@@ -5,7 +5,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <NoWarn>$(NoWarn);xUnit1041</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- xUnit v2 only discovers [CollectionDefinition] within the test assembly itself, so this
+         file must be compiled into every test project that uses it, not merely referenced. -->
     <Compile Include="..\PSPad.TestInfrastructure\PostgresCollection.cs" Link="PostgresCollection.cs" />
   </ItemGroup>
 
