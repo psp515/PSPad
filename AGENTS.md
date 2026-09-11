@@ -1,81 +1,64 @@
 # PSPad — Agent Guide
 
-A self-hosted, multi-user GTD notepad. This file is the entry point for any agent
-working in this repo: what we are building, what is decided, what is next.
+Self-hosted multi-user GTD notepad. Entry point for any agent in repo.
 
-**Status: design phase. No code exists yet.** The repo holds only a license,
-a Visual Studio `.gitignore`, and empty `src/`, `test/`, `docs/`, `docker/`.
+**Status: design done, no code yet.** Repo holds license, .gitignore, empty
+`src/`, `test/`, `docs/`, `docker/`.
 
 ---
 
 ## 1. Vision
 
-A daily-driver task system built around GTD practice, not a generic todo app.
-One screen answers "what do I do today", pulling across every area of life, while
-capture stays frictionless through a single shared Inbox. It runs on my own
-hardware, works on a phone with no connection, and syncs when the network returns.
+Daily-driver GTD system, not generic todo app. One Today screen answers "what do
+I do now" across all areas. Capture frictionless via one shared Inbox. Runs on
+own hardware. Works on phone with no network, syncs when back.
 
-The long-term system also covers habits, yearly goals, connected accounts
-(GitHub, OneDrive, Google Drive, Thingiverse), and 3D-printing material/part
-lists with reference libraries. Those are **not** in the first slice — see §3.
+Later: habits, yearly goals, connected accounts (GitHub, OneDrive, Google Drive,
+Thingiverse), 3D-print material and part lists, reference libraries. Not slice 1.
 
 ---
 
-## 2. Subsystem decomposition
+## 2. Subsystems
 
-The full idea is a platform, not one project. Each subsystem gets its own
-spec → plan → implementation cycle.
+Platform, not one project. Each gets own spec, plan, implementation.
 
 | # | Subsystem | Slice |
 |---|-----------|-------|
 | 1 | GTD core — areas, Inbox, lists, tasks, steps, recurrence, goals, Today | **1 (now)** |
-| 2 | Action history — event log + browsing screen | **1 (now)** |
+| 2 | Action history — event log + browse screen | **1 (now)** |
 | 3 | Identity — built-in login + Keycloak (OIDC) | **1 (now)** |
 | 4 | Habits — streaks, daily progress | later |
-| 5 | Goals & annual plans — yearly horizon, end-of-year summary | later |
-| 6 | Account integrations — GitHub issues, OneDrive, Google Drive, Thingiverse | later |
-| 7 | 3D-print domain — material lists, part lists, reference materials | later |
-| 8 | Analytics & reminders — charts, push notifications, thought of the day | later |
+| 5 | Goals & annual plans — yearly horizon, year-end summary | later |
+| 6 | Integrations — GitHub issues, OneDrive, Google Drive, Thingiverse | later |
+| 7 | 3D-print domain — materials, parts, reference materials | later |
+| 8 | Analytics & reminders — charts, push, thought of the day | later |
 
-Subsystems 4 and 5 are cheap follow-ons *because* slice 1 already models
-recurrence as occurrences and goals as entities. Do not regress those decisions.
+4 and 5 cheap later because slice 1 models recurrence as occurrences and goals as
+entities. Do not regress that.
 
 ---
 
-## 3. Slice 1 scope (current)
+## 3. Slice 1 scope
 
-In:
+In: areas (user-defined), lists (inside one area), Inbox (one per user, outside
+areas, organizing = first-class command), tasks (one list, name + due date +
+goal + priority + star + steps), steps (own due date, ordered, dense positions),
+recurrence (template + per-day occurrences), goals (global, many tasks to one),
+Today screen (cross-area), action history, offline PWA, auth.
 
-- **Areas** — life, work, studies, projects; user-defined, not hardcoded.
-- **Lists** — live inside an area. Plain lists only in this slice.
-- **Inbox** — one shared quick-capture list outside all areas. Moving an item
-  out of the Inbox into a list is the organizing act, and is a first-class command.
-- **Tasks** — belong to exactly one list. Fields: name, due date, goal link,
-  priority, star, steps.
-- **Steps** — checkable items inside a task, each with its own due date. List
-  screens show the task name plus its next unchecked step.
-- **Recurrence** — a recurring task is a template plus per-day occurrences.
-- **Goals** — separate entities; many tasks may point at one goal.
-- **Today screen** — cross-area, see rule below.
-- **Action history** — event stream plus a browsing screen with filters.
-- **Offline PWA** — full offline read and write via a local replica and a
-  command outbox.
-- **Auth** — standard app login plus Keycloak via OIDC.
+Out: habits, annual plans, integrations, print lists, reference materials,
+charts, push reminders, thought of day, list types beyond plain.
 
-Out of slice 1: habits, annual plans, integrations, print lists, reference
-materials, charts, push reminders, thought of the day, list types beyond plain.
+### Today rule
 
-### Today screen rule
+Task on Today when: due date today or earlier, OR next unchecked step due today
+or earlier. Earlier = overdue, pinned top. "Today" = today in **user's time
+zone**, stored on `User`. Never machine-local time.
 
-A task appears on Today when **either**:
-
-- its due date is today or earlier (earlier = overdue, pinned to the top), **or**
-- its next unchecked step is due today or earlier.
-
-**Recurring tasks never become overdue.** A missed occurrence stays on its own
-day marked *skipped*; only today's occurrence appears on Today. "Read a book"
-untouched yesterday must not show as overdue today. This rule lives in the
-domain layer, in one place, shared by client and server.
+**Recurring tasks never overdue.** Only today's occurrence shows, only while
+pending. Missed occurrence stays on its own day as skipped, never migrates
+forward. "Read a book" untouched yesterday must not show overdue today. Rule
+lives in domain layer, one place, shared client and server.
 
 ---
 
@@ -83,54 +66,55 @@ domain layer, in one place, shared by client and server.
 
 | Layer | Choice | Why |
 |-------|--------|-----|
-| Runtime | .NET (latest LTS) | Single language across client and server |
-| Store | **Marten on PostgreSQL** | JSONB documents *and* event sourcing in one engine; action history falls out of the event stream instead of a bolted-on audit table; ACID; one container |
-| Messaging | **Wolverine** | Native Marten integration — a command handler and its event append share one unit of work |
-| Frontend | **Blazor WebAssembly, standalone, as a PWA** | Blazor Server is disqualified: it needs a live connection and offline is a hard requirement |
-| UI kit | **MudBlazor** | Mature, complete component set (tables, date pickers, dialogs); Material look accepted over shadcn, which is React-only and whose Blazor ports are immature |
-| Local store | IndexedDB | Offline replica plus command outbox |
+| Runtime | .NET 10 (LTS) | One language client and server |
+| Store | **Marten on PostgreSQL 17** | Documents + event sourcing one engine; history falls out of event stream, no audit table; ACID; one container |
+| Messaging | **Wolverine** | Native Marten integration, handler + event append one unit of work |
+| Frontend | **Blazor WebAssembly standalone, PWA** | Blazor Server needs live connection, offline is hard requirement |
+| UI kit | **MudBlazor** | Complete component set out of box; Material look accepted over shadcn (React-only, Blazor ports immature) |
+| Local store | IndexedDB | Offline replica + command outbox |
 | Identity | ASP.NET Core Identity + OIDC to Keycloak | Self-hosted, multi-user |
-| Packaging | Docker Compose | App, PostgreSQL, Keycloak |
+| Integration tests | **Testcontainers** | Real Postgres per run, disposable, no shared fixture state |
+| Packaging | Docker Compose | App, Postgres, Keycloak |
 
 ---
 
 ## 5. Architecture decisions
 
-**AD-1 — Modular monolith, vertical slices.** Features are folders (Areas,
-Inbox, Tasks, Goals, Today, History), each holding its commands, handlers,
-projections, and endpoints. No horizontal Services/Repositories layering. No
-microservices.
+**AD-1 — Modular monolith, vertical slices.** Features are folders (Areas, Inbox,
+Tasks, Goals, Today, History), each holds its commands, handlers, projections,
+endpoints. No Services/Repositories layering. No microservices.
 
-**AD-2 — CQRS with an event-sourced write side.** Commands mutate aggregates and
-append events; Marten projections build read models. Queries never touch
-aggregates. Action history is the event stream — never write a parallel audit log.
+**AD-2 — CQRS, event-sourced write side.** Commands mutate aggregates, append
+events. Marten projections build read models. Queries never touch aggregates.
+Action history **is** the event stream. Never write a parallel audit log.
 
-**AD-3 — Commands are the shared contract.** Command types live in a project
-referenced by *both* the WASM client and the server. The client applies a command
-to its local IndexedDB replica immediately (optimistic), records it in an outbox,
-and ships it when the network is back. The server replays the same command
-through the real aggregate. One model of behavior, not two.
+**AD-3 — Commands are shared contract.** Command and event types live in
+`PSPad.Domain`, referenced by WASM client and server. Client applies command to
+IndexedDB replica immediately, records in outbox, ships on reconnect. Server
+replays same command through real aggregate. One model of behavior, not two.
 
-**AD-4 — Domain layer must compile to WASM.** Aggregates and domain rules carry
-no dependency on Marten, HTTP, or any infrastructure. This is what makes AD-3
-possible, and it is the discipline a domain system wants anyway.
+**AD-4 — Domain compiles to WASM.** Aggregates and rules carry no Marten, no
+HTTP, no infrastructure. Purity guard test enforces it.
 
-**AD-5 — Offline conflicts resolve last-write-wins per aggregate,** with rejected
-commands surfaced to the user rather than dropped silently. Data is
-single-owner, so genuine conflicts are rare. CRDTs were considered and
-rejected: a merge engine costs more than the whole GTD core.
+**AD-5 — Offline conflicts: last-write-wins per aggregate.** Rejected commands
+surfaced to user, never dropped silent. Data single-owner, real conflicts rare.
+CRDTs rejected: merge engine costs more than whole GTD core.
 
-**AD-6 — Sync is delta-by-version.** The client pulls changes since its last
-known version marker and overwrites its replica with server state. The server is
-the source of truth; the replica is disposable.
+**AD-6 — Sync is delta-by-version.** Client pulls rows changed since its marker,
+overwrites replica. Server is truth, replica disposable. Marker = Marten event
+sequence, never a clock.
 
-**AD-7 — Recurrence is template plus occurrences,** never a single task with a
-rolling date. Occurrence records are what later give habits their streaks and
-charts for free.
+**AD-7 — Recurrence is template + occurrences.** Never one task with rolling
+date. Only Done days stored; Pending and Skipped derived from rule + today. Gives
+habits streaks free.
 
-**AD-8 — Aggregate boundaries:** `Area`, `List`, `Task` (steps live inside the
-task aggregate, not on their own), `Goal`, `Inbox` (one per user). A task's goal
-link is an id reference across aggregates, not a nested object.
+**AD-8 — Aggregates:** `User`, `Area`, `TaskList`, `TodoTask` (steps inside),
+`Goal`, `Inbox` (one per user). Cross-aggregate links are ids, never nested
+objects.
+
+**AD-9 — Integration tests own their database.** Testcontainers starts a real
+Postgres 17 per test run. No compose service shared with dev. No in-memory fake —
+Marten behavior is the thing under test.
 
 ---
 
@@ -138,85 +122,180 @@ link is an id reference across aggregates, not a nested object.
 
 ```
 src/
-  PSPad.Domain/          aggregates, events, rules — no infrastructure, WASM-safe
-  PSPad.Contracts/       commands, DTOs — shared by client and server
+  PSPad.Domain/          aggregates, commands, events, rules — WASM-safe, no infrastructure
+  PSPad.Contracts/       wire shapes: command envelope, sync DTOs
   PSPad.Server/          Wolverine handlers, Marten projections, endpoints, vertical slices
   PSPad.Client/          Blazor WASM PWA, MudBlazor, IndexedDB replica + outbox
 test/
-  PSPad.Domain.Tests/    rule-level tests, no I/O
-  PSPad.Server.Tests/    handler + projection tests against a real Postgres
+  PSPad.Domain.Tests/         unit only, no I/O
+  PSPad.Server.Tests/         integration, Testcontainers Postgres
+  PSPad.Client.Tests/         unit + bUnit component tests
+  PSPad.TestInfrastructure/   Testcontainers fixture, trait constants
 docs/
   superpowers/specs/     design specs, one per subsystem
+  superpowers/plans/     implementation plans
 docker/                  compose: app, postgres, keycloak
 ```
 
 ---
 
-## 7. Current step
+## 7. Testing
 
-Slice 1 is specified and planned. Nothing is implemented yet.
+### Categories
+
+Every test gets a trait. No exceptions.
+
+```csharp
+[Trait(Categories.Key, Categories.Unit)]
+[Trait(Categories.Key, Categories.Integration)]
+```
+
+`Categories` lives in `PSPad.TestInfrastructure`:
+
+```csharp
+public static class Categories
+{
+    public const string Key = "Category";
+    public const string Unit = "Unit";
+    public const string Integration = "Integration";
+}
+```
+
+**Unit** — pure, in-process, no Docker, no network, no filesystem. Domain rules,
+projections-as-functions, client state folding, bUnit components.
+
+**Integration** — real Postgres via Testcontainers, real Marten, real HTTP host.
+Command handlers, projections, Today query, history, sync round trip, auth.
+
+Run:
+
+```bash
+dotnet test --filter Category=Unit
+dotnet test --filter Category=Integration
+dotnet test
+```
+
+Unit suite must stay under a few seconds. If it needs Docker, it is mislabeled.
+
+### Testcontainers fixture
+
+One container per test run, shared by an xUnit collection. Not one per test —
+Postgres startup is seconds, per-test is unusable.
+
+```csharp
+public sealed class PostgresFixture : IAsyncLifetime
+{
+    readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
+        .WithImage("postgres:17-alpine")
+        .WithDatabase("pspad_test")
+        .WithUsername("pspad")
+        .WithPassword("pspad")
+        .Build();
+
+    public string ConnectionString => _container.GetConnectionString();
+
+    public Task InitializeAsync() => _container.StartAsync();
+
+    public Task DisposeAsync() => _container.DisposeAsync().AsTask();
+}
+
+[CollectionDefinition(PostgresCollection.Name)]
+public sealed class PostgresCollection : ICollectionFixture<PostgresFixture>
+{
+    public const string Name = "postgres";
+}
+```
+
+Isolation between tests: each test uses its own `UserId`, so rows never collide.
+Do not truncate tables between tests — it serializes the suite for no gain.
+
+### Testcontainers inside the dev container
+
+Dev container needs the host Docker socket, otherwise Testcontainers cannot start
+anything:
+
+```json
+"mounts": ["source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"]
+```
+
+Compose still runs dev Postgres and Keycloak for running the app. Tests do not
+touch those.
+
+---
+
+## 8. Current step
+
+Slice 1 specified and planned. Nothing implemented.
 
 - Spec: `docs/superpowers/specs/2026-09-11-gtd-core-design.md`
-- Plans: `docs/superpowers/plans/` — seven of them, see `README.md` there for the
-  order and what each delivers.
+- Plans: `docs/superpowers/plans/`, see README there for order
 
-Execution starts with plan 01 (dev environment) and proceeds in numbered order;
-02 and 03 are pure domain and can be worked in parallel with nothing else. Each
-plan ends with a green test suite, so a plan is either done or not — there is no
-half-landed state to reason about.
+Start plan 01, then numbered order. 02 and 03 are pure domain, parallelizable.
+Each plan ends green — a plan is done or not, no half state.
 
-Do not skip ahead, and do not add features that no plan covers without taking
-them through brainstorming first.
+**Plans 01 and 04 still describe a `postgres-test` compose service and a
+connection-string fixture.** AD-9 supersedes that. When executing them, use
+Testcontainers per §7 instead, and drop `postgres-test` from compose.
 
 ---
 
-## 8. Future steps
+## 9. Future order
 
-Rough order after slice 1 ships:
-
-1. **Habits** — reuse the occurrence model; add streaks and daily progress.
-2. **Annual plans** — give `Goal` a yearly horizon and a year-end summary.
-3. **Analytics** — charts over completed/in-progress counts and habit progress.
-4. **Reminders** — server scheduler plus web push (VAPID); thought of the day.
-5. **GitHub integration** — issue-backed lists; the first external sync, so it
-   sets the pattern for the rest.
-6. **Cloud storage links** — OneDrive and Google Drive paths; reference-material
-   lists (no tasks, just linked locations, e.g. finished 3D-print projects).
-7. **Print domain** — material lists, part lists, Thingiverse links.
-8. **Checklists** — reusable templates convertible to a one-shot quick list.
+1. Habits — reuse occurrence model, add streaks
+2. Annual plans — give `Goal` a yearly horizon, year-end summary
+3. Analytics — charts over completions and habit progress
+4. Reminders — server scheduler + web push (VAPID); thought of the day
+5. GitHub — issue-backed lists; first external sync, sets pattern
+6. Cloud storage — OneDrive and Drive paths; reference-material lists
+7. Print domain — materials, parts, Thingiverse
+8. Checklists — reusable templates convertible to one-shot list
 
 ---
 
-## 9. Settled during design
+## 10. Settled
 
-- **Goals are global**, not scoped to an area — "new eating habit" spans life and
-  studies at once.
-- **Priority** is a fixed four-level set: none, low, medium, high.
-- **The star means "important" only.** It sorts a task up; it never puts a task
-  on Today. Today is driven by dates alone.
-- **Recurrence entered slice 1** after all: a daily task like "read a book" must
-  not show as overdue when yesterday was missed, and that rule cannot be bolted
-  on later without changing the model.
-- **Everything runs in Docker, including the SDK** — a dev container, not just
-  containerized infrastructure.
-- **The app is an offline-first PWA**, which ruled out Blazor Server and made
-  Blazor WebAssembly the only viable option.
+- Goals **global**, not per area — "new eating habit" spans areas
+- Priority: fixed four — none, low, medium, high
+- Star means **important only**. Sorts up. Never puts task on Today. Dates alone drive Today
+- Recurrence in slice 1, forced by the never-overdue rule
+- Everything in Docker including SDK — dev container, not just infra
+- Offline-first PWA, which killed Blazor Server
 
-Still open:
-
-- Retention for occurrence records and events — unbounded, or archived per year?
+Open: retention for occurrences and events — unbounded or archive per year.
 
 ---
 
-## 10. Conventions for agents
+## 11. Rules for agents
 
-- **Design before code.** New features go through brainstorming → spec → plan.
-  A spec lives in `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`.
-- **TDD.** Domain rules get a failing test first. The Today rule and the
-  recurrence rule are the two places where bugs will hurt most.
-- **Keep the domain pure.** If a change adds an infrastructure dependency inside
-  `PSPad.Domain`, it breaks AD-3 and AD-4 — find another way.
-- **Never add an audit table.** History comes from events (AD-2).
-- **Language:** code, comments, commits, and docs in English. Conversation with
-  the maintainer may be in Polish.
-- **License:** GPL v3. Keep dependencies compatible.
+**Design before code.** New feature goes brainstorming, spec, plan. Spec path:
+`docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`.
+
+**TDD.** Failing test first. Today rule and recurrence rule are where bugs hurt
+most.
+
+**No comments in code.** Name things so comments are unnecessary. If a line needs
+explaining, it needs renaming or extracting. Exception: a genuinely
+counter-intuitive constraint gets one line saying *why*, never *what*. XML docs
+only on public API others consume across projects.
+
+**Be terse.** Short answers. No preamble, no "great question", no restating the
+task back. Fragments fine. Say what changed, where, what broke. Sacrifice grammar
+for brevity.
+
+**No narration.** Do not announce tool calls or describe what you are about to
+do. Do it, then report result.
+
+**Report failures exact.** Quote the shortest decisive line of an error. Never
+claim green without running the suite.
+
+**Keep domain pure.** Infrastructure dependency inside `PSPad.Domain` breaks AD-3
+and AD-4. Find another way.
+
+**Never add an audit table.** History comes from events (AD-2).
+
+**Every test gets a category trait** (§7). Unmarked test is a broken test.
+
+**Language:** code, comments, commits, docs in English. Chat with maintainer may
+be Polish.
+
+**License:** GPL v3. Dependencies must be compatible.
