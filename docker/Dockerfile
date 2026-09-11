@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY Directory.Build.props PSPad.sln ./
+COPY Directory.Build.props *.props *.targets ./
 COPY src/ src/
 RUN dotnet publish src/PSPad.Server/PSPad.Server.csproj -c Release -o /app
 

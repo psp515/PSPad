@@ -16,5 +16,8 @@ dotnet build
 dotnet test
 ```
 
+The production stack (`docker/compose.prod.yaml`) serves plain HTTP on port
+5000 and expects a reverse proxy in front of it.
+
 Design documents live in `docs/superpowers/specs/`, implementation plans in
 `docs/superpowers/plans/`, and the working agreement for agents in `AGENTS.md`.

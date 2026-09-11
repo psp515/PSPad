@@ -1,6 +1,5 @@
 {
   "name": "PSPad",
-  "build": { "dockerfile": "Dockerfile" },
   "runServices": ["postgres", "keycloak"],
   "dockerComposeFile": ["../docker/compose.yaml", "compose.devcontainer.yaml"],
   "service": "devcontainer",
