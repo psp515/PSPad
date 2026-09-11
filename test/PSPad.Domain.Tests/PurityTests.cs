@@ -1,3 +1,4 @@
+using PSPad.Contracts;
 using PSPad.TestInfrastructure;
 using Shouldly;
 
@@ -11,19 +12,21 @@ public class PurityTests
         "Marten", "Npgsql", "Wolverine", "Microsoft.AspNetCore", "System.Net.Http"
     ];
 
-    [Fact]
-    public void Domain_assembly_references_no_infrastructure()
+    [Theory]
+    [InlineData(typeof(DomainMarker))]
+    [InlineData(typeof(ContractsMarker))]
+    public void Assembly_build_output_contains_no_infrastructure_dlls(Type marker)
     {
-        var referenced = typeof(DomainMarker).Assembly
-            .GetReferencedAssemblies()
-            .Select(a => a.Name!)
+        var outputDirectory = Path.GetDirectoryName(marker.Assembly.Location)!;
+        var dllNames = Directory.GetFiles(outputDirectory, "*.dll")
+            .Select(Path.GetFileNameWithoutExtension)
             .ToArray();
 
         foreach (var prefix in ForbiddenPrefixes)
         {
-            referenced.ShouldNotContain(
-                name => name.StartsWith(prefix, StringComparison.Ordinal),
-                $"PSPad.Domain must not reference {prefix} (see AD-4)");
+            dllNames.ShouldNotContain(
+                name => name!.StartsWith(prefix, StringComparison.Ordinal),
+                $"{marker.Assembly.GetName().Name} build output must not contain {prefix} (see AD-4)");
         }
     }
 }
