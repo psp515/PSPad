@@ -1,0 +1,17 @@
+{
+  "realm": "pspad",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "pspad-client",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://localhost:5000/*"],
+      "webOrigins": ["http://localhost:5000"]
+    },
+    {
+      "clientId": "pspad-api",
+      "bearerOnly": true
+    }
+  ]
+}
