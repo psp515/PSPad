@@ -503,8 +503,7 @@ namespace PSPad.TestInfrastructure;
 
 public sealed class PostgresFixture : IAsyncLifetime
 {
-    readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("postgres:17-alpine")
+    readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17-alpine")
         .WithDatabase("pspad_test")
         .WithUsername("pspad")
         .WithPassword("pspad")
