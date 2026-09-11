@@ -143,22 +143,20 @@ docker/                  compose: app, postgres, keycloak
 
 ### Categories
 
-Every test gets a trait. No exceptions.
+Every test class gets one category attribute. No exceptions. Both live in
+`PSPad.TestInfrastructure` and emit the xUnit trait `Category`:
 
 ```csharp
-[Trait(Categories.Key, Categories.Unit)]
-[Trait(Categories.Key, Categories.Integration)]
+[UnitTest]
+[IntegrationTest]
 ```
 
-`Categories` lives in `PSPad.TestInfrastructure`:
+Integration classes also join the shared container:
 
 ```csharp
-public static class Categories
-{
-    public const string Key = "Category";
-    public const string Unit = "Unit";
-    public const string Integration = "Integration";
-}
+[IntegrationTest]
+[Collection(PostgresCollection.Name)]
+public class SomethingTests(PostgresFixture fixture);
 ```
 
 **Unit** — pure, in-process, no Docker, no network, no filesystem. Domain rules,
