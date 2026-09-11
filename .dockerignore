@@ -1,6 +1,5 @@
 **/bin/
 **/obj/
 .git/
-.devcontainer/
 docs/
 test/

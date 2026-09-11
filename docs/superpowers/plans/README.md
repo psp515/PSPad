@@ -3,13 +3,14 @@
 Seven plans covering the GTD core, action history and identity. All of them
 implement one spec: `../specs/2026-09-11-gtd-core-design.md`.
 
-Everything runs in Docker, including the .NET SDK. Plan 01 builds that
-environment; every later plan assumes you are working inside the dev container it
-creates.
+Develop on the host with the .NET 10 SDK. Docker runs the backing services and,
+during integration tests, a throwaway PostgreSQL — so it must be running. Each
+deployable gets its own `Dockerfile` beside its `.csproj`: the server's in plan
+01, the client's in plan 06.
 
 | # | Plan | Delivers | Depends on |
 |---|------|----------|------------|
-| 01 | [Dev environment](2026-09-11-01-dev-environment.md) | Compose stack (Postgres, Keycloak), dev container with the SDK and Docker socket, solution skeleton, category attributes, Testcontainers fixture, purity guard, production image | — |
+| 01 | [Dev environment](2026-09-11-01-dev-environment.md) | Compose stack (Postgres, Keycloak), solution skeleton, category attributes, Testcontainers fixture, purity guard, server image | — |
 | 02 | [Domain core](2026-09-11-02-domain-core.md) | Areas, lists, goals, tasks, steps, Inbox as pure decide/apply functions; shared sort key | 01 |
 | 03 | [Recurrence & Today](2026-09-11-03-recurrence-and-today.md) | Recurrence rule, occurrences with derived skipped days, the Today rule, occurrence history | 02 |
 | 04 | [Server & CQRS](2026-09-11-04-server-cqrs.md) | Marten event store, command routing and idempotent processing, all projections, Today query, action history, HTTP endpoints | 01, 02, 03 |

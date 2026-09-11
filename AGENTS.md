@@ -74,7 +74,7 @@ lives in domain layer, one place, shared client and server.
 | Local store | IndexedDB | Offline replica + command outbox |
 | Identity | ASP.NET Core Identity + OIDC to Keycloak | Self-hosted, multi-user |
 | Integration tests | **Testcontainers** | Real Postgres per run, disposable, no shared fixture state |
-| Packaging | Docker Compose | App, Postgres, Keycloak |
+| Packaging | Docker Compose | One image per deployable: server and client, each with its own `Dockerfile` beside its `.csproj` |
 
 ---
 
@@ -121,11 +121,14 @@ Marten behavior is the thing under test.
 ## 6. Repo layout (planned)
 
 ```
+PSPad.slnx               solution (XML format, not .sln)
 src/
   PSPad.Domain/          aggregates, commands, events, rules — WASM-safe, no infrastructure
   PSPad.Contracts/       wire shapes: command envelope, sync DTOs
   PSPad.Server/          Wolverine handlers, Marten projections, endpoints, vertical slices
+                         + Dockerfile (API image)
   PSPad.Client/          Blazor WASM PWA, MudBlazor, IndexedDB replica + outbox
+                         + Dockerfile (static image)
 test/
   PSPad.Domain.Tests/         unit only, no I/O
   PSPad.Server.Tests/         integration, Testcontainers Postgres
@@ -134,7 +137,7 @@ test/
 docs/
   superpowers/specs/     design specs, one per subsystem
   superpowers/plans/     implementation plans
-docker/                  compose: app, postgres, keycloak
+docker/                  compose files, keycloak realm
 ```
 
 ---
@@ -206,17 +209,11 @@ public sealed class PostgresCollection : ICollectionFixture<PostgresFixture>
 Isolation between tests: each test uses its own `UserId`, so rows never collide.
 Do not truncate tables between tests — it serializes the suite for no gain.
 
-### Testcontainers inside the dev container
+### Running tests
 
-Dev container needs the host Docker socket, otherwise Testcontainers cannot start
-anything:
-
-```json
-"mounts": ["source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"]
-```
-
-Compose still runs dev Postgres and Keycloak for running the app. Tests do not
-touch those.
+Develop on the host with the .NET 10 SDK. Docker must be running, because
+integration tests start their own Postgres. They never touch the compose stack —
+that one exists for running the app.
 
 ---
 
@@ -251,7 +248,7 @@ Each plan ends green — a plan is done or not, no half state.
 - Priority: fixed four — none, low, medium, high
 - Star means **important only**. Sorts up. Never puts task on Today. Dates alone drive Today
 - Recurrence in slice 1, forced by the never-overdue rule
-- Everything in Docker including SDK — dev container, not just infra
+- Develop on the host, deploy in containers. No dev container: each deployable gets its own `Dockerfile` next to its `.csproj`, built with the repo root as context
 - Offline-first PWA, which killed Blazor Server
 
 Open: retention for occurrences and events — unbounded or archive per year.

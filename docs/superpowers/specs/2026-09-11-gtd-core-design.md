@@ -294,15 +294,24 @@ Not a timestamp — clocks on client devices are not trusted.
 
 ## 11. Runtime and environment
 
-Everything runs in Docker, including the SDK:
+Development happens on the developer's own machine with the .NET 10 SDK.
+Deployment happens in containers, one image per deployable.
 
-- `.devcontainer/` — dev container on `mcr.microsoft.com/dotnet/sdk:10.0`. Builds,
-  tests and `dotnet watch` run there. Mounts the host Docker socket so
-  Testcontainers can start containers from inside it.
-- `docker/compose.yaml` — `postgres`, `keycloak`, app. For running the app, not
-  for tests.
-- `docker/compose.prod.yaml` — production images.
-- No host dependency beyond Docker itself.
+- `PSPad.slnx` — the solution, in the XML format. Not `.sln`.
+- `src/PSPad.Server/Dockerfile` — the API image.
+- `src/PSPad.Client/Dockerfile` — the client image: the published WebAssembly
+  output served as static files.
+- Both build with the **repository root** as context, so `Directory.Build.props`
+  and the shared projects come along. `.dockerignore` lives at the root.
+- `docker/compose.yaml` — `postgres` and `keycloak`, for running the app
+  locally. Tests never touch it.
+- `docker/compose.prod.yaml` — the production stack.
+- Docker must be running during development, because integration tests start
+  their own PostgreSQL (§12).
+
+The client is served as static files by its own image, not by the API. The two
+are separate origins, so the API enables CORS for the client's origin and the
+client is configured with the API's base address at runtime.
 
 ---
 

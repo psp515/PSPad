@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PSPad.Contracts/PSPad.Contracts.csproj" />
+    <Project Path="src/PSPad.Domain/PSPad.Domain.csproj" />
+    <Project Path="src/PSPad.Server/PSPad.Server.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/PSPad.Domain.Tests/PSPad.Domain.Tests.csproj" />
+    <Project Path="test/PSPad.Server.Tests/PSPad.Server.Tests.csproj" />
+    <Project Path="test/PSPad.TestInfrastructure/PSPad.TestInfrastructure.csproj" />
+  </Folder>
+</Solution>

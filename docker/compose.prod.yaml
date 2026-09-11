@@ -1,10 +1,10 @@
 name: pspad-prod
 
 services:
-  app:
+  server:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: src/PSPad.Server/Dockerfile
     image: pspad-server:local
     environment:
       ConnectionStrings__Postgres: ${POSTGRES_CONNECTION}

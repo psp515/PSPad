@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A fully containerized development environment where `dotnet test` runs green against a real PostgreSQL started by Testcontainers, with unit and integration suites separable, plus the empty solution structure every later plan builds into.
+**Goal:** A development environment where `dotnet test` runs green against a real PostgreSQL started by Testcontainers, with unit and integration suites separable, plus the empty solution structure every later plan builds into and the API's container image.
 
-**Architecture:** Everything runs in Docker, including the .NET SDK. A dev container built on the SDK image is where builds, tests and `dotnet watch` execute, with the host Docker socket mounted so Testcontainers works from inside it. Compose supplies PostgreSQL and Keycloak for *running the app*; integration tests start their own disposable Postgres. The solution is a modular monolith: a pure domain, a shared contracts project, a server, a WASM client, and test projects sharing one test-infrastructure library.
+**Architecture:** Development happens on the host with the .NET 10 SDK; Docker is for the backing services and for deployment. Compose supplies PostgreSQL and Keycloak for *running the app*; integration tests start their own disposable Postgres through Testcontainers, so Docker must be running. The solution is a modular monolith: a pure domain, a shared contracts project, a server, a WASM client, and test projects sharing one test-infrastructure library. Each deployable carries its own `Dockerfile` beside its `.csproj`.
 
 **Tech Stack:** .NET 10, Docker Compose, PostgreSQL 17, Keycloak 26, Testcontainers, xUnit, Shouldly
 
@@ -134,123 +134,23 @@ git commit -m "chore: add docker compose infrastructure for running the app"
 
 ---
 
-### Task 2: Dev container
+### Task 2: Dev container — REMOVED
 
-**Files:**
-- Create: `.devcontainer/devcontainer.json`
-- Create: `.devcontainer/Dockerfile`
+This task originally built a dev container so the SDK itself ran in Docker. That
+approach was dropped: development happens on the host with the .NET 10 SDK
+installed, and Docker supplies only the backing services and the throwaway
+PostgreSQL that Testcontainers starts.
 
-**Interfaces:**
-- Consumes: the `pspad` network and services from Task 1
-- Produces: a dev container where `dotnet` is on PATH, `postgres` and `keycloak` resolve by hostname, and `docker ps` works against the host daemon so Testcontainers can start containers
-
-- [ ] **Step 1: Write the dev container Dockerfile**
-
-`.devcontainer/Dockerfile`:
-
-```dockerfile
-FROM mcr.microsoft.com/dotnet/sdk:10.0
-
-RUN apt-get update \
- && apt-get install -y --no-install-recommends git curl ca-certificates \
- && rm -rf /var/lib/apt/lists/*
-
-RUN install -m 0755 -d /etc/apt/keyrings \
- && curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
- && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list \
- && apt-get update \
- && apt-get install -y --no-install-recommends docker-ce-cli \
- && rm -rf /var/lib/apt/lists/*
-
-RUN dotnet workload install wasm-tools
-
-ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
-    DOTNET_NOLOGO=1 \
-    DOTNET_USE_POLLING_FILE_WATCHER=1
-
-WORKDIR /workspace
-```
-
-`dotnet/sdk:10.0` is an Ubuntu image, so the Docker CLI repository is the Ubuntu
-one — the Debian repository has no matching release and fails the build. Compose
-resolves a relative build context against the *first* `-f` file, which is
-`docker/compose.yaml`, so the context is spelled `../.devcontainer`, not `.`.
-
-`wasm-tools` is for the Blazor WebAssembly client in plan 06. The Docker CLI is
-for Testcontainers: it talks to the *host* daemon through the mounted socket, so
-test containers are siblings of the dev container, not children of it.
-
-- [ ] **Step 2: Write the dev container definition**
-
-`.devcontainer/devcontainer.json`:
-
-```json
-{
-  "name": "PSPad",
-  "build": { "dockerfile": "Dockerfile" },
-  "runServices": ["postgres", "keycloak"],
-  "dockerComposeFile": ["../docker/compose.yaml", "compose.devcontainer.yaml"],
-  "service": "devcontainer",
-  "workspaceFolder": "/workspace",
-  "forwardPorts": [5000, 5432, 8080],
-  "customizations": {
-    "vscode": {
-      "extensions": ["ms-dotnettools.csdevkit"]
-    }
-  }
-}
-```
-
-- [ ] **Step 3: Add the dev container service to compose**
-
-`.devcontainer/compose.devcontainer.yaml`:
-
-```yaml
-services:
-  devcontainer:
-    build:
-      context: ../.devcontainer
-      dockerfile: Dockerfile
-    volumes:
-      - ..:/workspace:cached
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: sleep infinity
-    networks: [pspad]
-    environment:
-      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      postgres:
-        condition: service_healthy
-```
-
-`TESTCONTAINERS_HOST_OVERRIDE` matters: a container started on the host daemon
-publishes its port on the *host*, not on this container's localhost. Without the
-override, connection attempts go nowhere and every integration test times out.
-
-- [ ] **Step 4: Verify connectivity from inside the container**
-
-Run inside the dev container: `dotnet --version`
-Expected: a `10.x` version string.
-
-Run: `docker ps`
-Expected: a container list, proving the mounted socket works. If this fails,
-Testcontainers cannot run and Task 4 has nothing to stand on.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add .devcontainer/
-git commit -m "chore: add dev container running the dotnet sdk in docker"
-```
+Nothing to implement. The task number is kept so the later tasks' numbering and
+every reference to them stay valid.
 
 ---
+
 
 ### Task 3: Solution and project skeleton
 
 **Files:**
-- Create: `PSPad.sln`
+- Create: `PSPad.slnx`
 - Create: `Directory.Build.props`
 - Create: `src/PSPad.Domain/PSPad.Domain.csproj`
 - Create: `src/PSPad.Contracts/PSPad.Contracts.csproj`
@@ -261,7 +161,7 @@ git commit -m "chore: add dev container running the dotnet sdk in docker"
 - Create: `test/PSPad.TestInfrastructure/Categories.cs`
 
 **Interfaces:**
-- Consumes: the dev container from Task 2
+- Consumes: the .NET 10 SDK on the host
 - Produces: assemblies `PSPad.Domain`, `PSPad.Contracts`, `PSPad.Server`, `PSPad.TestInfrastructure`; reference graph `Contracts -> Domain`, `Server -> Contracts`, every test project -> its subject and -> `PSPad.TestInfrastructure`; attributes `[UnitTest]` and `[IntegrationTest]` emitting the xUnit trait `Category`
 
 `PSPad.Client` is deliberately absent — plan 06 creates it, because the WASM
@@ -271,14 +171,14 @@ there is a UI to run.
 - [ ] **Step 1: Create the solution and class library projects**
 
 ```bash
-dotnet new sln -n PSPad
+dotnet new sln -n PSPad   # .NET 10 emits PSPad.slnx, the XML format — keep it
 dotnet new classlib -o src/PSPad.Domain -f net10.0
 dotnet new classlib -o src/PSPad.Contracts -f net10.0
 dotnet new web -o src/PSPad.Server -f net10.0
 dotnet new xunit -o test/PSPad.Domain.Tests -f net10.0
 dotnet new xunit -o test/PSPad.Server.Tests -f net10.0
 dotnet new classlib -o test/PSPad.TestInfrastructure -f net10.0
-dotnet sln add src/**/*.csproj test/**/*.csproj
+dotnet sln add src/**/*.csproj test/**/*.csproj   # if the glob does not expand in your shell, add each path explicitly
 ```
 
 - [ ] **Step 2: Wire the reference graph**
@@ -419,7 +319,7 @@ tests, the attribute is not wired and every later plan inherits the problem.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add PSPad.sln Directory.Build.props src/ test/
+git add PSPad.slnx Directory.Build.props src/ test/
 git commit -m "chore: scaffold solution with domain purity guard"
 ```
 
@@ -562,7 +462,7 @@ git commit -m "test: add testcontainers postgres fixture and category split"
 ### Task 5: Production image and developer entry points
 
 **Files:**
-- Create: `docker/Dockerfile`
+- Create: `src/PSPad.Server/Dockerfile`
 - Create: `docker/compose.prod.yaml`
 - Create: `.dockerignore` (repository root — the build context is the root, so a copy under `docker/` is never consulted)
 - Modify: `README.md`
@@ -573,12 +473,12 @@ git commit -m "test: add testcontainers postgres fixture and category split"
 
 - [ ] **Step 1: Write the production Dockerfile**
 
-`docker/Dockerfile`:
+`src/PSPad.Server/Dockerfile` — beside the project it builds, with the repository root as build context:
 
 ```dockerfile
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY Directory.Build.props PSPad.sln ./
+COPY Directory.Build.props *.props *.targets ./
 COPY src/ src/
 RUN dotnet publish src/PSPad.Server/PSPad.Server.csproj -c Release -o /app
 
@@ -598,7 +498,6 @@ ENTRYPOINT ["dotnet", "PSPad.Server.dll"]
 **/bin/
 **/obj/
 .git/
-.devcontainer/
 docs/
 test/
 ```
@@ -611,10 +510,10 @@ test/
 name: pspad-prod
 
 services:
-  app:
+  server:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: src/PSPad.Server/Dockerfile
     image: pspad-server:local
     environment:
       ConnectionStrings__Postgres: ${POSTGRES_CONNECTION}
@@ -667,7 +566,7 @@ Everything runs in Docker, including the .NET SDK.
 docker compose -f docker/compose.yaml up -d
 ```
 
-Then open the repository in the dev container (`.devcontainer/`) and work there:
+Then work normally on your own machine:
 
 ```bash
 dotnet build
@@ -690,7 +589,7 @@ git commit -m "chore: add production image, prod compose and developer docs"
 ## Done when
 
 - `docker compose -f docker/compose.yaml up -d` brings up a healthy `postgres` and a running `keycloak`.
-- The dev container builds, `dotnet --version` reports 10.x inside it, and `docker ps` works from inside it.
+- `dotnet build` and `dotnet test` run on the host against the SDK installed there.
 - `dotnet test` is green: domain purity guard plus the Testcontainers database check.
 - `dotnet test --filter Category=Unit` runs without starting a container; `--filter Category=Integration` starts one.
 - `docker compose -f docker/compose.prod.yaml build` produces a runnable server image.
