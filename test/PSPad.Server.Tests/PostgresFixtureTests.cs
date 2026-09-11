@@ -5,10 +5,8 @@ using Shouldly;
 namespace PSPad.Server.Tests;
 
 [IntegrationTest]
-#pragma warning disable xUnit1041
 [Collection(PostgresCollection.Name)]
 public class PostgresFixtureTests(PostgresFixture fixture)
-#pragma warning restore xUnit1041
 {
     [Fact]
     public async Task Container_database_is_reachable()
