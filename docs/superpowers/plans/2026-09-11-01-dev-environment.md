@@ -90,6 +90,7 @@ their own container (Task 4).
 
 ```dotenv
 POSTGRES_CONNECTION=Host=postgres;Port=5432;Database=pspad;Username=pspad;Password=pspad
+POSTGRES_PASSWORD=pspad
 KEYCLOAK_AUTHORITY=http://keycloak:8080/realms/pspad
 KEYCLOAK_AUDIENCE=pspad-api
 ```
@@ -564,7 +565,7 @@ git commit -m "test: add testcontainers postgres fixture and category split"
 **Files:**
 - Create: `docker/Dockerfile`
 - Create: `docker/compose.prod.yaml`
-- Create: `docker/.dockerignore`
+- Create: `.dockerignore` (repository root — the build context is the root, so a copy under `docker/` is never consulted)
 - Modify: `README.md`
 
 **Interfaces:**
@@ -592,7 +593,7 @@ ENTRYPOINT ["dotnet", "PSPad.Server.dll"]
 
 - [ ] **Step 2: Write the ignore file**
 
-`docker/.dockerignore`:
+`.dockerignore`, at the repository root:
 
 ```gitignore
 **/bin/
