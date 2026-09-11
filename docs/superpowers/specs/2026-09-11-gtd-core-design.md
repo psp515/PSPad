@@ -294,27 +294,61 @@ Not a timestamp — clocks on client devices are not trusted.
 
 ## 11. Runtime and environment
 
-Everything runs in Docker, including the SDK (user decision):
+Everything runs in Docker, including the SDK:
 
-- `.devcontainer/` — a dev container built on `mcr.microsoft.com/dotnet/sdk:10.0`,
-  where builds, tests, and `dotnet watch` all run.
-- `docker/compose.yaml` — `postgres`, `postgres-test`, `keycloak`, and the app.
-- `docker/compose.prod.yaml` — production images for app + postgres + keycloak.
-- No host machine dependency beyond Docker itself.
-
-Server tests run against the real `postgres-test` service, not an in-memory
-fake — Marten's behavior *is* the thing under test.
+- `.devcontainer/` — dev container on `mcr.microsoft.com/dotnet/sdk:10.0`. Builds,
+  tests and `dotnet watch` run there. Mounts the host Docker socket so
+  Testcontainers can start containers from inside it.
+- `docker/compose.yaml` — `postgres`, `keycloak`, app. For running the app, not
+  for tests.
+- `docker/compose.prod.yaml` — production images.
+- No host dependency beyond Docker itself.
 
 ---
 
 ## 12. Testing strategy
 
-| Layer | How |
-|-------|-----|
-| Domain | xUnit, pure functions, no I/O. Every invariant in §3.3 gets a test. The Today rule (§5) and recurrence (§6) get exhaustive cases including the "recurring never overdue" case. |
-| Handlers + projections | xUnit against `postgres-test`. Command in, events and projection rows out. |
-| Sync | Round-trip test: issue commands offline, drain the outbox, assert server state and the returned delta. |
-| Client | bUnit for components whose logic is non-trivial (Today row rendering, next-step display). No broad UI test suite. |
+### Categories
+
+Every test class carries exactly one category attribute, from
+`PSPad.TestInfrastructure`:
+
+- `[UnitTest]` — pure, in-process. No Docker, no network, no filesystem.
+- `[IntegrationTest]` — real Postgres, real Marten, real HTTP host.
+
+Both emit an xUnit trait `Category`, so the suites split:
+
+```bash
+dotnet test --filter Category=Unit
+dotnet test --filter Category=Integration
+```
+
+An unmarked test class is a defect. The unit suite must stay seconds long; if it
+needs Docker, it is mislabeled.
+
+### Layers
+
+| Layer | Category | How |
+|-------|----------|-----|
+| Domain | Unit | Pure functions, no I/O. Every invariant in §3.3 gets a test. Today (§5) and recurrence (§6) get exhaustive cases, including "recurring never overdue". |
+| Client state | Unit | Command folding, Today and list projections over the replica. |
+| Client components | Unit | bUnit, only where logic is non-trivial. No broad UI suite. |
+| Handlers + projections | Integration | Command in, events and projection rows out, against real Marten. |
+| API + auth | Integration | `WebApplicationFactory` over the real host. |
+| Sync | Integration | Round trip: queue commands offline, drain, assert server state and returned delta. |
+
+### Integration database
+
+**Testcontainers**, not a compose service and not an in-memory fake — Marten's
+behavior *is* the thing under test, and a disposable container keeps runs
+independent of whatever a developer left running.
+
+One `postgres:17-alpine` container per test run, shared through an xUnit
+collection fixture. Not one per test: startup costs seconds.
+
+Tests isolate by data, not by schema — each test uses a fresh `UserId`, so rows
+never collide. No truncation between tests; it would serialize the suite for
+nothing.
 
 ---
 

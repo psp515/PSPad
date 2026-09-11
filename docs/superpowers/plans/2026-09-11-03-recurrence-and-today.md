@@ -16,6 +16,9 @@
 - `PSPad.Domain` references no infrastructure packages and must compile for WebAssembly.
 - All user-facing dates are `DateOnly` in the user's time zone; all stored instants are UTC `DateTimeOffset`.
 - Decide functions never read the clock — "today" is always a parameter.
+- Integration tests get their Postgres from Testcontainers via `PostgresFixture` in `PSPad.TestInfrastructure` (AD-9). No compose service is shared with tests.
+- Every test class carries `[UnitTest]` or `[IntegrationTest]`; integration classes also join `[Collection(PostgresCollection.Name)]`. Unmarked is a defect.
+- No comments in code. Names carry the meaning. The doc comments in this plan's snippets explain things to *you*; port only a comment that states a non-obvious *why*.
 - Code, comments, commits and docs in English.
 - GPL v3 — every dependency must be license-compatible.
 
@@ -40,10 +43,12 @@
 ```csharp
 using PSPad.Domain.Common;
 using PSPad.Domain.Tasks;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Domain.Tests.Tasks;
 
+[UnitTest]
 public class RecurrenceRuleTests
 {
     static readonly DateOnly Friday = new(2026, 9, 11);
@@ -232,10 +237,12 @@ git commit -m "feat(domain): add recurrence rule as a pure day predicate"
 ```csharp
 using PSPad.Domain.Common;
 using PSPad.Domain.Tasks;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Domain.Tests.Tasks;
 
+[UnitTest]
 public class TaskRecurrenceTests
 {
     static readonly UserId User = UserId.New();
@@ -439,10 +446,12 @@ plus today, which is what keeps the write model small and makes the
 ```csharp
 using PSPad.Domain.Common;
 using PSPad.Domain.Tasks;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Domain.Tests.Tasks;
 
+[UnitTest]
 public class OccurrenceTests
 {
     static readonly UserId User = UserId.New();
@@ -731,10 +740,12 @@ rehydrated aggregates. The client evaluates the same rule over the same shape.
 using PSPad.Domain.Common;
 using PSPad.Domain.Tasks;
 using PSPad.Domain.Today;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Domain.Tests.Today;
 
+[UnitTest]
 public class TodayRuleTests
 {
     static readonly DateOnly Today = new(2026, 9, 11);
@@ -994,10 +1005,12 @@ reach into the event stream.
 ```csharp
 using PSPad.Domain.Common;
 using PSPad.Domain.Tasks;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Domain.Tests.Tasks;
 
+[UnitTest]
 public class OccurrenceHistoryTests
 {
     static readonly UserId User = UserId.New();

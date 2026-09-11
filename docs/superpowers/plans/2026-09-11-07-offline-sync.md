@@ -17,6 +17,9 @@
 - The client never invents a rule the server does not have — offline decisions use the same `Decide` functions.
 - Commands drain **in issue order**; a rejected command does not block the ones behind it, but is surfaced, never dropped.
 - The version marker is the server's event sequence, never a client clock.
+- Integration tests get their Postgres from Testcontainers via `PostgresFixture` in `PSPad.TestInfrastructure` (AD-9). No compose service is shared with tests.
+- Every test class carries `[UnitTest]` or `[IntegrationTest]`; integration classes also join `[Collection(PostgresCollection.Name)]`. Unmarked is a defect.
+- No comments in code. Names carry the meaning. The doc comments in this plan's snippets explain things to *you*; port only a comment that states a non-obvious *why*.
 - Code, comments, commits and docs in English.
 - GPL v3 — every dependency must be license-compatible.
 
@@ -49,10 +52,12 @@ its own, which is what makes that substitution honest rather than a dodge.
 
 ```csharp
 using PSPad.Client.Storage;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Client.Tests.Storage;
 
+[UnitTest]
 public class InMemoryStorageTests
 {
     record Thing(string Name, int Count);
@@ -355,10 +360,12 @@ using PSPad.Client.Storage;
 using PSPad.Client.Sync;
 using PSPad.Domain.Areas;
 using PSPad.Domain.Common;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Client.Tests.Sync;
 
+[UnitTest]
 public class OutboxTests
 {
     static readonly UserId User = UserId.New();
@@ -552,10 +559,12 @@ using PSPad.Client.Sync;
 using PSPad.Domain.Areas;
 using PSPad.Domain.Common;
 using PSPad.Domain.Lists;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Client.Tests.Sync;
 
+[UnitTest]
 public class OfflineDispatcherTests
 {
     static readonly UserId User = UserId.New();
@@ -905,10 +914,12 @@ using PSPad.Domain.Common;
 using PSPad.Domain.Goals;
 using PSPad.Domain.Lists;
 using PSPad.Domain.Tasks;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Client.Tests.Sync;
 
+[UnitTest]
 public class SyncServiceTests
 {
     static readonly UserId User = UserId.New();
@@ -1208,10 +1219,12 @@ using PSPad.Client.Storage;
 using PSPad.Client.Sync;
 using PSPad.Domain.Areas;
 using PSPad.Domain.Common;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Client.Tests.Components;
 
+[UnitTest]
 public class SyncStatusTests : TestContext
 {
     sealed class FakeConnectivity(bool online) : IConnectivity
@@ -1458,11 +1471,13 @@ using PSPad.Domain.Common;
 using PSPad.Domain.Inbox;
 using PSPad.Domain.Lists;
 using PSPad.Domain.Tasks;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Server.Tests.Sync;
 
-[Collection("database")]
+[IntegrationTest]
+[Collection(PostgresCollection.Name)]
 public class OfflineRoundTripTests(PostgresFixture fixture)
 {
     static CommandEnvelope Envelope<T>(T command) where T : ICommand =>

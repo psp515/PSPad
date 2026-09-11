@@ -9,7 +9,7 @@ creates.
 
 | # | Plan | Delivers | Depends on |
 |---|------|----------|------------|
-| 01 | [Dev environment](2026-09-11-01-dev-environment.md) | Compose stack (Postgres, test Postgres, Keycloak), dev container with the SDK, solution skeleton, domain purity guard, production image | — |
+| 01 | [Dev environment](2026-09-11-01-dev-environment.md) | Compose stack (Postgres, Keycloak), dev container with the SDK and Docker socket, solution skeleton, category attributes, Testcontainers fixture, purity guard, production image | — |
 | 02 | [Domain core](2026-09-11-02-domain-core.md) | Areas, lists, goals, tasks, steps, Inbox as pure decide/apply functions; shared sort key | 01 |
 | 03 | [Recurrence & Today](2026-09-11-03-recurrence-and-today.md) | Recurrence rule, occurrences with derived skipped days, the Today rule, occurrence history | 02 |
 | 04 | [Server & CQRS](2026-09-11-04-server-cqrs.md) | Marten event store, command routing and idempotent processing, all projections, Today query, action history, HTTP endpoints | 01, 02, 03 |
@@ -26,6 +26,20 @@ Run them in numbered order. Two exceptions worth knowing:
   to understand the system before touching infrastructure.
 - **05 modifies code that 04 wrote** (it deletes the `X-User-Id` seam). Do not
   ship 04 to anything reachable from a network without 05 behind it.
+
+## Test conventions
+
+Every test class carries `[UnitTest]` or `[IntegrationTest]` from
+`PSPad.TestInfrastructure`. Integration classes also join
+`[Collection(PostgresCollection.Name)]` and get a real Postgres from
+Testcontainers — one container per run, never a compose service.
+
+```bash
+dotnet test --filter Category=Unit
+dotnet test --filter Category=Integration
+```
+
+Unit suite starts no containers. If it does, something is mislabeled.
 
 ## The two rules that keep being load-bearing
 

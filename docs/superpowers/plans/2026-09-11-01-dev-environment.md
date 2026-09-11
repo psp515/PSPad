@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A fully containerized development environment where `dotnet test` runs green against a real PostgreSQL, plus the empty solution structure every later plan builds into.
+**Goal:** A fully containerized development environment where `dotnet test` runs green against a real PostgreSQL started by Testcontainers, with unit and integration suites separable, plus the empty solution structure every later plan builds into.
 
-**Architecture:** Everything runs in Docker, including the .NET SDK. A dev container built on the SDK image is where builds, tests and `dotnet watch` execute. Docker Compose supplies PostgreSQL (dev), a second PostgreSQL (tests), and Keycloak. The solution is a modular monolith: a pure domain, a shared contracts project, a server, a WASM client, and two test projects.
+**Architecture:** Everything runs in Docker, including the .NET SDK. A dev container built on the SDK image is where builds, tests and `dotnet watch` execute, with the host Docker socket mounted so Testcontainers works from inside it. Compose supplies PostgreSQL and Keycloak for *running the app*; integration tests start their own disposable Postgres. The solution is a modular monolith: a pure domain, a shared contracts project, a server, a WASM client, and test projects sharing one test-infrastructure library.
 
-**Tech Stack:** .NET 10, Docker Compose, PostgreSQL 17, Keycloak 26, xUnit, Shouldly
+**Tech Stack:** .NET 10, Docker Compose, PostgreSQL 17, Keycloak 26, Testcontainers, xUnit, Shouldly
 
 **Spec:** `docs/superpowers/specs/2026-09-11-gtd-core-design.md`
 
@@ -17,6 +17,9 @@
 - PostgreSQL 17. Marten 8.x. Wolverine 4.x. MudBlazor 8.x. xUnit + Shouldly.
 - All user-facing dates are `DateOnly` in the user's time zone; all stored instants are UTC `DateTimeOffset`.
 - No audit table — history comes from the event stream.
+- Integration tests start their own Postgres through Testcontainers (AD-9). No compose service is shared with tests.
+- Every test class carries `[UnitTest]` or `[IntegrationTest]`. Unmarked is a defect.
+- No comments in code. Names carry the meaning. The prose and doc comments in this plan's snippets explain things to *you*; port only a comment that states a non-obvious *why*, and drop the rest.
 - Code, comments, commits and docs in English.
 - GPL v3 — every dependency must be license-compatible.
 
@@ -31,7 +34,7 @@
 
 **Interfaces:**
 - Consumes: nothing
-- Produces: services `postgres` (port 5432), `postgres-test` (port 5433), `keycloak` (port 8080) on network `pspad`; connection strings `Host=postgres;Port=5432;Database=pspad;Username=pspad;Password=pspad` and `Host=postgres-test;Port=5432;Database=pspad_test;Username=pspad;Password=pspad`
+- Produces: services `postgres` (port 5432) and `keycloak` (port 8080) on network `pspad`; connection string `Host=postgres;Port=5432;Database=pspad;Username=pspad;Password=pspad`
 
 - [ ] **Step 1: Write the compose file**
 
@@ -58,23 +61,6 @@ services:
       retries: 10
     networks: [pspad]
 
-  postgres-test:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_DB: pspad_test
-      POSTGRES_USER: pspad
-      POSTGRES_PASSWORD: pspad
-    ports:
-      - "5433:5432"
-    tmpfs:
-      - /var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pspad -d pspad_test"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    networks: [pspad]
-
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     command: ["start-dev", "--import-realm"]
@@ -95,8 +81,8 @@ networks:
   pspad:
 ```
 
-The test database uses `tmpfs`, so every restart gives a clean disk and tests
-stay fast.
+This stack is what you run the app against. Tests never touch it — they get
+their own container (Task 4).
 
 - [ ] **Step 2: Write the example environment file**
 
@@ -104,7 +90,6 @@ stay fast.
 
 ```dotenv
 POSTGRES_CONNECTION=Host=postgres;Port=5432;Database=pspad;Username=pspad;Password=pspad
-POSTGRES_TEST_CONNECTION=Host=postgres-test;Port=5432;Database=pspad_test;Username=pspad;Password=pspad
 KEYCLOAK_AUTHORITY=http://keycloak:8080/realms/pspad
 KEYCLOAK_AUDIENCE=pspad-api
 ```
@@ -137,13 +122,13 @@ KEYCLOAK_AUDIENCE=pspad-api
 
 Run: `docker compose -f docker/compose.yaml up -d`
 Then: `docker compose -f docker/compose.yaml ps`
-Expected: `postgres` and `postgres-test` report `healthy`, `keycloak` reports `running`.
+Expected: `postgres` reports `healthy`, `keycloak` reports `running`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add docker/
-git commit -m "chore: add docker compose infrastructure for dev and tests"
+git commit -m "chore: add docker compose infrastructure for running the app"
 ```
 
 ---
@@ -156,7 +141,7 @@ git commit -m "chore: add docker compose infrastructure for dev and tests"
 
 **Interfaces:**
 - Consumes: the `pspad` network and services from Task 1
-- Produces: a dev container where `dotnet` is on PATH and `postgres`, `postgres-test`, `keycloak` resolve by hostname
+- Produces: a dev container where `dotnet` is on PATH, `postgres` and `keycloak` resolve by hostname, and `docker ps` works against the host daemon so Testcontainers can start containers
 
 - [ ] **Step 1: Write the dev container Dockerfile**
 
@@ -169,6 +154,8 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends git curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
+RUN install -m 0755 -d /etc/apt/keyrings  && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list  && apt-get update  && apt-get install -y --no-install-recommends docker-ce-cli  && rm -rf /var/lib/apt/lists/*
+
 RUN dotnet workload install wasm-tools
 
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
@@ -178,8 +165,9 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
 WORKDIR /workspace
 ```
 
-`wasm-tools` is required for the Blazor WebAssembly client in plan 06 — install
-it now so the image is built once.
+`wasm-tools` is for the Blazor WebAssembly client in plan 06. The Docker CLI is
+for Testcontainers: it talks to the *host* daemon through the mounted socket, so
+test containers are siblings of the dev container, not children of it.
 
 - [ ] **Step 2: Write the dev container definition**
 
@@ -189,11 +177,11 @@ it now so the image is built once.
 {
   "name": "PSPad",
   "build": { "dockerfile": "Dockerfile" },
-  "runServices": ["postgres", "postgres-test", "keycloak"],
+  "runServices": ["postgres", "keycloak"],
   "dockerComposeFile": ["../docker/compose.yaml", "compose.devcontainer.yaml"],
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
-  "forwardPorts": [5000, 5432, 5433, 8080],
+  "forwardPorts": [5000, 5432, 8080],
   "customizations": {
     "vscode": {
       "extensions": ["ms-dotnettools.csdevkit"]
@@ -214,22 +202,30 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ..:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker.sock
     command: sleep infinity
     networks: [pspad]
+    environment:
+      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
-      postgres-test:
-        condition: service_healthy
 ```
+
+`TESTCONTAINERS_HOST_OVERRIDE` matters: a container started on the host daemon
+publishes its port on the *host*, not on this container's localhost. Without the
+override, connection attempts go nowhere and every integration test times out.
 
 - [ ] **Step 4: Verify connectivity from inside the container**
 
 Run inside the dev container: `dotnet --version`
 Expected: a `10.x` version string.
 
-Run: `getent hosts postgres-test`
-Expected: an IP address, proving the test database is reachable by hostname.
+Run: `docker ps`
+Expected: a container list, proving the mounted socket works. If this fails,
+Testcontainers cannot run and Task 4 has nothing to stand on.
 
 - [ ] **Step 5: Commit**
 
@@ -250,10 +246,12 @@ git commit -m "chore: add dev container running the dotnet sdk in docker"
 - Create: `src/PSPad.Server/PSPad.Server.csproj`
 - Create: `test/PSPad.Domain.Tests/PSPad.Domain.Tests.csproj`
 - Create: `test/PSPad.Server.Tests/PSPad.Server.Tests.csproj`
+- Create: `test/PSPad.TestInfrastructure/PSPad.TestInfrastructure.csproj`
+- Create: `test/PSPad.TestInfrastructure/Categories.cs`
 
 **Interfaces:**
 - Consumes: the dev container from Task 2
-- Produces: assemblies `PSPad.Domain`, `PSPad.Contracts`, `PSPad.Server`; reference graph `Contracts -> Domain`, `Server -> Contracts`, both test projects -> their subject
+- Produces: assemblies `PSPad.Domain`, `PSPad.Contracts`, `PSPad.Server`, `PSPad.TestInfrastructure`; reference graph `Contracts -> Domain`, `Server -> Contracts`, every test project -> its subject and -> `PSPad.TestInfrastructure`; attributes `[UnitTest]` and `[IntegrationTest]` emitting the xUnit trait `Category`
 
 `PSPad.Client` is deliberately absent — plan 06 creates it, because the WASM
 template pulls a large dependency set that has no business existing before
@@ -268,6 +266,7 @@ dotnet new classlib -o src/PSPad.Contracts -f net10.0
 dotnet new web -o src/PSPad.Server -f net10.0
 dotnet new xunit -o test/PSPad.Domain.Tests -f net10.0
 dotnet new xunit -o test/PSPad.Server.Tests -f net10.0
+dotnet new classlib -o test/PSPad.TestInfrastructure -f net10.0
 dotnet sln add src/**/*.csproj test/**/*.csproj
 ```
 
@@ -278,6 +277,10 @@ dotnet add src/PSPad.Contracts reference src/PSPad.Domain
 dotnet add src/PSPad.Server reference src/PSPad.Contracts
 dotnet add test/PSPad.Domain.Tests reference src/PSPad.Domain
 dotnet add test/PSPad.Server.Tests reference src/PSPad.Server
+dotnet add test/PSPad.Domain.Tests reference test/PSPad.TestInfrastructure
+dotnet add test/PSPad.Server.Tests reference test/PSPad.TestInfrastructure
+dotnet add test/PSPad.TestInfrastructure package xunit.abstractions
+dotnet add test/PSPad.TestInfrastructure package xunit.extensibility.core
 dotnet add test/PSPad.Domain.Tests package Shouldly
 dotnet add test/PSPad.Server.Tests package Shouldly
 ```
@@ -298,16 +301,59 @@ dotnet add test/PSPad.Server.Tests package Shouldly
 </Project>
 ```
 
-- [ ] **Step 4: Write a guard test that the domain stays infrastructure-free**
+- [ ] **Step 4: Write the test category attributes**
+
+`test/PSPad.TestInfrastructure/Categories.cs`:
+
+```csharp
+using Xunit.Sdk;
+
+namespace PSPad.TestInfrastructure;
+
+public static class Categories
+{
+    public const string Key = "Category";
+    public const string Unit = "Unit";
+    public const string Integration = "Integration";
+}
+
+[TraitDiscoverer("PSPad.TestInfrastructure.CategoryDiscoverer", "PSPad.TestInfrastructure")]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+public sealed class UnitTestAttribute : Attribute, ITraitAttribute;
+
+[TraitDiscoverer("PSPad.TestInfrastructure.CategoryDiscoverer", "PSPad.TestInfrastructure")]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+public sealed class IntegrationTestAttribute : Attribute, ITraitAttribute;
+
+public sealed class CategoryDiscoverer : ITraitDiscoverer
+{
+    public IEnumerable<KeyValuePair<string, string>> GetTraits(IAttributeInfo traitAttribute)
+    {
+        var category = traitAttribute.AttributeType.Name.StartsWith("Integration", StringComparison.Ordinal)
+            ? Categories.Integration
+            : Categories.Unit;
+
+        yield return new KeyValuePair<string, string>(Categories.Key, category);
+    }
+}
+```
+
+If the installed xUnit major version has dropped `ITraitDiscoverer`, fall back to
+plain subclasses of `TraitAttribute`, or to
+`[Trait(Categories.Key, Categories.Unit)]` written out on each class. What
+matters is that `dotnet test --filter Category=Unit` splits the suites.
+
+- [ ] **Step 5: Write a guard test that the domain stays infrastructure-free**
 
 `test/PSPad.Domain.Tests/PurityTests.cs`:
 
 ```csharp
-using System.Reflection;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Domain.Tests;
 
+[UnitTest]
 public class PurityTests
 {
     static readonly string[] ForbiddenPrefixes =
@@ -333,28 +379,33 @@ public class PurityTests
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it fails**
+- [ ] **Step 6: Run the test to verify it fails**
 
 Run: `dotnet test test/PSPad.Domain.Tests`
 Expected: FAIL — `DomainMarker` does not exist.
 
-- [ ] **Step 6: Add the marker type**
+- [ ] **Step 7: Add the marker type**
 
 `src/PSPad.Domain/DomainMarker.cs`:
 
 ```csharp
 namespace PSPad.Domain;
 
-/// <summary>Anchor type for assembly-level reflection. Holds no behavior.</summary>
 public sealed class DomainMarker;
 ```
 
-- [ ] **Step 7: Run the test to verify it passes**
+`DomainMarker` is an anchor for assembly-level reflection and holds no behavior.
+
+- [ ] **Step 8: Run the test to verify it passes and is categorized**
 
 Run: `dotnet test test/PSPad.Domain.Tests`
 Expected: PASS, 1 test.
 
-- [ ] **Step 8: Commit**
+Run: `dotnet test test/PSPad.Domain.Tests --filter Category=Unit`
+Expected: PASS, 1 test — proving the trait is discovered. If this reports 0
+tests, the attribute is not wired and every later plan inherits the problem.
+
+- [ ] **Step 9: Commit**
 
 ```bash
 git add PSPad.sln Directory.Build.props src/ test/
@@ -363,94 +414,137 @@ git commit -m "chore: scaffold solution with domain purity guard"
 
 ---
 
-### Task 4: Test database fixture
+### Task 4: Testcontainers Postgres fixture
 
 **Files:**
-- Create: `test/PSPad.Server.Tests/PostgresFixture.cs`
-- Create: `test/PSPad.Server.Tests/DatabaseCollection.cs`
-- Modify: `test/PSPad.Server.Tests/PSPad.Server.Tests.csproj`
+- Create: `test/PSPad.TestInfrastructure/PostgresFixture.cs`
+- Create: `test/PSPad.TestInfrastructure/PostgresCollection.cs`
+- Modify: `test/PSPad.TestInfrastructure/PSPad.TestInfrastructure.csproj`
+- Test: `test/PSPad.Server.Tests/PostgresFixtureTests.cs`
 
 **Interfaces:**
-- Consumes: the `postgres-test` service from Task 1
-- Produces: `PostgresFixture` exposing `string ConnectionString`, and an xUnit collection named `"database"` that every later server test joins with `[Collection("database")]`
+- Consumes: the Docker socket mounted in Task 2, the attributes from Task 3
+- Produces: `PostgresFixture` (`IAsyncLifetime`) exposing `string ConnectionString`; `PostgresCollection` with `public const string Name = "postgres"`, joined by every integration test as `[Collection(PostgresCollection.Name)]`
 
-- [ ] **Step 1: Write a failing test that the fixture can reach the database**
+One container per test run, shared through the collection fixture. Not one per
+test — Postgres startup costs seconds, and per-test containers make the suite
+unusable. Tests isolate by data instead: each uses a fresh `UserId`.
+
+- [ ] **Step 1: Write the failing test**
 
 `test/PSPad.Server.Tests/PostgresFixtureTests.cs`:
 
 ```csharp
 using Npgsql;
+using PSPad.TestInfrastructure;
 using Shouldly;
 
 namespace PSPad.Server.Tests;
 
-[Collection("database")]
+[IntegrationTest]
+[Collection(PostgresCollection.Name)]
 public class PostgresFixtureTests(PostgresFixture fixture)
 {
     [Fact]
-    public async Task Test_database_is_reachable()
+    public async Task Container_database_is_reachable()
     {
         await using var connection = new NpgsqlConnection(fixture.ConnectionString);
         await connection.OpenAsync();
 
         await using var command = new NpgsqlCommand("select 1", connection);
-        var result = await command.ExecuteScalarAsync();
 
-        result.ShouldBe(1);
+        (await command.ExecuteScalarAsync()).ShouldBe(1);
+    }
+
+    [Fact]
+    public void Connection_string_does_not_point_at_the_dev_database()
+    {
+        fixture.ConnectionString.ShouldNotContain("Host=postgres;");
     }
 }
 ```
 
+The second test is not ceremony: pointing the suite at the dev database is the
+exact mistake this task exists to prevent, and it fails silently otherwise.
+
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `dotnet test test/PSPad.Server.Tests`
-Expected: FAIL — `PostgresFixture` and `Npgsql` do not exist.
+Expected: FAIL — `PostgresFixture` and `PostgresCollection` do not exist.
 
-- [ ] **Step 3: Add the Npgsql package and write the fixture**
+- [ ] **Step 3: Add the packages**
 
 ```bash
+dotnet add test/PSPad.TestInfrastructure package Testcontainers.PostgreSql
+dotnet add test/PSPad.TestInfrastructure package xunit.core
 dotnet add test/PSPad.Server.Tests package Npgsql
 ```
 
-`test/PSPad.Server.Tests/PostgresFixture.cs`:
+- [ ] **Step 4: Write the fixture**
+
+`test/PSPad.TestInfrastructure/PostgresFixture.cs`:
 
 ```csharp
-namespace PSPad.Server.Tests;
+using Testcontainers.PostgreSql;
+using Xunit;
 
-/// <summary>
-/// Points tests at the compose service `postgres-test`. The connection string
-/// can be overridden with POSTGRES_TEST_CONNECTION so the same suite runs in CI.
-/// </summary>
-public sealed class PostgresFixture
+namespace PSPad.TestInfrastructure;
+
+public sealed class PostgresFixture : IAsyncLifetime
 {
-    public string ConnectionString { get; } =
-        Environment.GetEnvironmentVariable("POSTGRES_TEST_CONNECTION")
-        ?? "Host=postgres-test;Port=5432;Database=pspad_test;Username=pspad;Password=pspad";
+    readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
+        .WithImage("postgres:17-alpine")
+        .WithDatabase("pspad_test")
+        .WithUsername("pspad")
+        .WithPassword("pspad")
+        .Build();
+
+    public string ConnectionString => _container.GetConnectionString();
+
+    public Task InitializeAsync() => _container.StartAsync();
+
+    public Task DisposeAsync() => _container.DisposeAsync().AsTask();
 }
 ```
 
-`test/PSPad.Server.Tests/DatabaseCollection.cs`:
+`test/PSPad.TestInfrastructure/PostgresCollection.cs`:
 
 ```csharp
-namespace PSPad.Server.Tests;
+using Xunit;
 
-[CollectionDefinition("database")]
-public sealed class DatabaseCollection : ICollectionFixture<PostgresFixture>;
+namespace PSPad.TestInfrastructure;
+
+[CollectionDefinition(Name)]
+public sealed class PostgresCollection : ICollectionFixture<PostgresFixture>
+{
+    public const string Name = "postgres";
+}
 ```
 
-The collection serializes database tests, so two suites never fight over the
-same schema.
+If the installed xUnit version renames `IAsyncLifetime`'s members
+(`InitializeAsync`/`DisposeAsync` became `ValueTask` in v3), match the installed
+signature. The shape — one container started once, disposed at the end — does
+not change.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `dotnet test test/PSPad.Server.Tests`
-Expected: PASS, 1 test.
+Expected: PASS, 2 tests. The first run pulls `postgres:17-alpine` and takes
+longer; later runs start in a few seconds.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Verify the suites split**
+
+Run: `dotnet test --filter Category=Unit`
+Expected: PASS, and no Docker container is started.
+
+Run: `dotnet test --filter Category=Integration`
+Expected: PASS, 2 tests.
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add test/PSPad.Server.Tests/
-git commit -m "test: add postgres fixture backed by the compose test database"
+git add test/
+git commit -m "test: add testcontainers postgres fixture and category split"
 ```
 
 ---
@@ -585,7 +679,8 @@ git commit -m "chore: add production image, prod compose and developer docs"
 
 ## Done when
 
-- `docker compose -f docker/compose.yaml up -d` brings up healthy `postgres`, `postgres-test` and `keycloak`.
-- The dev container builds and `dotnet --version` reports 10.x inside it.
-- `dotnet test` runs both test projects green, including the domain purity guard and the live database check.
+- `docker compose -f docker/compose.yaml up -d` brings up a healthy `postgres` and a running `keycloak`.
+- The dev container builds, `dotnet --version` reports 10.x inside it, and `docker ps` works from inside it.
+- `dotnet test` is green: domain purity guard plus the Testcontainers database check.
+- `dotnet test --filter Category=Unit` runs without starting a container; `--filter Category=Integration` starts one.
 - `docker compose -f docker/compose.prod.yaml build` produces a runnable server image.

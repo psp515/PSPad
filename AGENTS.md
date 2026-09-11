@@ -233,10 +233,6 @@ Slice 1 specified and planned. Nothing implemented.
 Start plan 01, then numbered order. 02 and 03 are pure domain, parallelizable.
 Each plan ends green — a plan is done or not, no half state.
 
-**Plans 01 and 04 still describe a `postgres-test` compose service and a
-connection-string fixture.** AD-9 supersedes that. When executing them, use
-Testcontainers per §7 instead, and drop `postgres-test` from compose.
-
 ---
 
 ## 9. Future order
