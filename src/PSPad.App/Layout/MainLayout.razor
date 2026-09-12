@@ -3,13 +3,15 @@
 @using PSPad.App.Api
 @using PSPad.App.State
 @using PSPad.App.Sync
+@using PSPad.App.Theme
 @using PSPad.Module.Tasks.Today
 @inject SyncCoordinator Coordinator
 @inject AppState State
 @inject PSPadApiClient Api
+@inject ThemePreference Preference
 @implements IDisposable
 
-<MudThemeProvider />
+<MudThemeProvider @ref="_themeProvider" Theme="@PSPadTheme.Instance" IsDarkMode="@Preference.IsDark" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -53,12 +55,15 @@
 @code {
     [CascadingParameter] Task<AuthenticationState>? AuthStateTask { get; set; }
 
+    MudThemeProvider? _themeProvider;
+    bool _themeReady;
     bool _open = true;
     bool _ready;
 
     protected override async Task OnInitializedAsync()
     {
         Coordinator.Changed += OnCoordinatorChanged;
+        Preference.Changed += OnThemeChanged;
 
         var authState = AuthStateTask is null ? null : await AuthStateTask;
         if (authState?.User.Identity?.IsAuthenticated == true)
@@ -73,9 +78,35 @@
         Coordinator.Start();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _themeProvider is null || _themeReady)
+        {
+            return;
+        }
+
+        _themeReady = true;
+        var systemPrefersDark = await _themeProvider.GetSystemDarkModeAsync();
+        await Preference.InitialiseAsync(systemPrefersDark);
+        await _themeProvider.WatchSystemDarkModeAsync(OnSystemDarkModeChanged);
+        StateHasChanged();
+    }
+
+    async Task OnSystemDarkModeChanged(bool prefersDark)
+    {
+        await Preference.InitialiseAsync(prefersDark);
+        StateHasChanged();
+    }
+
     void OnCoordinatorChanged() => InvokeAsync(StateHasChanged);
+
+    void OnThemeChanged() => InvokeAsync(StateHasChanged);
 
     void ToggleDrawer() => _open = !_open;
 
-    public void Dispose() => Coordinator.Changed -= OnCoordinatorChanged;
+    public void Dispose()
+    {
+        Coordinator.Changed -= OnCoordinatorChanged;
+        Preference.Changed -= OnThemeChanged;
+    }
 }
