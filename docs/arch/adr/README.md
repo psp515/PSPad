@@ -1,0 +1,34 @@
+# Architecture Decision Records
+
+Format: [template.md](template.md). Every ADR carries a title, tags, a
+decision date, a status (`Proposed` / `Active` / `Superseded by ADR-XXXX`),
+the context that forced the decision, the decision itself, the alternatives
+that were genuinely weighed, and the consequences — including the downsides.
+
+New decision → copy `template.md` to `NNNN-kebab-case-title.md`, next
+sequential number, status `Proposed` until acted on, then `Active`. Changing
+your mind about a past decision never edits that file's Decision or
+Consequences after the fact — write a new ADR that supersedes it, and update
+the old one's status line to point at the new number.
+
+## Index
+
+| # | Title | Status | Date | Tags |
+|---|-------|--------|------|------|
+| [0001](0001-vertical-slice-folders-in-one-project.md) | Organize the backend as vertical-slice folders in one project | Superseded by [0010](0010-modular-monolith-three-modules.md) | 2026-09-11 | architecture, modularity |
+| [0002](0002-cqrs-event-sourced-write-side.md) | Use CQRS with an event-sourced write side on Marten/PostgreSQL | Superseded by [0011](0011-aggregate-documents-are-truth.md) | 2026-09-11 | architecture, persistence, event-sourcing |
+| [0003](0003-commands-are-the-shared-contract.md) | Commands are the shared client/server contract | Active | 2026-09-11 | architecture, offline, contracts |
+| [0004](0004-tasks-module-compiles-to-wasm.md) | The Tasks module must compile to WebAssembly with zero infrastructure references | Active | 2026-09-11 | architecture, offline, purity |
+| [0005](0005-offline-conflicts-last-write-wins.md) | Resolve offline conflicts last-write-wins per aggregate | Active | 2026-09-11 | architecture, offline, sync |
+| [0006](0006-sync-is-delta-by-version.md) | Sync pulls deltas by a monotonic version marker, never a clock | Active | 2026-09-11 | architecture, offline, sync |
+| [0007](0007-recurrence-as-template-and-occurrences.md) | Model recurrence as a template plus derived occurrences, never a rolling date | Active | 2026-09-11 | architecture, domain, recurrence |
+| [0008](0008-aggregate-boundaries.md) | Aggregate boundaries — Area, TaskList, TodoTask, Goal, Inbox, User | Active | 2026-09-11 | architecture, domain, aggregates |
+| [0009](0009-integration-tests-own-their-database.md) | Integration tests own a real, disposable MongoDB via Testcontainers | Active | 2026-09-12 | testing, persistence |
+| [0010](0010-modular-monolith-three-modules.md) | Split the modular monolith into three separate module projects | Active (supersedes [0001](0001-vertical-slice-folders-in-one-project.md)) | 2026-09-12 | architecture, modularity |
+| [0011](0011-aggregate-documents-are-truth.md) | Aggregate documents are truth; events are the log beside them | Active (supersedes [0002](0002-cqrs-event-sourced-write-side.md)) | 2026-09-12 | architecture, persistence, event-sourcing |
+| [0012](0012-extract-ordering-into-its-own-module.md) | Extract element ordering into its own module, out of the Tasks domain | Proposed | 2026-09-12 | architecture, domain, ui, future-work |
+
+Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
+specs (`docs/superpowers/specs/`) that established and then revised them.
+AGENTS.md stays the terse day-to-day reference (AD-1 … AD-9); this index is
+where the reasoning and rejected alternatives behind each one live.

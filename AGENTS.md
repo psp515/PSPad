@@ -316,6 +316,28 @@ claim green without running the suite.
 
 **Every test gets a category trait** (§7). Unmarked test is a broken test.
 
+**One type per file, grouped by operation.** Filename matches the
+class/record/enum it contains (standard C# convention). Inside each
+aggregate's folder, one command's command/event/handler live together in a
+verb-named subfolder — `Goals/Achieve/AchieveGoal.cs`,
+`Goals/Achieve/GoalAchieved.cs`, `Goals/Achieve/AchieveGoalHandler.cs` — so
+a whole operation is one folder, not three files scattered across
+`XCommands.cs`/`XEvents.cs`/`XHandlers.cs`. Elements the whole aggregate
+shares (the aggregate class itself, e.g. `Goals/Goal.cs`) stay directly in
+the aggregate's folder, not inside any verb subfolder. A sub-aggregate
+(steps inside a task) nests one level deeper: `Tasks/Steps/Add/AddStep.cs`.
+The namespace stays the aggregate's namespace regardless of nesting depth
+(`PSPad.Module.Tasks.Goals`, not `...Goals.Achieve`) — folders are for
+navigation, not for the type system.
+
+**Architecture decisions go in `docs/arch/adr/`.** One file per decision,
+using `docs/arch/adr/template.md`'s format (title, tags, date, status,
+context, decision, alternatives, consequences). AGENTS.md §5 stays the
+terse day-to-day summary (AD-1 … AD-9); the ADR is where the reasoning and
+rejected alternatives live. Changing your mind about a past decision never
+edits an old ADR's Decision or Consequences — write a new one that
+supersedes it and update the old one's status line.
+
 **Language:** code, comments, commits, docs in English. Chat with maintainer may
 be Polish.
 
