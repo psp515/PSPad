@@ -1,14 +1,23 @@
 using System.Text.Json;
-using MongoDB.Bson;
 using MongoDB.Driver;
+using PSPad.Abstractions;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Identity;
+using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Goals;
+using PSPad.Module.Tasks.Inbox;
+using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.Tasks;
 
 namespace PSPad.Api.Sync;
 
 public sealed class SyncReader(MongoContext context)
 {
-    static readonly string[] Collections = ["areas", "tasklists", "todotasks", "goals", "inboxes", "users"];
+    static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        IncludeFields = true
+    };
 
     public async Task<SyncResponse> ReadAsync(Guid userId, long since, CancellationToken ct)
     {
@@ -18,19 +27,15 @@ public sealed class SyncReader(MongoContext context)
             .SortBy(entry => entry.Seq)
             .ToListAsync(ct);
 
-        var documents = new Dictionary<string, JsonElement[]>();
-
-        foreach (var name in Collections)
+        var documents = new Dictionary<string, JsonElement[]>
         {
-            var rows = await context.Collection<BsonDocument>(name)
-                .Find(Builders<BsonDocument>.Filter.Eq("userId", new BsonBinaryData(userId, GuidRepresentation.Standard)) &
-                      Builders<BsonDocument>.Filter.Gt("seq", since))
-                .ToListAsync(ct);
-
-            documents[name] = rows
-                .Select(row => JsonSerializer.Deserialize<JsonElement>(row.ToJson()))
-                .ToArray();
-        }
+            ["areas"] = await ReadCollectionAsync<Area>(userId, since, ct),
+            ["tasklists"] = await ReadCollectionAsync<TaskList>(userId, since, ct),
+            ["todotasks"] = await ReadCollectionAsync<TodoTask>(userId, since, ct),
+            ["goals"] = await ReadCollectionAsync<Goal>(userId, since, ct),
+            ["inboxes"] = await ReadCollectionAsync<Inbox>(userId, since, ct),
+            ["users"] = await ReadCollectionAsync<User>(userId, since, ct)
+        };
 
         var marker = events.Count > 0
             ? events[^1].Seq
@@ -42,6 +47,17 @@ public sealed class SyncReader(MongoContext context)
             events.Select(entry => new SyncEvent(
                 entry.Seq, entry.AggregateType, entry.AggregateId, entry.Type, entry.Payload, entry.At))
                 .ToArray());
+    }
+
+    async Task<JsonElement[]> ReadCollectionAsync<T>(Guid userId, long since, CancellationToken ct)
+        where T : Aggregate
+    {
+        var rows = await context.Collection<T>()
+            .Find(Builders<T>.Filter.Eq(document => document.UserId, userId) &
+                  Builders<T>.Filter.Gt(document => document.Seq, since))
+            .ToListAsync(ct);
+
+        return rows.Select(row => JsonSerializer.SerializeToElement(row, JsonOptions)).ToArray();
     }
 
     async Task<long> HighestSeqAsync(Guid userId, CancellationToken ct)

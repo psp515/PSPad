@@ -1,14 +1,22 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 
 namespace PSPad.Module.Identity;
 
 public sealed class User : Aggregate
 {
+    [JsonInclude]
     public string Subject { get; private set; } = "";
+
+    [JsonInclude]
     public string DisplayName { get; private set; } = "";
+
+    [JsonInclude]
     public string TimeZone { get; private set; } = "Etc/UTC";
+
+    [JsonInclude]
     public DateTimeOffset? ProvisionedAt { get; private set; }
 
     public static Guid IdFor(string subject) =>

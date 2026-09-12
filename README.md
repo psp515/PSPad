@@ -44,3 +44,24 @@ a reverse proxy in front of it.
 Design documents live in `docs/superpowers/specs/2026-09-12-slice-1-design.md`,
 implementation plans in `docs/superpowers/plans/`, and the working agreement for
 agents in `AGENTS.md`.
+
+## Offline
+
+The client keeps a replica of its data in the browser's IndexedDB (`pspad`
+database — `documents`, `meta` and `outbox` object stores), so the app stays
+usable with no network at all. Every edit writes straight to the replica and
+appends a command to the outbox; nothing waits on the API.
+
+A sync service flushes the outbox in strict append order whenever the app
+starts, whenever the browser comes back online, and every 60 seconds while
+online. It pushes commands in order and stops at the first one the server
+rejects — a command behind a rejected one is never sent ahead of it, since it
+may depend on state the rejection means never landed. The rejection message
+surfaces to the user through a snackbar; it is never dropped silently. Once
+the outbox is flushed, the service pulls everything changed since the
+replica's marker (the server's own monotonic sequence number, never a clock)
+and overwrites the matching replica rows.
+
+The replica is disposable: clearing site data, or losing IndexedDB entirely,
+costs nothing but a full pull from marker 0 the next time the app is online.
+The server is the source of truth; the replica only ever mirrors it.
