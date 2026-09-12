@@ -18,6 +18,21 @@ services:
         condition: service_healthy
     networks: [pspad]
 
+  app:
+    build:
+      context: ..
+      dockerfile: src/PSPad.App/Dockerfile
+    image: pspad-app:local
+    environment:
+      API_BASE_ADDRESS: ${API_BASE_ADDRESS}
+      KEYCLOAK_AUTHORITY: ${KEYCLOAK_AUTHORITY}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+    ports:
+      - "5001:8080"
+    depends_on:
+      - api
+    networks: [pspad]
+
   mongo:
     image: mongo:8
     entrypoint: ["bash", "/mongo-entrypoint.sh"]
