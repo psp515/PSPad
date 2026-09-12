@@ -68,5 +68,3 @@ batched lookup) that today's single-document read doesn't pay. Until this
 is implemented, `Position` stays on the aggregates as-is; this ADR is the
 plan for when that changes, not a description of the current code.
 
-See the accompanying plan stub:
-`docs/superpowers/plans/2026-09-12-future-ordering-module.md`.

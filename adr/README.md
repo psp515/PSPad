@@ -30,6 +30,6 @@ the old one's status line to point at the new number.
 | [0013](0013-responsive-shell-and-per-device-theme.md) | Keep sections and areas on separate navigation surfaces, and the theme per device | Active | 2026-09-12 | ui, offline, identity |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
-specs (`docs/superpowers/specs/`) that established and then revised them.
+specs in `specs/` that established and then revised them.
 AGENTS.md stays the terse day-to-day reference (AD-1 … AD-9); this index is
 where the reasoning and rejected alternatives behind each one live.

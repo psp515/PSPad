@@ -41,9 +41,12 @@ the repository root as context so the shared build props come along:
 The production stack (`docker/compose.prod.yaml`) serves plain HTTP and expects
 a reverse proxy in front of it.
 
-Design documents live in `docs/superpowers/specs/2026-09-12-slice-1-design.md`,
-implementation plans in `docs/superpowers/plans/`, and the working agreement for
-agents in `AGENTS.md`.
+Design specs live in `specs/` — `slice-design.md` covers the backend and
+domain end to end, `ui-ux-redesign-design.md` the client's navigation, theming
+and screens. Architecture decision records live in `adr/` (see `adr/README.md`
+for the index) and carry the reasoning and rejected alternatives behind each
+decision; where a spec and an ADR disagree, the ADR is the decision of record.
+The working agreement for agents is in `AGENTS.md`.
 
 ## Offline
 
