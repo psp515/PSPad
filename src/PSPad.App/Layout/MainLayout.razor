@@ -77,10 +77,15 @@
         if (authState?.User.Identity?.IsAuthenticated == true)
         {
             var me = await Api.MeAsync();
-            State.UserId = me!.UserId;
-            State.TimeZone = me.TimeZone;
-            State.Today = TodayRule.TodayIn(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
-            _areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
+
+            if (me is not null)
+            {
+                State.UserId = me.UserId;
+                State.TimeZone = me.TimeZone;
+                State.Today = TodayRule.TodayIn(
+                    DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
+                _areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
+            }
         }
 
         _ready = true;
