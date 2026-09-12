@@ -3,6 +3,7 @@ using PSPad.Api.Endpoints;
 using PSPad.Api.Identity;
 using PSPad.Api.Sync;
 using PSPad.Infrastructure;
+using PSPad.Infrastructure.Mongo;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,9 @@ var app = builder.Build();
 app.MapGet("/health", () => "healthy");
 app.MapCommandEndpoints();
 app.MapSyncEndpoints();
+app.MapTodayEndpoints();
+
+await MongoIndexes.EnsureAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 
 app.Run();
 
