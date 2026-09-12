@@ -29,4 +29,22 @@ public class ArchitectureTests
         AssemblyReferenceGuard.AssertReferencesNone(
             typeof(PSPad.Infrastructure.InfrastructureMarker).Assembly, "PSPad.Module");
     }
+
+    [Fact]
+    public void TheModuleNeverReadsMachineLocalTime()
+    {
+        var source = Directory.EnumerateFiles(
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..",
+                "src", "modules", "PSPad.Module.Tasks"),
+            "*.cs", SearchOption.AllDirectories);
+
+        var offenders = source
+            .Where(file => File.ReadAllText(file) is var text &&
+                (text.Contains("DateTime.Now") || text.Contains("DateTime.Today") ||
+                 text.Contains("DateTimeOffset.Now")))
+            .Select(Path.GetFileName)
+            .ToArray();
+
+        Assert.True(offenders.Length == 0, $"Machine-local time in: {string.Join(", ", offenders)}");
+    }
 }
