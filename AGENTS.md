@@ -330,6 +330,14 @@ The namespace stays the aggregate's namespace regardless of nesting depth
 (`PSPad.Module.Tasks.Goals`, not `...Goals.Achieve`) — folders are for
 navigation, not for the type system.
 
+**Read the ADRs before touching architecture.** Before any task that
+touches module boundaries, persistence, sync, contracts, or aggregate
+shape, read `docs/arch/adr/README.md`'s index and the `Active` records it
+points to — not just AGENTS.md §5. §5 is a terse summary; the ADR carries
+the context and rejected alternatives that explain *why*, which is what
+keeps a "cheaper-looking" alternative from silently re-opening a settled
+tradeoff.
+
 **Architecture decisions go in `docs/arch/adr/`.** One file per decision,
 using `docs/arch/adr/template.md`'s format (title, tags, date, status,
 context, decision, alternatives, consequences). AGENTS.md §5 stays the
@@ -337,6 +345,14 @@ terse day-to-day summary (AD-1 … AD-9); the ADR is where the reasoning and
 rejected alternatives live. Changing your mind about a past decision never
 edits an old ADR's Decision or Consequences — write a new one that
 supersedes it and update the old one's status line.
+
+**Any new or changed architectural decision gets an ADR, immediately.**
+If a task makes, changes, or supersedes an architectural decision — not
+just implements one already on record — add or update the ADR (and its
+row in `docs/arch/adr/README.md`'s index) in the same piece of work, before
+calling it done. Don't defer this to a follow-up. If the decision also
+shifts an AD-N summary in AGENTS.md §5, update that line too so §5 and the
+ADR set never drift apart.
 
 **Language:** code, comments, commits, docs in English. Chat with maintainer may
 be Polish.
