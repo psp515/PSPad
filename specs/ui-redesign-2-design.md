@@ -229,8 +229,12 @@ invisible for the wrong reason, and the cheap version is no harder to write.
 
 **Added:** `Layout/AppShell.razor`, `Layout/AccountMenu.razor`,
 `Layout/TaskDetailPanel.razor`, `Components/ListCard.razor`,
-`Components/TaskRow.razor`, `Pages/AreaBoard.razor`, `Pages/SearchPage.razor`,
-`State/CardCollapseState.cs`, `State/AvatarColor.cs`.
+`Components/TaskRow.razor`, `Components/NameDialog.razor`,
+`Pages/AreaBoard.razor`, `Pages/SearchPage.razor`,
+`State/CardCollapseState.cs`, `State/AvatarColor.cs`, `State/SidebarCounts.cs`,
+`State/ReplicaSearch.cs`, `State/SearchHit.cs`, `State/TaskQuery.cs`, and
+`test/PSPad.App.Tests/AppTestHost.cs` as the one arrangement helper for
+component tests.
 
 **Rewritten:** `Layout/NavSidebar.razor`, `Theme/PSPadTheme.cs`,
 `Pages/Today.razor`, `Pages/InboxPage.razor`, `Pages/ListPage.razor`,
@@ -242,7 +246,8 @@ invisible for the wrong reason, and the cheap version is no harder to write.
 `State/FabContext.cs`, `State/FabAction.cs`.
 
 **Untouched:** everything under `State/` and `Sync/` other than the two FAB
-types and the two additions above; `Api/`; `Components/StepList.razor`;
+types, the additions above, and one event added to `CommandSender` so the
+sidebar counts know when to recompute; `Api/`; `Components/StepList.razor`;
 `Components/RecurrenceEditor.razor`; every project outside `PSPad.App`.
 
 ### Plans
