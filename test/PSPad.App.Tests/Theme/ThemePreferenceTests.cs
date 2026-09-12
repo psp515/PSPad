@@ -63,44 +63,45 @@ public class ThemePreferenceTests
         Assert.False(preference.IsDark);
     }
 
-    [Fact]
-    public async Task CyclingGoesSystemThenLightThenDarkThenBack()
+    [Theory]
+    [InlineData(ThemeMode.Light, false)]
+    [InlineData(ThemeMode.Dark, true)]
+    public async Task SettingAModePinsItRegardlessOfTheSystem(ThemeMode mode, bool expectedDark)
     {
         var preference = new ThemePreference(new FakeJsRuntime());
-        await preference.InitialiseAsync(systemPrefersDark: false);
+        await preference.InitialiseAsync(systemPrefersDark: !expectedDark);
 
-        await preference.CycleAsync();
-        Assert.Equal(ThemeMode.Light, preference.Mode);
+        await preference.SetAsync(mode);
 
-        await preference.CycleAsync();
-        Assert.Equal(ThemeMode.Dark, preference.Mode);
-
-        await preference.CycleAsync();
-        Assert.Equal(ThemeMode.System, preference.Mode);
+        Assert.Equal(mode, preference.Mode);
+        Assert.Equal(expectedDark, preference.IsDark);
     }
 
     [Fact]
-    public async Task CyclingPersistsTheChoice()
+    public async Task SettingSystemGoesBackToFollowingTheSystem()
+    {
+        var preference = new ThemePreference(new FakeJsRuntime());
+        await preference.InitialiseAsync(systemPrefersDark: true);
+        await preference.SetAsync(ThemeMode.Light);
+
+        await preference.SetAsync(ThemeMode.System);
+
+        Assert.Equal(ThemeMode.System, preference.Mode);
+        Assert.True(preference.IsDark);
+    }
+
+    [Fact]
+    public async Task SettingPersistsTheChoiceAndRaisesChanged()
     {
         var js = new FakeJsRuntime();
         var preference = new ThemePreference(js);
         await preference.InitialiseAsync(systemPrefersDark: false);
-
-        await preference.CycleAsync();
-
-        Assert.Equal(nameof(ThemeMode.Light), js.Stored);
-    }
-
-    [Fact]
-    public async Task CyclingRaisesChanged()
-    {
-        var preference = new ThemePreference(new FakeJsRuntime());
-        await preference.InitialiseAsync(systemPrefersDark: false);
         var raised = 0;
         preference.Changed += () => raised++;
 
-        await preference.CycleAsync();
+        await preference.SetAsync(ThemeMode.Dark);
 
+        Assert.Equal(nameof(ThemeMode.Dark), js.Stored);
         Assert.Equal(1, raised);
     }
 }

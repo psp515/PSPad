@@ -21,25 +21,25 @@ public class ThemeToggleTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task TheLabelFollowsTheModeAsItCycles()
+    public async Task TheLabelFollowsTheModeAsItChanges()
     {
         Arrange();
 
         var toggle = Render<ThemeToggle>();
         await toggle.Find("button").ClickAsync(new());
 
-        Assert.Equal("Theme: Light", toggle.Find("button").GetAttribute("aria-label"));
+        Assert.Equal("Theme: Dark", toggle.Find("button").GetAttribute("aria-label"));
     }
 
     [Fact]
-    public async Task ClickingItCyclesTheMode()
+    public async Task ClickingItSetsDarkMode()
     {
         var preference = Arrange();
 
         var toggle = Render<ThemeToggle>();
         await toggle.Find("button").ClickAsync(new());
 
-        Assert.Equal(ThemeMode.Light, preference.Mode);
+        Assert.Equal(ThemeMode.Dark, preference.Mode);
     }
 
     ThemePreference Arrange()

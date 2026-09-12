@@ -18,7 +18,7 @@
 
     protected override void OnInitialized() => Preference.Changed += OnChanged;
 
-    async Task CycleAsync() => await Preference.CycleAsync();
+    async Task CycleAsync() => await Preference.SetAsync(ThemeMode.Dark);
 
     void OnChanged() => InvokeAsync(StateHasChanged);
 

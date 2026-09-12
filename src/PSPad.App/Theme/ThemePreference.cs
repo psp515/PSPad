@@ -29,14 +29,9 @@ public sealed class ThemePreference(IJSRuntime js)
         Changed?.Invoke();
     }
 
-    public async Task CycleAsync()
+    public async Task SetAsync(ThemeMode mode)
     {
-        Mode = Mode switch
-        {
-            ThemeMode.System => ThemeMode.Light,
-            ThemeMode.Light => ThemeMode.Dark,
-            _ => ThemeMode.System
-        };
+        Mode = mode;
 
         await js.InvokeAsync<string>("localStorage.setItem", StorageKey, Mode.ToString());
         Changed?.Invoke();
