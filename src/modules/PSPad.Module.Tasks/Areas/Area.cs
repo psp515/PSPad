@@ -1,10 +1,14 @@
+using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 
 namespace PSPad.Module.Tasks.Areas;
 
 public sealed class Area : Aggregate
 {
+    [JsonInclude]
     public string Name { get; private set; } = "";
+
+    [JsonInclude]
     public int Position { get; private set; }
 
     public static IReadOnlyList<DomainEvent> Decide(Area? area, ICommand command, DateTimeOffset at)

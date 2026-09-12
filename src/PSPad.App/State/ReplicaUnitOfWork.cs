@@ -1,22 +1,17 @@
 using System.Text.Json;
 using PSPad.Abstractions;
-using PSPad.App.Api;
 using PSPad.Contracts;
 
 namespace PSPad.App.State;
 
-public sealed class ReplicaUnitOfWork(IReplica replica, PSPadApiClient api) : IUnitOfWork
+public sealed class ReplicaUnitOfWork(IReplica replica, IOutbox outbox) : IUnitOfWork
 {
     readonly List<Aggregate> _staged = [];
-    readonly List<CommandEnvelope> _pending = [];
-
-    public IReadOnlyList<CommandResponse> LastResponses { get; private set; } = [];
+    readonly List<ICommand> _pending = [];
 
     public void Stage(Aggregate aggregate, IReadOnlyList<DomainEvent> events) => _staged.Add(aggregate);
 
-    public void Queue(ICommand command) =>
-        _pending.Add(new CommandEnvelope(
-            command.GetType().Name, JsonSerializer.SerializeToElement(command, command.GetType())));
+    public void Queue(ICommand command) => _pending.Add(command);
 
     public async Task CommitAsync(Guid commandId, Guid userId, CancellationToken ct)
     {
@@ -27,11 +22,14 @@ public sealed class ReplicaUnitOfWork(IReplica replica, PSPadApiClient api) : IU
 
         _staged.Clear();
 
-        if (_pending.Count > 0)
+        foreach (var command in _pending)
         {
-            LastResponses = await api.SendAsync(_pending);
-            _pending.Clear();
+            var envelope = new CommandEnvelope(
+                command.GetType().Name, JsonSerializer.SerializeToElement(command, command.GetType()));
+            await outbox.AppendAsync(commandId, envelope);
         }
+
+        _pending.Clear();
     }
 
     public Task<bool> IsProcessedAsync(Guid commandId, CancellationToken ct) => Task.FromResult(false);

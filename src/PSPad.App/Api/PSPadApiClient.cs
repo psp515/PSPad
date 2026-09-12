@@ -3,7 +3,7 @@ using PSPad.Contracts;
 
 namespace PSPad.App.Api;
 
-public sealed class PSPadApiClient(HttpClient http) : IHistorySource
+public sealed class PSPadApiClient(HttpClient http) : IHistorySource, ISyncApi
 {
     public async Task<MeResponse?> MeAsync() =>
         await http.GetFromJsonAsync<MeResponse>("api/me");

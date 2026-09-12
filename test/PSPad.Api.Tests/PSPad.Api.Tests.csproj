@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\src\PSPad.Api\PSPad.Api.csproj" />
     <ProjectReference Include="..\PSPad.TestInfrastructure\PSPad.TestInfrastructure.csproj" />
     <ProjectReference Include="..\PSPad.Module.Tasks.Tests\PSPad.Module.Tasks.Tests.csproj" />
+    <ProjectReference Include="..\..\src\PSPad.App\PSPad.App.csproj" />
   </ItemGroup>
 
 </Project>

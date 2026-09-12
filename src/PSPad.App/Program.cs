@@ -6,6 +6,7 @@ using PSPad.Abstractions;
 using PSPad.App;
 using PSPad.App.Api;
 using PSPad.App.State;
+using PSPad.App.Sync;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -17,12 +18,10 @@ builder.Services.AddOidcAuthentication(options =>
 {
     builder.Configuration.Bind("Keycloak", options.ProviderOptions);
     options.ProviderOptions.ResponseType = "code";
-    options.ProviderOptions.DefaultScopes.Add("openid");
-    options.ProviderOptions.DefaultScopes.Add("profile");
-    options.ProviderOptions.DefaultScopes.Add("zoneinfo");
 });
 
-builder.Services.AddScoped<IReplica, InMemoryReplica>();
+builder.Services.AddScoped<IReplica, IndexedDbReplica>();
+builder.Services.AddScoped<IOutbox, IndexedDbOutbox>();
 builder.Services.AddScoped(typeof(IDocumentStore<>), typeof(ReplicaDocumentStore<>));
 builder.Services.AddScoped<ReplicaUnitOfWork>();
 builder.Services.AddScoped<IUnitOfWork>(services => services.GetRequiredService<ReplicaUnitOfWork>());
@@ -40,6 +39,11 @@ builder.Services.AddHttpClient<PSPadApiClient>(client => client.BaseAddress = ne
         return handler;
     });
 
+builder.Services.AddScoped<AppState>();
 builder.Services.AddScoped<IHistorySource>(sp => sp.GetRequiredService<PSPadApiClient>());
+builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
+builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();
+builder.Services.AddScoped<SyncService>();
+builder.Services.AddScoped<SyncCoordinator>();
 
 await builder.Build().RunAsync();

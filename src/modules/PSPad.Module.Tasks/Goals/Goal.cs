@@ -1,10 +1,14 @@
+using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 
 namespace PSPad.Module.Tasks.Goals;
 
 public sealed class Goal : Aggregate
 {
+    [JsonInclude]
     public string Name { get; private set; } = "";
+
+    [JsonInclude]
     public bool Achieved { get; private set; }
 
     public static IReadOnlyList<DomainEvent> Decide(Goal? goal, ICommand command, DateTimeOffset at)

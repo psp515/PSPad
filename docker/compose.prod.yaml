@@ -11,6 +11,7 @@ services:
       Mongo__Database: ${MONGO_DATABASE}
       Keycloak__Authority: ${KEYCLOAK_AUTHORITY}
       Keycloak__Audience: ${KEYCLOAK_AUDIENCE}
+      Cors__AllowedOrigins__0: ${APP_BASE_ADDRESS}
     ports:
       - "5000:8080"
     depends_on:
@@ -25,6 +26,7 @@ services:
     image: pspad-app:local
     environment:
       API_BASE_ADDRESS: ${API_BASE_ADDRESS}
+      APP_BASE_ADDRESS: ${APP_BASE_ADDRESS}
       KEYCLOAK_AUTHORITY: ${KEYCLOAK_AUTHORITY}
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
     ports:

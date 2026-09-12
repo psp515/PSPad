@@ -22,6 +22,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
     });
 builder.Services.AddAuthorization();
+
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options =>
+    options.AddPolicy("AppClient", policy =>
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
+
 builder.Services.AddScoped<ICurrentUser, ClaimsCurrentUser>();
 builder.Services.AddScoped<UserProvisioner>();
 builder.Services.AddScoped<CommandDispatcher>();
@@ -31,6 +37,7 @@ builder.Services.AddScoped<HistoryReader>();
 
 var app = builder.Build();
 
+app.UseCors("AppClient");
 app.UseAuthentication();
 app.UseAuthorization();
 
