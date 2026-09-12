@@ -1,0 +1,31 @@
+@using PSPad.Module.Tasks.Areas
+
+<MudDrawer Open="@Open" OpenChanged="@OpenChanged" Anchor="Anchor.Bottom"
+           Elevation="8" Variant="DrawerVariant.Temporary" Height="60vh">
+    <MudList T="string" Class="pa-2">
+        @foreach (var area in Areas.OrderBy(a => a.Position))
+        {
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Folder"
+                         OnClick="@(() => OnAreaSelected.InvokeAsync(area))">@area.Name</MudListItem>
+        }
+
+        <MudDivider Class="my-2" />
+
+        <MudListItem T="string" Icon="@Icons.Material.Filled.Add"
+                     OnClick="@OnNewAreaRequested">New area</MudListItem>
+        <MudListItem T="string" Icon="@Icons.Material.Filled.Flag" Href="/goals">Goals</MudListItem>
+        <MudListItem T="string" Icon="@Icons.Material.Filled.History" Href="/history">History</MudListItem>
+    </MudList>
+</MudDrawer>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+
+    [Parameter] public IReadOnlyList<Area> Areas { get; set; } = [];
+
+    [Parameter] public EventCallback<Area> OnAreaSelected { get; set; }
+
+    [Parameter] public EventCallback OnNewAreaRequested { get; set; }
+}
