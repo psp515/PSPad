@@ -7,7 +7,7 @@ namespace PSPad.Module.Tasks.Inbox;
 public sealed class Inbox : Aggregate
 {
     [JsonInclude]
-    readonly List<InboxItem> _items = [];
+    List<InboxItem> _items = [];
 
     public IReadOnlyList<InboxItem> Items => _items.OrderBy(item => item.Position).ToArray();
 

@@ -1,29 +1,49 @@
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using PSPad.Contracts;
 
 namespace PSPad.App.Api;
 
 public sealed class PSPadApiClient(HttpClient http) : IHistorySource, ISyncApi
 {
-    public async Task<MeResponse?> MeAsync() =>
-        await http.GetFromJsonAsync<MeResponse>("api/me");
+    public Task<MeResponse?> MeAsync() => GetAsync<MeResponse>("api/me");
 
     public async Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes)
     {
-        var response = await http.PostAsJsonAsync("api/commands", envelopes);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<CommandResponse[]>() ?? [];
+        try
+        {
+            var response = await http.PostAsJsonAsync("api/commands", envelopes);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<CommandResponse[]>() ?? [];
+        }
+        catch (AccessTokenNotAvailableException expired)
+        {
+            expired.Redirect();
+            return [];
+        }
     }
 
-    public async Task<SyncResponse?> SyncAsync(long since) =>
-        await http.GetFromJsonAsync<SyncResponse>($"api/sync?since={since}");
+    public Task<SyncResponse?> SyncAsync(long since) => GetAsync<SyncResponse>($"api/sync?since={since}");
 
     public async Task<IReadOnlyList<HistoryEntry>> HistoryAsync(long? before, int limit)
     {
         var query = before is null ? $"api/history?limit={limit}" : $"api/history?limit={limit}&before={before}";
-        return await http.GetFromJsonAsync<HistoryEntry[]>(query) ?? [];
+        return await GetAsync<HistoryEntry[]>(query) ?? [];
     }
 
     Task<IReadOnlyList<HistoryEntry>> IHistorySource.ReadAsync(long? before, int limit) =>
         HistoryAsync(before, limit);
+
+    async Task<T?> GetAsync<T>(string uri)
+    {
+        try
+        {
+            return await http.GetFromJsonAsync<T>(uri);
+        }
+        catch (AccessTokenNotAvailableException expired)
+        {
+            expired.Redirect();
+            return default;
+        }
+    }
 }

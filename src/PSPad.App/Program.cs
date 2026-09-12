@@ -7,6 +7,7 @@ using PSPad.App;
 using PSPad.App.Api;
 using PSPad.App.State;
 using PSPad.App.Sync;
+using PSPad.App.Theme;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -40,6 +41,8 @@ builder.Services.AddHttpClient<PSPadApiClient>(client => client.BaseAddress = ne
     });
 
 builder.Services.AddScoped<AppState>();
+builder.Services.AddScoped<ThemePreference>();
+builder.Services.AddScoped<FabContext>();
 builder.Services.AddScoped<IHistorySource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();

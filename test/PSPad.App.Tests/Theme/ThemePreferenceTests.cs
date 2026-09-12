@@ -1,0 +1,106 @@
+using Microsoft.JSInterop;
+using PSPad.App.Theme;
+using PSPad.TestInfrastructure;
+
+namespace PSPad.App.Tests.Theme;
+
+[UnitTest]
+public class ThemePreferenceTests
+{
+    sealed class FakeJsRuntime : IJSRuntime
+    {
+        public List<string> Calls { get; } = [];
+
+        public string? Stored { get; set; }
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            Calls.Add(identifier);
+
+            if (identifier == "localStorage.setItem")
+            {
+                Stored = args?[1] as string;
+            }
+
+            return ValueTask.FromResult((TValue)(object)(Stored ?? "")!);
+        }
+
+        public ValueTask<TValue> InvokeAsync<TValue>(
+            string identifier, CancellationToken cancellationToken, object?[]? args) =>
+            InvokeAsync<TValue>(identifier, args);
+    }
+
+    [Fact]
+    public async Task WithNothingStoredItFollowsTheSystem()
+    {
+        var preference = new ThemePreference(new FakeJsRuntime());
+
+        await preference.InitialiseAsync(systemPrefersDark: true);
+
+        Assert.Equal(ThemeMode.System, preference.Mode);
+        Assert.True(preference.IsDark);
+    }
+
+    [Fact]
+    public async Task SystemModeFollowsALightSystemToo()
+    {
+        var preference = new ThemePreference(new FakeJsRuntime());
+
+        await preference.InitialiseAsync(systemPrefersDark: false);
+
+        Assert.False(preference.IsDark);
+    }
+
+    [Fact]
+    public async Task AStoredModeWinsOverTheSystem()
+    {
+        var js = new FakeJsRuntime { Stored = nameof(ThemeMode.Light) };
+        var preference = new ThemePreference(js);
+
+        await preference.InitialiseAsync(systemPrefersDark: true);
+
+        Assert.Equal(ThemeMode.Light, preference.Mode);
+        Assert.False(preference.IsDark);
+    }
+
+    [Fact]
+    public async Task CyclingGoesSystemThenLightThenDarkThenBack()
+    {
+        var preference = new ThemePreference(new FakeJsRuntime());
+        await preference.InitialiseAsync(systemPrefersDark: false);
+
+        await preference.CycleAsync();
+        Assert.Equal(ThemeMode.Light, preference.Mode);
+
+        await preference.CycleAsync();
+        Assert.Equal(ThemeMode.Dark, preference.Mode);
+
+        await preference.CycleAsync();
+        Assert.Equal(ThemeMode.System, preference.Mode);
+    }
+
+    [Fact]
+    public async Task CyclingPersistsTheChoice()
+    {
+        var js = new FakeJsRuntime();
+        var preference = new ThemePreference(js);
+        await preference.InitialiseAsync(systemPrefersDark: false);
+
+        await preference.CycleAsync();
+
+        Assert.Equal(nameof(ThemeMode.Light), js.Stored);
+    }
+
+    [Fact]
+    public async Task CyclingRaisesChanged()
+    {
+        var preference = new ThemePreference(new FakeJsRuntime());
+        await preference.InitialiseAsync(systemPrefersDark: false);
+        var raised = 0;
+        preference.Changed += () => raised++;
+
+        await preference.CycleAsync();
+
+        Assert.Equal(1, raised);
+    }
+}

@@ -32,10 +32,10 @@ public sealed class TodoTask : Aggregate
     public RecurrenceRule? Recurrence { get; private set; }
 
     [JsonInclude]
-    readonly List<Step> _steps = [];
+    List<Step> _steps = [];
 
     [JsonInclude]
-    readonly HashSet<DateOnly> _completedDays = [];
+    HashSet<DateOnly> _completedDays = [];
 
     public IReadOnlyList<Step> Steps => _steps.OrderBy(step => step.Position).ToArray();
 
