@@ -1,0 +1,39 @@
+@page "/areas/{AreaId:guid}"
+@using PSPad.Abstractions
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Lists
+@inject IDocumentStore<Area> AreaStore
+@inject IDocumentStore<TaskList> ListStore
+@inject AppState State
+
+@if (_area is not null)
+{
+    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-1">@_area.Name</MudText>
+    <MudText Typo="Typo.caption" Class="mb-4">@($"{_lists.Count} lists")</MudText>
+
+    <MudList T="string">
+        @foreach (var list in _lists)
+        {
+            <MudListItem T="string" Href="@($"/lists/{list.Id}")">@list.Name</MudListItem>
+        }
+    </MudList>
+}
+
+@code {
+    [Parameter] public Guid AreaId { get; set; }
+
+    Area? _area;
+    IReadOnlyList<TaskList> _lists = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _area = await AreaStore.LoadAsync(AreaId, CancellationToken.None);
+
+        var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _lists = lists
+            .Where(list => list.AreaId == AreaId && !list.Deleted)
+            .OrderBy(list => list.Position)
+            .ToArray();
+    }
+}

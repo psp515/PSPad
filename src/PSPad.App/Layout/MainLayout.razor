@@ -56,7 +56,7 @@
 <div class="d-md-none">
     <BottomNav OnAreasRequested="@(() => _sheetOpen = true)" />
     <AreaSheet Open="_sheetOpen" OpenChanged="@(open => _sheetOpen = open)" Areas="@_areas"
-               OnAreaSelected="@GoToArea" OnNewAreaRequested="@GoToAreas" />
+               OnAreaSelected="@GoToArea" />
 </div>
 
 @code {
@@ -115,13 +115,7 @@
     void GoToArea(Area area)
     {
         _sheetOpen = false;
-        Navigation.NavigateTo($"/areas?area={area.Id}");
-    }
-
-    void GoToAreas()
-    {
-        _sheetOpen = false;
-        Navigation.NavigateTo("/areas");
+        Navigation.NavigateTo($"/areas/{area.Id}");
     }
 
     void OnCoordinatorChanged() => InvokeAsync(StateHasChanged);
