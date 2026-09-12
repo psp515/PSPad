@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using PSPad.Api.Commands;
 using PSPad.Api.Endpoints;
+using PSPad.Api.History;
 using PSPad.Api.Identity;
 using PSPad.Api.Sync;
 using PSPad.Infrastructure;
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.History;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,8 @@ builder.Services.AddScoped<ICurrentUser, ClaimsCurrentUser>();
 builder.Services.AddScoped<UserProvisioner>();
 builder.Services.AddScoped<CommandDispatcher>();
 builder.Services.AddScoped<SyncReader>();
+builder.Services.AddScoped<IEventLog, MongoEventLog>();
+builder.Services.AddScoped<HistoryReader>();
 
 var app = builder.Build();
 
@@ -37,6 +41,7 @@ api.MapCommandEndpoints();
 api.MapSyncEndpoints();
 api.MapTodayEndpoints();
 api.MapMeEndpoints();
+api.MapHistoryEndpoints();
 
 await MongoIndexes.EnsureAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 
