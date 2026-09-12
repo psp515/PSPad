@@ -9,7 +9,7 @@ public sealed class ApiFactory(MongoFixture fixture) : WebApplicationFactory<Pro
 {
     protected override IHost CreateHost(IHostBuilder builder)
     {
-        builder.ConfigureHostConfiguration(configuration =>
+        builder.ConfigureAppConfiguration(configuration =>
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Mongo:ConnectionString"] = fixture.ConnectionString,
