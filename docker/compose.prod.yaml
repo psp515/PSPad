@@ -1,39 +1,43 @@
 name: pspad-prod
 
 services:
-  server:
+  api:
     build:
       context: ..
-      dockerfile: src/PSPad.Server/Dockerfile
-    image: pspad-server:local
+      dockerfile: src/PSPad.Api/Dockerfile
+    image: pspad-api:local
     environment:
-      ConnectionStrings__Postgres: ${POSTGRES_CONNECTION}
+      ConnectionStrings__Mongo: ${MONGO_CONNECTION}
+      Mongo__Database: ${MONGO_DATABASE}
       Keycloak__Authority: ${KEYCLOAK_AUTHORITY}
       Keycloak__Audience: ${KEYCLOAK_AUDIENCE}
     ports:
       - "5000:8080"
     depends_on:
-      postgres:
+      mongo:
         condition: service_healthy
     networks: [pspad]
 
-  postgres:
-    image: postgres:17-alpine
+  mongo:
+    image: mongo:8
+    entrypoint: ["bash", "/mongo-entrypoint.sh"]
     environment:
-      POSTGRES_DB: pspad
-      POSTGRES_USER: pspad
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: pspad
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - mongo-data:/data/db
+      - ./mongo-entrypoint.sh:/mongo-entrypoint.sh:ro
+      - ./mongo-keyfile:/keyfile-source/mongo-keyfile:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pspad -d pspad"]
+      test: ["CMD-SHELL", "mongosh --quiet -u pspad -p ${MONGO_PASSWORD} --eval \"try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}).ok }\" | grep -q 1"]
       interval: 5s
-      timeout: 5s
-      retries: 10
+      timeout: 10s
+      retries: 20
+      start_period: 10s
     networks: [pspad]
 
 volumes:
-  postgres-data:
+  mongo-data:
 
 networks:
   pspad:
