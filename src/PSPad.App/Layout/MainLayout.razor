@@ -1,14 +1,18 @@
 @inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
+@using PSPad.Abstractions
 @using PSPad.App.Api
 @using PSPad.App.State
 @using PSPad.App.Sync
 @using PSPad.App.Theme
+@using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Today
 @inject SyncCoordinator Coordinator
 @inject AppState State
 @inject PSPadApiClient Api
 @inject ThemePreference Preference
+@inject IDocumentStore<Area> AreaStore
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <MudThemeProvider @ref="_themeProvider" Theme="@PSPadTheme.Instance" IsDarkMode="@Preference.IsDark" />
@@ -18,28 +22,23 @@
 
 <MudLayout>
     <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
-                       OnClick="@ToggleDrawer" />
-        <MudText Typo="Typo.h6" Class="ml-3">PSPad</MudText>
+        <MudText Typo="Typo.h6">PSPad</MudText>
+        <MudSpacer />
         @if (Coordinator.PendingCount > 0)
         {
-            <MudSpacer />
             <MudBadge Content="@Coordinator.PendingCount" Color="Color.Warning" Overlap="true" Class="mr-4">
                 <MudIcon Icon="@Icons.Material.Filled.CloudSync" />
             </MudBadge>
         }
+        <ThemeToggle />
     </MudAppBar>
-    <MudDrawer Open="_open" OpenChanged="@(value => _open = value)" Elevation="1">
-        <MudNavMenu>
-            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Today">Today</MudNavLink>
-            <MudNavLink Href="/inbox" Icon="@Icons.Material.Filled.Inbox">Inbox</MudNavLink>
-            <MudNavLink Href="/areas" Icon="@Icons.Material.Filled.Folder">Areas</MudNavLink>
-            <MudNavLink Href="/goals" Icon="@Icons.Material.Filled.Flag">Goals</MudNavLink>
-            <MudNavLink Href="/history" Icon="@Icons.Material.Filled.History">History</MudNavLink>
-        </MudNavMenu>
+
+    <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="1" Class="d-none d-md-flex">
+        <NavSidebar />
     </MudDrawer>
+
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.Large" Class="my-4">
+        <MudContainer MaxWidth="MaxWidth.Large" Class="my-4 pspad-content">
             @if (_ready)
             {
                 @Body
@@ -52,13 +51,20 @@
     </MudMainContent>
 </MudLayout>
 
+<div class="d-md-none">
+    <BottomNav OnAreasRequested="@(() => _sheetOpen = true)" />
+    <AreaSheet Open="_sheetOpen" OpenChanged="@(open => _sheetOpen = open)" Areas="@_areas"
+               OnAreaSelected="@GoToArea" OnNewAreaRequested="@GoToAreas" />
+</div>
+
 @code {
     [CascadingParameter] Task<AuthenticationState>? AuthStateTask { get; set; }
 
     MudThemeProvider? _themeProvider;
     bool _themeReady;
-    bool _open = true;
     bool _ready;
+    bool _sheetOpen;
+    IReadOnlyList<Area> _areas = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -72,6 +78,7 @@
             State.UserId = me!.UserId;
             State.TimeZone = me.TimeZone;
             State.Today = TodayRule.TodayIn(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
+            _areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
         }
 
         _ready = true;
@@ -98,11 +105,21 @@
         StateHasChanged();
     }
 
+    void GoToArea(Area area)
+    {
+        _sheetOpen = false;
+        Navigation.NavigateTo($"/areas?area={area.Id}");
+    }
+
+    void GoToAreas()
+    {
+        _sheetOpen = false;
+        Navigation.NavigateTo("/areas");
+    }
+
     void OnCoordinatorChanged() => InvokeAsync(StateHasChanged);
 
     void OnThemeChanged() => InvokeAsync(StateHasChanged);
-
-    void ToggleDrawer() => _open = !_open;
 
     public void Dispose()
     {
