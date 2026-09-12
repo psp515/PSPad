@@ -21,3 +21,16 @@ public sealed record CompleteTask(Guid CommandId, Guid UserId, Guid TaskId) : IC
 public sealed record ReopenTask(Guid CommandId, Guid UserId, Guid TaskId) : ICommand;
 
 public sealed record DeleteTask(Guid CommandId, Guid UserId, Guid TaskId) : ICommand;
+
+public sealed record AddStep(Guid CommandId, Guid UserId, Guid TaskId, Guid StepId, string Name) : ICommand;
+
+public sealed record RenameStep(Guid CommandId, Guid UserId, Guid TaskId, Guid StepId, string Name) : ICommand;
+
+public sealed record SetStepDueDate(Guid CommandId, Guid UserId, Guid TaskId, Guid StepId, DateOnly? DueOn)
+    : ICommand;
+
+public sealed record CheckStep(Guid CommandId, Guid UserId, Guid TaskId, Guid StepId, bool Checked) : ICommand;
+
+public sealed record MoveStep(Guid CommandId, Guid UserId, Guid TaskId, Guid StepId, int ToIndex) : ICommand;
+
+public sealed record RemoveStep(Guid CommandId, Guid UserId, Guid TaskId, Guid StepId) : ICommand;

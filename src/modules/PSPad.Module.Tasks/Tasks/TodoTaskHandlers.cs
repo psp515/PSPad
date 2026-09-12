@@ -222,3 +222,135 @@ public sealed class DeleteTaskHandler(IDocumentStore<TodoTask> store, IUnitOfWor
         }
     }
 }
+
+public sealed class AddStepHandler(IDocumentStore<TodoTask> store, IUnitOfWork work, IClock clock)
+    : ICommandHandler<AddStep>
+{
+    public async Task<CommandResult> HandleAsync(AddStep command, CancellationToken ct)
+    {
+        var task = await store.LoadAsync(command.TaskId, ct);
+
+        try
+        {
+            var events = TodoTask.Decide(task, command, clock.UtcNow);
+            task!.ApplyAll(events);
+            work.Stage(task, events);
+            await work.CommitAsync(command.CommandId, command.UserId, ct);
+            return CommandResult.Ok();
+        }
+        catch (DomainRejectedException rejection)
+        {
+            return CommandResult.Rejected(rejection.Message);
+        }
+    }
+}
+
+public sealed class RenameStepHandler(IDocumentStore<TodoTask> store, IUnitOfWork work, IClock clock)
+    : ICommandHandler<RenameStep>
+{
+    public async Task<CommandResult> HandleAsync(RenameStep command, CancellationToken ct)
+    {
+        var task = await store.LoadAsync(command.TaskId, ct);
+
+        try
+        {
+            var events = TodoTask.Decide(task, command, clock.UtcNow);
+            task!.ApplyAll(events);
+            work.Stage(task, events);
+            await work.CommitAsync(command.CommandId, command.UserId, ct);
+            return CommandResult.Ok();
+        }
+        catch (DomainRejectedException rejection)
+        {
+            return CommandResult.Rejected(rejection.Message);
+        }
+    }
+}
+
+public sealed class SetStepDueDateHandler(IDocumentStore<TodoTask> store, IUnitOfWork work, IClock clock)
+    : ICommandHandler<SetStepDueDate>
+{
+    public async Task<CommandResult> HandleAsync(SetStepDueDate command, CancellationToken ct)
+    {
+        var task = await store.LoadAsync(command.TaskId, ct);
+
+        try
+        {
+            var events = TodoTask.Decide(task, command, clock.UtcNow);
+            task!.ApplyAll(events);
+            work.Stage(task, events);
+            await work.CommitAsync(command.CommandId, command.UserId, ct);
+            return CommandResult.Ok();
+        }
+        catch (DomainRejectedException rejection)
+        {
+            return CommandResult.Rejected(rejection.Message);
+        }
+    }
+}
+
+public sealed class CheckStepHandler(IDocumentStore<TodoTask> store, IUnitOfWork work, IClock clock)
+    : ICommandHandler<CheckStep>
+{
+    public async Task<CommandResult> HandleAsync(CheckStep command, CancellationToken ct)
+    {
+        var task = await store.LoadAsync(command.TaskId, ct);
+
+        try
+        {
+            var events = TodoTask.Decide(task, command, clock.UtcNow);
+            task!.ApplyAll(events);
+            work.Stage(task, events);
+            await work.CommitAsync(command.CommandId, command.UserId, ct);
+            return CommandResult.Ok();
+        }
+        catch (DomainRejectedException rejection)
+        {
+            return CommandResult.Rejected(rejection.Message);
+        }
+    }
+}
+
+public sealed class MoveStepHandler(IDocumentStore<TodoTask> store, IUnitOfWork work, IClock clock)
+    : ICommandHandler<MoveStep>
+{
+    public async Task<CommandResult> HandleAsync(MoveStep command, CancellationToken ct)
+    {
+        var task = await store.LoadAsync(command.TaskId, ct);
+
+        try
+        {
+            var events = TodoTask.Decide(task, command, clock.UtcNow);
+            task!.ApplyAll(events);
+            work.Stage(task, events);
+            await work.CommitAsync(command.CommandId, command.UserId, ct);
+            return CommandResult.Ok();
+        }
+        catch (DomainRejectedException rejection)
+        {
+            return CommandResult.Rejected(rejection.Message);
+        }
+    }
+}
+
+public sealed class RemoveStepHandler(IDocumentStore<TodoTask> store, IUnitOfWork work, IClock clock)
+    : ICommandHandler<RemoveStep>
+{
+    public async Task<CommandResult> HandleAsync(RemoveStep command, CancellationToken ct)
+    {
+        var task = await store.LoadAsync(command.TaskId, ct);
+
+        try
+        {
+            var events = TodoTask.Decide(task, command, clock.UtcNow);
+            task!.ApplyAll(events);
+            work.Stage(task, events);
+            await work.CommitAsync(command.CommandId, command.UserId, ct);
+            return CommandResult.Ok();
+        }
+        catch (DomainRejectedException rejection)
+        {
+            return CommandResult.Rejected(rejection.Message);
+        }
+    }
+}

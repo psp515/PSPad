@@ -1,4 +1,5 @@
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Ordering;
 
 namespace PSPad.Module.Tasks.Tasks;
 
@@ -11,6 +12,12 @@ public sealed class TodoTask : Aggregate
     public Priority Priority { get; private set; } = Priority.None;
     public bool Starred { get; private set; }
     public DateTimeOffset? CompletedAt { get; private set; }
+
+    readonly List<Step> _steps = [];
+
+    public IReadOnlyList<Step> Steps => _steps.OrderBy(step => step.Position).ToArray();
+
+    public Step? NextUncheckedStep => Steps.FirstOrDefault(step => !step.Checked);
 
     public static IReadOnlyList<DomainEvent> Decide(TodoTask? task, ICommand command, DateTimeOffset at)
     {
@@ -85,6 +92,46 @@ public sealed class TodoTask : Aggregate
                 var deleting = Require(task, delete.UserId);
                 return deleting.Deleted ? [] : [new TaskDeleted(deleting.Id, delete.UserId, at)];
 
+            case AddStep add:
+                var adding = Require(task, add.UserId);
+                return [new StepAdded(
+                    adding.Id, add.UserId, at, add.StepId, RequireName(add.Name),
+                    Positions.Next(adding.Steps.Select(step => step.Position)))];
+
+            case RenameStep renameStep:
+                var stepRenaming = Require(task, renameStep.UserId);
+                var existingStep = RequireStep(stepRenaming, renameStep.StepId);
+                var stepName = RequireName(renameStep.Name);
+                return existingStep.Name == stepName
+                    ? []
+                    : [new StepRenamed(stepRenaming.Id, renameStep.UserId, at, renameStep.StepId, stepName)];
+
+            case SetStepDueDate stepDue:
+                var stepDating = Require(task, stepDue.UserId);
+                var dated = RequireStep(stepDating, stepDue.StepId);
+                return dated.DueOn == stepDue.DueOn
+                    ? []
+                    : [new StepDueDateSet(stepDating.Id, stepDue.UserId, at, stepDue.StepId, stepDue.DueOn)];
+
+            case CheckStep check:
+                var checking = Require(task, check.UserId);
+                var checkedStep = RequireStep(checking, check.StepId);
+                return checkedStep.Checked == check.Checked
+                    ? []
+                    : [new StepChecked(checking.Id, check.UserId, at, check.StepId, check.Checked)];
+
+            case MoveStep moveStep:
+                var stepMoving = Require(task, moveStep.UserId);
+                RequireStep(stepMoving, moveStep.StepId);
+                var order = Positions.Move(
+                    stepMoving.Steps.Select(step => step.Id).ToArray(), moveStep.StepId, moveStep.ToIndex);
+                return [new StepsReordered(stepMoving.Id, moveStep.UserId, at, order)];
+
+            case RemoveStep removeStep:
+                var removing = Require(task, removeStep.UserId);
+                RequireStep(removing, removeStep.StepId);
+                return [new StepRemoved(removing.Id, removeStep.UserId, at, removeStep.StepId)];
+
             default:
                 throw new DomainRejectedException($"A task cannot handle {command.GetType().Name}.");
         }
@@ -127,8 +174,43 @@ public sealed class TodoTask : Aggregate
             case TaskDeleted:
                 Deleted = true;
                 break;
+            case StepAdded added:
+                _steps.Add(new Step(added.StepId, added.Name, null, false, added.Position));
+                break;
+            case StepRenamed stepRenamed:
+                Replace(stepRenamed.StepId, step => step with { Name = stepRenamed.Name });
+                break;
+            case StepDueDateSet stepDue:
+                Replace(stepDue.StepId, step => step with { DueOn = stepDue.DueOn });
+                break;
+            case StepChecked stepChecked:
+                Replace(stepChecked.StepId, step => step with { Checked = stepChecked.Checked });
+                break;
+            case StepsReordered reordered:
+                for (var index = 0; index < reordered.Order.Count; index++)
+                {
+                    Replace(reordered.Order[index], step => step with { Position = index });
+                }
+
+                break;
+            case StepRemoved stepRemoved:
+                _steps.RemoveAll(step => step.Id == stepRemoved.StepId);
+                break;
         }
     }
+
+    void Replace(Guid stepId, Func<Step, Step> change)
+    {
+        var index = _steps.FindIndex(step => step.Id == stepId);
+        if (index >= 0)
+        {
+            _steps[index] = change(_steps[index]);
+        }
+    }
+
+    static Step RequireStep(TodoTask task, Guid stepId) =>
+        task.Steps.FirstOrDefault(step => step.Id == stepId)
+        ?? throw new DomainRejectedException("That step is not on this task.");
 
     static TodoTask Require(TodoTask? task, Guid userId)
     {

@@ -31,3 +31,23 @@ public sealed record TaskReopened(Guid AggregateId, Guid UserId, DateTimeOffset 
 
 public sealed record TaskDeleted(Guid AggregateId, Guid UserId, DateTimeOffset At)
     : DomainEvent(AggregateId, UserId, At);
+
+public sealed record StepAdded(
+    Guid AggregateId, Guid UserId, DateTimeOffset At, Guid StepId, string Name, int Position)
+    : DomainEvent(AggregateId, UserId, At);
+
+public sealed record StepRenamed(Guid AggregateId, Guid UserId, DateTimeOffset At, Guid StepId, string Name)
+    : DomainEvent(AggregateId, UserId, At);
+
+public sealed record StepDueDateSet(
+    Guid AggregateId, Guid UserId, DateTimeOffset At, Guid StepId, DateOnly? DueOn)
+    : DomainEvent(AggregateId, UserId, At);
+
+public sealed record StepChecked(Guid AggregateId, Guid UserId, DateTimeOffset At, Guid StepId, bool Checked)
+    : DomainEvent(AggregateId, UserId, At);
+
+public sealed record StepsReordered(Guid AggregateId, Guid UserId, DateTimeOffset At, IReadOnlyList<Guid> Order)
+    : DomainEvent(AggregateId, UserId, At);
+
+public sealed record StepRemoved(Guid AggregateId, Guid UserId, DateTimeOffset At, Guid StepId)
+    : DomainEvent(AggregateId, UserId, At);
