@@ -316,6 +316,20 @@ claim green without running the suite.
 
 **Every test gets a category trait** (§7). Unmarked test is a broken test.
 
+**One type per file.** Filename matches the class/record/enum it contains
+(standard C# convention). Groups related types alphabetically for free —
+`CreateGoal.cs` sits next to `CreateGoalHandler.cs`. Applies to commands,
+events, handlers and aggregates alike; no `XCommands.cs`/`XEvents.cs`
+grab-bag files.
+
+**Architecture decisions go in `docs/arch/adr/`.** One file per decision,
+using `docs/arch/adr/template.md`'s format (title, tags, date, status,
+context, decision, alternatives, consequences). AGENTS.md §5 stays the
+terse day-to-day summary (AD-1 … AD-9); the ADR is where the reasoning and
+rejected alternatives live. Changing your mind about a past decision never
+edits an old ADR's Decision or Consequences — write a new one that
+supersedes it and update the old one's status line.
+
 **Language:** code, comments, commits, docs in English. Chat with maintainer may
 be Polish.
 
