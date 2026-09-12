@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Ordering;
 using PSPad.Module.Tasks.Recurrence;
@@ -6,16 +7,34 @@ namespace PSPad.Module.Tasks.Tasks;
 
 public sealed class TodoTask : Aggregate
 {
+    [JsonInclude]
     public Guid ListId { get; private set; }
+
+    [JsonInclude]
     public string Name { get; private set; } = "";
+
+    [JsonInclude]
     public DateOnly? DueOn { get; private set; }
+
+    [JsonInclude]
     public Guid? GoalId { get; private set; }
+
+    [JsonInclude]
     public Priority Priority { get; private set; } = Priority.None;
+
+    [JsonInclude]
     public bool Starred { get; private set; }
+
+    [JsonInclude]
     public DateTimeOffset? CompletedAt { get; private set; }
+
+    [JsonInclude]
     public RecurrenceRule? Recurrence { get; private set; }
 
+    [JsonInclude]
     readonly List<Step> _steps = [];
+
+    [JsonInclude]
     readonly HashSet<DateOnly> _completedDays = [];
 
     public IReadOnlyList<Step> Steps => _steps.OrderBy(step => step.Position).ToArray();

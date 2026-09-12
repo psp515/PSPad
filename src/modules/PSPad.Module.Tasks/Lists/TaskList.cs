@@ -1,11 +1,17 @@
+using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 
 namespace PSPad.Module.Tasks.Lists;
 
 public sealed class TaskList : Aggregate
 {
+    [JsonInclude]
     public Guid AreaId { get; private set; }
+
+    [JsonInclude]
     public string Name { get; private set; } = "";
+
+    [JsonInclude]
     public int Position { get; private set; }
 
     public static IReadOnlyList<DomainEvent> Decide(TaskList? list, ICommand command, DateTimeOffset at)

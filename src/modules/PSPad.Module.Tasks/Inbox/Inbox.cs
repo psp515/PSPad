@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Ordering;
 
@@ -5,6 +6,7 @@ namespace PSPad.Module.Tasks.Inbox;
 
 public sealed class Inbox : Aggregate
 {
+    [JsonInclude]
     readonly List<InboxItem> _items = [];
 
     public IReadOnlyList<InboxItem> Items => _items.OrderBy(item => item.Position).ToArray();

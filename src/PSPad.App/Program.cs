@@ -22,7 +22,7 @@ builder.Services.AddOidcAuthentication(options =>
     options.ProviderOptions.DefaultScopes.Add("zoneinfo");
 });
 
-builder.Services.AddScoped<IReplica, InMemoryReplica>();
+builder.Services.AddScoped<IReplica, IndexedDbReplica>();
 builder.Services.AddScoped(typeof(IDocumentStore<>), typeof(ReplicaDocumentStore<>));
 builder.Services.AddScoped<ReplicaUnitOfWork>();
 builder.Services.AddScoped<IUnitOfWork>(services => services.GetRequiredService<ReplicaUnitOfWork>());
