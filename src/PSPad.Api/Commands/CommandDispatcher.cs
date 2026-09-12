@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using PSPad.Abstractions;
 using PSPad.Contracts;
 
@@ -25,6 +26,14 @@ public sealed class CommandDispatcher(IServiceProvider services)
         if (command.UserId != userId)
         {
             return new CommandResponse(command.CommandId, false, "That command is for a different user.");
+        }
+
+        var work = services.GetService<IUnitOfWork>();
+        if (work is not null && await work.IsProcessedAsync(command.CommandId, ct))
+        {
+            // Checked here, not in Decide: by replay time the aggregate already reflects the
+            // first application, so the domain layer alone cannot tell a replay from a genuine conflict.
+            return new CommandResponse(command.CommandId, true, null);
         }
 
         var handler = services.GetService(typeof(ICommandHandler<>).MakeGenericType(type));

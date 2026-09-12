@@ -12,6 +12,11 @@ public sealed class MongoUnitOfWork(MongoContext context) : IUnitOfWork
     public void Stage(Aggregate aggregate, IReadOnlyList<DomainEvent> events) =>
         _staged.Add((aggregate, events));
 
+    public Task<bool> IsProcessedAsync(Guid commandId, CancellationToken ct) =>
+        context.Collection<ProcessedCommand>("processed_commands")
+            .Find(Builders<ProcessedCommand>.Filter.Eq(entry => entry.Id, commandId))
+            .AnyAsync(ct);
+
     public async Task CommitAsync(Guid commandId, Guid userId, CancellationToken ct)
     {
         if (_staged.Count == 0)
