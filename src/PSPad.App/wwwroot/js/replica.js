@@ -14,6 +14,7 @@ function open() {
         db.createObjectStore('meta', { keyPath: 'key' });
       }
       if (!db.objectStoreNames.contains('outbox')) {
+        // autoIncrement gives strict append order for free, matching the outbox's ordering guarantee.
         db.createObjectStore('outbox', { keyPath: 'position', autoIncrement: true });
       }
     };

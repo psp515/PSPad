@@ -1,4 +1,7 @@
 @inherits LayoutComponentBase
+@using PSPad.App.Sync
+@inject SyncCoordinator Coordinator
+@implements IDisposable
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -10,6 +13,13 @@
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
                        OnClick="@ToggleDrawer" />
         <MudText Typo="Typo.h6" Class="ml-3">PSPad</MudText>
+        @if (Coordinator.PendingCount > 0)
+        {
+            <MudSpacer />
+            <MudBadge Content="@Coordinator.PendingCount" Color="Color.Warning" Overlap="true" Class="mr-4">
+                <MudIcon Icon="@Icons.Material.Filled.CloudSync" />
+            </MudBadge>
+        }
     </MudAppBar>
     <MudDrawer Open="_open" OpenChanged="@(value => _open = value)" Elevation="1">
         <MudNavMenu>
@@ -30,5 +40,15 @@
 @code {
     bool _open = true;
 
+    protected override void OnInitialized()
+    {
+        Coordinator.Changed += OnCoordinatorChanged;
+        Coordinator.Start();
+    }
+
+    void OnCoordinatorChanged() => InvokeAsync(StateHasChanged);
+
     void ToggleDrawer() => _open = !_open;
+
+    public void Dispose() => Coordinator.Changed -= OnCoordinatorChanged;
 }
