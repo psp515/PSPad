@@ -316,11 +316,19 @@ claim green without running the suite.
 
 **Every test gets a category trait** (§7). Unmarked test is a broken test.
 
-**One type per file.** Filename matches the class/record/enum it contains
-(standard C# convention). Groups related types alphabetically for free —
-`CreateGoal.cs` sits next to `CreateGoalHandler.cs`. Applies to commands,
-events, handlers and aggregates alike; no `XCommands.cs`/`XEvents.cs`
-grab-bag files.
+**One type per file, grouped by operation.** Filename matches the
+class/record/enum it contains (standard C# convention). Inside each
+aggregate's folder, one command's command/event/handler live together in a
+verb-named subfolder — `Goals/Achieve/AchieveGoal.cs`,
+`Goals/Achieve/GoalAchieved.cs`, `Goals/Achieve/AchieveGoalHandler.cs` — so
+a whole operation is one folder, not three files scattered across
+`XCommands.cs`/`XEvents.cs`/`XHandlers.cs`. Elements the whole aggregate
+shares (the aggregate class itself, e.g. `Goals/Goal.cs`) stay directly in
+the aggregate's folder, not inside any verb subfolder. A sub-aggregate
+(steps inside a task) nests one level deeper: `Tasks/Steps/Add/AddStep.cs`.
+The namespace stays the aggregate's namespace regardless of nesting depth
+(`PSPad.Module.Tasks.Goals`, not `...Goals.Achieve`) — folders are for
+navigation, not for the type system.
 
 **Architecture decisions go in `docs/arch/adr/`.** One file per decision,
 using `docs/arch/adr/template.md`'s format (title, tags, date, status,
