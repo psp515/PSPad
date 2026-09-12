@@ -8,8 +8,17 @@ public static class AvatarColor
         "#7A4E63", "#4E7A75", "#6E7A4E", "#7A6A4E"
     ];
 
-    public static string For(Guid userId) =>
-        Palette[(uint)userId.GetHashCode() % Palette.Length];
+    public static string For(Guid userId)
+    {
+        var hash = 2166136261u;
+
+        foreach (var value in userId.ToByteArray())
+        {
+            hash = (hash ^ value) * 16777619u;
+        }
+
+        return Palette[hash % Palette.Length];
+    }
 
     public static string InitialOf(string email)
     {

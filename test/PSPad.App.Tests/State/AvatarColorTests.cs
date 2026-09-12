@@ -15,6 +15,14 @@ public class AvatarColorTests
     }
 
     [Fact]
+    public void AKnownUserAlwaysGetsAKnownColour()
+    {
+        var user = Guid.Parse("6f1d2c3b-0000-4000-8000-000000000001");
+
+        Assert.Equal("#3E6E7A", AvatarColor.For(user));
+    }
+
+    [Fact]
     public void DifferentUsersCanGetDifferentColours()
     {
         var colours = Enumerable
