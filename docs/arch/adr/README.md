@@ -27,6 +27,7 @@ the old one's status line to point at the new number.
 | [0010](0010-modular-monolith-three-modules.md) | Split the modular monolith into three separate module projects | Active (supersedes [0001](0001-vertical-slice-folders-in-one-project.md)) | 2026-09-12 | architecture, modularity |
 | [0011](0011-aggregate-documents-are-truth.md) | Aggregate documents are truth; events are the log beside them | Active (supersedes [0002](0002-cqrs-event-sourced-write-side.md)) | 2026-09-12 | architecture, persistence, event-sourcing |
 | [0012](0012-extract-ordering-into-its-own-module.md) | Extract element ordering into its own module, out of the Tasks domain | Proposed | 2026-09-12 | architecture, domain, ui, future-work |
+| [0013](0013-responsive-shell-and-per-device-theme.md) | Keep sections and areas on separate navigation surfaces, and the theme per device | Active | 2026-09-12 | ui, offline, identity |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs (`docs/superpowers/specs/`) that established and then revised them.
