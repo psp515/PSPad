@@ -1,0 +1,39 @@
+name: pspad-prod
+
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: src/PSPad.Server/Dockerfile
+    image: pspad-server:local
+    environment:
+      ConnectionStrings__Postgres: ${POSTGRES_CONNECTION}
+      Keycloak__Authority: ${KEYCLOAK_AUTHORITY}
+      Keycloak__Audience: ${KEYCLOAK_AUDIENCE}
+    ports:
+      - "5000:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [pspad]
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: pspad
+      POSTGRES_USER: pspad
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pspad -d pspad"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [pspad]
+
+volumes:
+  postgres-data:
+
+networks:
+  pspad:
