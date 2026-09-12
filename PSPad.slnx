@@ -16,6 +16,7 @@
     <Project Path="test/PSPad.TestInfrastructure/PSPad.TestInfrastructure.csproj" />
     <Project Path="test/PSPad.Module.Tasks.Tests/PSPad.Module.Tasks.Tests.csproj" />
     <Project Path="test/PSPad.Module.Identity.Tests/PSPad.Module.Identity.Tests.csproj" />
+    <Project Path="test/PSPad.Module.History.Tests/PSPad.Module.History.Tests.csproj" />
     <Project Path="test/PSPad.Api.Tests/PSPad.Api.Tests.csproj" />
   </Folder>
 </Solution>
