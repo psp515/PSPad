@@ -31,12 +31,46 @@ public class AreaBoardTests : Bunit.TestContext
     {
         var mine = NewArea("Dom");
         var other = NewArea("Praca");
-        Arrange(mine, other, NewList(mine.Id, "Zakupy"), NewList(other.Id, "Sprint"));
+        Arrange(mine, other, NewList(mine.Id, "Zakupy", 0), NewList(other.Id, "Sprint", 0));
 
         var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, mine.Id));
 
         Assert.Contains("Zakupy", page.Markup);
         Assert.DoesNotContain("Sprint", page.Markup);
+    }
+
+    [Fact]
+    public void ItOrdersListsByPositionNotCreationOrder()
+    {
+        var area = NewArea("Dom");
+        var remont = NewList(area.Id, "Remont", 2);
+        var zakupy = NewList(area.Id, "Zakupy", 0);
+        var ogrod = NewList(area.Id, "Ogród", 1);
+        Arrange(area, remont, zakupy, ogrod);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        var markup = page.Markup;
+        Assert.True(markup.IndexOf("Zakupy", StringComparison.Ordinal)
+            < markup.IndexOf("Ogród", StringComparison.Ordinal));
+        Assert.True(markup.IndexOf("Ogród", StringComparison.Ordinal)
+            < markup.IndexOf("Remont", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ItHidesDeletedLists()
+    {
+        var area = NewArea("Dom");
+        var kept = NewList(area.Id, "Zakupy", 0);
+        var removed = NewList(area.Id, "Remont", 1);
+        removed.ApplyAll(TaskList.Decide(
+            removed, new DeleteTaskList(Guid.NewGuid(), User, removed.Id), DateTimeOffset.UnixEpoch));
+        Arrange(area, kept, removed);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Contains("Zakupy", page.Markup);
+        Assert.DoesNotContain("Remont", page.Markup);
     }
 
     void Arrange(params Aggregate[] documents)
@@ -64,12 +98,12 @@ public class AreaBoardTests : Bunit.TestContext
         return area;
     }
 
-    static TaskList NewList(Guid areaId, string name)
+    static TaskList NewList(Guid areaId, string name, int position)
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, position),
             DateTimeOffset.UnixEpoch));
         return list;
     }
