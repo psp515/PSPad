@@ -8,7 +8,7 @@ public static class CommandEndpoints
 {
     public static void MapCommandEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/commands", async (
+        app.MapPost("commands", async (
             CommandEnvelope[] envelopes,
             CommandDispatcher dispatcher,
             ICurrentUser user,

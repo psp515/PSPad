@@ -1,5 +1,6 @@
 using PSPad.Abstractions;
 using PSPad.Api.Identity;
+using PSPad.Module.Identity;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.Module.Tasks.Today;
 
@@ -9,35 +10,19 @@ public static class TodayEndpoints
 {
     public static void MapTodayEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/today", async (
-            HttpRequest request,
+        app.MapGet("today", async (
+            IDocumentStore<User> users,
             IDocumentStore<TodoTask> tasks,
-            ICurrentUser user,
+            ICurrentUser current,
             IClock clock,
             CancellationToken ct) =>
         {
-            var zone = ZoneFrom(request.Headers["X-Time-Zone"]);
+            var user = await users.LoadAsync(current.UserId, ct);
+            var zone = TimeZoneInfo.FindSystemTimeZoneById(user?.TimeZone ?? "Etc/UTC");
             var today = TodayRule.TodayIn(clock.UtcNow, zone);
-            var all = await tasks.LoadAllAsync(user.UserId, ct);
+            var all = await tasks.LoadAllAsync(current.UserId, ct);
 
             return Results.Ok(TodayRule.Select(all, today));
         });
-    }
-
-    static TimeZoneInfo ZoneFrom(string? id)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            return TimeZoneInfo.Utc;
-        }
-
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById(id);
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            return TimeZoneInfo.Utc;
-        }
     }
 }

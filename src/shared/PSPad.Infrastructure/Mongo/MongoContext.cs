@@ -22,5 +22,9 @@ public sealed class MongoContext
     public IMongoCollection<TDocument> Collection<TDocument>(string name) =>
         Database.GetCollection<TDocument>(name);
 
-    public static string NameOf(Type aggregate) => aggregate.Name.ToLowerInvariant() + "s";
+    public static string NameOf(Type aggregate)
+    {
+        var name = aggregate.Name.ToLowerInvariant();
+        return name.EndsWith('x') ? name + "es" : name + "s";
+    }
 }

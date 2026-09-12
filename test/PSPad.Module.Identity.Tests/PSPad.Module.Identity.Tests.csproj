@@ -17,16 +17,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.12" />
     <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\PSPad.Api\PSPad.Api.csproj" />
+    <ProjectReference Include="..\..\src\modules\PSPad.Module.Identity\PSPad.Module.Identity.csproj" />
     <ProjectReference Include="..\PSPad.TestInfrastructure\PSPad.TestInfrastructure.csproj" />
-    <ProjectReference Include="..\PSPad.Module.Tasks.Tests\PSPad.Module.Tasks.Tests.csproj" />
   </ItemGroup>
 
 </Project>
