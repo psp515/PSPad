@@ -6,6 +6,7 @@ public abstract class Aggregate : IAggregate
     public Guid UserId { get; protected set; }
     public int Version { get; protected set; }
     public bool Deleted { get; protected set; }
+    public long Seq { get; set; }
 
     public void Apply(DomainEvent @event)
     {

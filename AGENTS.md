@@ -198,7 +198,9 @@ Unit suite must stay under a few seconds. If it needs Docker, it is mislabeled.
 ### Testcontainers fixture
 
 One container per test run, shared by an xUnit collection. Not one per test —
-Postgres startup is seconds, per-test is unusable.
+Mongo startup is seconds, per-test is unusable. Pin the image tag (`mongo:8`,
+never `latest`) — an upstream bump changing behavior under you is a worse bug
+than the one you were testing for.
 
 ```csharp
 public sealed class MongoFixture : IAsyncLifetime
@@ -237,6 +239,46 @@ The replica set is mandatory. Without it every transaction fails.
 Isolation between tests: each test uses its own `UserId`, so documents never
 collide. Do not drop collections between tests — it serializes the suite for no
 gain.
+
+### Hosted (`WebApplicationFactory`) tests
+
+Every test that boots the API host goes through `ApiFactory`, never a bare
+`new WebApplicationFactory<Program>()`. `Program.cs` runs
+`MongoIndexes.EnsureAsync` before `app.Run()`, so *any* hosted test needs a
+real, reachable Mongo — there is no health-check-only path that skips it.
+A bare factory falls through to `appsettings.json`'s dev connection string,
+which is absent in CI and misleadingly present on a dev box that happens to
+have Mongo running locally — the test passes for the wrong reason and fails
+the moment it runs somewhere else.
+
+```csharp
+public sealed class ApiFactory(MongoFixture fixture) : WebApplicationFactory<Program>
+{
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        builder.ConfigureAppConfiguration(configuration =>
+            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Mongo:ConnectionString"] = fixture.ConnectionString,
+                ["Mongo:Database"] = "pspad_test"
+            }));
+
+        return base.CreateHost(builder);
+    }
+}
+```
+
+Use `ConfigureAppConfiguration`, not `ConfigureHostConfiguration`. `Program.cs`
+uses the minimal-hosting model (`WebApplication.CreateBuilder`, no
+`Startup`/`IWebHostBuilder`), so `WebApplicationFactory<Program>` runs it
+through a deferred host builder: host configuration is merged *before*
+`Program.cs`'s own config sources (`appsettings.json` included), so anything
+added via `ConfigureHostConfiguration` gets silently overridden by
+`appsettings.json`. `ConfigureAppConfiguration` layers on top instead and
+actually wins. Every test class that needs the host joins the shared
+`[Collection(MongoCollection.Name)]` and takes `MongoFixture` — one factory
+per test method is fine (cheap), one container is not (shared via the
+fixture).
 
 ### Running tests
 

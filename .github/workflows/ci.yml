@@ -43,9 +43,24 @@ jobs:
 
       - run: docker build -f src/PSPad.Api/Dockerfile -t pspad-api:ci .
 
+      - name: Start Mongo for smoke test
+        run: |
+          docker network create pspad-ci
+          docker run -d --name pspad-mongo-ci --network pspad-ci mongo:8
+          for i in $(seq 1 30); do
+            if docker exec pspad-mongo-ci mongosh --quiet --eval "db.runCommand('ping').ok" | grep -q 1; then exit 0; fi
+            sleep 1
+          done
+          echo "Mongo never became ready"
+          docker logs pspad-mongo-ci
+          exit 1
+
       - name: Smoke test the image
         run: |
-          docker run -d --name pspad-api-ci -p 5000:8080 pspad-api:ci
+          docker run -d --name pspad-api-ci --network pspad-ci -p 5000:8080 \
+            -e Mongo__ConnectionString="mongodb://pspad-mongo-ci:27017" \
+            -e Mongo__Database=pspad \
+            pspad-api:ci
           for i in $(seq 1 20); do
             if curl -sf localhost:5000/health; then exit 0; fi
             sleep 1
@@ -55,4 +70,7 @@ jobs:
           exit 1
 
       - if: always()
-        run: docker rm -f pspad-api-ci || true
+        run: |
+          docker rm -f pspad-api-ci || true
+          docker rm -f pspad-mongo-ci || true
+          docker network rm pspad-ci || true

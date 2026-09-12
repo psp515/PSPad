@@ -1,16 +1,16 @@
-using Microsoft.AspNetCore.Mvc.Testing;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Api.Tests;
 
 [IntegrationTest]
-public class HealthEndpointTests
+[Collection(MongoCollection.Name)]
+public class HealthEndpointTests(MongoFixture fixture)
 {
     [Fact]
     public async Task HealthRespondsWithoutAuthentication()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        await using var factory = new WebApplicationFactory<Program>();
+        await using var factory = new ApiFactory(fixture);
         var client = factory.CreateClient();
 
         var response = await client.GetAsync("/health", cancellationToken);
