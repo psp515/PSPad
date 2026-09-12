@@ -40,4 +40,6 @@ builder.Services.AddHttpClient<PSPadApiClient>(client => client.BaseAddress = ne
         return handler;
     });
 
+builder.Services.AddScoped<IHistorySource>(sp => sp.GetRequiredService<PSPadApiClient>());
+
 await builder.Build().RunAsync();

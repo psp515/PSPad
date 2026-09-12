@@ -3,7 +3,7 @@ using PSPad.Contracts;
 
 namespace PSPad.App.Api;
 
-public sealed class PSPadApiClient(HttpClient http)
+public sealed class PSPadApiClient(HttpClient http) : IHistorySource
 {
     public async Task<MeResponse?> MeAsync() =>
         await http.GetFromJsonAsync<MeResponse>("api/me");
@@ -23,4 +23,7 @@ public sealed class PSPadApiClient(HttpClient http)
         var query = before is null ? $"api/history?limit={limit}" : $"api/history?limit={limit}&before={before}";
         return await http.GetFromJsonAsync<HistoryEntry[]>(query) ?? [];
     }
+
+    Task<IReadOnlyList<HistoryEntry>> IHistorySource.ReadAsync(long? before, int limit) =>
+        HistoryAsync(before, limit);
 }

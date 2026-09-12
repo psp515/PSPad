@@ -1,0 +1,89 @@
+@page "/goals"
+@using PSPad.Abstractions
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Goals
+@using PSPad.Module.Tasks.Tasks
+@inject IDocumentStore<Goal> Store
+@inject IDocumentStore<TodoTask> TaskStore
+@inject AppState State
+@inject IServiceProvider Services
+
+<MudText Typo="Typo.h5" Class="mb-4">Goals</MudText>
+
+<MudTextField T="string" @bind-Value="_newGoalName" Label="New goal" Immediate="true" OnKeyDown="@OnKeyDown" />
+
+@if (_goals is not null)
+{
+    <MudList T="string" Class="mt-4">
+        @foreach (var goal in _goals)
+        {
+            <MudListItem T="string">
+                <div class="d-flex align-center gap-2">
+                    <MudText>@goal.Name</MudText>
+                    <MudText Typo="Typo.caption">@OpenTaskCount(goal) open</MudText>
+                    @if (goal.Achieved)
+                    {
+                        <MudButton Size="Size.Small" OnClick="@(() => ReopenAsync(goal))">reopen</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Size="Size.Small" OnClick="@(() => AchieveAsync(goal))">achieve</MudButton>
+                    }
+                    <MudButton Size="Size.Small" OnClick="@(() => DeleteAsync(goal))">delete</MudButton>
+                </div>
+            </MudListItem>
+        }
+    </MudList>
+}
+
+@code {
+    IReadOnlyList<Goal>? _goals;
+    IReadOnlyList<TodoTask>? _tasks;
+    string _newGoalName = "";
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        _goals = await Store.LoadAllAsync(State.UserId, CancellationToken.None);
+        _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+    }
+
+    int OpenTaskCount(Goal goal) =>
+        _tasks?.Count(task => task.GoalId == goal.Id && task.CompletedAt is null && !task.Deleted) ?? 0;
+
+    async Task OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
+    {
+        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_newGoalName))
+        {
+            return;
+        }
+
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new CreateGoal(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _newGoalName));
+
+        _newGoalName = "";
+        await ReloadAsync();
+    }
+
+    async Task AchieveAsync(Goal goal)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new AchieveGoal(Guid.NewGuid(), State.UserId, goal.Id));
+        await ReloadAsync();
+    }
+
+    async Task ReopenAsync(Goal goal)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new ReopenGoal(Guid.NewGuid(), State.UserId, goal.Id));
+        await ReloadAsync();
+    }
+
+    async Task DeleteAsync(Goal goal)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new DeleteGoal(Guid.NewGuid(), State.UserId, goal.Id));
+        await ReloadAsync();
+    }
+}
