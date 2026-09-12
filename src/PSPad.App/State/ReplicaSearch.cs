@@ -27,13 +27,12 @@ public sealed class ReplicaSearch(
         var listsById = allLists.Where(list => !list.Deleted).ToDictionary(list => list.Id);
 
         var taskHits = allTasks
-            .Where(task => !task.Deleted && Matches(task.Name, needle))
+            .Where(task => !task.Deleted && listsById.ContainsKey(task.ListId) && Matches(task.Name, needle))
             .Select(task => new SearchHit(task.Id, task.Name, PathOf(task.ListId, listsById, areaNames), false));
 
         var listHits = listsById.Values
-            .Where(list => Matches(list.Name, needle))
-            .Select(list => new SearchHit(
-                list.Id, list.Name, areaNames.GetValueOrDefault(list.AreaId, ""), true));
+            .Where(list => areaNames.ContainsKey(list.AreaId) && Matches(list.Name, needle))
+            .Select(list => new SearchHit(list.Id, list.Name, areaNames[list.AreaId], true));
 
         return [.. listHits, .. taskHits];
     }

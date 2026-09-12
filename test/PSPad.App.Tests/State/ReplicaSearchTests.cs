@@ -65,6 +65,39 @@ public class ReplicaSearchTests
         Assert.DoesNotContain(await search.FindAsync(User, "znik"), hit => hit.Name == "Zniknąć");
     }
 
+    [Fact]
+    public async Task ATaskWhoseListWasDeletedIsNotFound()
+    {
+        var search = Arrange(out _, out var list, "Kupić farbę");
+        list.ApplyAll(TaskList.Decide(
+            list, new DeleteTaskList(Guid.NewGuid(), User, list.Id), DateTimeOffset.UnixEpoch));
+        Save(list);
+
+        Assert.DoesNotContain(await search.FindAsync(User, "farb"), hit => hit.Name == "Kupić farbę");
+    }
+
+    [Fact]
+    public async Task AListWhoseAreaWasDeletedIsNotFound()
+    {
+        var search = Arrange(out var area, out _);
+        area.ApplyAll(Area.Decide(
+            area, new DeleteArea(Guid.NewGuid(), User, area.Id), DateTimeOffset.UnixEpoch));
+        Save(area);
+
+        Assert.DoesNotContain(await search.FindAsync(User, "remo"), hit => hit.Name == "Remont");
+    }
+
+    [Fact]
+    public async Task ADeletedListIsNotFoundAsAHitItself()
+    {
+        var search = Arrange(out _, out var list);
+        list.ApplyAll(TaskList.Decide(
+            list, new DeleteTaskList(Guid.NewGuid(), User, list.Id), DateTimeOffset.UnixEpoch));
+        Save(list);
+
+        Assert.DoesNotContain(await search.FindAsync(User, "remo"), hit => hit.Name == "Remont");
+    }
+
     InMemoryReplica _replica = new();
 
     void Save(Aggregate document) => _replica.SaveAsync(document).GetAwaiter().GetResult();

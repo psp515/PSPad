@@ -2,9 +2,8 @@
 @using PSPad.App.State
 @inject ReplicaSearch Search
 @inject AppState State
-@inject NavigationManager Navigation
 
-<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">@($"Search: {_query}")</MudText>
+<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">@($"Search: {Q ?? ""}")</MudText>
 
 @if (_hits.Count == 0)
 {
@@ -24,16 +23,14 @@ else
 }
 
 @code {
-    string _query = "";
+    [Parameter, SupplyParameterFromQuery(Name = "q")]
+    public string? Q { get; set; }
+
     IReadOnlyList<SearchHit> _hits = [];
 
     protected override async Task OnParametersSetAsync()
     {
-        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-        _query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query)
-            .TryGetValue("q", out var value) ? value.ToString() : "";
-
-        _hits = await Search.FindAsync(State.UserId, _query);
+        _hits = await Search.FindAsync(State.UserId, Q ?? "");
     }
 
     static string HrefOf(SearchHit hit) => hit.IsList ? $"/lists/{hit.Id}" : $"/search?task={hit.Id}";
