@@ -72,6 +72,31 @@ public class StepTests
             task, new CheckStep(Guid.NewGuid(), User, task.Id, Guid.NewGuid(), true), Now));
     }
 
+    [Fact]
+    public void RemovingAStepRewritesThePositionsDensely()
+    {
+        var task = WithSteps("first", "second", "third");
+        var middle = task.Steps[1].Id;
+
+        task.ApplyAll(TodoTask.Decide(task, new RemoveStep(Guid.NewGuid(), User, task.Id, middle), Now));
+
+        Assert.Equal(["first", "third"], task.Steps.Select(step => step.Name));
+        Assert.Equal([0, 1], task.Steps.Select(step => step.Position));
+    }
+
+    [Fact]
+    public void AddingAStepWithARepeatedIdIsIgnored()
+    {
+        var task = WithSteps("only");
+        var stepId = task.Steps[0].Id;
+
+        var events = TodoTask.Decide(task, new AddStep(Guid.NewGuid(), User, task.Id, stepId, "again"), Now);
+        task.ApplyAll(events);
+
+        Assert.Empty(events);
+        Assert.Single(task.Steps);
+    }
+
     static TodoTask WithSteps(params string[] names)
     {
         var task = TodoTaskTests.Existing();

@@ -63,6 +63,46 @@ public class InboxTests
         Assert.Contains(work.Events, @event => @event is InboxItemOrganised);
     }
 
+    [Fact]
+    public void OrganisingRewritesThePositionsDensely()
+    {
+        var inbox = WithItems("call the dentist", "buy a gift", "return the parcel");
+        var middle = inbox.Items[1].Id;
+
+        inbox.ApplyAll(InboxAggregate.Decide(inbox, new OrganiseInboxItem(
+            Guid.NewGuid(), User, inbox.Id, middle, Guid.NewGuid(), Guid.NewGuid()), Now));
+
+        Assert.Equal(["call the dentist", "return the parcel"], inbox.Items.Select(item => item.Text));
+        Assert.Equal([0, 1], inbox.Items.Select(item => item.Position));
+    }
+
+    [Fact]
+    public void DiscardingRewritesThePositionsDensely()
+    {
+        var inbox = WithItems("call the dentist", "buy a gift", "return the parcel");
+        var middle = inbox.Items[1].Id;
+
+        inbox.ApplyAll(InboxAggregate.Decide(
+            inbox, new DiscardInboxItem(Guid.NewGuid(), User, inbox.Id, middle), Now));
+
+        Assert.Equal(["call the dentist", "return the parcel"], inbox.Items.Select(item => item.Text));
+        Assert.Equal([0, 1], inbox.Items.Select(item => item.Position));
+    }
+
+    [Fact]
+    public void CapturingWithARepeatedIdIsIgnored()
+    {
+        var inbox = WithItems("call the dentist");
+        var itemId = inbox.Items[0].Id;
+
+        var events = InboxAggregate.Decide(
+            inbox, new CaptureToInbox(Guid.NewGuid(), User, inbox.Id, itemId, "again"), Now);
+        inbox.ApplyAll(events);
+
+        Assert.Empty(events);
+        Assert.Single(inbox.Items);
+    }
+
     static InboxAggregate WithItems(params string[] texts)
     {
         var inbox = new InboxAggregate();

@@ -6,7 +6,8 @@ namespace PSPad.Module.Tasks.Tests;
 public class ArchitectureTests
 {
     static readonly string[] Infrastructure =
-        ["MongoDB", "Microsoft.AspNetCore", "System.Net.Http", "Microsoft.Extensions.Hosting"];
+        ["MongoDB", "Microsoft.AspNetCore", "System.Net.Http", "Microsoft.Extensions.Hosting",
+            "PSPad.Infrastructure"];
 
     [Fact]
     public void TasksModuleCarriesNoInfrastructure()

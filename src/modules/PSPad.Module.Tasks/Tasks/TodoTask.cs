@@ -94,9 +94,11 @@ public sealed class TodoTask : Aggregate
 
             case AddStep add:
                 var adding = Require(task, add.UserId);
-                return [new StepAdded(
-                    adding.Id, add.UserId, at, add.StepId, RequireName(add.Name),
-                    Positions.Next(adding.Steps.Select(step => step.Position)))];
+                return adding.Steps.Any(step => step.Id == add.StepId)
+                    ? []
+                    : [new StepAdded(
+                        adding.Id, add.UserId, at, add.StepId, RequireName(add.Name),
+                        Positions.Next(adding.Steps.Select(step => step.Position)))];
 
             case RenameStep renameStep:
                 var stepRenaming = Require(task, renameStep.UserId);
@@ -195,6 +197,7 @@ public sealed class TodoTask : Aggregate
                 break;
             case StepRemoved stepRemoved:
                 _steps.RemoveAll(step => step.Id == stepRemoved.StepId);
+                Densify();
                 break;
         }
     }
@@ -205,6 +208,15 @@ public sealed class TodoTask : Aggregate
         if (index >= 0)
         {
             _steps[index] = change(_steps[index]);
+        }
+    }
+
+    void Densify()
+    {
+        var ordered = _steps.OrderBy(step => step.Position).ToArray();
+        for (var index = 0; index < ordered.Length; index++)
+        {
+            Replace(ordered[index].Id, step => step with { Position = index });
         }
     }
 

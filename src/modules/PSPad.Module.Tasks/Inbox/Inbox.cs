@@ -24,9 +24,11 @@ public sealed class Inbox : Aggregate
             case CaptureToInbox capture:
                 var capturing = Require(inbox, capture.UserId);
                 var text = RequireText(capture.Text);
-                return [new InboxItemCaptured(
-                    capturing.Id, capture.UserId, at, capture.ItemId, text,
-                    Positions.Next(capturing.Items.Select(item => item.Position)))];
+                return capturing.Items.Any(item => item.Id == capture.ItemId)
+                    ? []
+                    : [new InboxItemCaptured(
+                        capturing.Id, capture.UserId, at, capture.ItemId, text,
+                        Positions.Next(capturing.Items.Select(item => item.Position)))];
 
             case OrganiseInboxItem organise:
                 var organising = Require(inbox, organise.UserId);
@@ -57,10 +59,22 @@ public sealed class Inbox : Aggregate
                 break;
             case InboxItemOrganised organised:
                 _items.RemoveAll(item => item.Id == organised.ItemId);
+                Densify();
                 break;
             case InboxItemDiscarded discarded:
                 _items.RemoveAll(item => item.Id == discarded.ItemId);
+                Densify();
                 break;
+        }
+    }
+
+    void Densify()
+    {
+        var ordered = _items.OrderBy(item => item.Position).ToArray();
+        _items.Clear();
+        for (var index = 0; index < ordered.Length; index++)
+        {
+            _items.Add(ordered[index] with { Position = index });
         }
     }
 
