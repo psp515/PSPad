@@ -147,7 +147,7 @@ test/
   PSPad.Api.Tests/              integration, Testcontainers MongoDB
   PSPad.App.Tests/              unit + bUnit component tests
   PSPad.TestInfrastructure/     Mongo fixture, trait constants, architecture guards
-specs/                   design specs — slice 1 and the UI/UX redesign
+specs/                   design specs — slice 1, and the client redesigns
 adr/                     architecture decision records + index and template
 .superpowers/sdd/        working plans for in-flight features (not committed)
 docker/                  compose files, keycloak realm, nginx config
@@ -298,13 +298,15 @@ not, and stay authoritative:
 - `specs/slice-design.md` — slice 1 end to end: project layout, command
   pipeline, storage and index shapes, domain rules, sync, identity, HTTP
   surface, containers, testing.
-- `specs/ui-ux-redesign-design.md` — the client's navigation, theming and FAB
-  contract, D1…D6, and the screen-by-screen work.
+- `specs/ui-ux-redesign-design.md` — the client's first redesign: theming, the
+  FAB contract, the breakpoint shell. Its navigation decisions (D1, D2, D4, D6,
+  D8) are superseded; its theme and `TaskRow` reasoning still stand.
+- `specs/ui-redesign-2-design.md` — the current client design: one navigation
+  tree at every width, area screens of list cards, the task detail overlay,
+  inline creation, local search, the sage palette.
 
-Next up is that spec's **plan 10 — screens**: `TaskRow`, then Today, list,
-Inbox with inline organise, Areas, Goals, History and task detail redrawn
-against the shell delivered by plan 09. `adr/0012` (ordering module) is
-`Proposed` and still unbuilt.
+Next up are that spec's **plan 10 — shell** and **plan 11 — screens**.
+`adr/0012` (ordering module) is `Proposed` and still unbuilt.
 
 ---
 
@@ -345,8 +347,9 @@ plans live under `.superpowers/sdd/<feature>/` and are not committed.
 **Specs are a knowledge source, not history.** Before work on a subsystem,
 read the spec that covers it — `specs/slice-design.md` for anything touching
 the command pipeline, storage shape, domain rules, sync or the HTTP surface;
-`specs/ui-ux-redesign-design.md` for anything touching the client's
-navigation, theme or screens. They answer *what the intended behaviour is*
+`specs/ui-redesign-2-design.md` for anything touching the client's
+navigation, theme or screens, with `specs/ui-ux-redesign-design.md` behind it
+as the superseded first pass. They answer *what the intended behaviour is*
 at a level the code does not state and AGENTS.md only summarises. Where a
 spec and an ADR disagree, the ADR wins — it is the decision of record; where
 a spec and the code disagree, say so rather than silently following either.

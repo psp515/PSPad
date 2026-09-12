@@ -2,7 +2,7 @@
 title: Keep sections and areas on separate navigation surfaces, and the theme per device
 tags: [ui, offline, identity]
 date: 2026-09-12
-status: Active
+status: Superseded by [0014](0014-one-navigation-tree-at-every-width.md)
 ---
 
 # ADR-0013: Responsive navigation shell and per-device theme

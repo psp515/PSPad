@@ -42,8 +42,9 @@ The production stack (`docker/compose.prod.yaml`) serves plain HTTP and expects
 a reverse proxy in front of it.
 
 Design specs live in `specs/` — `slice-design.md` covers the backend and
-domain end to end, `ui-ux-redesign-design.md` the client's navigation, theming
-and screens. Architecture decision records live in `adr/` (see `adr/README.md`
+domain end to end, `ui-redesign-2-design.md` the client's navigation, theming
+and screens, with `ui-ux-redesign-design.md` behind it as the superseded first
+pass. Architecture decision records live in `adr/` (see `adr/README.md`
 for the index) and carry the reasoning and rejected alternatives behind each
 decision; where a spec and an ADR disagree, the ADR is the decision of record.
 The working agreement for agents is in `AGENTS.md`.
