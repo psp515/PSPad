@@ -1,5 +1,6 @@
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Ordering;
+using PSPad.Module.Tasks.Recurrence;
 
 namespace PSPad.Module.Tasks.Tasks;
 
@@ -12,12 +13,18 @@ public sealed class TodoTask : Aggregate
     public Priority Priority { get; private set; } = Priority.None;
     public bool Starred { get; private set; }
     public DateTimeOffset? CompletedAt { get; private set; }
+    public RecurrenceRule? Recurrence { get; private set; }
 
     readonly List<Step> _steps = [];
+    readonly HashSet<DateOnly> _completedDays = [];
 
     public IReadOnlyList<Step> Steps => _steps.OrderBy(step => step.Position).ToArray();
 
     public Step? NextUncheckedStep => Steps.FirstOrDefault(step => !step.Checked);
+
+    public IReadOnlySet<DateOnly> CompletedDays => _completedDays;
+
+    public bool IsRecurring => Recurrence is not null;
 
     public static IReadOnlyList<DomainEvent> Decide(TodoTask? task, ICommand command, DateTimeOffset at)
     {
@@ -43,6 +50,11 @@ public sealed class TodoTask : Aggregate
 
             case SetTaskDueDate due:
                 var dating = Require(task, due.UserId);
+                if (due.DueOn is not null && dating.IsRecurring)
+                {
+                    throw new DomainRejectedException("A repeating task cannot also have a due date.");
+                }
+
                 return dating.DueOn == due.DueOn
                     ? []
                     : [new TaskDueDateSet(dating.Id, due.UserId, at, due.DueOn)];
@@ -78,6 +90,11 @@ public sealed class TodoTask : Aggregate
 
             case CompleteTask complete:
                 var completing = Require(task, complete.UserId);
+                if (completing.IsRecurring)
+                {
+                    throw new DomainRejectedException("Tick today's occurrence instead of the whole task.");
+                }
+
                 return completing.CompletedAt is not null
                     ? []
                     : [new TaskCompleted(completing.Id, complete.UserId, at)];
@@ -133,6 +150,34 @@ public sealed class TodoTask : Aggregate
                 var removing = Require(task, removeStep.UserId);
                 RequireStep(removing, removeStep.StepId);
                 return [new StepRemoved(removing.Id, removeStep.UserId, at, removeStep.StepId)];
+
+            case SetTaskRecurrence recurrence:
+                var repeating = Require(task, recurrence.UserId);
+                if (recurrence.Rule is not null && repeating.DueOn is not null)
+                {
+                    throw new DomainRejectedException("A repeating task cannot also have a due date.");
+                }
+
+                return repeating.Recurrence == recurrence.Rule
+                    ? []
+                    : [new TaskRecurrenceSet(repeating.Id, recurrence.UserId, at, recurrence.Rule)];
+
+            case CompleteOccurrence occurrence:
+                var ticking = Require(task, occurrence.UserId);
+                if (ticking.Recurrence is null)
+                {
+                    throw new DomainRejectedException("That task does not repeat.");
+                }
+
+                if (!ticking.Recurrence.OccursOn(occurrence.Day))
+                {
+                    throw new DomainRejectedException("That task does not repeat on that day.");
+                }
+
+                return ticking.CompletedDays.Contains(occurrence.Day) == occurrence.Completed
+                    ? []
+                    : [new OccurrenceCompleted(
+                        ticking.Id, occurrence.UserId, at, occurrence.Day, occurrence.Completed)];
 
             default:
                 throw new DomainRejectedException($"A task cannot handle {command.GetType().Name}.");
@@ -198,6 +243,25 @@ public sealed class TodoTask : Aggregate
             case StepRemoved stepRemoved:
                 _steps.RemoveAll(step => step.Id == stepRemoved.StepId);
                 Densify();
+                break;
+            case TaskRecurrenceSet recurrenceSet:
+                Recurrence = recurrenceSet.Rule;
+                if (recurrenceSet.Rule is null)
+                {
+                    _completedDays.Clear();
+                }
+
+                break;
+            case OccurrenceCompleted occurrenceCompleted:
+                if (occurrenceCompleted.Completed)
+                {
+                    _completedDays.Add(occurrenceCompleted.Day);
+                }
+                else
+                {
+                    _completedDays.Remove(occurrenceCompleted.Day);
+                }
+
                 break;
         }
     }
