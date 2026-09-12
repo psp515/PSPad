@@ -1,0 +1,34 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                       OnClick="@ToggleDrawer" />
+        <MudText Typo="Typo.h6" Class="ml-3">PSPad</MudText>
+    </MudAppBar>
+    <MudDrawer Open="_open" OpenChanged="@(value => _open = value)" Elevation="1">
+        <MudNavMenu>
+            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Today">Today</MudNavLink>
+            <MudNavLink Href="/inbox" Icon="@Icons.Material.Filled.Inbox">Inbox</MudNavLink>
+            <MudNavLink Href="/areas" Icon="@Icons.Material.Filled.Folder">Areas</MudNavLink>
+            <MudNavLink Href="/goals" Icon="@Icons.Material.Filled.Flag">Goals</MudNavLink>
+            <MudNavLink Href="/history" Icon="@Icons.Material.Filled.History">History</MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="my-4">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    bool _open = true;
+
+    void ToggleDrawer() => _open = !_open;
+}
