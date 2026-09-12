@@ -51,6 +51,8 @@
     </MudMainContent>
 </MudLayout>
 
+<AppFab />
+
 <div class="d-md-none">
     <BottomNav OnAreasRequested="@(() => _sheetOpen = true)" />
     <AreaSheet Open="_sheetOpen" OpenChanged="@(open => _sheetOpen = open)" Areas="@_areas"

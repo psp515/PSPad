@@ -1,0 +1,45 @@
+@using PSPad.App.State
+@inject FabContext Context
+@implements IDisposable
+
+@if (Context.Primary is not null)
+{
+    <div class="pspad-fab d-flex align-center gap-1">
+        <MudFab Color="Color.Primary" StartIcon="@Context.Primary.Icon"
+                aria-label="@Context.Primary.Label" OnClick="@InvokePrimaryAsync" />
+
+        @if (Context.Secondary.Count > 0)
+        {
+            <MudMenu AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight">
+                <ActivatorContent>
+                    <MudFab Color="Color.Secondary" Size="Size.Small"
+                            StartIcon="@Icons.Material.Filled.MoreVert" aria-label="More actions" />
+                </ActivatorContent>
+                <ChildContent>
+                    @foreach (var action in Context.Secondary)
+                    {
+                        <MudMenuItem Icon="@action.Icon" OnClick="@(() => action.Invoke())">
+                            @action.Label
+                        </MudMenuItem>
+                    }
+                </ChildContent>
+            </MudMenu>
+        }
+    </div>
+}
+
+@code {
+    protected override void OnInitialized() => Context.Changed += OnChanged;
+
+    async Task InvokePrimaryAsync()
+    {
+        if (Context.Primary is not null)
+        {
+            await Context.Primary.Invoke();
+        }
+    }
+
+    void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Context.Changed -= OnChanged;
+}

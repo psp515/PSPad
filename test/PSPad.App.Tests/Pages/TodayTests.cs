@@ -4,6 +4,7 @@ using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App.Pages;
 using PSPad.App.State;
+using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -61,6 +62,8 @@ public class TodayTests : Bunit.TestContext
 
         Services.AddSingleton<IReplica>(replica);
         Services.AddSingleton<IDocumentStore<TodoTask>>(new ReplicaDocumentStore<TodoTask>(replica));
+        Services.AddSingleton<IDocumentStore<Inbox>>(new ReplicaDocumentStore<Inbox>(replica));
+        Services.AddSingleton(new FabContext());
         Services.AddSingleton(new AppState { UserId = User, TimeZone = "Etc/UTC", Today = today });
     }
 
