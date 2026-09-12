@@ -14,9 +14,10 @@ public class CommandEndpointTests(MongoFixture fixture)
     public async Task AnAcceptedCommandComesBackAcceptedAndIsStored()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
-        var user = Guid.NewGuid();
         await using var factory = new ApiFactory(fixture);
-        var client = factory.ClientFor(user);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var me = await client.GetFromJsonAsync<MeResponse>("/api/me", ct);
+        var user = me!.UserId;
         var command = new CreateArea(Guid.NewGuid(), user, Guid.NewGuid(), "Home", 0);
 
         var response = await client.PostAsJsonAsync("/api/commands", new[]
@@ -33,10 +34,11 @@ public class CommandEndpointTests(MongoFixture fixture)
     public async Task ABatchIsAppliedInOrderAndReportsEachResult()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
-        var user = Guid.NewGuid();
         var areaId = Guid.NewGuid();
         await using var factory = new ApiFactory(fixture);
-        var client = factory.ClientFor(user);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var me = await client.GetFromJsonAsync<MeResponse>("/api/me", ct);
+        var user = me!.UserId;
 
         var response = await client.PostAsJsonAsync("/api/commands", new[]
         {
@@ -57,9 +59,12 @@ public class CommandEndpointTests(MongoFixture fixture)
     public async Task ReplayingTheSameBatchChangesNothing()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
-        var user = Guid.NewGuid();
         await using var factory = new ApiFactory(fixture);
-        var client = factory.ClientFor(user);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var me = await client.GetFromJsonAsync<MeResponse>("/api/me", ct);
+        var user = me!.UserId;
+        var baseline = await client.GetFromJsonAsync<JsonElement>("/api/sync?since=0", ct);
+        var marker = baseline.GetProperty("marker").GetInt64();
         var batch = new[] { Envelope(new CreateArea(Guid.NewGuid(), user, Guid.NewGuid(), "Home", 0)) };
 
         await client.PostAsJsonAsync("/api/commands", batch, ct);
@@ -68,7 +73,7 @@ public class CommandEndpointTests(MongoFixture fixture)
         var results = await replay.Content.ReadFromJsonAsync<CommandResponse[]>(ct);
         Assert.True(Assert.Single(results!).Accepted);
 
-        var sync = await client.GetFromJsonAsync<JsonElement>("/api/sync?since=0", ct);
+        var sync = await client.GetFromJsonAsync<JsonElement>($"/api/sync?since={marker}", ct);
         Assert.Equal(1, sync.GetProperty("events").GetArrayLength());
     }
 
