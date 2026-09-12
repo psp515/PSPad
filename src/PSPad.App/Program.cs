@@ -23,6 +23,7 @@ builder.Services.AddOidcAuthentication(options =>
 });
 
 builder.Services.AddScoped<IReplica, IndexedDbReplica>();
+builder.Services.AddScoped<IOutbox, IndexedDbOutbox>();
 builder.Services.AddScoped(typeof(IDocumentStore<>), typeof(ReplicaDocumentStore<>));
 builder.Services.AddScoped<ReplicaUnitOfWork>();
 builder.Services.AddScoped<IUnitOfWork>(services => services.GetRequiredService<ReplicaUnitOfWork>());
