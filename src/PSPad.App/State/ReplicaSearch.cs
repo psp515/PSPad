@@ -27,7 +27,8 @@ public sealed class ReplicaSearch(
         var listsById = allLists.Where(list => !list.Deleted).ToDictionary(list => list.Id);
 
         var taskHits = allTasks
-            .Where(task => !task.Deleted && listsById.ContainsKey(task.ListId) && Matches(task.Name, needle))
+            .Where(task => !task.Deleted && Matches(task.Name, needle)
+                && listsById.TryGetValue(task.ListId, out var list) && areaNames.ContainsKey(list.AreaId))
             .Select(task => new SearchHit(task.Id, task.Name, PathOf(task.ListId, listsById, areaNames), false));
 
         var listHits = listsById.Values

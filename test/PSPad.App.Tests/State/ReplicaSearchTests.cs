@@ -88,6 +88,17 @@ public class ReplicaSearchTests
     }
 
     [Fact]
+    public async Task ATaskWhoseListsAreaWasDeletedIsNotFound()
+    {
+        var search = Arrange(out var area, out _, "Kupić farbę");
+        area.ApplyAll(Area.Decide(
+            area, new DeleteArea(Guid.NewGuid(), User, area.Id), DateTimeOffset.UnixEpoch));
+        Save(area);
+
+        Assert.DoesNotContain(await search.FindAsync(User, "farb"), hit => hit.Name == "Kupić farbę");
+    }
+
+    [Fact]
     public async Task ADeletedListIsNotFoundAsAHitItself()
     {
         var search = Arrange(out _, out var list);
