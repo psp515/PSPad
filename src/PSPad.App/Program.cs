@@ -18,9 +18,6 @@ builder.Services.AddOidcAuthentication(options =>
 {
     builder.Configuration.Bind("Keycloak", options.ProviderOptions);
     options.ProviderOptions.ResponseType = "code";
-    options.ProviderOptions.DefaultScopes.Add("openid");
-    options.ProviderOptions.DefaultScopes.Add("profile");
-    options.ProviderOptions.DefaultScopes.Add("zoneinfo");
 });
 
 builder.Services.AddScoped<IReplica, IndexedDbReplica>();
@@ -42,6 +39,7 @@ builder.Services.AddHttpClient<PSPadApiClient>(client => client.BaseAddress = ne
         return handler;
     });
 
+builder.Services.AddScoped<AppState>();
 builder.Services.AddScoped<IHistorySource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();

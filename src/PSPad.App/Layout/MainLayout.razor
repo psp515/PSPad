@@ -1,6 +1,12 @@
 @inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using PSPad.App.Api
+@using PSPad.App.State
 @using PSPad.App.Sync
+@using PSPad.Module.Tasks.Today
 @inject SyncCoordinator Coordinator
+@inject AppState State
+@inject PSPadApiClient Api
 @implements IDisposable
 
 <MudThemeProvider />
@@ -32,17 +38,38 @@
     </MudDrawer>
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.Large" Class="my-4">
-            @Body
+            @if (_ready)
+            {
+                @Body
+            }
+            else
+            {
+                <MudProgressCircular Indeterminate="true" />
+            }
         </MudContainer>
     </MudMainContent>
 </MudLayout>
 
 @code {
-    bool _open = true;
+    [CascadingParameter] Task<AuthenticationState>? AuthStateTask { get; set; }
 
-    protected override void OnInitialized()
+    bool _open = true;
+    bool _ready;
+
+    protected override async Task OnInitializedAsync()
     {
         Coordinator.Changed += OnCoordinatorChanged;
+
+        var authState = AuthStateTask is null ? null : await AuthStateTask;
+        if (authState?.User.Identity?.IsAuthenticated == true)
+        {
+            var me = await Api.MeAsync();
+            State.UserId = me!.UserId;
+            State.TimeZone = me.TimeZone;
+            State.Today = TodayRule.TodayIn(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
+        }
+
+        _ready = true;
         Coordinator.Start();
     }
 
