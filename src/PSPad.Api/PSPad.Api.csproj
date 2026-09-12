@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\shared\PSPad.Abstractions\PSPad.Abstractions.csproj" />
+    <ProjectReference Include="..\shared\PSPad.Contracts\PSPad.Contracts.csproj" />
+    <ProjectReference Include="..\shared\PSPad.Infrastructure\PSPad.Infrastructure.csproj" />
+    <ProjectReference Include="..\modules\PSPad.Module.Tasks\PSPad.Module.Tasks.csproj" />
+    <ProjectReference Include="..\modules\PSPad.Module.History\PSPad.Module.History.csproj" />
+    <ProjectReference Include="..\modules\PSPad.Module.Identity\PSPad.Module.Identity.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>
