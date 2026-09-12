@@ -1,0 +1,40 @@
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Recurrence
+@using PSPad.Module.Tasks.Tasks
+@inject IServiceProvider Services
+
+<div>
+    <MudSwitch T="bool" Value="@(Task.Recurrence is not null)" ValueChanged="@ToggleAsync" Label="Repeats" />
+
+    @if (Task.Recurrence is not null)
+    {
+        <div class="d-flex gap-1 mt-2">
+            @foreach (var occurrence in Occurrences.Between(Task, Today.AddDays(-13), Today, Today))
+            {
+                <span class="repeat-day">@occurrence.Day.ToString("MM-dd"): @Label(occurrence.Status)</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TodoTask Task { get; set; } = null!;
+    [Parameter] public Guid UserId { get; set; }
+    [Parameter] public DateOnly Today { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+
+    static string Label(OccurrenceStatus status) => status switch
+    {
+        OccurrenceStatus.Done => "Done",
+        OccurrenceStatus.Pending => "Pending",
+        _ => "Skipped"
+    };
+
+    async System.Threading.Tasks.Task ToggleAsync(bool repeats)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        var rule = repeats ? RecurrenceRule.Daily(Today) : null;
+        await sender.SendAsync(new SetTaskRecurrence(Guid.NewGuid(), UserId, Task.Id, rule));
+        await Changed.InvokeAsync();
+    }
+}

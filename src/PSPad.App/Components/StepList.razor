@@ -1,0 +1,37 @@
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Tasks
+@inject IServiceProvider Services
+
+<MudList T="string">
+    @foreach (var step in Task.Steps)
+    {
+        <MudListItem T="string">
+            <div class="d-flex align-center gap-2">
+                <input type="checkbox" checked="@step.Checked"
+                       @onchange="@(args => CheckAsync(step, (bool)args.Value!))" />
+                <MudText>@step.Name</MudText>
+                <MudButton Size="Size.Small" OnClick="@(() => RemoveAsync(step))">remove</MudButton>
+            </div>
+        </MudListItem>
+    }
+</MudList>
+
+@code {
+    [Parameter, EditorRequired] public TodoTask Task { get; set; } = null!;
+    [Parameter] public Guid UserId { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+
+    async System.Threading.Tasks.Task CheckAsync(Step step, bool @checked)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new CheckStep(Guid.NewGuid(), UserId, Task.Id, step.Id, @checked));
+        await Changed.InvokeAsync();
+    }
+
+    async System.Threading.Tasks.Task RemoveAsync(Step step)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new RemoveStep(Guid.NewGuid(), UserId, Task.Id, step.Id));
+        await Changed.InvokeAsync();
+    }
+}

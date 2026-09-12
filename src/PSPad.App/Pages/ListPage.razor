@@ -1,0 +1,68 @@
+@page "/lists/{ListId:guid}"
+@using PSPad.Abstractions
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Tasks
+@inject IDocumentStore<TaskList> ListStore
+@inject IDocumentStore<TodoTask> TaskStore
+@inject AppState State
+@inject IServiceProvider Services
+
+@if (_list is not null)
+{
+    <MudText Typo="Typo.h5" Class="mb-4">@_list.Name</MudText>
+}
+
+<MudTextField T="string" @bind-Value="_newTaskName" Label="New task" Immediate="true" OnKeyDown="@OnKeyDown" />
+
+@if (_tasks is not null)
+{
+    <MudList T="string" Class="mt-4">
+        @foreach (var task in _tasks.Where(t => t.CompletedAt is null))
+        {
+            <MudListItem T="string" Href="@($"/tasks/{task.Id}")">@task.Name</MudListItem>
+        }
+    </MudList>
+
+    <MudExpansionPanels Class="mt-4">
+        <MudExpansionPanel Text="Completed">
+            <MudList T="string">
+                @foreach (var task in _tasks.Where(t => t.CompletedAt is not null))
+                {
+                    <MudListItem T="string" Href="@($"/tasks/{task.Id}")">@task.Name</MudListItem>
+                }
+            </MudList>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+}
+
+@code {
+    [Parameter] public Guid ListId { get; set; }
+
+    TaskList? _list;
+    IReadOnlyList<TodoTask>? _tasks;
+    string _newTaskName = "";
+
+    protected override async Task OnParametersSetAsync() => await ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        _list = await ListStore.LoadAsync(ListId, CancellationToken.None);
+        var all = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _tasks = all.Where(t => t.ListId == ListId && !t.Deleted).ToArray();
+    }
+
+    async Task OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
+    {
+        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_newTaskName))
+        {
+            return;
+        }
+
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, Guid.NewGuid(), ListId, _newTaskName));
+
+        _newTaskName = "";
+        await ReloadAsync();
+    }
+}
