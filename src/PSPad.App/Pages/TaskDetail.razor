@@ -1,0 +1,142 @@
+@page "/tasks/{TaskId:guid}"
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Goals
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Tasks
+@inject IDocumentStore<TodoTask> Store
+@inject AppState State
+@inject IServiceProvider Services
+
+@if (_task is not null)
+{
+    <MudTextField T="string" Value="@_task.Name" Label="Name" ValueChanged="@RenameAsync" />
+
+    <div class="d-flex align-center gap-2 mt-2">
+        <MudCheckBox T="bool" Value="@(_task.CompletedAt is not null)" ValueChanged="@CompleteAsync" Label="Done" />
+        <MudCheckBox T="bool" Value="@_task.Starred" ValueChanged="@StarAsync" Label="Starred" />
+    </div>
+
+    <MudSelect T="Priority" Value="@_task.Priority" ValueChanged="@PriorityAsync" Label="Priority">
+        @foreach (var priority in Enum.GetValues<Priority>())
+        {
+            <MudSelectItem T="Priority" Value="@priority">@priority</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudDatePicker Label="Due date" Date="@DueDate" DateChanged="@DueDateAsync"
+                   Disabled="@_task.IsRecurring" />
+
+    @if (_lists is not null)
+    {
+        <MudSelect T="Guid" Value="@_task.ListId" ValueChanged="@MoveToListAsync" Label="List">
+            @foreach (var list in _lists)
+            {
+                <MudSelectItem T="Guid" Value="@list.Id">@list.Name</MudSelectItem>
+            }
+        </MudSelect>
+    }
+
+    @if (_goals is not null)
+    {
+        <MudSelect T="Guid?" Value="@_task.GoalId" ValueChanged="@LinkGoalAsync" Label="Goal">
+            <MudSelectItem T="Guid?" Value="@((Guid?)null)">None</MudSelectItem>
+            @foreach (var goal in _goals)
+            {
+                <MudSelectItem T="Guid?" Value="@((Guid?)goal.Id)">@goal.Name</MudSelectItem>
+            }
+        </MudSelect>
+    }
+
+    <MudText Class="mt-4">Steps</MudText>
+    <StepList Task="_task" UserId="State.UserId" Changed="@ReloadAsync" />
+
+    <MudText Class="mt-4">Repeat</MudText>
+    <RecurrenceEditor Task="_task" UserId="State.UserId" Today="State.Today" Changed="@ReloadAsync" />
+}
+
+@code {
+    [Parameter] public Guid TaskId { get; set; }
+
+    TodoTask? _task;
+    IReadOnlyList<TaskList>? _lists;
+    IReadOnlyList<Goal>? _goals;
+
+    DateTime? DueDate => _task?.DueOn is { } due ? due.ToDateTime(TimeOnly.MinValue) : null;
+
+    protected override async Task OnParametersSetAsync() => await ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        _task = await Store.LoadAsync(TaskId, CancellationToken.None);
+
+        var listStore = Services.GetService<IDocumentStore<TaskList>>();
+        _lists = listStore is null
+            ? []
+            : await listStore.LoadAllAsync(State.UserId, CancellationToken.None);
+
+        var goalStore = Services.GetService<IDocumentStore<Goal>>();
+        _goals = goalStore is null
+            ? []
+            : await goalStore.LoadAllAsync(State.UserId, CancellationToken.None);
+    }
+
+    async Task RenameAsync(string name)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new RenameTask(Guid.NewGuid(), State.UserId, TaskId, name));
+        await ReloadAsync();
+    }
+
+    async Task CompleteAsync(bool completed)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        if (completed)
+        {
+            await sender.SendAsync(new CompleteTask(Guid.NewGuid(), State.UserId, TaskId));
+        }
+        else
+        {
+            await sender.SendAsync(new ReopenTask(Guid.NewGuid(), State.UserId, TaskId));
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task StarAsync(bool starred)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, TaskId, starred));
+        await ReloadAsync();
+    }
+
+    async Task PriorityAsync(Priority priority)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new SetTaskPriority(Guid.NewGuid(), State.UserId, TaskId, priority));
+        await ReloadAsync();
+    }
+
+    async Task DueDateAsync(DateTime? date)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        var dueOn = date is null ? null : (DateOnly?)DateOnly.FromDateTime(date.Value);
+        await sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, TaskId, dueOn));
+        await ReloadAsync();
+    }
+
+    async Task MoveToListAsync(Guid listId)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new MoveTaskToList(Guid.NewGuid(), State.UserId, TaskId, listId));
+        await ReloadAsync();
+    }
+
+    async Task LinkGoalAsync(Guid? goalId)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new LinkTaskToGoal(Guid.NewGuid(), State.UserId, TaskId, goalId));
+        await ReloadAsync();
+    }
+}

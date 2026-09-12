@@ -1,0 +1,65 @@
+@page "/"
+@using PSPad.Abstractions
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Tasks
+@using PSPad.Module.Tasks.Today
+@inject IDocumentStore<TodoTask> Store
+@inject AppState State
+@inject IServiceProvider Services
+
+<MudText Typo="Typo.h5" Class="mb-4">Today</MudText>
+
+@if (_entries is not null)
+{
+    <MudList T="string">
+        @foreach (var entry in _entries)
+        {
+            <MudListItem T="string" Class="@(entry.Overdue ? "overdue" : "")">
+                <div class="d-flex align-center gap-2">
+                    <MudCheckBox T="bool" Value="false" ValueChanged="@(_ => CompleteAsync(entry))" />
+                    @if (entry.Starred)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" />
+                    }
+                    <MudText>@entry.Name</MudText>
+                    @if (entry.Priority > 0)
+                    {
+                        <MudChip T="string" Size="Size.Small">@((Priority)entry.Priority)</MudChip>
+                    }
+                    @if (entry.Overdue)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error">Overdue</MudChip>
+                    }
+                </div>
+            </MudListItem>
+        }
+    </MudList>
+}
+
+@code {
+    IReadOnlyList<TodayEntry>? _entries;
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        var tasks = await Store.LoadAllAsync(State.UserId, CancellationToken.None);
+        _entries = TodayRule.Select(tasks, State.Today);
+    }
+
+    async Task CompleteAsync(TodayEntry entry)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+
+        if (entry.Recurring)
+        {
+            await sender.SendAsync(new CompleteOccurrence(Guid.NewGuid(), State.UserId, entry.TaskId, State.Today, true));
+        }
+        else
+        {
+            await sender.SendAsync(new CompleteTask(Guid.NewGuid(), State.UserId, entry.TaskId));
+        }
+
+        await ReloadAsync();
+    }
+}

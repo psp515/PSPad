@@ -1,0 +1,91 @@
+@page "/inbox"
+@using PSPad.Abstractions
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Inbox
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Tasks
+@inject IDocumentStore<Inbox> Store
+@inject IDocumentStore<TaskList> Lists
+@inject AppState State
+@inject IServiceProvider Services
+
+<MudText Typo="Typo.h5" Class="mb-4">Inbox</MudText>
+
+<MudTextField T="string" @bind-Value="_text" @ref="_field" Label="Capture" Immediate="true"
+              OnKeyDown="@OnKeyDown" />
+
+@if (_inbox is not null)
+{
+    <MudList T="string" Class="mt-4">
+        @foreach (var item in _inbox.Items.OrderByDescending(i => i.Position))
+        {
+            <MudListItem T="string">
+                <div class="d-flex align-center gap-2">
+                    <MudText>@item.Text</MudText>
+                    <MudButton Size="Size.Small" OnClick="@(() => OrganiseAsync(item))">organise</MudButton>
+                    <MudButton Size="Size.Small" OnClick="@(() => DiscardAsync(item))">discard</MudButton>
+                </div>
+            </MudListItem>
+        }
+    </MudList>
+}
+
+@code {
+    Inbox? _inbox;
+    string _text = "";
+    MudTextField<string>? _field;
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        var inboxes = await Store.LoadAllAsync(State.UserId, CancellationToken.None);
+        _inbox = inboxes.FirstOrDefault();
+    }
+
+    async Task OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
+    {
+        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_text) || _inbox is null)
+        {
+            return;
+        }
+
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new CaptureToInbox(Guid.NewGuid(), State.UserId, _inbox.Id, Guid.NewGuid(), _text));
+
+        _text = "";
+        await ReloadAsync();
+        _field?.FocusAsync();
+    }
+
+    async Task OrganiseAsync(InboxItem item)
+    {
+        var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
+        var target = lists.FirstOrDefault();
+        if (target is null || _inbox is null)
+        {
+            return;
+        }
+
+        var sender = Services.GetRequiredService<CommandSender>();
+        var taskId = Guid.NewGuid();
+        await sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, taskId, target.Id, item.Text));
+        await sender.SendAsync(new OrganiseInboxItem(
+            Guid.NewGuid(), State.UserId, _inbox.Id, item.Id, target.Id, taskId));
+
+        await ReloadAsync();
+    }
+
+    async Task DiscardAsync(InboxItem item)
+    {
+        if (_inbox is null)
+        {
+            return;
+        }
+
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new DiscardInboxItem(Guid.NewGuid(), State.UserId, _inbox.Id, item.Id));
+
+        await ReloadAsync();
+    }
+}

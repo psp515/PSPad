@@ -1,0 +1,97 @@
+@page "/areas"
+@using PSPad.Abstractions
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Ordering
+@inject IDocumentStore<Area> AreaStore
+@inject IDocumentStore<TaskList> ListStore
+@inject AppState State
+@inject IServiceProvider Services
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h5" Class="mb-4">Areas</MudText>
+
+<MudTextField T="string" @bind-Value="_newAreaName" Label="New area" Immediate="true" OnKeyDown="@OnAreaKeyDown" />
+
+@if (_areas is not null)
+{
+    @foreach (var area in _areas.OrderBy(a => a.Position))
+    {
+        <MudPaper Class="pa-4 my-2">
+            <div class="d-flex align-center gap-2">
+                <MudText Typo="Typo.h6">@area.Name</MudText>
+                <MudButton Size="Size.Small" OnClick="@(() => DeleteAreaAsync(area))">delete</MudButton>
+            </div>
+
+            <MudList T="string">
+                @foreach (var list in _lists!.Where(l => l.AreaId == area.Id).OrderBy(l => l.Position))
+                {
+                    <MudListItem T="string" Href="@($"/lists/{list.Id}")">@list.Name</MudListItem>
+                }
+            </MudList>
+
+            <MudTextField T="string" Label="New list" Immediate="true"
+                          OnKeyDown="@(args => OnListKeyDown(args, area))" @bind-Value="_newListNames[area.Id]" />
+        </MudPaper>
+    }
+}
+
+@code {
+    IReadOnlyList<Area>? _areas;
+    IReadOnlyList<TaskList>? _lists;
+    string _newAreaName = "";
+    readonly Dictionary<Guid, string> _newListNames = [];
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        _areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
+
+        foreach (var area in _areas)
+        {
+            _newListNames.TryAdd(area.Id, "");
+        }
+    }
+
+    async Task OnAreaKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
+    {
+        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_newAreaName))
+        {
+            return;
+        }
+
+        var sender = Services.GetRequiredService<CommandSender>();
+        var position = Positions.Next(_areas!.Select(a => a.Position));
+        await sender.SendAsync(new CreateArea(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _newAreaName, position));
+
+        _newAreaName = "";
+        await ReloadAsync();
+    }
+
+    async Task OnListKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args, Area area)
+    {
+        var name = _newListNames.GetValueOrDefault(area.Id, "");
+        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        var sender = Services.GetRequiredService<CommandSender>();
+        var position = Positions.Next(_lists!.Where(l => l.AreaId == area.Id).Select(l => l.Position));
+        await sender.SendAsync(
+            new CreateTaskList(Guid.NewGuid(), State.UserId, Guid.NewGuid(), area.Id, name, position));
+
+        _newListNames[area.Id] = "";
+        await ReloadAsync();
+    }
+
+    async Task DeleteAreaAsync(Area area)
+    {
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new DeleteArea(Guid.NewGuid(), State.UserId, area.Id));
+        await ReloadAsync();
+    }
+}

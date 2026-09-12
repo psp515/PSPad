@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/PSPad.Api/PSPad.Api.csproj" />
+    <Project Path="src/PSPad.App/PSPad.App.csproj" />
   </Folder>
   <Folder Name="/src/shared/">
     <Project Path="src/shared/PSPad.Abstractions/PSPad.Abstractions.csproj" />
@@ -18,5 +19,6 @@
     <Project Path="test/PSPad.Module.Identity.Tests/PSPad.Module.Identity.Tests.csproj" />
     <Project Path="test/PSPad.Module.History.Tests/PSPad.Module.History.Tests.csproj" />
     <Project Path="test/PSPad.Api.Tests/PSPad.Api.Tests.csproj" />
+    <Project Path="test/PSPad.App.Tests/PSPad.App.Tests.csproj" />
   </Folder>
 </Solution>

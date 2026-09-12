@@ -32,8 +32,11 @@ Each deployable carries its own `Dockerfile` next to its `.csproj`, built with
 the repository root as context so the shared build props come along:
 
 - `src/PSPad.Api/Dockerfile` — the API.
-- `src/PSPad.App/Dockerfile` — the Blazor WebAssembly client, served as
-  static files. Added with the client project itself.
+- `src/PSPad.App/Dockerfile` — the Blazor WebAssembly client, published and
+  served as static files by nginx on port 8080. `API_BASE_ADDRESS`,
+  `KEYCLOAK_AUTHORITY` and `KEYCLOAK_CLIENT_ID` are substituted into
+  `appsettings.json` at container start, so the same image runs in any
+  environment.
 
 The production stack (`docker/compose.prod.yaml`) serves plain HTTP and expects
 a reverse proxy in front of it.
