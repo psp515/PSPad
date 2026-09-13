@@ -97,8 +97,15 @@ Inbox, an area screen and a list screen all open the same panel with no
 per-screen wiring.
 
 The panel holds: checkbox, name, star; steps with their own checkboxes and
-**+ Next step**; due date; recurrence; goal; priority; the owning list; created
-date; delete.
+**+ Next step**; due date; recurrence; goal; priority; the owning list; delete.
+
+**Amended during implementation: no created date.** This design originally
+listed one. No aggregate carries a creation timestamp — `Aggregate` has `Id`,
+`UserId`, `Version`, `Deleted` and `Seq`, and nothing more — so the only source
+is the server-side event log, over HTTP. That call fails offline, in a panel
+this same design requires to work offline. The alternative, putting a
+`CreatedAt` on `TodoTask`, is an aggregate change this redesign's own scope
+rules out. The field is dropped rather than bought at either price.
 
 **Rejected: a permanent third pane.** It reflows every screen at every width
 and buys visibility of a list the user has just clicked away from.
