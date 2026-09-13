@@ -17,6 +17,7 @@ public static class AppTestHost
         Bunit.TestContext context, Guid userId, DateOnly today, params Aggregate[] documents)
     {
         context.JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
+        context.Services.Options = new ServiceProviderOptions { ValidateScopes = false };
         context.Services.AddMudServices();
 
         var replica = new InMemoryReplica();

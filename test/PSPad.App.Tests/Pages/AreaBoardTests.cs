@@ -1,6 +1,8 @@
 using Bunit;
+using Microsoft.AspNetCore.Components.Web;
 using PSPad.Abstractions;
 using PSPad.App.Pages;
+using PSPad.App.State;
 using PSPad.App.Tests;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
@@ -124,7 +126,23 @@ public class AreaBoardTests : Bunit.TestContext
         Assert.Contains("New list", page.Markup);
     }
 
-    void Arrange(params Aggregate[] documents) =>
+    [Fact]
+    public async Task TypingIntoACardsAddTaskFieldCreatesTheTaskInTheReplica()
+    {
+        var area = NewArea("Dom");
+        var shopping = NewList(area.Id, "Zakupy", 0);
+        var replica = Arrange(area, shopping);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        var input = page.Find("input[placeholder='Add task']");
+        input.Input("Kup farbę");
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        var tasks = await replica.LoadAllAsync<TodoTask>(User);
+        Assert.Contains(tasks, task => task.ListId == shopping.Id && task.Name == "Kup farbę");
+    }
+
+    InMemoryReplica Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12), documents);
 
     static Area NewArea(string name)
