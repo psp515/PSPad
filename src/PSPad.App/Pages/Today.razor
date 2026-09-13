@@ -1,16 +1,11 @@
 @page "/"
 @using PSPad.Abstractions
 @using PSPad.App.State
-@using PSPad.Module.Tasks.Inbox
 @using PSPad.Module.Tasks.Tasks
 @using PSPad.Module.Tasks.Today
 @inject IDocumentStore<TodoTask> Store
-@inject IDocumentStore<Inbox> InboxStore
 @inject AppState State
 @inject IServiceProvider Services
-@inject FabContext Fab
-@inject ISnackbar Snackbar
-@implements IDisposable
 
 <MudText Typo="Typo.h5" Class="mb-4">Today</MudText>
 
@@ -47,28 +42,7 @@
     protected override async Task OnInitializedAsync()
     {
         await ReloadAsync();
-
-        Fab.Set(new FabAction("Capture to Inbox", Icons.Material.Filled.Add, CaptureAsync));
     }
-
-    async Task CaptureAsync()
-    {
-        var inboxes = await InboxStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        var inbox = inboxes.FirstOrDefault();
-
-        if (inbox is null)
-        {
-            return;
-        }
-
-        var sender = Services.GetRequiredService<CommandSender>();
-        await sender.SendAsync(new CaptureToInbox(
-            Guid.NewGuid(), State.UserId, inbox.Id, Guid.NewGuid(), "New thought"));
-
-        Snackbar.Add("Captured to Inbox", Severity.Success);
-    }
-
-    public void Dispose() => Fab.Clear();
 
     async Task ReloadAsync()
     {

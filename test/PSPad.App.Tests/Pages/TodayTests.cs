@@ -63,7 +63,6 @@ public class TodayTests : Bunit.TestContext
         Services.AddSingleton<IReplica>(replica);
         Services.AddSingleton<IDocumentStore<TodoTask>>(new ReplicaDocumentStore<TodoTask>(replica));
         Services.AddSingleton<IDocumentStore<Inbox>>(new ReplicaDocumentStore<Inbox>(replica));
-        Services.AddSingleton(new FabContext());
         Services.AddSingleton(new AppState { UserId = User, TimeZone = "Etc/UTC", Today = today });
     }
 
