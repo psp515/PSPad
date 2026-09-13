@@ -45,6 +45,50 @@ public class TaskRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ACompletedTaskWithAPastDueDateIsNotOverdue()
+    {
+        Arrange();
+
+        var row = Render(Complete(Due(Task("Buy paint"), Today.AddDays(-1))));
+
+        Assert.DoesNotContain("overdue", row.Markup, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ATaskOverdueOnlyThroughAStepDueDateIsOverdue()
+    {
+        Arrange();
+        var task = Task("Plan trip");
+        Add(task, "Book flights");
+
+        var row = Render(StepDue(task, Today.AddDays(-1)));
+
+        Assert.Contains("overdue", row.Markup, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ACompletedNonRecurringTaskRendersStruckThroughAndChecked()
+    {
+        Arrange();
+
+        var row = Render(Complete(Task("Buy milk")));
+
+        Assert.Contains("text-decoration:line-through", row.Markup);
+        Assert.True(row.Find("input.mud-checkbox-input").HasAttribute("checked"));
+    }
+
+    [Fact]
+    public void ARecurringTaskCompletedTodayRendersStruckThroughAndChecked()
+    {
+        Arrange();
+
+        var row = Render(CompleteOccurrenceOn(Recurring(Task("Read a book"), Today), Today));
+
+        Assert.Contains("text-decoration:line-through", row.Markup);
+        Assert.True(row.Find("input.mud-checkbox-input").HasAttribute("checked"));
+    }
+
+    [Fact]
     public void ARecurringTaskCarriesTheRecurrenceGlyph()
     {
         Arrange();
@@ -146,4 +190,28 @@ public class TaskRowTests : Bunit.TestContext
         task.ApplyAll(TodoTask.Decide(
             task, new AddStep(Guid.NewGuid(), User, task.Id, Guid.NewGuid(), name),
             DateTimeOffset.UnixEpoch));
+
+    static TodoTask Complete(TodoTask task)
+    {
+        task.ApplyAll(TodoTask.Decide(
+            task, new CompleteTask(Guid.NewGuid(), User, task.Id), DateTimeOffset.UnixEpoch));
+        return task;
+    }
+
+    static TodoTask CompleteOccurrenceOn(TodoTask task, DateOnly day)
+    {
+        task.ApplyAll(TodoTask.Decide(
+            task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, day, true),
+            DateTimeOffset.UnixEpoch));
+        return task;
+    }
+
+    static TodoTask StepDue(TodoTask task, DateOnly due)
+    {
+        var stepId = task.Steps.Single().Id;
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetStepDueDate(Guid.NewGuid(), User, task.Id, stepId, due),
+            DateTimeOffset.UnixEpoch));
+        return task;
+    }
 }
