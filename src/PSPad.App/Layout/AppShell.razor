@@ -11,8 +11,9 @@
 @inject AppState State
 @inject PSPadApiClient Api
 @inject ThemePreference Preference
+@inject SidebarCounts Counts
+@inject CommandSender Sender
 @inject IDocumentStore<Area> AreaStore
-@inject NavigationManager Navigation
 @implements IDisposable
 
 <MudThemeProvider @ref="_themeProvider" Theme="@PSPadTheme.Instance" IsDarkMode="@Preference.IsDark" />
@@ -21,19 +22,18 @@
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="1">
+    <MudAppBar Elevation="0" Class="d-md-none">
+        <MudIconButton id="pspad-drawer-toggle" Class="d-md-none" Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
         <MudText Typo="Typo.h6">PSPad</MudText>
-        <MudSpacer />
-        @if (Coordinator.PendingCount > 0)
-        {
-            <MudBadge Content="@Coordinator.PendingCount" Color="Color.Warning" Overlap="true" Class="mr-4">
-                <MudIcon Icon="@Icons.Material.Filled.CloudSync" />
-            </MudBadge>
-        }
     </MudAppBar>
 
-    <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="1" Class="d-none d-md-flex">
-        <NavSidebar />
+    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Responsive"
+               Breakpoint="Breakpoint.Md" Elevation="1" ClipMode="DrawerClipMode.Never">
+        <NavSidebar Areas="@_areas" Email="@_email" UserId="@State.UserId"
+                    PendingCommands="@Coordinator.PendingCount"
+                    OnNewArea="@(() => _drawerOpen = false)"
+                    Navigated="@(() => _drawerOpen = false)" />
     </MudDrawer>
 
     <MudMainContent>
@@ -50,31 +50,27 @@
     </MudMainContent>
 </MudLayout>
 
-<AppFab />
-
-<div class="d-md-none">
-    <BottomNav OnAreasRequested="@(() => _sheetOpen = true)" />
-    <AreaSheet Open="_sheetOpen" OpenChanged="@(open => _sheetOpen = open)" Areas="@_areas"
-               OnAreaSelected="@GoToArea" />
-</div>
-
 @code {
     [CascadingParameter] Task<AuthenticationState>? AuthStateTask { get; set; }
 
     MudThemeProvider? _themeProvider;
     bool _themeReady;
     bool _ready;
-    bool _sheetOpen;
+    bool _drawerOpen;
+    string _email = "";
     IReadOnlyList<Area> _areas = [];
 
     protected override async Task OnInitializedAsync()
     {
-        Coordinator.Changed += OnCoordinatorChanged;
-        Preference.Changed += OnThemeChanged;
+        Coordinator.Changed += OnChanged;
+        Preference.Changed += OnChanged;
+        Sender.Sent += OnCommandSent;
 
         var authState = AuthStateTask is null ? null : await AuthStateTask;
         if (authState?.User.Identity?.IsAuthenticated == true)
         {
+            _email = authState.User.Identity.Name ?? "";
+
             var me = await Api.MeAsync();
 
             if (me is not null)
@@ -84,6 +80,7 @@
                 State.Today = TodayRule.TodayIn(
                     DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
                 _areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
+                await Counts.RefreshAsync();
             }
         }
 
@@ -111,19 +108,14 @@
         StateHasChanged();
     }
 
-    void GoToArea(Area area)
-    {
-        _sheetOpen = false;
-        Navigation.NavigateTo($"/areas/{area.Id}");
-    }
+    void OnChanged() => InvokeAsync(StateHasChanged);
 
-    void OnCoordinatorChanged() => InvokeAsync(StateHasChanged);
-
-    void OnThemeChanged() => InvokeAsync(StateHasChanged);
+    void OnCommandSent() => InvokeAsync(Counts.RefreshAsync);
 
     public void Dispose()
     {
-        Coordinator.Changed -= OnCoordinatorChanged;
-        Preference.Changed -= OnThemeChanged;
+        Coordinator.Changed -= OnChanged;
+        Preference.Changed -= OnChanged;
+        Sender.Sent -= OnCommandSent;
     }
 }
