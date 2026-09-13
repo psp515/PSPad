@@ -70,6 +70,39 @@ public class TaskDetailPanelTests : Bunit.TestContext
         Assert.Null(reloaded.CompletedAt);
     }
 
+    [Fact]
+    public void ARecurringTaskShowsAMissedDayAsSkippedRatherThanOverdue()
+    {
+        var task = NewTask("Read a book");
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(Today.AddDays(-3))),
+            DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Contains("Skipped", panel.Markup);
+        Assert.DoesNotContain("Overdue", panel.Markup);
+    }
+
+    [Fact]
+    public void StepsRenderInPositionOrderRatherThanInsertionOrder()
+    {
+        var task = NewTask("Wedding prep");
+        Step(task, "first");
+        var secondId = Step(task, "second");
+        task.ApplyAll(TodoTask.Decide(
+            task, new MoveStep(Guid.NewGuid(), User, task.Id, secondId, 0),
+            DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        var secondIndex = panel.Markup.IndexOf("second", StringComparison.Ordinal);
+        var firstIndex = panel.Markup.IndexOf("first", StringComparison.Ordinal);
+        Assert.True(secondIndex < firstIndex);
+    }
+
     static TodoTask NewTask(string name)
     {
         var task = new TodoTask();
@@ -79,8 +112,12 @@ public class TaskDetailPanelTests : Bunit.TestContext
         return task;
     }
 
-    static void Step(TodoTask task, string name) =>
+    static Guid Step(TodoTask task, string name)
+    {
+        var stepId = Guid.NewGuid();
         task.ApplyAll(TodoTask.Decide(
-            task, new AddStep(Guid.NewGuid(), User, task.Id, Guid.NewGuid(), name),
+            task, new AddStep(Guid.NewGuid(), User, task.Id, stepId, name),
             DateTimeOffset.UnixEpoch));
+        return stepId;
+    }
 }

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
@@ -84,6 +85,39 @@ public class AppShellTests : Bunit.TestContext
 
         Assert.Contains("Dom", shell.Markup);
         Assert.DoesNotContain("Stare", shell.Markup);
+    }
+
+    [Fact]
+    public void OpeningTheAppOnAUrlWithATaskQueryRendersThePanelForIt()
+    {
+        Arrange();
+        var listId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"lists/{listId}?task={taskId}");
+
+        var shell = Render<AppShell>();
+
+        Assert.Equal(taskId, shell.FindComponent<TaskDetailPanel>().Instance.TaskId);
+    }
+
+    [Fact]
+    public void GoingBackDropsTheTaskButLeavesTheShellOnTheSameScreen()
+    {
+        Arrange();
+        var screen = $"lists/{Guid.NewGuid()}";
+        var taskId = Guid.NewGuid();
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"{screen}?task={taskId}");
+        var shell = Render<AppShell>();
+
+        navigation.NavigateTo(screen);
+
+        shell.WaitForAssertion(() =>
+        {
+            Assert.Null(shell.FindComponent<TaskDetailPanel>().Instance.TaskId);
+            Assert.EndsWith(screen, navigation.Uri);
+        });
     }
 
     void Arrange(params Aggregate[] documents)
