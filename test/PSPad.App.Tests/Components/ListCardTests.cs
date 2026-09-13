@@ -61,7 +61,24 @@ public class ListCardTests : Bunit.TestContext
 
         var card = Render(list, Tasks(list.Id, 17));
 
-        Assert.Contains("17", card.Markup);
+        Assert.Equal("17", card.Find(".pspad-open-count").TextContent);
+    }
+
+    [Fact]
+    public void DeletedTasksNeverAppearInACard()
+    {
+        Arrange();
+        var list = List("Remont");
+        var pair = Tasks(list.Id, 2);
+        var deleted = pair[0];
+        var live = pair[1];
+        deleted.ApplyAll(TodoTask.Decide(
+            deleted, new DeleteTask(Guid.NewGuid(), User, deleted.Id), DateTimeOffset.UnixEpoch));
+
+        var card = Render(list, [deleted, live]);
+
+        Assert.DoesNotContain(deleted.Name, card.Markup);
+        Assert.Contains(live.Name, card.Markup);
     }
 
     [Fact]
