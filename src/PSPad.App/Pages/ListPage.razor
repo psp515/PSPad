@@ -20,7 +20,7 @@
     <MudList T="string" Class="mt-4">
         @foreach (var task in _tasks.Where(t => t.CompletedAt is null))
         {
-            <MudListItem T="string" Href="@($"/tasks/{task.Id}")">@task.Name</MudListItem>
+            <MudListItem T="string" Href="@($"?task={task.Id}")">@task.Name</MudListItem>
         }
     </MudList>
 
@@ -29,7 +29,7 @@
             <MudList T="string">
                 @foreach (var task in _tasks.Where(t => t.CompletedAt is not null))
                 {
-                    <MudListItem T="string" Href="@($"/tasks/{task.Id}")">@task.Name</MudListItem>
+                    <MudListItem T="string" Href="@($"?task={task.Id}")">@task.Name</MudListItem>
                 }
             </MudList>
         </MudExpansionPanel>

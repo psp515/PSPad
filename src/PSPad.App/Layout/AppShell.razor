@@ -15,6 +15,7 @@
 @inject CardCollapseState Collapse
 @inject CommandSender Sender
 @inject IDocumentStore<Area> AreaStore
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <MudThemeProvider @ref="_themeProvider" Theme="@PSPadTheme.Instance" IsDarkMode="@Preference.IsDark" />
@@ -55,6 +56,8 @@
             }
         </MudContainer>
     </MudMainContent>
+
+    <TaskDetailPanel TaskId="@_openTask" OnClose="@CloseTask" />
 </MudLayout>
 
 @code {
@@ -67,12 +70,14 @@
     string _email = "";
     string _displayName = "";
     IReadOnlyList<Area> _areas = [];
+    Guid? _openTask;
 
     protected override async Task OnInitializedAsync()
     {
         Coordinator.Changed += OnSyncChanged;
         Preference.Changed += OnPreferenceChanged;
         Sender.Sent += OnCommandSent;
+        Navigation.LocationChanged += OnLocationChanged;
 
         var authState = AuthStateTask is null ? null : await AuthStateTask;
         if (authState?.User.Identity?.IsAuthenticated == true)
@@ -94,6 +99,20 @@
 
         _ready = true;
         Coordinator.Start();
+        ReadOpenTask();
+    }
+
+    void ReadOpenTask()
+    {
+        _openTask = TaskQuery.From(Navigation.Uri);
+    }
+
+    void CloseTask() => Navigation.NavigateTo(TaskQuery.Without(Navigation.Uri));
+
+    void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        ReadOpenTask();
+        InvokeAsync(StateHasChanged);
     }
 
     async Task ReloadAreasAndCountsAsync()
@@ -136,5 +155,6 @@
         Coordinator.Changed -= OnSyncChanged;
         Preference.Changed -= OnPreferenceChanged;
         Sender.Sent -= OnCommandSent;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

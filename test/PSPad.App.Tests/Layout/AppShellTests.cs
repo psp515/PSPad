@@ -55,7 +55,8 @@ public class AppShellTests : Bunit.TestContext
         var shell = Render<AppShell>();
 
         var temporary = shell.FindComponents<MudDrawer>()
-            .Single(drawer => drawer.Instance.Variant == DrawerVariant.Temporary);
+            .Single(drawer => drawer.Instance.Variant == DrawerVariant.Temporary
+                && drawer.FindComponents<NavSidebar>().Count > 0);
         Assert.Contains("d-md-none", temporary.Find(".mud-drawer").ClassList);
     }
 

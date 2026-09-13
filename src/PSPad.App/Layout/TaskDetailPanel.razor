@@ -1,0 +1,183 @@
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Goals
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Tasks
+@inject IDocumentStore<TodoTask> Store
+@inject IDocumentStore<TaskList> Lists
+@inject IDocumentStore<Goal> Goals
+@inject AppState State
+@inject CommandSender Sender
+
+<MudDrawer Open="@(TaskId is not null)" OpenChanged="@OnOpenChanged" Anchor="Anchor.Right"
+           Variant="DrawerVariant.Temporary" Elevation="6" Width="360px" OverlayAutoClose="true">
+    @if (_task is not null)
+    {
+        <div class="d-flex align-center gap-2 pa-3">
+            <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync"
+                         Color="Color.Primary" />
+            <MudTextField T="string" Value="@_task.Name" ValueChanged="@RenameAsync"
+                          Variant="Variant.Text" Immediate="false" />
+            <MudIconButton Size="Size.Small" Color="Color.Primary"
+                           Icon="@(_task.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                           OnClick="@(() => StarAsync(!_task.Starred))" />
+            <MudIconButton Class="pspad-task-close" Size="Size.Small" Icon="@Icons.Material.Filled.Close"
+                           OnClick="@OnClose" />
+        </div>
+
+        <MudDivider />
+
+        <div class="pa-3">
+            <StepList Task="@_task" UserId="@State.UserId" Changed="@ReloadAsync" />
+        </div>
+
+        <MudDivider />
+
+        <div class="pa-3 d-flex flex-column gap-3">
+            <MudDatePicker Label="Due date" Date="@DueDate" DateChanged="@DueDateAsync"
+                           Disabled="@_task.IsRecurring" />
+
+            <RecurrenceEditor Task="@_task" UserId="@State.UserId" Today="@State.Today" Changed="@ReloadAsync" />
+
+            <MudSelect T="Priority" Value="@_task.Priority" ValueChanged="@PriorityAsync" Label="Priority">
+                @foreach (var priority in Enum.GetValues<Priority>())
+                {
+                    <MudSelectItem T="Priority" Value="@priority">@priority</MudSelectItem>
+                }
+            </MudSelect>
+
+            @if (_goals is not null)
+            {
+                <MudSelect T="Guid?" Value="@_task.GoalId" ValueChanged="@LinkGoalAsync" Label="Goal">
+                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">None</MudSelectItem>
+                    @foreach (var goal in _goals)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)goal.Id)">@goal.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            @if (_lists is not null)
+            {
+                <MudSelect T="Guid" Value="@_task.ListId" ValueChanged="@MoveToListAsync" Label="List">
+                    @foreach (var list in _lists)
+                    {
+                        <MudSelectItem T="Guid" Value="@list.Id">@list.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            <MudButton StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                       Variant="Variant.Text" OnClick="@DeleteAsync">
+                Delete task
+            </MudButton>
+        </div>
+    }
+</MudDrawer>
+
+@code {
+    [Parameter] public Guid? TaskId { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    TodoTask? _task;
+    IReadOnlyList<TaskList>? _lists;
+    IReadOnlyList<Goal>? _goals;
+
+    bool Done => _task is not null && (_task.IsRecurring
+        ? _task.CompletedDays.Contains(State.Today)
+        : _task.CompletedAt is not null);
+
+    DateTime? DueDate => _task?.DueOn?.ToDateTime(TimeOnly.MinValue);
+
+    protected override async Task OnParametersSetAsync() => await ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        if (TaskId is null)
+        {
+            _task = null;
+            return;
+        }
+
+        _task = await Store.LoadAsync(TaskId.Value, CancellationToken.None);
+        _lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
+        _goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
+    }
+
+    async Task OnOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+    async Task RenameAsync(string name)
+    {
+        await Sender.SendAsync(new RenameTask(Guid.NewGuid(), State.UserId, TaskId!.Value, name));
+        await ReloadAsync();
+    }
+
+    async Task CompleteAsync(bool completed)
+    {
+        if (_task!.IsRecurring)
+        {
+            await Sender.SendAsync(new CompleteOccurrence(
+                Guid.NewGuid(), State.UserId, _task.Id, State.Today, completed));
+        }
+        else if (completed)
+        {
+            await Sender.SendAsync(new CompleteTask(Guid.NewGuid(), State.UserId, _task.Id));
+        }
+        else
+        {
+            await Sender.SendAsync(new ReopenTask(Guid.NewGuid(), State.UserId, _task.Id));
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task StarAsync(bool starred)
+    {
+        await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, TaskId!.Value, starred));
+        await ReloadAsync();
+    }
+
+    async Task PriorityAsync(Priority priority)
+    {
+        await Sender.SendAsync(new SetTaskPriority(Guid.NewGuid(), State.UserId, TaskId!.Value, priority));
+        await ReloadAsync();
+    }
+
+    async Task DueDateAsync(DateTime? date)
+    {
+        var dueOn = date is null ? null : (DateOnly?)DateOnly.FromDateTime(date.Value);
+        await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, TaskId!.Value, dueOn));
+        await ReloadAsync();
+    }
+
+    async Task MoveToListAsync(Guid listId)
+    {
+        await Sender.SendAsync(new MoveTaskToList(Guid.NewGuid(), State.UserId, TaskId!.Value, listId));
+        await ReloadAsync();
+    }
+
+    async Task LinkGoalAsync(Guid? goalId)
+    {
+        await Sender.SendAsync(new LinkTaskToGoal(Guid.NewGuid(), State.UserId, TaskId!.Value, goalId));
+        await ReloadAsync();
+    }
+
+    async Task DeleteAsync()
+    {
+        if (_task is null)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new DeleteTask(Guid.NewGuid(), State.UserId, _task.Id));
+        await OnClose.InvokeAsync();
+    }
+}
