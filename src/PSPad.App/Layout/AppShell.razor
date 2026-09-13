@@ -12,6 +12,7 @@
 @inject PSPadApiClient Api
 @inject ThemePreference Preference
 @inject SidebarCounts Counts
+@inject CardCollapseState Collapse
 @inject CommandSender Sender
 @inject IDocumentStore<Area> AreaStore
 @implements IDisposable
@@ -100,6 +101,7 @@
         var loaded = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _areas = [.. loaded.Where(area => !area.Deleted)];
         await Counts.RefreshAsync();
+        await Collapse.LoadAsync();
         StateHasChanged();
     }
 

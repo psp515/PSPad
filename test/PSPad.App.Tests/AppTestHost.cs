@@ -41,6 +41,10 @@ public static class AppTestHost
         context.Services.AddPSPadCommands();
         context.Services.AddSingleton(new AppState { UserId = userId, Today = today });
 
+        var collapse = new CardCollapseState(context.JSInterop.JSRuntime);
+        collapse.LoadAsync().GetAwaiter().GetResult();
+        context.Services.AddSingleton(collapse);
+
         context.Services.AddSingleton(services => new CommandSender(services, work));
 
         return replica;
