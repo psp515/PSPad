@@ -1,68 +1,112 @@
 @page "/lists/{ListId:guid}"
 @using PSPad.Abstractions
+@using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<TodoTask> TaskStore
 @inject AppState State
-@inject IServiceProvider Services
+@inject CommandSender Sender
+@inject NavigationManager Navigation
 
 @if (_list is not null)
 {
-    <MudText Typo="Typo.h5" Class="mb-4">@_list.Name</MudText>
-}
+    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">@_list.Name</MudText>
 
-<MudTextField T="string" @bind-Value="_newTaskName" Label="New task" Immediate="true" OnKeyDown="@OnKeyDown" />
-
-@if (_tasks is not null)
-{
-    <MudList T="string" Class="mt-4">
-        @foreach (var task in _tasks.Where(t => t.CompletedAt is null))
+    <MudPaper Outlined="true">
+        @foreach (var task in _open)
         {
-            <MudListItem T="string" Href="@($"?task={task.Id}")">@task.Name</MudListItem>
+            <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
+                     OnOpen="@Open" />
         }
-    </MudList>
 
-    <MudExpansionPanels Class="mt-4">
-        <MudExpansionPanel Text="Completed">
-            <MudList T="string">
-                @foreach (var task in _tasks.Where(t => t.CompletedAt is not null))
-                {
-                    <MudListItem T="string" Href="@($"?task={task.Id}")">@task.Name</MudListItem>
-                }
-            </MudList>
-        </MudExpansionPanel>
-    </MudExpansionPanels>
+        @if (_done.Count > 0)
+        {
+            <MudDivider />
+            <MudExpansionPanels Elevation="0">
+                <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
+                    @foreach (var task in _done)
+                    {
+                        <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync"
+                                 OnStar="@StarAsync" OnOpen="@Open" />
+                    }
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
+
+        <MudDivider />
+        <MudTextField T="string" @bind-Value="_newTask" Placeholder="Add task" Immediate="true"
+                      Variant="Variant.Text" Margin="Margin.Dense" Class="px-3"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Add"
+                      OnKeyDown="@OnKeyDown" />
+    </MudPaper>
+}
+else
+{
+    <MudText Typo="Typo.body1">This list is not there anymore.</MudText>
 }
 
 @code {
     [Parameter] public Guid ListId { get; set; }
 
     TaskList? _list;
-    IReadOnlyList<TodoTask>? _tasks;
-    string _newTaskName = "";
+    IReadOnlyList<TodoTask> _open = [];
+    IReadOnlyList<TodoTask> _done = [];
+    string _newTask = "";
 
     protected override async Task OnParametersSetAsync() => await ReloadAsync();
 
     async Task ReloadAsync()
     {
-        _list = await ListStore.LoadAsync(ListId, CancellationToken.None);
+        var list = await ListStore.LoadAsync(ListId, CancellationToken.None);
+        _list = list is null || list.Deleted ? null : list;
+
         var all = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        _tasks = all.Where(t => t.ListId == ListId && !t.Deleted).ToArray();
+        var mine = all.Where(task => task.ListId == ListId && !task.Deleted).ToArray();
+
+        _open = [.. mine.Where(task => task.CompletedAt is null)];
+        _done = [.. mine.Where(task => task.CompletedAt is not null)];
     }
 
-    async Task OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
+    void Open(TodoTask task) => Navigation.NavigateTo($"/lists/{ListId}?task={task.Id}");
+
+    async Task ToggleAsync(TodoTask task)
     {
-        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_newTaskName))
+        if (task.IsRecurring)
+        {
+            await Sender.SendAsync(new CompleteOccurrence(
+                Guid.NewGuid(), State.UserId, task.Id, State.Today, true));
+        }
+        else if (task.CompletedAt is null)
+        {
+            await Sender.SendAsync(new CompleteTask(Guid.NewGuid(), State.UserId, task.Id));
+        }
+        else
+        {
+            await Sender.SendAsync(new ReopenTask(Guid.NewGuid(), State.UserId, task.Id));
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task StarAsync(TodoTask task)
+    {
+        await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, task.Id, !task.Starred));
+        await ReloadAsync();
+    }
+
+    async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_newTask))
         {
             return;
         }
 
-        var sender = Services.GetRequiredService<CommandSender>();
-        await sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, Guid.NewGuid(), ListId, _newTaskName));
+        await Sender.SendAsync(new CreateTask(
+            Guid.NewGuid(), State.UserId, Guid.NewGuid(), ListId, _newTask));
 
-        _newTaskName = "";
+        _newTask = "";
         await ReloadAsync();
     }
 }
