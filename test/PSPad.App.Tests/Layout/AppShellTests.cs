@@ -87,24 +87,13 @@ public class AppShellTests : Bunit.TestContext
 
     void Arrange(params Aggregate[] documents)
     {
-        JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
-        Services.AddMudServices();
+        var today = new DateOnly(2026, 9, 12);
+        var replica = AppTestHost.Arrange(this, User, today, documents);
         Services.AddSingleton(new ThemePreference(JSInterop.JSRuntime));
-
-        var replica = new InMemoryReplica();
-        foreach (var document in documents)
-        {
-            replica.SaveAsync(document).GetAwaiter().GetResult();
-        }
-
-        var state = new AppState { UserId = User, Today = new DateOnly(2026, 9, 12) };
-        Services.AddSingleton<IReplica>(replica);
-        Services.AddSingleton(state);
         Services.AddSingleton(new SidebarCounts(
             new ReplicaDocumentStore<Module.Tasks.Tasks.TodoTask>(replica),
             new ReplicaDocumentStore<Module.Tasks.Inbox.Inbox>(replica),
-            state));
-        Services.AddSingleton<IDocumentStore<Area>>(new ReplicaDocumentStore<Area>(replica));
+            new AppState { UserId = User, Today = today }));
 
         var meResponse = new MeResponse(User, "Kolber", "UTC");
         Services.AddSingleton(new PSPadApiClient(new HttpClient(new FakeMeHandler(meResponse))
@@ -112,12 +101,9 @@ public class AppShellTests : Bunit.TestContext
             BaseAddress = new Uri("http://localhost/")
         }));
         Services.AddSingleton<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
-        Services.AddSingleton<IOutbox>(new InMemoryOutbox());
         Services.AddSingleton<IConnectivity>(new FakeConnectivity());
         Services.AddScoped<SyncService>();
         Services.AddScoped<SyncCoordinator>();
-        Services.AddScoped<ReplicaUnitOfWork>();
-        Services.AddScoped<CommandSender>();
     }
 
     static Area NewArea(string name, int position)

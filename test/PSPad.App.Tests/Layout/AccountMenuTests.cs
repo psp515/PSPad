@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
-using MudBlazor.Services;
 using PSPad.App.Layout;
 using PSPad.App.Theme;
 using PSPad.TestInfrastructure;
@@ -86,8 +85,7 @@ public class AccountMenuTests : Bunit.TestContext
 
     void Arrange()
     {
-        JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
-        Services.AddMudServices();
+        AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
         Services.AddSingleton(new ThemePreference(JSInterop.JSRuntime));
     }
 

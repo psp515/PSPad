@@ -1,9 +1,7 @@
 using Bunit;
-using Microsoft.Extensions.DependencyInjection;
-using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App.Pages;
-using PSPad.App.State;
+using PSPad.App.Tests;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.TestInfrastructure;
@@ -86,22 +84,8 @@ public class AreaBoardTests : Bunit.TestContext
         Assert.DoesNotContain("Remont", page.Markup);
     }
 
-    void Arrange(params Aggregate[] documents)
-    {
-        JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
-        Services.AddMudServices();
-
-        var replica = new InMemoryReplica();
-        foreach (var document in documents)
-        {
-            replica.SaveAsync(document).GetAwaiter().GetResult();
-        }
-
-        Services.AddSingleton<IReplica>(replica);
-        Services.AddSingleton<IDocumentStore<Area>>(new ReplicaDocumentStore<Area>(replica));
-        Services.AddSingleton<IDocumentStore<TaskList>>(new ReplicaDocumentStore<TaskList>(replica));
-        Services.AddSingleton(new AppState { UserId = User, Today = new DateOnly(2026, 9, 12) });
-    }
+    void Arrange(params Aggregate[] documents) =>
+        AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12), documents);
 
     static Area NewArea(string name)
     {

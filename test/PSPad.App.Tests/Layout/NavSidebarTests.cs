@@ -1,10 +1,9 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using MudBlazor.Services;
-using PSPad.Abstractions;
 using PSPad.App.Layout;
 using PSPad.App.State;
+using PSPad.App.Tests;
 using PSPad.App.Theme;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
@@ -132,18 +131,13 @@ public class NavSidebarTests : Bunit.TestContext
 
     void Arrange()
     {
-        JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
-        Services.AddMudServices();
+        var today = new DateOnly(2026, 9, 12);
+        var replica = AppTestHost.Arrange(this, User, today);
         Services.AddSingleton(new ThemePreference(JSInterop.JSRuntime));
-
-        var replica = new InMemoryReplica();
-        Services.AddSingleton<IReplica>(replica);
-        var state = new AppState { UserId = User, Today = new DateOnly(2026, 9, 12) };
-        Services.AddSingleton(state);
         Services.AddSingleton(new SidebarCounts(
             new ReplicaDocumentStore<Module.Tasks.Tasks.TodoTask>(replica),
             new ReplicaDocumentStore<Module.Tasks.Inbox.Inbox>(replica),
-            state));
+            new AppState { UserId = User, Today = today }));
     }
 
     static Area[] Areas(params string[] names) =>
