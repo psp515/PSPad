@@ -1,0 +1,78 @@
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Tasks
+@inject CardCollapseState Collapse
+
+<MudPaper Outlined="true" Class="mb-3">
+    <div class="d-flex align-center gap-2 px-3 py-2">
+        <MudIconButton Size="Size.Small"
+                       Icon="@(Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)"
+                       OnClick="@(() => Collapse.ToggleAsync(List.Id))" />
+        <MudLink Href="@($"/lists/{List.Id}")" Typo="Typo.subtitle2" Underline="Underline.None">
+            @List.Name
+        </MudLink>
+        <MudSpacer />
+        <MudText Typo="Typo.caption">@Open.Count</MudText>
+    </div>
+
+    @if (!Collapsed)
+    {
+        <MudDivider />
+
+        @foreach (var task in Open.Take(Preview))
+        {
+            <TaskRow Task="@task" Today="@Today" OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
+        }
+
+        @if (Open.Count > Preview)
+        {
+            <MudDivider />
+            <MudButton Href="@($"/lists/{List.Id}")" Variant="Variant.Text" Color="Color.Primary"
+                       Class="ma-1">
+                @($"Show all ({Open.Count})")
+            </MudButton>
+        }
+
+        <MudDivider />
+        <MudTextField T="string" @bind-Value="_newTask" Placeholder="Add task" Immediate="true"
+                      Variant="Variant.Text" Margin="Margin.Dense" Class="px-3"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Add"
+                      OnKeyDown="@OnKeyDown" />
+    }
+</MudPaper>
+
+@code {
+    public const int Preview = 10;
+
+    [Parameter, EditorRequired] public TaskList List { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnStar { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
+
+    [Parameter] public EventCallback<string> OnAddTask { get; set; }
+
+    string _newTask = "";
+
+    bool Collapsed => Collapse.IsCollapsed(List.Id);
+
+    IReadOnlyList<TodoTask> Open =>
+        [.. Tasks.Where(task => !task.Deleted && task.CompletedAt is null)];
+
+    async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_newTask))
+        {
+            return;
+        }
+
+        await OnAddTask.InvokeAsync(_newTask);
+        _newTask = "";
+    }
+}
