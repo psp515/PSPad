@@ -4,6 +4,7 @@ using PSPad.App.Pages;
 using PSPad.App.Tests;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Pages;
@@ -84,6 +85,45 @@ public class AreaBoardTests : Bunit.TestContext
         Assert.DoesNotContain("Remont", page.Markup);
     }
 
+    [Fact]
+    public void EachListIsACard()
+    {
+        var area = NewArea("Dom");
+        var shopping = NewList(area.Id, "Zakupy", 0);
+        var repairs = NewList(area.Id, "Remont", 1);
+        Arrange(area, shopping, repairs);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal(2, page.FindComponents<PSPad.App.Components.ListCard>().Count);
+    }
+
+    [Fact]
+    public void ACardShowsOnlyItsOwnTasks()
+    {
+        var area = NewArea("Dom");
+        var shopping = NewList(area.Id, "Zakupy", 0);
+        var repairs = NewList(area.Id, "Remont", 1);
+        Arrange(area, shopping, repairs, NewTask(shopping.Id, "Mleko"), NewTask(repairs.Id, "Farba"));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        var first = page.FindComponents<PSPad.App.Components.ListCard>()[0];
+
+        Assert.Contains("Mleko", first.Markup);
+        Assert.DoesNotContain("Farba", first.Markup);
+    }
+
+    [Fact]
+    public void NewListIsOffered()
+    {
+        var area = NewArea("Dom");
+        Arrange(area);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Contains("New list", page.Markup);
+    }
+
     void Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12), documents);
 
@@ -103,5 +143,14 @@ public class AreaBoardTests : Bunit.TestContext
             new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, position),
             DateTimeOffset.UnixEpoch));
         return list;
+    }
+
+    static TodoTask NewTask(Guid listId, string name)
+    {
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(
+            null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), listId, name),
+            DateTimeOffset.UnixEpoch));
+        return task;
     }
 }
