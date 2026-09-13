@@ -1,0 +1,111 @@
+@page "/areas/{AreaId:guid}"
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Ordering
+@using PSPad.Module.Tasks.Tasks
+@inject IDocumentStore<Area> AreaStore
+@inject IDocumentStore<TaskList> ListStore
+@inject IDocumentStore<TodoTask> TaskStore
+@inject AppState State
+@inject CommandSender Sender
+@inject IDialogService Dialogs
+@inject NavigationManager Navigation
+
+@if (_area is not null)
+{
+    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-1">@_area.Name</MudText>
+    <MudText Typo="Typo.caption" Class="mb-4">@($"{_lists.Count} lists")</MudText>
+
+    @foreach (var list in _lists)
+    {
+        <ListCard List="@list" Tasks="@TasksOf(list.Id)" Today="@State.Today"
+                  OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
+                  OnAddTask="@(name => AddTaskAsync(list.Id, name))" />
+    }
+
+    <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="@NewListAsync">
+        New list
+    </MudButton>
+}
+else
+{
+    <MudText Typo="Typo.body1">This area is not there anymore.</MudText>
+}
+
+@code {
+    [Parameter] public Guid AreaId { get; set; }
+
+    Area? _area;
+    IReadOnlyList<TaskList> _lists = [];
+    IReadOnlyList<TodoTask> _tasks = [];
+
+    protected override async Task OnParametersSetAsync() => await ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        var area = await AreaStore.LoadAsync(AreaId, CancellationToken.None);
+        _area = area is null || area.Deleted ? null : area;
+
+        var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _lists = [.. lists.Where(list => list.AreaId == AreaId && !list.Deleted).OrderBy(list => list.Position)];
+
+        _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+    }
+
+    IReadOnlyList<TodoTask> TasksOf(Guid listId) => [.. _tasks.Where(task => task.ListId == listId)];
+
+    void Open(TodoTask task) =>
+        Navigation.NavigateTo($"{Navigation.Uri.Split('?')[0]}?task={task.Id}");
+
+    async Task ToggleAsync(TodoTask task)
+    {
+        if (task.IsRecurring)
+        {
+            await Sender.SendAsync(new CompleteOccurrence(
+                Guid.NewGuid(), State.UserId, task.Id, State.Today, true));
+        }
+        else if (task.CompletedAt is null)
+        {
+            await Sender.SendAsync(new CompleteTask(Guid.NewGuid(), State.UserId, task.Id));
+        }
+        else
+        {
+            await Sender.SendAsync(new ReopenTask(Guid.NewGuid(), State.UserId, task.Id));
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task StarAsync(TodoTask task)
+    {
+        await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, task.Id, !task.Starred));
+        await ReloadAsync();
+    }
+
+    async Task AddTaskAsync(Guid listId, string name)
+    {
+        await Sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, Guid.NewGuid(), listId, name));
+        await ReloadAsync();
+    }
+
+    async Task NewListAsync()
+    {
+        var parameters = new DialogParameters<NameDialog> { { dialog => dialog.Title, "List name" } };
+        var dialog = await Dialogs.ShowAsync<NameDialog>("New list", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new CreateTaskList(
+            Guid.NewGuid(), State.UserId, Guid.NewGuid(), AreaId, name,
+            Positions.Next(_lists.Select(list => list.Position))));
+
+        await ReloadAsync();
+    }
+}

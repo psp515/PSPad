@@ -2,8 +2,8 @@
 
 Self-hosted multi-user GTD notepad. Entry point for any agent in repo.
 
-**Status: design done, no code yet.** Repo holds license, .gitignore, empty
-`src/`, `test/`, `docs/`, `docker/`.
+**Status: slice 1 implemented** through plan 09 (responsive UI shell). Repo
+holds `src/`, `test/`, `specs/`, `adr/`, `docker/`.
 
 ---
 
@@ -147,9 +147,9 @@ test/
   PSPad.Api.Tests/              integration, Testcontainers MongoDB
   PSPad.App.Tests/              unit + bUnit component tests
   PSPad.TestInfrastructure/     Mongo fixture, trait constants, architecture guards
-docs/
-  superpowers/specs/     design specs, one per subsystem
-  superpowers/plans/     implementation plans
+specs/                   design specs — slice 1, and the client redesigns
+adr/                     architecture decision records + index and template
+.superpowers/sdd/        working plans for in-flight features (not committed)
 docker/                  compose files, keycloak realm, nginx config
 ```
 
@@ -290,13 +290,23 @@ that one exists for running the app.
 
 ## 8. Current step
 
-Slice 1 respecified on MongoDB and replanned. Nothing implemented.
+Slice 1 is built and merged: foundation, tasks core, recurrence and Today, API
+and persistence, identity, history, PWA client, offline sync, responsive UI
+shell. The numbered plans that drove it are gone; the specs behind them are
+not, and stay authoritative:
 
-- Spec: `docs/superpowers/specs/2026-09-12-slice-1-design.md`
-- Plans: `docs/superpowers/plans/`, eight of them, see README there for order
+- `specs/slice-design.md` — slice 1 end to end: project layout, command
+  pipeline, storage and index shapes, domain rules, sync, identity, HTTP
+  surface, containers, testing.
+- `specs/ui-ux-redesign-design.md` — the client's first redesign: theming, the
+  FAB contract, the breakpoint shell. Its navigation decisions (D1, D2, D4, D6,
+  D8) are superseded; its theme and `TaskRow` reasoning still stand.
+- `specs/ui-redesign-2-design.md` — the current client design: one navigation
+  tree at every width, area screens of list cards, the task detail overlay,
+  inline creation, local search, the sage palette.
 
-Start plan 01, then numbered order. 02 and 03 are pure domain, parallelizable.
-Each plan ends green — a plan is done or not, no half state.
+Next up are that spec's **plan 10 — shell** and **plan 11 — screens**.
+`adr/0012` (ordering module) is `Proposed` and still unbuilt.
 
 ---
 
@@ -330,8 +340,19 @@ Open: retention for occurrences and events — unbounded or archive per year.
 
 ## 11. Rules for agents
 
-**Design before code.** New feature goes brainstorming, spec, plan. Spec path:
-`docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`.
+**Design before code.** New feature goes brainstorming, spec, plan. A spec
+that outlives its plans is committed to `specs/<topic>-design.md`; in-flight
+plans live under `.superpowers/sdd/<feature>/` and are not committed.
+
+**Specs are a knowledge source, not history.** Before work on a subsystem,
+read the spec that covers it — `specs/slice-design.md` for anything touching
+the command pipeline, storage shape, domain rules, sync or the HTTP surface;
+`specs/ui-redesign-2-design.md` for anything touching the client's
+navigation, theme or screens, with `specs/ui-ux-redesign-design.md` behind it
+as the superseded first pass. They answer *what the intended behaviour is*
+at a level the code does not state and AGENTS.md only summarises. Where a
+spec and an ADR disagree, the ADR wins — it is the decision of record; where
+a spec and the code disagree, say so rather than silently following either.
 
 **TDD.** Failing test first. Today rule and recurrence rule are where bugs hurt
 most.
@@ -374,14 +395,14 @@ navigation, not for the type system.
 
 **Read the ADRs before touching architecture.** Before any task that
 touches module boundaries, persistence, sync, contracts, or aggregate
-shape, read `docs/arch/adr/README.md`'s index and the `Active` records it
+shape, read `adr/README.md`'s index and the `Active` records it
 points to — not just AGENTS.md §5. §5 is a terse summary; the ADR carries
 the context and rejected alternatives that explain *why*, which is what
 keeps a "cheaper-looking" alternative from silently re-opening a settled
 tradeoff.
 
-**Architecture decisions go in `docs/arch/adr/`.** One file per decision,
-using `docs/arch/adr/template.md`'s format (title, tags, date, status,
+**Architecture decisions go in `adr/`.** One file per decision,
+using `adr/template.md`'s format (title, tags, date, status,
 context, decision, alternatives, consequences). AGENTS.md §5 stays the
 terse day-to-day summary (AD-1 … AD-9); the ADR is where the reasoning and
 rejected alternatives live. Changing your mind about a past decision never
@@ -391,7 +412,7 @@ supersedes it and update the old one's status line.
 **Any new or changed architectural decision gets an ADR, immediately.**
 If a task makes, changes, or supersedes an architectural decision — not
 just implements one already on record — add or update the ADR (and its
-row in `docs/arch/adr/README.md`'s index) in the same piece of work, before
+row in `adr/README.md`'s index) in the same piece of work, before
 calling it done. Don't defer this to a follow-up. If the decision also
 shifts an AD-N summary in AGENTS.md §5, update that line too so §5 and the
 ADR set never drift apart.

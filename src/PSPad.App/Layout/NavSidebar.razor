@@ -1,8 +1,86 @@
-<MudNavMenu>
-    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Today">Today</MudNavLink>
-    <MudNavLink Href="/inbox" Icon="@Icons.Material.Filled.Inbox">Inbox</MudNavLink>
-    <MudNavLink Href="/areas" Icon="@Icons.Material.Filled.Folder">Areas</MudNavLink>
-    <MudDivider Class="my-2" />
-    <MudNavLink Href="/goals" Icon="@Icons.Material.Filled.Flag">Goals</MudNavLink>
-    <MudNavLink Href="/history" Icon="@Icons.Material.Filled.History">History</MudNavLink>
-</MudNavMenu>
+@using MudBlazor.Interfaces
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Areas
+@inject SidebarCounts Counts
+@inject NavigationManager Navigation
+@implements IDisposable
+@implements INavigationEventReceiver
+
+<div class="d-flex flex-column" style="height:100%">
+    <AccountMenu Email="@Email" DisplayName="@DisplayName" UserId="@UserId" PendingCommands="@PendingCommands" />
+
+    <MudTextField T="string" @bind-Value="_query" Placeholder="Search" Immediate="true"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="mx-3 mb-2"
+                  OnKeyDown="@OnSearchKey" />
+
+    <CascadingValue Value="@((INavigationEventReceiver)this)" IsFixed="true">
+        <MudNavMenu>
+            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.WbSunny">
+                @($"My Day{Badge(Counts.Today)}")
+            </MudNavLink>
+            <MudNavLink Href="/inbox" Icon="@Icons.Material.Filled.Inbox">
+                @($"Inbox{Badge(Counts.Inbox)}")
+            </MudNavLink>
+        </MudNavMenu>
+
+        <MudDivider Class="my-2" />
+
+        <div class="flex-grow-1 overflow-auto">
+            <MudNavMenu>
+                @foreach (var area in Areas.OrderBy(area => area.Position))
+                {
+                    <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
+                        @area.Name
+                    </MudNavLink>
+                }
+            </MudNavMenu>
+        </div>
+    </CascadingValue>
+
+    <MudDivider />
+
+    <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Class="ma-2"
+               OnClick="@OnNewArea">
+        New area
+    </MudButton>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<Area> Areas { get; set; } = [];
+
+    [Parameter] public string Email { get; set; } = "";
+
+    [Parameter] public string DisplayName { get; set; } = "";
+
+    [Parameter] public Guid UserId { get; set; }
+
+    [Parameter] public int PendingCommands { get; set; }
+
+    [Parameter] public EventCallback OnNewArea { get; set; }
+
+    [Parameter] public EventCallback Navigated { get; set; }
+
+    string _query = "";
+
+    protected override void OnInitialized() => Counts.Changed += OnCountsChanged;
+
+    void OnCountsChanged() => InvokeAsync(StateHasChanged);
+
+    static string Badge(int count) => count == 0 ? "" : $"  ({count})";
+
+    async Task OnSearchKey(KeyboardEventArgs args)
+    {
+        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_query))
+        {
+            return;
+        }
+
+        Navigation.NavigateTo($"/search?q={Uri.EscapeDataString(_query)}");
+        await Navigated.InvokeAsync();
+    }
+
+    Task INavigationEventReceiver.OnNavigation() => Navigated.InvokeAsync();
+
+    public void Dispose() => Counts.Changed -= OnCountsChanged;
+}

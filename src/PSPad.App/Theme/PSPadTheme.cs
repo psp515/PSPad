@@ -8,39 +8,48 @@ public static class PSPadTheme
     {
         PaletteLight = new PaletteLight
         {
-            Primary = "#4F46E5",
-            Secondary = "#0EA5E9",
-            Error = "#DC2626",
-            Warning = "#D97706",
-            Success = "#16A34A",
-            Background = "#FAFAFA",
+            Primary = "#4E7A5E",
+            Secondary = "#6E8F7C",
+            Error = "#B3261E",
+            Warning = "#B26A00",
+            Success = "#4E7A5E",
+            Background = "#F7F8F5",
             Surface = "#FFFFFF",
-            AppbarBackground = "#FFFFFF",
-            AppbarText = "#1F2328",
-            DrawerBackground = "#FAFAFA",
-            DrawerText = "#1F2328",
-            TextPrimary = "#1F2328",
-            TextSecondary = "#5B6472"
+            AppbarBackground = "#EDF1EA",
+            AppbarText = "#1E2A22",
+            DrawerBackground = "#EDF1EA",
+            DrawerText = "#1E2A22",
+            DrawerIcon = "#4E7A5E",
+            LinesDefault = "#DCE3D9",
+            TableLines = "#DCE3D9",
+            TextPrimary = "#1E2A22",
+            TextSecondary = "#66736B",
+            ActionDefault = "#66736B"
         },
         PaletteDark = new PaletteDark
         {
-            Primary = "#818CF8",
-            Secondary = "#38BDF8",
-            Error = "#F87171",
-            Warning = "#FBBF24",
-            Success = "#4ADE80",
-            Background = "#121417",
-            Surface = "#1A1D21",
-            AppbarBackground = "#1A1D21",
-            AppbarText = "#E6E8EB",
-            DrawerBackground = "#121417",
-            DrawerText = "#E6E8EB",
-            TextPrimary = "#E6E8EB",
-            TextSecondary = "#9BA4B0"
+            Primary = "#8FBF9F",
+            Secondary = "#7FAE94",
+            Error = "#F2A9A2",
+            Warning = "#E0B252",
+            Success = "#8FBF9F",
+            Background = "#141815",
+            Surface = "#1C211D",
+            AppbarBackground = "#171C18",
+            AppbarText = "#E4E9E4",
+            DrawerBackground = "#171C18",
+            DrawerText = "#E4E9E4",
+            DrawerIcon = "#8FBF9F",
+            LinesDefault = "#2A312C",
+            TableLines = "#2A312C",
+            TextPrimary = "#E4E9E4",
+            TextSecondary = "#94A199",
+            ActionDefault = "#94A199"
         },
         LayoutProperties = new LayoutProperties
         {
-            DefaultBorderRadius = "10px"
+            DefaultBorderRadius = "8px",
+            DrawerWidthLeft = "260px"
         }
     };
 }

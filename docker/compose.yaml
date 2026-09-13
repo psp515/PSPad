@@ -1,6 +1,41 @@
 name: pspad
 
 services:
+  api:
+    build:
+      context: ..
+      dockerfile: src/PSPad.Api/Dockerfile
+    image: pspad-api:dev
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Mongo__ConnectionString: mongodb://pspad:pspad@mongo:27017/pspad?authSource=admin&directConnection=true
+      Mongo__Database: pspad
+      Keycloak__Authority: http://keycloak:8080/realms/pspad
+      Keycloak__Audience: pspad-api
+      Cors__AllowedOrigins__0: http://localhost:5001
+    ports:
+      - "5000:8080"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [pspad]
+
+  app:
+    build:
+      context: ..
+      dockerfile: src/PSPad.App/Dockerfile
+    image: pspad-app:dev
+    environment:
+      API_BASE_ADDRESS: http://localhost:5000
+      APP_BASE_ADDRESS: http://localhost:5001
+      KEYCLOAK_AUTHORITY: http://localhost:8080/realms/pspad
+      KEYCLOAK_CLIENT_ID: pspad-app
+    ports:
+      - "5001:8080"
+    depends_on:
+      - api
+    networks: [pspad]
+
   mongo:
     image: mongo:8
     entrypoint: ["bash", "/mongo-entrypoint.sh"]
@@ -28,6 +63,8 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "8080:8080"
     volumes:

@@ -7,7 +7,7 @@ services:
       dockerfile: src/PSPad.Api/Dockerfile
     image: pspad-api:local
     environment:
-      ConnectionStrings__Mongo: ${MONGO_CONNECTION}
+      Mongo__ConnectionString: ${MONGO_CONNECTION}
       Mongo__Database: ${MONGO_DATABASE}
       Keycloak__Authority: ${KEYCLOAK_AUTHORITY}
       Keycloak__Audience: ${KEYCLOAK_AUDIENCE}

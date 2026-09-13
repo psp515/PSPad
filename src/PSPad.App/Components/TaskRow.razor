@@ -1,0 +1,76 @@
+@using PSPad.Module.Tasks.Tasks
+@using PSPad.Module.Tasks.Today
+
+<div class="d-flex align-center gap-3 py-2 px-3 @(Overdue ? "pspad-overdue overdue" : "")">
+    <MudCheckBox T="bool" Value="@Done" ValueChanged="@(_ => OnToggle.InvokeAsync(Task))"
+                 Color="Color.Primary" Dense="true" />
+
+    <div class="flex-grow-1 pspad-task-name" style="cursor:pointer"
+         @onclick="@(() => OnOpen.InvokeAsync(Task))">
+        <MudText Typo="Typo.body2"
+                 Style="@(Done ? "text-decoration:line-through" : "")">@Task.Name</MudText>
+
+        @if (HasMeta)
+        {
+            <div class="d-flex align-center gap-3">
+                @if (ListName is not null)
+                {
+                    <MudText Typo="Typo.caption">@ListName</MudText>
+                }
+                @if (Task.Steps.Count > 0)
+                {
+                    <MudText Typo="Typo.caption">@($"{Task.Steps.Count(step => step.Checked)} / {Task.Steps.Count}")</MudText>
+                }
+                @if (Task.DueOn is { } due)
+                {
+                    <MudText Typo="Typo.caption" Color="@(Overdue ? Color.Error : Color.Default)">
+                        @due.ToString("d MMM")
+                    </MudText>
+                }
+                @if (Task.IsRecurring)
+                {
+                    <MudIcon Class="pspad-recurring" Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" />
+                }
+            </div>
+        }
+    </div>
+
+    @if (Task.Priority != Priority.None)
+    {
+        <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@PriorityColour" />
+    }
+
+    <MudIconButton Size="Size.Small" Color="Color.Primary"
+                   Icon="@(Task.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                   OnClick="@(() => OnStar.InvokeAsync(Task))" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TodoTask Task { get; set; } = null!;
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public string? ListName { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnStar { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
+
+    bool Done => Task.CompletedAt is not null || Task.CompletedDays.Contains(Today);
+
+    bool Overdue => IsOverdue(Task, Today);
+
+    bool HasMeta => ListName is not null || Task.Steps.Count > 0 || Task.DueOn is not null || Task.IsRecurring;
+
+    Color PriorityColour => Task.Priority switch
+    {
+        Priority.High => Color.Error,
+        Priority.Medium => Color.Warning,
+        _ => Color.Default
+    };
+
+    public static bool IsOverdue(TodoTask task, DateOnly today) =>
+        TodayRule.Select([task], today).FirstOrDefault()?.Overdue == true;
+}

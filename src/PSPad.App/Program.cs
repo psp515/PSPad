@@ -42,7 +42,9 @@ builder.Services.AddHttpClient<PSPadApiClient>(client => client.BaseAddress = ne
 
 builder.Services.AddScoped<AppState>();
 builder.Services.AddScoped<ThemePreference>();
-builder.Services.AddScoped<FabContext>();
+builder.Services.AddScoped<CardCollapseState>();
+builder.Services.AddScoped<ReplicaSearch>();
+builder.Services.AddScoped<SidebarCounts>();
 builder.Services.AddScoped<IHistorySource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();

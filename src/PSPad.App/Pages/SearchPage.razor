@@ -1,0 +1,37 @@
+@page "/search"
+@using PSPad.App.State
+@inject ReplicaSearch Search
+@inject AppState State
+
+<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">@($"Search: {Q ?? ""}")</MudText>
+
+@if (_hits.Count == 0)
+{
+    <MudText Typo="Typo.body2">Nothing matches.</MudText>
+}
+else
+{
+    <MudList T="string">
+        @foreach (var hit in _hits)
+        {
+            <MudListItem T="string" Href="@HrefOf(hit)">
+                <MudText>@hit.Name</MudText>
+                <MudText Typo="Typo.caption">@hit.Path</MudText>
+            </MudListItem>
+        }
+    </MudList>
+}
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "q")]
+    public string? Q { get; set; }
+
+    IReadOnlyList<SearchHit> _hits = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _hits = await Search.FindAsync(State.UserId, Q ?? "");
+    }
+
+    static string HrefOf(SearchHit hit) => hit.IsList ? $"/lists/{hit.Id}" : $"/search?task={hit.Id}";
+}
