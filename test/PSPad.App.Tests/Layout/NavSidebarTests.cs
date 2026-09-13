@@ -42,6 +42,18 @@ public class NavSidebarTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItOrdersAreasByPositionNotInsertionOrder()
+    {
+        Arrange();
+
+        var sidebar = Render(Areas(("Praca", 2), ("Dom", 0), ("Studia", 1)));
+
+        var markup = sidebar.Markup;
+        Assert.True(markup.IndexOf("Dom") < markup.IndexOf("Studia"));
+        Assert.True(markup.IndexOf("Studia") < markup.IndexOf("Praca"));
+    }
+
+    [Fact]
     public void EveryAreaLinksToItsOwnScreen()
     {
         Arrange();
@@ -99,12 +111,15 @@ public class NavSidebarTests : Bunit.TestContext
     }
 
     static Area[] Areas(params string[] names) =>
-        [.. names.Select((name, index) =>
+        Areas([.. names.Select((name, index) => (name, index))]);
+
+    static Area[] Areas(params (string Name, int Position)[] entries) =>
+        [.. entries.Select(entry =>
         {
             var area = new Area();
             area.ApplyAll(Area.Decide(
                 null,
-                new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), name, index),
+                new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), entry.Name, entry.Position),
                 DateTimeOffset.UnixEpoch));
             return area;
         })];
