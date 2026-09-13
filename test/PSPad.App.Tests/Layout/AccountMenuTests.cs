@@ -24,7 +24,7 @@ public class AccountMenuTests : Bunit.TestContext
     {
         Arrange();
 
-        var menu = Render(BuildMenu("kolberu@gmail.com", User, pendingCommands: 0));
+        var menu = Render(BuildMenu("Kolber", "kolberu@gmail.com", User, pendingCommands: 0));
         OpenMenu(menu);
 
         Assert.Contains(entry, menu.Markup);
@@ -35,9 +35,31 @@ public class AccountMenuTests : Bunit.TestContext
     {
         Arrange();
 
-        var menu = Render(BuildMenu("kolberu@gmail.com", User, pendingCommands: 0));
+        var menu = Render(BuildMenu("Kolber", "kolberu@gmail.com", User, pendingCommands: 0));
 
         Assert.Contains(">K<", menu.Markup);
+    }
+
+    [Fact]
+    public void TheInitialComesFromTheEmailNotTheDisplayName()
+    {
+        Arrange();
+
+        var menu = Render(BuildMenu("Anna", "kolberu@gmail.com", User, pendingCommands: 0));
+
+        Assert.Contains(">K<", menu.Markup);
+        Assert.DoesNotContain(">A<", menu.Markup);
+    }
+
+    [Fact]
+    public void ItShowsBothTheDisplayNameAndTheEmail()
+    {
+        Arrange();
+
+        var menu = Render(BuildMenu("Łukasz Kolber", "kolberu@gmail.com", User, pendingCommands: 0));
+
+        Assert.Contains("Łukasz Kolber", menu.Markup);
+        Assert.Contains("kolberu@gmail.com", menu.Markup);
     }
 
     [Fact]
@@ -45,7 +67,7 @@ public class AccountMenuTests : Bunit.TestContext
     {
         Arrange();
 
-        var menu = Render(BuildMenu("kolberu@gmail.com", User, pendingCommands: 3));
+        var menu = Render(BuildMenu("Kolber", "kolberu@gmail.com", User, pendingCommands: 3));
         OpenMenu(menu);
 
         Assert.Contains("Sync: 3 pending", menu.Markup);
@@ -56,7 +78,7 @@ public class AccountMenuTests : Bunit.TestContext
     {
         Arrange();
 
-        var menu = Render(BuildMenu("kolberu@gmail.com", User, pendingCommands: 0));
+        var menu = Render(BuildMenu("Kolber", "kolberu@gmail.com", User, pendingCommands: 0));
         OpenMenu(menu);
 
         Assert.DoesNotContain("Sync:", menu.Markup);
@@ -71,14 +93,15 @@ public class AccountMenuTests : Bunit.TestContext
 
     // MudMenu renders ChildContent into MudPopoverProvider's portal, not inline, so both
     // must share one render tree for the popover content to reach the rendered markup.
-    static RenderFragment BuildMenu(string email, Guid userId, int pendingCommands) => builder =>
+    static RenderFragment BuildMenu(string displayName, string email, Guid userId, int pendingCommands) => builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
         builder.CloseComponent();
         builder.OpenComponent<AccountMenu>(1);
         builder.AddAttribute(2, nameof(AccountMenu.Email), email);
-        builder.AddAttribute(3, nameof(AccountMenu.UserId), userId);
-        builder.AddAttribute(4, nameof(AccountMenu.PendingCommands), pendingCommands);
+        builder.AddAttribute(3, nameof(AccountMenu.DisplayName), displayName);
+        builder.AddAttribute(4, nameof(AccountMenu.UserId), userId);
+        builder.AddAttribute(5, nameof(AccountMenu.PendingCommands), pendingCommands);
         builder.CloseComponent();
     };
 

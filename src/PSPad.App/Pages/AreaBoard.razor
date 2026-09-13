@@ -19,6 +19,10 @@
         }
     </MudList>
 }
+else
+{
+    <MudText Typo="Typo.body1">This area is not there anymore.</MudText>
+}
 
 @code {
     [Parameter] public Guid AreaId { get; set; }
@@ -28,7 +32,8 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        _area = await AreaStore.LoadAsync(AreaId, CancellationToken.None);
+        var area = await AreaStore.LoadAsync(AreaId, CancellationToken.None);
+        _area = area is null || area.Deleted ? null : area;
 
         var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _lists = lists

@@ -8,7 +8,10 @@
             <MudAvatar Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")" Size="Size.Medium">
                 @AvatarColor.InitialOf(Email)
             </MudAvatar>
-            <MudText Typo="Typo.body2">@Email</MudText>
+            <div class="d-flex flex-column">
+                <MudText Typo="Typo.body2">@DisplayName</MudText>
+                <MudText Typo="Typo.caption">@Email</MudText>
+            </div>
         </div>
     </ActivatorContent>
     <ChildContent>
@@ -42,6 +45,8 @@
 
 @code {
     [Parameter] public string Email { get; set; } = "";
+
+    [Parameter] public string DisplayName { get; set; } = "";
 
     [Parameter] public Guid UserId { get; set; }
 

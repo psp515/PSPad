@@ -1,5 +1,10 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Security.Claims;
 using Bunit;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App.Api;
@@ -7,6 +12,8 @@ using PSPad.App.Layout;
 using PSPad.App.State;
 using PSPad.App.Sync;
 using PSPad.App.Theme;
+using PSPad.Contracts;
+using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Layout;
@@ -14,18 +21,46 @@ namespace PSPad.App.Tests.Layout;
 [UnitTest]
 public class AppShellTests : Bunit.TestContext
 {
+    static readonly Guid User = Guid.NewGuid();
+
     [Fact]
-    public void ItRendersOneSidebar()
+    public void ItRendersOneSidebarPerBreakpointBranch()
     {
         Arrange();
 
         var shell = Render<AppShell>();
 
-        Assert.Single(shell.FindComponents<NavSidebar>());
+        Assert.Equal(2, shell.FindComponents<NavSidebar>().Count);
     }
 
     [Fact]
-    public void TheHamburgerIsHiddenAtDesktopWidths()
+    public void ThePersistentDrawerIsAlwaysOpenAndDesktopOnly()
+    {
+        Arrange();
+
+        var shell = Render<AppShell>();
+
+        var persistent = shell.FindComponents<MudDrawer>()
+            .Single(drawer => drawer.Instance.Variant == DrawerVariant.Persistent);
+        Assert.Contains("mud-drawer--open", persistent.Find(".mud-drawer").ClassList);
+        Assert.Contains("d-none", persistent.Find(".mud-drawer").ClassList);
+        Assert.Contains("d-md-flex", persistent.Find(".mud-drawer").ClassList);
+    }
+
+    [Fact]
+    public void TheTemporaryDrawerIsMobileOnly()
+    {
+        Arrange();
+
+        var shell = Render<AppShell>();
+
+        var temporary = shell.FindComponents<MudDrawer>()
+            .Single(drawer => drawer.Instance.Variant == DrawerVariant.Temporary);
+        Assert.Contains("d-md-none", temporary.Find(".mud-drawer").ClassList);
+    }
+
+    [Fact]
+    public void TheHamburgerCarriesTheMobileOnlyClass()
     {
         Arrange();
 
@@ -34,24 +69,48 @@ public class AppShellTests : Bunit.TestContext
         Assert.Contains("d-md-none", shell.Find("#pspad-drawer-toggle").ClassList);
     }
 
-    void Arrange()
+    [Fact]
+    public void DeletedAreasAreNotInTheSidebar()
+    {
+        var kept = NewArea("Dom", 0);
+        var removed = NewArea("Stare", 1);
+        removed.ApplyAll(Area.Decide(
+            removed, new DeleteArea(Guid.NewGuid(), User, removed.Id), DateTimeOffset.UnixEpoch));
+        Arrange(kept, removed);
+        var authStateTask = AuthenticatedAs("Kolber", "kolberu@gmail.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        Assert.Contains("Dom", shell.Markup);
+        Assert.DoesNotContain("Stare", shell.Markup);
+    }
+
+    void Arrange(params Aggregate[] documents)
     {
         JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
         Services.AddMudServices();
         Services.AddSingleton(new ThemePreference(JSInterop.JSRuntime));
 
         var replica = new InMemoryReplica();
-        var state = new AppState { UserId = Guid.NewGuid(), Today = new DateOnly(2026, 9, 12) };
+        foreach (var document in documents)
+        {
+            replica.SaveAsync(document).GetAwaiter().GetResult();
+        }
+
+        var state = new AppState { UserId = User, Today = new DateOnly(2026, 9, 12) };
         Services.AddSingleton<IReplica>(replica);
         Services.AddSingleton(state);
         Services.AddSingleton(new SidebarCounts(
             new ReplicaDocumentStore<Module.Tasks.Tasks.TodoTask>(replica),
             new ReplicaDocumentStore<Module.Tasks.Inbox.Inbox>(replica),
             state));
-        Services.AddSingleton<IDocumentStore<Module.Tasks.Areas.Area>>(
-            new ReplicaDocumentStore<Module.Tasks.Areas.Area>(replica));
+        Services.AddSingleton<IDocumentStore<Area>>(new ReplicaDocumentStore<Area>(replica));
 
-        Services.AddSingleton(new PSPadApiClient(new HttpClient()));
+        var meResponse = new MeResponse(User, "Kolber", "UTC");
+        Services.AddSingleton(new PSPadApiClient(new HttpClient(new FakeMeHandler(meResponse))
+        {
+            BaseAddress = new Uri("http://localhost/")
+        }));
         Services.AddSingleton<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
         Services.AddSingleton<IOutbox>(new InMemoryOutbox());
         Services.AddSingleton<IConnectivity>(new FakeConnectivity());
@@ -61,6 +120,23 @@ public class AppShellTests : Bunit.TestContext
         Services.AddScoped<CommandSender>();
     }
 
+    static Area NewArea(string name, int position)
+    {
+        var area = new Area();
+        area.ApplyAll(Area.Decide(
+            null,
+            new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), name, position),
+            DateTimeOffset.UnixEpoch));
+        return area;
+    }
+
+    static Task<AuthenticationState> AuthenticatedAs(string name, string email)
+    {
+        var identity = new ClaimsIdentity(
+            [new Claim(ClaimTypes.Name, name), new Claim("email", email)], "test");
+        return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
+    }
+
     sealed class FakeConnectivity : IConnectivity
     {
         public bool IsOnline => false;
@@ -68,5 +144,15 @@ public class AppShellTests : Bunit.TestContext
 #pragma warning disable CS0067
         public event Action? CameOnline;
 #pragma warning restore CS0067
+    }
+
+    sealed class FakeMeHandler(MeResponse response) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken ct) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(response)
+            });
     }
 }

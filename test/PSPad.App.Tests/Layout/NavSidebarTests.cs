@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using PSPad.Abstractions;
@@ -86,6 +87,41 @@ public class NavSidebarTests : Bunit.TestContext
         var sidebar = Render([]);
 
         Assert.Contains("New area", sidebar.Markup);
+    }
+
+    [Fact]
+    public void ClickingAnAreaRowRaisesNavigated()
+    {
+        Arrange();
+        var area = Areas("Dom")[0];
+        var navigated = 0;
+
+        var sidebar = Render<NavSidebar>(parameters => parameters
+            .Add(p => p.Areas, new[] { area })
+            .Add(p => p.Email, "kolberu@gmail.com")
+            .Add(p => p.UserId, User)
+            .Add(p => p.Navigated, EventCallback.Factory.Create(this, () => navigated++)));
+
+        sidebar.Find($"a[href='/areas/{area.Id}']").Click();
+
+        Assert.Equal(1, navigated);
+    }
+
+    [Fact]
+    public void ClickingNewAreaRaisesOnNewArea()
+    {
+        Arrange();
+        var newArea = 0;
+
+        var sidebar = Render<NavSidebar>(parameters => parameters
+            .Add(p => p.Areas, Areas("Dom"))
+            .Add(p => p.Email, "kolberu@gmail.com")
+            .Add(p => p.UserId, User)
+            .Add(p => p.OnNewArea, EventCallback.Factory.Create(this, () => newArea++)));
+
+        sidebar.Find("button").Click();
+
+        Assert.Equal(1, newArea);
     }
 
     IRenderedComponent<NavSidebar> Render(IReadOnlyList<Area> areas) =>

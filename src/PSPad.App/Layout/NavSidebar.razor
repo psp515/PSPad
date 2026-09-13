@@ -1,40 +1,42 @@
+@using MudBlazor.Interfaces
 @using PSPad.App.State
 @using PSPad.Module.Tasks.Areas
 @inject SidebarCounts Counts
 @inject NavigationManager Navigation
 @implements IDisposable
+@implements INavigationEventReceiver
 
 <div class="d-flex flex-column" style="height:100%">
-    <AccountMenu Email="@Email" UserId="@UserId" PendingCommands="@PendingCommands" />
+    <AccountMenu Email="@Email" DisplayName="@DisplayName" UserId="@UserId" PendingCommands="@PendingCommands" />
 
     <MudTextField T="string" @bind-Value="_query" Placeholder="Search" Immediate="true"
                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mx-3 mb-2"
                   OnKeyDown="@OnSearchKey" />
 
-    <MudNavMenu>
-        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.WbSunny"
-                    OnClick="@Navigated">
-            @($"My Day{Badge(Counts.Today)}")
-        </MudNavLink>
-        <MudNavLink Href="/inbox" Icon="@Icons.Material.Filled.Inbox" OnClick="@Navigated">
-            @($"Inbox{Badge(Counts.Inbox)}")
-        </MudNavLink>
-    </MudNavMenu>
-
-    <MudDivider Class="my-2" />
-
-    <div class="flex-grow-1 overflow-auto">
+    <CascadingValue Value="@((INavigationEventReceiver)this)" IsFixed="true">
         <MudNavMenu>
-            @foreach (var area in Areas.OrderBy(area => area.Position))
-            {
-                <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder"
-                            OnClick="@Navigated">
-                    @area.Name
-                </MudNavLink>
-            }
+            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.WbSunny">
+                @($"My Day{Badge(Counts.Today)}")
+            </MudNavLink>
+            <MudNavLink Href="/inbox" Icon="@Icons.Material.Filled.Inbox">
+                @($"Inbox{Badge(Counts.Inbox)}")
+            </MudNavLink>
         </MudNavMenu>
-    </div>
+
+        <MudDivider Class="my-2" />
+
+        <div class="flex-grow-1 overflow-auto">
+            <MudNavMenu>
+                @foreach (var area in Areas.OrderBy(area => area.Position))
+                {
+                    <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
+                        @area.Name
+                    </MudNavLink>
+                }
+            </MudNavMenu>
+        </div>
+    </CascadingValue>
 
     <MudDivider />
 
@@ -48,6 +50,8 @@
     [Parameter] public IReadOnlyList<Area> Areas { get; set; } = [];
 
     [Parameter] public string Email { get; set; } = "";
+
+    [Parameter] public string DisplayName { get; set; } = "";
 
     [Parameter] public Guid UserId { get; set; }
 
@@ -75,6 +79,8 @@
         Navigation.NavigateTo($"/search?q={Uri.EscapeDataString(_query)}");
         await Navigated.InvokeAsync();
     }
+
+    Task INavigationEventReceiver.OnNavigation() => Navigated.InvokeAsync();
 
     public void Dispose() => Counts.Changed -= OnCountsChanged;
 }

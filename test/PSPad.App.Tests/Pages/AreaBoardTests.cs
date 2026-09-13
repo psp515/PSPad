@@ -58,6 +58,19 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ADeletedAreasScreenDoesNotRenderItsName()
+    {
+        var area = NewArea("Dom");
+        area.ApplyAll(Area.Decide(
+            area, new DeleteArea(Guid.NewGuid(), User, area.Id), DateTimeOffset.UnixEpoch));
+        Arrange(area);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.DoesNotContain("Dom", page.Markup);
+    }
+
+    [Fact]
     public void ItHidesDeletedLists()
     {
         var area = NewArea("Dom");

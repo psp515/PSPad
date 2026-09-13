@@ -39,7 +39,7 @@ public sealed class ReplicaSearch(
     }
 
     static bool Matches(string name, string needle) =>
-        name.Contains(needle, StringComparison.CurrentCultureIgnoreCase);
+        name.Contains(needle, StringComparison.InvariantCultureIgnoreCase);
 
     static string PathOf(
         Guid listId, IReadOnlyDictionary<Guid, TaskList> lists, IReadOnlyDictionary<Guid, string> areas) =>

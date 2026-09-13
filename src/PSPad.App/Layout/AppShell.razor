@@ -28,9 +28,15 @@
         <MudText Typo="Typo.h6">PSPad</MudText>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Responsive"
-               Breakpoint="Breakpoint.Md" Elevation="1" ClipMode="DrawerClipMode.Never">
-        <NavSidebar Areas="@_areas" Email="@_email" UserId="@State.UserId"
+    <MudDrawer Variant="DrawerVariant.Persistent" Open="true" Elevation="1"
+               ClipMode="DrawerClipMode.Never" Class="d-none d-md-flex">
+        <NavSidebar Areas="@_areas" Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
+                    PendingCommands="@Coordinator.PendingCount" />
+    </MudDrawer>
+
+    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Temporary"
+               Elevation="1" ClipMode="DrawerClipMode.Never" Class="d-md-none">
+        <NavSidebar Areas="@_areas" Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
                     PendingCommands="@Coordinator.PendingCount"
                     OnNewArea="@(() => _drawerOpen = false)"
                     Navigated="@(() => _drawerOpen = false)" />
@@ -58,34 +64,43 @@
     bool _ready;
     bool _drawerOpen;
     string _email = "";
+    string _displayName = "";
     IReadOnlyList<Area> _areas = [];
 
     protected override async Task OnInitializedAsync()
     {
-        Coordinator.Changed += OnChanged;
-        Preference.Changed += OnChanged;
+        Coordinator.Changed += OnSyncChanged;
+        Preference.Changed += OnPreferenceChanged;
         Sender.Sent += OnCommandSent;
 
         var authState = AuthStateTask is null ? null : await AuthStateTask;
         if (authState?.User.Identity?.IsAuthenticated == true)
         {
-            _email = authState.User.Identity.Name ?? "";
+            _email = authState.User.FindFirst("email")?.Value ?? authState.User.Identity.Name ?? "";
 
             var me = await Api.MeAsync();
 
             if (me is not null)
             {
+                _displayName = me.DisplayName;
                 State.UserId = me.UserId;
                 State.TimeZone = me.TimeZone;
                 State.Today = TodayRule.TodayIn(
                     DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
-                _areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
-                await Counts.RefreshAsync();
+                await ReloadAreasAndCountsAsync();
             }
         }
 
         _ready = true;
         Coordinator.Start();
+    }
+
+    async Task ReloadAreasAndCountsAsync()
+    {
+        var loaded = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _areas = [.. loaded.Where(area => !area.Deleted)];
+        await Counts.RefreshAsync();
+        StateHasChanged();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -108,14 +123,16 @@
         StateHasChanged();
     }
 
-    void OnChanged() => InvokeAsync(StateHasChanged);
+    void OnPreferenceChanged() => InvokeAsync(StateHasChanged);
 
-    void OnCommandSent() => InvokeAsync(Counts.RefreshAsync);
+    void OnSyncChanged() => InvokeAsync(ReloadAreasAndCountsAsync);
+
+    void OnCommandSent() => InvokeAsync(ReloadAreasAndCountsAsync);
 
     public void Dispose()
     {
-        Coordinator.Changed -= OnChanged;
-        Preference.Changed -= OnChanged;
+        Coordinator.Changed -= OnSyncChanged;
+        Preference.Changed -= OnPreferenceChanged;
         Sender.Sent -= OnCommandSent;
     }
 }

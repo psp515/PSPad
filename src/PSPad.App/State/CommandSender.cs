@@ -18,7 +18,11 @@ public sealed class CommandSender(IServiceProvider services, ReplicaUnitOfWork w
         }
 
         var result = await handler.HandleAsync(command, ct);
-        Sent?.Invoke();
+
+        if (result.Accepted)
+        {
+            Sent?.Invoke();
+        }
 
         return result;
     }

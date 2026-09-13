@@ -24,6 +24,22 @@ public class CommandSenderTests
     }
 
     [Fact]
+    public async Task SentStaysSilentWhenTheHandlerRejects()
+    {
+        var rejected = CommandResult.Rejected("nope");
+        var sender = new CommandSender(
+            new FakeServiceProvider(new FakeCommandHandler(rejected)), Work());
+        var fires = 0;
+        sender.Sent += () => fires++;
+
+        var result = await sender.SendAsync(
+            new FakeCommand(Guid.NewGuid(), Guid.NewGuid()), TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, fires);
+        Assert.False(result.Accepted);
+    }
+
+    [Fact]
     public async Task SentStaysSilentWhenNoHandlerIsRegistered()
     {
         var sender = new CommandSender(new FakeServiceProvider(handler: null), Work());
