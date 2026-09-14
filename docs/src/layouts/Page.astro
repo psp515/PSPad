@@ -1,0 +1,78 @@
+---
+import Mark from '../components/Mark.astro'
+import '../styles/theme.css'
+
+interface Props { title: string; description: string }
+const { title, description } = Astro.props
+const base = import.meta.env.BASE_URL
+const nav = [
+  { href: `${base}/features`, label: 'Features' },
+  { href: `${base}/install`, label: 'Install' },
+  { href: 'https://github.com/psp515/PSPad', label: 'GitHub' }
+]
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content={new URL(`${base}/og.png`, Astro.site)} />
+    <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+  </head>
+  <body>
+    <a class="skip" href="#content">Skip to content</a>
+    <header class="wrap site-header">
+      <a class="brand" href={base}>
+        <Mark size={28} />
+        <span>PSPad</span>
+      </a>
+      <nav>
+        {nav.map((item) => <a href={item.href}>{item.label}</a>)}
+      </nav>
+    </header>
+    <main id="content"><slot /></main>
+    <footer class="wrap site-footer">
+      <p>PSPad is free software under the GPL v3. <a href="https://github.com/psp515/PSPad">Source on GitHub</a>.</p>
+    </footer>
+  </body>
+</html>
+
+<style>
+  .site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  nav { display: flex; gap: 20px; }
+  nav a { text-decoration: none; font-weight: 500; }
+  nav a:hover { text-decoration: underline; }
+
+  .site-footer {
+    margin-top: 80px;
+    padding: 24px 24px 48px;
+    border-top: 1px solid var(--lines);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+</style>

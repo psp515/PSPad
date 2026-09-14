@@ -3,9 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "test": "vitest run",
     "icons": "node scripts/render-icons.mjs"
   },
   "devDependencies": {
-    "sharp": "^0.33.5"
+    "astro": "^5.13.0",
+    "sharp": "^0.33.5",
+    "vitest": "^3.2.0"
   }
 }

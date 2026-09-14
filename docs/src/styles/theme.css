@@ -1,0 +1,128 @@
+:root {
+  --primary: #4E7A5E;
+  --secondary: #6E8F7C;
+  --background: #F7F8F5;
+  --surface: #FFFFFF;
+  --raised: #EDF1EA;
+  --lines: #DCE3D9;
+  --text: #1E2A22;
+  --muted: #66736B;
+  --warning: #B26A00;
+  --radius: 12px;
+  --measure: 68ch;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #8FBF9F;
+    --secondary: #7FAE94;
+    --background: #141815;
+    --surface: #1C211D;
+    --raised: #171C18;
+    --lines: #2A312C;
+    --text: #E4E9E4;
+    --muted: #94A199;
+    --warning: #E0B252;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+main { display: block; }
+
+.wrap {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.prose { max-width: var(--measure); }
+
+h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); }
+h2 { font-size: 1.6rem; margin-top: 3rem; }
+h3 { font-size: 1.15rem; }
+
+a { color: var(--primary); }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: var(--raised);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+pre {
+  background: var(--raised);
+  border: 1px solid var(--lines);
+  border-radius: var(--radius);
+  padding: 16px;
+  overflow-x: auto;
+}
+
+pre code { background: none; padding: 0; }
+
+table { border-collapse: collapse; width: 100%; }
+
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--lines);
+}
+
+th { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+
+.button {
+  display: inline-block;
+  padding: 12px 22px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--primary);
+}
+
+.button-primary { background: var(--primary); color: var(--background); }
+.button-secondary { color: var(--primary); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--lines);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.skip {
+  position: absolute;
+  left: -9999px;
+}
+
+.skip:focus {
+  left: 16px;
+  top: 16px;
+  background: var(--surface);
+  padding: 12px;
+  border-radius: var(--radius);
+  z-index: 10;
+}
