@@ -1,5 +1,7 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using PSPad.App.Components;
 using PSPad.App.State;
 using PSPad.Module.Tasks.Lists;
@@ -94,11 +96,44 @@ public class ListCardTests : Bunit.TestContext
         Assert.Contains("Remont", card.Markup);
     }
 
+    [Fact]
+    public void TheHeaderCarriesAMenuThatRaisesRenameAndDelete()
+    {
+        Arrange();
+        var list = List("Zakupy");
+        var renamed = false;
+        var deleted = false;
+
+        var card = Render(BuildCardWithPopover(list, () => renamed = true, () => deleted = true));
+
+        card.Find(".pspad-list-menu button").Click();
+        card.FindAll(".mud-menu-item")[0].Click();
+        Assert.True(renamed);
+
+        card.Find(".pspad-list-menu button").Click();
+        card.FindAll(".mud-menu-item").Last().Click();
+        Assert.True(deleted);
+    }
+
     IRenderedComponent<ListCard> Render(TaskList list, IReadOnlyList<TodoTask> tasks) =>
         Render<ListCard>(parameters => parameters
             .Add(p => p.List, list)
             .Add(p => p.Tasks, tasks)
             .Add(p => p.Today, Today));
+
+    // MudMenu portals its open content through MudPopoverProvider, so this render
+    // tree needs one alongside ListCard for the menu item clicks to be reachable.
+    RenderFragment BuildCardWithPopover(TaskList list, Action onRename, Action onDelete) => builder =>
+    {
+        builder.OpenComponent<MudPopoverProvider>(0);
+        builder.CloseComponent();
+        builder.OpenComponent<ListCard>(1);
+        builder.AddAttribute(2, nameof(ListCard.List), list);
+        builder.AddAttribute(3, nameof(ListCard.Today), Today);
+        builder.AddAttribute(4, nameof(ListCard.OnRename), new EventCallback(null, onRename));
+        builder.AddAttribute(5, nameof(ListCard.OnDelete), new EventCallback(null, onDelete));
+        builder.CloseComponent();
+    };
 
     CardCollapseState Arrange()
     {

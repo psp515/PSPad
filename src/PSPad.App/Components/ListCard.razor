@@ -13,6 +13,12 @@
         </MudLink>
         <MudSpacer />
         <MudText Typo="Typo.caption" Class="pspad-open-count">@Open.Count</MudText>
+        <ThingMenu Class="pspad-list-menu"
+                   OnRename="@OnRename" OnDelete="@OnDelete">
+            <Extra>
+                <MudMenuItem OnClick="@OnMove">Move to area</MudMenuItem>
+            </Extra>
+        </ThingMenu>
     </div>
 
     @if (!Collapsed)
@@ -57,6 +63,12 @@
     [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
 
     [Parameter] public EventCallback<string> OnAddTask { get; set; }
+
+    [Parameter] public EventCallback OnRename { get; set; }
+
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    [Parameter] public EventCallback OnMove { get; set; }
 
     string _newTask = "";
 
