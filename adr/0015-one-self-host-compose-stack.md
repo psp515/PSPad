@@ -45,11 +45,15 @@ rather than moving to a production Keycloak deployment.
   to operate for a single-user, self-hosted deployment whose only other store
   is one MongoDB. The cost does not match what it buys here.
 - **Initiate the replica set with member host `mongo:27017` and keep
-  discovery.** Rejected: the in-container `mongosh` healthcheck, and any
-  host-side tooling connecting to the mapped port, would then have to resolve
-  a Docker network name they have no route to, trading one unreachable host
-  (`localhost` from inside the container) for another (`mongo` from outside
-  it).
+  discovery.** Rejected: that hostname resolves fine for another container on
+  the compose network, but it becomes the replica set's own advertised
+  member address, baked into its configuration rather than into any one
+  caller's connection string. Anything that ever reaches this MongoDB from
+  outside that network — a restored backup, a `mongosh` run from the host, an
+  operator debugging with the port temporarily published — would be handed
+  back an advertised host it cannot resolve. `directConnection=true` performs
+  no discovery at all, so no hostname is ever advertised to a caller and the
+  question does not arise.
 - **Bring-your-own identity provider.** Rejected: an install page that opens
   by telling the reader to go install and configure a separate product first
   is a worse start than a Keycloak container the stack already brings up.
