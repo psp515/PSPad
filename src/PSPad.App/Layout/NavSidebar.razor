@@ -10,10 +10,12 @@
 <div class="d-flex flex-column" style="height:100%">
     <AccountMenu Email="@Email" DisplayName="@DisplayName" UserId="@UserId" PendingCommands="@PendingCommands" />
 
-    <MudTextField T="string" @bind-Value="_query" Placeholder="Search" Immediate="true"
-                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="mx-3 mb-2"
-                  OnKeyDown="@OnSearchKey" />
+    <div>
+        <MudTextField T="string" @bind-Value="_query" Placeholder="Search" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="mx-3 mb-2"
+                      OnKeyDown="@OnSearchKey" />
+    </div>
 
     <CascadingValue Value="@((INavigationEventReceiver)this)" IsFixed="true">
         <MudNavMenu>
@@ -25,7 +27,7 @@
             </MudNavLink>
         </MudNavMenu>
 
-        <MudDivider Class="my-2" />
+        <MudDivider Class="my-2" Style="flex-grow:0" />
 
         <MudNavMenu>
             @foreach (var area in Areas.OrderBy(area => area.Position))
@@ -44,10 +46,10 @@
         </MudNavMenu>
     </CascadingValue>
 
-    <MudDivider Class="my-2" />
+    <MudDivider Class="my-2" Style="flex-grow:0" />
 
     <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Class="ma-2 pspad-new-area"
-               Style="align-self:flex-start" OnClick="@OnNewArea">
+               Style="align-self:flex-start;flex-grow:0" OnClick="@OnNewArea">
         New area
     </MudButton>
 </div>
