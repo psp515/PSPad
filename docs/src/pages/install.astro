@@ -1,0 +1,234 @@
+---
+import Page from '../layouts/Page.astro'
+import Callout from '../components/Callout.astro'
+import EnvTable from '../components/EnvTable.astro'
+import Step from '../components/Step.astro'
+import { parseEnvExample, readRepoFile } from '../lib/repo'
+
+const compose = readRepoFile('docker/compose.yaml')
+const entries = parseEnvExample(readRepoFile('docker/.env.example'))
+---
+<Page
+  title="Install PSPad"
+  description="Run PSPad on your own hardware with Docker Compose: the stack, every environment variable, the secrets, and the first sign-in."
+>
+  <div class="wrap prose">
+    <h1>Install</h1>
+    <p>
+      PSPad runs as four containers: the API, the client, MongoDB, and Keycloak for
+      sign-in. One Compose file starts all four. Budget several minutes, not seconds,
+      especially on a machine that has never pulled the base images before.
+    </p>
+
+    <h2>Before you start</h2>
+    <ul>
+      <li>Docker with Compose v2 (<code>docker compose version</code> prints v2.x).</li>
+      <li>About 2 GB of disk for images and data.</li>
+      <li>
+        For anything beyond <code>localhost</code>: a reverse proxy terminating TLS.
+        The stack serves plain HTTP on purpose and does not manage certificates.
+      </li>
+    </ul>
+
+    <Step n={1} title="Clone the repository">
+      <pre><code>git clone https://github.com/psp515/PSPad.git
+cd PSPad</code></pre>
+    </Step>
+
+    <Step n={2} title="Create your environment file">
+      <pre><code>cp docker/.env.example docker/.env</code></pre>
+      <p>
+        Do this before anything else. <code>docker/compose.yaml</code> reads every
+        <code>${'{VAR}'}</code> from <code>docker/.env</code>; without it, <code>docker compose up</code>
+        starts containers with empty or missing values instead of failing loudly. The
+        defaults work on <code>localhost</code> as they are. Change at least
+        <code>MONGO_PASSWORD</code> and <code>KEYCLOAK_ADMIN_PASSWORD</code> before the stack is
+        reachable from anywhere else.
+      </p>
+      <EnvTable entries={entries} />
+      <Callout kind="warning" title="Two Keycloak URLs, and they mean different things">
+        <p>
+          <code>KEYCLOAK_AUTHORITY</code> is the realm URL the <strong>browser</strong> uses —
+          the WebAssembly client redirects there to sign in. <code>KEYCLOAK_INTERNAL_AUTHORITY</code>
+          is the realm URL the <strong>API container</strong> uses to validate tokens. They have
+          to differ because the two reach Keycloak by different names: inside the <code>api</code>
+          container, <code>localhost</code> means that container, not the host machine, so the
+          browser's address does not work there. Running your own external Keycloak instead of
+          this stack's bundled one? Set both variables to whatever address the API container can
+          actually reach that instance at — often the same public URL as <code>KEYCLOAK_AUTHORITY</code>.
+          Leaving <code>KEYCLOAK_INTERNAL_AUTHORITY</code> at its default with no <code>keycloak</code>
+          service running makes every authenticated API call fail.
+        </p>
+      </Callout>
+      <Callout title="The admin credentials apply once">
+        <p>
+          <code>KEYCLOAK_ADMIN_USER</code> and <code>KEYCLOAK_ADMIN_PASSWORD</code> create the
+          Keycloak administrator on the very first start. Changing them later has no
+          effect — change the password in the Keycloak console instead.
+        </p>
+      </Callout>
+    </Step>
+
+    <Step n={3} title="Start the stack">
+      <pre><code>docker compose -f docker/compose.yaml up -d --build</code></pre>
+      <p>
+        The first build took a bit over a minute with the .NET SDK and ASP.NET base images
+        already cached locally; pulling those images for the first time adds several minutes
+        on top. MongoDB starts as a single-node replica set — PSPad writes each command, its
+        events and its command id in one transaction, and transactions require a replica set.
+        Wait for it to report healthy:
+      </p>
+      <pre><code>docker compose -f docker/compose.yaml ps</code></pre>
+      <p>
+        The API will not start until Mongo is healthy. On the first run Mongo also
+        generates its own replica-set keyfile into the <code>mongo-keyfile</code> volume.
+        <code>api</code>, <code>app</code> and <code>keycloak</code> declare no healthcheck of their
+        own, so <code>ps</code> shows them as a bare <code>Up</code> forever — that is expected,
+        not a sign anything is wrong. Confirm the API is actually answering instead:
+      </p>
+      <pre><code>curl -s -o /dev/null -w "%{'{'}http_code{'}'}\n" http://localhost:5000/api/today</code></pre>
+      <p>
+        An unauthenticated request should come back <code>401</code>. Anything else —
+        <code>500</code>, <code>000</code>, a hang — means the stack did not come up cleanly.
+      </p>
+      <Callout title="The API runs in Production mode, on purpose">
+        <p>
+          <code>docker compose exec api printenv ASPNETCORE_ENVIRONMENT</code> prints nothing,
+          and the API logs <code>Hosting environment: Production</code>. It can still reach the
+          bundled Keycloak over plain HTTP because <code>docker/compose.yaml</code> sets
+          <code>Keycloak__RequireHttpsMetadata: "false"</code> explicitly for the <code>api</code>
+          service — not because it is running in Development mode. If you later put an identity
+          provider behind HTTPS, change that value to <code>"true"</code> in
+          <code>docker/compose.yaml</code> rather than setting <code>ASPNETCORE_ENVIRONMENT</code>,
+          which would also turn on the developer exception page and leak stack traces to anyone
+          who can reach the API.
+        </p>
+      </Callout>
+    </Step>
+
+    <Step n={4} title="Create your first user">
+      <p>
+        PSPad has no registration screen; accounts live in Keycloak, and the realm ships
+        with none. <strong>Creating one now is mandatory, not optional</strong> — the
+        application is unusable until you do.
+      </p>
+      <ol>
+        <li>
+          Open the admin console at the <code>KEYCLOAK_HOSTNAME</code> you configured
+          (<code>http://localhost:8080</code> by default) and sign in with the bootstrap
+          administrator (<code>KEYCLOAK_ADMIN_USER</code> / <code>KEYCLOAK_ADMIN_PASSWORD</code>).
+        </li>
+        <li>
+          Switch realm from <strong>master</strong> to <strong>pspad</strong>. A fresh stack's
+          Users list reads "No users found" — that is correct.
+        </li>
+        <li>
+          <strong>Users</strong> → <strong>Create new user</strong>. Set a username and email,
+          and fill in first and last name while you are there — doing it now skips an
+          "Update Account Information" interstitial that would otherwise interrupt the very
+          first sign-in.
+        </li>
+        <li>
+          Create lands on a separate detail view for that user. <strong>Credentials</strong> →
+          <strong>Set password</strong> is a second, separate action — with <em>Temporary</em>
+          switched off, or Keycloak forces a password change the client has no screen for.
+        </li>
+      </ol>
+    </Step>
+
+    <Step n={5} title="Sign in">
+      <p>
+        Open <code>APP_BASE_ADDRESS</code>. You are redirected to Keycloak, sign in, and
+        land on My Day — empty at first, showing "Nothing due today." while the app
+        provisions three starter areas (Personal, Work, Home) in the background; they can
+        take a few seconds to appear. Install it from the browser's address bar to get the
+        offline app — from then on it keeps working with no network and syncs when one returns.
+      </p>
+      <Callout kind="warning" title="Give it 20–30 seconds before you trust something is saved">
+        <p>
+          The client is offline-first: creating an area, a list or a task applies to a
+          local browser-side replica immediately, and is only queued for delivery to the
+          server in the background on a periodic interval — observed around 20–30 seconds.
+          If you create something and immediately restart the stack or close the browser
+          within that window, it was never actually written to MongoDB and is lost.
+        </p>
+      </Callout>
+    </Step>
+
+    <h2>The stack, in full</h2>
+    <p>This is <code>docker/compose.yaml</code> exactly as it ships:</p>
+    <pre><code>{compose}</code></pre>
+
+    <h2>Putting it behind a proxy</h2>
+    <p>
+      Point three hostnames at the published ports — the client on <code>5001</code>, the API
+      on <code>5000</code>, Keycloak on <code>8080</code> — terminate TLS at the proxy, and forward
+      <code>X-Forwarded-For</code> and <code>X-Forwarded-Proto</code>. Then:
+    </p>
+    <ol>
+      <li>
+        Set <code>APP_BASE_ADDRESS</code>, <code>API_BASE_ADDRESS</code>,
+        <code>KEYCLOAK_AUTHORITY</code> and <code>KEYCLOAK_HOSTNAME</code> in
+        <code>docker/.env</code> to those public <code>https://</code> URLs.
+      </li>
+      <li>
+        <strong>Edit the Keycloak client, or sign-in will fail.</strong> Keycloak 26 rejects
+        <code>${'{env.…}'}</code> placeholders in a realm import, so the bundled realm export
+        carries the literal <code>http://localhost:5001/*</code> redirect URI baked in — changing
+        <code>APP_BASE_ADDRESS</code> does not change it. In the admin console, realm
+        <strong>pspad</strong> → <strong>Clients</strong> → <strong>pspad-app</strong>, update
+        <strong>Valid redirect URIs</strong> and <strong>Web origins</strong> to your new public
+        address. Skip this and sign-in fails with <code>Invalid parameter: redirect_uri</code>
+        and nothing on screen explains why.
+      </li>
+      <li>Recreate the stack so the new environment values take effect:
+        <pre><code>docker compose -f docker/compose.yaml up -d --force-recreate</code></pre>
+      </li>
+    </ol>
+    <p>
+      MongoDB publishes no port at all; it is reachable only from the other containers.
+    </p>
+
+    <h2>Backups</h2>
+    <p>Three volumes hold everything that matters:</p>
+    <ul>
+      <li><code>pspad_mongo-data</code> — your areas, lists, tasks and the event log.</li>
+      <li><code>pspad_mongo-keyfile</code> — the generated replica-set key. Restoring <code>mongo-data</code> without it leaves a set that will not start.</li>
+      <li><code>pspad_keycloak-data</code> — accounts and realm configuration.</li>
+    </ul>
+    <p>A dump of the database alone:</p>
+    <pre><code>docker compose -f docker/compose.yaml exec -T mongo \
+  mongodump --archive --username pspad --password "$MONGO_PASSWORD" \
+  --authenticationDatabase admin > pspad-backup.archive</code></pre>
+
+    <h2>Upgrading, restarting</h2>
+    <pre><code>git pull
+docker compose -f docker/compose.yaml up -d --build</code></pre>
+    <p>
+      Data survives: the volumes are not touched. <code>down -v</code> is the command that
+      destroys them. A restart — <code>docker compose -f docker/compose.yaml restart</code>,
+      or an upgrade's rebuild — brings every container down at once, and the API refuses
+      connections until Mongo reports healthy again. Give it 10–30 seconds before you judge
+      the stack broken; that was enough on every run observed during verification.
+    </p>
+
+    <h2>Two things worth knowing</h2>
+    <Callout kind="warning" title="Keycloak runs in development mode">
+      <p>
+        It stores its data in an embedded H2 database on the <code>keycloak-data</code> volume.
+        That is deliberate — a PostgreSQL container for a single-user deployment whose
+        entire store is one MongoDB is not a trade worth making — but Keycloak does not
+        support this mode for production, and a major version bump of the image may not
+        migrate cleanly. Export the realm before bumping it.
+      </p>
+    </Callout>
+    <Callout kind="warning" title="The old keyfile is in the git history">
+      <p>
+        Early revisions of this repository committed <code>docker/mongo-keyfile</code>. Your
+        installation generates its own on first start and never uses that one, but the
+        original value cannot be unpublished. It is only usable by someone who can already
+        reach your MongoDB, which publishes no port.
+      </p>
+    </Callout>
+  </div>
+</Page>

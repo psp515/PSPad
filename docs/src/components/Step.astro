@@ -1,0 +1,32 @@
+---
+interface Props { n: number; title: string }
+const { n, title } = Astro.props
+---
+<section class="step">
+  <h2><span class="number">{n}</span>{title}</h2>
+  <slot />
+</section>
+
+<style>
+  .step { margin-top: 48px; }
+
+  .step h2 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 0;
+  }
+
+  .number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--primary);
+    color: var(--background);
+    font-size: 1rem;
+  }
+</style>
