@@ -7,6 +7,7 @@ Develop on your own machine with the .NET 10 SDK. Docker supplies the backing
 services and, for integration tests, a throwaway MongoDB.
 
 ```bash
+cp docker/.env.example docker/.env
 docker compose -f docker/compose.yaml up -d
 ```
 
@@ -38,8 +39,10 @@ the repository root as context so the shared build props come along:
   `appsettings.json` at container start, so the same image runs in any
   environment.
 
-The production stack (`docker/compose.prod.yaml`) serves plain HTTP and expects
-a reverse proxy in front of it.
+There is one stack, `docker/compose.yaml`, and it is both the development and
+the self-hosting stack. It reads `docker/.env` (copy `docker/.env.example`),
+serves plain HTTP, and expects a reverse proxy in front of it. Self-hosting is
+documented in full at <https://psp515.github.io/PSPad/install>.
 
 Design specs live in `specs/` — `slice-design.md` covers the backend and
 domain end to end, `ui-redesign-2-design.md` the client's navigation, theming

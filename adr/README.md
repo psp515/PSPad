@@ -29,6 +29,7 @@ the old one's status line to point at the new number.
 | [0012](0012-extract-ordering-into-its-own-module.md) | Extract element ordering into its own module, out of the Tasks domain | Proposed | 2026-09-12 | architecture, domain, ui, future-work |
 | [0013](0013-responsive-shell-and-per-device-theme.md) | Keep sections and areas on separate navigation surfaces, and the theme per device | Superseded by [0014](0014-one-navigation-tree-at-every-width.md) | 2026-09-12 | ui, offline, identity |
 | [0014](0014-one-navigation-tree-at-every-width.md) | One navigation tree at every width, revealed rather than rebuilt | Active (supersedes [0013](0013-responsive-shell-and-per-device-theme.md)) | 2026-09-12 | ui, offline, identity |
+| [0015](0015-one-self-host-compose-stack.md) | One `.env`-driven self-host compose stack | Active | 2026-09-14 | deployment, security, identity |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
