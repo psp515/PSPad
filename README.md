@@ -1,6 +1,8 @@
 # PSPad
 My vision of notepad with GTD practicies.
 
+Documentation: <https://psp515.github.io/PSPad> — [install](https://psp515.github.io/PSPad/install) · [features](https://psp515.github.io/PSPad/features)
+
 ## Development
 
 Develop on your own machine with the .NET 10 SDK. Docker supplies the backing
