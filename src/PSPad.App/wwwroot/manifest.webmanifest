@@ -1,11 +1,11 @@
 {
-  "name": "PSPad.App",
-  "short_name": "PSPad.App",
+  "name": "PSPad",
+  "short_name": "PSPad",
   "id": "./",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#03173d",
+  "background_color": "#F7F8F5",
+  "theme_color": "#4E7A5E",
   "prefer_related_applications": false,
   "icons": [
     {

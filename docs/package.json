@@ -1,0 +1,11 @@
+{
+  "name": "pspad-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "icons": "node scripts/render-icons.mjs"
+  },
+  "devDependencies": {
+    "sharp": "^0.33.5"
+  }
+}
