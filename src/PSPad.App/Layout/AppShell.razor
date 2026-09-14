@@ -2,10 +2,12 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using PSPad.Abstractions
 @using PSPad.App.Api
+@using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.Sync
 @using PSPad.App.Theme
 @using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Ordering
 @using PSPad.Module.Tasks.Today
 @inject SyncCoordinator Coordinator
 @inject AppState State
@@ -33,15 +35,20 @@
     <MudDrawer Variant="DrawerVariant.Persistent" Open="true" Elevation="1"
                ClipMode="DrawerClipMode.Never" Class="d-none d-md-flex">
         <NavSidebar Areas="@_areas" Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
-                    PendingCommands="@Coordinator.PendingCount" />
+                    PendingCommands="@Coordinator.PendingCount"
+                    OnNewArea="@NewAreaAsync"
+                    OnRenameArea="@RenameAreaAsync"
+                    OnDeleteArea="@DeleteAreaAsync" />
     </MudDrawer>
 
     <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Temporary"
                Elevation="1" ClipMode="DrawerClipMode.Never" Class="d-md-none">
         <NavSidebar Areas="@_areas" Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
                     PendingCommands="@Coordinator.PendingCount"
-                    OnNewArea="@(() => _drawerOpen = false)"
-                    Navigated="@(() => _drawerOpen = false)" />
+                    OnNewArea="@NewAreaAsync"
+                    OnRenameArea="@RenameAreaAsync"
+                    OnDeleteArea="@DeleteAreaAsync"
+                    Navigated="@CloseDrawer" />
     </MudDrawer>
 
     <MudMainContent>
@@ -102,12 +109,83 @@
         ReadOpenTask();
     }
 
+    [Inject] IDialogService Dialogs { get; set; } = null!;
+
     void ReadOpenTask()
     {
         _openTask = TaskQuery.From(Navigation.Uri);
     }
 
     void CloseTask() => Navigation.NavigateTo(TaskQuery.Without(Navigation.Uri));
+
+    void CloseDrawer() => _drawerOpen = false;
+
+    async Task NewAreaAsync()
+    {
+        _drawerOpen = false;
+
+        var name = await AskForNameAsync("New area", "Area name", "");
+        if (name is null)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new CreateArea(
+            Guid.NewGuid(), State.UserId, Guid.NewGuid(), name,
+            Positions.Next(_areas.Select(area => area.Position))));
+
+        await ReloadAreasAndCountsAsync();
+    }
+
+    async Task RenameAreaAsync(Area area)
+    {
+        var name = await AskForNameAsync("Rename area", "Area name", area.Name);
+        if (name is null)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new RenameArea(Guid.NewGuid(), State.UserId, area.Id, name));
+        await ReloadAreasAndCountsAsync();
+    }
+
+    async Task DeleteAreaAsync(Area area)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, $"Delete “{area.Name}”? Its lists stay, without an area." }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete area", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new DeleteArea(Guid.NewGuid(), State.UserId, area.Id));
+        await ReloadAreasAndCountsAsync();
+
+        if (Navigation.Uri.Contains($"/areas/{area.Id}", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    async Task<string?> AskForNameAsync(string title, string label, string value)
+    {
+        var parameters = new DialogParameters<NameDialog>
+        {
+            { dialog => dialog.Title, label },
+            { dialog => dialog.Value, value }
+        };
+        var dialog = await Dialogs.ShowAsync<NameDialog>(title, parameters);
+        var result = await dialog.Result;
+
+        return result is null || result.Canceled || result.Data is not string name || name.Length == 0
+            ? null
+            : name;
+    }
 
     void OnLocationChanged(object? sender, LocationChangedEventArgs args)
     {

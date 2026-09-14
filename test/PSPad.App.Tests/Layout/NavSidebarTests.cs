@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using PSPad.App.Components;
 using PSPad.App.Layout;
 using PSPad.App.State;
 using PSPad.App.Tests;
@@ -118,10 +119,50 @@ public class NavSidebarTests : Bunit.TestContext
             .Add(p => p.UserId, User)
             .Add(p => p.OnNewArea, EventCallback.Factory.Create(this, () => newArea++)));
 
-        sidebar.Find("button").Click();
+        sidebar.Find(".pspad-new-area").Click();
 
         Assert.Equal(1, newArea);
     }
+
+    [Fact]
+    public void EveryAreaRowCarriesAMenu()
+    {
+        Arrange();
+
+        var sidebar = Render(Areas("Dom", "Praca"));
+
+        Assert.Equal(2, sidebar.FindComponents<ThingMenu>().Count);
+    }
+
+    [Fact]
+    public void RenamingAnAreaRaisesItWithTheArea()
+    {
+        Arrange();
+        var area = Areas("Dom")[0];
+        Area? renamed = null;
+
+        var sidebar = Render(BuildSidebarWithPopover(area, a => renamed = a));
+
+        sidebar.Find(".pspad-area-menu button").Click();
+        sidebar.FindAll(".mud-menu-item")[0].Click();
+
+        Assert.Equal(area.Id, renamed?.Id);
+    }
+
+    // MudMenu portals its open content through MudPopoverProvider, so this render
+    // tree needs one alongside NavSidebar for the menu item click to be reachable.
+    RenderFragment BuildSidebarWithPopover(Area area, Action<Area> onRenameArea) => builder =>
+    {
+        builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+        builder.CloseComponent();
+        builder.OpenComponent<NavSidebar>(1);
+        builder.AddAttribute(2, nameof(NavSidebar.Areas), new[] { area });
+        builder.AddAttribute(3, nameof(NavSidebar.Email), "kolberu@gmail.com");
+        builder.AddAttribute(4, nameof(NavSidebar.UserId), User);
+        builder.AddAttribute(5, nameof(NavSidebar.OnRenameArea),
+            EventCallback.Factory.Create(this, onRenameArea));
+        builder.CloseComponent();
+    };
 
     IRenderedComponent<NavSidebar> Render(IReadOnlyList<Area> areas) =>
         Render<NavSidebar>(parameters => parameters
