@@ -27,29 +27,27 @@
 
         <MudDivider Class="my-2" />
 
-        <div class="flex-grow-1 overflow-auto">
-            <MudNavMenu>
-                @foreach (var area in Areas.OrderBy(area => area.Position))
-                {
-                    <div class="d-flex align-center pspad-area-row">
-                        <div class="flex-grow-1">
-                            <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
-                                @area.Name
-                            </MudNavLink>
-                        </div>
-                        <ThingMenu Class="pspad-area-menu mr-2"
-                                   OnRename="@(() => OnRenameArea.InvokeAsync(area))"
-                                   OnDelete="@(() => OnDeleteArea.InvokeAsync(area))" />
+        <MudNavMenu>
+            @foreach (var area in Areas.OrderBy(area => area.Position))
+            {
+                <div class="d-flex align-center pspad-area-row">
+                    <div class="flex-grow-1">
+                        <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
+                            @area.Name
+                        </MudNavLink>
                     </div>
-                }
-            </MudNavMenu>
-        </div>
+                    <ThingMenu Class="pspad-area-menu mr-2"
+                               OnRename="@(() => OnRenameArea.InvokeAsync(area))"
+                               OnDelete="@(() => OnDeleteArea.InvokeAsync(area))" />
+                </div>
+            }
+        </MudNavMenu>
     </CascadingValue>
 
-    <MudDivider />
+    <MudDivider Class="my-2" />
 
     <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Class="ma-2 pspad-new-area"
-               OnClick="@OnNewArea">
+               Style="align-self:flex-start" OnClick="@OnNewArea">
         New area
     </MudButton>
 </div>
