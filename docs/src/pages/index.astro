@@ -1,8 +1,86 @@
 ---
 import Page from '../layouts/Page.astro'
+import Hero from '../components/Hero.astro'
+import FeatureCard from '../components/FeatureCard.astro'
+import { join } from '../lib/repo'
+
+const base = import.meta.env.BASE_URL
+
+const proof = [
+  {
+    title: 'Offline is the default, not a mode',
+    body: 'Edits go to a replica in your browser and an outbox, immediately. When the network returns the outbox ships in order and tells you about anything the server refused. Nothing is dropped quietly.'
+  },
+  {
+    title: 'Repeating work never goes overdue',
+    body: 'A recurring task is a template plus the days it happened. A day you missed stays on that day. Today shows today’s occurrence, once.'
+  },
+  {
+    title: 'History you can actually read',
+    body: 'Every change writes an event next to the document it changed, and the history screen reads them. No parallel audit table to disagree with the data.'
+  },
+  {
+    title: 'Your server, your accounts',
+    body: 'Four containers, one Compose file, your hardware. Sign-in runs through your own Keycloak. Nothing leaves the machine you put it on.'
+  }
+]
 ---
-<Page title="PSPad" description="A self-hosted GTD notepad that works offline.">
-  <div class="wrap prose">
-    <h1>PSPad</h1>
+<Page
+  title="PSPad — a self-hosted GTD notepad"
+  description="PSPad is a self-hosted GTD notepad with one Today screen across every area, one Inbox, recurrence that never goes overdue, and full offline use on your phone."
+>
+  <Hero />
+
+  <div class="wrap">
+    <div class="prose">
+      <h2>Built for the question every list app dodges</h2>
+      <p>
+        Most tools give you a list per project and leave you to work out what matters
+        this morning. PSPad answers it directly: one Today screen, across every area,
+        showing what is due now and what step comes next — computed in your time zone,
+        not the server's.
+      </p>
+      <p>
+        Everything you capture lands in one Inbox. Organising it later is a deliberate
+        step, not a chore you perform by editing fields.
+      </p>
+    </div>
+
+    <div class="grid">
+      {proof.map((item) => <FeatureCard title={item.title}><p>{item.body}</p></FeatureCard>)}
+    </div>
+
+    <div class="prose steps">
+      <h2>How it goes</h2>
+      <ol>
+        <li><strong>Capture.</strong> Anything, into the Inbox, without deciding where it belongs.</li>
+        <li><strong>Organize.</strong> Give it a list, a date, a goal — once, on purpose.</li>
+        <li><strong>Today.</strong> Open the app and do what is there.</li>
+      </ol>
+    </div>
+
+    <div class="call">
+      <h2>Run it yourself</h2>
+      <p>One Compose file, four containers, about ten minutes.</p>
+      <p><a class="button button-primary" href={join(base, 'install')}>Install PSPad</a></p>
+    </div>
   </div>
 </Page>
+
+<style>
+  .grid { margin: 32px 0 48px; }
+
+  .steps ol { padding-left: 1.2em; }
+  .steps li { margin-bottom: 8px; }
+
+  .call {
+    margin-top: 64px;
+    padding: 40px 24px;
+    border-radius: var(--radius);
+    background: var(--raised);
+    border: 1px solid var(--lines);
+    text-align: center;
+  }
+
+  .call h2 { margin-top: 0; }
+</style>
