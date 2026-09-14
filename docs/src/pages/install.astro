@@ -177,9 +177,12 @@ cd PSPad</code></pre>
         carries the literal <code>http://localhost:5001/*</code> redirect URI baked in — changing
         <code>APP_BASE_ADDRESS</code> does not change it. In the admin console, realm
         <strong>pspad</strong> → <strong>Clients</strong> → <strong>pspad-app</strong>, update
-        <strong>Valid redirect URIs</strong> and <strong>Web origins</strong> to your new public
-        address. Skip this and sign-in fails with <code>Invalid parameter: redirect_uri</code>
-        and nothing on screen explains why.
+        <strong>Valid redirect URIs</strong> to your new public address. <strong>Web origins</strong>
+        needs no separate edit — it ships as <code>+</code>, Keycloak's shorthand for "derive the
+        allowed origins from Valid redirect URIs," so it follows along automatically once that
+        field is correct, unless you have changed it yourself. Skip the redirect URI edit and
+        sign-in fails with <code>Invalid parameter: redirect_uri</code> and nothing on screen
+        explains why.
       </li>
       <li>Recreate the stack so the new environment values take effect:
         <pre><code>docker compose -f docker/compose.yaml up -d --force-recreate</code></pre>
@@ -198,8 +201,15 @@ cd PSPad</code></pre>
     </ul>
     <p>A dump of the database alone:</p>
     <pre><code>docker compose -f docker/compose.yaml exec -T mongo \
-  mongodump --archive --username pspad --password "$MONGO_PASSWORD" \
-  --authenticationDatabase admin > pspad-backup.archive</code></pre>
+  sh -c 'mongodump --archive --username pspad --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' \
+  > pspad-backup.archive</code></pre>
+    <p>
+      Single quotes around the inner <code>sh -c</code> command are deliberate: the password has
+      to come from <code>MONGO_INITDB_ROOT_PASSWORD</code>, which only exists inside the
+      <code>mongo</code> container's own environment. Double quotes would let your host shell try
+      to expand <code>$MONGO_INITDB_ROOT_PASSWORD</code> itself — where it is unset — and
+      authenticate with an empty password instead.
+    </p>
 
     <h2>Upgrading, restarting</h2>
     <pre><code>git pull
