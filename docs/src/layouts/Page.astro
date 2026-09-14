@@ -1,13 +1,14 @@
 ---
 import Mark from '../components/Mark.astro'
+import { join } from '../lib/repo'
 import '../styles/theme.css'
 
 interface Props { title: string; description: string }
 const { title, description } = Astro.props
 const base = import.meta.env.BASE_URL
 const nav = [
-  { href: `${base}/features`, label: 'Features' },
-  { href: `${base}/install`, label: 'Install' },
+  { href: join(base, 'features'), label: 'Features' },
+  { href: join(base, 'install'), label: 'Install' },
   { href: 'https://github.com/psp515/PSPad', label: 'GitHub' }
 ]
 ---
@@ -21,8 +22,8 @@ const nav = [
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content={new URL(`${base}/og.png`, Astro.site)} />
-    <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
+    <meta property="og:image" content={new URL(join(base, 'og.png'), Astro.site)} />
+    <link rel="icon" href={join(base, 'favicon.svg')} type="image/svg+xml" />
     <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
   </head>
   <body>
