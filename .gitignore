@@ -430,3 +430,6 @@ FodyWeavers.xsd
 
 # superpowers subagent-driven-development scratch workspace
 .superpowers/
+
+# git worktrees created for parallel plan tracks
+.claude/worktrees/
