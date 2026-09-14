@@ -1,5 +1,7 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Pages;
 using PSPad.App.State;
@@ -141,6 +143,37 @@ public class AreaBoardTests : Bunit.TestContext
         var tasks = await replica.LoadAllAsync<TodoTask>(User);
         Assert.Contains(tasks, task => task.ListId == shopping.Id && task.Name == "Kup farbę");
     }
+
+    [Fact]
+    public async Task DeletingAListFromItsCardRemovesItFromTheScreen()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy", 0);
+        var replica = Arrange(area, list);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-list-menu button").Click();
+        page.FindAll(".mud-menu-item").Last().Click();
+
+        var dialog = page.FindComponent<MudDialogProvider>();
+        dialog.FindAll("button").Last().Click();
+
+        var stored = await replica.LoadAsync<TaskList>(list.Id);
+        Assert.True(stored!.Deleted);
+    }
+
+    // Both ThingMenu's MudMenu and IDialogService's MudDialogProvider portal their open
+    // content through MudPopoverProvider, so all three must share one render tree.
+    RenderFragment BuildAreaBoardWithDialogs(Guid areaId) => builder =>
+    {
+        builder.OpenComponent<MudPopoverProvider>(0);
+        builder.CloseComponent();
+        builder.OpenComponent<MudDialogProvider>(1);
+        builder.CloseComponent();
+        builder.OpenComponent<AreaBoard>(2);
+        builder.AddAttribute(3, nameof(AreaBoard.AreaId), areaId);
+        builder.CloseComponent();
+    };
 
     InMemoryReplica Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12), documents);
