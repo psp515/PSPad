@@ -72,6 +72,18 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheNewAreaButtonIsWiredToAHandler()
+    {
+        Arrange();
+
+        var shell = Render<AppShell>();
+        var sidebars = shell.FindComponents<NavSidebar>();
+
+        Assert.All(sidebars, sidebar =>
+            Assert.True(sidebar.Instance.OnNewArea.HasDelegate));
+    }
+
+    [Fact]
     public void DeletedAreasAreNotInTheSidebar()
     {
         var kept = NewArea("Dom", 0);

@@ -51,14 +51,14 @@ public class AccountMenuTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ItShowsBothTheDisplayNameAndTheEmail()
+    public void ItShowsOnlyTheEmailNotTheDisplayName()
     {
         Arrange();
 
         var menu = Render(BuildMenu("Łukasz Kolber", "kolberu@gmail.com", User, pendingCommands: 0));
 
-        Assert.Contains("Łukasz Kolber", menu.Markup);
         Assert.Contains("kolberu@gmail.com", menu.Markup);
+        Assert.DoesNotContain("Łukasz Kolber", menu.Markup);
     }
 
     [Fact]

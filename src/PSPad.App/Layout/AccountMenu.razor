@@ -2,16 +2,14 @@
 @using PSPad.App.Theme
 @inject ThemePreference Preference
 
-<MudMenu ActivationEvent="@MouseEvent.LeftClick" AnchorOrigin="Origin.BottomLeft" FullWidth="true">
+<MudMenu ActivationEvent="@MouseEvent.LeftClick" AnchorOrigin="Origin.BottomLeft" FullWidth="true"
+         Class="pspad-account-menu">
     <ActivatorContent>
-        <div class="d-flex align-center gap-3 pa-2">
+        <div class="d-flex align-center gap-2 px-3 py-2">
             <MudAvatar Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")" Size="Size.Medium">
                 @AvatarColor.InitialOf(Email)
             </MudAvatar>
-            <div class="d-flex flex-column">
-                <MudText Typo="Typo.body2">@DisplayName</MudText>
-                <MudText Typo="Typo.caption">@Email</MudText>
-            </div>
+            <MudText Typo="Typo.body2">@Email</MudText>
         </div>
     </ActivatorContent>
     <ChildContent>

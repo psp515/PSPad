@@ -1,0 +1,30 @@
+@using PSPad.Module.Tasks.Areas
+
+<MudDialog>
+    <DialogContent>
+        <MudSelect T="Guid" @bind-Value="_areaId" Label="Area" Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            @foreach (var area in Areas)
+            {
+                <MudSelectItem T="Guid" Value="@area.Id">@area.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => Dialog.Cancel())">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Disabled="@(_areaId == Guid.Empty)"
+                   OnClick="@(() => Dialog.Close(DialogResult.Ok(_areaId)))">
+            Move
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance Dialog { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<Area> Areas { get; set; } = [];
+
+    Guid _areaId;
+
+    protected override void OnInitialized() => _areaId = Areas.Count > 0 ? Areas[0].Id : Guid.Empty;
+}

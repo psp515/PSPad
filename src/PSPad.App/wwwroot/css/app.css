@@ -1,3 +1,19 @@
 html, body {
     margin: 0;
 }
+
+.pspad-area-row .mud-nav-link {
+    padding-right: 0;
+}
+
+.pspad-account-menu {
+    align-self: flex-start !important;
+    width: 100%;
+}
+
+.pspad-fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1200;
+}

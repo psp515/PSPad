@@ -1,10 +1,13 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using MudBlazor.Services;
 using PSPad.Abstractions;
+using PSPad.App.Components;
 using PSPad.App.Pages;
 using PSPad.App.State;
 using PSPad.Module.Tasks.Inbox;
+using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.Recurrence;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -14,82 +17,182 @@ namespace PSPad.App.Tests.Pages;
 public class TodayTests : Bunit.TestContext
 {
     static readonly Guid User = Guid.NewGuid();
+    static readonly DateOnly Today = new(2026, 9, 12);
 
     [Fact]
-    public void ATaskDueYesterdayRendersAsOverdue()
+    public void OverdueTasksGetTheirOwnSection()
     {
-        var today = new DateOnly(2026, 9, 12);
-        Arrange(today, DueTask("Buy milk", today.AddDays(-1)));
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Buy milk", Today.AddDays(-1)));
 
         var page = Render<Today>();
 
+        Assert.Contains("Overdue", page.Markup);
         Assert.Contains("Buy milk", page.Markup);
-        Assert.Contains("overdue", page.Markup, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void ARecurringTaskMissedYesterdayIsNotRenderedAsOverdue()
+    public void TheOverdueSectionIsAbsentWhenNothingIsOverdue()
     {
-        var today = new DateOnly(2026, 9, 12);
-        Arrange(today, RecurringTask("Read a book", today.AddDays(-7)));
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Buy milk", Today));
+
+        var page = Render<Today>();
+
+        Assert.DoesNotContain("Overdue", page.Markup);
+        Assert.Contains("Buy milk", page.Markup);
+    }
+
+    [Fact]
+    public void ARecurringTaskMissedYesterdayIsNotOverdue()
+    {
+        var list = NewList("Regularne");
+        Arrange(list, Recurring(list.Id, "Read a book", Today.AddDays(-7)));
 
         var page = Render<Today>();
 
         Assert.Contains("Read a book", page.Markup);
+        Assert.DoesNotContain("Overdue", page.Markup);
         Assert.DoesNotContain("overdue", page.Markup, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public void ATaskDueTomorrowIsNotOnTheScreen()
     {
-        var today = new DateOnly(2026, 9, 12);
-        Arrange(today, DueTask("Later", today.AddDays(1)));
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Later", Today.AddDays(1)));
 
         var page = Render<Today>();
 
         Assert.DoesNotContain("Later", page.Markup);
     }
 
-    void Arrange(DateOnly today, params TodoTask[] tasks)
+    [Fact]
+    public void ATaskCompletedTodayMovesToTheCompletedSection()
     {
-        JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
-        Services.AddMudServices();
-        var replica = new InMemoryReplica();
-        foreach (var task in tasks)
-        {
-            replica.SaveAsync(task).GetAwaiter().GetResult();
-        }
+        var list = NewList("Zakupy");
+        var done = Due(list.Id, "Masło", Today);
+        done.ApplyAll(TodoTask.Decide(
+            done, new CompleteTask(Guid.NewGuid(), User, done.Id),
+            new DateTimeOffset(Today.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero)));
+        Arrange(list, done, Due(list.Id, "Mleko", Today));
 
-        Services.AddSingleton<IReplica>(replica);
-        Services.AddSingleton<IDocumentStore<TodoTask>>(new ReplicaDocumentStore<TodoTask>(replica));
-        Services.AddSingleton<IDocumentStore<Inbox>>(new ReplicaDocumentStore<Inbox>(replica));
-        Services.AddSingleton(new AppState { UserId = User, TimeZone = "Etc/UTC", Today = today });
+        var page = Render<Today>();
+
+        Assert.Contains("Completed (1)", page.Markup);
+        Assert.Contains("Masło", page.Markup);
+
+        var beforeCompletedSection = page.Markup[..page.Markup.IndexOf("Completed (1)")];
+        Assert.DoesNotContain("Masło", beforeCompletedSection);
+        Assert.Contains("Mleko", beforeCompletedSection);
     }
 
-    static TodoTask DueTask(string name, DateOnly due)
+    [Fact]
+    public void ThereIsNoEmptyOverdueBoxWhenEverythingIsDueToday()
     {
-        var task = NewTask(name);
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Mleko", Today));
+
+        var page = Render<Today>();
+
+        Assert.DoesNotContain("Overdue", page.Markup);
+        Assert.Single(page.FindAll(".mud-paper"));
+    }
+
+    [Fact]
+    public void EachRowCarriesItsListName()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Mleko", Today));
+
+        var page = Render<Today>();
+
+        Assert.Contains("Zakupy", page.Markup);
+    }
+
+    [Fact]
+    public async Task TogglingATaskCompletesItInTheReplica()
+    {
+        var list = NewList("Zakupy");
+        var task = Due(list.Id, "Mleko", Today);
+        var replica = Arrange(list, task);
+
+        var page = Render<Today>();
+        page.Find("input.mud-checkbox-input").Change(true);
+
+        var stored = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.NotNull(stored?.CompletedAt);
+    }
+
+    [Fact]
+    public void ClickingATaskAppendsItToTheQueryString()
+    {
+        var list = NewList("Zakupy");
+        var task = Due(list.Id, "Mleko", Today);
+        Arrange(list, task);
+
+        var page = Render<Today>();
+        page.Find(".pspad-task-name").Click();
+
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        Assert.Contains($"?task={task.Id}", navigation.Uri);
+    }
+
+    [Fact]
+    public async Task CompletingATaskDropsTheTodayCount()
+    {
+        var list = NewList("Zakupy");
+        var task = Due(list.Id, "Mleko", Today);
+        Arrange(list, task);
+
+        var counts = new SidebarCounts(
+            Services.GetRequiredService<IDocumentStore<TodoTask>>(),
+            Services.GetRequiredService<IDocumentStore<Inbox>>(),
+            Services.GetRequiredService<AppState>());
+        await counts.RefreshAsync();
+        Assert.Equal(1, counts.Today);
+
+        var page = Render<Today>();
+        page.Find("input.mud-checkbox-input").Change(true);
+        await counts.RefreshAsync();
+
+        Assert.Equal(0, counts.Today);
+    }
+
+    InMemoryReplica Arrange(params Aggregate[] documents) =>
+        AppTestHost.Arrange(this, User, Today, documents);
+
+    static TaskList NewList(string name)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, 0),
+            DateTimeOffset.UnixEpoch));
+        return list;
+    }
+
+    static TodoTask Due(Guid listId, string name, DateOnly due)
+    {
+        var task = New(listId, name);
         task.ApplyAll(TodoTask.Decide(
             task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, due), DateTimeOffset.UnixEpoch));
         return task;
     }
 
-    static TodoTask RecurringTask(string name, DateOnly from)
+    static TodoTask Recurring(Guid listId, string name, DateOnly from)
     {
-        var task = NewTask(name);
+        var task = New(listId, name);
         task.ApplyAll(TodoTask.Decide(
-            task,
-            new SetTaskRecurrence(
-                Guid.NewGuid(), User, task.Id, Module.Tasks.Recurrence.RecurrenceRule.Daily(from)),
+            task, new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(from)),
             DateTimeOffset.UnixEpoch));
         return task;
     }
 
-    static TodoTask NewTask(string name)
+    static TodoTask New(Guid listId, string name)
     {
         var task = new TodoTask();
         task.ApplyAll(TodoTask.Decide(
-            null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name),
+            null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), listId, name),
             DateTimeOffset.UnixEpoch));
         return task;
     }

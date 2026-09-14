@@ -11,7 +11,7 @@ public static class MeEndpoints
             ICurrentUser current, UserProvisioner provisioner, CancellationToken ct) =>
         {
             var user = await provisioner.EnsureAsync(
-                current.Subject, current.Subject, current.TimeZoneHint, ct);
+                current.Subject, current.DisplayName, current.TimeZoneHint, ct);
 
             return Results.Ok(new MeResponse(user.Id, user.DisplayName, user.TimeZone));
         });

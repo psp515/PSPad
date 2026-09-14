@@ -1,5 +1,7 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
 using PSPad.App.Pages;
@@ -138,6 +140,37 @@ public class ListPageTests : Bunit.TestContext
         var stored = await replica.LoadAsync<TodoTask>(task.Id);
         Assert.NotNull(stored?.CompletedAt);
     }
+
+    [Fact]
+    public async Task RenamingFromTheTitleMenuRenamesTheList()
+    {
+        var list = NewList("Zakupy");
+        var replica = Arrange(list);
+
+        var page = Render(BuildListPageWithDialogs(list.Id));
+        page.Find(".pspad-list-menu button").Click();
+        page.FindAll(".mud-menu-item")[0].Click();
+
+        var field = page.Find("div.mud-dialog input");
+        field.Input("Zakupy tygodniowe");
+        page.FindAll("div.mud-dialog button").Last().Click();
+
+        var stored = await replica.LoadAsync<TaskList>(list.Id);
+        Assert.Equal("Zakupy tygodniowe", stored!.Name);
+    }
+
+    // ThingMenu's MudMenu and IDialogService's MudDialogProvider both portal their open
+    // content through MudPopoverProvider, so all three must share one render tree.
+    RenderFragment BuildListPageWithDialogs(Guid listId) => builder =>
+    {
+        builder.OpenComponent<MudPopoverProvider>(0);
+        builder.CloseComponent();
+        builder.OpenComponent<MudDialogProvider>(1);
+        builder.CloseComponent();
+        builder.OpenComponent<ListPage>(2);
+        builder.AddAttribute(3, nameof(ListPage.ListId), listId);
+        builder.CloseComponent();
+    };
 
     InMemoryReplica Arrange(params Aggregate[] documents) => AppTestHost.Arrange(this, User, Today, documents);
 

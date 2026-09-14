@@ -8,11 +8,16 @@
 @inject IDocumentStore<TodoTask> TaskStore
 @inject AppState State
 @inject CommandSender Sender
+@inject IDialogService Dialogs
 @inject NavigationManager Navigation
 
 @if (_list is not null)
 {
-    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">@_list.Name</MudText>
+    <div class="d-flex align-center mb-4">
+        <MudText Typo="Typo.h5" Color="Color.Primary">@_list.Name</MudText>
+        <ThingMenu Class="pspad-list-menu ml-2"
+                   OnRename="@RenameAsync" OnDelete="@DeleteAsync" />
+    </div>
 
     <MudPaper Outlined="true">
         @foreach (var task in _open)
@@ -70,6 +75,54 @@ else
     }
 
     void Open(TodoTask task) => Navigation.NavigateTo($"/lists/{ListId}?task={task.Id}");
+
+    async Task RenameAsync()
+    {
+        if (_list is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<NameDialog>
+        {
+            { dialog => dialog.Title, "List name" },
+            { dialog => dialog.Value, _list.Name }
+        };
+        var dialog = await Dialogs.ShowAsync<NameDialog>("Rename list", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new RenameTaskList(Guid.NewGuid(), State.UserId, ListId, name));
+        await ReloadAsync();
+    }
+
+    async Task DeleteAsync()
+    {
+        if (_list is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, $"Delete “{_list.Name}”? Its tasks stay, without a list." }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete list", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        var areaId = _list.AreaId;
+        await Sender.SendAsync(new DeleteTaskList(Guid.NewGuid(), State.UserId, ListId));
+        Navigation.NavigateTo($"/areas/{areaId}");
+    }
 
     async Task ToggleAsync(TodoTask task)
     {

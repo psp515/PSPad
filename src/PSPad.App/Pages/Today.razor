@@ -1,68 +1,124 @@
 @page "/"
 @using PSPad.Abstractions
+@using PSPad.App.Components
 @using PSPad.App.State
+@using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Tasks
 @using PSPad.Module.Tasks.Today
-@inject IDocumentStore<TodoTask> Store
+@inject IDocumentStore<TodoTask> TaskStore
+@inject IDocumentStore<TaskList> ListStore
 @inject AppState State
-@inject IServiceProvider Services
+@inject CommandSender Sender
+@inject NavigationManager Navigation
 
-<MudText Typo="Typo.h5" Class="mb-4">Today</MudText>
+<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">My Day</MudText>
 
-@if (_entries is not null)
+@if (_overdue.Count > 0)
 {
-    <MudList T="string">
-        @foreach (var entry in _entries)
+    <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">Overdue</MudText>
+    <MudPaper Outlined="true" Class="mb-4">
+        @foreach (var task in _overdue)
         {
-            <MudListItem T="string" Class="@(entry.Overdue ? "overdue" : "")">
-                <div class="d-flex align-center gap-2">
-                    <MudCheckBox T="bool" Value="false" ValueChanged="@(_ => CompleteAsync(entry))" />
-                    @if (entry.Starred)
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" />
-                    }
-                    <MudText>@entry.Name</MudText>
-                    @if (entry.Priority > 0)
-                    {
-                        <MudChip T="string" Size="Size.Small">@((Priority)entry.Priority)</MudChip>
-                    }
-                    @if (entry.Overdue)
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Error">Overdue</MudChip>
-                    }
-                </div>
-            </MudListItem>
+            <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
+                     OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
         }
-    </MudList>
+    </MudPaper>
 }
 
-@code {
-    IReadOnlyList<TodayEntry>? _entries;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await ReloadAsync();
-    }
-
-    async Task ReloadAsync()
-    {
-        var tasks = await Store.LoadAllAsync(State.UserId, CancellationToken.None);
-        _entries = TodayRule.Select(tasks, State.Today);
-    }
-
-    async Task CompleteAsync(TodayEntry entry)
-    {
-        var sender = Services.GetRequiredService<CommandSender>();
-
-        if (entry.Recurring)
+@if (_due.Count > 0 || _overdue.Count == 0)
+{
+    <MudPaper Outlined="true">
+        @if (_due.Count > 0)
         {
-            await sender.SendAsync(new CompleteOccurrence(Guid.NewGuid(), State.UserId, entry.TaskId, State.Today, true));
+            @foreach (var task in _due)
+            {
+                <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
+                         OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+            }
         }
         else
         {
-            await sender.SendAsync(new CompleteTask(Guid.NewGuid(), State.UserId, entry.TaskId));
+            <MudText Typo="Typo.body2" Class="pa-4">Nothing due today.</MudText>
+        }
+    </MudPaper>
+}
+
+@if (_done.Count > 0)
+{
+    <MudExpansionPanels Elevation="0" Class="mt-4">
+        <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
+            @foreach (var task in _done)
+            {
+                <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
+                         OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+            }
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+}
+
+@code {
+    IReadOnlyList<TodoTask> _overdue = [];
+    IReadOnlyList<TodoTask> _due = [];
+    IReadOnlyList<TodoTask> _done = [];
+    IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        var tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
+
+        _listNames = lists.Where(list => !list.Deleted).ToDictionary(list => list.Id, list => list.Name);
+
+        var byId = tasks.ToDictionary(task => task.Id);
+        var entries = TodayRule.Select(tasks, State.Today);
+
+        _overdue = [.. entries.Where(entry => entry.Overdue).Select(entry => byId[entry.TaskId])];
+        _due = [.. entries.Where(entry => !entry.Overdue).Select(entry => byId[entry.TaskId])];
+
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(State.TimeZone);
+        _done =
+        [
+            .. tasks
+                .Where(task => !task.Deleted && CompletedToday(task, zone))
+                .OrderByDescending(task => task.CompletedAt)
+                .ThenBy(task => task.Name)
+        ];
+    }
+
+    bool CompletedToday(TodoTask task, TimeZoneInfo zone) =>
+        task.CompletedDays.Contains(State.Today)
+        || (task.CompletedAt is { } at
+            && DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(at, zone).DateTime) == State.Today);
+
+    string? NameOf(Guid listId) => _listNames.TryGetValue(listId, out var name) ? name : null;
+
+    void Open(TodoTask task) =>
+        Navigation.NavigateTo($"{Navigation.Uri.Split('?')[0]}?task={task.Id}");
+
+    async Task ToggleAsync(TodoTask task)
+    {
+        if (task.IsRecurring)
+        {
+            await Sender.SendAsync(new CompleteOccurrence(
+                Guid.NewGuid(), State.UserId, task.Id, State.Today, !task.CompletedDays.Contains(State.Today)));
+        }
+        else if (task.CompletedAt is null)
+        {
+            await Sender.SendAsync(new CompleteTask(Guid.NewGuid(), State.UserId, task.Id));
+        }
+        else
+        {
+            await Sender.SendAsync(new ReopenTask(Guid.NewGuid(), State.UserId, task.Id));
         }
 
+        await ReloadAsync();
+    }
+
+    async Task StarAsync(TodoTask task)
+    {
+        await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, task.Id, !task.Starred));
         await ReloadAsync();
     }
 }
