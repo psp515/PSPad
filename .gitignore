@@ -434,3 +434,6 @@ FodyWeavers.xsd
 
 # git worktrees created for parallel plan tracks
 .claude/worktrees/
+
+# The replica-set keyfile is generated into a volume on first run, never committed
+docker/mongo-keyfile
