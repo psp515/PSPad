@@ -46,9 +46,16 @@
 
                     <MudSelect T="Guid" @bind-Value="_listId" Label="List"
                                Margin="Margin.Dense" Variant="Variant.Outlined">
-                        @foreach (var list in ListsIn(_areaId))
+                        @if (ListsIn(_areaId).Count == 0)
                         {
-                            <MudSelectItem T="Guid" Value="@list.Id">@list.Name</MudSelectItem>
+                            <MudSelectItem T="Guid" Value="@Guid.Empty">No lists in this area</MudSelectItem>
+                        }
+                        else
+                        {
+                            @foreach (var list in ListsIn(_areaId))
+                            {
+                                <MudSelectItem T="Guid" Value="@list.Id">@list.Name</MudSelectItem>
+                            }
                         }
                     </MudSelect>
 

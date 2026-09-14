@@ -101,6 +101,7 @@ public class InboxPageTests : Bunit.TestContext
         page.Find(".pspad-inbox-item").Click();
 
         Assert.True(page.Find("button.pspad-inbox-move").HasAttribute("disabled"));
+        Assert.Contains("No lists in this area", page.Markup);
     }
 
     InMemoryReplica Arrange(params Aggregate[] documents) =>
