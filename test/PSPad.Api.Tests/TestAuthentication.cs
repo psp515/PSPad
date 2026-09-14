@@ -26,6 +26,16 @@ public sealed class TestAuthenticationHandler(
             claims.Add(new Claim("zoneinfo", zone!));
         }
 
+        if (Request.Headers.TryGetValue("X-Test-Name", out var name))
+        {
+            claims.Add(new Claim("name", name!));
+        }
+
+        if (Request.Headers.TryGetValue("X-Test-Preferred-Username", out var preferred))
+        {
+            claims.Add(new Claim("preferred_username", preferred!));
+        }
+
         var identity = new ClaimsIdentity(claims, Scheme);
         return Task.FromResult(AuthenticateResult.Success(
             new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme)));

@@ -9,6 +9,8 @@ public interface ICurrentUser
     Guid UserId { get; }
 
     string TimeZoneHint { get; }
+
+    string DisplayName { get; }
 }
 
 public sealed class ClaimsCurrentUser(IHttpContextAccessor accessor) : ICurrentUser
@@ -22,4 +24,9 @@ public sealed class ClaimsCurrentUser(IHttpContextAccessor accessor) : ICurrentU
 
     public string TimeZoneHint =>
         accessor.HttpContext?.User.FindFirstValue("zoneinfo") ?? "Etc/UTC";
+
+    public string DisplayName =>
+        accessor.HttpContext?.User.FindFirstValue("name")
+        ?? accessor.HttpContext?.User.FindFirstValue("preferred_username")
+        ?? Subject;
 }
