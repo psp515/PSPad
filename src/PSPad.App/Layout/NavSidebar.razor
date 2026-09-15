@@ -33,18 +33,27 @@
         <MudDivider Class="my-2" Style="flex-grow:0" />
 
         <MudNavMenu>
-            @foreach (var area in Areas.OrderBy(area => area.Position))
+            @if (!AreasLoaded)
             {
-                <div class="d-flex align-center pspad-area-row">
-                    <div class="flex-grow-1">
-                        <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
-                            @area.Name
-                        </MudNavLink>
+                <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+                <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+                <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+            }
+            else
+            {
+                @foreach (var area in Areas.OrderBy(area => area.Position))
+                {
+                    <div class="d-flex align-center pspad-area-row">
+                        <div class="flex-grow-1">
+                            <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
+                                @area.Name
+                            </MudNavLink>
+                        </div>
+                        <ThingMenu Class="pspad-area-menu mr-2"
+                                   OnRename="@(() => OnRenameArea.InvokeAsync(area))"
+                                   OnDelete="@(() => OnDeleteArea.InvokeAsync(area))" />
                     </div>
-                    <ThingMenu Class="pspad-area-menu mr-2"
-                               OnRename="@(() => OnRenameArea.InvokeAsync(area))"
-                               OnDelete="@(() => OnDeleteArea.InvokeAsync(area))" />
-                </div>
+                }
             }
         </MudNavMenu>
     </CascadingValue>
@@ -59,6 +68,8 @@
 
 @code {
     [Parameter] public IReadOnlyList<Area> Areas { get; set; } = [];
+
+    [Parameter] public bool AreasLoaded { get; set; } = true;
 
     [Parameter] public string Email { get; set; } = "";
 

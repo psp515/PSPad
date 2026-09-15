@@ -1,8 +1,10 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.Abstractions;
+using PSPad.App.Components;
 using PSPad.App.Pages;
 using PSPad.App.State;
 using PSPad.App.Tests;
@@ -118,6 +120,29 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItLaysListCardsOutInTheGrid()
+    {
+        var area = NewArea("Dom");
+        Arrange(area, NewList(area.Id, "Zakupy", 0));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.NotNull(page.Find(".pspad-grid"));
+    }
+
+    [Fact]
+    public void ItShowsCardSkeletonsBeforeItHasLoaded()
+    {
+        var area = NewArea("Dom");
+        ArrangeWithPendingStore(area);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Single(page.FindComponents<CardSkeleton>());
+        Assert.DoesNotContain("This area is not there anymore", page.Markup);
+    }
+
+    [Fact]
     public void NewListIsOffered()
     {
         var area = NewArea("Dom");
@@ -177,6 +202,21 @@ public class AreaBoardTests : Bunit.TestContext
 
     InMemoryReplica Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12), documents);
+
+    void ArrangeWithPendingStore(params Aggregate[] documents)
+    {
+        Arrange(documents);
+        Services.AddSingleton<IDocumentStore<Area>>(new NeverLoadingAreaStore());
+    }
+
+    sealed class NeverLoadingAreaStore : IDocumentStore<Area>
+    {
+        public Task<Area?> LoadAsync(Guid id, CancellationToken ct) =>
+            new TaskCompletionSource<Area?>().Task;
+
+        public Task<IReadOnlyList<Area>> LoadAllAsync(Guid userId, CancellationToken ct) =>
+            new TaskCompletionSource<IReadOnlyList<Area>>().Task;
+    }
 
     static Area NewArea(string name)
     {

@@ -10,6 +10,7 @@ using MudBlazor;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App.Api;
+using PSPad.App.Components;
 using PSPad.App.Layout;
 using PSPad.App.State;
 using PSPad.App.Sync;
@@ -157,6 +158,17 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItShowsTheBrandLoaderUntilTheShellIsReady()
+    {
+        Arrange(resolveMe: false);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        Assert.Single(shell.FindComponents<BrandLoader>());
+    }
+
+    [Fact]
     public void GoingBackDropsTheTaskButLeavesTheShellOnTheSameScreen()
     {
         Arrange();
@@ -179,6 +191,7 @@ public class AppShellTests : Bunit.TestContext
         string displayName = "Ada Lovelace",
         string email = "ada@example.com",
         string? emailClaim = "ada@example.com",
+        bool resolveMe = true,
         params Aggregate[] documents)
     {
         var today = new DateOnly(2026, 9, 12);
@@ -190,7 +203,7 @@ public class AppShellTests : Bunit.TestContext
             new AppState { UserId = User, Today = today }));
 
         var meResponse = new MeResponse(User, displayName, email, "UTC");
-        Services.AddSingleton(new PSPadApiClient(new HttpClient(new FakeMeHandler(meResponse))
+        Services.AddSingleton(new PSPadApiClient(new HttpClient(new FakeMeHandler(meResponse, resolveMe))
         {
             BaseAddress = new Uri("http://localhost/")
         }));
@@ -235,13 +248,15 @@ public class AppShellTests : Bunit.TestContext
 #pragma warning restore CS0067
     }
 
-    sealed class FakeMeHandler(MeResponse response) : HttpMessageHandler
+    sealed class FakeMeHandler(MeResponse response, bool resolveMe) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken ct) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = JsonContent.Create(response)
-            });
+            resolveMe
+                ? Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(response)
+                })
+                : new TaskCompletionSource<HttpResponseMessage>().Task;
     }
 }
