@@ -31,11 +31,23 @@ public sealed class ApiFactory(MongoFixture fixture) : WebApplicationFactory<Pro
                     TestAuthenticationHandler.Scheme, _ => { });
         });
 
-    public HttpClient ClientFor(string subject, string zone = "Etc/UTC")
+    public HttpClient ClientFor(
+        string subject, string zone = "Etc/UTC", string? name = null, string? email = null)
     {
         var client = CreateClient();
         client.DefaultRequestHeaders.Add("X-Test-Subject", subject);
         client.DefaultRequestHeaders.Add("X-Test-Zone", zone);
+
+        if (name is not null)
+        {
+            client.DefaultRequestHeaders.Add("X-Test-Name", name);
+        }
+
+        if (email is not null)
+        {
+            client.DefaultRequestHeaders.Add("X-Test-Email", email);
+        }
+
         return client;
     }
 }
