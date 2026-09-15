@@ -3,52 +3,28 @@ import Page from '../layouts/Page.astro'
 import FeatureCard from '../components/FeatureCard.astro'
 
 const features = [
-  {
-    title: 'One Today screen',
-    body: 'A task is on Today when its due date is today or earlier, or when its next unchecked step is. Earlier means overdue, and overdue pins to the top. Today means today in your time zone, which is stored on your account — never the server’s clock.'
-  },
-  {
-    title: 'One Inbox',
-    body: 'Capture anything without deciding where it goes. The Inbox sits outside your areas, and organising an item is its own command rather than an edit bolted onto a generic entry — it turns the captured text into a task in the list you pick.'
-  },
-  {
-    title: 'Areas and lists',
-    body: 'Areas are yours to define: work, home, a side project. Each holds lists, and opening an area loads every one of its lists with the open work in each, so you see the whole area without opening each list on its own.'
-  },
-  {
-    title: 'Tasks and steps',
-    body: 'A task carries a due date, a goal, a priority, a star and its steps. Each step has its own due date and its own order, so a task that runs over a week surfaces on the day its next step is due, not the day the whole thing is due.'
-  },
-  {
-    title: 'Recurrence that never nags',
-    body: 'A repeating task is a template plus the days it actually happened, not one task with a rolling date. Yesterday’s missed occurrence stays on yesterday. Today shows today’s, once, while it is still pending — a book you did not read last night is not overdue this morning.'
-  },
-  {
-    title: 'Goals across areas',
-    body: 'Goals are global, not filed inside an area, because the things worth calling goals rarely stay in one. Many tasks point at one goal, and the goals screen shows how many of them are still open against it.'
-  },
-  {
-    title: 'History of what you did',
-    body: 'Every command writes an event beside the document it changed, and the history screen reads those events back. There is no separate audit table to fall out of step with reality — the log is the record.'
-  },
-  {
-    title: 'Works with no network',
-    body: 'The client keeps a full replica in your browser and an outbox of commands. Edits write to the replica and queue immediately; nothing waits on the server. When a connection returns, the outbox ships in order, stops at the first command the server rejects, and tells you which one. Then it pulls everything that changed since its marker.'
-  },
-  {
-    title: 'Yours, and multi-user',
-    body: 'Sign-in goes through Keycloak on your own hardware — PSPad has no registration screen of its own, accounts are created there. Each user gets their own areas, lists and Inbox, and never sees another user’s.'
-  }
+  { title: 'One Today screen', body: 'What’s due, overdue first, in your own time zone.', status: 'built' },
+  { title: 'One Inbox', body: 'Capture anything. Decide where it goes later.', status: 'built' },
+  { title: 'Areas and lists', body: 'Work, home, side projects — each with its own lists.', status: 'built' },
+  { title: 'Tasks and steps', body: 'Due dates, priorities, goals, and steps on every task.', status: 'built' },
+  { title: 'Recurrence that never nags', body: 'Miss a day, it just stays missed. Never overdue.', status: 'in-progress' },
+  { title: 'Goals across areas', body: 'One goal, tasks from anywhere, pointed at it.', status: 'in-progress' },
+  { title: 'A real history', body: 'Every change logged automatically. Nothing to drift out of sync.', status: 'in-progress' },
+  { title: 'Works with no signal', body: 'Saves locally first. Syncs once you’re back online.', status: 'in-progress' },
+  { title: 'Yours, and multi-user', body: 'Your hardware, your Keycloak, your data.', status: 'built' }
 ]
 
+const built = features.filter((feature) => feature.status === 'built')
+const inProgress = features.filter((feature) => feature.status === 'in-progress')
+
 const planned = [
-  ['Habits', 'Streaks and daily progress over the occurrence model recurrence already uses.'],
-  ['Annual plans', 'A yearly horizon on goals, and a year-end summary.'],
-  ['Analytics and reminders', 'Charts over completions, web push, a thought of the day.'],
-  ['GitHub issues', 'Issue-backed lists — the first external sync, and the pattern for the rest.'],
-  ['Cloud storage', 'OneDrive and Google Drive paths, and reference-material lists.'],
-  ['3D printing', 'Materials, parts, and Thingiverse links.'],
-  ['Checklists', 'Reusable templates you convert into a one-shot list.']
+  ['Habits', 'Streaks for daily habits.'],
+  ['Annual plans', 'Yearly goals, year-end summary.'],
+  ['Analytics and reminders', 'Charts, notifications, daily motivation.'],
+  ['GitHub issues', 'GitHub issues as tasks.'],
+  ['Cloud storage', 'OneDrive and Google Drive.'],
+  ['3D printing', 'Materials, parts, Thingiverse links.'],
+  ['Checklists', 'Reusable checklists.']
 ]
 ---
 <Page
@@ -58,30 +34,32 @@ const planned = [
   <div class="wrap">
     <div class="prose">
       <h1>Features</h1>
-      <p>
-        PSPad is a GTD system, not a generic todo list. What follows is what it does
-        now — the rules as the code actually implements them.
-      </p>
+      <p>My own take on GTD, not a certified method.</p>
     </div>
 
     <div class="grid">
-      {features.map((feature) => <FeatureCard title={feature.title}><p>{feature.body}</p></FeatureCard>)}
+      {built.map((feature) => (
+        <FeatureCard title={feature.title} status={feature.status}><p>{feature.body}</p></FeatureCard>
+      ))}
     </div>
 
     <div class="prose">
-      <h2>Planned, and honestly not built yet</h2>
-      <p>
-        The data model was shaped to make these cheap rather than to promise them.
-        None of it is in the application today.
-      </p>
+      <h2>In progress</h2>
+    </div>
+
+    <div class="grid">
+      {inProgress.map((feature) => (
+        <FeatureCard title={feature.title} status={feature.status}><p>{feature.body}</p></FeatureCard>
+      ))}
+    </div>
+
+    <div class="prose">
+      <h2>Planned</h2>
     </div>
 
     <div class="grid">
       {planned.map(([title, body]) => (
-        <article class="card planned">
-          <h3>{title}</h3>
-          <p>{body}</p>
-        </article>
+        <FeatureCard title={title} status="planned"><p>{body}</p></FeatureCard>
       ))}
     </div>
   </div>
@@ -89,13 +67,4 @@ const planned = [
 
 <style>
   .grid { margin: 32px 0; }
-
-  .planned {
-    background: none;
-    border-style: dashed;
-    color: var(--muted);
-  }
-
-  .planned h3 { margin-top: 0; color: var(--text); }
-  .planned p:last-child { margin-bottom: 0; }
 </style>

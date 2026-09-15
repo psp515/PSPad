@@ -16,13 +16,13 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --primary: #8FBF9F;
     --secondary: #7FAE94;
-    --background: #141815;
-    --surface: #1C211D;
-    --raised: #171C18;
-    --lines: #2A312C;
+    --background: #1B211C;
+    --surface: #232A24;
+    --raised: #1F251F;
+    --lines: #333B34;
     --text: #E4E9E4;
     --muted: #94A199;
     --warning: #E0B252;
@@ -30,9 +30,25 @@
   }
 }
 
+:root[data-theme='dark'] {
+  --primary: #8FBF9F;
+  --secondary: #7FAE94;
+  --background: #1B211C;
+  --surface: #232A24;
+  --raised: #1F251F;
+  --lines: #333B34;
+  --text: #E4E9E4;
+  --muted: #94A199;
+  --warning: #E0B252;
+  color-scheme: dark;
+}
+
 * { box-sizing: border-box; }
 
+html { scroll-behavior: smooth; }
+
 body {
+  position: relative;
   margin: 0;
   background: var(--background);
   color: var(--text);
@@ -40,6 +56,37 @@ body {
   font-size: 17px;
   line-height: 1.6;
 }
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(circle, var(--muted) 1.5px, transparent 1.5px);
+  background-size: 26px 26px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: 10%;
+  right: -12%;
+  z-index: -1;
+  width: min(640px, 55vw);
+  aspect-ratio: 1;
+  background: radial-gradient(circle, var(--primary), transparent 70%);
+  opacity: 0.14;
+  filter: blur(100px);
+  pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) body::after { opacity: 0.24; }
+}
+
+:root[data-theme='dark'] body::after { opacity: 0.24; }
 
 main { display: block; }
 
@@ -50,7 +97,7 @@ main { display: block; }
   padding: 0 24px;
 }
 
-.prose { max-width: var(--measure); }
+.prose p, .prose li { max-width: var(--measure); }
 
 h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
 h1 { font-size: clamp(2rem, 5vw, 3rem); }
@@ -105,6 +152,30 @@ th { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; colo
   border: 1px solid var(--lines);
   border-radius: var(--radius);
   padding: 20px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.08);
+}
+
+@supports (animation-timeline: view()) {
+  .grid {
+    animation: flow-up linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 25%;
+  }
+}
+
+@keyframes flow-up {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none !important; transition: none; }
+  html { scroll-behavior: auto; }
 }
 
 .grid {

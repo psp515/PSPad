@@ -4,40 +4,63 @@ import { join } from '../lib/repo'
 
 const base = import.meta.env.BASE_URL
 ---
-<section class="hero wrap">
-  <div>
-    <Mark size={72} />
-    <h1>Your day, on your own hardware.</h1>
-    <p class="claim">
-      PSPad is a self-hosted GTD notepad. One Today screen answers what to do now
-      across every part of your life, one Inbox catches everything else, and the whole
-      thing keeps working on a phone with no signal.
-    </p>
-    <p class="actions">
-      <a class="button button-primary" href={join(base, 'install')}>Install it</a>
-      <a class="button button-secondary" href={join(base, 'features')}>See what it does</a>
-    </p>
+<section class="hero-bg">
+  <div class="hero wrap">
+    <div class="hero-inner">
+      <div>
+        <Mark size={72} />
+        <h1>Your day, on your own hardware.</h1>
+        <p class="claim">
+          A self-hosted GTD notepad.
+        </p>
+        <p class="actions">
+          <a class="button button-primary" href={join(base, 'install')}>Install it</a>
+          <a class="button button-secondary" href={join(base, 'features')}>See what it does</a>
+        </p>
+      </div>
+      <div class="mock" aria-hidden="true">
+        <p class="mock-title">My Day</p>
+        <div class="row overdue"><span class="box"></span><span>Renew the domain<em>yesterday</em></span></div>
+        <div class="row"><span class="box"></span><span>Draft the release notes<em>today</em></span></div>
+        <div class="row"><span class="box"></span><span>Read a book<em>every day</em></span></div>
+        <div class="row done"><span class="box checked"></span><span>Water the plants<em>today</em></span></div>
+      </div>
+    </div>
   </div>
-  <div class="mock" aria-hidden="true">
-    <p class="mock-title">My Day</p>
-    <div class="row overdue"><span class="box"></span><span>Renew the domain<em>yesterday</em></span></div>
-    <div class="row"><span class="box"></span><span>Draft the release notes<em>today</em></span></div>
-    <div class="row"><span class="box"></span><span>Read a book<em>every day</em></span></div>
-    <div class="row done"><span class="box checked"></span><span>Water the plants<em>today</em></span></div>
-  </div>
+
+  <a class="scroll-cue" href="#more" aria-label="Scroll down for more">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  </a>
 </section>
 
 <style>
+  .hero-bg {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+  }
+
   .hero {
-    display: grid;
-    gap: 48px;
-    grid-template-columns: 1fr;
+    position: relative;
+    z-index: 1;
+    width: 100%;
     padding-top: 40px;
     padding-bottom: 40px;
   }
 
+  .hero-inner {
+    display: grid;
+    gap: 48px;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
   @media (min-width: 900px) {
-    .hero { grid-template-columns: 1.1fr 0.9fr; align-items: center; }
+    .hero-inner { grid-template-columns: 1.1fr 0.9fr; align-items: center; }
   }
 
   h1 { margin: 16px 0; }
@@ -47,6 +70,7 @@ const base = import.meta.env.BASE_URL
   .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
 
   .mock {
+    position: relative;
     background: var(--surface);
     border: 1px solid var(--lines);
     border-radius: var(--radius);
@@ -85,4 +109,33 @@ const base = import.meta.env.BASE_URL
   .overdue em { color: var(--warning); font-weight: 600; }
 
   .done { color: var(--muted); text-decoration: line-through; }
+
+  .scroll-cue {
+    position: absolute;
+    z-index: 1;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--lines);
+    border-radius: 50%;
+    color: var(--muted);
+    background: var(--surface);
+    animation: bob 2s ease-in-out infinite;
+  }
+
+  .scroll-cue:hover { color: var(--primary); border-color: var(--primary); }
+
+  @keyframes bob {
+    0%, 100% { transform: translate(-50%, 0); }
+    50% { transform: translate(-50%, 6px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-cue { animation: none; }
+  }
 </style>

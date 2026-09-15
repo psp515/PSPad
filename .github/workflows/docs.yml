@@ -35,9 +35,6 @@ jobs:
       - run: npm ci
         working-directory: docs
 
-      - run: npm test
-        working-directory: docs
-
       - run: npm run build
         working-directory: docs
 

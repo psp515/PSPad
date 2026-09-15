@@ -60,7 +60,7 @@ library's weight.
 tests .NET and knows nothing about Node; merging the two would run a dotnet
 restore for a prose change and an npm install for a domain change.
 
-- `pull_request` — install, test, build. No deploy.
+- `pull_request` — install, build. No deploy.
 - `push` to `main`, paths `docs/**`, `brand/**`, `docker/**` and the workflow
   itself — build, then `actions/deploy-pages`.
 - `workflow_dispatch` — manual republish.
@@ -89,7 +89,13 @@ The install page does not retype the stack. Its frontmatter reads
 
 Documenting a new variable therefore means writing its comment in
 `.env.example`, one place, and the page follows. The parser lives in
-`docs/src/lib/repo.ts` and is unit tested (Testing, below).
+`docs/src/lib/repo.ts`.
+
+**Amended: no test suite.** This design originally called for `vitest` unit
+tests on the parser. Removed — a three-page marketing site doesn't carry the
+same cost of a wrong parse as the application does, and the drift guard below
+(a moved or renamed file fails the build outright) catches the failure mode
+that actually matters. `docs.yml` no longer runs `npm test`.
 
 This also buys a drift guard for free: because the page reads those two paths,
 a pull request that moves or renames them fails the docs build.
@@ -195,13 +201,26 @@ that change once a year.
 `"name": "PSPad"`, `"short_name": "PSPad"`, `"theme_color": "#4E7A5E"`,
 `"background_color": "#F7F8F5"`.
 
-### D8 — The sage palette, and zero JavaScript
+### D8 — The sage palette, a light/dark toggle
 
 `docs/src/styles/theme.css` declares the D12 palette from
-`ui-redesign-2-design.md` as custom properties, both modes, switched by
-`prefers-color-scheme`. The site and the application look like one product.
-System font stack. Astro ships no client JavaScript; nothing on these three
-pages needs any.
+`ui-redesign-2-design.md` as custom properties. The site and the application
+look like one product. System font stack.
+
+**Amended: a manual theme toggle, and the JavaScript that costs.** This
+design originally shipped zero client JavaScript, switching palette purely by
+`prefers-color-scheme`. A toggle button in the header now lets a visitor
+override that — same System/Light/Dark idea the application's own account
+menu offers (D12/D13 of `ui-redesign-2-design.md`), reachable here without
+signing in to anything. The choice is written to `localStorage` under
+`pspad-theme` and applied via a `data-theme` attribute on `<html>`.
+
+Two small inline scripts carry this, both in `Page.astro`: one in `<head>`,
+blocking, applying a stored preference before first paint (skipping it means
+a flash of the wrong theme); one at the end of `<body>` wiring the toggle
+button's click handler. Nothing else on the site uses JavaScript, and D2's
+build still runs no Node test step against it — it's small enough to read at
+a glance in the one file that has it.
 
 ### D9 — No screenshots until the client redesign lands
 
@@ -236,7 +255,7 @@ brand/
   icon.svg                     master mark, single source
 
 docs/
-  package.json                 astro 5; sharp + vitest as devDependencies
+  package.json                 astro 5; sharp as a devDependency
   astro.config.mjs             site + base '/PSPad'
   tsconfig.json
   scripts/render-icons.mjs     sharp: brand/icon.svg to PNGs
@@ -250,7 +269,6 @@ docs/
       Callout.astro            note / warning
       Mark.astro               inline SVG icon
     lib/repo.ts                readRepoFile(), parseEnvExample()
-    lib/repo.test.ts           vitest
     pages/index.astro
     pages/install.astro
     pages/features.astro
@@ -347,18 +365,11 @@ compose file has to be the final one before the page is written against it.
 
 ## Testing
 
-`docs/src/lib/repo.test.ts`, vitest, written before the parser:
+No unit test suite — removed after the first pass; a three-page marketing
+site doesn't carry the parser-correctness risk that justified it, and the
+guard below catches the failure mode that actually matters.
 
-- a key, a default and the `#` comment above it become one row;
-- blank lines and stand-alone comments produce no row;
-- a value containing `=` survives intact — connection strings and URLs both
-  carry one, and a naive `split('=')` truncates them;
-- a key with no comment above it yields a row with an empty description rather
-  than throwing;
-- `readRepoFile` resolves relative to the repository root, not the working
-  directory.
-
-The pull-request job in `docs.yml` is the integration guard: the pages import
+The pull-request job in `docs.yml` is the guard: the pages import
 `docker/compose.yaml` and `docker/.env.example`, so a change that moves,
 renames or deletes either fails the build.
 

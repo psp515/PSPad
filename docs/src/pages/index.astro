@@ -7,47 +7,27 @@ import { join } from '../lib/repo'
 const base = import.meta.env.BASE_URL
 
 const proof = [
-  {
-    title: 'Offline is the default, not a mode',
-    body: 'Edits go to a replica in your browser and an outbox, immediately. When the network returns the outbox ships in order and tells you about anything the server refused. Nothing is dropped quietly.'
-  },
-  {
-    title: 'Repeating work never goes overdue',
-    body: 'A recurring task is a template plus the days it happened. A day you missed stays on that day. Today shows today’s occurrence, once.'
-  },
-  {
-    title: 'History you can actually read',
-    body: 'Every change writes an event next to the document it changed, and the history screen reads them. No parallel audit table to disagree with the data.'
-  },
-  {
-    title: 'Your server, your accounts',
-    body: 'Four containers, one Compose file, your hardware. Sign-in runs through your own Keycloak. Nothing leaves the machine you put it on.'
-  }
+  { title: 'One Today screen', body: 'What’s due, overdue first, in your own time zone.' },
+  { title: 'One Inbox', body: 'Capture anything. Decide where it goes later.' },
+  { title: 'Areas and lists', body: 'Work, home, side projects — each with its own lists.' },
+  { title: 'Tasks and steps', body: 'Due dates, priorities, goals, and steps on every task.' },
+  { title: 'Yours, and multi-user', body: 'Your hardware, your Keycloak, your data.' }
 ]
 ---
 <Page
   title="PSPad — a self-hosted GTD notepad"
   description="PSPad is a self-hosted GTD notepad with one Today screen across every area, one Inbox, recurrence that never goes overdue, and full offline use on your phone."
+  heroNav
 >
   <Hero />
 
-  <div class="wrap">
-    <div class="prose">
-      <h2>Built for the question every list app dodges</h2>
-      <p>
-        Most tools give you a list per project and leave you to work out what matters
-        this morning. PSPad answers it directly: one Today screen, across every area,
-        showing what is due now and what step comes next — computed in your time zone,
-        not the server's.
-      </p>
-      <p>
-        Everything you capture lands in one Inbox. Organising it later is a deliberate
-        step, not a chore you perform by editing fields.
-      </p>
-    </div>
-
+  <div class="wrap" id="more">
     <div class="grid">
       {proof.map((item) => <FeatureCard title={item.title}><p>{item.body}</p></FeatureCard>)}
+      <a class="card see-all" href={join(base, 'features')}>
+        <h3>See all features →</h3>
+        <p>What's built, what's in progress, what's still planned.</p>
+      </a>
     </div>
 
     <div class="prose steps">
@@ -69,6 +49,16 @@ const proof = [
 
 <style>
   .grid { margin: 32px 0 48px; }
+
+  .see-all {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    border-color: var(--primary);
+  }
+
+  .see-all h3 { margin-top: 0; color: var(--primary); }
+  .see-all p { margin-bottom: 0; color: var(--muted); }
 
   .steps ol { padding-left: 1.2em; }
   .steps li { margin-bottom: 8px; }

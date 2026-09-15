@@ -1,13 +1,31 @@
 ---
-interface Props { title: string }
-const { title } = Astro.props
+interface Props { title: string; status?: 'built' | 'in-progress' | 'planned' }
+const { title, status = 'built' } = Astro.props
 ---
-<article class="card">
+<article class={`card ${status}`}>
   <h3>{title}</h3>
   <slot />
 </article>
 
 <style>
+  .card {
+    border-left-width: 4px;
+    border-left-style: solid;
+    border-left-color: var(--primary);
+  }
+
   h3 { margin-top: 0; }
   article :global(p:last-child) { margin-bottom: 0; }
+
+  .in-progress { border-left-color: var(--warning); }
+
+  .planned {
+    background: none;
+    border-style: dashed;
+    border-left-style: solid;
+    border-left-color: var(--muted);
+    color: var(--muted);
+  }
+
+  .planned h3 { color: var(--text); }
 </style>
