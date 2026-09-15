@@ -104,6 +104,8 @@
                 _displayName = me.DisplayName;
                 _email = me.Email;
                 State.UserId = me.UserId;
+                State.DisplayName = me.DisplayName;
+                State.Email = me.Email;
                 State.TimeZone = me.TimeZone;
                 State.Today = TodayRule.TodayIn(
                     DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
@@ -238,7 +240,11 @@
 
     void OnPreferenceChanged() => InvokeAsync(StateHasChanged);
 
-    void OnSyncChanged() => InvokeAsync(ReloadAreasAndCountsAsync);
+    void OnSyncChanged()
+    {
+        State.PendingCommands = Coordinator.PendingCount;
+        InvokeAsync(ReloadAreasAndCountsAsync);
+    }
 
     void OnCommandSent() => InvokeAsync(ReloadAreasAndCountsAsync);
 

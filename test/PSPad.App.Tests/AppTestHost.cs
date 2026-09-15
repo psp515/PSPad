@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App.State;
+using PSPad.App.Theme;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Inbox;
@@ -41,6 +42,7 @@ public static class AppTestHost
         context.Services.AddSingleton<IDocumentStore<Inbox>>(new ReplicaDocumentStore<Inbox>(replica));
         context.Services.AddPSPadCommands();
         context.Services.AddSingleton(new AppState { UserId = userId, Today = today });
+        context.Services.AddSingleton(new ThemePreference(context.JSInterop.JSRuntime));
 
         var collapse = new CardCollapseState(context.JSInterop.JSRuntime);
         collapse.LoadAsync().GetAwaiter().GetResult();
