@@ -23,4 +23,10 @@ public sealed class InMemoryOutbox : IOutbox
     }
 
     public Task<int> CountAsync() => Task.FromResult(_entries.Count);
+
+    public Task ClearAsync()
+    {
+        _entries.Clear();
+        return Task.CompletedTask;
+    }
 }

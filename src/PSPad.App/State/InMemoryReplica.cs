@@ -6,6 +6,7 @@ public sealed class InMemoryReplica : IReplica
 {
     readonly Dictionary<Guid, Aggregate> _documents = [];
     long _marker;
+    Guid? _owner;
 
     public Task<T?> LoadAsync<T>(Guid id) where T : Aggregate =>
         Task.FromResult(_documents.GetValueOrDefault(id) as T);
@@ -25,6 +26,22 @@ public sealed class InMemoryReplica : IReplica
     public Task SetMarkerAsync(long marker)
     {
         _marker = marker;
+        return Task.CompletedTask;
+    }
+
+    public Task<Guid?> OwnerAsync() => Task.FromResult(_owner);
+
+    public Task SetOwnerAsync(Guid userId)
+    {
+        _owner = userId;
+        return Task.CompletedTask;
+    }
+
+    public Task ClearAsync()
+    {
+        _documents.Clear();
+        _marker = 0;
+        _owner = null;
         return Task.CompletedTask;
     }
 }
