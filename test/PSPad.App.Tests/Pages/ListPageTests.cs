@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
@@ -73,6 +74,29 @@ public class ListPageTests : Bunit.TestContext
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
         Assert.DoesNotContain("overdue", page.Markup, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ItLaysOpenTasksOutInTheGrid()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, NewTask(list.Id, "Mleko"), NewTask(list.Id, "Chleb"));
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.NotNull(page.Find(".pspad-grid"));
+    }
+
+    [Fact]
+    public void ItDoesNotClaimTheListIsGoneBeforeItHasLoaded()
+    {
+        var list = NewList("Zakupy");
+        ArrangeWithPendingStore(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Single(page.FindComponents<RowSkeleton>());
+        Assert.DoesNotContain("not there anymore", page.Markup);
     }
 
     [Fact]
@@ -173,6 +197,21 @@ public class ListPageTests : Bunit.TestContext
     };
 
     InMemoryReplica Arrange(params Aggregate[] documents) => AppTestHost.Arrange(this, User, Today, documents);
+
+    void ArrangeWithPendingStore(params Aggregate[] documents)
+    {
+        Arrange(documents);
+        Services.AddSingleton<IDocumentStore<TaskList>>(new NeverLoadingListStore());
+    }
+
+    sealed class NeverLoadingListStore : IDocumentStore<TaskList>
+    {
+        public Task<TaskList?> LoadAsync(Guid id, CancellationToken ct) =>
+            new TaskCompletionSource<TaskList?>().Task;
+
+        public Task<IReadOnlyList<TaskList>> LoadAllAsync(Guid userId, CancellationToken ct) =>
+            new TaskCompletionSource<IReadOnlyList<TaskList>>().Task;
+    }
 
     static TaskList NewList(string name)
     {

@@ -57,3 +57,7 @@ html, body {
 .pspad-grid > * {
     background: var(--mud-palette-surface);
 }
+
+.pspad-inbox-expanded {
+    grid-column: 1 / -1;
+}

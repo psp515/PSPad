@@ -11,52 +11,64 @@
 @inject CommandSender Sender
 @inject NavigationManager Navigation
 
-<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">My Day</MudText>
-
-@if (_overdue.Count > 0)
+@if (!_loaded)
 {
-    <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">Overdue</MudText>
-    <MudPaper Outlined="true" Class="mb-4">
-        @foreach (var task in _overdue)
-        {
-            <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
-                     OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
-        }
-    </MudPaper>
+    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">My Day</MudText>
+    <RowSkeleton Count="6" />
 }
-
-@if (_due.Count > 0 || _overdue.Count == 0)
+else
 {
+    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">My Day</MudText>
+
+    @if (_overdue.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">Overdue</MudText>
+        <MudPaper Outlined="true" Class="mb-4">
+            <div class="pspad-grid">
+                @foreach (var task in _overdue)
+                {
+                    <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
+                             OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+                }
+            </div>
+        </MudPaper>
+    }
+
     <MudPaper Outlined="true">
         @if (_due.Count > 0)
         {
-            @foreach (var task in _due)
-            {
-                <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
-                         OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
-            }
+            <div class="pspad-grid">
+                @foreach (var task in _due)
+                {
+                    <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
+                             OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+                }
+            </div>
         }
         else
         {
             <MudText Typo="Typo.body2" Class="pa-4">Nothing due today.</MudText>
         }
     </MudPaper>
-}
 
-@if (_done.Count > 0)
-{
-    <MudExpansionPanels Elevation="0" Class="mt-4">
-        <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
-            @foreach (var task in _done)
-            {
-                <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
-                         OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
-            }
-        </MudExpansionPanel>
-    </MudExpansionPanels>
+    @if (_done.Count > 0)
+    {
+        <MudExpansionPanels Elevation="0" Class="mt-4">
+            <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
+                <div class="pspad-grid">
+                    @foreach (var task in _done)
+                    {
+                        <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
+                                 OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+                    }
+                </div>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    }
 }
 
 @code {
+    bool _loaded;
     IReadOnlyList<TodoTask> _overdue = [];
     IReadOnlyList<TodoTask> _due = [];
     IReadOnlyList<TodoTask> _done = [];
@@ -85,6 +97,8 @@
                 .OrderByDescending(task => task.CompletedAt)
                 .ThenBy(task => task.Name)
         ];
+
+        _loaded = true;
     }
 
     bool CompletedToday(TodoTask task, TimeZoneInfo zone) =>
