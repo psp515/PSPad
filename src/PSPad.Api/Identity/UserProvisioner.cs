@@ -55,4 +55,33 @@ public sealed class UserProvisioner(
         await work.CommitAsync(commandId, id, ct);
         return user;
     }
+
+    public async Task<User> RenameAsync(User user, string displayName, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(displayName) || user.DisplayName == displayName)
+        {
+            return user;
+        }
+
+        var commandId = Guid.NewGuid();
+        var events = User.Decide(
+            user, new SetUserDisplayName(commandId, user.Id, displayName), clock.UtcNow);
+
+        return await StageAndCommitAsync(user, events, commandId, ct);
+    }
+
+    async Task<User> StageAndCommitAsync(
+        User user, IReadOnlyList<DomainEvent> events, Guid commandId, CancellationToken ct)
+    {
+        if (events.Count == 0)
+        {
+            return user;
+        }
+
+        user.ApplyAll(events);
+        work.Stage(user, events);
+        await work.CommitAsync(commandId, user.Id, ct);
+
+        return user;
+    }
 }
