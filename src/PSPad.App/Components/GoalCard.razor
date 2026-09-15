@@ -1,0 +1,81 @@
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Goals
+@using PSPad.Module.Tasks.Tasks
+@inject CardCollapseState Collapse
+
+<MudPaper Outlined="true" Class="mb-3">
+    <div class="d-flex align-center gap-2 px-3 py-2">
+        <MudIconButton Size="Size.Small"
+                       Icon="@(Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)"
+                       OnClick="@(() => Collapse.ToggleAsync(Goal.Id))" />
+        <MudText Typo="Typo.subtitle2" Class="flex-grow-1">@Goal.Name</MudText>
+        <MudText Typo="Typo.caption" Class="pspad-open-count">@($"{Open.Count} open")</MudText>
+        <ThingMenu Class="pspad-goal-menu" OnRename="@OnRename" OnDelete="@OnDelete">
+            <Extra>
+                @if (Goal.Achieved)
+                {
+                    <MudMenuItem OnClick="@OnReopen">Reopen</MudMenuItem>
+                }
+                else
+                {
+                    <MudMenuItem OnClick="@OnAchieve">Achieve</MudMenuItem>
+                }
+            </Extra>
+        </ThingMenu>
+    </div>
+
+    @if (!Collapsed)
+    {
+        <MudDivider />
+
+        @if (Open.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="pa-3">No open tasks.</MudText>
+        }
+
+        @foreach (var task in Open.Take(Preview))
+        {
+            <TaskRow Task="@task" Today="@Today" ListName="@NameOf(task.ListId)"
+                     OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
+        }
+
+        @if (Open.Count > Preview)
+        {
+            <MudDivider />
+            <MudText Typo="Typo.caption" Class="pa-2">@($"+{Open.Count - Preview} more")</MudText>
+        }
+    }
+</MudPaper>
+
+@code {
+    public const int Preview = 10;
+
+    [Parameter, EditorRequired] public Goal Goal { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
+
+    [Parameter] public IReadOnlyDictionary<Guid, string> ListNames { get; set; } = new Dictionary<Guid, string>();
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnStar { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
+
+    [Parameter] public EventCallback OnAchieve { get; set; }
+
+    [Parameter] public EventCallback OnReopen { get; set; }
+
+    [Parameter] public EventCallback OnRename { get; set; }
+
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    bool Collapsed => Collapse.IsCollapsed(Goal.Id);
+
+    IReadOnlyList<TodoTask> Open =>
+        [.. Tasks.Where(task => !task.Deleted && task.CompletedAt is null)];
+
+    string? NameOf(Guid listId) => ListNames.TryGetValue(listId, out var name) ? name : null;
+}

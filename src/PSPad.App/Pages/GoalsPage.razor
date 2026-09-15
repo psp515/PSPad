@@ -1,56 +1,108 @@
 @page "/goals"
 @using PSPad.Abstractions
+@using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.Module.Tasks.Goals
+@using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Tasks
-@inject IDocumentStore<Goal> Store
+@inject IDocumentStore<Goal> GoalStore
 @inject IDocumentStore<TodoTask> TaskStore
+@inject IDocumentStore<TaskList> ListStore
 @inject AppState State
-@inject IServiceProvider Services
+@inject CommandSender Sender
+@inject IDialogService Dialogs
+@inject NavigationManager Navigation
 
-<MudText Typo="Typo.h5" Class="mb-4">Goals</MudText>
+<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Goals</MudText>
 
-<MudTextField T="string" @bind-Value="_newGoalName" Label="New goal" Immediate="true" OnKeyDown="@OnKeyDown" />
+<MudTextField T="string" @bind-Value="_newGoalName" Placeholder="New goal" Immediate="true"
+              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4"
+              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Add"
+              OnKeyDown="@OnKeyDown" />
 
-@if (_goals is not null)
+@if (_active.Count == 0 && _achieved.Count == 0)
 {
-    <MudList T="string" Class="mt-4">
-        @foreach (var goal in _goals)
-        {
-            <MudListItem T="string">
-                <div class="d-flex align-center gap-2">
-                    <MudText>@goal.Name</MudText>
-                    <MudText Typo="Typo.caption">@OpenTaskCount(goal) open</MudText>
-                    @if (goal.Achieved)
-                    {
-                        <MudButton Size="Size.Small" OnClick="@(() => ReopenAsync(goal))">reopen</MudButton>
-                    }
-                    else
-                    {
-                        <MudButton Size="Size.Small" OnClick="@(() => AchieveAsync(goal))">achieve</MudButton>
-                    }
-                    <MudButton Size="Size.Small" OnClick="@(() => DeleteAsync(goal))">delete</MudButton>
-                </div>
-            </MudListItem>
-        }
-    </MudList>
+    <MudText Typo="Typo.body2">No goals yet.</MudText>
+}
+
+@foreach (var goal in _active)
+{
+    <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
+              OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
+              OnAchieve="@(() => AchieveAsync(goal))"
+              OnReopen="@(() => ReopenAsync(goal))"
+              OnRename="@(() => RenameAsync(goal))"
+              OnDelete="@(() => DeleteAsync(goal))" />
+}
+
+@if (_achieved.Count > 0)
+{
+    <MudExpansionPanels Elevation="0" Class="mt-4">
+        <MudExpansionPanel Text="@($"Achieved ({_achieved.Count})")">
+            @foreach (var goal in _achieved)
+            {
+                <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
+                          OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
+                          OnAchieve="@(() => AchieveAsync(goal))"
+                          OnReopen="@(() => ReopenAsync(goal))"
+                          OnRename="@(() => RenameAsync(goal))"
+                          OnDelete="@(() => DeleteAsync(goal))" />
+            }
+        </MudExpansionPanel>
+    </MudExpansionPanels>
 }
 
 @code {
-    IReadOnlyList<Goal>? _goals;
-    IReadOnlyList<TodoTask>? _tasks;
+    IReadOnlyList<Goal> _active = [];
+    IReadOnlyList<Goal> _achieved = [];
+    IReadOnlyList<TodoTask> _tasks = [];
+    IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
     string _newGoalName = "";
 
     protected override async Task OnInitializedAsync() => await ReloadAsync();
 
     async Task ReloadAsync()
     {
-        _goals = await Store.LoadAllAsync(State.UserId, CancellationToken.None);
+        var goals = await GoalStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var kept = goals.Where(goal => !goal.Deleted).OrderBy(goal => goal.Name).ToArray();
+        _active = [.. kept.Where(goal => !goal.Achieved)];
+        _achieved = [.. kept.Where(goal => goal.Achieved)];
+
         _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+
+        var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _listNames = lists.Where(list => !list.Deleted).ToDictionary(list => list.Id, list => list.Name);
     }
 
-    int OpenTaskCount(Goal goal) =>
-        _tasks?.Count(task => task.GoalId == goal.Id && task.CompletedAt is null && !task.Deleted) ?? 0;
+    IReadOnlyList<TodoTask> TasksOf(Guid goalId) => [.. _tasks.Where(task => task.GoalId == goalId)];
+
+    void Open(TodoTask task) =>
+        Navigation.NavigateTo($"{Navigation.Uri.Split('?')[0]}?task={task.Id}");
+
+    async Task ToggleAsync(TodoTask task)
+    {
+        if (task.IsRecurring)
+        {
+            await Sender.SendAsync(new CompleteOccurrence(
+                Guid.NewGuid(), State.UserId, task.Id, State.Today, !task.CompletedDays.Contains(State.Today)));
+        }
+        else if (task.CompletedAt is null)
+        {
+            await Sender.SendAsync(new CompleteTask(Guid.NewGuid(), State.UserId, task.Id));
+        }
+        else
+        {
+            await Sender.SendAsync(new ReopenTask(Guid.NewGuid(), State.UserId, task.Id));
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task StarAsync(TodoTask task)
+    {
+        await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, task.Id, !task.Starred));
+        await ReloadAsync();
+    }
 
     async Task OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
     {
@@ -59,31 +111,57 @@
             return;
         }
 
-        var sender = Services.GetRequiredService<CommandSender>();
-        await sender.SendAsync(new CreateGoal(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _newGoalName));
-
+        await Sender.SendAsync(new CreateGoal(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _newGoalName));
         _newGoalName = "";
+        await ReloadAsync();
+    }
+
+    async Task RenameAsync(Goal goal)
+    {
+        var parameters = new DialogParameters<NameDialog>
+        {
+            { dialog => dialog.Title, "Goal name" },
+            { dialog => dialog.Value, goal.Name }
+        };
+        var dialog = await Dialogs.ShowAsync<NameDialog>("Rename goal", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new RenameGoal(Guid.NewGuid(), State.UserId, goal.Id, name));
         await ReloadAsync();
     }
 
     async Task AchieveAsync(Goal goal)
     {
-        var sender = Services.GetRequiredService<CommandSender>();
-        await sender.SendAsync(new AchieveGoal(Guid.NewGuid(), State.UserId, goal.Id));
+        await Sender.SendAsync(new AchieveGoal(Guid.NewGuid(), State.UserId, goal.Id));
         await ReloadAsync();
     }
 
     async Task ReopenAsync(Goal goal)
     {
-        var sender = Services.GetRequiredService<CommandSender>();
-        await sender.SendAsync(new ReopenGoal(Guid.NewGuid(), State.UserId, goal.Id));
+        await Sender.SendAsync(new ReopenGoal(Guid.NewGuid(), State.UserId, goal.Id));
         await ReloadAsync();
     }
 
     async Task DeleteAsync(Goal goal)
     {
-        var sender = Services.GetRequiredService<CommandSender>();
-        await sender.SendAsync(new DeleteGoal(Guid.NewGuid(), State.UserId, goal.Id));
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, $"Delete “{goal.Name}”? Its tasks stay, without a goal." }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete goal", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new DeleteGoal(Guid.NewGuid(), State.UserId, goal.Id));
         await ReloadAsync();
     }
 }

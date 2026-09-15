@@ -36,8 +36,8 @@ Below `md` the same component is a temporary drawer behind a hamburger in the
 app bar.
 
 Top to bottom: account avatar with name and email, search field, **My Day**,
-**Inbox**, a divider, the user's areas in `Position` order, and **+ New area**
-pinned to the bottom.
+**Inbox**, **Goals**, a divider, the user's areas in `Position` order, and
+**+ New area** pinned to the bottom.
 
 The bottom bar and the area bottom sheet are deleted. So is the flat areas
 page, whose job the sidebar now does.
@@ -199,12 +199,21 @@ menu.
 
 The avatar is the first letter of the user's email on a colour derived
 deterministically from the user id, so the same user is the same colour on
-every device. Clicking it opens: **Goals**, **History**, **Theme**
+every device. Clicking it opens: **History**, **Theme**
 (System / Light / Dark), **Sync** (pending command count), **Sign out**.
 
-Goals and History keep their routes and their screens; they lose their
-permanent sidebar rows because they are low-frequency and the sidebar's job is
-areas.
+History keeps its route and its screen; it loses its permanent sidebar row
+because it is low-frequency and the sidebar's job is areas.
+
+**Amended by ADR-0017: Goals is a sidebar row, not an account-menu entry.**
+This design originally folded Goals into the account menu alongside History,
+on the same low-frequency reasoning. That reasoning holds for History — an
+append-only log a user browses occasionally — but not for Goals: AGENTS.md
+§10 settles goals as **global**, spanning every area, the same shape as My
+Day and Inbox, which are permanent rows. Burying a first-class GTD concept
+next to Sign out made it easy to forget it exists. Goals moved back to a
+permanent sidebar row, between Inbox and the divider; its route and screen
+are unchanged, only its point of entry.
 
 ### D14 — Sidebar counts are computed once and refreshed on command
 
@@ -278,7 +287,8 @@ inputs call into `mudKeyInterceptor`.
 
 What is asserted:
 
-- the sidebar lists every app section and every area, and raises a selection
+- the sidebar lists every app section (My Day, Inbox, Goals) and every area,
+  and raises a selection
 - **+ New area** is present regardless of how many areas exist
 - a list card shows at most ten unchecked tasks, and no completed ones
 - **Show all (N)** appears only when the list holds more than ten open tasks
@@ -286,7 +296,7 @@ What is asserted:
 - a recurring task never renders overdue styling, on any screen that shows it
 - `?task=` opens the panel; removing it closes the panel and not the screen
 - search matches tasks and lists by name and reports each task's area and list
-- the account menu offers Goals, History, Theme and Sign out
+- the account menu offers History, Theme and Sign out, and no longer Goals
 - the avatar colour is stable for a given user id
 
 What is not asserted: palette values, spacing, and which breakpoint branch is

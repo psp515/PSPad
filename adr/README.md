@@ -28,9 +28,10 @@ the old one's status line to point at the new number.
 | [0011](0011-aggregate-documents-are-truth.md) | Aggregate documents are truth; events are the log beside them | Active (supersedes [0002](0002-cqrs-event-sourced-write-side.md)) | 2026-09-12 | architecture, persistence, event-sourcing |
 | [0012](0012-extract-ordering-into-its-own-module.md) | Extract element ordering into its own module, out of the Tasks domain | Proposed | 2026-09-12 | architecture, domain, ui, future-work |
 | [0013](0013-responsive-shell-and-per-device-theme.md) | Keep sections and areas on separate navigation surfaces, and the theme per device | Superseded by [0014](0014-one-navigation-tree-at-every-width.md) | 2026-09-12 | ui, offline, identity |
-| [0014](0014-one-navigation-tree-at-every-width.md) | One navigation tree at every width, revealed rather than rebuilt | Active (supersedes [0013](0013-responsive-shell-and-per-device-theme.md)) | 2026-09-12 | ui, offline, identity |
+| [0014](0014-one-navigation-tree-at-every-width.md) | One navigation tree at every width, revealed rather than rebuilt | Active (supersedes [0013](0013-responsive-shell-and-per-device-theme.md); Goals' placement superseded by [0017](0017-promote-goals-to-a-sidebar-row.md)) | 2026-09-12 | ui, offline, identity |
 | [0015](0015-one-self-host-compose-stack.md) | One `.env`-driven self-host compose stack | Active | 2026-09-14 | deployment, security, identity |
 | [0016](0016-documentation-site.md) | A documentation site in Astro, published to GitHub Pages | Active | 2026-09-14 | documentation, tooling, deployment |
+| [0017](0017-promote-goals-to-a-sidebar-row.md) | Promote Goals to a permanent sidebar row | Active (supersedes Goals' placement in [0014](0014-one-navigation-tree-at-every-width.md)) | 2026-09-15 | ui, domain |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
