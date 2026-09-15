@@ -206,16 +206,16 @@ public class AreaBoardTests : Bunit.TestContext
     void ArrangeWithPendingStore(params Aggregate[] documents)
     {
         Arrange(documents);
-        Services.AddSingleton<IDocumentStore<TaskList>>(new NeverLoadingTaskListStore());
+        Services.AddSingleton<IDocumentStore<Area>>(new NeverLoadingAreaStore());
     }
 
-    sealed class NeverLoadingTaskListStore : IDocumentStore<TaskList>
+    sealed class NeverLoadingAreaStore : IDocumentStore<Area>
     {
-        public Task<TaskList?> LoadAsync(Guid id, CancellationToken ct) =>
-            new TaskCompletionSource<TaskList?>().Task;
+        public Task<Area?> LoadAsync(Guid id, CancellationToken ct) =>
+            new TaskCompletionSource<Area?>().Task;
 
-        public Task<IReadOnlyList<TaskList>> LoadAllAsync(Guid userId, CancellationToken ct) =>
-            new TaskCompletionSource<IReadOnlyList<TaskList>>().Task;
+        public Task<IReadOnlyList<Area>> LoadAllAsync(Guid userId, CancellationToken ct) =>
+            new TaskCompletionSource<IReadOnlyList<Area>>().Task;
     }
 
     static Area NewArea(string name)
