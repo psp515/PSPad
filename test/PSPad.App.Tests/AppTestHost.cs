@@ -47,6 +47,8 @@ public static class AppTestHost
         context.Services.AddSingleton(collapse);
 
         context.Services.AddSingleton(services => new CommandSender(services, work));
+        context.Services.AddSingleton(new ReplicaOwnership(replica, outbox));
+        context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop: true));
 
         return replica;
     }
@@ -54,5 +56,16 @@ public static class AppTestHost
     sealed class FixedClock(DateOnly today) : IClock
     {
         public DateTimeOffset UtcNow => new(today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+    }
+
+    public sealed class FakeViewport(bool isDesktop) : IViewport
+    {
+        public Task SubscribeAsync(Action<bool> onDesktopChanged)
+        {
+            onDesktopChanged(isDesktop);
+            return Task.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

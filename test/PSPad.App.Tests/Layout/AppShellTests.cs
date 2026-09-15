@@ -35,7 +35,7 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ThePersistentDrawerIsAlwaysOpenAndDesktopOnly()
+    public void ThePersistentDrawerIsOpenOnDesktopAndDesktopOnly()
     {
         Arrange();
 
@@ -46,6 +46,22 @@ public class AppShellTests : Bunit.TestContext
         Assert.Contains("mud-drawer--open", persistent.Find(".mud-drawer").ClassList);
         Assert.Contains("d-none", persistent.Find(".mud-drawer").ClassList);
         Assert.Contains("d-md-flex", persistent.Find(".mud-drawer").ClassList);
+    }
+
+    // MudBlazor pushes .mud-main-content over by the persistent drawer's width whenever it
+    // is logically Open, regardless of the CSS classes that hide it on a small viewport -- so
+    // Open must track the breakpoint, or content stays shoved aside on mobile forever.
+    [Fact]
+    public void ThePersistentDrawerIsClosedBelowTheDesktopBreakpointSoItStopsReservingSpace()
+    {
+        Arrange();
+        Services.AddSingleton<IViewport>(new AppTestHost.FakeViewport(isDesktop: false));
+
+        var shell = Render<AppShell>();
+
+        var persistent = shell.FindComponents<MudDrawer>()
+            .Single(drawer => drawer.Instance.Variant == DrawerVariant.Persistent);
+        Assert.DoesNotContain("mud-drawer--open", persistent.Find(".mud-drawer").ClassList);
     }
 
     [Fact]

@@ -11,4 +11,6 @@ public interface IOutbox
     Task RemoveThroughAsync(long position);
 
     Task<int> CountAsync();
+
+    Task ClearAsync();
 }

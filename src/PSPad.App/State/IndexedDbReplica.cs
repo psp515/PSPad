@@ -40,6 +40,25 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
         await module.InvokeVoidAsync("setMeta", "marker", marker);
     }
 
+    public async Task<Guid?> OwnerAsync()
+    {
+        var module = await ModuleAsync();
+        var stored = await module.InvokeAsync<OwnerRow?>("getMeta", "owner");
+        return stored is null ? null : Guid.Parse(stored.Value);
+    }
+
+    public async Task SetOwnerAsync(Guid userId)
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("setMeta", "owner", userId.ToString());
+    }
+
+    public async Task ClearAsync()
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("clearReplica");
+    }
+
     async Task<IJSObjectReference> ModuleAsync() =>
         _module ??= await js.InvokeAsync<IJSObjectReference>("import", "./js/replica.js");
 
@@ -52,4 +71,6 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
     }
 
     public sealed record MetaRow(string Key, long Value);
+
+    public sealed record OwnerRow(string Key, string Value);
 }

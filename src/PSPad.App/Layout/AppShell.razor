@@ -16,9 +16,12 @@
 @inject SidebarCounts Counts
 @inject CardCollapseState Collapse
 @inject CommandSender Sender
+@inject ReplicaOwnership Ownership
 @inject IDocumentStore<Area> AreaStore
 @inject NavigationManager Navigation
+@inject IViewport Viewport
 @implements IDisposable
+@implements IAsyncDisposable
 
 <MudThemeProvider @ref="_themeProvider" Theme="@PSPadTheme.Instance" IsDarkMode="@Preference.IsDark" />
 <MudPopoverProvider />
@@ -29,10 +32,12 @@
     <MudAppBar Elevation="0" Dense="true" Class="d-md-none">
         <MudIconButton id="pspad-drawer-toggle" Class="d-md-none" Icon="@Icons.Material.Filled.Menu"
                        Color="Color.Inherit" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
-        <MudText Typo="Typo.h6">PSPad</MudText>
+        <MudSpacer />
+        <AccountMenu Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
+                     PendingCommands="@Coordinator.PendingCount" AvatarOnly="true" />
     </MudAppBar>
 
-    <MudDrawer Variant="DrawerVariant.Persistent" Open="true" Elevation="1"
+    <MudDrawer Variant="DrawerVariant.Persistent" Open="@_isDesktop" Elevation="1"
                ClipMode="DrawerClipMode.Never" Class="d-none d-md-flex">
         <NavSidebar Areas="@_areas" Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
                     PendingCommands="@Coordinator.PendingCount"
@@ -74,6 +79,7 @@
     bool _themeReady;
     bool _ready;
     bool _drawerOpen;
+    bool _isDesktop = true;
     string _email = "";
     string _displayName = "";
     IReadOnlyList<Area> _areas = [];
@@ -85,6 +91,8 @@
         Preference.Changed += OnPreferenceChanged;
         Sender.Sent += OnCommandSent;
         Navigation.LocationChanged += OnLocationChanged;
+
+        await Viewport.SubscribeAsync(OnDesktopChanged);
 
         var authState = AuthStateTask is null ? null : await AuthStateTask;
         if (authState?.User.Identity?.IsAuthenticated == true)
@@ -100,6 +108,7 @@
                 State.TimeZone = me.TimeZone;
                 State.Today = TodayRule.TodayIn(
                     DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
+                await Ownership.EnsureCurrentUserAsync(me.UserId);
                 await ReloadAreasAndCountsAsync();
             }
         }
@@ -107,6 +116,12 @@
         _ready = true;
         Coordinator.Start();
         ReadOpenTask();
+    }
+
+    void OnDesktopChanged(bool isDesktop)
+    {
+        _isDesktop = isDesktop;
+        InvokeAsync(StateHasChanged);
     }
 
     [Inject] IDialogService Dialogs { get; set; } = null!;
@@ -234,5 +249,10 @@
         Preference.Changed -= OnPreferenceChanged;
         Sender.Sent -= OnCommandSent;
         Navigation.LocationChanged -= OnLocationChanged;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await Viewport.DisposeAsync();
     }
 }

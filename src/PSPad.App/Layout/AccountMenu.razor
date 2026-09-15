@@ -5,12 +5,21 @@
 <MudMenu ActivationEvent="@MouseEvent.LeftClick" AnchorOrigin="Origin.BottomLeft" FullWidth="true"
          Class="pspad-account-menu">
     <ActivatorContent>
-        <div class="d-flex align-center gap-2 px-3 py-2">
+        @if (AvatarOnly)
+        {
             <MudAvatar Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")" Size="Size.Medium">
                 @AvatarColor.InitialOf(Email)
             </MudAvatar>
-            <MudText Typo="Typo.body2">@Email</MudText>
-        </div>
+        }
+        else
+        {
+            <div class="d-flex align-center gap-2 px-3 py-2">
+                <MudAvatar Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")" Size="Size.Medium">
+                    @AvatarColor.InitialOf(Email)
+                </MudAvatar>
+                <MudText Typo="Typo.body2">@Email</MudText>
+            </div>
+        }
     </ActivatorContent>
     <ChildContent>
         <MudMenuItem Href="/history" Icon="@Icons.Material.Filled.History">History</MudMenuItem>
@@ -48,4 +57,6 @@
     [Parameter] public Guid UserId { get; set; }
 
     [Parameter] public int PendingCommands { get; set; }
+
+    [Parameter] public bool AvatarOnly { get; set; }
 }

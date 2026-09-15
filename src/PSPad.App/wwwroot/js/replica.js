@@ -81,3 +81,17 @@ export function removeThrough(position) {
 export function count() {
   return run('outbox', 'readonly', outbox => outbox.count());
 }
+
+export function clearOutbox() {
+  return run('outbox', 'readwrite', outbox => outbox.clear());
+}
+
+export function clearReplica() {
+  return open().then(db => new Promise((resolve, reject) => {
+    const transaction = db.transaction(['documents', 'meta'], 'readwrite');
+    transaction.objectStore('documents').clear();
+    transaction.objectStore('meta').clear();
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  }));
+}

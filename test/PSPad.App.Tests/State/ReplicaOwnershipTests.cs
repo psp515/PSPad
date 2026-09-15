@@ -1,0 +1,63 @@
+using System.Text.Json;
+using PSPad.App.State;
+using PSPad.Contracts;
+using PSPad.Module.Tasks.Areas;
+using PSPad.TestInfrastructure;
+
+namespace PSPad.App.Tests.State;
+
+[UnitTest]
+public class ReplicaOwnershipTests
+{
+    [Fact]
+    public async Task FirstSignInOnADeviceRecordsTheOwnerWithoutClearing()
+    {
+        var replica = new InMemoryReplica();
+        var outbox = new InMemoryOutbox();
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope());
+        var ownership = new ReplicaOwnership(replica, outbox);
+        var user = Guid.NewGuid();
+
+        await ownership.EnsureCurrentUserAsync(user);
+
+        Assert.Equal(user, await replica.OwnerAsync());
+        Assert.Equal(1, await outbox.CountAsync());
+    }
+
+    [Fact]
+    public async Task TheSameUserSigningInAgainKeepsThePendingOutbox()
+    {
+        var replica = new InMemoryReplica();
+        var outbox = new InMemoryOutbox();
+        var user = Guid.NewGuid();
+        await replica.SetOwnerAsync(user);
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope());
+        var ownership = new ReplicaOwnership(replica, outbox);
+
+        await ownership.EnsureCurrentUserAsync(user);
+
+        Assert.Equal(1, await outbox.CountAsync());
+    }
+
+    [Fact]
+    public async Task ADifferentUserSigningInClearsTheStaleReplicaAndOutbox()
+    {
+        var replica = new InMemoryReplica();
+        var outbox = new InMemoryOutbox();
+        var previousUser = Guid.NewGuid();
+        await replica.SetOwnerAsync(previousUser);
+        await replica.SetMarkerAsync(42);
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope());
+        var ownership = new ReplicaOwnership(replica, outbox);
+        var nextUser = Guid.NewGuid();
+
+        await ownership.EnsureCurrentUserAsync(nextUser);
+
+        Assert.Equal(nextUser, await replica.OwnerAsync());
+        Assert.Equal(0, await outbox.CountAsync());
+        Assert.Equal(0, await replica.MarkerAsync());
+    }
+
+    static CommandEnvelope Envelope() =>
+        new(nameof(CreateArea), JsonSerializer.SerializeToElement(new { Name = "Home" }));
+}

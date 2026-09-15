@@ -32,6 +32,12 @@ public sealed class IndexedDbOutbox(IJSRuntime js) : IOutbox, IAsyncDisposable
         return await module.InvokeAsync<int>("count");
     }
 
+    public async Task ClearAsync()
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("clearOutbox");
+    }
+
     async Task<IJSObjectReference> ModuleAsync() =>
         _module ??= await js.InvokeAsync<IJSObjectReference>("import", "./js/replica.js");
 

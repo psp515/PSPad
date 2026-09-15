@@ -13,4 +13,10 @@ public interface IReplica
     Task<long> MarkerAsync();
 
     Task SetMarkerAsync(long marker);
+
+    Task<Guid?> OwnerAsync();
+
+    Task SetOwnerAsync(Guid userId);
+
+    Task ClearAsync();
 }
