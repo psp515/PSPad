@@ -166,6 +166,17 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItDoesNotClaimNothingIsDueWhenSomethingIsOverdue()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Buy milk", Today.AddDays(-1)));
+
+        var page = Render<Today>();
+
+        Assert.DoesNotContain("Nothing due today", page.Markup);
+    }
+
+    [Fact]
     public async Task CompletingATaskDropsTheTodayCount()
     {
         var list = NewList("Zakupy");

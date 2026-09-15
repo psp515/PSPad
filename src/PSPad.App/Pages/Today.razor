@@ -34,22 +34,25 @@ else
         </MudPaper>
     }
 
-    <MudPaper Outlined="true">
-        @if (_due.Count > 0)
-        {
-            <div class="pspad-grid">
-                @foreach (var task in _due)
-                {
-                    <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
-                             OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
-                }
-            </div>
-        }
-        else
-        {
-            <MudText Typo="Typo.body2" Class="pa-4">Nothing due today.</MudText>
-        }
-    </MudPaper>
+    @if (_due.Count > 0 || _overdue.Count == 0)
+    {
+        <MudPaper Outlined="true">
+            @if (_due.Count > 0)
+            {
+                <div class="pspad-grid">
+                    @foreach (var task in _due)
+                    {
+                        <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
+                                 OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+                    }
+                </div>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="pa-4">Nothing due today.</MudText>
+            }
+        </MudPaper>
+    }
 
     @if (_done.Count > 0)
     {
