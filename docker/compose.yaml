@@ -5,14 +5,14 @@ services:
     build:
       context: ..
       dockerfile: src/PSPad.Api/Dockerfile
-    image: pspad-api:dev
+    image: pspad-api:local
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      Mongo__ConnectionString: mongodb://pspad:pspad@mongo:27017/pspad?authSource=admin&directConnection=true
-      Mongo__Database: pspad
-      Keycloak__Authority: http://keycloak:8080/realms/pspad
-      Keycloak__Audience: pspad-api
-      Cors__AllowedOrigins__0: http://localhost:5001
+      Mongo__ConnectionString: mongodb://pspad:${MONGO_PASSWORD}@mongo:27017/${MONGO_DATABASE}?authSource=admin&directConnection=true
+      Mongo__Database: ${MONGO_DATABASE}
+      Keycloak__Authority: ${KEYCLOAK_INTERNAL_AUTHORITY}
+      Keycloak__Audience: ${KEYCLOAK_AUDIENCE}
+      Keycloak__RequireHttpsMetadata: "false"
+      Cors__AllowedOrigins__0: ${APP_BASE_ADDRESS}
     ports:
       - "5000:8080"
     depends_on:
@@ -24,12 +24,12 @@ services:
     build:
       context: ..
       dockerfile: src/PSPad.App/Dockerfile
-    image: pspad-app:dev
+    image: pspad-app:local
     environment:
-      API_BASE_ADDRESS: http://localhost:5000
-      APP_BASE_ADDRESS: http://localhost:5001
-      KEYCLOAK_AUTHORITY: http://localhost:8080/realms/pspad
-      KEYCLOAK_CLIENT_ID: pspad-app
+      API_BASE_ADDRESS: ${API_BASE_ADDRESS}
+      APP_BASE_ADDRESS: ${APP_BASE_ADDRESS}
+      KEYCLOAK_AUTHORITY: ${KEYCLOAK_AUTHORITY}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
     ports:
       - "5001:8080"
     depends_on:
@@ -41,15 +41,13 @@ services:
     entrypoint: ["bash", "/mongo-entrypoint.sh"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: pspad
-      MONGO_INITDB_ROOT_PASSWORD: pspad
-    ports:
-      - "27017:27017"
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
     volumes:
       - mongo-data:/data/db
+      - mongo-keyfile:/keyfile
       - ./mongo-entrypoint.sh:/mongo-entrypoint.sh:ro
-      - ./mongo-keyfile:/keyfile-source/mongo-keyfile:ro
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet -u pspad -p pspad --eval \"try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}).ok }\" | grep -q 1"]
+      test: ["CMD-SHELL", "mongosh --quiet -u pspad -p ${MONGO_PASSWORD} --eval \"try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}).ok }\" | grep -q 1"]
       interval: 5s
       timeout: 10s
       retries: 20
@@ -60,19 +58,25 @@ services:
     image: quay.io/keycloak/keycloak:26.0
     command: ["start-dev", "--import-realm"]
     environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_HEALTH_ENABLED: "true"
-      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME}
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_PROXY_HEADERS: xforwarded
+      APP_BASE_ADDRESS: ${APP_BASE_ADDRESS}
+      API_BASE_ADDRESS: ${API_BASE_ADDRESS}
     ports:
       - "8080:8080"
     volumes:
       - ./keycloak:/opt/keycloak/data/import:ro
+      - keycloak-data:/opt/keycloak/data
     networks: [pspad]
 
 volumes:
   mongo-data:
+  mongo-keyfile:
+  keycloak-data:
 
 networks:
   pspad:

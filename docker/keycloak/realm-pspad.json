@@ -35,25 +35,5 @@
         }
       ]
     }
-  ],
-  "users": [
-    {
-      "username": "demo",
-      "enabled": true,
-      "email": "demo@pspad.local",
-      "emailVerified": true,
-      "firstName": "Demo",
-      "lastName": "User",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "demo",
-          "temporary": false
-        }
-      ],
-      "attributes": {
-        "zoneinfo": ["Europe/Warsaw"]
-      }
-    }
   ]
 }

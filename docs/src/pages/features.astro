@@ -1,0 +1,70 @@
+---
+import Page from '../layouts/Page.astro'
+import FeatureCard from '../components/FeatureCard.astro'
+
+const features = [
+  { title: 'One Today screen', body: 'What’s due, overdue first, in your own time zone.', status: 'built' },
+  { title: 'One Inbox', body: 'Capture anything. Decide where it goes later.', status: 'built' },
+  { title: 'Areas and lists', body: 'Work, home, side projects — each with its own lists.', status: 'built' },
+  { title: 'Tasks and steps', body: 'Due dates, priorities, goals, and steps on every task.', status: 'built' },
+  { title: 'Recurrence that never nags', body: 'Miss a day, it just stays missed. Never overdue.', status: 'in-progress' },
+  { title: 'Goals across areas', body: 'One goal, tasks from anywhere, pointed at it.', status: 'in-progress' },
+  { title: 'A real history', body: 'Every change logged automatically. Nothing to drift out of sync.', status: 'in-progress' },
+  { title: 'Works with no signal', body: 'Saves locally first. Syncs once you’re back online.', status: 'in-progress' },
+  { title: 'Yours, and multi-user', body: 'Your hardware, your Keycloak, your data.', status: 'built' }
+]
+
+const built = features.filter((feature) => feature.status === 'built')
+const inProgress = features.filter((feature) => feature.status === 'in-progress')
+
+const planned = [
+  ['Habits', 'Streaks for daily habits.'],
+  ['Annual plans', 'Yearly goals, year-end summary.'],
+  ['Analytics and reminders', 'Charts, notifications, daily motivation.'],
+  ['GitHub issues', 'GitHub issues as tasks.'],
+  ['Cloud storage', 'OneDrive and Google Drive.'],
+  ['3D printing', 'Materials, parts, Thingiverse links.'],
+  ['Checklists', 'Reusable checklists.']
+]
+---
+<Page
+  title="PSPad features"
+  description="What PSPad does today: one Today screen across every area, one Inbox, recurrence that never goes overdue, an action history from the event log, and full offline use."
+>
+  <div class="wrap">
+    <div class="prose">
+      <h1>Features</h1>
+      <p>My own take on GTD, not a certified method.</p>
+    </div>
+
+    <div class="grid">
+      {built.map((feature) => (
+        <FeatureCard title={feature.title} status={feature.status}><p>{feature.body}</p></FeatureCard>
+      ))}
+    </div>
+
+    <div class="prose">
+      <h2>In progress</h2>
+    </div>
+
+    <div class="grid">
+      {inProgress.map((feature) => (
+        <FeatureCard title={feature.title} status={feature.status}><p>{feature.body}</p></FeatureCard>
+      ))}
+    </div>
+
+    <div class="prose">
+      <h2>Planned</h2>
+    </div>
+
+    <div class="grid">
+      {planned.map(([title, body]) => (
+        <FeatureCard title={title} status="planned"><p>{body}</p></FeatureCard>
+      ))}
+    </div>
+  </div>
+</Page>
+
+<style>
+  .grid { margin: 32px 0; }
+</style>

@@ -1,0 +1,15 @@
+{
+  "name": "pspad-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "icons": "node scripts/render-icons.mjs"
+  },
+  "devDependencies": {
+    "astro": "^5.13.0",
+    "sharp": "^0.33.5"
+  }
+}

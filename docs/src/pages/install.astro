@@ -1,0 +1,186 @@
+---
+import Page from '../layouts/Page.astro'
+import Callout from '../components/Callout.astro'
+import EnvTable from '../components/EnvTable.astro'
+import Step from '../components/Step.astro'
+import { parseEnvExample, readRepoFile } from '../lib/repo'
+
+const compose = readRepoFile('docker/compose.yaml')
+const entries = parseEnvExample(readRepoFile('docker/.env.example'))
+---
+<Page
+  title="Install PSPad"
+  description="Run PSPad on your own hardware with Docker Compose: the stack, every environment variable, the secrets, and the first sign-in."
+>
+  <div class="wrap prose">
+    <h1>Install</h1>
+    <p>
+      Four containers — API, client, MongoDB, Keycloak — one Compose file. Budget a
+      few minutes for the first build.
+    </p>
+
+    <h2>Before you start</h2>
+    <ul>
+      <li>Docker with Compose v2 (<code>docker compose version</code> prints v2.x).</li>
+      <li>About 2 GB of disk.</li>
+      <li>Beyond <code>localhost</code>: a reverse proxy for TLS. The stack serves plain HTTP only.</li>
+    </ul>
+
+    <Step n={1} title="Clone the repository">
+      <pre><code>git clone https://github.com/psp515/PSPad.git
+cd PSPad</code></pre>
+    </Step>
+
+    <Step n={2} title="Create your environment file">
+      <pre><code>cp docker/.env.example docker/.env</code></pre>
+      <p>
+        Do this first, or the stack starts with empty values. Defaults work on
+        <code>localhost</code> — change <code>MONGO_PASSWORD</code> and
+        <code>KEYCLOAK_ADMIN_PASSWORD</code> before it's reachable from anywhere else.
+      </p>
+      <EnvTable entries={entries} />
+      <Callout kind="warning" title="Two Keycloak URLs">
+        <p>
+          <code>KEYCLOAK_AUTHORITY</code> is for your <strong>browser</strong>.
+          <code>KEYCLOAK_INTERNAL_AUTHORITY</code> is for the <strong>API container</strong> —
+          they reach Keycloak by different names, so <code>localhost</code> means something
+          different to each. Running an external Keycloak? Set both to the same address.
+        </p>
+      </Callout>
+      <Callout title="The admin credentials apply once">
+        <p>
+          <code>KEYCLOAK_ADMIN_USER</code> and <code>KEYCLOAK_ADMIN_PASSWORD</code> only
+          apply on the very first start. Change the password in the Keycloak console
+          afterwards — editing <code>.env</code> later does nothing.
+        </p>
+      </Callout>
+    </Step>
+
+    <Step n={3} title="Start the stack">
+      <pre><code>docker compose -f docker/compose.yaml up -d --build</code></pre>
+      <p>The first build takes a few minutes. Mongo starts as a replica set — required for transactions. Wait for it to report healthy:</p>
+      <pre><code>docker compose -f docker/compose.yaml ps</code></pre>
+      <p>
+        <code>api</code>, <code>app</code> and <code>keycloak</code> show a bare
+        <code>Up</code> forever — that's normal. Confirm the API is actually answering:
+      </p>
+      <pre><code>curl -s -o /dev/null -w "%{'{'}http_code{'}'}\n" http://localhost:5000/api/today</code></pre>
+      <p><code>401</code> is correct — you're just not signed in yet. Anything else means the stack didn't come up cleanly.</p>
+      <Callout title="The API runs in Production mode, on purpose">
+        <p>
+          It can still reach Keycloak over plain HTTP because <code>compose.yaml</code> sets
+          <code>Keycloak__RequireHttpsMetadata: "false"</code> for the <code>api</code> service
+          directly — not because it's in Development mode. Putting Keycloak behind HTTPS later?
+          Flip that value instead of setting <code>ASPNETCORE_ENVIRONMENT</code>, which would
+          also leak stack traces to anyone who can reach the API.
+        </p>
+      </Callout>
+    </Step>
+
+    <Step n={4} title="Create your first user">
+      <p>No registration screen — accounts live in Keycloak, and you need one before the app is usable.</p>
+      <ol>
+        <li>
+          Open the admin console at <code>KEYCLOAK_HOSTNAME</code>
+          (<code>http://localhost:8080</code> by default) and sign in with
+          <code>KEYCLOAK_ADMIN_USER</code> / <code>KEYCLOAK_ADMIN_PASSWORD</code>.
+        </li>
+        <li>Switch realm from <strong>master</strong> to <strong>pspad</strong>.</li>
+        <li>
+          <strong>Users</strong> → <strong>Create new user</strong>. Fill in username, email,
+          first and last name.
+        </li>
+        <li>
+          Then <strong>Credentials</strong> → <strong>Set password</strong>, with
+          <em>Temporary</em> off — otherwise Keycloak forces a password change the client
+          can't show.
+        </li>
+      </ol>
+    </Step>
+
+    <Step n={5} title="Sign in">
+      <p>
+        Open <code>APP_BASE_ADDRESS</code>, sign in, and land on My Day — empty at first,
+        while three starter areas provision in the background. Install it from your
+        browser's address bar for the offline app.
+      </p>
+      <Callout kind="warning" title="Give it 20–30 seconds before you trust something is saved">
+        <p>
+          The app is offline-first: new tasks save to your browser immediately and sync to
+          the server every 20–30 seconds. Restart the stack right after creating something
+          and it's gone — it never made it to MongoDB.
+        </p>
+      </Callout>
+    </Step>
+
+    <h2>The stack, in full</h2>
+    <p><code>docker/compose.yaml</code>, exactly as it ships:</p>
+    <pre><code>{compose}</code></pre>
+
+    <h2>Putting it behind a proxy</h2>
+    <p>
+      Point three hostnames at the published ports — client <code>5001</code>, API
+      <code>5000</code>, Keycloak <code>8080</code> — terminate TLS at the proxy, and forward
+      <code>X-Forwarded-For</code> and <code>X-Forwarded-Proto</code>.
+    </p>
+    <ol>
+      <li>
+        Set <code>APP_BASE_ADDRESS</code>, <code>API_BASE_ADDRESS</code>,
+        <code>KEYCLOAK_AUTHORITY</code> and <code>KEYCLOAK_HOSTNAME</code> in
+        <code>docker/.env</code> to your public <code>https://</code> URLs.
+      </li>
+      <li>
+        <strong>Update the Keycloak client too, or sign-in fails.</strong> The bundled realm
+        ships with <code>http://localhost:5001/*</code> baked into its redirect URI — changing
+        <code>APP_BASE_ADDRESS</code> doesn't touch it. Realm <strong>pspad</strong> →
+        <strong>Clients</strong> → <strong>pspad-app</strong> → update
+        <strong>Valid redirect URIs</strong>. <strong>Web origins</strong> follows
+        automatically (it's <code>+</code>, unless you've changed it).
+      </li>
+      <li>Recreate the stack:
+        <pre><code>docker compose -f docker/compose.yaml up -d --force-recreate</code></pre>
+      </li>
+    </ol>
+    <p>MongoDB publishes no port — it's reachable only from the other containers.</p>
+
+    <h2>Backups</h2>
+    <p>Three volumes hold everything:</p>
+    <ul>
+      <li><code>pspad_mongo-data</code> — areas, lists, tasks, the event log.</li>
+      <li><code>pspad_mongo-keyfile</code> — the replica-set key. Lose it and <code>mongo-data</code> won't start.</li>
+      <li><code>pspad_keycloak-data</code> — accounts and realm config.</li>
+    </ul>
+    <p>Dump the database:</p>
+    <pre><code>docker compose -f docker/compose.yaml exec -T mongo \
+  sh -c 'mongodump --archive --username pspad --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' \
+  > pspad-backup.archive</code></pre>
+    <p>
+      Keep the single quotes — the password only exists inside the <code>mongo</code>
+      container. Double quotes would expand it on your host instead, where it's empty.
+    </p>
+
+    <h2>Upgrading, restarting</h2>
+    <pre><code>git pull
+docker compose -f docker/compose.yaml up -d --build</code></pre>
+    <p>
+      Volumes survive — only <code>down -v</code> destroys them. Give Mongo 10–30 seconds to
+      report healthy again before assuming something's broken.
+    </p>
+
+    <h2>Two things worth knowing</h2>
+    <Callout kind="warning" title="Keycloak runs in development mode">
+      <p>
+        Its data lives in an embedded H2 database on a volume — fine for one user, but
+        Keycloak doesn't support that mode for production, and a major image upgrade might
+        not migrate cleanly. Export the realm before bumping it.
+      </p>
+    </Callout>
+    <Callout kind="warning" title="The old keyfile is in the git history">
+      <p>
+        Early commits included <code>docker/mongo-keyfile</code>. Yours generates its own on
+        first start and never uses that one. The old key only matters to someone who can
+        already reach your MongoDB, which publishes no port.
+      </p>
+    </Callout>
+  </div>
+</Page>

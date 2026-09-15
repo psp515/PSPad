@@ -19,6 +19,7 @@ public class NavSidebarTests : Bunit.TestContext
     [Theory]
     [InlineData("My Day")]
     [InlineData("Inbox")]
+    [InlineData("Goals")]
     [InlineData("New area")]
     public void ItCarriesEverySection(string text)
     {
@@ -69,13 +70,13 @@ public class NavSidebarTests : Bunit.TestContext
     }
 
     [Fact]
-    public void GoalsAndHistoryAreNotSidebarRows()
+    public void GoalsIsASidebarRowButHistoryIsNot()
     {
         Arrange();
 
         var sidebar = Render(Areas("Dom"));
 
-        Assert.DoesNotContain("/goals\"", sidebar.Markup);
+        Assert.Contains("/goals\"", sidebar.Markup);
         Assert.DoesNotContain("/history\"", sidebar.Markup);
     }
 

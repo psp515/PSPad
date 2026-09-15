@@ -147,6 +147,8 @@ test/
   PSPad.Api.Tests/              integration, Testcontainers MongoDB
   PSPad.App.Tests/              unit + bUnit component tests
   PSPad.TestInfrastructure/     Mongo fixture, trait constants, architecture guards
+brand/                   icon.svg — the single icon master
+docs/                    Astro documentation site, published to GitHub Pages
 specs/                   design specs — slice 1, and the client redesigns
 adr/                     architecture decision records + index and template
 .superpowers/sdd/        working plans for in-flight features (not committed)
@@ -353,6 +355,16 @@ as the superseded first pass. They answer *what the intended behaviour is*
 at a level the code does not state and AGENTS.md only summarises. Where a
 spec and an ADR disagree, the ADR wins — it is the decision of record; where
 a spec and the code disagree, say so rather than silently following either.
+
+**Docs ship with the change.** A change to what a self-hoster runs (compose
+services, environment variables, secrets, ports) updates
+`docs/src/pages/install.astro`; a change to what the application does (a new
+screen, a new capability, scope moving from *later* to *now*) updates
+`features.astro` and the landing page. Same piece of work, never a follow-up.
+The compose block and the environment table are read from
+`docker/compose.yaml` and `docker/.env.example` at build time and need no hand
+edit — but a new variable needs its `#` description comment in `.env.example`,
+and the prose around them is hand-written.
 
 **TDD.** Failing test first. Today rule and recurrence rule are where bugs hurt
 most.

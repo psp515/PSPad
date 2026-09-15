@@ -1,0 +1,27 @@
+---
+import type { EnvEntry } from '../lib/repo'
+
+interface Props { entries: EnvEntry[] }
+const { entries } = Astro.props
+---
+<div class="scroll">
+  <table>
+    <thead>
+      <tr><th>Variable</th><th>Default</th><th>What it is</th></tr>
+    </thead>
+    <tbody>
+      {entries.map((entry) => (
+        <tr>
+          <td><code>{entry.name}</code></td>
+          <td><code>{entry.value}</code></td>
+          <td>{entry.description}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .scroll { overflow-x: auto; }
+  td code { overflow-wrap: anywhere; }
+</style>

@@ -1,0 +1,141 @@
+---
+import Mark from './Mark.astro'
+import { join } from '../lib/repo'
+
+const base = import.meta.env.BASE_URL
+---
+<section class="hero-bg">
+  <div class="hero wrap">
+    <div class="hero-inner">
+      <div>
+        <Mark size={72} />
+        <h1>Your day, on your own hardware.</h1>
+        <p class="claim">
+          A self-hosted GTD notepad.
+        </p>
+        <p class="actions">
+          <a class="button button-primary" href={join(base, 'install')}>Install it</a>
+          <a class="button button-secondary" href={join(base, 'features')}>See what it does</a>
+        </p>
+      </div>
+      <div class="mock" aria-hidden="true">
+        <p class="mock-title">My Day</p>
+        <div class="row overdue"><span class="box"></span><span>Renew the domain<em>yesterday</em></span></div>
+        <div class="row"><span class="box"></span><span>Draft the release notes<em>today</em></span></div>
+        <div class="row"><span class="box"></span><span>Read a book<em>every day</em></span></div>
+        <div class="row done"><span class="box checked"></span><span>Water the plants<em>today</em></span></div>
+      </div>
+    </div>
+  </div>
+
+  <a class="scroll-cue" href="#more" aria-label="Scroll down for more">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  </a>
+</section>
+
+<style>
+  .hero-bg {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+  }
+
+  .hero {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  .hero-inner {
+    display: grid;
+    gap: 48px;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  @media (min-width: 900px) {
+    .hero-inner { grid-template-columns: 1.1fr 0.9fr; align-items: center; }
+  }
+
+  h1 { margin: 16px 0; }
+
+  .claim { font-size: 1.15rem; color: var(--muted); max-width: 52ch; }
+
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+
+  .mock {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--lines);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  .mock-title { margin: 0 0 16px; font-weight: 700; }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--lines);
+  }
+
+  .row span { display: flex; align-items: center; gap: 8px; width: 100%; }
+
+  .row em {
+    margin-left: auto;
+    font-style: normal;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .row .box {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    border: 2px solid var(--secondary);
+    border-radius: 5px;
+  }
+
+  .row .box.checked { background: var(--primary); border-color: var(--primary); }
+
+  .overdue em { color: var(--warning); font-weight: 600; }
+
+  .done { color: var(--muted); text-decoration: line-through; }
+
+  .scroll-cue {
+    position: absolute;
+    z-index: 1;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--lines);
+    border-radius: 50%;
+    color: var(--muted);
+    background: var(--surface);
+    animation: bob 2s ease-in-out infinite;
+  }
+
+  .scroll-cue:hover { color: var(--primary); border-color: var(--primary); }
+
+  @keyframes bob {
+    0%, 100% { transform: translate(-50%, 0); }
+    50% { transform: translate(-50%, 6px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-cue { animation: none; }
+  }
+</style>

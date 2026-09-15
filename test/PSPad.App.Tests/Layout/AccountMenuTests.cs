@@ -15,7 +15,6 @@ public class AccountMenuTests : Bunit.TestContext
     static readonly Guid User = Guid.Parse("6f1d2c3b-0000-4000-8000-000000000001");
 
     [Theory]
-    [InlineData("Goals")]
     [InlineData("History")]
     [InlineData("Theme")]
     [InlineData("Sign out")]
@@ -27,6 +26,17 @@ public class AccountMenuTests : Bunit.TestContext
         OpenMenu(menu);
 
         Assert.Contains(entry, menu.Markup);
+    }
+
+    [Fact]
+    public void ItNoLongerOffersGoalsNowThatTheSidebarDoes()
+    {
+        Arrange();
+
+        var menu = Render(BuildMenu("Kolber", "kolberu@gmail.com", User, pendingCommands: 0));
+        OpenMenu(menu);
+
+        Assert.DoesNotContain("Goals", menu.Markup);
     }
 
     [Fact]
