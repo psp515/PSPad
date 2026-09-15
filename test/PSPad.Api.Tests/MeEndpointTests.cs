@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using PSPad.Contracts;
 using PSPad.TestInfrastructure;
@@ -51,5 +52,35 @@ public class MeEndpointTests(MongoFixture fixture)
 
         Assert.NotNull(me);
         Assert.Equal("Ada Lovelace", me.DisplayName);
+    }
+
+    [Fact]
+    public async Task ItSetsTheTimeZone()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(
+            Guid.NewGuid().ToString(), name: "Ada Lovelace", email: "ada@example.com");
+
+        var response = await client.PutAsJsonAsync(
+            "api/me/timezone", new SetTimeZoneRequest("Europe/Warsaw"), ct);
+
+        response.EnsureSuccessStatusCode();
+        var me = await response.Content.ReadFromJsonAsync<MeResponse>(ct);
+        Assert.Equal("Europe/Warsaw", me!.TimeZone);
+    }
+
+    [Fact]
+    public async Task ItRejectsAZoneTheServerDoesNotKnow()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(
+            Guid.NewGuid().ToString(), name: "Ada Lovelace", email: "ada@example.com");
+
+        var response = await client.PutAsJsonAsync(
+            "api/me/timezone", new SetTimeZoneRequest("Mars/Olympus_Mons"), ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }
