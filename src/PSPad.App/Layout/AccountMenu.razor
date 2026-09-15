@@ -1,6 +1,4 @@
 @using PSPad.App.State
-@using PSPad.App.Theme
-@inject ThemePreference Preference
 
 <MudMenu ActivationEvent="@MouseEvent.LeftClick" AnchorOrigin="Origin.BottomLeft" FullWidth="true"
          Class="pspad-account-menu">
@@ -8,42 +6,30 @@
         @if (AvatarOnly)
         {
             <MudAvatar Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")" Size="Size.Medium">
-                @AvatarColor.InitialOf(Email)
+                @AvatarColor.InitialOf(DisplayName.Length > 0 ? DisplayName : Email)
             </MudAvatar>
         }
         else
         {
-            <div class="d-flex align-center gap-2 px-3 py-2">
+            <div class="d-flex align-center gap-2 px-3 py-2 pspad-account-activator">
                 <MudAvatar Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")" Size="Size.Medium">
-                    @AvatarColor.InitialOf(Email)
+                    @AvatarColor.InitialOf(DisplayName.Length > 0 ? DisplayName : Email)
                 </MudAvatar>
-                <MudText Typo="Typo.body2">@Email</MudText>
+                <div class="pspad-account-identity">
+                    <MudText Typo="Typo.body2">@(DisplayName.Length > 0 ? DisplayName : Email)</MudText>
+                    @if (DisplayName.Length > 0 && Email.Length > 0)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@Email</MudText>
+                    }
+                </div>
+                <MudSpacer />
+                <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
             </div>
         }
     </ActivatorContent>
     <ChildContent>
+        <MudMenuItem Href="/settings" Icon="@Icons.Material.Filled.Settings">Settings</MudMenuItem>
         <MudMenuItem Href="/history" Icon="@Icons.Material.Filled.History">History</MudMenuItem>
-        <MudDivider />
-        <MudMenuItem Icon="@Icons.Material.Filled.Brightness4">
-            <div class="d-flex align-center gap-2">
-                <MudText Typo="Typo.body2">Theme</MudText>
-                <MudButtonGroup Size="Size.Small" Variant="Variant.Text">
-                    @foreach (var mode in Enum.GetValues<ThemeMode>())
-                    {
-                        <MudButton OnClick="@(() => Preference.SetAsync(mode))"
-                                   Color="@(Preference.Mode == mode ? Color.Primary : Color.Default)">
-                            @mode
-                        </MudButton>
-                    }
-                </MudButtonGroup>
-            </div>
-        </MudMenuItem>
-        @if (PendingCommands > 0)
-        {
-            <MudMenuItem Icon="@Icons.Material.Filled.CloudSync">
-                @($"Sync: {PendingCommands} pending")
-            </MudMenuItem>
-        }
         <MudDivider />
         <MudMenuItem Href="/authentication/logout" Icon="@Icons.Material.Filled.Logout">Sign out</MudMenuItem>
     </ChildContent>
@@ -55,8 +41,6 @@
     [Parameter] public string DisplayName { get; set; } = "";
 
     [Parameter] public Guid UserId { get; set; }
-
-    [Parameter] public int PendingCommands { get; set; }
 
     [Parameter] public bool AvatarOnly { get; set; }
 }

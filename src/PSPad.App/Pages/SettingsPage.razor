@@ -1,0 +1,80 @@
+@page "/settings"
+@using PSPad.App.Api
+@using PSPad.App.State
+@using PSPad.App.Theme
+@using PSPad.Module.Tasks.Today
+@inject PSPadApiClient Api
+@inject AppState State
+@inject ThemePreference Preference
+
+<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Settings</MudText>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.subtitle2" Class="mb-3">Account</MudText>
+    <div class="d-flex align-center gap-3">
+        <MudAvatar Style="@($"background:{AvatarColor.For(State.UserId)};color:#FFFFFF")" Size="Size.Large">
+            @AvatarColor.InitialOf(State.DisplayName.Length > 0 ? State.DisplayName : State.Email)
+        </MudAvatar>
+        <div>
+            <MudText Typo="Typo.body1">@State.DisplayName</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@State.Email</MudText>
+        </div>
+    </div>
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.subtitle2" Class="mb-3">Time zone</MudText>
+    <MudSelect T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
+               Variant="Variant.Outlined" Margin="Margin.Dense">
+        @foreach (var zone in TimeZoneInfo.GetSystemTimeZones().OrderBy(zone => zone.Id))
+        {
+            <MudSelectItem T="string" Value="@zone.Id">@zone.Id</MudSelectItem>
+        }
+    </MudSelect>
+    <MudText Typo="Typo.caption">The time zone is saved on the server, so it needs a connection.</MudText>
+    @if (_rejected)
+    {
+        <MudText Typo="Typo.caption" Color="Color.Error">That change did not go through.</MudText>
+    }
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.subtitle2" Class="mb-3">Theme</MudText>
+    <MudButtonGroup Size="Size.Small" Variant="Variant.Text">
+        @foreach (var mode in Enum.GetValues<ThemeMode>())
+        {
+            <MudButton OnClick="@(() => Preference.SetAsync(mode))"
+                       Color="@(Preference.Mode == mode ? Color.Primary : Color.Default)">
+                @mode
+            </MudButton>
+        }
+    </MudButtonGroup>
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4">
+    <MudText Typo="Typo.subtitle2" Class="mb-3">Sync</MudText>
+    <MudText Typo="Typo.body2">
+        @(State.PendingCommands == 0 ? "Everything is synced." : $"{State.PendingCommands} pending")
+    </MudText>
+</MudPaper>
+
+@code {
+    bool _rejected;
+
+    public async Task ApplyTimeZoneAsync(string timeZone)
+    {
+        var me = await Api.SetTimeZoneAsync(timeZone);
+
+        if (me is null)
+        {
+            _rejected = true;
+            return;
+        }
+
+        _rejected = false;
+        State.TimeZone = me.TimeZone;
+        State.Today = TodayRule.TodayIn(
+            DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
+        StateHasChanged();
+    }
+}

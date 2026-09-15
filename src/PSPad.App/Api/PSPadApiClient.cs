@@ -8,6 +8,28 @@ public sealed class PSPadApiClient(HttpClient http) : IHistorySource, ISyncApi
 {
     public Task<MeResponse?> MeAsync() => GetAsync<MeResponse>("api/me");
 
+    public async Task<MeResponse?> SetTimeZoneAsync(string timeZone)
+    {
+        try
+        {
+            var response = await http.PutAsJsonAsync(
+                "api/me/timezone", new SetTimeZoneRequest(timeZone));
+
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<MeResponse>()
+                : null;
+        }
+        catch (AccessTokenNotAvailableException expired)
+        {
+            expired.Redirect();
+            return null;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+    }
+
     public async Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes)
     {
         try

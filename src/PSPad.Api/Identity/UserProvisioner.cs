@@ -56,6 +56,15 @@ public sealed class UserProvisioner(
         return user;
     }
 
+    public async Task<User> SetTimeZoneAsync(User user, string timeZone, CancellationToken ct)
+    {
+        var commandId = Guid.NewGuid();
+        var events = User.Decide(
+            user, new SetUserTimeZone(commandId, user.Id, timeZone), clock.UtcNow);
+
+        return await StageAndCommitAsync(user, events, commandId, ct);
+    }
+
     public async Task<User> RenameAsync(User user, string displayName, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(displayName) || user.DisplayName == displayName)
