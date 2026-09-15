@@ -34,7 +34,7 @@
                        Color="Color.Inherit" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
         <MudSpacer />
         <AccountMenu Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
-                     PendingCommands="@Coordinator.PendingCount" AvatarOnly="true" />
+                     AvatarOnly="true" />
     </MudAppBar>
 
     <MudDrawer Variant="DrawerVariant.Persistent" Open="@_isDesktop" Elevation="1"

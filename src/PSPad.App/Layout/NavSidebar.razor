@@ -8,7 +8,7 @@
 @implements INavigationEventReceiver
 
 <div class="d-flex flex-column" style="height:100%">
-    <AccountMenu Email="@Email" DisplayName="@DisplayName" UserId="@UserId" PendingCommands="@PendingCommands" />
+    <AccountMenu Email="@Email" DisplayName="@DisplayName" UserId="@UserId" />
 
     <div>
         <MudTextField T="string" @bind-Value="_query" Placeholder="Search" Immediate="true"
