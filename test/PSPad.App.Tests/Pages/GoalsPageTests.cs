@@ -42,6 +42,27 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItLaysGoalCardsOutInTheGrid()
+    {
+        Arrange(NewGoal("Eat healthier"));
+
+        var page = Render<GoalsPage>();
+
+        Assert.NotNull(page.Find(".pspad-grid"));
+    }
+
+    [Fact]
+    public void ItShowsCardSkeletonsBeforeItHasLoaded()
+    {
+        ArrangeWithPendingStore();
+
+        var page = Render<GoalsPage>();
+
+        Assert.Single(page.FindComponents<CardSkeleton>());
+        Assert.DoesNotContain("No goals yet.", page.Markup);
+    }
+
+    [Fact]
     public void EachGoalIsACard()
     {
         Arrange(NewGoal("Eat healthier"), NewGoal("Ship the redesign"));
@@ -167,6 +188,21 @@ public class GoalsPageTests : Bunit.TestContext
 
     InMemoryReplica Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12), documents);
+
+    void ArrangeWithPendingStore()
+    {
+        Arrange();
+        Services.AddSingleton<IDocumentStore<Goal>>(new NeverLoadingGoalStore());
+    }
+
+    sealed class NeverLoadingGoalStore : IDocumentStore<Goal>
+    {
+        public Task<Goal?> LoadAsync(Guid id, CancellationToken ct) =>
+            new TaskCompletionSource<Goal?>().Task;
+
+        public Task<IReadOnlyList<Goal>> LoadAllAsync(Guid userId, CancellationToken ct) =>
+            new TaskCompletionSource<IReadOnlyList<Goal>>().Task;
+    }
 
     static Goal NewGoal(string name, bool achieved = false)
     {

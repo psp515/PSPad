@@ -29,7 +29,7 @@ public class SkeletonTests : Bunit.TestContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
 
-        Assert.NotNull(Render<RowSkeleton>().Find(".pspad-grid"));
-        Assert.NotNull(Render<CardSkeleton>().Find(".pspad-grid"));
+        Assert.NotNull(Render<RowSkeleton>().Find(".pspad-grid .pspad-row-skeleton"));
+        Assert.NotNull(Render<CardSkeleton>().Find(".pspad-grid .pspad-card-skeleton"));
     }
 }
