@@ -1,6 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Api.Tests;
@@ -23,8 +24,8 @@ public class MongoBackfillTests(MongoFixture fixture)
 
         await MongoBackfill.EnsureCreatedAtAsync(context, ct);
 
-        var document = await LoadTask(context, taskId, ct);
-        Assert.Equal(at.UtcDateTime, document["createdAt"].ToUniversalTime());
+        var task = await LoadTask(context, taskId, ct);
+        Assert.Equal(at, task.CreatedAt);
     }
 
     [Fact]
@@ -36,52 +37,65 @@ public class MongoBackfillTests(MongoFixture fixture)
         var taskId = Guid.NewGuid();
         var stored = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero);
 
-        await InsertTaskWithCreatedAt(context, userId, taskId, stored, ct);
+        await InsertTask(context, userId, taskId, stored, ct);
         await InsertTaskCreatedEvent(
             context, userId, taskId, new DateTimeOffset(2026, 2, 1, 8, 0, 0, TimeSpan.Zero), ct);
 
         await MongoBackfill.EnsureCreatedAtAsync(context, ct);
 
-        var document = await LoadTask(context, taskId, ct);
-        Assert.Equal(stored.UtcDateTime, document["createdAt"].ToUniversalTime());
+        var task = await LoadTask(context, taskId, ct);
+        Assert.Equal(stored, task.CreatedAt);
     }
 
-    static Task InsertTaskWithoutCreatedAt(MongoContext context, Guid userId, Guid taskId, CancellationToken ct) =>
-        context.Collection<BsonDocument>("todotasks").InsertOneAsync(TaskDocument(userId, taskId), cancellationToken: ct);
-
-    static Task InsertTaskWithCreatedAt(
-        MongoContext context, Guid userId, Guid taskId, DateTimeOffset createdAt, CancellationToken ct)
+    [Fact]
+    public async Task ItLeavesAnOrphanTaskAloneAndDoesNotThrow()
     {
-        var document = TaskDocument(userId, taskId);
-        document["createdAt"] = createdAt.UtcDateTime;
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var context = Persistence.TestContext.For(fixture);
+        var userId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+
+        await InsertTaskWithoutCreatedAt(context, userId, taskId, ct);
+
+        await MongoBackfill.EnsureCreatedAtAsync(context, ct);
+
+        var task = await LoadTask(context, taskId, ct);
+        Assert.Null(task.CreatedAt);
+    }
+
+    static Task InsertTask(MongoContext context, Guid userId, Guid taskId, DateTimeOffset createdAt, CancellationToken ct) =>
+        context.Collection<TodoTask>().InsertOneAsync(NewTask(userId, taskId, createdAt), cancellationToken: ct);
+
+    static Task InsertTaskWithoutCreatedAt(MongoContext context, Guid userId, Guid taskId, CancellationToken ct)
+    {
+        var document = NewTask(userId, taskId, DateTimeOffset.UtcNow).ToBsonDocument();
+        document.Remove("createdAt");
         return context.Collection<BsonDocument>("todotasks").InsertOneAsync(document, cancellationToken: ct);
     }
 
     static Task InsertTaskCreatedEvent(
         MongoContext context, Guid userId, Guid taskId, DateTimeOffset at, CancellationToken ct) =>
-        context.Collection<BsonDocument>("events").InsertOneAsync(new BsonDocument
+        context.Collection<StoredEvent>("events").InsertOneAsync(new StoredEvent
         {
-            { "seq", 1L },
-            { "userId", new BsonBinaryData(userId, GuidRepresentation.Standard) },
-            { "aggregateType", "TodoTask" },
-            { "aggregateId", new BsonBinaryData(taskId, GuidRepresentation.Standard) },
-            { "type", "TaskCreated" },
-            { "payload", "{}" },
-            { "at", at.UtcDateTime }
+            Seq = 1,
+            UserId = userId,
+            AggregateType = nameof(TodoTask),
+            AggregateId = taskId,
+            Type = nameof(TaskCreated),
+            Payload = "{}",
+            At = at
         }, cancellationToken: ct);
 
-    static Task<BsonDocument> LoadTask(MongoContext context, Guid taskId, CancellationToken ct) =>
-        context.Collection<BsonDocument>("todotasks")
-            .Find(Builders<BsonDocument>.Filter.Eq("_id", new BsonBinaryData(taskId, GuidRepresentation.Standard)))
+    static Task<TodoTask> LoadTask(MongoContext context, Guid taskId, CancellationToken ct) =>
+        context.Collection<TodoTask>()
+            .Find(Builders<TodoTask>.Filter.Eq(task => task.Id, taskId))
             .SingleAsync(ct);
 
-    static BsonDocument TaskDocument(Guid userId, Guid taskId) => new()
+    static TodoTask NewTask(Guid userId, Guid taskId, DateTimeOffset createdAt)
     {
-        { "_id", new BsonBinaryData(taskId, GuidRepresentation.Standard) },
-        { "userId", new BsonBinaryData(userId, GuidRepresentation.Standard) },
-        { "version", 1 },
-        { "deleted", false },
-        { "listId", new BsonBinaryData(Guid.NewGuid(), GuidRepresentation.Standard) },
-        { "name", "Task" }
-    };
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(
+            null, new CreateTask(Guid.NewGuid(), userId, taskId, Guid.NewGuid(), "Task"), createdAt));
+        return task;
+    }
 }
