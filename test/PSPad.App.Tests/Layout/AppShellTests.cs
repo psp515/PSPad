@@ -108,7 +108,7 @@ public class AppShellTests : Bunit.TestContext
         removed.ApplyAll(Area.Decide(
             removed, new DeleteArea(Guid.NewGuid(), User, removed.Id), DateTimeOffset.UnixEpoch));
         Arrange(documents: [kept, removed]);
-        var authStateTask = AuthenticatedAs("Kolber", "kolberu@gmail.com");
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
 
         var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
 
@@ -176,9 +176,9 @@ public class AppShellTests : Bunit.TestContext
     }
 
     void Arrange(
-        string displayName = "Kolber",
-        string email = "kolberu@gmail.com",
-        string? emailClaim = "kolberu@gmail.com",
+        string displayName = "Ada Lovelace",
+        string email = "ada@example.com",
+        string? emailClaim = "ada@example.com",
         params Aggregate[] documents)
     {
         var today = new DateOnly(2026, 9, 12);
