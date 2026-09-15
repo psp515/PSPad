@@ -29,6 +29,9 @@ public sealed class TodoTask : Aggregate
     public DateTimeOffset? CompletedAt { get; private set; }
 
     [JsonInclude]
+    public DateTimeOffset? CreatedAt { get; private set; }
+
+    [JsonInclude]
     public RecurrenceRule? Recurrence { get; private set; }
 
     [JsonInclude]
@@ -212,6 +215,7 @@ public sealed class TodoTask : Aggregate
                 UserId = created.UserId;
                 ListId = created.ListId;
                 Name = created.Name;
+                CreatedAt = created.At;
                 break;
             case TaskRenamed renamed:
                 Name = renamed.Name;

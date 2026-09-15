@@ -93,6 +93,18 @@ public class TodoTaskTests
         Assert.Null(task.CompletedAt);
     }
 
+    [Fact]
+    public void ItRecordsWhenItWasCreated()
+    {
+        var created = new DateTimeOffset(2026, 3, 1, 9, 0, 0, TimeSpan.Zero);
+        var task = new TodoTask();
+
+        task.ApplyAll(TodoTask.Decide(
+            null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Write the plan"), created));
+
+        Assert.Equal(created, task.CreatedAt);
+    }
+
     internal static TodoTask Existing()
     {
         var task = new TodoTask();
