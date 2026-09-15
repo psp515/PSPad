@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using Bunit;
 using Bunit.TestDoubles;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
@@ -106,7 +107,7 @@ public class AppShellTests : Bunit.TestContext
         var removed = NewArea("Stare", 1);
         removed.ApplyAll(Area.Decide(
             removed, new DeleteArea(Guid.NewGuid(), User, removed.Id), DateTimeOffset.UnixEpoch));
-        Arrange(kept, removed);
+        Arrange(documents: [kept, removed]);
         var authStateTask = AuthenticatedAs("Kolber", "kolberu@gmail.com");
 
         var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
@@ -130,6 +131,18 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItTakesTheEmailFromApiMeRatherThanTheClaim()
+    {
+        Arrange(displayName: "Ada Lovelace", email: "ada@example.com", emailClaim: null);
+
+        var shell = Render<AppShell>();
+
+        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+        Assert.Equal("ada@example.com", sidebar.Email);
+        Assert.Equal("Ada Lovelace", sidebar.DisplayName);
+    }
+
+    [Fact]
     public void GoingBackDropsTheTaskButLeavesTheShellOnTheSameScreen()
     {
         Arrange();
@@ -148,7 +161,11 @@ public class AppShellTests : Bunit.TestContext
         });
     }
 
-    void Arrange(params Aggregate[] documents)
+    void Arrange(
+        string displayName = "Kolber",
+        string email = "kolberu@gmail.com",
+        string? emailClaim = "kolberu@gmail.com",
+        params Aggregate[] documents)
     {
         var today = new DateOnly(2026, 9, 12);
         var replica = AppTestHost.Arrange(this, User, today, documents);
@@ -158,7 +175,7 @@ public class AppShellTests : Bunit.TestContext
             new ReplicaDocumentStore<Module.Tasks.Inbox.Inbox>(replica),
             new AppState { UserId = User, Today = today }));
 
-        var meResponse = new MeResponse(User, "Kolber", "UTC");
+        var meResponse = new MeResponse(User, displayName, email, "UTC");
         Services.AddSingleton(new PSPadApiClient(new HttpClient(new FakeMeHandler(meResponse))
         {
             BaseAddress = new Uri("http://localhost/")
@@ -167,6 +184,10 @@ public class AppShellTests : Bunit.TestContext
         Services.AddSingleton<IConnectivity>(new FakeConnectivity());
         Services.AddScoped<SyncService>();
         Services.AddScoped<SyncCoordinator>();
+
+        var authStateTask = AuthenticatedAs(displayName, emailClaim);
+        RenderTree.Add<CascadingValue<Task<AuthenticationState>>>(parameters =>
+            parameters.Add(cascade => cascade.Value, authStateTask));
     }
 
     static Area NewArea(string name, int position)
@@ -179,10 +200,15 @@ public class AppShellTests : Bunit.TestContext
         return area;
     }
 
-    static Task<AuthenticationState> AuthenticatedAs(string name, string email)
+    static Task<AuthenticationState> AuthenticatedAs(string name, string? emailClaim)
     {
-        var identity = new ClaimsIdentity(
-            [new Claim(ClaimTypes.Name, name), new Claim("email", email)], "test");
+        var claims = new List<Claim> { new(ClaimTypes.Name, name) };
+        if (emailClaim is not null)
+        {
+            claims.Add(new Claim("email", emailClaim));
+        }
+
+        var identity = new ClaimsIdentity(claims, "test");
         return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
     }
 
