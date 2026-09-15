@@ -25,6 +25,13 @@ public class BootScreenTests
         Assert.Contains("pspad.theme", Markup);
     }
 
+    [Fact]
+    public void ItScopesBootStylesToBootWrapperNotAppElement()
+    {
+        Assert.Contains(".pspad-boot {", Markup);
+        Assert.DoesNotContain("#app {", Markup);
+    }
+
     static string PathToIndex()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
