@@ -52,6 +52,7 @@ api.MapMeEndpoints();
 api.MapHistoryEndpoints();
 
 await MongoIndexes.EnsureAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
+await MongoBackfill.EnsureCreatedAtAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 
 app.Run();
 
