@@ -59,4 +59,44 @@ public class UserTests
         user.ApplyAll(User.Decide(null, Command(zone), Now));
         return user;
     }
+
+    static User Provisioned(string subject, string displayName)
+    {
+        var user = new User();
+        user.ApplyAll(User.Decide(
+            null, new ProvisionUser(Guid.NewGuid(), Guid.Empty, subject, displayName, "Etc/UTC"), Now));
+        return user;
+    }
+
+    [Fact]
+    public void ItSetsANewDisplayName()
+    {
+        var user = Provisioned("ada@example.com", "old name");
+
+        var events = User.Decide(
+            user, new SetUserDisplayName(Guid.NewGuid(), user.Id, "Ada Lovelace"), Now);
+
+        var renamed = Assert.IsType<UserDisplayNameSet>(Assert.Single(events));
+        Assert.Equal("Ada Lovelace", renamed.DisplayName);
+    }
+
+    [Fact]
+    public void ItIgnoresADisplayNameThatHasNotChanged()
+    {
+        var user = Provisioned("ada@example.com", "Ada Lovelace");
+
+        var events = User.Decide(
+            user, new SetUserDisplayName(Guid.NewGuid(), user.Id, "Ada Lovelace"), Now);
+
+        Assert.Empty(events);
+    }
+
+    [Fact]
+    public void ItRejectsABlankDisplayName()
+    {
+        var user = Provisioned("ada@example.com", "Ada Lovelace");
+
+        Assert.Throws<DomainRejectedException>(() => User.Decide(
+            user, new SetUserDisplayName(Guid.NewGuid(), user.Id, "   "), Now));
+    }
 }

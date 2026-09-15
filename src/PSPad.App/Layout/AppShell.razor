@@ -97,13 +97,12 @@
         var authState = AuthStateTask is null ? null : await AuthStateTask;
         if (authState?.User.Identity?.IsAuthenticated == true)
         {
-            _email = authState.User.FindFirst("email")?.Value ?? authState.User.Identity.Name ?? "";
-
             var me = await Api.MeAsync();
 
             if (me is not null)
             {
                 _displayName = me.DisplayName;
+                _email = me.Email;
                 State.UserId = me.UserId;
                 State.TimeZone = me.TimeZone;
                 State.Today = TodayRule.TodayIn(

@@ -41,6 +41,13 @@ public sealed class User : Aggregate
                 var id = RequireZone(zone.TimeZone);
                 return existing.TimeZone == id ? [] : [new UserTimeZoneSet(existing.Id, existing.Id, at, id)];
 
+            case SetUserDisplayName rename:
+                var renaming = Require(user);
+                var displayName = RequireDisplayName(rename.DisplayName);
+                return renaming.DisplayName == displayName
+                    ? []
+                    : [new UserDisplayNameSet(renaming.Id, renaming.Id, at, displayName)];
+
             default:
                 throw new DomainRejectedException($"A user cannot handle {command.GetType().Name}.");
         }
@@ -61,6 +68,9 @@ public sealed class User : Aggregate
             case UserTimeZoneSet zoneSet:
                 TimeZone = zoneSet.TimeZone;
                 break;
+            case UserDisplayNameSet renamed:
+                DisplayName = renamed.DisplayName;
+                break;
         }
     }
 
@@ -78,4 +88,9 @@ public sealed class User : Aggregate
             throw new DomainRejectedException($"{id} is not a time zone this system knows.");
         }
     }
+
+    static string RequireDisplayName(string displayName) =>
+        string.IsNullOrWhiteSpace(displayName)
+            ? throw new DomainRejectedException("A user needs a display name.")
+            : displayName.Trim();
 }
