@@ -17,3 +17,32 @@ html, body {
     right: 24px;
     z-index: 1200;
 }
+
+.pspad-brand-loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 0;
+}
+
+.pspad-brand-loader .pspad-boot-mark {
+    width: 72px;
+    height: 72px;
+}
+
+.pspad-brand-loader .pspad-boot-check {
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+    animation: pspad-draw 1.8s ease-in-out infinite;
+}
+
+@keyframes pspad-draw {
+    0%   { stroke-dashoffset: 200; }
+    45%  { stroke-dashoffset: 0; }
+    75%  { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: -200; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pspad-brand-loader .pspad-boot-check { animation: none; stroke-dashoffset: 0; }
+}

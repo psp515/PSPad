@@ -9,6 +9,7 @@ using MudBlazor;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App.Api;
+using PSPad.App.Components;
 using PSPad.App.Layout;
 using PSPad.App.State;
 using PSPad.App.Sync;
@@ -106,7 +107,7 @@ public class AppShellTests : Bunit.TestContext
         var removed = NewArea("Stare", 1);
         removed.ApplyAll(Area.Decide(
             removed, new DeleteArea(Guid.NewGuid(), User, removed.Id), DateTimeOffset.UnixEpoch));
-        Arrange(kept, removed);
+        Arrange(documents: [kept, removed]);
         var authStateTask = AuthenticatedAs("Kolber", "kolberu@gmail.com");
 
         var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
@@ -130,6 +131,17 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItShowsTheBrandLoaderUntilTheShellIsReady()
+    {
+        Arrange(resolveMe: false);
+        var authStateTask = AuthenticatedAs("Kolber", "kolberu@gmail.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        Assert.Single(shell.FindComponents<BrandLoader>());
+    }
+
+    [Fact]
     public void GoingBackDropsTheTaskButLeavesTheShellOnTheSameScreen()
     {
         Arrange();
@@ -148,7 +160,7 @@ public class AppShellTests : Bunit.TestContext
         });
     }
 
-    void Arrange(params Aggregate[] documents)
+    void Arrange(bool resolveMe = true, params Aggregate[] documents)
     {
         var today = new DateOnly(2026, 9, 12);
         var replica = AppTestHost.Arrange(this, User, today, documents);
@@ -159,7 +171,7 @@ public class AppShellTests : Bunit.TestContext
             new AppState { UserId = User, Today = today }));
 
         var meResponse = new MeResponse(User, "Kolber", "UTC");
-        Services.AddSingleton(new PSPadApiClient(new HttpClient(new FakeMeHandler(meResponse))
+        Services.AddSingleton(new PSPadApiClient(new HttpClient(new FakeMeHandler(meResponse, resolveMe))
         {
             BaseAddress = new Uri("http://localhost/")
         }));
@@ -195,13 +207,15 @@ public class AppShellTests : Bunit.TestContext
 #pragma warning restore CS0067
     }
 
-    sealed class FakeMeHandler(MeResponse response) : HttpMessageHandler
+    sealed class FakeMeHandler(MeResponse response, bool resolveMe) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken ct) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = JsonContent.Create(response)
-            });
+            resolveMe
+                ? Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(response)
+                })
+                : new TaskCompletionSource<HttpResponseMessage>().Task;
     }
 }
