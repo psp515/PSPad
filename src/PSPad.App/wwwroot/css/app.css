@@ -46,3 +46,14 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
     .pspad-brand-loader .pspad-boot-check { animation: none; stroke-dashoffset: 0; }
 }
+
+.pspad-grid {
+    display: grid;
+    gap: 1px;
+    background: var(--mud-palette-lines-default);
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+}
+
+.pspad-grid > * {
+    background: var(--mud-palette-surface);
+}
