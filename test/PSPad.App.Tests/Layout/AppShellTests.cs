@@ -143,6 +143,20 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItRendersSafelyForAnUnauthenticatedUser()
+    {
+        Arrange();
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(
+            Task.FromResult(new AuthenticationState(new ClaimsPrincipal()))));
+
+        Assert.Empty(shell.FindComponents<MudProgressCircular>());
+        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+        Assert.Equal("", sidebar.Email);
+        Assert.Equal("", sidebar.DisplayName);
+    }
+
+    [Fact]
     public void GoingBackDropsTheTaskButLeavesTheShellOnTheSameScreen()
     {
         Arrange();
