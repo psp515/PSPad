@@ -1,9 +1,44 @@
 @page "/history"
+@using PSPad.Abstractions
+@using PSPad.App.State
 @using PSPad.App.Api
 @using PSPad.Contracts
+@using PSPad.Module.Tasks.Analytics
+@using PSPad.Module.Tasks.Tasks
 @inject IHistorySource History
+@inject IDocumentStore<TodoTask> TaskStore
+@inject AppState State
 
 <MudText Typo="Typo.h5" Class="mb-4">History</MudText>
+
+@if (!_loaded)
+{
+    <div class="pspad-burndown-skeleton mb-4" role="status" aria-busy="true">
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="220px" Class="mb-2" />
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="140px" />
+    </div>
+}
+else
+{
+    <div class="pspad-burndown mb-4" data-days="@_days">
+        <MudButtonGroup Size="Size.Small" Variant="Variant.Text" Class="mb-2">
+            <MudButton OnClick="@(() => SetDays(30))" Color="@(_days == 30 ? Color.Primary : Color.Default)">
+                30 days
+            </MudButton>
+            <MudButton OnClick="@(() => SetDays(90))" Color="@(_days == 90 ? Color.Primary : Color.Default)">
+                90 days
+            </MudButton>
+        </MudButtonGroup>
+
+        <MudText Typo="Typo.subtitle2" Class="mb-1">Open tasks</MudText>
+        <MudChart ChartType="ChartType.Line" ChartSeries="@_openSeries" ChartLabels="@_labels"
+                  Width="100%" Height="220px" />
+
+        <MudText Typo="Typo.subtitle2" Class="mt-4 mb-1">Completions</MudText>
+        <MudChart ChartType="ChartType.Bar" ChartSeries="@_completedSeries" ChartLabels="@_labels"
+                  Width="100%" Height="140px" />
+    </div>
+}
 
 @if (_entries is not null)
 {
@@ -25,9 +60,51 @@
 }
 
 @code {
+    bool _loaded;
+    int _days = 30;
+    IReadOnlyList<TodoTask> _tasks = [];
+    string[] _labels = [];
+    List<ChartSeries<double>> _openSeries = [];
+    List<ChartSeries<double>> _completedSeries = [];
     List<HistoryEntry> _entries = [];
 
-    protected override async Task OnInitializedAsync() => await LoadAsync(null);
+    protected override async Task OnInitializedAsync()
+    {
+        _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        BuildSeries();
+        _loaded = true;
+
+        await LoadAsync(null);
+    }
+
+    void BuildSeries()
+    {
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(State.TimeZone);
+        var series = BurndownRule.Build(_tasks, State.Today, _days, zone);
+
+        _labels = [.. series.Points.Select(point => point.Day.ToString("MM-dd"))];
+        _openSeries = [new ChartSeries<double>
+        {
+            Name = "Open",
+            Data = series.Points.Select(point => (double)point.Open).ToArray()
+        }];
+        _completedSeries = [new ChartSeries<double>
+        {
+            Name = "Completed",
+            Data = series.Points.Select(point => (double)point.Completed).ToArray()
+        }];
+    }
+
+    void SetDays(int days)
+    {
+        if (_days == days)
+        {
+            return;
+        }
+
+        _days = days;
+        BuildSeries();
+    }
 
     async Task LoadAsync(long? before)
     {

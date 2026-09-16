@@ -53,6 +53,19 @@ public class BurndownRuleTests
     }
 
     [Fact]
+    public void ATaskCreatedAndCompletedOnTheSameDayIsClosedNotOpenAndCountsAsCompleted()
+    {
+        var sameDay = new DateTimeOffset(2026, 3, 8, 9, 0, 0, TimeSpan.Zero);
+        var task = Created(sameDay);
+        Complete(task, sameDay.AddHours(3));
+
+        var series = BurndownRule.Build([task], Today, days: 5, Utc);
+
+        Assert.Equal(0, PointOn(series, new DateOnly(2026, 3, 8)).Open);
+        Assert.Equal(1, PointOn(series, new DateOnly(2026, 3, 8)).Completed);
+    }
+
+    [Fact]
     public void ARecurringTaskNeverJoinsTheOpenLine()
     {
         var task = Created(new DateTimeOffset(2026, 3, 6, 12, 0, 0, TimeSpan.Zero));
