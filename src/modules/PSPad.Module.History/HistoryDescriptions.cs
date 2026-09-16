@@ -41,7 +41,8 @@ public static partial class HistoryDescriptions
         ["InboxItemOrganised"] = "Organised an inbox item into a task",
         ["InboxItemDiscarded"] = "Discarded an inbox item",
         ["UserProvisioned"] = "Signed in for the first time",
-        ["UserTimeZoneSet"] = "Changed the time zone"
+        ["UserTimeZoneSet"] = "Changed the time zone",
+        ["UserDisplayNameSet"] = "Updated the display name from your account"
     };
 
     public static string For(string eventType) =>
