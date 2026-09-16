@@ -78,6 +78,22 @@ public class AccountMenuTests : Bunit.TestContext
         Assert.Contains(">A<", menu.Markup);
     }
 
+    [Fact]
+    public void TheAvatarOnlyActivatorHasPadding()
+    {
+        Arrange();
+
+        var menu = Render<AccountMenu>(parameters => parameters
+            .Add(account => account.DisplayName, "Ada Lovelace")
+            .Add(account => account.Email, "ada@example.com")
+            .Add(account => account.UserId, User)
+            .Add(account => account.AvatarOnly, true));
+
+        var wrapper = menu.Find(".pspad-account-avatar-only");
+        Assert.Contains("px-3", wrapper.ClassList);
+        Assert.Contains("py-2", wrapper.ClassList);
+    }
+
     void Arrange() => AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
 
     // MudMenu renders ChildContent into MudPopoverProvider's portal, not inline, so both

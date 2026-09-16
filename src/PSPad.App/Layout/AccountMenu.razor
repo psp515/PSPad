@@ -5,9 +5,11 @@
     <ActivatorContent>
         @if (AvatarOnly)
         {
-            <MudAvatar Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")" Size="Size.Medium">
-                @AvatarColor.InitialOf(DisplayName.Length > 0 ? DisplayName : Email)
-            </MudAvatar>
+            <div class="px-3 py-2 pspad-account-avatar-only">
+                <MudAvatar Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")" Size="Size.Medium">
+                    @AvatarColor.InitialOf(DisplayName.Length > 0 ? DisplayName : Email)
+                </MudAvatar>
+            </div>
         }
         else
         {
