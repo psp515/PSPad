@@ -160,12 +160,65 @@ public class AppShellTests : Bunit.TestContext
     [Fact]
     public void ItShowsTheBrandLoaderUntilTheShellIsReady()
     {
-        Arrange(resolveMe: false);
+        Arrange(meHangs: true);
         var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
 
         var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
 
         Assert.Single(shell.FindComponents<BrandLoader>());
+    }
+
+    [Fact]
+    public void ARetriedAccountFetchStillLoadsNormallyOnceItSucceeds()
+    {
+        Arrange(meFailures: 1);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+            Assert.Equal(User, sidebar.UserId);
+            Assert.Equal("Ada Lovelace", sidebar.DisplayName);
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public void WhenTheAccountNeverLoadsTheShellShowsARecoverableMessageInsteadOfRenderingBroken()
+    {
+        Arrange(meFailures: 10);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            Assert.Empty(shell.FindComponents<BrandLoader>());
+            Assert.Single(shell.FindComponents<MudAlert>());
+            Assert.Contains("couldn't load your account", shell.Markup, StringComparison.OrdinalIgnoreCase);
+        }, TimeSpan.FromSeconds(2));
+
+        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+        Assert.Equal("", sidebar.DisplayName);
+    }
+
+    [Fact]
+    public void RetryingFromTheRecoverableMessageLoadsTheAccount()
+    {
+        Arrange(meFailures: 10);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+        shell.WaitForAssertion(() => Assert.Single(shell.FindComponents<MudAlert>()), TimeSpan.FromSeconds(2));
+
+        _meHandler!.FailuresRemaining = 0;
+        shell.InvokeAsync(() => shell.Find(".pspad-account-retry").Click());
+
+        shell.WaitForAssertion(() =>
+        {
+            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+            Assert.Equal(User, sidebar.UserId);
+        }, TimeSpan.FromSeconds(2));
     }
 
     [Fact]
@@ -187,11 +240,14 @@ public class AppShellTests : Bunit.TestContext
         });
     }
 
+    FakeMeHandler? _meHandler;
+
     void Arrange(
         string displayName = "Ada Lovelace",
         string email = "ada@example.com",
         string? emailClaim = "ada@example.com",
-        bool resolveMe = true,
+        int meFailures = 0,
+        bool meHangs = false,
         params Aggregate[] documents)
     {
         var today = new DateOnly(2026, 9, 12);
@@ -203,10 +259,18 @@ public class AppShellTests : Bunit.TestContext
             new AppState { UserId = User, Today = today }));
 
         var meResponse = new MeResponse(User, displayName, email, "UTC");
-        Services.AddSingleton(new PSPadApiClient(new HttpClient(new FakeMeHandler(meResponse, resolveMe))
+        HttpMessageHandler handler;
+        if (meHangs)
         {
-            BaseAddress = new Uri("http://localhost/")
-        }));
+            handler = new HangingMeHandler();
+        }
+        else
+        {
+            _meHandler = new FakeMeHandler(meResponse) { FailuresRemaining = meFailures };
+            handler = _meHandler;
+        }
+
+        Services.AddSingleton(new PSPadApiClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }));
         Services.AddSingleton<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
         Services.AddSingleton<IConnectivity>(new FakeConnectivity());
         Services.AddScoped<SyncService>();
@@ -248,15 +312,28 @@ public class AppShellTests : Bunit.TestContext
 #pragma warning restore CS0067
     }
 
-    sealed class FakeMeHandler(MeResponse response, bool resolveMe) : HttpMessageHandler
+    sealed class FakeMeHandler(MeResponse response) : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken ct) =>
-            resolveMe
-                ? Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = JsonContent.Create(response)
-                })
-                : new TaskCompletionSource<HttpResponseMessage>().Task;
+        public int FailuresRemaining { get; set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            if (FailuresRemaining > 0)
+            {
+                FailuresRemaining--;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(response)
+            });
+        }
+    }
+
+    sealed class HangingMeHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            new TaskCompletionSource<HttpResponseMessage>().Task;
     }
 }

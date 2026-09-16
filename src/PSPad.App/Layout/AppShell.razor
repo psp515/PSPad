@@ -6,6 +6,7 @@
 @using PSPad.App.State
 @using PSPad.App.Sync
 @using PSPad.App.Theme
+@using PSPad.Contracts
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Ordering
 @using PSPad.Module.Tasks.Today
@@ -62,6 +63,13 @@
             {
                 @Body
             }
+            else if (_accountUnavailable)
+            {
+                <MudAlert Severity="Severity.Warning" Class="pspad-account-unavailable">
+                    Couldn't load your account. Check your connection, then
+                    <MudLink Class="pspad-account-retry" OnClick="@RetryAccountAsync">try again</MudLink>.
+                </MudAlert>
+            }
             else
             {
                 <BrandLoader />
@@ -78,6 +86,7 @@
     MudThemeProvider? _themeProvider;
     bool _themeReady;
     bool _ready;
+    bool _accountUnavailable;
     bool _drawerOpen;
     bool _isDesktop = true;
     string _email = "";
@@ -97,26 +106,75 @@
         var authState = AuthStateTask is null ? null : await AuthStateTask;
         if (authState?.User.Identity?.IsAuthenticated == true)
         {
-            var me = await Api.MeAsync();
+            await LoadAccountAsync();
+        }
+        else
+        {
+            _ready = true;
+        }
 
-            if (me is not null)
+        Coordinator.Start();
+        ReadOpenTask();
+    }
+
+    async Task LoadAccountAsync()
+    {
+        var me = await FetchAccountAsync();
+
+        if (me is null)
+        {
+            _accountUnavailable = true;
+            return;
+        }
+
+        _accountUnavailable = false;
+        _displayName = me.DisplayName;
+        _email = me.Email;
+        State.UserId = me.UserId;
+        State.DisplayName = me.DisplayName;
+        State.Email = me.Email;
+        State.TimeZone = me.TimeZone;
+        State.Today = TodayRule.TodayIn(
+            DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
+        await Ownership.EnsureCurrentUserAsync(me.UserId);
+        await ReloadAreasAndCountsAsync();
+
+        _ready = true;
+    }
+
+    async Task<MeResponse?> FetchAccountAsync()
+    {
+        const int attempts = 3;
+
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            try
             {
-                _displayName = me.DisplayName;
-                _email = me.Email;
-                State.UserId = me.UserId;
-                State.DisplayName = me.DisplayName;
-                State.Email = me.Email;
-                State.TimeZone = me.TimeZone;
-                State.Today = TodayRule.TodayIn(
-                    DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
-                await Ownership.EnsureCurrentUserAsync(me.UserId);
-                await ReloadAreasAndCountsAsync();
+                var me = await Api.MeAsync();
+                if (me is not null)
+                {
+                    return me;
+                }
+            }
+            catch (HttpRequestException)
+            {
+            }
+
+            if (attempt < attempts - 1)
+            {
+                // The WASM auth library can briefly report "authenticated" before its token cache
+                // catches up right after a sign-in redirect -- this closes that window without a
+                // long, user-visible stall.
+                await Task.Delay(TimeSpan.FromMilliseconds(200));
             }
         }
 
-        _ready = true;
-        Coordinator.Start();
-        ReadOpenTask();
+        return null;
+    }
+
+    async Task RetryAccountAsync()
+    {
+        await LoadAccountAsync();
     }
 
     void OnDesktopChanged(bool isDesktop)
