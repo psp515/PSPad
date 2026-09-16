@@ -127,7 +127,7 @@ public class AreaBoardTests : Bunit.TestContext
 
         var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
 
-        Assert.NotNull(page.Find(".pspad-grid"));
+        page.Find(".pspad-grid");
     }
 
     [Fact]

@@ -48,7 +48,7 @@ public class GoalsPageTests : Bunit.TestContext
 
         var page = Render<GoalsPage>();
 
-        Assert.NotNull(page.Find(".pspad-grid"));
+        page.Find(".pspad-grid");
     }
 
     [Fact]

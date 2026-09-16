@@ -151,7 +151,7 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        Assert.NotNull(page.Find(".pspad-grid"));
+        page.Find(".pspad-grid");
     }
 
     [Fact]

@@ -101,7 +101,7 @@ public class InboxPageTests : Bunit.TestContext
 
         var page = Render<InboxPage>();
 
-        Assert.NotNull(page.Find(".pspad-grid"));
+        page.Find(".pspad-grid");
     }
 
     [Fact]
