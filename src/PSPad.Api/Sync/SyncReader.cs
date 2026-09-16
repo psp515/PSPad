@@ -27,19 +27,34 @@ public sealed class SyncReader(MongoContext context)
             .SortBy(entry => entry.Seq)
             .ToListAsync(ct);
 
+        var areas = await ReadCollectionAsync<Area>(userId, since, ct);
+        var taskLists = await ReadCollectionAsync<TaskList>(userId, since, ct);
+        var todoTasks = await ReadCollectionAsync<TodoTask>(userId, since, ct);
+        var goals = await ReadCollectionAsync<Goal>(userId, since, ct);
+        var inboxes = await ReadCollectionAsync<Inbox>(userId, since, ct);
+        var users = await ReadCollectionAsync<User>(userId, since, ct);
+
         var documents = new Dictionary<string, JsonElement[]>
         {
-            ["areas"] = await ReadCollectionAsync<Area>(userId, since, ct),
-            ["tasklists"] = await ReadCollectionAsync<TaskList>(userId, since, ct),
-            ["todotasks"] = await ReadCollectionAsync<TodoTask>(userId, since, ct),
-            ["goals"] = await ReadCollectionAsync<Goal>(userId, since, ct),
-            ["inboxes"] = await ReadCollectionAsync<Inbox>(userId, since, ct),
-            ["users"] = await ReadCollectionAsync<User>(userId, since, ct)
+            ["areas"] = areas.Rows,
+            ["tasklists"] = taskLists.Rows,
+            ["todotasks"] = todoTasks.Rows,
+            ["goals"] = goals.Rows,
+            ["inboxes"] = inboxes.Rows,
+            ["users"] = users.Rows
         };
 
-        var marker = events.Count > 0
+        var highestDocumentSeq = new[]
+        {
+            areas.HighestSeq, taskLists.HighestSeq, todoTasks.HighestSeq,
+            goals.HighestSeq, inboxes.HighestSeq, users.HighestSeq
+        }.Max();
+
+        var highestEventSeq = events.Count > 0
             ? events[^1].Seq
             : Math.Max(since, await HighestSeqAsync(userId, ct));
+
+        var marker = Math.Max(highestEventSeq, highestDocumentSeq);
 
         return new SyncResponse(
             marker,
@@ -49,7 +64,8 @@ public sealed class SyncReader(MongoContext context)
                 .ToArray());
     }
 
-    async Task<JsonElement[]> ReadCollectionAsync<T>(Guid userId, long since, CancellationToken ct)
+    async Task<(JsonElement[] Rows, long HighestSeq)> ReadCollectionAsync<T>(
+        Guid userId, long since, CancellationToken ct)
         where T : Aggregate
     {
         var rows = await context.Collection<T>()
@@ -57,7 +73,9 @@ public sealed class SyncReader(MongoContext context)
                   Builders<T>.Filter.Gt(document => document.Seq, since))
             .ToListAsync(ct);
 
-        return rows.Select(row => JsonSerializer.SerializeToElement(row, JsonOptions)).ToArray();
+        var highestSeq = rows.Count > 0 ? rows.Max(row => row.Seq) : 0;
+
+        return (rows.Select(row => JsonSerializer.SerializeToElement(row, JsonOptions)).ToArray(), highestSeq);
     }
 
     async Task<long> HighestSeqAsync(Guid userId, CancellationToken ct)
