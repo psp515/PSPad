@@ -24,6 +24,8 @@ public class AppCssTests
         Assert.Contains("grid-template-columns: repeat(2, 1fr);", Css);
         Assert.Contains("@media (min-width: 960px)", Css);
         Assert.Contains("grid-template-columns: repeat(3, 1fr);", Css);
+        Assert.Contains("@media (min-width: 1920px)", Css);
+        Assert.Contains("grid-template-columns: repeat(4, 1fr);", Css);
     }
 
     static string PathToAppCss()

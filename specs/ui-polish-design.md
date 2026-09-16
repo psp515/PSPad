@@ -153,12 +153,19 @@ to promote Goals.
 @media (min-width: 960px) {
     .pspad-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+@media (min-width: 1920px) {
+    .pspad-grid { grid-template-columns: repeat(4, 1fr); }
+}
 ```
 
 One column on a phone, two on a tablet, three inside the existing
-`MaxWidth.Large` container — the 600px/960px thresholds match
-`BrowserViewport`'s own `Breakpoint.MdAndUp` split, so the grid and the
-desktop/mobile shell agree on where "wide enough" starts.
+`MaxWidth.Large` container, four once the viewport itself passes MudBlazor's
+`xl` breakpoint (1920px) — wide enough that even a `MaxWidth.Large`-capped
+container has room for a fourth 1fr column without any card shrinking past
+its comfortable minimum. The 600px/960px thresholds match `BrowserViewport`'s
+own `Breakpoint.MdAndUp` split, so the grid and the desktop/mobile shell
+agree on where "wide enough" starts.
 
 The area behind the grid carries no background of its own — each card is a
 `MudPaper Outlined="true"` (border in `var(--mud-palette-lines-default)`)

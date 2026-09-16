@@ -82,6 +82,12 @@ html, body {
     }
 }
 
+@media (min-width: 1920px) {
+    .pspad-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
 .pspad-inbox-expanded {
     grid-column: 1 / -1;
 }
