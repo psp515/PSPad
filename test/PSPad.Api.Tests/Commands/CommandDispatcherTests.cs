@@ -68,7 +68,7 @@ public class CommandDispatcherTests
     public async Task AMalformedPayloadIsRejectedAsUnrecoverable()
     {
         var services = new ServiceCollection().AddPSPadCommands().BuildServiceProvider();
-        var envelope = new CommandEnvelope(nameof(CreateArea), JsonSerializer.SerializeToElement(new { }));
+        var envelope = new CommandEnvelope(nameof(CreateArea), JsonSerializer.SerializeToElement<object?>(null));
 
         var response = await new CommandDispatcher(services).DispatchAsync(
             envelope, Guid.NewGuid(), CancellationToken.None);
