@@ -44,18 +44,19 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
             accepted++;
         }
 
-        if (accepted > 0)
+        var rejected = accepted < responses.Count ? responses[accepted] : null;
+
+        // A structural rejection (unknown command, malformed payload, wrong user, no handler) is a
+        // verdict against the command's own contents -- resending it unchanged rejects it
+        // identically forever, so it is dropped once surfaced instead of blocking everything behind
+        // it. A domain rejection from the command's own handler stays queued, unchanged from before.
+        var removeThrough = rejected is { Unrecoverable: true } ? accepted : accepted - 1;
+        if (removeThrough >= 0)
         {
-            // Stop at the first rejection and keep everything after it -- a later command
-            // usually depends on the one that failed, and shipping it anyway would leave the
-            // client and server disagreeing about state.
-            await outbox.RemoveThroughAsync(batch[accepted - 1].Position);
+            await outbox.RemoveThroughAsync(batch[removeThrough].Position);
         }
 
-        var rejections = accepted < responses.Count && responses[accepted].Rejection is { } reason
-            ? new[] { reason }
-            : Array.Empty<string>();
-
+        var rejections = rejected?.Rejection is { } reason ? new[] { reason } : Array.Empty<string>();
         return (accepted, rejections);
     }
 

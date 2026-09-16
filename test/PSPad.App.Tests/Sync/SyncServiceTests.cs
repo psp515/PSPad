@@ -81,6 +81,30 @@ public class SyncServiceTests
     }
 
     [Fact]
+    public async Task AnUnrecoverableRejectionIsDroppedInsteadOfWedgingTheOutbox()
+    {
+        var outbox = new InMemoryOutbox();
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope());
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope());
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope());
+        var api = new FakeApi
+        {
+            Respond = envelopes =>
+            [
+                new CommandResponse(Guid.NewGuid(), true, null),
+                new CommandResponse(Guid.NewGuid(), false, "That command is for a different user.", Unrecoverable: true),
+                new CommandResponse(Guid.NewGuid(), true, null)
+            ]
+        };
+
+        var outcome = await ServiceFor(api, outbox).SyncAsync(CancellationToken.None);
+
+        Assert.Equal(1, outcome.Pushed);
+        Assert.Equal("That command is for a different user.", Assert.Single(outcome.Rejections));
+        Assert.Equal(1, await outbox.CountAsync());
+    }
+
+    [Fact]
     public async Task PulledDocumentsOverwriteTheReplicaAndAdvanceTheMarker()
     {
         var area = new Area();
