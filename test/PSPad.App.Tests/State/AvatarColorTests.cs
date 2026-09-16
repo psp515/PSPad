@@ -43,7 +43,7 @@ public class AvatarColorTests
     }
 
     [Theory]
-    [InlineData("kolberu@gmail.com", "K")]
+    [InlineData("ada@example.com", "A")]
     [InlineData("  ada@example.org", "A")]
     [InlineData("", "?")]
     public void TheInitialIsTheFirstLetterOfTheAddress(string email, string expected)

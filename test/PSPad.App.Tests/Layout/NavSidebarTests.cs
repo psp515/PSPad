@@ -20,6 +20,7 @@ public class NavSidebarTests : Bunit.TestContext
     [InlineData("My Day")]
     [InlineData("Inbox")]
     [InlineData("Goals")]
+    [InlineData("History")]
     [InlineData("New area")]
     public void ItCarriesEverySection(string text)
     {
@@ -51,7 +52,7 @@ public class NavSidebarTests : Bunit.TestContext
         var sidebar = Render<NavSidebar>(parameters => parameters
             .Add(p => p.Areas, Array.Empty<Area>())
             .Add(p => p.AreasLoaded, false)
-            .Add(p => p.Email, "kolberu@gmail.com")
+            .Add(p => p.Email, "ada@example.com")
             .Add(p => p.UserId, User));
 
         var status = sidebar.Find("[role='status']");
@@ -85,14 +86,14 @@ public class NavSidebarTests : Bunit.TestContext
     }
 
     [Fact]
-    public void GoalsIsASidebarRowButHistoryIsNot()
+    public void GoalsAndHistoryAreBothSidebarRows()
     {
         Arrange();
 
         var sidebar = Render(Areas("Dom"));
 
         Assert.Contains("/goals\"", sidebar.Markup);
-        Assert.DoesNotContain("/history\"", sidebar.Markup);
+        Assert.Contains("/history\"", sidebar.Markup);
     }
 
     [Fact]
@@ -114,7 +115,7 @@ public class NavSidebarTests : Bunit.TestContext
 
         var sidebar = Render<NavSidebar>(parameters => parameters
             .Add(p => p.Areas, new[] { area })
-            .Add(p => p.Email, "kolberu@gmail.com")
+            .Add(p => p.Email, "ada@example.com")
             .Add(p => p.UserId, User)
             .Add(p => p.Navigated, EventCallback.Factory.Create(this, () => navigated++)));
 
@@ -131,7 +132,7 @@ public class NavSidebarTests : Bunit.TestContext
 
         var sidebar = Render<NavSidebar>(parameters => parameters
             .Add(p => p.Areas, Areas("Dom"))
-            .Add(p => p.Email, "kolberu@gmail.com")
+            .Add(p => p.Email, "ada@example.com")
             .Add(p => p.UserId, User)
             .Add(p => p.OnNewArea, EventCallback.Factory.Create(this, () => newArea++)));
 
@@ -173,7 +174,7 @@ public class NavSidebarTests : Bunit.TestContext
         builder.CloseComponent();
         builder.OpenComponent<NavSidebar>(1);
         builder.AddAttribute(2, nameof(NavSidebar.Areas), new[] { area });
-        builder.AddAttribute(3, nameof(NavSidebar.Email), "kolberu@gmail.com");
+        builder.AddAttribute(3, nameof(NavSidebar.Email), "ada@example.com");
         builder.AddAttribute(4, nameof(NavSidebar.UserId), User);
         builder.AddAttribute(5, nameof(NavSidebar.OnRenameArea),
             EventCallback.Factory.Create(this, onRenameArea));
@@ -183,7 +184,7 @@ public class NavSidebarTests : Bunit.TestContext
     IRenderedComponent<NavSidebar> Render(IReadOnlyList<Area> areas) =>
         Render<NavSidebar>(parameters => parameters
             .Add(p => p.Areas, areas)
-            .Add(p => p.Email, "kolberu@gmail.com")
+            .Add(p => p.Email, "ada@example.com")
             .Add(p => p.UserId, User));
 
     void Arrange()
