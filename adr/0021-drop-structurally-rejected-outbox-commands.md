@@ -60,15 +60,24 @@ behaviour someone has to rediscover by testing:
 
 - Dropping an unrecoverable command's outbox entry does **not** reconcile
   the local replica, which already applied the command optimistically before
-  it was queued. For the wrong-user case this is invisible in practice — the
-  malformed local write is stamped with a user id nothing ever queries for
-  again. For the version-skew case (a stale cached PWA client emitting a
-  command type a newer server no longer recognizes) the local write is
-  visible to the user and silently diverges from the server forever once the
-  entry is dropped. This is strictly better than the old retry-forever
-  behaviour, which at least kept re-surfacing the problem via the snackbar
-  every cycle, but it is not a complete fix. Accepted as a known limitation,
-  not silently.
+  it was queued. Command stamping and aggregate persistence are separate: the
+  command envelope carries the bad `Guid.Empty` user id, but the aggregate
+  *saved to the replica* keeps its own real, original `UserId` — that field
+  is never touched by the command that was rejected. So for the wrong-user
+  case the local write is **not** invisible — it can be a real, user-visible
+  edit (a renamed task, a ticked checkbox) that silently and permanently
+  diverges from the server the moment the entry is dropped, exactly as in
+  the version-skew case (a stale cached PWA client emitting a command type a
+  newer server no longer recognizes). This is strictly better than the old
+  retry-forever behaviour, which at least kept re-surfacing the problem via
+  the snackbar every cycle, but it is not a complete fix. Accepted as a known
+  limitation, not silently: the actual mitigation is closing off ungated
+  command-emitting UI while the local user id is untrustworthy (the
+  `AppShell` account-readiness gating this branch also adds, extended to
+  every command-emitting surface — not just the sidebar). This ADR's
+  drop-after-one-surfacing behaviour only stops the outbox from wedging once
+  such a command has already slipped through; it does not, and cannot,
+  prevent the divergence itself.
 - An empty-object payload (`{}`) deserializes successfully into an
   all-default command rather than failing, so the "malformed payload" guard
   only fires on a literal JSON `null` or a structurally incompatible
