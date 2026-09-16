@@ -61,11 +61,11 @@ public class HistoryPageTests : Bunit.TestContext
 
         var page = Render<HistoryPage>();
 
-        Assert.Equal("30", page.Find(".pspad-burndown").GetAttribute("data-days"));
+        Assert.Equal(30, page.FindComponent<MudChart<double>>().Instance.ChartLabels.Length);
 
         page.FindAll("button").Single(button => button.TextContent.Contains("90 days")).Click();
 
-        Assert.Equal("90", page.Find(".pspad-burndown").GetAttribute("data-days"));
+        Assert.Equal(90, page.FindComponent<MudChart<double>>().Instance.ChartLabels.Length);
     }
 
     void Arrange(FakeHistory history, params Aggregate[] documents)
