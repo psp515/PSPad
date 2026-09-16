@@ -6,7 +6,10 @@
         @if (AvatarOnly)
         {
             <MudSpacer/>
-            <div class="px-3 py-2 pspad-account-avatar-only">
+            @* Dense mobile app bar is 48px tall; a Medium avatar (40px) plus py-2 (16px)
+               is 56px and overflows the toolbar's fixed height, bleeding past its bottom
+               edge. py-1 keeps the wrapper at exactly 48px. *@
+            <div class="px-3 py-1 pspad-account-avatar-only">
                 <MudAvatar Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")" Size="Size.Medium">
                     @AvatarColor.InitialOf(DisplayName.Length > 0 ? DisplayName : Email)
                 </MudAvatar>

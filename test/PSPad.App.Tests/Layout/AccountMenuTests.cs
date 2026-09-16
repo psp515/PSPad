@@ -91,7 +91,7 @@ public class AccountMenuTests : Bunit.TestContext
 
         var wrapper = menu.Find(".pspad-account-avatar-only");
         Assert.Contains("px-3", wrapper.ClassList);
-        Assert.Contains("py-2", wrapper.ClassList);
+        Assert.Contains("py-1", wrapper.ClassList);
     }
 
     void Arrange() => AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
