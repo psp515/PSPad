@@ -35,9 +35,11 @@
         <MudNavMenu>
             @if (!AreasLoaded)
             {
-                <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
-                <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
-                <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+                <div role="status" aria-busy="true">
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+                </div>
             }
             else
             {
