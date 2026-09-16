@@ -1,0 +1,58 @@
+@using PSPad.Module.Tasks.Goals
+@using PSPad.Module.Tasks.Tasks
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex flex-column gap-3">
+            <MudTextField T="string" @bind-Value="_name" Placeholder="Task name" Immediate="true"
+                          AutoFocus="true" />
+
+            <MudDatePicker Label="Due date" @bind-Date="_dueOn" />
+
+            <MudSelect T="Priority" @bind-Value="_priority" Label="Priority" Class="pspad-add-task-priority">
+                @foreach (var priority in Enum.GetValues<Priority>())
+                {
+                    <MudSelectItem T="Priority" Value="@priority">@priority</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="Guid?" @bind-Value="_goalId" Label="Goal" Class="pspad-add-task-goal">
+                <MudSelectItem T="Guid?" Value="@((Guid?)null)">None</MudSelectItem>
+                @foreach (var goal in Goals)
+                {
+                    <MudSelectItem T="Guid?" Value="@((Guid?)goal.Id)">@goal.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudIconButton Class="pspad-add-task-star" Color="Color.Primary"
+                           Icon="@(_starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                           OnClick="@(() => _starred = !_starred)" />
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => Dialog.Cancel())">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(_name)"
+                   OnClick="@Submit">
+            Save
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance Dialog { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<Goal> Goals { get; set; } = [];
+
+    string _name = "";
+    DateTime? _dueOn;
+    Priority _priority = Priority.None;
+    Guid? _goalId;
+    bool _starred;
+
+    void Submit() => Dialog.Close(DialogResult.Ok(new AddTaskResult(
+        _name.Trim(),
+        _dueOn is null ? null : DateOnly.FromDateTime(_dueOn.Value),
+        _priority,
+        _goalId,
+        _starred)));
+}

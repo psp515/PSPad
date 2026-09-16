@@ -3,12 +3,14 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Ordering
 @using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<Area> AreaStore
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<TodoTask> TaskStore
+@inject IDocumentStore<Goal> GoalStore
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -28,7 +30,7 @@ else if (_area is not null)
         {
             <ListCard List="@list" Tasks="@TasksOf(list.Id)" Today="@State.Today"
                       OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
-                      OnAddTask="@(name => AddTaskAsync(list.Id, name))"
+                      OnAddTaskClick="@(() => AddTaskAsync(list.Id))"
                       OnRename="@(() => RenameListAsync(list))"
                       OnDelete="@(() => DeleteListAsync(list))"
                       OnMove="@(() => MoveListAsync(list))" />
@@ -50,6 +52,7 @@ else
     Area? _area;
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<TodoTask> _tasks = [];
+    IReadOnlyList<Goal> _goals = [];
 
     protected override async Task OnParametersSetAsync() => await ReloadAsync();
 
@@ -62,6 +65,7 @@ else
         _lists = [.. lists.Where(list => list.AreaId == AreaId && !list.Deleted).OrderBy(list => list.Position)];
 
         _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _goals = await GoalStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _loaded = true;
     }
 
@@ -95,9 +99,41 @@ else
         await ReloadAsync();
     }
 
-    async Task AddTaskAsync(Guid listId, string name)
+    async Task AddTaskAsync(Guid listId)
     {
-        await Sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, Guid.NewGuid(), listId, name));
+        var parameters = new DialogParameters<AddTaskDialog> { { dialog => dialog.Goals, _goals } };
+        var dialog = await Dialogs.ShowAsync<AddTaskDialog>("New task", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled || result.Data is not AddTaskResult task
+            || task.Name.Length == 0)
+        {
+            return;
+        }
+
+        var taskId = Guid.NewGuid();
+        await Sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, taskId, listId, task.Name));
+
+        if (task.DueOn is not null)
+        {
+            await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, taskId, task.DueOn));
+        }
+
+        if (task.Priority != Priority.None)
+        {
+            await Sender.SendAsync(new SetTaskPriority(Guid.NewGuid(), State.UserId, taskId, task.Priority));
+        }
+
+        if (task.GoalId is not null)
+        {
+            await Sender.SendAsync(new LinkTaskToGoal(Guid.NewGuid(), State.UserId, taskId, task.GoalId));
+        }
+
+        if (task.Starred)
+        {
+            await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, taskId, true));
+        }
+
         await ReloadAsync();
     }
 

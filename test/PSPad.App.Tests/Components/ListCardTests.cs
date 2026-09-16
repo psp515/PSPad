@@ -17,18 +17,18 @@ public class ListCardTests : Bunit.TestContext
     static readonly DateOnly Today = new(2026, 9, 12);
 
     [Fact]
-    public void ItShowsAtMostTenOpenTasks()
+    public void ItShowsAtMostFiveOpenTasks()
     {
         Arrange();
         var list = List("Remont");
 
         var card = Render(list, Tasks(list.Id, 17));
 
-        Assert.Equal(10, card.FindComponents<TaskRow>().Count);
+        Assert.Equal(5, card.FindComponents<TaskRow>().Count);
     }
 
     [Fact]
-    public void ShowAllAppearsOnlyWhenThereAreMoreThanTen()
+    public void ShowAllAppearsOnlyWhenThereAreMoreThanFive()
     {
         Arrange();
         var list = List("Remont");
@@ -97,14 +97,46 @@ public class ListCardTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheCardHasNoDefaultElevationShadowSoItDoesNotDoubleUpWithTheGridHairline()
+    public void TheCardIsOutlinedRatherThanElevated()
     {
         Arrange();
         var list = List("Remont");
 
         var card = Render(list, Tasks(list.Id, 1));
 
-        Assert.Contains("mud-elevation-0", card.Find(".mud-paper").ClassList);
+        var classes = card.Find(".mud-paper").ClassList;
+        Assert.Contains("mud-paper-outlined", classes);
+        Assert.DoesNotContain(classes, className => className.StartsWith("mud-elevation-", StringComparison.Ordinal)
+            && className != "mud-elevation-0");
+    }
+
+    [Fact]
+    public void TheHeaderCarriesAnAddTaskIconThatRaisesOnAddTaskClick()
+    {
+        Arrange();
+        var list = List("Remont");
+        var clicked = false;
+
+        var card = Render<ListCard>(parameters => parameters
+            .Add(p => p.List, list)
+            .Add(p => p.Tasks, Tasks(list.Id, 1))
+            .Add(p => p.Today, Today)
+            .Add(p => p.OnAddTaskClick, EventCallback.Factory.Create(this, () => clicked = true)));
+
+        card.Find(".pspad-add-task").Click();
+
+        Assert.True(clicked);
+    }
+
+    [Fact]
+    public void NoInlineAddTaskFieldRemainsInTheCard()
+    {
+        Arrange();
+        var list = List("Remont");
+
+        var card = Render(list, Tasks(list.Id, 1));
+
+        Assert.Empty(card.FindAll("input[placeholder='Add task']"));
     }
 
     [Fact]

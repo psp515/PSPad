@@ -66,13 +66,9 @@ html, body {
 
 .pspad-grid {
     display: grid;
-    gap: 1px;
-    background: var(--mud-palette-lines-default);
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-}
-
-.pspad-grid > * {
-    background: var(--mud-palette-surface);
+    gap: 16px;
+    justify-content: start;
+    grid-template-columns: repeat(auto-fit, 340px);
 }
 
 .pspad-inbox-expanded {
