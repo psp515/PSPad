@@ -9,6 +9,7 @@ public static class MongoBackfill
     {
         var tasks = context.Collection<BsonDocument>("todotasks");
         var events = context.Collection<BsonDocument>("events");
+        var sequence = new SequenceSource(context);
 
         var missing = await tasks
             .Find(Builders<BsonDocument>.Filter.Exists("createdAt", false))
@@ -27,9 +28,13 @@ public static class MongoBackfill
                 continue;
             }
 
+            using var session = await context.Client.StartSessionAsync(cancellationToken: ct);
+            var seq = await sequence.NextAsync(session, ct);
+
             await tasks.UpdateOneAsync(
+                session,
                 Builders<BsonDocument>.Filter.Eq("_id", document["_id"]),
-                Builders<BsonDocument>.Update.Set("createdAt", created["at"]),
+                Builders<BsonDocument>.Update.Set("createdAt", created["at"]).Set("seq", seq),
                 cancellationToken: ct);
         }
     }

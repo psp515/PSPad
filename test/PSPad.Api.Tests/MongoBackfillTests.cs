@@ -41,10 +41,50 @@ public class MongoBackfillTests(MongoFixture fixture)
         await InsertTaskCreatedEvent(
             context, userId, taskId, new DateTimeOffset(2026, 2, 1, 8, 0, 0, TimeSpan.Zero), ct);
 
+        var before = await LoadTask(context, taskId, ct);
+
         await MongoBackfill.EnsureCreatedAtAsync(context, ct);
 
         var task = await LoadTask(context, taskId, ct);
         Assert.Equal(stored, task.CreatedAt);
+        Assert.Equal(before.Seq, task.Seq);
+    }
+
+    [Fact]
+    public async Task ItBumpsSeqSoAnAlreadySyncedClientReceivesTheBackfilledValue()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var context = Persistence.TestContext.For(fixture);
+        var userId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+        var at = new DateTimeOffset(2026, 2, 1, 8, 0, 0, TimeSpan.Zero);
+
+        await InsertTaskWithoutCreatedAt(context, userId, taskId, ct);
+        await InsertTaskCreatedEvent(context, userId, taskId, at, ct);
+
+        var since = await RaiseCounterFloorAsync(context, 1_000_000, ct);
+
+        await MongoBackfill.EnsureCreatedAtAsync(context, ct);
+
+        var task = await LoadTask(context, taskId, ct);
+        Assert.True(task.Seq > since);
+
+        var synced = await context.Collection<TodoTask>()
+            .Find(Builders<TodoTask>.Filter.Eq(document => document.UserId, userId) &
+                  Builders<TodoTask>.Filter.Gt(document => document.Seq, since))
+            .ToListAsync(ct);
+        Assert.Contains(synced, document => document.Id == taskId);
+    }
+
+    static async Task<long> RaiseCounterFloorAsync(MongoContext context, long floor, CancellationToken ct)
+    {
+        var counters = context.Collection<BsonDocument>("counters");
+        var updated = await counters.FindOneAndUpdateAsync(
+            Builders<BsonDocument>.Filter.Eq("_id", "events"),
+            Builders<BsonDocument>.Update.Max("value", floor),
+            new FindOneAndUpdateOptions<BsonDocument> { IsUpsert = true, ReturnDocument = ReturnDocument.After },
+            ct);
+        return updated["value"].ToInt64();
     }
 
     [Fact]
