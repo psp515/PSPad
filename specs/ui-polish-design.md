@@ -143,26 +143,40 @@ to promote Goals.
 .pspad-grid {
     display: grid;
     gap: 16px;
-    justify-content: start;
-    grid-template-columns: repeat(auto-fit, 340px);
+    grid-template-columns: repeat(1, 1fr);
+}
+
+@media (min-width: 600px) {
+    .pspad-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 960px) {
+    .pspad-grid { grid-template-columns: repeat(3, 1fr); }
 }
 ```
 
-`auto-fit` with a fixed track width yields one column on a phone, two on a
-tablet and three inside the existing `MaxWidth.Large` container, with no
-breakpoint list and no `IViewport` round trip. `auto-fit` over `auto-fill`:
-with fewer items than the row can fit, `auto-fill` keeps the leftover column
-tracks in the grid, empty and painted in the grid's own background — a stray
-coloured block wherever a row doesn't fill exactly. `auto-fit` collapses
-those tracks instead.
+One column on a phone, two on a tablet, three inside the existing
+`MaxWidth.Large` container — the 600px/960px thresholds match
+`BrowserViewport`'s own `Breakpoint.MdAndUp` split, so the grid and the
+desktop/mobile shell agree on where "wide enough" starts.
 
 The area behind the grid carries no background of its own — each card is a
 `MudPaper Outlined="true"` (border in `var(--mud-palette-lines-default)`)
 with `Elevation="0"`, so separation comes from the card's own outline, not
-from a coloured seam under the grid. `justify-content: start` plus the fixed
-340px track width stops cards from stretching to fill a row that has fewer
-cards than it has room for — a card takes only the space it needs, never the
-leftover width of a half-empty row.
+from a coloured seam under the grid.
+
+**Amended during implementation: fixed-width `auto-fit` tracks replaced by
+breakpoint-counted columns.** A first pass used
+`grid-template-columns: repeat(auto-fit, 340px)` to stop cards stretching
+into a half-empty row. That backfired: three 340px tracks plus two 16px gaps
+need 1052px, so an area narrower than that — common once a sidebar is
+open — wrapped to two columns even where there was clearly room for a
+third, narrower one. Fixing the column *count* to the breakpoint instead of
+deriving it from a fixed pixel width solves both problems at once: the
+column count always matches what the viewport can actually hold, and because
+the column count is explicit (not `auto-fit`/`auto-fill`), a row with fewer
+cards than columns leaves the remaining column empty rather than stretching
+a card into it.
 
 Applied to `AreaBoard` (list cards), `GoalsPage` (goal cards), `Today` (each
 of overdue, due and completed as its own grid), `InboxPage` and `ListPage`.

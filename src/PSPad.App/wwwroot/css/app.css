@@ -67,8 +67,19 @@ html, body {
 .pspad-grid {
     display: grid;
     gap: 16px;
-    justify-content: start;
-    grid-template-columns: repeat(auto-fit, 340px);
+    grid-template-columns: repeat(1, 1fr);
+}
+
+@media (min-width: 600px) {
+    .pspad-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 960px) {
+    .pspad-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
 .pspad-inbox-expanded {
