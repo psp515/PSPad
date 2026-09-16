@@ -107,8 +107,10 @@ public class ListPageTests : Bunit.TestContext
 
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
-        page.Find(".mud-skeleton-text");
-        Assert.Single(page.FindComponents<RowSkeleton>());
+        var titleSkeleton = page.Find(".mud-skeleton.mb-4");
+        var style = titleSkeleton.GetAttribute("style");
+        Assert.Contains("width:30%", style);
+        Assert.Contains("height:40px", style);
     }
 
     [Fact]
