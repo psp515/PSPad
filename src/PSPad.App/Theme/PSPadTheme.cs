@@ -20,8 +20,8 @@ public static class PSPadTheme
             DrawerBackground = "#EDF1EA",
             DrawerText = "#1E2A22",
             DrawerIcon = "#4E7A5E",
-            LinesDefault = "#DCE3D9",
-            TableLines = "#DCE3D9",
+            LinesDefault = "#738D68",
+            TableLines = "#738D68",
             TextPrimary = "#1E2A22",
             TextSecondary = "#66736B",
             ActionDefault = "#66736B"
@@ -40,8 +40,8 @@ public static class PSPadTheme
             DrawerBackground = "#171C18",
             DrawerText = "#E4E9E4",
             DrawerIcon = "#8FBF9F",
-            LinesDefault = "#2A312C",
-            TableLines = "#2A312C",
+            LinesDefault = "#65766A",
+            TableLines = "#65766A",
             TextPrimary = "#E4E9E4",
             TextSecondary = "#94A199",
             ActionDefault = "#94A199"

@@ -11,6 +11,8 @@ public interface ICurrentUser
     string TimeZoneHint { get; }
 
     string DisplayName { get; }
+
+    string Email { get; }
 }
 
 public sealed class ClaimsCurrentUser(IHttpContextAccessor accessor) : ICurrentUser
@@ -27,6 +29,10 @@ public sealed class ClaimsCurrentUser(IHttpContextAccessor accessor) : ICurrentU
 
     public string DisplayName =>
         accessor.HttpContext?.User.FindFirstValue("name")
+        ?? accessor.HttpContext?.User.FindFirstValue(ClaimTypes.Name)
         ?? accessor.HttpContext?.User.FindFirstValue("preferred_username")
         ?? Subject;
+
+    public string Email =>
+        accessor.HttpContext?.User.FindFirstValue("email") ?? "";
 }

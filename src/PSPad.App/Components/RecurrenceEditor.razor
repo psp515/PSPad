@@ -4,7 +4,8 @@
 @inject IServiceProvider Services
 
 <div>
-    <MudSwitch T="bool" Value="@(Task.Recurrence is not null)" ValueChanged="@ToggleAsync" Label="Repeats" />
+    <MudSwitch T="bool" Value="@(Task.Recurrence is not null)" ValueChanged="@ToggleAsync" Label="Repeats"
+               Disabled="@Disabled" />
 
     @if (Task.Recurrence is not null)
     {
@@ -21,6 +22,7 @@
     [Parameter, EditorRequired] public TodoTask Task { get; set; } = null!;
     [Parameter] public Guid UserId { get; set; }
     [Parameter] public DateOnly Today { get; set; }
+    [Parameter] public bool Disabled { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
 
     static string Label(OccurrenceStatus status) => status switch
@@ -32,6 +34,11 @@
 
     async System.Threading.Tasks.Task ToggleAsync(bool repeats)
     {
+        if (Disabled)
+        {
+            return;
+        }
+
         var sender = Services.GetRequiredService<CommandSender>();
         var rule = repeats ? RecurrenceRule.Daily(Today) : null;
         await sender.SendAsync(new SetTaskRecurrence(Guid.NewGuid(), UserId, Task.Id, rule));

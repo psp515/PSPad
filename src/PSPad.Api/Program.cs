@@ -20,6 +20,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.Authority = builder.Configuration["Keycloak:Authority"];
         options.Audience = builder.Configuration["Keycloak:Audience"];
         options.RequireHttpsMetadata = builder.Configuration.GetValue<bool?>("Keycloak:RequireHttpsMetadata") ?? !builder.Environment.IsDevelopment();
+        options.MapInboundClaims = false;
     });
 builder.Services.AddAuthorization();
 
@@ -51,6 +52,7 @@ api.MapMeEndpoints();
 api.MapHistoryEndpoints();
 
 await MongoIndexes.EnsureAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
+await MongoBackfill.EnsureCreatedAtAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 
 app.Run();
 

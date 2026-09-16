@@ -3,18 +3,21 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using Bunit;
 using Bunit.TestDoubles;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App.Api;
+using PSPad.App.Components;
 using PSPad.App.Layout;
 using PSPad.App.State;
 using PSPad.App.Sync;
 using PSPad.App.Theme;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Layout;
@@ -106,8 +109,8 @@ public class AppShellTests : Bunit.TestContext
         var removed = NewArea("Stare", 1);
         removed.ApplyAll(Area.Decide(
             removed, new DeleteArea(Guid.NewGuid(), User, removed.Id), DateTimeOffset.UnixEpoch));
-        Arrange(kept, removed);
-        var authStateTask = AuthenticatedAs("Kolber", "kolberu@gmail.com");
+        Arrange(documents: [kept, removed]);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
 
         var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
 
@@ -130,6 +133,202 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItTakesTheEmailFromApiMeRatherThanTheClaim()
+    {
+        Arrange(displayName: "Ada Lovelace", email: "ada@example.com", emailClaim: null);
+
+        var shell = Render<AppShell>();
+
+        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+        Assert.Equal("ada@example.com", sidebar.Email);
+        Assert.Equal("Ada Lovelace", sidebar.DisplayName);
+    }
+
+    [Fact]
+    public void ItRendersSafelyForAnUnauthenticatedUser()
+    {
+        Arrange();
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(
+            Task.FromResult(new AuthenticationState(new ClaimsPrincipal()))));
+
+        Assert.Empty(shell.FindComponents<MudProgressCircular>());
+        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+        Assert.Equal("", sidebar.Email);
+        Assert.Equal("", sidebar.DisplayName);
+    }
+
+    [Fact]
+    public void ItShowsTheBrandLoaderUntilTheShellIsReady()
+    {
+        Arrange(meHangs: true);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        Assert.Single(shell.FindComponents<BrandLoader>());
+    }
+
+    [Fact]
+    public void ARetriedAccountFetchStillLoadsNormallyOnceItSucceeds()
+    {
+        Arrange(meFailures: 1);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+            Assert.Equal(User, sidebar.UserId);
+            Assert.Equal("Ada Lovelace", sidebar.DisplayName);
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public void WhenTheAccountNeverLoadsTheShellShowsARecoverableMessageInsteadOfRenderingBroken()
+    {
+        Arrange(meFailures: 10);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            Assert.Empty(shell.FindComponents<BrandLoader>());
+            Assert.Single(shell.FindComponents<MudAlert>());
+            Assert.Contains("couldn't load your account", shell.Markup, StringComparison.OrdinalIgnoreCase);
+        }, TimeSpan.FromSeconds(2));
+
+        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+        Assert.Equal("", sidebar.DisplayName);
+    }
+
+    [Fact]
+    public void WhenTheAccountFetchTimesOutTheShellShowsARecoverableMessageInsteadOfCrashing()
+    {
+        Arrange(meTimesOut: true);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            Assert.Empty(shell.FindComponents<BrandLoader>());
+            Assert.Single(shell.FindComponents<MudAlert>());
+            Assert.Contains("couldn't load your account", shell.Markup, StringComparison.OrdinalIgnoreCase);
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public void WhenTheAccountNeverLoadsTheSidebarDisablesCommandCreatingActions()
+    {
+        Arrange(meFailures: 10);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+            Assert.True(sidebar.Disabled);
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public void TheSidebarIsDisabledWhileTheAccountFetchIsStillInFlight()
+    {
+        Arrange(meHangs: true);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+        Assert.True(sidebar.Disabled);
+    }
+
+    [Fact]
+    public void TheTaskDetailPanelIsDisabledWhileTheAccountFetchIsStillInFlight()
+    {
+        Arrange(meHangs: true);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        Assert.True(shell.FindComponent<TaskDetailPanel>().Instance.Disabled);
+    }
+
+    [Fact]
+    public async Task TheTaskDetailPanelDoesNotEmitACommandWhileTheAccountIsUnavailable()
+    {
+        var task = NewTask("Buy milk");
+        Arrange(meFailures: 10, documents: [task]);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"lists/{Guid.NewGuid()}?task={task.Id}");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() => Assert.Single(shell.FindComponents<MudAlert>()), TimeSpan.FromSeconds(2));
+        shell.WaitForAssertion(
+            () => Assert.NotEmpty(shell.FindAll(".pspad-task-done input")), TimeSpan.FromSeconds(2));
+
+        var outbox = Services.GetRequiredService<IOutbox>();
+        shell.Find(".pspad-task-done input").Change(true);
+
+        Assert.Equal(0, await outbox.CountAsync());
+    }
+
+    [Fact]
+    public void RetryingFromTheRecoverableMessageLoadsTheAccount()
+    {
+        Arrange(meFailures: 10);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+        shell.WaitForAssertion(() => Assert.Single(shell.FindComponents<MudAlert>()), TimeSpan.FromSeconds(2));
+
+        _meHandler!.FailuresRemaining = 0;
+        shell.InvokeAsync(() => shell.Find(".pspad-account-retry").Click());
+
+        shell.WaitForAssertion(() =>
+        {
+            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+            Assert.Equal(User, sidebar.UserId);
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public void ANullDisplayNameOrEmailFromApiMeDoesNotCrashTheShell()
+    {
+        Arrange(meResponseOverride: new MeResponse(User, null!, null!, "UTC"));
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+            Assert.Equal(User, sidebar.UserId);
+            Assert.Equal("", sidebar.DisplayName);
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public void ANullTimeZoneFromApiMeDoesNotCrashTheShell()
+    {
+        Arrange(meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", null!));
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+            Assert.Equal(User, sidebar.UserId);
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
     public void GoingBackDropsTheTaskButLeavesTheShellOnTheSameScreen()
     {
         Arrange();
@@ -148,7 +347,17 @@ public class AppShellTests : Bunit.TestContext
         });
     }
 
-    void Arrange(params Aggregate[] documents)
+    FakeMeHandler? _meHandler;
+
+    void Arrange(
+        string displayName = "Ada Lovelace",
+        string email = "ada@example.com",
+        string? emailClaim = "ada@example.com",
+        int meFailures = 0,
+        bool meHangs = false,
+        bool meTimesOut = false,
+        MeResponse? meResponseOverride = null,
+        params Aggregate[] documents)
     {
         var today = new DateOnly(2026, 9, 12);
         var replica = AppTestHost.Arrange(this, User, today, documents);
@@ -158,15 +367,31 @@ public class AppShellTests : Bunit.TestContext
             new ReplicaDocumentStore<Module.Tasks.Inbox.Inbox>(replica),
             new AppState { UserId = User, Today = today }));
 
-        var meResponse = new MeResponse(User, "Kolber", "UTC");
-        Services.AddSingleton(new PSPadApiClient(new HttpClient(new FakeMeHandler(meResponse))
+        var meResponse = meResponseOverride ?? new MeResponse(User, displayName, email, "UTC");
+        HttpMessageHandler handler;
+        if (meHangs)
         {
-            BaseAddress = new Uri("http://localhost/")
-        }));
+            handler = new HangingMeHandler();
+        }
+        else if (meTimesOut)
+        {
+            handler = new TimingOutMeHandler();
+        }
+        else
+        {
+            _meHandler = new FakeMeHandler(meResponse) { FailuresRemaining = meFailures };
+            handler = _meHandler;
+        }
+
+        Services.AddSingleton(new PSPadApiClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }));
         Services.AddSingleton<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
         Services.AddSingleton<IConnectivity>(new FakeConnectivity());
         Services.AddScoped<SyncService>();
         Services.AddScoped<SyncCoordinator>();
+
+        var authStateTask = AuthenticatedAs(displayName, emailClaim);
+        RenderTree.Add<CascadingValue<Task<AuthenticationState>>>(parameters =>
+            parameters.Add(cascade => cascade.Value, authStateTask));
     }
 
     static Area NewArea(string name, int position)
@@ -179,10 +404,24 @@ public class AppShellTests : Bunit.TestContext
         return area;
     }
 
-    static Task<AuthenticationState> AuthenticatedAs(string name, string email)
+    static TodoTask NewTask(string name)
     {
-        var identity = new ClaimsIdentity(
-            [new Claim(ClaimTypes.Name, name), new Claim("email", email)], "test");
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(
+            null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name),
+            DateTimeOffset.UnixEpoch));
+        return task;
+    }
+
+    static Task<AuthenticationState> AuthenticatedAs(string name, string? emailClaim)
+    {
+        var claims = new List<Claim> { new(ClaimTypes.Name, name) };
+        if (emailClaim is not null)
+        {
+            claims.Add(new Claim("email", emailClaim));
+        }
+
+        var identity = new ClaimsIdentity(claims, "test");
         return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
     }
 
@@ -197,11 +436,32 @@ public class AppShellTests : Bunit.TestContext
 
     sealed class FakeMeHandler(MeResponse response) : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken ct) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        public int FailuresRemaining { get; set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            if (FailuresRemaining > 0)
+            {
+                FailuresRemaining--;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = JsonContent.Create(response)
             });
+        }
+    }
+
+    sealed class HangingMeHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            new TaskCompletionSource<HttpResponseMessage>().Task;
+    }
+
+    sealed class TimingOutMeHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            Task.FromException<HttpResponseMessage>(new TaskCanceledException());
     }
 }

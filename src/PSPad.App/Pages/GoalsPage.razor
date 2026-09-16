@@ -20,39 +20,51 @@
               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Add"
               OnKeyDown="@OnKeyDown" />
 
-@if (_active.Count == 0 && _achieved.Count == 0)
+@if (!_loaded)
 {
-    <MudText Typo="Typo.body2">No goals yet.</MudText>
+    <CardSkeleton Count="3" />
 }
-
-@foreach (var goal in _active)
+else
 {
-    <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
-              OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
-              OnAchieve="@(() => AchieveAsync(goal))"
-              OnReopen="@(() => ReopenAsync(goal))"
-              OnRename="@(() => RenameAsync(goal))"
-              OnDelete="@(() => DeleteAsync(goal))" />
+    @if (_active.Count == 0 && _achieved.Count == 0)
+    {
+        <MudText Typo="Typo.body2">No goals yet.</MudText>
+    }
+
+    <div class="pspad-grid">
+        @foreach (var goal in _active)
+        {
+            <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
+                      OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
+                      OnAchieve="@(() => AchieveAsync(goal))"
+                      OnReopen="@(() => ReopenAsync(goal))"
+                      OnRename="@(() => RenameAsync(goal))"
+                      OnDelete="@(() => DeleteAsync(goal))" />
+        }
+    </div>
 }
 
 @if (_achieved.Count > 0)
 {
     <MudExpansionPanels Elevation="0" Class="mt-4">
         <MudExpansionPanel Text="@($"Achieved ({_achieved.Count})")">
-            @foreach (var goal in _achieved)
-            {
-                <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
-                          OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
-                          OnAchieve="@(() => AchieveAsync(goal))"
-                          OnReopen="@(() => ReopenAsync(goal))"
-                          OnRename="@(() => RenameAsync(goal))"
-                          OnDelete="@(() => DeleteAsync(goal))" />
-            }
+            <div class="pspad-grid">
+                @foreach (var goal in _achieved)
+                {
+                    <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
+                              OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
+                              OnAchieve="@(() => AchieveAsync(goal))"
+                              OnReopen="@(() => ReopenAsync(goal))"
+                              OnRename="@(() => RenameAsync(goal))"
+                              OnDelete="@(() => DeleteAsync(goal))" />
+                }
+            </div>
         </MudExpansionPanel>
     </MudExpansionPanels>
 }
 
 @code {
+    bool _loaded;
     IReadOnlyList<Goal> _active = [];
     IReadOnlyList<Goal> _achieved = [];
     IReadOnlyList<TodoTask> _tasks = [];
@@ -72,6 +84,7 @@
 
         var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _listNames = lists.Where(list => !list.Deleted).ToDictionary(list => list.Id, list => list.Name);
+        _loaded = true;
     }
 
     IReadOnlyList<TodoTask> TasksOf(Guid goalId) => [.. _tasks.Where(task => task.GoalId == goalId)];

@@ -8,7 +8,7 @@
 @implements INavigationEventReceiver
 
 <div class="d-flex flex-column" style="height:100%">
-    <AccountMenu Email="@Email" DisplayName="@DisplayName" UserId="@UserId" PendingCommands="@PendingCommands" />
+    <AccountMenu Email="@Email" DisplayName="@DisplayName" UserId="@UserId" />
 
     <div>
         <MudTextField T="string" @bind-Value="_query" Placeholder="Search" Immediate="true"
@@ -28,23 +28,37 @@
             <MudNavLink Href="/goals" Icon="@Icons.Material.Filled.Flag">
                 Goals
             </MudNavLink>
+            <MudNavLink Href="/history" Icon="@Icons.Material.Filled.History">
+                History
+            </MudNavLink>
         </MudNavMenu>
 
         <MudDivider Class="my-2" Style="flex-grow:0" />
 
         <MudNavMenu>
-            @foreach (var area in Areas.OrderBy(area => area.Position))
+            @if (!AreasLoaded)
             {
-                <div class="d-flex align-center pspad-area-row">
-                    <div class="flex-grow-1">
-                        <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
-                            @area.Name
-                        </MudNavLink>
-                    </div>
-                    <ThingMenu Class="pspad-area-menu mr-2"
-                               OnRename="@(() => OnRenameArea.InvokeAsync(area))"
-                               OnDelete="@(() => OnDeleteArea.InvokeAsync(area))" />
+                <div role="status" aria-busy="true">
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
                 </div>
+            }
+            else
+            {
+                @foreach (var area in Areas.OrderBy(area => area.Position))
+                {
+                    <div class="d-flex align-center pspad-area-row">
+                        <div class="flex-grow-1">
+                            <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
+                                @area.Name
+                            </MudNavLink>
+                        </div>
+                        <ThingMenu Class="pspad-area-menu mr-2"
+                                   OnRename="@(() => Disabled ? Task.CompletedTask : OnRenameArea.InvokeAsync(area))"
+                                   OnDelete="@(() => Disabled ? Task.CompletedTask : OnDeleteArea.InvokeAsync(area))" />
+                    </div>
+                }
             }
         </MudNavMenu>
     </CascadingValue>
@@ -52,7 +66,7 @@
     <MudDivider Class="my-2" Style="flex-grow:0" />
 
     <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Class="ma-2 pspad-new-area"
-               Style="align-self:flex-start;flex-grow:0" OnClick="@OnNewArea">
+               Style="align-self:flex-start;flex-grow:0" Disabled="@Disabled" OnClick="@OnNewAreaClick">
         New area
     </MudButton>
 </div>
@@ -60,13 +74,15 @@
 @code {
     [Parameter] public IReadOnlyList<Area> Areas { get; set; } = [];
 
+    [Parameter] public bool AreasLoaded { get; set; } = true;
+
+    [Parameter] public bool Disabled { get; set; }
+
     [Parameter] public string Email { get; set; } = "";
 
     [Parameter] public string DisplayName { get; set; } = "";
 
     [Parameter] public Guid UserId { get; set; }
-
-    [Parameter] public int PendingCommands { get; set; }
 
     [Parameter] public EventCallback OnNewArea { get; set; }
 
@@ -83,6 +99,8 @@
     void OnCountsChanged() => InvokeAsync(StateHasChanged);
 
     static string Badge(int count) => count == 0 ? "" : $"  ({count})";
+
+    Task OnNewAreaClick() => Disabled ? Task.CompletedTask : OnNewArea.InvokeAsync();
 
     async Task OnSearchKey(KeyboardEventArgs args)
     {

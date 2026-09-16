@@ -19,6 +19,7 @@ builder.Services.AddOidcAuthentication(options =>
 {
     builder.Configuration.Bind("Keycloak", options.ProviderOptions);
     options.ProviderOptions.ResponseType = "code";
+    options.ProviderOptions.DefaultScopes.Add("email");
 });
 
 builder.Services.AddScoped<IReplica, IndexedDbReplica>();

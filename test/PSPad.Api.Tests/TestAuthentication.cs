@@ -36,6 +36,11 @@ public sealed class TestAuthenticationHandler(
             claims.Add(new Claim("preferred_username", preferred!));
         }
 
+        if (Request.Headers.TryGetValue("X-Test-Email", out var email))
+        {
+            claims.Add(new Claim("email", email!));
+        }
+
         var identity = new ClaimsIdentity(claims, Scheme);
         return Task.FromResult(AuthenticateResult.Success(
             new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme)));

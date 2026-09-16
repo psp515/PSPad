@@ -11,7 +11,12 @@
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
 
-@if (_list is not null)
+@if (!_loaded)
+{
+    <MudSkeleton SkeletonType="SkeletonType.Text" Width="30%" Height="40px" Class="mb-4" />
+    <RowSkeleton Count="6" />
+}
+else if (_list is not null)
 {
     <div class="d-flex align-center mb-4">
         <MudText Typo="Typo.h5" Color="Color.Primary">@_list.Name</MudText>
@@ -20,22 +25,26 @@
     </div>
 
     <MudPaper Outlined="true">
-        @foreach (var task in _open)
-        {
-            <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
-                     OnOpen="@Open" />
-        }
+        <div class="pspad-grid">
+            @foreach (var task in _open)
+            {
+                <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
+                         OnOpen="@Open" />
+            }
+        </div>
 
         @if (_done.Count > 0)
         {
             <MudDivider />
             <MudExpansionPanels Elevation="0">
                 <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
-                    @foreach (var task in _done)
-                    {
-                        <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync"
-                                 OnStar="@StarAsync" OnOpen="@Open" />
-                    }
+                    <div class="pspad-grid">
+                        @foreach (var task in _done)
+                        {
+                            <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync"
+                                     OnStar="@StarAsync" OnOpen="@Open" />
+                        }
+                    </div>
                 </MudExpansionPanel>
             </MudExpansionPanels>
         }
@@ -55,6 +64,7 @@ else
 @code {
     [Parameter] public Guid ListId { get; set; }
 
+    bool _loaded;
     TaskList? _list;
     IReadOnlyList<TodoTask> _open = [];
     IReadOnlyList<TodoTask> _done = [];
@@ -72,6 +82,8 @@ else
 
         _open = [.. mine.Where(task => task.CompletedAt is null)];
         _done = [.. mine.Where(task => task.CompletedAt is not null)];
+
+        _loaded = true;
     }
 
     void Open(TodoTask task) => Navigation.NavigateTo($"/lists/{ListId}?task={task.Id}");

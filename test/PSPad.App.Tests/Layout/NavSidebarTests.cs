@@ -20,6 +20,7 @@ public class NavSidebarTests : Bunit.TestContext
     [InlineData("My Day")]
     [InlineData("Inbox")]
     [InlineData("Goals")]
+    [InlineData("History")]
     [InlineData("New area")]
     public void ItCarriesEverySection(string text)
     {
@@ -41,6 +42,21 @@ public class NavSidebarTests : Bunit.TestContext
         {
             Assert.Contains(name, sidebar.Markup);
         }
+    }
+
+    [Fact]
+    public void AreasLoadingIsMarkedAsALiveLoadingRegion()
+    {
+        Arrange();
+
+        var sidebar = Render<NavSidebar>(parameters => parameters
+            .Add(p => p.Areas, Array.Empty<Area>())
+            .Add(p => p.AreasLoaded, false)
+            .Add(p => p.Email, "ada@example.com")
+            .Add(p => p.UserId, User));
+
+        var status = sidebar.Find("[role='status']");
+        Assert.Equal("true", status.GetAttribute("aria-busy"));
     }
 
     [Fact]
@@ -70,14 +86,14 @@ public class NavSidebarTests : Bunit.TestContext
     }
 
     [Fact]
-    public void GoalsIsASidebarRowButHistoryIsNot()
+    public void GoalsAndHistoryAreBothSidebarRows()
     {
         Arrange();
 
         var sidebar = Render(Areas("Dom"));
 
         Assert.Contains("/goals\"", sidebar.Markup);
-        Assert.DoesNotContain("/history\"", sidebar.Markup);
+        Assert.Contains("/history\"", sidebar.Markup);
     }
 
     [Fact]
@@ -99,7 +115,7 @@ public class NavSidebarTests : Bunit.TestContext
 
         var sidebar = Render<NavSidebar>(parameters => parameters
             .Add(p => p.Areas, new[] { area })
-            .Add(p => p.Email, "kolberu@gmail.com")
+            .Add(p => p.Email, "ada@example.com")
             .Add(p => p.UserId, User)
             .Add(p => p.Navigated, EventCallback.Factory.Create(this, () => navigated++)));
 
@@ -116,13 +132,46 @@ public class NavSidebarTests : Bunit.TestContext
 
         var sidebar = Render<NavSidebar>(parameters => parameters
             .Add(p => p.Areas, Areas("Dom"))
-            .Add(p => p.Email, "kolberu@gmail.com")
+            .Add(p => p.Email, "ada@example.com")
             .Add(p => p.UserId, User)
             .Add(p => p.OnNewArea, EventCallback.Factory.Create(this, () => newArea++)));
 
         sidebar.Find(".pspad-new-area").Click();
 
         Assert.Equal(1, newArea);
+    }
+
+    [Fact]
+    public void ClickingNewAreaWhileDisabledDoesNotRaiseOnNewArea()
+    {
+        Arrange();
+        var newArea = 0;
+
+        var sidebar = Render<NavSidebar>(parameters => parameters
+            .Add(p => p.Areas, Areas("Dom"))
+            .Add(p => p.Email, "ada@example.com")
+            .Add(p => p.UserId, User)
+            .Add(p => p.Disabled, true)
+            .Add(p => p.OnNewArea, EventCallback.Factory.Create(this, () => newArea++)));
+
+        sidebar.Find(".pspad-new-area").Click();
+
+        Assert.Equal(0, newArea);
+    }
+
+    [Fact]
+    public void RenamingWhileDisabledDoesNotRaiseOnRenameArea()
+    {
+        Arrange();
+        var area = Areas("Dom")[0];
+        Area? renamed = null;
+
+        var sidebar = Render(BuildSidebarWithPopover(area, a => renamed = a, disabled: true));
+
+        sidebar.Find(".pspad-area-menu button").Click();
+        sidebar.FindAll(".mud-menu-item")[0].Click();
+
+        Assert.Null(renamed);
     }
 
     [Fact]
@@ -142,7 +191,7 @@ public class NavSidebarTests : Bunit.TestContext
         var area = Areas("Dom")[0];
         Area? renamed = null;
 
-        var sidebar = Render(BuildSidebarWithPopover(area, a => renamed = a));
+        var sidebar = Render(BuildSidebarWithPopover(area, a => renamed = a, disabled: false));
 
         sidebar.Find(".pspad-area-menu button").Click();
         sidebar.FindAll(".mud-menu-item")[0].Click();
@@ -152,23 +201,24 @@ public class NavSidebarTests : Bunit.TestContext
 
     // MudMenu portals its open content through MudPopoverProvider, so this render
     // tree needs one alongside NavSidebar for the menu item click to be reachable.
-    RenderFragment BuildSidebarWithPopover(Area area, Action<Area> onRenameArea) => builder =>
+    RenderFragment BuildSidebarWithPopover(Area area, Action<Area> onRenameArea, bool disabled) => builder =>
     {
         builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
         builder.CloseComponent();
         builder.OpenComponent<NavSidebar>(1);
         builder.AddAttribute(2, nameof(NavSidebar.Areas), new[] { area });
-        builder.AddAttribute(3, nameof(NavSidebar.Email), "kolberu@gmail.com");
+        builder.AddAttribute(3, nameof(NavSidebar.Email), "ada@example.com");
         builder.AddAttribute(4, nameof(NavSidebar.UserId), User);
         builder.AddAttribute(5, nameof(NavSidebar.OnRenameArea),
             EventCallback.Factory.Create(this, onRenameArea));
+        builder.AddAttribute(6, nameof(NavSidebar.Disabled), disabled);
         builder.CloseComponent();
     };
 
     IRenderedComponent<NavSidebar> Render(IReadOnlyList<Area> areas) =>
         Render<NavSidebar>(parameters => parameters
             .Add(p => p.Areas, areas)
-            .Add(p => p.Email, "kolberu@gmail.com")
+            .Add(p => p.Email, "ada@example.com")
             .Add(p => p.UserId, User));
 
     void Arrange()

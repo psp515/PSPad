@@ -2,7 +2,7 @@
 title: One navigation tree at every width, revealed rather than rebuilt
 tags: [ui, offline, identity]
 date: 2026-09-12
-status: Active (supersedes [0013](0013-responsive-shell-and-per-device-theme.md); Goals' placement superseded by [0017](0017-promote-goals-to-a-sidebar-row.md))
+status: Active (supersedes [0013](0013-responsive-shell-and-per-device-theme.md); Goals' placement superseded by [0017](0017-promote-goals-to-a-sidebar-row.md); History's placement superseded by [0020](0020-history-sidebar-row-and-settings-screen.md))
 ---
 
 # ADR-0014: One navigation tree at every width

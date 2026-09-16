@@ -42,6 +42,38 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItLaysGoalCardsOutInTheGrid()
+    {
+        Arrange(NewGoal("Eat healthier"));
+
+        var page = Render<GoalsPage>();
+
+        page.Find(".pspad-grid");
+    }
+
+    [Fact]
+    public void ItLaysAchievedGoalCardsOutInTheGrid()
+    {
+        Arrange(NewGoal("Eat healthier", achieved: true));
+
+        var page = Render<GoalsPage>();
+        var grids = page.FindAll(".pspad-grid");
+
+        Assert.Contains(grids, grid => grid.TextContent.Contains("Eat healthier"));
+    }
+
+    [Fact]
+    public void ItShowsCardSkeletonsBeforeItHasLoaded()
+    {
+        ArrangeWithPendingStore();
+
+        var page = Render<GoalsPage>();
+
+        Assert.Single(page.FindComponents<CardSkeleton>());
+        Assert.DoesNotContain("No goals yet.", page.Markup);
+    }
+
+    [Fact]
     public void EachGoalIsACard()
     {
         Arrange(NewGoal("Eat healthier"), NewGoal("Ship the redesign"));
@@ -49,6 +81,17 @@ public class GoalsPageTests : Bunit.TestContext
         var page = Render<GoalsPage>();
 
         Assert.Equal(2, page.FindComponents<GoalCard>().Count);
+    }
+
+    [Fact]
+    public void ACardHasNoDefaultElevationShadowSoItDoesNotDoubleUpWithTheGridHairline()
+    {
+        Arrange(NewGoal("Eat healthier"));
+
+        var page = Render<GoalsPage>();
+        var card = page.FindComponents<GoalCard>().Single();
+
+        Assert.Contains("mud-elevation-0", card.Find(".mud-paper").ClassList);
     }
 
     [Fact]
@@ -167,6 +210,21 @@ public class GoalsPageTests : Bunit.TestContext
 
     InMemoryReplica Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12), documents);
+
+    void ArrangeWithPendingStore()
+    {
+        Arrange();
+        Services.AddSingleton<IDocumentStore<Goal>>(new NeverLoadingGoalStore());
+    }
+
+    sealed class NeverLoadingGoalStore : IDocumentStore<Goal>
+    {
+        public Task<Goal?> LoadAsync(Guid id, CancellationToken ct) =>
+            new TaskCompletionSource<Goal?>().Task;
+
+        public Task<IReadOnlyList<Goal>> LoadAllAsync(Guid userId, CancellationToken ct) =>
+            new TaskCompletionSource<IReadOnlyList<Goal>>().Task;
+    }
 
     static Goal NewGoal(string name, bool achieved = false)
     {

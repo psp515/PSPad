@@ -1,10 +1,8 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.App.Layout;
-using PSPad.App.Theme;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Layout;
@@ -16,13 +14,13 @@ public class AccountMenuTests : Bunit.TestContext
 
     [Theory]
     [InlineData("History")]
-    [InlineData("Theme")]
+    [InlineData("Settings")]
     [InlineData("Sign out")]
     public void ItOffersEveryEntry(string entry)
     {
         Arrange();
 
-        var menu = Render(BuildMenu("Kolber", "kolberu@gmail.com", User, pendingCommands: 0));
+        var menu = Render(BuildMenu("Ada Lovelace", "ada@example.com", User));
         OpenMenu(menu);
 
         Assert.Contains(entry, menu.Markup);
@@ -33,75 +31,74 @@ public class AccountMenuTests : Bunit.TestContext
     {
         Arrange();
 
-        var menu = Render(BuildMenu("Kolber", "kolberu@gmail.com", User, pendingCommands: 0));
+        var menu = Render(BuildMenu("Ada Lovelace", "ada@example.com", User));
         OpenMenu(menu);
 
         Assert.DoesNotContain("Goals", menu.Markup);
     }
 
     [Fact]
-    public void ItShowsTheInitialOfTheAddress()
+    public void ItShowsTheNameAndEmailOnItsActivator()
     {
         Arrange();
 
-        var menu = Render(BuildMenu("Kolber", "kolberu@gmail.com", User, pendingCommands: 0));
+        var menu = Render<AccountMenu>(parameters => parameters
+            .Add(account => account.DisplayName, "Ada Lovelace")
+            .Add(account => account.Email, "ada@example.com")
+            .Add(account => account.UserId, User));
 
-        Assert.Contains(">K<", menu.Markup);
+        Assert.Contains("Ada Lovelace", menu.Markup);
+        Assert.Contains("ada@example.com", menu.Markup);
     }
 
     [Fact]
-    public void TheInitialComesFromTheEmailNotTheDisplayName()
+    public void ItOffersSettingsHistoryAndSignOutAndNoThemeToggle()
     {
         Arrange();
 
-        var menu = Render(BuildMenu("Anna", "kolberu@gmail.com", User, pendingCommands: 0));
-
-        Assert.Contains(">K<", menu.Markup);
-        Assert.DoesNotContain(">A<", menu.Markup);
-    }
-
-    [Fact]
-    public void ItShowsOnlyTheEmailNotTheDisplayName()
-    {
-        Arrange();
-
-        var menu = Render(BuildMenu("Łukasz Kolber", "kolberu@gmail.com", User, pendingCommands: 0));
-
-        Assert.Contains("kolberu@gmail.com", menu.Markup);
-        Assert.DoesNotContain("Łukasz Kolber", menu.Markup);
-    }
-
-    [Fact]
-    public void ItReportsPendingCommandsWhenThereAreAny()
-    {
-        Arrange();
-
-        var menu = Render(BuildMenu("Kolber", "kolberu@gmail.com", User, pendingCommands: 3));
+        var menu = Render(BuildMenu("Ada Lovelace", "ada@example.com", User));
         OpenMenu(menu);
 
-        Assert.Contains("Sync: 3 pending", menu.Markup);
+        Assert.Contains("/settings", menu.Markup);
+        Assert.Contains("/history", menu.Markup);
+        Assert.Contains("/authentication/logout", menu.Markup);
+        Assert.DoesNotContain("Theme", menu.Markup);
     }
 
     [Fact]
-    public void ItDoesNotOfferSyncWhenNothingIsPending()
+    public void TheAvatarFallsBackToTheEmailWhenThereIsNoName()
     {
         Arrange();
 
-        var menu = Render(BuildMenu("Kolber", "kolberu@gmail.com", User, pendingCommands: 0));
-        OpenMenu(menu);
+        var menu = Render<AccountMenu>(parameters => parameters
+            .Add(account => account.DisplayName, "")
+            .Add(account => account.Email, "ada@example.com")
+            .Add(account => account.UserId, User));
 
-        Assert.DoesNotContain("Sync:", menu.Markup);
+        Assert.Contains(">A<", menu.Markup);
     }
 
-    void Arrange()
+    [Fact]
+    public void TheAvatarOnlyActivatorHasPadding()
     {
-        AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
-        Services.AddSingleton(new ThemePreference(JSInterop.JSRuntime));
+        Arrange();
+
+        var menu = Render<AccountMenu>(parameters => parameters
+            .Add(account => account.DisplayName, "Ada Lovelace")
+            .Add(account => account.Email, "ada@example.com")
+            .Add(account => account.UserId, User)
+            .Add(account => account.AvatarOnly, true));
+
+        var wrapper = menu.Find(".pspad-account-avatar-only");
+        Assert.Contains("px-3", wrapper.ClassList);
+        Assert.Contains("py-1", wrapper.ClassList);
     }
+
+    void Arrange() => AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
 
     // MudMenu renders ChildContent into MudPopoverProvider's portal, not inline, so both
     // must share one render tree for the popover content to reach the rendered markup.
-    static RenderFragment BuildMenu(string displayName, string email, Guid userId, int pendingCommands) => builder =>
+    static RenderFragment BuildMenu(string displayName, string email, Guid userId) => builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
         builder.CloseComponent();
@@ -109,7 +106,6 @@ public class AccountMenuTests : Bunit.TestContext
         builder.AddAttribute(2, nameof(AccountMenu.Email), email);
         builder.AddAttribute(3, nameof(AccountMenu.DisplayName), displayName);
         builder.AddAttribute(4, nameof(AccountMenu.UserId), userId);
-        builder.AddAttribute(5, nameof(AccountMenu.PendingCommands), pendingCommands);
         builder.CloseComponent();
     };
 

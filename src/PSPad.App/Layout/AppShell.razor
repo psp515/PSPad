@@ -6,6 +6,7 @@
 @using PSPad.App.State
 @using PSPad.App.Sync
 @using PSPad.App.Theme
+@using PSPad.Contracts
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Ordering
 @using PSPad.Module.Tasks.Today
@@ -34,13 +35,13 @@
                        Color="Color.Inherit" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
         <MudSpacer />
         <AccountMenu Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
-                     PendingCommands="@Coordinator.PendingCount" AvatarOnly="true" />
+                     AvatarOnly="true" />
     </MudAppBar>
 
     <MudDrawer Variant="DrawerVariant.Persistent" Open="@_isDesktop" Elevation="1"
                ClipMode="DrawerClipMode.Never" Class="d-none d-md-flex">
-        <NavSidebar Areas="@_areas" Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
-                    PendingCommands="@Coordinator.PendingCount"
+        <NavSidebar Areas="@_areas" AreasLoaded="@_ready" Email="@_email" DisplayName="@_displayName"
+                    UserId="@State.UserId" Disabled="@(!_ready)"
                     OnNewArea="@NewAreaAsync"
                     OnRenameArea="@RenameAreaAsync"
                     OnDeleteArea="@DeleteAreaAsync" />
@@ -48,8 +49,8 @@
 
     <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Temporary"
                Elevation="1" ClipMode="DrawerClipMode.Never" Class="d-md-none">
-        <NavSidebar Areas="@_areas" Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
-                    PendingCommands="@Coordinator.PendingCount"
+        <NavSidebar Areas="@_areas" AreasLoaded="@_ready" Email="@_email" DisplayName="@_displayName"
+                    UserId="@State.UserId" Disabled="@(!_ready)"
                     OnNewArea="@NewAreaAsync"
                     OnRenameArea="@RenameAreaAsync"
                     OnDeleteArea="@DeleteAreaAsync"
@@ -62,14 +63,21 @@
             {
                 @Body
             }
+            else if (_accountUnavailable)
+            {
+                <MudAlert Severity="Severity.Warning" Class="pspad-account-unavailable">
+                    Couldn't load your account. Check your connection, then
+                    <MudLink Class="pspad-account-retry" OnClick="@RetryAccountAsync">try again</MudLink>.
+                </MudAlert>
+            }
             else
             {
-                <MudProgressCircular Indeterminate="true" />
+                <BrandLoader />
             }
         </MudContainer>
     </MudMainContent>
 
-    <TaskDetailPanel TaskId="@_openTask" OnClose="@CloseTask" />
+    <TaskDetailPanel TaskId="@_openTask" OnClose="@CloseTask" Disabled="@(!_ready)" />
 </MudLayout>
 
 @code {
@@ -78,6 +86,7 @@
     MudThemeProvider? _themeProvider;
     bool _themeReady;
     bool _ready;
+    bool _accountUnavailable;
     bool _drawerOpen;
     bool _isDesktop = true;
     string _email = "";
@@ -97,25 +106,78 @@
         var authState = AuthStateTask is null ? null : await AuthStateTask;
         if (authState?.User.Identity?.IsAuthenticated == true)
         {
-            _email = authState.User.FindFirst("email")?.Value ?? authState.User.Identity.Name ?? "";
+            await LoadAccountAsync();
+        }
+        else
+        {
+            _ready = true;
+        }
 
-            var me = await Api.MeAsync();
+        Coordinator.Start();
+        ReadOpenTask();
+    }
 
-            if (me is not null)
+    async Task LoadAccountAsync()
+    {
+        var fetched = await FetchAccountAsync();
+
+        if (fetched is null)
+        {
+            _accountUnavailable = true;
+            return;
+        }
+
+        var me = fetched.Sanitized();
+
+        _accountUnavailable = false;
+        _displayName = me.DisplayName;
+        _email = me.Email;
+        State.UserId = me.UserId;
+        State.DisplayName = me.DisplayName;
+        State.Email = me.Email;
+        State.TimeZone = me.TimeZone;
+        State.Today = TodayRule.TodayIn(
+            DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
+        await Ownership.EnsureCurrentUserAsync(me.UserId);
+        await ReloadAreasAndCountsAsync();
+
+        _ready = true;
+    }
+
+    async Task<MeResponse?> FetchAccountAsync()
+    {
+        const int attempts = 3;
+
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            try
             {
-                _displayName = me.DisplayName;
-                State.UserId = me.UserId;
-                State.TimeZone = me.TimeZone;
-                State.Today = TodayRule.TodayIn(
-                    DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
-                await Ownership.EnsureCurrentUserAsync(me.UserId);
-                await ReloadAreasAndCountsAsync();
+                var me = await Api.MeAsync();
+                if (me is not null)
+                {
+                    return me;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Account fetch failed: {ex.Message}");
+            }
+
+            if (attempt < attempts - 1)
+            {
+                // The WASM auth library can briefly report "authenticated" before its token cache
+                // catches up right after a sign-in redirect -- this closes that window without a
+                // long, user-visible stall.
+                await Task.Delay(TimeSpan.FromMilliseconds(200));
             }
         }
 
-        _ready = true;
-        Coordinator.Start();
-        ReadOpenTask();
+        return null;
+    }
+
+    async Task RetryAccountAsync()
+    {
+        await LoadAccountAsync();
     }
 
     void OnDesktopChanged(bool isDesktop)

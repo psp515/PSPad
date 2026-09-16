@@ -20,9 +20,9 @@ public static class AvatarColor
         return Palette[hash % Palette.Length];
     }
 
-    public static string InitialOf(string email)
+    public static string InitialOf(string? email)
     {
-        var trimmed = email.TrimStart();
+        var trimmed = email?.TrimStart() ?? "";
 
         return trimmed.Length == 0 ? "?" : trimmed[..1].ToUpperInvariant();
     }

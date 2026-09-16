@@ -139,6 +139,44 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItLaysTodaysTasksOutInTheGrid()
+    {
+        var list = NewList("Zakupy");
+        Arrange(
+            list,
+            Due(list.Id, "Mleko", Today),
+            Due(list.Id, "Chleb", Today),
+            Due(list.Id, "Masło", Today),
+            Due(list.Id, "Jajka", Today));
+
+        var page = Render<Today>();
+
+        page.Find(".pspad-grid");
+    }
+
+    [Fact]
+    public void ItDoesNotClaimNothingIsDueBeforeItHasLoaded()
+    {
+        ArrangeWithPendingStore();
+
+        var page = Render<Today>();
+
+        Assert.Single(page.FindComponents<RowSkeleton>());
+        Assert.DoesNotContain("Nothing due today", page.Markup);
+    }
+
+    [Fact]
+    public void ItDoesNotClaimNothingIsDueWhenSomethingIsOverdue()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Buy milk", Today.AddDays(-1)));
+
+        var page = Render<Today>();
+
+        Assert.DoesNotContain("Nothing due today", page.Markup);
+    }
+
+    [Fact]
     public async Task CompletingATaskDropsTheTodayCount()
     {
         var list = NewList("Zakupy");
@@ -161,6 +199,21 @@ public class TodayTests : Bunit.TestContext
 
     InMemoryReplica Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, Today, documents);
+
+    void ArrangeWithPendingStore()
+    {
+        Arrange();
+        Services.AddSingleton<IDocumentStore<TodoTask>>(new NeverLoadingTaskStore());
+    }
+
+    sealed class NeverLoadingTaskStore : IDocumentStore<TodoTask>
+    {
+        public Task<TodoTask?> LoadAsync(Guid id, CancellationToken ct) =>
+            new TaskCompletionSource<TodoTask?>().Task;
+
+        public Task<IReadOnlyList<TodoTask>> LoadAllAsync(Guid userId, CancellationToken ct) =>
+            new TaskCompletionSource<IReadOnlyList<TodoTask>>().Task;
+    }
 
     static TaskList NewList(string name)
     {

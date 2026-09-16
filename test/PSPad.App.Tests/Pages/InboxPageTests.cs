@@ -1,6 +1,8 @@
 using Bunit;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using PSPad.Abstractions;
+using PSPad.App.Components;
 using PSPad.App.Pages;
 using PSPad.App.State;
 using PSPad.Module.Tasks.Areas;
@@ -93,6 +95,27 @@ public class InboxPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItLaysCapturedItemsOutInTheGrid()
+    {
+        Arrange(NewInbox("Pierwsze", "Drugie"));
+
+        var page = Render<InboxPage>();
+
+        page.Find(".pspad-grid");
+    }
+
+    [Fact]
+    public void ItDoesNotClaimNothingIsCapturedBeforeItHasLoaded()
+    {
+        ArrangeWithPendingStore();
+
+        var page = Render<InboxPage>();
+
+        Assert.Single(page.FindComponents<RowSkeleton>());
+        Assert.DoesNotContain("Nothing captured", page.Markup);
+    }
+
+    [Fact]
     public void WithNoListsTheMoveButtonIsDisabledRatherThanAbsent()
     {
         Arrange(NewInbox("Kupić mleko"), NewArea("Dom", 0));
@@ -106,6 +129,21 @@ public class InboxPageTests : Bunit.TestContext
 
     InMemoryReplica Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, Today, documents);
+
+    void ArrangeWithPendingStore()
+    {
+        Arrange();
+        Services.AddSingleton<IDocumentStore<Inbox>>(new NeverLoadingInboxStore());
+    }
+
+    sealed class NeverLoadingInboxStore : IDocumentStore<Inbox>
+    {
+        public Task<Inbox?> LoadAsync(Guid id, CancellationToken ct) =>
+            new TaskCompletionSource<Inbox?>().Task;
+
+        public Task<IReadOnlyList<Inbox>> LoadAllAsync(Guid userId, CancellationToken ct) =>
+            new TaskCompletionSource<IReadOnlyList<Inbox>>().Task;
+    }
 
     static Inbox NewInbox(params string[] texts)
     {

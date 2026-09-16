@@ -15,17 +15,17 @@ public sealed class CommandDispatcher(IServiceProvider services)
         var type = CommandCatalogue.Resolve(envelope.Type);
         if (type is null)
         {
-            return new CommandResponse(Guid.Empty, false, $"Unknown command {envelope.Type}.");
+            return new CommandResponse(Guid.Empty, false, $"Unknown command {envelope.Type}.", Unrecoverable: true);
         }
 
         if (envelope.Payload.Deserialize(type, Json) is not ICommand command)
         {
-            return new CommandResponse(Guid.Empty, false, $"Malformed payload for {envelope.Type}.");
+            return new CommandResponse(Guid.Empty, false, $"Malformed payload for {envelope.Type}.", Unrecoverable: true);
         }
 
         if (command.UserId != userId)
         {
-            return new CommandResponse(command.CommandId, false, "That command is for a different user.");
+            return new CommandResponse(command.CommandId, false, "That command is for a different user.", Unrecoverable: true);
         }
 
         var work = services.GetService<IUnitOfWork>();
@@ -39,7 +39,7 @@ public sealed class CommandDispatcher(IServiceProvider services)
         var handler = services.GetService(typeof(ICommandHandler<>).MakeGenericType(type));
         if (handler is null)
         {
-            return new CommandResponse(command.CommandId, false, $"No handler for {envelope.Type}.");
+            return new CommandResponse(command.CommandId, false, $"No handler for {envelope.Type}.", Unrecoverable: true);
         }
 
         var method = handler.GetType().GetMethod(nameof(ICommandHandler<ICommand>.HandleAsync))!;

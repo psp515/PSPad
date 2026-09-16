@@ -11,9 +11,70 @@ html, body {
     width: 100%;
 }
 
+.pspad-account-activator {
+    cursor: pointer;
+    width: 100%;
+}
+
+.pspad-account-identity {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.pspad-account-identity .mud-typography {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .pspad-fab {
     position: fixed;
     bottom: 24px;
     right: 24px;
     z-index: 1200;
+}
+
+.pspad-brand-loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 0;
+}
+
+.pspad-brand-loader .pspad-boot-mark {
+    width: 72px;
+    height: 72px;
+}
+
+.pspad-brand-loader .pspad-boot-check {
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+    animation: pspad-draw 1.8s ease-in-out infinite;
+}
+
+@keyframes pspad-draw {
+    0%   { stroke-dashoffset: 200; }
+    45%  { stroke-dashoffset: 0; }
+    75%  { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: -200; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pspad-brand-loader .pspad-boot-check { animation: none; stroke-dashoffset: 0; }
+}
+
+.pspad-grid {
+    display: grid;
+    gap: 1px;
+    background: var(--mud-palette-lines-default);
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+}
+
+.pspad-grid > * {
+    background: var(--mud-palette-surface);
+}
+
+.pspad-inbox-expanded {
+    grid-column: 1 / -1;
 }
