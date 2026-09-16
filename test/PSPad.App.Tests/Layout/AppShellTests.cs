@@ -298,6 +298,37 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ANullDisplayNameOrEmailFromApiMeDoesNotCrashTheShell()
+    {
+        Arrange(meResponseOverride: new MeResponse(User, null!, null!, "UTC"));
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+            Assert.Equal(User, sidebar.UserId);
+            Assert.Equal("", sidebar.DisplayName);
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public void ANullTimeZoneFromApiMeDoesNotCrashTheShell()
+    {
+        Arrange(meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", null!));
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+            Assert.Equal(User, sidebar.UserId);
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
     public void GoingBackDropsTheTaskButLeavesTheShellOnTheSameScreen()
     {
         Arrange();
@@ -325,6 +356,7 @@ public class AppShellTests : Bunit.TestContext
         int meFailures = 0,
         bool meHangs = false,
         bool meTimesOut = false,
+        MeResponse? meResponseOverride = null,
         params Aggregate[] documents)
     {
         var today = new DateOnly(2026, 9, 12);
@@ -335,7 +367,7 @@ public class AppShellTests : Bunit.TestContext
             new ReplicaDocumentStore<Module.Tasks.Inbox.Inbox>(replica),
             new AppState { UserId = User, Today = today }));
 
-        var meResponse = new MeResponse(User, displayName, email, "UTC");
+        var meResponse = meResponseOverride ?? new MeResponse(User, displayName, email, "UTC");
         HttpMessageHandler handler;
         if (meHangs)
         {

@@ -46,7 +46,8 @@ public class AvatarColorTests
     [InlineData("ada@example.com", "A")]
     [InlineData("  ada@example.org", "A")]
     [InlineData("", "?")]
-    public void TheInitialIsTheFirstLetterOfTheAddress(string email, string expected)
+    [InlineData(null, "?")]
+    public void TheInitialIsTheFirstLetterOfTheAddress(string? email, string expected)
     {
         Assert.Equal(expected, AvatarColor.InitialOf(email));
     }
