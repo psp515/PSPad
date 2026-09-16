@@ -204,6 +204,22 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void WhenTheAccountFetchTimesOutTheShellShowsARecoverableMessageInsteadOfCrashing()
+    {
+        Arrange(meTimesOut: true);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            Assert.Empty(shell.FindComponents<BrandLoader>());
+            Assert.Single(shell.FindComponents<MudAlert>());
+            Assert.Contains("couldn't load your account", shell.Markup, StringComparison.OrdinalIgnoreCase);
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
     public void RetryingFromTheRecoverableMessageLoadsTheAccount()
     {
         Arrange(meFailures: 10);
@@ -248,6 +264,7 @@ public class AppShellTests : Bunit.TestContext
         string? emailClaim = "ada@example.com",
         int meFailures = 0,
         bool meHangs = false,
+        bool meTimesOut = false,
         params Aggregate[] documents)
     {
         var today = new DateOnly(2026, 9, 12);
@@ -263,6 +280,10 @@ public class AppShellTests : Bunit.TestContext
         if (meHangs)
         {
             handler = new HangingMeHandler();
+        }
+        else if (meTimesOut)
+        {
+            handler = new TimingOutMeHandler();
         }
         else
         {
@@ -335,5 +356,11 @@ public class AppShellTests : Bunit.TestContext
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
             new TaskCompletionSource<HttpResponseMessage>().Task;
+    }
+
+    sealed class TimingOutMeHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            Task.FromException<HttpResponseMessage>(new TaskCanceledException());
     }
 }
