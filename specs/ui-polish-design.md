@@ -144,16 +144,21 @@ to promote Goals.
     display: grid;
     gap: 1px;
     background: var(--mud-palette-lines-default);
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
 }
 
 .pspad-grid > * { background: var(--mud-palette-surface); }
 ```
 
-`auto-fill` with `minmax` yields one column on a phone, two on a tablet and
+`auto-fit` with `minmax` yields one column on a phone, two on a tablet and
 three inside the existing `MaxWidth.Large` container, with no breakpoint list
 and no `IViewport` round trip. The 1px gap over a lines-coloured background
-draws hairlines both ways without `:nth-child` arithmetic.
+draws hairlines both ways without `:nth-child` arithmetic. `auto-fit` over
+`auto-fill`: with fewer items than the row can fit, `auto-fill` keeps the
+leftover column tracks in the grid, empty and painted in the grid's own
+background — a stray coloured block wherever a row doesn't fill exactly.
+`auto-fit` collapses those tracks and lets the real cards stretch to fill the
+row instead.
 
 Applied to `AreaBoard` (list cards), `GoalsPage` (goal cards), `Today` (each
 of overdue, due and completed as its own grid), `InboxPage` and `ListPage`.
