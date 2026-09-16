@@ -9,9 +9,10 @@ const features = [
   { title: 'Tasks and steps', body: 'Due dates, priorities, goals, and steps on every task.', status: 'built' },
   { title: 'Recurrence that never nags', body: 'Miss a day, it just stays missed. Never overdue.', status: 'in-progress' },
   { title: 'Goals across areas', body: 'One goal, tasks from anywhere, pointed at it.', status: 'in-progress' },
-  { title: 'A real history', body: 'Every change logged automatically. Nothing to drift out of sync.', status: 'in-progress' },
+  { title: 'A real history', body: 'Every change logged automatically, with a burndown chart of open and completed work.', status: 'built' },
   { title: 'Works with no signal', body: 'Saves locally first. Syncs once you’re back online.', status: 'in-progress' },
-  { title: 'Yours, and multi-user', body: 'Your hardware, your Keycloak, your data.', status: 'built' }
+  { title: 'Yours, and multi-user', body: 'Your hardware, your Keycloak, your data.', status: 'built' },
+  { title: 'Settings, in one place', body: 'Time zone, theme and sync status — no longer buried in a menu.', status: 'built' }
 ]
 
 const built = features.filter((feature) => feature.status === 'built')
@@ -20,7 +21,7 @@ const inProgress = features.filter((feature) => feature.status === 'in-progress'
 const planned = [
   ['Habits', 'Streaks for daily habits.'],
   ['Annual plans', 'Yearly goals, year-end summary.'],
-  ['Analytics and reminders', 'Charts, notifications, daily motivation.'],
+  ['Reminders', 'Push notifications, daily motivation.'],
   ['GitHub issues', 'GitHub issues as tasks.'],
   ['Cloud storage', 'OneDrive and Google Drive.'],
   ['3D printing', 'Materials, parts, Thingiverse links.'],

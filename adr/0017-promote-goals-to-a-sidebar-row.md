@@ -2,7 +2,7 @@
 title: Promote Goals to a permanent sidebar row
 tags: [ui, domain]
 date: 2026-09-15
-status: Active (supersedes Goals' placement in [0014](0014-one-navigation-tree-at-every-width.md))
+status: Active (supersedes Goals' placement in [0014](0014-one-navigation-tree-at-every-width.md); History's placement here superseded by [0020](0020-history-sidebar-row-and-settings-screen.md))
 ---
 
 # ADR-0017: Promote Goals to a permanent sidebar row
