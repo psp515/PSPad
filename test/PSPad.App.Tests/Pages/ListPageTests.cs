@@ -100,6 +100,18 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItShowsATitleSkeletonBeforeItHasLoaded()
+    {
+        var list = NewList("Zakupy");
+        ArrangeWithPendingStore(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        page.Find(".mud-skeleton-text");
+        Assert.Single(page.FindComponents<RowSkeleton>());
+    }
+
+    [Fact]
     public void ANonExistentListShowsItIsGoneInsteadOfCrashing()
     {
         Arrange();

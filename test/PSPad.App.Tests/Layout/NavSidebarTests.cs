@@ -44,6 +44,21 @@ public class NavSidebarTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AreasLoadingIsMarkedAsALiveLoadingRegion()
+    {
+        Arrange();
+
+        var sidebar = Render<NavSidebar>(parameters => parameters
+            .Add(p => p.Areas, Array.Empty<Area>())
+            .Add(p => p.AreasLoaded, false)
+            .Add(p => p.Email, "kolberu@gmail.com")
+            .Add(p => p.UserId, User));
+
+        var status = sidebar.Find("[role='status']");
+        Assert.Equal("true", status.GetAttribute("aria-busy"));
+    }
+
+    [Fact]
     public void ItOrdersAreasByPositionNotInsertionOrder()
     {
         Arrange();

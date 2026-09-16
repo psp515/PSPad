@@ -52,6 +52,17 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItLaysAchievedGoalCardsOutInTheGrid()
+    {
+        Arrange(NewGoal("Eat healthier", achieved: true));
+
+        var page = Render<GoalsPage>();
+        var grids = page.FindAll(".pspad-grid");
+
+        Assert.Contains(grids, grid => grid.TextContent.Contains("Eat healthier"));
+    }
+
+    [Fact]
     public void ItShowsCardSkeletonsBeforeItHasLoaded()
     {
         ArrangeWithPendingStore();

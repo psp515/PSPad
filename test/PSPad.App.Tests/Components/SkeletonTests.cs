@@ -32,4 +32,22 @@ public class SkeletonTests : Bunit.TestContext
         Assert.NotNull(Render<RowSkeleton>().Find(".pspad-grid .pspad-row-skeleton"));
         Assert.NotNull(Render<CardSkeleton>().Find(".pspad-grid .pspad-card-skeleton"));
     }
+
+    [Fact]
+    public void ARowSkeletonMarksItselfAsALiveLoadingRegion()
+    {
+        var root = Render<RowSkeleton>().Find(".pspad-grid");
+
+        Assert.Equal("status", root.GetAttribute("role"));
+        Assert.Equal("true", root.GetAttribute("aria-busy"));
+    }
+
+    [Fact]
+    public void ACardSkeletonMarksItselfAsALiveLoadingRegion()
+    {
+        var root = Render<CardSkeleton>().Find(".pspad-grid");
+
+        Assert.Equal("status", root.GetAttribute("role"));
+        Assert.Equal("true", root.GetAttribute("aria-busy"));
+    }
 }
