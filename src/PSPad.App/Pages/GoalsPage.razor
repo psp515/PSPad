@@ -48,15 +48,17 @@ else
 {
     <MudExpansionPanels Elevation="0" Class="mt-4">
         <MudExpansionPanel Text="@($"Achieved ({_achieved.Count})")">
-            @foreach (var goal in _achieved)
-            {
-                <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
-                          OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
-                          OnAchieve="@(() => AchieveAsync(goal))"
-                          OnReopen="@(() => ReopenAsync(goal))"
-                          OnRename="@(() => RenameAsync(goal))"
-                          OnDelete="@(() => DeleteAsync(goal))" />
-            }
+            <div class="pspad-grid">
+                @foreach (var goal in _achieved)
+                {
+                    <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
+                              OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
+                              OnAchieve="@(() => AchieveAsync(goal))"
+                              OnReopen="@(() => ReopenAsync(goal))"
+                              OnRename="@(() => RenameAsync(goal))"
+                              OnDelete="@(() => DeleteAsync(goal))" />
+                }
+            </div>
         </MudExpansionPanel>
     </MudExpansionPanels>
 }
