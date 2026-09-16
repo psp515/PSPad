@@ -84,6 +84,17 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ACardHasNoDefaultElevationShadowSoItDoesNotDoubleUpWithTheGridHairline()
+    {
+        Arrange(NewGoal("Eat healthier"));
+
+        var page = Render<GoalsPage>();
+        var card = page.FindComponents<GoalCard>().Single();
+
+        Assert.Contains("mud-elevation-0", card.Find(".mud-paper").ClassList);
+    }
+
+    [Fact]
     public void ACardShowsOnlyItsOwnOpenTasks()
     {
         var goal = NewGoal("Eat healthier");

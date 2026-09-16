@@ -97,6 +97,17 @@ public class ListCardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheCardHasNoDefaultElevationShadowSoItDoesNotDoubleUpWithTheGridHairline()
+    {
+        Arrange();
+        var list = List("Remont");
+
+        var card = Render(list, Tasks(list.Id, 1));
+
+        Assert.Contains("mud-elevation-0", card.Find(".mud-paper").ClassList);
+    }
+
+    [Fact]
     public void TheHeaderCarriesAMenuThatRaisesRenameAndDelete()
     {
         Arrange();
