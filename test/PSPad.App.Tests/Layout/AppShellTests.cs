@@ -220,6 +220,21 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void WhenTheAccountNeverLoadsTheSidebarDisablesCommandCreatingActions()
+    {
+        Arrange(meFailures: 10);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() =>
+        {
+            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+            Assert.True(sidebar.Disabled);
+        }, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
     public void RetryingFromTheRecoverableMessageLoadsTheAccount()
     {
         Arrange(meFailures: 10);

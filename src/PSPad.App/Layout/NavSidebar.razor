@@ -55,8 +55,8 @@
                             </MudNavLink>
                         </div>
                         <ThingMenu Class="pspad-area-menu mr-2"
-                                   OnRename="@(() => OnRenameArea.InvokeAsync(area))"
-                                   OnDelete="@(() => OnDeleteArea.InvokeAsync(area))" />
+                                   OnRename="@(() => Disabled ? Task.CompletedTask : OnRenameArea.InvokeAsync(area))"
+                                   OnDelete="@(() => Disabled ? Task.CompletedTask : OnDeleteArea.InvokeAsync(area))" />
                     </div>
                 }
             }
@@ -66,7 +66,7 @@
     <MudDivider Class="my-2" Style="flex-grow:0" />
 
     <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Class="ma-2 pspad-new-area"
-               Style="align-self:flex-start;flex-grow:0" OnClick="@OnNewArea">
+               Style="align-self:flex-start;flex-grow:0" Disabled="@Disabled" OnClick="@OnNewAreaClick">
         New area
     </MudButton>
 </div>
@@ -75,6 +75,8 @@
     [Parameter] public IReadOnlyList<Area> Areas { get; set; } = [];
 
     [Parameter] public bool AreasLoaded { get; set; } = true;
+
+    [Parameter] public bool Disabled { get; set; }
 
     [Parameter] public string Email { get; set; } = "";
 
@@ -97,6 +99,8 @@
     void OnCountsChanged() => InvokeAsync(StateHasChanged);
 
     static string Badge(int count) => count == 0 ? "" : $"  ({count})";
+
+    Task OnNewAreaClick() => Disabled ? Task.CompletedTask : OnNewArea.InvokeAsync();
 
     async Task OnSearchKey(KeyboardEventArgs args)
     {

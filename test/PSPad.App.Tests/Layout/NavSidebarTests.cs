@@ -142,6 +142,39 @@ public class NavSidebarTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ClickingNewAreaWhileDisabledDoesNotRaiseOnNewArea()
+    {
+        Arrange();
+        var newArea = 0;
+
+        var sidebar = Render<NavSidebar>(parameters => parameters
+            .Add(p => p.Areas, Areas("Dom"))
+            .Add(p => p.Email, "ada@example.com")
+            .Add(p => p.UserId, User)
+            .Add(p => p.Disabled, true)
+            .Add(p => p.OnNewArea, EventCallback.Factory.Create(this, () => newArea++)));
+
+        sidebar.Find(".pspad-new-area").Click();
+
+        Assert.Equal(0, newArea);
+    }
+
+    [Fact]
+    public void RenamingWhileDisabledDoesNotRaiseOnRenameArea()
+    {
+        Arrange();
+        var area = Areas("Dom")[0];
+        Area? renamed = null;
+
+        var sidebar = Render(BuildSidebarWithPopover(area, a => renamed = a, disabled: true));
+
+        sidebar.Find(".pspad-area-menu button").Click();
+        sidebar.FindAll(".mud-menu-item")[0].Click();
+
+        Assert.Null(renamed);
+    }
+
+    [Fact]
     public void EveryAreaRowCarriesAMenu()
     {
         Arrange();
@@ -158,7 +191,7 @@ public class NavSidebarTests : Bunit.TestContext
         var area = Areas("Dom")[0];
         Area? renamed = null;
 
-        var sidebar = Render(BuildSidebarWithPopover(area, a => renamed = a));
+        var sidebar = Render(BuildSidebarWithPopover(area, a => renamed = a, disabled: false));
 
         sidebar.Find(".pspad-area-menu button").Click();
         sidebar.FindAll(".mud-menu-item")[0].Click();
@@ -168,7 +201,7 @@ public class NavSidebarTests : Bunit.TestContext
 
     // MudMenu portals its open content through MudPopoverProvider, so this render
     // tree needs one alongside NavSidebar for the menu item click to be reachable.
-    RenderFragment BuildSidebarWithPopover(Area area, Action<Area> onRenameArea) => builder =>
+    RenderFragment BuildSidebarWithPopover(Area area, Action<Area> onRenameArea, bool disabled) => builder =>
     {
         builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
         builder.CloseComponent();
@@ -178,6 +211,7 @@ public class NavSidebarTests : Bunit.TestContext
         builder.AddAttribute(4, nameof(NavSidebar.UserId), User);
         builder.AddAttribute(5, nameof(NavSidebar.OnRenameArea),
             EventCallback.Factory.Create(this, onRenameArea));
+        builder.AddAttribute(6, nameof(NavSidebar.Disabled), disabled);
         builder.CloseComponent();
     };
 

@@ -41,7 +41,7 @@
     <MudDrawer Variant="DrawerVariant.Persistent" Open="@_isDesktop" Elevation="1"
                ClipMode="DrawerClipMode.Never" Class="d-none d-md-flex">
         <NavSidebar Areas="@_areas" AreasLoaded="@_ready" Email="@_email" DisplayName="@_displayName"
-                    UserId="@State.UserId"
+                    UserId="@State.UserId" Disabled="@_accountUnavailable"
                     OnNewArea="@NewAreaAsync"
                     OnRenameArea="@RenameAreaAsync"
                     OnDeleteArea="@DeleteAreaAsync" />
@@ -50,7 +50,7 @@
     <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Temporary"
                Elevation="1" ClipMode="DrawerClipMode.Never" Class="d-md-none">
         <NavSidebar Areas="@_areas" AreasLoaded="@_ready" Email="@_email" DisplayName="@_displayName"
-                    UserId="@State.UserId"
+                    UserId="@State.UserId" Disabled="@_accountUnavailable"
                     OnNewArea="@NewAreaAsync"
                     OnRenameArea="@RenameAreaAsync"
                     OnDeleteArea="@DeleteAreaAsync"
@@ -156,8 +156,9 @@
                     return me;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.Error.WriteLine($"Account fetch failed: {ex.Message}");
             }
 
             if (attempt < attempts - 1)
