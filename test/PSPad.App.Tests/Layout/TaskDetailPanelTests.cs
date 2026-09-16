@@ -54,6 +54,21 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task CompletingATaskWhileDisabledDoesNotChangeItsState()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters
+            .Add(p => p.TaskId, (Guid?)task.Id)
+            .Add(p => p.Disabled, true));
+        panel.Find(".pspad-task-done input").Change(true);
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Null(reloaded!.CompletedAt);
+    }
+
+    [Fact]
     public async Task CompletingARecurringTaskTicksTodaysOccurrenceRatherThanTheWholeTask()
     {
         var task = NewTask("Read a book");

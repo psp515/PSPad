@@ -17,6 +17,7 @@ using PSPad.App.Sync;
 using PSPad.App.Theme;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Layout;
@@ -235,6 +236,50 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheSidebarIsDisabledWhileTheAccountFetchIsStillInFlight()
+    {
+        Arrange(meHangs: true);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+        Assert.True(sidebar.Disabled);
+    }
+
+    [Fact]
+    public void TheTaskDetailPanelIsDisabledWhileTheAccountFetchIsStillInFlight()
+    {
+        Arrange(meHangs: true);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        Assert.True(shell.FindComponent<TaskDetailPanel>().Instance.Disabled);
+    }
+
+    [Fact]
+    public async Task TheTaskDetailPanelDoesNotEmitACommandWhileTheAccountIsUnavailable()
+    {
+        var task = NewTask("Buy milk");
+        Arrange(meFailures: 10, documents: [task]);
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"lists/{Guid.NewGuid()}?task={task.Id}");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() => Assert.Single(shell.FindComponents<MudAlert>()), TimeSpan.FromSeconds(2));
+        shell.WaitForAssertion(
+            () => Assert.NotEmpty(shell.FindAll(".pspad-task-done input")), TimeSpan.FromSeconds(2));
+
+        var outbox = Services.GetRequiredService<IOutbox>();
+        shell.Find(".pspad-task-done input").Change(true);
+
+        Assert.Equal(0, await outbox.CountAsync());
+    }
+
+    [Fact]
     public void RetryingFromTheRecoverableMessageLoadsTheAccount()
     {
         Arrange(meFailures: 10);
@@ -325,6 +370,15 @@ public class AppShellTests : Bunit.TestContext
             new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), name, position),
             DateTimeOffset.UnixEpoch));
         return area;
+    }
+
+    static TodoTask NewTask(string name)
+    {
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(
+            null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name),
+            DateTimeOffset.UnixEpoch));
+        return task;
     }
 
     static Task<AuthenticationState> AuthenticatedAs(string name, string? emailClaim)
