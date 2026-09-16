@@ -69,9 +69,10 @@ Node 22, `npm ci`, `working-directory: docs`,
 `permissions: { contents: read, pages: write, id-token: write }`,
 `concurrency: { group: pages }`.
 
-The site is a project site at `https://psp515.github.io/PSPad`, so
-`astro.config.mjs` sets `site: 'https://psp515.github.io'` and
-`base: '/PSPad'`. Every internal link and asset resolves through
+The site is served at `https://psp515.com/pspad` through a Cloudflare
+Worker that proxies to GitHub Pages, so `astro.config.mjs` sets
+`site: 'https://psp515.com'` and `base: '/pspad'`. Every internal link and
+asset resolves through
 `import.meta.env.BASE_URL` — a hard-coded `/install` works in `astro dev` and
 404s in production, which is the one mistake this configuration invites.
 
@@ -358,7 +359,7 @@ browser can sign in to from a clean clone.
 **Plan 13 — the site.** The Astro project, the palette, the three pages, the
 build-time import and its tests (D1, D2, D3, D8, D9), `docs.yml`, ADR-0016,
 the README edit. Ends with the site published at
-`https://psp515.github.io/PSPad`.
+`https://psp515.com/pspad`.
 
 Stack first: the install page is generated from the compose file, so the
 compose file has to be the final one before the page is written against it.

@@ -9,7 +9,7 @@
     <a href="https://github.com/psp515/PSPad/actions/workflows/ci.yml">
       <img src="https://img.shields.io/github/actions/workflow/status/psp515/PSPad/ci.yml?branch=main&label=CI" alt="CI status" />
     </a>
-    <a href="https://psp515.github.io/PSPad/">
+    <a href="https://psp515.com/pspad/">
       <img src="https://img.shields.io/github/deployments/psp515/PSPad/github-pages?label=docs" alt="docs" />
     </a>
     <a href="">
@@ -67,12 +67,12 @@ with no signal.
 
 ## Documentation
 
-Full docs live at **[psp515.github.io/PSPad](https://psp515.github.io/PSPad/)**
+Full docs live at **[psp515.com/pspad](https://psp515.com/pspad/)**
 (built with Astro):
 
-- [Features](https://psp515.github.io/PSPad/features/) — what's built, what's
+- [Features](https://psp515.com/pspad/features/) — what's built, what's
   in progress, and what's still only planned.
-- [Install](https://psp515.github.io/PSPad/install/) — run PSPad on your own
+- [Install](https://psp515.com/pspad/install/) — run PSPad on your own
   hardware with Docker Compose, from a clone to your first sign-in.
 
 ## Development
@@ -99,7 +99,7 @@ Each deployable carries its own `Dockerfile` next to its `.csproj`
 (`src/PSPad.Api`, `src/PSPad.App`), built with the repository root as
 context. `docker/compose.yaml` is both the development and the self-hosting
 stack — self-hosting is documented in full on the
-[install page](https://psp515.github.io/PSPad/install/).
+[install page](https://psp515.com/pspad/install/).
 
 Design specs live in `specs/`, architecture decision records in `adr/` (see
 `adr/README.md` for the index — they carry the reasoning and rejected

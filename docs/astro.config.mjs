@@ -1,6 +1,6 @@
 import { defineConfig } from 'astro/config'
 
 export default defineConfig({
-  site: 'https://psp515.github.io',
-  base: '/PSPad'
+  site: 'https://psp515.com',
+  base: '/pspad'
 })
