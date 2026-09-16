@@ -46,6 +46,17 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task ANullTimeZoneFromTheServerDoesNotCrashTheSettingsPage()
+    {
+        var state = Arrange(displayName: "Ada", email: "ada@example.com", respondWithNullTimeZone: true);
+
+        var page = Render<SettingsPage>();
+        await page.InvokeAsync(() => page.Instance.ApplyTimeZoneAsync("Pacific/Kiritimati"));
+
+        Assert.Equal("Etc/UTC", state.TimeZone);
+    }
+
+    [Fact]
     public void ItShowsEverythingSyncedWhenTheOutboxIsEmpty()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
@@ -81,7 +92,7 @@ public class SettingsPageTests : Bunit.TestContext
         Assert.Contains("Dark", page.Markup);
     }
 
-    AppState Arrange(string displayName, string email)
+    AppState Arrange(string displayName, string email, bool respondWithNullTimeZone = false)
     {
         AppTestHost.Arrange(this, User, Today);
 
@@ -94,7 +105,8 @@ public class SettingsPageTests : Bunit.TestContext
         };
         Services.AddSingleton(state);
 
-        Services.AddSingleton(new PSPadApiClient(new HttpClient(new EchoTimeZoneHandler(User, displayName, email))
+        Services.AddSingleton(new PSPadApiClient(
+            new HttpClient(new EchoTimeZoneHandler(User, displayName, email, respondWithNullTimeZone))
         {
             BaseAddress = new Uri("http://localhost/")
         }));
@@ -102,16 +114,18 @@ public class SettingsPageTests : Bunit.TestContext
         return state;
     }
 
-    sealed class EchoTimeZoneHandler(Guid userId, string displayName, string email) : HttpMessageHandler
+    sealed class EchoTimeZoneHandler(Guid userId, string displayName, string email, bool respondWithNullTimeZone)
+        : HttpMessageHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var body = await request.Content!.ReadFromJsonAsync<SetTimeZoneRequest>(cancellationToken);
+            var timeZone = respondWithNullTimeZone ? null! : body!.TimeZone;
 
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new MeResponse(userId, displayName, email, body!.TimeZone))
+                Content = JsonContent.Create(new MeResponse(userId, displayName, email, timeZone))
             };
         }
     }

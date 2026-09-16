@@ -119,27 +119,25 @@
 
     async Task LoadAccountAsync()
     {
-        var me = await FetchAccountAsync();
+        var fetched = await FetchAccountAsync();
 
-        if (me is null)
+        if (fetched is null)
         {
             _accountUnavailable = true;
             return;
         }
 
-        // The wire contract's string fields aren't runtime-enforced non-null -- a malformed or
-        // unexpected server response should degrade to empty/UTC, never crash the shell.
-        var timeZoneId = string.IsNullOrEmpty(me.TimeZone) ? "Etc/UTC" : me.TimeZone;
+        var me = fetched.Sanitized();
 
         _accountUnavailable = false;
-        _displayName = me.DisplayName ?? "";
-        _email = me.Email ?? "";
+        _displayName = me.DisplayName;
+        _email = me.Email;
         State.UserId = me.UserId;
-        State.DisplayName = _displayName;
-        State.Email = _email;
-        State.TimeZone = timeZoneId;
+        State.DisplayName = me.DisplayName;
+        State.Email = me.Email;
+        State.TimeZone = me.TimeZone;
         State.Today = TodayRule.TodayIn(
-            DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(timeZoneId));
+            DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
         await Ownership.EnsureCurrentUserAsync(me.UserId);
         await ReloadAreasAndCountsAsync();
 
