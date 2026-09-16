@@ -14,7 +14,10 @@ public static class MeEndpoints
             var user = await provisioner.EnsureAsync(
                 current.Subject, current.DisplayName, current.TimeZoneHint, ct);
 
-            user = await provisioner.RenameAsync(user, current.DisplayName, ct);
+            if (current.DisplayName != current.Subject)
+            {
+                user = await provisioner.RenameAsync(user, current.DisplayName, ct);
+            }
 
             return Results.Ok(new MeResponse(user.Id, user.DisplayName, current.Email, user.TimeZone));
         });

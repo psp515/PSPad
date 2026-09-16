@@ -63,6 +63,35 @@ public class MeEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task ItDoesNotOverwriteAHealedNameWhenTheTokenFallsBackToTheSubject()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        using var factory = new ApiFactory(fixture);
+        using var client = factory.CreateClient();
+        var subject = Guid.NewGuid().ToString();
+
+        var healed = new HttpRequestMessage(HttpMethod.Get, "/api/me");
+        healed.Headers.Add("X-Test-Subject", subject);
+        healed.Headers.Add("X-Test-Name", "Ada Lovelace");
+        await client.SendAsync(healed, ct);
+
+        var fallback = new HttpRequestMessage(HttpMethod.Get, "/api/me");
+        fallback.Headers.Add("X-Test-Subject", subject);
+
+        var response = await client.SendAsync(fallback, ct);
+        var me = await response.Content.ReadFromJsonAsync<MeResponse>(ct);
+
+        Assert.Equal("Ada Lovelace", me!.DisplayName);
+
+        var historyRequest = new HttpRequestMessage(HttpMethod.Get, "/api/history");
+        historyRequest.Headers.Add("X-Test-Subject", subject);
+        var historyResponse = await client.SendAsync(historyRequest, ct);
+        var history = await historyResponse.Content.ReadFromJsonAsync<HistoryEntry[]>(ct);
+        Assert.DoesNotContain(
+            history!, entry => entry.Description == "Updated the display name from your account");
+    }
+
+    [Fact]
     public async Task ItReturnsTheTokenEmail()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
