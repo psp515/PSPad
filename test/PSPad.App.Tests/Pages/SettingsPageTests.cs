@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using PSPad.App.Api;
@@ -42,6 +43,30 @@ public class SettingsPageTests : Bunit.TestContext
             TodayRule.TodayIn(DateTimeOffset.UtcNow,
                 TimeZoneInfo.FindSystemTimeZoneById("Pacific/Kiritimati")),
             state.Today);
+    }
+
+    [Fact]
+    public void ItShowsEverythingSyncedWhenTheOutboxIsEmpty()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.Contains("Everything is synced.", page.Markup);
+    }
+
+    [Fact]
+    public async Task ItShowsThePendingCommandCountFromTheOutboxRegardlessOfSyncCoordinatorState()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var outbox = Services.GetRequiredService<IOutbox>();
+        await outbox.AppendAsync(Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
+        await outbox.AppendAsync(Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
+
+        var page = Render<SettingsPage>();
+
+        Assert.Contains("2 pending", page.Markup);
     }
 
     [Fact]

@@ -6,6 +6,9 @@
 @inject PSPadApiClient Api
 @inject AppState State
 @inject ThemePreference Preference
+@inject IOutbox Outbox
+@inject CommandSender Sender
+@implements IDisposable
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Settings</MudText>
 
@@ -54,12 +57,29 @@
 <MudPaper Outlined="true" Class="pa-4">
     <MudText Typo="Typo.subtitle2" Class="mb-3">Sync</MudText>
     <MudText Typo="Typo.body2">
-        @(State.PendingCommands == 0 ? "Everything is synced." : $"{State.PendingCommands} pending")
+        @(_pendingCommands == 0 ? "Everything is synced." : $"{_pendingCommands} pending")
     </MudText>
 </MudPaper>
 
 @code {
     bool _rejected;
+    int _pendingCommands;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Sender.Sent += OnCommandSent;
+        await RefreshPendingAsync();
+    }
+
+    async Task RefreshPendingAsync()
+    {
+        _pendingCommands = await Outbox.CountAsync();
+        StateHasChanged();
+    }
+
+    void OnCommandSent() => InvokeAsync(RefreshPendingAsync);
+
+    public void Dispose() => Sender.Sent -= OnCommandSent;
 
     public async Task ApplyTimeZoneAsync(string timeZone)
     {

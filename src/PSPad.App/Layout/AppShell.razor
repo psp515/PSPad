@@ -40,7 +40,7 @@
     <MudDrawer Variant="DrawerVariant.Persistent" Open="@_isDesktop" Elevation="1"
                ClipMode="DrawerClipMode.Never" Class="d-none d-md-flex">
         <NavSidebar Areas="@_areas" AreasLoaded="@_ready" Email="@_email" DisplayName="@_displayName"
-                    UserId="@State.UserId" PendingCommands="@Coordinator.PendingCount"
+                    UserId="@State.UserId"
                     OnNewArea="@NewAreaAsync"
                     OnRenameArea="@RenameAreaAsync"
                     OnDeleteArea="@DeleteAreaAsync" />
@@ -49,7 +49,7 @@
     <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Temporary"
                Elevation="1" ClipMode="DrawerClipMode.Never" Class="d-md-none">
         <NavSidebar Areas="@_areas" AreasLoaded="@_ready" Email="@_email" DisplayName="@_displayName"
-                    UserId="@State.UserId" PendingCommands="@Coordinator.PendingCount"
+                    UserId="@State.UserId"
                     OnNewArea="@NewAreaAsync"
                     OnRenameArea="@RenameAreaAsync"
                     OnDeleteArea="@DeleteAreaAsync"
@@ -240,11 +240,7 @@
 
     void OnPreferenceChanged() => InvokeAsync(StateHasChanged);
 
-    void OnSyncChanged()
-    {
-        State.PendingCommands = Coordinator.PendingCount;
-        InvokeAsync(ReloadAreasAndCountsAsync);
-    }
+    void OnSyncChanged() => InvokeAsync(ReloadAreasAndCountsAsync);
 
     void OnCommandSent() => InvokeAsync(ReloadAreasAndCountsAsync);
 
