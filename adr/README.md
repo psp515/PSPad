@@ -33,6 +33,7 @@ the old one's status line to point at the new number.
 | [0016](0016-documentation-site.md) | A documentation site in Astro, published to GitHub Pages | Active | 2026-09-14 | documentation, tooling, deployment |
 | [0017](0017-promote-goals-to-a-sidebar-row.md) | Promote Goals to a permanent sidebar row | Active (supersedes Goals' placement in [0014](0014-one-navigation-tree-at-every-width.md)) | 2026-09-15 | ui, domain |
 | [0018](0018-purge-local-replica-on-user-switch.md) | Purge the local replica and outbox when the signed-in user changes | Active | 2026-09-15 | offline, sync, identity |
+| [0019](0019-created-at-on-todo-task-and-burndown-backfill.md) | Backfill TodoTask.CreatedAt from TaskCreated, and bump seq so delta sync delivers it | Active | 2026-09-16 | persistence, sync, analytics |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

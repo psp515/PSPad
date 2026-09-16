@@ -31,7 +31,7 @@ Platform, not one project. Each gets own spec, plan, implementation.
 | 5 | Goals & annual plans — yearly horizon, year-end summary | later |
 | 6 | Integrations — GitHub issues, OneDrive, Google Drive, Thingiverse | later |
 | 7 | 3D-print domain — materials, parts, reference materials | later |
-| 8 | Analytics & reminders — charts, push, thought of the day | later |
+| 8 | Analytics & reminders — push, thought of the day (a burndown chart already ships in slice 1's History screen) | later |
 
 4 and 5 cheap later because slice 1 models recurrence as occurrences and goals as
 entities. Do not regress that.
@@ -44,10 +44,11 @@ In: areas (user-defined), lists (inside one area), Inbox (one per user, outside
 areas, organizing = first-class command), tasks (one list, name + due date +
 goal + priority + star + steps), steps (own due date, ordered, dense positions),
 recurrence (template + per-day occurrences), goals (global, many tasks to one),
-Today screen (cross-area), action history, offline PWA, auth.
+Today screen (cross-area), action history, a burndown chart on the History
+screen, offline PWA, auth.
 
 Out: habits, annual plans, integrations, print lists, reference materials,
-charts, push reminders, thought of day, list types beyond plain.
+push reminders, thought of day, list types beyond plain.
 
 ### Today rule
 
@@ -306,9 +307,14 @@ not, and stay authoritative:
 - `specs/ui-redesign-2-design.md` — the current client design: one navigation
   tree at every width, area screens of list cards, the task detail overlay,
   inline creation, local search, the sage palette.
+- `specs/ui-polish-design.md` — the current client's polish pass: correct
+  identity data (display name, time zone), a settings screen, a single brand
+  mark from first paint through loading skeletons, wider-screen grid layouts,
+  and the History screen's burndown chart.
 
-Next up are that spec's **plan 10 — shell** and **plan 11 — screens**.
-`adr/0012` (ordering module) is `Proposed` and still unbuilt.
+That polish pass's plans — identity fixes, the burndown chart, loading and
+grid work, settings and nav — are merged on this branch. `adr/0012`
+(ordering module) is still `Proposed` and still unbuilt.
 
 ---
 
