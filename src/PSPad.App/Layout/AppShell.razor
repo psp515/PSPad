@@ -34,17 +34,15 @@
         <MudIconButton id="pspad-drawer-toggle" Class="d-md-none" Icon="@Icons.Material.Filled.Menu"
                        Color="Color.Inherit" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
         <MudSpacer />
-        <AccountMenu Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
-                     AvatarOnly="true" />
+        <AccountBadge Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
+                      AvatarOnly="true" />
     </MudAppBar>
 
     <MudDrawer Variant="DrawerVariant.Persistent" Open="@_isDesktop" Elevation="1"
                ClipMode="DrawerClipMode.Never" Class="d-none d-md-flex">
         <NavSidebar Areas="@_areas" AreasLoaded="@_ready" Email="@_email" DisplayName="@_displayName"
                     UserId="@State.UserId" Disabled="@(!_ready)"
-                    OnNewArea="@NewAreaAsync"
-                    OnRenameArea="@RenameAreaAsync"
-                    OnDeleteArea="@DeleteAreaAsync" />
+                    OnNewArea="@NewAreaAsync" />
     </MudDrawer>
 
     <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Temporary"
@@ -52,8 +50,6 @@
         <NavSidebar Areas="@_areas" AreasLoaded="@_ready" Email="@_email" DisplayName="@_displayName"
                     UserId="@State.UserId" Disabled="@(!_ready)"
                     OnNewArea="@NewAreaAsync"
-                    OnRenameArea="@RenameAreaAsync"
-                    OnDeleteArea="@DeleteAreaAsync"
                     Navigated="@CloseDrawer" />
     </MudDrawer>
 
@@ -212,41 +208,6 @@
             Positions.Next(_areas.Select(area => area.Position))));
 
         await ReloadAreasAndCountsAsync();
-    }
-
-    async Task RenameAreaAsync(Area area)
-    {
-        var name = await AskForNameAsync("Rename area", "Area name", area.Name);
-        if (name is null)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new RenameArea(Guid.NewGuid(), State.UserId, area.Id, name));
-        await ReloadAreasAndCountsAsync();
-    }
-
-    async Task DeleteAreaAsync(Area area)
-    {
-        var parameters = new DialogParameters<ConfirmDialog>
-        {
-            { dialog => dialog.Message, $"Delete “{area.Name}”? Its lists stay, without an area." }
-        };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete area", parameters);
-        var result = await dialog.Result;
-
-        if (result is null || result.Canceled)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new DeleteArea(Guid.NewGuid(), State.UserId, area.Id));
-        await ReloadAreasAndCountsAsync();
-
-        if (Navigation.Uri.Contains($"/areas/{area.Id}", StringComparison.OrdinalIgnoreCase))
-        {
-            Navigation.NavigateTo("/");
-        }
     }
 
     async Task<string?> AskForNameAsync(string title, string label, string value)

@@ -3,19 +3,11 @@
 @using PSPad.App.State
 @using PSPad.Module.Tasks.Areas
 @inject SidebarCounts Counts
-@inject NavigationManager Navigation
 @implements IDisposable
 @implements INavigationEventReceiver
 
 <div class="d-flex flex-column" style="height:100%">
-    <AccountMenu Email="@Email" DisplayName="@DisplayName" UserId="@UserId" />
-
-    <div>
-        <MudTextField T="string" @bind-Value="_query" Placeholder="Search" Immediate="true"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="mx-3 mb-2"
-                      OnKeyDown="@OnSearchKey" />
-    </div>
+    <AccountBadge Email="@Email" DisplayName="@DisplayName" UserId="@UserId" />
 
     <CascadingValue Value="@((INavigationEventReceiver)this)" IsFixed="true">
         <MudNavMenu>
@@ -48,27 +40,40 @@
             {
                 @foreach (var area in Areas.OrderBy(area => area.Position))
                 {
-                    <div class="d-flex align-center pspad-area-row">
-                        <div class="flex-grow-1">
-                            <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
-                                @area.Name
-                            </MudNavLink>
-                        </div>
-                        <ThingMenu Class="pspad-area-menu mr-2"
-                                   OnRename="@(() => Disabled ? Task.CompletedTask : OnRenameArea.InvokeAsync(area))"
-                                   OnDelete="@(() => Disabled ? Task.CompletedTask : OnDeleteArea.InvokeAsync(area))" />
-                    </div>
+                    <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
+                        @area.Name
+                    </MudNavLink>
                 }
             }
+
+            <MudNavLink Icon="@Icons.Material.Filled.Add" Class="pspad-new-area"
+                        Disabled="@Disabled" OnClick="@OnNewAreaClick">
+                New area
+            </MudNavLink>
+        </MudNavMenu>
+
+        <MudDivider Class="my-2" Style="flex-grow:0" />
+
+        <MudNavMenu>
+            <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">
+                Settings
+            </MudNavLink>
+            <MudNavLink Href="/app-info" Icon="@Icons.Material.Filled.Info">
+                App info
+            </MudNavLink>
         </MudNavMenu>
     </CascadingValue>
 
-    <MudDivider Class="my-2" Style="flex-grow:0" />
+    <div class="flex-grow-1"></div>
 
-    <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Class="ma-2 pspad-new-area"
-               Style="align-self:flex-start;flex-grow:0" Disabled="@Disabled" OnClick="@OnNewAreaClick">
-        New area
-    </MudButton>
+    <div class="px-3 py-2 pspad-sidebar-footer">
+        <div>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@_now.ToString("yyyy-MM-dd HH:mm")</MudText>
+        </div>
+        <div>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">PSPad &middot; GPL v3</MudText>
+        </div>
+    </div>
 </div>
 
 @code {
@@ -86,15 +91,26 @@
 
     [Parameter] public EventCallback OnNewArea { get; set; }
 
-    [Parameter] public EventCallback<Area> OnRenameArea { get; set; }
-
-    [Parameter] public EventCallback<Area> OnDeleteArea { get; set; }
-
     [Parameter] public EventCallback Navigated { get; set; }
 
-    string _query = "";
+    DateTime _now = DateTime.Now;
+    PeriodicTimer? _clock;
 
-    protected override void OnInitialized() => Counts.Changed += OnCountsChanged;
+    protected override void OnInitialized()
+    {
+        Counts.Changed += OnCountsChanged;
+        _ = RunClockAsync();
+    }
+
+    async Task RunClockAsync()
+    {
+        _clock = new PeriodicTimer(TimeSpan.FromMinutes(1));
+        while (await _clock.WaitForNextTickAsync())
+        {
+            _now = DateTime.Now;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
     void OnCountsChanged() => InvokeAsync(StateHasChanged);
 
@@ -102,18 +118,11 @@
 
     Task OnNewAreaClick() => Disabled ? Task.CompletedTask : OnNewArea.InvokeAsync();
 
-    async Task OnSearchKey(KeyboardEventArgs args)
-    {
-        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_query))
-        {
-            return;
-        }
-
-        Navigation.NavigateTo($"/search?q={Uri.EscapeDataString(_query)}");
-        await Navigated.InvokeAsync();
-    }
-
     Task INavigationEventReceiver.OnNavigation() => Navigated.InvokeAsync();
 
-    public void Dispose() => Counts.Changed -= OnCountsChanged;
+    public void Dispose()
+    {
+        Counts.Changed -= OnCountsChanged;
+        _clock?.Dispose();
+    }
 }

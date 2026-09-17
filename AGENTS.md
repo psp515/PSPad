@@ -306,7 +306,12 @@ not, and stay authoritative:
   D8) are superseded; its theme and `TaskRow` reasoning still stand.
 - `specs/ui-redesign-2-design.md` — the current client design: one navigation
   tree at every width, area screens of list cards, the task detail overlay,
-  inline creation, local search, the sage palette.
+  inline creation, local search, the sage palette. Its D6/D7 (no FAB; `⋯`
+  menu on the thing) are superseded for areas only by `adr/0022` — area
+  rename/delete now lives on a FAB on the area's own page; lists are
+  unaffected. Its local-search decision is temporarily superseded by
+  `adr/0023` — the sidebar's search field is gone and `/search` is
+  unreachable from the UI until it gets a new home.
 - `specs/ui-polish-design.md` — the current client's polish pass: correct
   identity data (display name, time zone), a settings screen, a single brand
   mark from first paint through loading skeletons, wider-screen grid layouts,
@@ -314,7 +319,11 @@ not, and stay authoritative:
 
 That polish pass's plans — identity fixes, the burndown chart, loading and
 grid work, settings and nav — are merged on this branch. `adr/0012`
-(ordering module) is still `Proposed` and still unbuilt.
+(ordering module) is still `Proposed` and still unbuilt. `adr/0022` (drawer
+cleanup: dead account-menu arrow removed, Settings and App info as sidebar
+rows, area actions moved to a FAB) and `adr/0023` (search pulled from the
+sidebar for now, drawer footer with date/time and license) are `Active` and
+built on this branch.
 
 ---
 

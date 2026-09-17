@@ -1,0 +1,27 @@
+@page "/app-info"
+@using System.Reflection
+
+<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">App info</MudText>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.subtitle2" Class="mb-3">PSPad</MudText>
+    <MudText Typo="Typo.body2">Version @Version</MudText>
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.subtitle2" Class="mb-3">License</MudText>
+    <MudText Typo="Typo.body2">Free software, licensed under the GNU General Public License v3.</MudText>
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4">
+    <MudText Typo="Typo.subtitle2" Class="mb-3">Links</MudText>
+    <MudLink Href="https://github.com/psp515/PSPad" Target="_blank">Source on GitHub</MudLink>
+    <br />
+    <MudLink Href="https://psp515.github.io" Target="_blank">Documentation</MudLink>
+</MudPaper>
+
+@code {
+    static string Version =>
+        typeof(AppInfoPage).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion ?? "unknown";
+}

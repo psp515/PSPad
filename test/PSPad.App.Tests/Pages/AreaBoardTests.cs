@@ -215,6 +215,50 @@ public class AreaBoardTests : Bunit.TestContext
         Assert.True(stored!.Deleted);
     }
 
+    [Fact]
+    public void TheAreaCarriesAnActionsFab()
+    {
+        var area = NewArea("Dom");
+        Arrange(area);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        page.Find(".pspad-area-fab");
+    }
+
+    [Fact]
+    public async Task RenamingTheAreaFromItsFabUpdatesTheReplica()
+    {
+        var area = NewArea("Dom");
+        var replica = Arrange(area);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-area-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        page.FindAll(".mud-menu-item")[0].Click();
+
+        var field = page.Find("div.mud-dialog input");
+        field.Input("Domownicy");
+        page.FindAll("div.mud-dialog button").Last().Click();
+
+        var stored = await replica.LoadAsync<Area>(area.Id);
+        Assert.Equal("Domownicy", stored!.Name);
+    }
+
+    [Fact]
+    public async Task DeletingTheAreaFromItsFabNavigatesHome()
+    {
+        var area = NewArea("Dom");
+        var replica = Arrange(area);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-area-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        page.FindAll(".mud-menu-item")[1].Click();
+        page.FindAll("div.mud-dialog button").Last().Click();
+
+        var stored = await replica.LoadAsync<Area>(area.Id);
+        Assert.True(stored!.Deleted);
+    }
+
     // Both ThingMenu's MudMenu and IDialogService's MudDialogProvider portal their open
     // content through MudPopoverProvider, so all three must share one render tree.
     RenderFragment BuildAreaBoardWithDialogs(Guid areaId) => builder =>

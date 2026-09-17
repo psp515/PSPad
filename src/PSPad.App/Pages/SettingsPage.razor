@@ -54,12 +54,17 @@
     </MudButtonGroup>
 </MudPaper>
 
-<MudPaper Outlined="true" Class="pa-4">
+<MudPaper Outlined="true" Class="pa-4 mb-4">
     <MudText Typo="Typo.subtitle2" Class="mb-3">Sync</MudText>
     <MudText Typo="Typo.body2">
         @(_pendingCommands == 0 ? "Everything is synced." : $"{_pendingCommands} pending")
     </MudText>
 </MudPaper>
+
+<MudButton Class="pspad-sign-out" Href="/authentication/logout" StartIcon="@Icons.Material.Filled.Logout"
+           Color="Color.Error" Variant="Variant.Outlined">
+    Sign out
+</MudButton>
 
 @code {
     bool _rejected;

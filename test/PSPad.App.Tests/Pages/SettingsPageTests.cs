@@ -81,6 +81,16 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItOffersSignOut()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.Contains("/authentication/logout", page.Markup);
+    }
+
+    [Fact]
     public void ItOffersTheThreeThemeModes()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
