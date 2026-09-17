@@ -3,19 +3,11 @@
 @using PSPad.App.State
 @using PSPad.Module.Tasks.Areas
 @inject SidebarCounts Counts
-@inject NavigationManager Navigation
 @implements IDisposable
 @implements INavigationEventReceiver
 
 <div class="d-flex flex-column" style="height:100%">
     <AccountBadge Email="@Email" DisplayName="@DisplayName" UserId="@UserId" />
-
-    <div>
-        <MudTextField T="string" @bind-Value="_query" Placeholder="Search" Immediate="true"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="mx-3 mb-2"
-                      OnKeyDown="@OnSearchKey" />
-    </div>
 
     <CascadingValue Value="@((INavigationEventReceiver)this)" IsFixed="true">
         <MudNavMenu>
@@ -54,10 +46,10 @@
                 }
             }
 
-            <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Class="ma-2 pspad-new-area"
-                       Style="align-self:flex-start;flex-grow:0" Disabled="@Disabled" OnClick="@OnNewAreaClick">
+            <MudNavLink Icon="@Icons.Material.Filled.Add" Class="pspad-new-area"
+                        Disabled="@Disabled" OnClick="@OnNewAreaClick">
                 New area
-            </MudButton>
+            </MudNavLink>
         </MudNavMenu>
 
         <MudDivider Class="my-2" Style="flex-grow:0" />
@@ -71,6 +63,13 @@
             </MudNavLink>
         </MudNavMenu>
     </CascadingValue>
+
+    <div class="flex-grow-1"></div>
+
+    <div class="px-3 py-2 pspad-sidebar-footer">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@_now.ToString("yyyy-MM-dd HH:mm")</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">GPL v3</MudText>
+    </div>
 </div>
 
 @code {
@@ -90,9 +89,24 @@
 
     [Parameter] public EventCallback Navigated { get; set; }
 
-    string _query = "";
+    DateTime _now = DateTime.Now;
+    PeriodicTimer? _clock;
 
-    protected override void OnInitialized() => Counts.Changed += OnCountsChanged;
+    protected override void OnInitialized()
+    {
+        Counts.Changed += OnCountsChanged;
+        _ = RunClockAsync();
+    }
+
+    async Task RunClockAsync()
+    {
+        _clock = new PeriodicTimer(TimeSpan.FromMinutes(1));
+        while (await _clock.WaitForNextTickAsync())
+        {
+            _now = DateTime.Now;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
     void OnCountsChanged() => InvokeAsync(StateHasChanged);
 
@@ -100,18 +114,11 @@
 
     Task OnNewAreaClick() => Disabled ? Task.CompletedTask : OnNewArea.InvokeAsync();
 
-    async Task OnSearchKey(KeyboardEventArgs args)
-    {
-        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_query))
-        {
-            return;
-        }
-
-        Navigation.NavigateTo($"/search?q={Uri.EscapeDataString(_query)}");
-        await Navigated.InvokeAsync();
-    }
-
     Task INavigationEventReceiver.OnNavigation() => Navigated.InvokeAsync();
 
-    public void Dispose() => Counts.Changed -= OnCountsChanged;
+    public void Dispose()
+    {
+        Counts.Changed -= OnCountsChanged;
+        _clock?.Dispose();
+    }
 }

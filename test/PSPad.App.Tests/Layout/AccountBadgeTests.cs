@@ -53,6 +53,20 @@ public class AccountBadgeTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheFullBadgeHasGenerousTopAndBottomPadding()
+    {
+        Arrange();
+
+        var badge = Render<AccountBadge>(parameters => parameters
+            .Add(account => account.DisplayName, "Ada Lovelace")
+            .Add(account => account.Email, "ada@example.com")
+            .Add(account => account.UserId, User));
+
+        var wrapper = badge.Find(".pspad-account-badge");
+        Assert.Contains("py-4", wrapper.ClassList);
+    }
+
+    [Fact]
     public void ItHasNoDropdownArrowOrMenu()
     {
         Arrange();

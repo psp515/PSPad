@@ -138,7 +138,7 @@ public class NavSidebarTests : Bunit.TestContext
             .Add(p => p.UserId, User)
             .Add(p => p.OnNewArea, EventCallback.Factory.Create(this, () => newArea++)));
 
-        sidebar.Find(".pspad-new-area").Click();
+        sidebar.Find(".pspad-new-area .mud-nav-link").Click();
 
         Assert.Equal(1, newArea);
     }
@@ -156,7 +156,7 @@ public class NavSidebarTests : Bunit.TestContext
             .Add(p => p.Disabled, true)
             .Add(p => p.OnNewArea, EventCallback.Factory.Create(this, () => newArea++)));
 
-        sidebar.Find(".pspad-new-area").Click();
+        sidebar.Find(".pspad-new-area .mud-nav-link").Click();
 
         Assert.Equal(0, newArea);
     }
@@ -180,6 +180,38 @@ public class NavSidebarTests : Bunit.TestContext
 
         Assert.Contains("/settings\"", sidebar.Markup);
         Assert.Contains("/app-info\"", sidebar.Markup);
+    }
+
+    [Fact]
+    public void ThereIsNoSearchFieldAnymore()
+    {
+        Arrange();
+
+        var sidebar = Render(Areas("Dom"));
+
+        Assert.Empty(sidebar.FindAll("input[placeholder='Search']"));
+    }
+
+    [Fact]
+    public void TheFooterShowsTheDateTimeAndTheLicense()
+    {
+        Arrange();
+
+        var sidebar = Render(Areas("Dom"));
+
+        Assert.Contains("pspad-sidebar-footer", sidebar.Markup);
+        Assert.Contains("GPL v3", sidebar.Markup);
+    }
+
+    [Fact]
+    public void TheNewAreaRowCarriesAnAddIcon()
+    {
+        Arrange();
+
+        var sidebar = Render(Areas("Dom"));
+
+        var newArea = sidebar.Find(".pspad-new-area");
+        Assert.Contains("M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z", newArea.InnerHtml);
     }
 
     IRenderedComponent<NavSidebar> Render(IReadOnlyList<Area> areas) =>
