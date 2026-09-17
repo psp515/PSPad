@@ -39,6 +39,7 @@ the old one's status line to point at the new number.
 | [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md) | Kill the dead account-menu arrow — Settings and App info become sidebar rows, area actions move to a FAB on the area page | Active (amends [0020](0020-history-sidebar-row-and-settings-screen.md); supersedes `ui-redesign-2-design.md` D6/D7 for area actions only) | 2026-09-17 | ui, identity, domain |
 | [0023](0023-sidebar-search-removed-footer-added.md) | Pull local search out of the sidebar for now, give the drawer a footer | Active (amends [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md); temporarily supersedes `ui-redesign-2-design.md`'s local-search decision) | 2026-09-17 | ui |
 | [0024](0024-authentication-callback-route-off-appshell.md) | Keep the OIDC login-callback route off AppShell's layout | Active | 2026-09-17 | identity, sync, offline |
+| [0025](0025-purge-on-any-user-mismatch-including-no-recorded-owner.md) | Purge local data on any signed-in/recorded-owner mismatch, including no recorded owner yet | Active (refines [0018](0018-purge-local-replica-on-user-switch.md)) | 2026-09-17 | offline, sync, identity |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
