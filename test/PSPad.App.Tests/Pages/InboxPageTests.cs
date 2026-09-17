@@ -1,6 +1,7 @@
 using Bunit;
-using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
 using PSPad.App.Pages;
@@ -20,19 +21,30 @@ public class InboxPageTests : Bunit.TestContext
     static readonly DateOnly Today = new(2026, 9, 12);
 
     [Fact]
-    public async Task CapturingOnEnterStoresTheItemAndClearsTheField()
+    public async Task CapturingThroughTheFabDialogStoresTheItem()
     {
         var inbox = NewInbox();
         var replica = Arrange(inbox);
 
-        var page = Render<InboxPage>();
-        var input = page.Find("input[placeholder='Capture']");
-        input.Input("Zadzwonić do serwisu");
-        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        var page = Render(BuildInboxPageWithDialogs());
+        page.Find(".pspad-fab").Click();
+        var dialog = page.FindComponent<MudDialogProvider>();
+        dialog.Find("input[placeholder='Capture']").Input("Zadzwonić do serwisu");
+        dialog.FindAll("button").Last().Click();
 
         var stored = await replica.LoadAsync<Inbox>(inbox.Id);
         Assert.Contains(stored!.Items, item => item.Text == "Zadzwonić do serwisu");
-        Assert.Equal("", page.Find("input[placeholder='Capture']").GetAttribute("value") ?? "");
+    }
+
+    [Fact]
+    public void ThereIsNoInlineCaptureFieldAnymoreOnlyTheFab()
+    {
+        Arrange(NewInbox());
+
+        var page = Render<InboxPage>();
+
+        Assert.Empty(page.FindAll("input[placeholder='Capture']"));
+        page.Find(".pspad-fab");
     }
 
     [Fact]
@@ -48,7 +60,17 @@ public class InboxPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TappingAnItemOpensNameAreaAndListInsideTheRow()
+    public void EachItemIsItsOwnCard()
+    {
+        Arrange(NewInbox("Pierwsze", "Drugie"));
+
+        var page = Render<InboxPage>();
+
+        Assert.Equal(2, page.FindComponents<InboxItemCard>().Count);
+    }
+
+    [Fact]
+    public void TappingAnItemOpensThePanelWithAreaAndListPickers()
     {
         var area = NewArea("Dom", 0);
         var list = NewList(area.Id, "Zakupy");
@@ -81,12 +103,13 @@ public class InboxPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task DiscardingRemovesTheItemAndCreatesNoTask()
+    public async Task DiscardingFromThePanelRemovesTheItemAndCreatesNoTask()
     {
         var inbox = NewInbox("Nieaktualne");
         var replica = Arrange(inbox);
 
         var page = Render<InboxPage>();
+        page.Find(".pspad-inbox-item").Click();
         page.Find("button.pspad-inbox-discard").Click();
 
         var stored = await replica.LoadAsync<Inbox>(inbox.Id);
@@ -126,6 +149,19 @@ public class InboxPageTests : Bunit.TestContext
         Assert.True(page.Find("button.pspad-inbox-move").HasAttribute("disabled"));
         Assert.Contains("No lists in this area", page.Markup);
     }
+
+    // CaptureDialog and InboxItemCard both portal/render inside the page's own tree,
+    // but MudDialogProvider must share a render tree with the page for the FAB's
+    // dialog to be reachable by bUnit.
+    RenderFragment BuildInboxPageWithDialogs() => builder =>
+    {
+        builder.OpenComponent<MudPopoverProvider>(0);
+        builder.CloseComponent();
+        builder.OpenComponent<MudDialogProvider>(1);
+        builder.CloseComponent();
+        builder.OpenComponent<InboxPage>(2);
+        builder.CloseComponent();
+    };
 
     InMemoryReplica Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, Today, documents);
