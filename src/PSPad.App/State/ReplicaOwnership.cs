@@ -6,7 +6,10 @@ public sealed class ReplicaOwnership(IReplica replica, IOutbox outbox)
     {
         var owner = await replica.OwnerAsync();
 
-        if (owner is not null && owner != userId)
+        // No exception for a never-recorded owner (null): anything queued before this device
+        // ever attributed its data to a user (e.g. commands sent during a mid-login race) is
+        // exactly the data that must never survive into a real session, ADR-0018's own case.
+        if (owner != userId)
         {
             await replica.ClearAsync();
             await outbox.ClearAsync();

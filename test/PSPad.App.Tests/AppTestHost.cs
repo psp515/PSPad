@@ -26,6 +26,7 @@ public static class AppTestHost
         context.Services.AddMudServices();
 
         var replica = new InMemoryReplica();
+        replica.SetOwnerAsync(userId).GetAwaiter().GetResult();
         foreach (var document in documents)
         {
             replica.SaveAsync(document).GetAwaiter().GetResult();
