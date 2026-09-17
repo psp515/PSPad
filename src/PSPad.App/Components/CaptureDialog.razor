@@ -7,7 +7,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="@(() => Dialog.Cancel())">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Disabled="@(_text.Length == 0)"
+        <MudButton Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(_text)"
                    OnClick="@(() => Dialog.Close(DialogResult.Ok(_text)))">
             Add
         </MudButton>
@@ -21,7 +21,7 @@
 
     void OnKeyDown(KeyboardEventArgs args)
     {
-        if (args.Key == "Enter" && _text.Length > 0)
+        if (args.Key == "Enter" && !string.IsNullOrWhiteSpace(_text))
         {
             Dialog.Close(DialogResult.Ok(_text));
         }

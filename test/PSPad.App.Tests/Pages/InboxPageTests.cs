@@ -37,6 +37,27 @@ public class InboxPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task CapturingWhitespaceOnlyTextDoesNothing()
+    {
+        var inbox = NewInbox();
+        var replica = Arrange(inbox);
+
+        var page = Render(BuildInboxPageWithDialogs());
+        page.Find(".pspad-fab").Click();
+        var dialog = page.FindComponent<MudDialogProvider>();
+        dialog.Find("input[placeholder='Capture']").Input("   ");
+        dialog.FindAll("button").Last().Click();
+
+        Assert.NotEmpty(dialog.FindAll("input[placeholder='Capture']"));
+
+        var stored = await replica.LoadAsync<Inbox>(inbox.Id);
+        Assert.Empty(stored!.Items);
+
+        var outbox = page.Services.GetRequiredService<IOutbox>();
+        Assert.Equal(0, await outbox.CountAsync());
+    }
+
+    [Fact]
     public void ThereIsNoInlineCaptureFieldAnymoreOnlyTheFab()
     {
         Arrange(NewInbox());

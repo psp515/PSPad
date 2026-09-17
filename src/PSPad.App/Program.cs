@@ -35,7 +35,7 @@ builder.Services.AddScoped<IUnitOfWork>(services => services.GetRequiredService<
 builder.Services.AddScoped<IClock, BrowserClock>();
 builder.Services.AddScoped<CommandSender>();
 builder.Services.AddScoped<ReplicaOwnership>();
-builder.Services.AddScoped<IViewport, BrowserViewport>();
+builder.Services.AddTransient<IViewport, BrowserViewport>();
 builder.Services.AddPSPadCommands();
 
 var apiBaseAddress = builder.Configuration["Api:BaseAddress"]!;

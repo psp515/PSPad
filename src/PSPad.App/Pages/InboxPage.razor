@@ -65,7 +65,7 @@ else
         var dialog = await Dialogs.ShowAsync<CaptureDialog>("Capture");
         var result = await dialog.Result;
 
-        if (result is null || result.Canceled || result.Data is not string text || text.Length == 0)
+        if (result is null || result.Canceled || result.Data is not string text || string.IsNullOrWhiteSpace(text))
         {
             return;
         }
