@@ -1,4 +1,9 @@
 @page "/authentication/{action}"
+@* AppShell would race the login-callback redirect: its one-shot auth check runs before
+   RemoteAuthenticatorView finishes processing, sees "unauthenticated", and locks in an
+   anonymous session for the rest of the SPA's lifetime (its own layout is never remounted
+   by the client-side redirect that follows). Keeping this route off AppShell removes the race. *@
+@layout AuthenticationLayout
 
 <RemoteAuthenticatorView Action="@Action" />
 
