@@ -1,8 +1,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
-const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
+const repositoryRoot = path.resolve(process.cwd(), '..')
 
 export interface EnvEntry {
   name: string
