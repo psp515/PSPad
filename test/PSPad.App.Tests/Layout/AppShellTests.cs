@@ -298,6 +298,19 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void WhenTheAccountFetchFailsTheSyncCoordinatorNeverStartsPushingTheStaleOutbox()
+    {
+        Arrange(meFailures: 10);
+        var connectivity = (SpyConnectivity)Services.GetRequiredService<IConnectivity>();
+        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
+
+        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
+
+        shell.WaitForAssertion(() => Assert.Single(shell.FindComponents<MudAlert>()), TimeSpan.FromSeconds(2));
+        Assert.Equal(0, connectivity.IsOnlineReads);
+    }
+
+    [Fact]
     public void ANullDisplayNameOrEmailFromApiMeDoesNotCrashTheShell()
     {
         Arrange(meResponseOverride: new MeResponse(User, null!, null!, "UTC"));
@@ -385,7 +398,7 @@ public class AppShellTests : Bunit.TestContext
 
         Services.AddSingleton(new PSPadApiClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }));
         Services.AddSingleton<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
-        Services.AddSingleton<IConnectivity>(new FakeConnectivity());
+        Services.AddSingleton<IConnectivity>(new SpyConnectivity());
         Services.AddScoped<SyncService>();
         Services.AddScoped<SyncCoordinator>();
 
@@ -425,9 +438,18 @@ public class AppShellTests : Bunit.TestContext
         return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
     }
 
-    sealed class FakeConnectivity : IConnectivity
+    sealed class SpyConnectivity : IConnectivity
     {
-        public bool IsOnline => false;
+        public int IsOnlineReads { get; private set; }
+
+        public bool IsOnline
+        {
+            get
+            {
+                IsOnlineReads++;
+                return false;
+            }
+        }
 
 #pragma warning disable CS0067
         public event Action? CameOnline;

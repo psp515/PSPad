@@ -118,6 +118,28 @@ public class TaskDetailPanelTests : Bunit.TestContext
         Assert.True(secondIndex < firstIndex);
     }
 
+    [Fact]
+    public void OnADesktopViewportTheDrawerKeepsItsFixedColumnWidth()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Contains("360px", panel.Find(".mud-drawer").GetAttribute("style"));
+    }
+
+    [Fact]
+    public void OnASmallViewportTheDrawerFillsTheFullWidthInsteadOfAFixedColumn()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, isDesktop: false, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Contains("100%", panel.Find(".mud-drawer").GetAttribute("style"));
+    }
+
     static TodoTask NewTask(string name)
     {
         var task = new TodoTask();

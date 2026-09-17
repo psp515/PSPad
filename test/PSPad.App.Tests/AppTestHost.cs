@@ -15,13 +15,18 @@ namespace PSPad.App.Tests;
 public static class AppTestHost
 {
     public static InMemoryReplica Arrange(
-        Bunit.TestContext context, Guid userId, DateOnly today, params Aggregate[] documents)
+        Bunit.TestContext context, Guid userId, DateOnly today, params Aggregate[] documents) =>
+        Arrange(context, userId, today, isDesktop: true, documents);
+
+    public static InMemoryReplica Arrange(
+        Bunit.TestContext context, Guid userId, DateOnly today, bool isDesktop, params Aggregate[] documents)
     {
         context.JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
         context.Services.Options = new ServiceProviderOptions { ValidateScopes = false };
         context.Services.AddMudServices();
 
         var replica = new InMemoryReplica();
+        replica.SetOwnerAsync(userId).GetAwaiter().GetResult();
         foreach (var document in documents)
         {
             replica.SaveAsync(document).GetAwaiter().GetResult();
@@ -50,7 +55,7 @@ public static class AppTestHost
 
         context.Services.AddSingleton(services => new CommandSender(services, work));
         context.Services.AddSingleton(new ReplicaOwnership(replica, outbox));
-        context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop: true));
+        context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop));
 
         return replica;
     }

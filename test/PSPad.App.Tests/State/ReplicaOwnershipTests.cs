@@ -10,7 +10,21 @@ namespace PSPad.App.Tests.State;
 public class ReplicaOwnershipTests
 {
     [Fact]
-    public async Task FirstSignInOnADeviceRecordsTheOwnerWithoutClearing()
+    public async Task FirstSignInOnAGenuinelyEmptyDeviceRecordsTheOwner()
+    {
+        var replica = new InMemoryReplica();
+        var outbox = new InMemoryOutbox();
+        var ownership = new ReplicaOwnership(replica, outbox);
+        var user = Guid.NewGuid();
+
+        await ownership.EnsureCurrentUserAsync(user);
+
+        Assert.Equal(user, await replica.OwnerAsync());
+        Assert.Equal(0, await outbox.CountAsync());
+    }
+
+    [Fact]
+    public async Task DataQueuedBeforeAnyOwnerWasEverRecordedIsClearedToo()
     {
         var replica = new InMemoryReplica();
         var outbox = new InMemoryOutbox();
@@ -21,7 +35,7 @@ public class ReplicaOwnershipTests
         await ownership.EnsureCurrentUserAsync(user);
 
         Assert.Equal(user, await replica.OwnerAsync());
-        Assert.Equal(1, await outbox.CountAsync());
+        Assert.Equal(0, await outbox.CountAsync());
     }
 
     [Fact]

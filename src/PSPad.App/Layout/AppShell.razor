@@ -107,9 +107,9 @@
         else
         {
             _ready = true;
+            Coordinator.Start();
         }
 
-        Coordinator.Start();
         ReadOpenTask();
     }
 
@@ -138,6 +138,7 @@
         await ReloadAreasAndCountsAsync();
 
         _ready = true;
+        Coordinator.Start();
     }
 
     async Task<MeResponse?> FetchAccountAsync()

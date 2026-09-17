@@ -9,9 +9,12 @@
 @inject IDocumentStore<Goal> Goals
 @inject AppState State
 @inject CommandSender Sender
+@inject IViewport Viewport
+@implements IAsyncDisposable
 
 <MudDrawer Open="@(TaskId is not null)" OpenChanged="@OnOpenChanged" Anchor="Anchor.Right"
-           Variant="DrawerVariant.Temporary" Elevation="6" Width="360px" OverlayAutoClose="true">
+           Variant="DrawerVariant.Temporary" Elevation="6" Width="@(_isDesktop ? "360px" : "100%")"
+           OverlayAutoClose="true">
     @if (_task is not null)
     {
         <div class="d-flex align-center gap-2 pa-3">
@@ -90,12 +93,15 @@
     TodoTask? _task;
     IReadOnlyList<TaskList>? _lists;
     IReadOnlyList<Goal>? _goals;
+    bool _isDesktop = true;
 
     bool Done => _task is not null && (_task.IsRecurring
         ? _task.CompletedDays.Contains(State.Today)
         : _task.CompletedAt is not null);
 
     DateTime? DueDate => _task?.DueOn?.ToDateTime(TimeOnly.MinValue);
+
+    protected override async Task OnInitializedAsync() => await Viewport.SubscribeAsync(OnDesktopChanged);
 
     protected override async Task OnParametersSetAsync() => await ReloadAsync();
 
@@ -110,6 +116,12 @@
         _task = await Store.LoadAsync(TaskId.Value, CancellationToken.None);
         _lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
         _goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
+    }
+
+    void OnDesktopChanged(bool isDesktop)
+    {
+        _isDesktop = isDesktop;
+        InvokeAsync(StateHasChanged);
     }
 
     async Task OnOpenChanged(bool open)
@@ -221,4 +233,6 @@
         await Sender.SendAsync(new DeleteTask(Guid.NewGuid(), State.UserId, _task.Id));
         await OnClose.InvokeAsync();
     }
+
+    public async ValueTask DisposeAsync() => await Viewport.DisposeAsync();
 }
