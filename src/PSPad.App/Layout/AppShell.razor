@@ -33,9 +33,6 @@
     <MudAppBar Elevation="0" Dense="true" Class="d-md-none">
         <MudIconButton id="pspad-drawer-toggle" Class="d-md-none" Icon="@Icons.Material.Filled.Menu"
                        Color="Color.Inherit" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
-        <MudSpacer />
-        <AccountBadge Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
-                      AvatarOnly="true" />
     </MudAppBar>
 
     <MudDrawer Variant="DrawerVariant.Persistent" Open="@_isDesktop" Elevation="1"
