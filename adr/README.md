@@ -36,6 +36,7 @@ the old one's status line to point at the new number.
 | [0019](0019-created-at-on-todo-task-and-burndown-backfill.md) | Backfill TodoTask.CreatedAt from TaskCreated, and bump seq so delta sync delivers it | Active | 2026-09-16 | persistence, sync, analytics |
 | [0020](0020-history-sidebar-row-and-settings-screen.md) | History as a sidebar row, theme and sync status into a Settings screen | Active (amends [0014](0014-one-navigation-tree-at-every-width.md); supersedes History's placement in [0017](0017-promote-goals-to-a-sidebar-row.md)) | 2026-09-16 | ui, identity |
 | [0021](0021-drop-structurally-rejected-outbox-commands.md) | Drop structurally rejected outbox commands instead of retrying forever | Active (refines [0005](0005-offline-conflicts-last-write-wins.md)) | 2026-09-16 | architecture, offline, sync, contracts |
+| [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md) | Kill the dead account-menu arrow — Settings and App info become sidebar rows, area actions move to a FAB on the area page | Active (amends [0020](0020-history-sidebar-row-and-settings-screen.md); supersedes `ui-redesign-2-design.md` D6/D7 for area actions only) | 2026-09-17 | ui, identity, domain |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

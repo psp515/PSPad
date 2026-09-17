@@ -8,7 +8,7 @@
 @implements INavigationEventReceiver
 
 <div class="d-flex flex-column" style="height:100%">
-    <AccountMenu Email="@Email" DisplayName="@DisplayName" UserId="@UserId" />
+    <AccountBadge Email="@Email" DisplayName="@DisplayName" UserId="@UserId" />
 
     <div>
         <MudTextField T="string" @bind-Value="_query" Placeholder="Search" Immediate="true"
@@ -48,27 +48,29 @@
             {
                 @foreach (var area in Areas.OrderBy(area => area.Position))
                 {
-                    <div class="d-flex align-center pspad-area-row">
-                        <div class="flex-grow-1">
-                            <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
-                                @area.Name
-                            </MudNavLink>
-                        </div>
-                        <ThingMenu Class="pspad-area-menu mr-2"
-                                   OnRename="@(() => Disabled ? Task.CompletedTask : OnRenameArea.InvokeAsync(area))"
-                                   OnDelete="@(() => Disabled ? Task.CompletedTask : OnDeleteArea.InvokeAsync(area))" />
-                    </div>
+                    <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
+                        @area.Name
+                    </MudNavLink>
                 }
             }
+
+            <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Class="ma-2 pspad-new-area"
+                       Style="align-self:flex-start;flex-grow:0" Disabled="@Disabled" OnClick="@OnNewAreaClick">
+                New area
+            </MudButton>
+        </MudNavMenu>
+
+        <MudDivider Class="my-2" Style="flex-grow:0" />
+
+        <MudNavMenu>
+            <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">
+                Settings
+            </MudNavLink>
+            <MudNavLink Href="/app-info" Icon="@Icons.Material.Filled.Info">
+                App info
+            </MudNavLink>
         </MudNavMenu>
     </CascadingValue>
-
-    <MudDivider Class="my-2" Style="flex-grow:0" />
-
-    <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Class="ma-2 pspad-new-area"
-               Style="align-self:flex-start;flex-grow:0" Disabled="@Disabled" OnClick="@OnNewAreaClick">
-        New area
-    </MudButton>
 </div>
 
 @code {
@@ -85,10 +87,6 @@
     [Parameter] public Guid UserId { get; set; }
 
     [Parameter] public EventCallback OnNewArea { get; set; }
-
-    [Parameter] public EventCallback<Area> OnRenameArea { get; set; }
-
-    [Parameter] public EventCallback<Area> OnDeleteArea { get; set; }
 
     [Parameter] public EventCallback Navigated { get; set; }
 

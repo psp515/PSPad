@@ -1,0 +1,41 @@
+@using PSPad.App.State
+
+@if (AvatarOnly)
+{
+    <div class="d-flex" style="width:100%">
+        <MudSpacer />
+        @* Dense mobile app bar is 48px tall; a Medium avatar (40px) plus py-2 (16px)
+           is 56px and overflows the toolbar's fixed height, bleeding past its bottom
+           edge. py-1 keeps the wrapper at exactly 48px. *@
+        <div class="px-3 py-1 pspad-account-avatar-only">
+            <MudAvatar Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")" Size="Size.Medium">
+                @AvatarColor.InitialOf(DisplayName.Length > 0 ? DisplayName : Email)
+            </MudAvatar>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex align-center gap-2 px-3 py-2 pspad-account-badge">
+        <MudAvatar Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")" Size="Size.Medium">
+            @AvatarColor.InitialOf(DisplayName.Length > 0 ? DisplayName : Email)
+        </MudAvatar>
+        <div class="pspad-account-identity">
+            <MudText Typo="Typo.body2">@(DisplayName.Length > 0 ? DisplayName : Email)</MudText>
+            @if (DisplayName.Length > 0 && Email.Length > 0)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Email</MudText>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Email { get; set; } = "";
+
+    [Parameter] public string DisplayName { get; set; } = "";
+
+    [Parameter] public Guid UserId { get; set; }
+
+    [Parameter] public bool AvatarOnly { get; set; }
+}
