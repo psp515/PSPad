@@ -142,23 +142,48 @@ to promote Goals.
 ```css
 .pspad-grid {
     display: grid;
-    gap: 1px;
-    background: var(--mud-palette-lines-default);
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+    grid-template-columns: repeat(1, 1fr);
 }
 
-.pspad-grid > * { background: var(--mud-palette-surface); }
+@media (min-width: 600px) {
+    .pspad-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 960px) {
+    .pspad-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 1920px) {
+    .pspad-grid { grid-template-columns: repeat(4, 1fr); }
+}
 ```
 
-`auto-fit` with `minmax` yields one column on a phone, two on a tablet and
-three inside the existing `MaxWidth.Large` container, with no breakpoint list
-and no `IViewport` round trip. The 1px gap over a lines-coloured background
-draws hairlines both ways without `:nth-child` arithmetic. `auto-fit` over
-`auto-fill`: with fewer items than the row can fit, `auto-fill` keeps the
-leftover column tracks in the grid, empty and painted in the grid's own
-background — a stray coloured block wherever a row doesn't fill exactly.
-`auto-fit` collapses those tracks and lets the real cards stretch to fill the
-row instead.
+One column on a phone, two on a tablet, three inside the existing
+`MaxWidth.Large` container, four once the viewport itself passes MudBlazor's
+`xl` breakpoint (1920px) — wide enough that even a `MaxWidth.Large`-capped
+container has room for a fourth 1fr column without any card shrinking past
+its comfortable minimum. The 600px/960px thresholds match `BrowserViewport`'s
+own `Breakpoint.MdAndUp` split, so the grid and the desktop/mobile shell
+agree on where "wide enough" starts.
+
+The area behind the grid carries no background of its own — each card is a
+`MudPaper Outlined="true"` (border in `var(--mud-palette-lines-default)`)
+with `Elevation="0"`, so separation comes from the card's own outline, not
+from a coloured seam under the grid.
+
+**Amended during implementation: fixed-width `auto-fit` tracks replaced by
+breakpoint-counted columns.** A first pass used
+`grid-template-columns: repeat(auto-fit, 340px)` to stop cards stretching
+into a half-empty row. That backfired: three 340px tracks plus two 16px gaps
+need 1052px, so an area narrower than that — common once a sidebar is
+open — wrapped to two columns even where there was clearly room for a
+third, narrower one. Fixing the column *count* to the breakpoint instead of
+deriving it from a fixed pixel width solves both problems at once: the
+column count always matches what the viewport can actually hold, and because
+the column count is explicit (not `auto-fit`/`auto-fill`), a row with fewer
+cards than columns leaves the remaining column empty rather than stretching
+a card into it.
 
 Applied to `AreaBoard` (list cards), `GoalsPage` (goal cards), `Today` (each
 of overdue, due and completed as its own grid), `InboxPage` and `ListPage`.

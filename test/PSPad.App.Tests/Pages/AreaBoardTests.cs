@@ -9,6 +9,7 @@ using PSPad.App.Pages;
 using PSPad.App.State;
 using PSPad.App.Tests;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
@@ -154,19 +155,46 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task TypingIntoACardsAddTaskFieldCreatesTheTaskInTheReplica()
+    public async Task ClickingACardsAddTaskIconOpensADialogThatCreatesTheTaskInTheReplica()
     {
         var area = NewArea("Dom");
         var shopping = NewList(area.Id, "Zakupy", 0);
         var replica = Arrange(area, shopping);
 
-        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
-        var input = page.Find("input[placeholder='Add task']");
-        input.Input("Kup farbę");
-        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-add-task").Click();
+        var dialog = page.FindComponent<MudDialogProvider>();
+        dialog.Find("input[placeholder='Task name']").Input("Kup farbę");
+        dialog.FindAll("button").Last().Click();
 
         var tasks = await replica.LoadAllAsync<TodoTask>(User);
         Assert.Contains(tasks, task => task.ListId == shopping.Id && task.Name == "Kup farbę");
+    }
+
+    [Fact]
+    public async Task TheAddTaskDialogAlsoSetsDueDatePriorityGoalAndStar()
+    {
+        var area = NewArea("Dom");
+        var shopping = NewList(area.Id, "Zakupy", 0);
+        var goal = NewGoal("Remont domu");
+        var replica = Arrange(area, shopping, goal);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-add-task").Click();
+        var dialog = page.FindComponent<MudDialogProvider>();
+        dialog.Find("input[placeholder='Task name']").Input("Kup farbę");
+        dialog.Find(".pspad-add-task-priority").MouseDown();
+        page.FindAll(".mud-list-item")[(int)Priority.High].Click();
+        dialog.Find(".pspad-add-task-goal").MouseDown();
+        page.FindAll(".mud-list-item").Last().Click();
+        dialog.Find(".pspad-add-task-star").Click();
+        dialog.FindAll("button").Last().Click();
+
+        var tasks = await replica.LoadAllAsync<TodoTask>(User);
+        var created = Assert.Single(tasks, task => task.ListId == shopping.Id && task.Name == "Kup farbę");
+        Assert.Equal(Priority.High, created.Priority);
+        Assert.Equal(goal.Id, created.GoalId);
+        Assert.True(created.Starred);
     }
 
     [Fact]
@@ -234,6 +262,14 @@ public class AreaBoardTests : Bunit.TestContext
             new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, position),
             DateTimeOffset.UnixEpoch));
         return list;
+    }
+
+    static Goal NewGoal(string name)
+    {
+        var goal = new Goal();
+        goal.ApplyAll(Goal.Decide(
+            null, new CreateGoal(Guid.NewGuid(), User, Guid.NewGuid(), name), DateTimeOffset.UnixEpoch));
+        return goal;
     }
 
     static TodoTask NewTask(Guid listId, string name)

@@ -70,12 +70,17 @@ The sidebar does not expand areas into lists. Two levels of tree in a drawer
 that is itself temporary on a phone reads badly, and the lists have somewhere
 better to be.
 
-### D4 — A list card previews up to ten open tasks and collapses
+### D4 — A list card previews up to five open tasks and collapses
 
 The card header carries a chevron, the list name and the count of open tasks.
-The body shows at most **ten** unchecked tasks, each with a working checkbox.
-Completed tasks never appear in a card. Past ten, a **Show all (N)** row links
+The body shows at most **five** unchecked tasks, each with a working checkbox.
+Completed tasks never appear in a card. Past five, a **Show all (N)** row links
 to the list screen.
+
+**Amended during implementation: preview cut from ten to five.** An area
+screen holds several cards side by side; ten rows per card pushed most cards
+past a phone's fold before the grid finished laying out. Five keeps a card an
+at-a-glance summary, consistent with `AreaBoard.razor`'s `ListCard.Preview`.
 
 The chevron collapses the card to its header alone. Collapsed state is per
 list, in `localStorage`, keyed by list id — a device preference about a
@@ -116,13 +121,23 @@ The FAB is deleted, with `FabContext` and `FabAction`.
 
 | Thing | Where |
 |---|---|
-| Task | **+ Add task** at the foot of a list card and of the list screen |
+| Task | **+** icon in a list card's header (area screen); **+ Add task** at the foot of the list screen |
 | List | **+ New list** at the foot of an area screen |
 | Area | **+ New area** pinned to the foot of the sidebar |
 | Inbox capture | a permanently open field at the top of the Inbox |
 
-Areas and lists open a small dialog for their name; tasks and captures are
-inline fields that commit on Enter.
+Areas and lists open a small dialog for their name; the list screen's and
+Inbox's task/capture fields stay inline, committing on Enter.
+
+**Amended during implementation: a list card's add-task moved from an inline
+foot field to a header icon opening `AddTaskDialog`.** A card previews at
+most five tasks (D4); an inline field at the foot competed with that summary
+for the same vertical space and grew the card every time it was focused. The
+header icon costs no card height and opens a dialog covering name, due date,
+priority, goal and star in one step — using `CreateTask` plus the existing
+`SetTaskDueDate`/`SetTaskPriority`/`LinkTaskToGoal`/`StarTask` commands, no
+new command shape. The list screen's own inline field (`ListPage.razor`) is
+unchanged — this only touches the card used on the area board.
 
 **Rejected: keeping the FAB alongside.** Two routes to the same act, one of
 which is always in the wrong corner.
@@ -290,8 +305,8 @@ What is asserted:
 - the sidebar lists every app section (My Day, Inbox, Goals) and every area,
   and raises a selection
 - **+ New area** is present regardless of how many areas exist
-- a list card shows at most ten unchecked tasks, and no completed ones
-- **Show all (N)** appears only when the list holds more than ten open tasks
+- a list card shows at most five unchecked tasks, and no completed ones
+- **Show all (N)** appears only when the list holds more than five open tasks
 - collapsing a card survives a re-render, and the state is keyed by list id
 - a recurring task never renders overdue styling, on any screen that shows it
 - `?task=` opens the panel; removing it closes the panel and not the screen

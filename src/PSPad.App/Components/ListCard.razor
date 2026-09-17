@@ -3,7 +3,7 @@
 @using PSPad.Module.Tasks.Tasks
 @inject CardCollapseState Collapse
 
-<MudPaper Elevation="0">
+<MudPaper Elevation="0" Outlined="true">
     <div class="d-flex align-center gap-2 px-3 py-2">
         <MudIconButton Size="Size.Small"
                        Icon="@(Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)"
@@ -13,6 +13,8 @@
         </MudLink>
         <MudSpacer />
         <MudText Typo="Typo.caption" Class="pspad-open-count">@Open.Count</MudText>
+        <MudIconButton Class="pspad-add-task" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
+                       OnClick="@OnAddTaskClick" />
         <ThingMenu Class="pspad-list-menu"
                    OnRename="@OnRename" OnDelete="@OnDelete">
             <Extra>
@@ -38,17 +40,11 @@
                 @($"Show all ({Open.Count})")
             </MudButton>
         }
-
-        <MudDivider />
-        <MudTextField T="string" @bind-Value="_newTask" Placeholder="Add task" Immediate="true"
-                      Variant="Variant.Text" Margin="Margin.Dense" Class="px-3"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Add"
-                      OnKeyDown="@OnKeyDown" />
     }
 </MudPaper>
 
 @code {
-    public const int Preview = 10;
+    public const int Preview = 5;
 
     [Parameter, EditorRequired] public TaskList List { get; set; } = null!;
 
@@ -62,7 +58,7 @@
 
     [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
 
-    [Parameter] public EventCallback<string> OnAddTask { get; set; }
+    [Parameter] public EventCallback OnAddTaskClick { get; set; }
 
     [Parameter] public EventCallback OnRename { get; set; }
 
@@ -70,21 +66,8 @@
 
     [Parameter] public EventCallback OnMove { get; set; }
 
-    string _newTask = "";
-
     bool Collapsed => Collapse.IsCollapsed(List.Id);
 
     IReadOnlyList<TodoTask> Open =>
         [.. Tasks.Where(task => !task.Deleted && task.CompletedAt is null)];
-
-    async Task OnKeyDown(KeyboardEventArgs args)
-    {
-        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_newTask))
-        {
-            return;
-        }
-
-        await OnAddTask.InvokeAsync(_newTask);
-        _newTask = "";
-    }
 }

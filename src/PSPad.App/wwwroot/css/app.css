@@ -66,13 +66,26 @@ html, body {
 
 .pspad-grid {
     display: grid;
-    gap: 1px;
-    background: var(--mud-palette-lines-default);
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+    grid-template-columns: repeat(1, 1fr);
 }
 
-.pspad-grid > * {
-    background: var(--mud-palette-surface);
+@media (min-width: 600px) {
+    .pspad-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 960px) {
+    .pspad-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1920px) {
+    .pspad-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
 
 .pspad-inbox-expanded {
