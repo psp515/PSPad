@@ -200,7 +200,19 @@ public class NavSidebarTests : Bunit.TestContext
         var sidebar = Render(Areas("Dom"));
 
         Assert.Contains("pspad-sidebar-footer", sidebar.Markup);
+        Assert.Contains("PSPad", sidebar.Markup);
         Assert.Contains("GPL v3", sidebar.Markup);
+    }
+
+    [Fact]
+    public void TheFooterSplitsTheDateAndTheSignatureAcrossTwoLines()
+    {
+        Arrange();
+
+        var sidebar = Render(Areas("Dom"));
+
+        var footer = sidebar.Find(".pspad-sidebar-footer");
+        Assert.Equal(2, footer.Children.Length);
     }
 
     [Fact]
