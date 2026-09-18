@@ -1,7 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using PSPad.App.Api;
-using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Sync;

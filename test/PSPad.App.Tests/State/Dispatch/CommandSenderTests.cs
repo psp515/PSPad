@@ -1,5 +1,4 @@
 using PSPad.Abstractions;
-using PSPad.App.State;
 using PSPad.App.State.Dispatch;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;

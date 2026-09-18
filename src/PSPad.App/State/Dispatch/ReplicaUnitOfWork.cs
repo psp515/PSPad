@@ -1,8 +1,8 @@
 using System.Text.Json;
 using PSPad.Abstractions;
-using PSPad.Contracts;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
+using PSPad.Contracts;
 
 namespace PSPad.App.State.Dispatch;
 
