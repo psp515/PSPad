@@ -1,4 +1,4 @@
-namespace PSPad.App.State;
+namespace PSPad.App.State.Viewport;
 
 public interface IViewport : IAsyncDisposable
 {

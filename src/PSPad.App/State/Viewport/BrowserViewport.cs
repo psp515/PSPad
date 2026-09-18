@@ -1,6 +1,6 @@
 using MudBlazor;
 
-namespace PSPad.App.State;
+namespace PSPad.App.State.Viewport;
 
 public sealed class BrowserViewport(IBrowserViewportService service) : IViewport
 {
