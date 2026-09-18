@@ -1,6 +1,7 @@
 using System.Text.Json;
 using PSPad.Abstractions;
 using PSPad.Contracts;
+using PSPad.App.State.Outbox;
 
 namespace PSPad.App.State;
 

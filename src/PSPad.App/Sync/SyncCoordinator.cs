@@ -1,8 +1,9 @@
 using MudBlazor;
+using PSPad.App.State.Outbox;
 
 namespace PSPad.App.Sync;
 
-public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity, State.IOutbox outbox, ISnackbar snackbar)
+public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity, IOutbox outbox, ISnackbar snackbar)
 {
     static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(60);
 

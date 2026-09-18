@@ -1,5 +1,6 @@
 using PSPad.Abstractions;
 using PSPad.App.State;
+using PSPad.App.State.Outbox;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.State;

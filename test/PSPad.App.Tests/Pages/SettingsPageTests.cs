@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PSPad.App.Api;
 using PSPad.App.Pages;
 using PSPad.App.State;
+using PSPad.App.State.Outbox;
 using PSPad.App.Tests;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Today;

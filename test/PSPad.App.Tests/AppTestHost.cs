@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App.State;
+using PSPad.App.State.Outbox;
 using PSPad.App.Theme;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Goals;

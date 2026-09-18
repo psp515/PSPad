@@ -1,7 +1,7 @@
 using Microsoft.JSInterop;
 using PSPad.Contracts;
 
-namespace PSPad.App.State;
+namespace PSPad.App.State.Outbox;
 
 public sealed class IndexedDbOutbox(IJSRuntime js) : IOutbox, IAsyncDisposable
 {

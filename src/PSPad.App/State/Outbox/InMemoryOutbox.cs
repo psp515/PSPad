@@ -1,6 +1,6 @@
 using PSPad.Contracts;
 
-namespace PSPad.App.State;
+namespace PSPad.App.State.Outbox;
 
 public sealed class InMemoryOutbox : IOutbox
 {

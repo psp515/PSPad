@@ -2,6 +2,7 @@ using System.Text.Json;
 using PSPad.Abstractions;
 using PSPad.App.Api;
 using PSPad.App.State;
+using PSPad.App.State.Outbox;
 
 namespace PSPad.App.Sync;
 

@@ -1,3 +1,5 @@
+using PSPad.App.State.Outbox;
+
 namespace PSPad.App.State;
 
 public sealed class ReplicaOwnership(IReplica replica, IOutbox outbox)
