@@ -3,6 +3,7 @@ using PSPad.Abstractions;
 using PSPad.App.Api;
 using PSPad.App.State;
 using PSPad.App.State.Outbox;
+using PSPad.App.State.Replica;
 
 namespace PSPad.App.Sync;
 

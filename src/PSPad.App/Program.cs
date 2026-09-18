@@ -7,6 +7,7 @@ using PSPad.App;
 using PSPad.App.Api;
 using PSPad.App.State;
 using PSPad.App.State.Outbox;
+using PSPad.App.State.Replica;
 using PSPad.App.Sync;
 using PSPad.App.Theme;
 

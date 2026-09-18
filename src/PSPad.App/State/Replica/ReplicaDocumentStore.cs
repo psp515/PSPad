@@ -1,6 +1,6 @@
 using PSPad.Abstractions;
 
-namespace PSPad.App.State;
+namespace PSPad.App.State.Replica;
 
 public sealed class ReplicaDocumentStore<T>(IReplica replica) : IDocumentStore<T> where T : Aggregate
 {

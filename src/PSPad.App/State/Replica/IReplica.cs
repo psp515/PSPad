@@ -1,6 +1,6 @@
 using PSPad.Abstractions;
 
-namespace PSPad.App.State;
+namespace PSPad.App.State.Replica;
 
 public interface IReplica
 {

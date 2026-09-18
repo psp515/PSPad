@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PSPad.App.Components;
 using PSPad.App.Layout;
 using PSPad.App.State;
+using PSPad.App.State.Replica;
 using PSPad.App.Tests;
 using PSPad.App.Theme;
 using PSPad.Module.Tasks.Areas;
