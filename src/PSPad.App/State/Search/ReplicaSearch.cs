@@ -3,7 +3,7 @@ using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
 
-namespace PSPad.App.State;
+namespace PSPad.App.State.Search;
 
 public sealed class ReplicaSearch(
     IDocumentStore<TodoTask> tasks,

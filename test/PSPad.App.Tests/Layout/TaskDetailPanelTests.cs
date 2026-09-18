@@ -1,7 +1,6 @@
 using Bunit;
 using PSPad.Abstractions;
 using PSPad.App.Layout;
-using PSPad.App.State;
 using PSPad.Module.Tasks.Recurrence;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;

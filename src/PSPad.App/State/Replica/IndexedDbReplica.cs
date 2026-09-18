@@ -1,7 +1,7 @@
 using Microsoft.JSInterop;
 using PSPad.Abstractions;
 
-namespace PSPad.App.State;
+namespace PSPad.App.State.Replica;
 
 public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
 {

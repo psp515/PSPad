@@ -1,12 +1,12 @@
 using System.Text.Json;
-using PSPad.App.State;
+using PSPad.App.State.Replica;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Recurrence;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
-namespace PSPad.App.Tests.State;
+namespace PSPad.App.Tests.State.Replica;
 
 [UnitTest]
 public class IndexedDbReplicaTests

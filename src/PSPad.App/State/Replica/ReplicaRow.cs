@@ -1,7 +1,7 @@
 using System.Text.Json;
 using PSPad.Abstractions;
 
-namespace PSPad.App.State;
+namespace PSPad.App.State.Replica;
 
 public sealed record ReplicaRow(Guid Id, string Type, Guid UserId, string Json)
 {

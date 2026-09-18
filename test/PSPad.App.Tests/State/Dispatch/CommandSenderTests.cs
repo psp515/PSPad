@@ -1,8 +1,10 @@
 using PSPad.Abstractions;
-using PSPad.App.State;
+using PSPad.App.State.Dispatch;
+using PSPad.App.State.Outbox;
+using PSPad.App.State.Replica;
 using PSPad.TestInfrastructure;
 
-namespace PSPad.App.Tests.State;
+namespace PSPad.App.Tests.State.Dispatch;
 
 [UnitTest]
 public class CommandSenderTests

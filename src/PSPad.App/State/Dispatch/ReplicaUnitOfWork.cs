@@ -1,8 +1,10 @@
 using System.Text.Json;
 using PSPad.Abstractions;
+using PSPad.App.State.Outbox;
+using PSPad.App.State.Replica;
 using PSPad.Contracts;
 
-namespace PSPad.App.State;
+namespace PSPad.App.State.Dispatch;
 
 public sealed class ReplicaUnitOfWork(IReplica replica, IOutbox outbox) : IUnitOfWork
 {

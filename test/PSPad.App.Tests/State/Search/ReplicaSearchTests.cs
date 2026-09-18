@@ -1,11 +1,12 @@
 using PSPad.Abstractions;
-using PSPad.App.State;
+using PSPad.App.State.Replica;
+using PSPad.App.State.Search;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
-namespace PSPad.App.Tests.State;
+namespace PSPad.App.Tests.State.Search;
 
 [UnitTest]
 public class ReplicaSearchTests

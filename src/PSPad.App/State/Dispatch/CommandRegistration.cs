@@ -2,7 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using PSPad.Abstractions;
 
-namespace PSPad.App.State;
+namespace PSPad.App.State.Dispatch;
 
 public static class CommandRegistration
 {
