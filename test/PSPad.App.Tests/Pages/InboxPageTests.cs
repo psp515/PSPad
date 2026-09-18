@@ -5,6 +5,7 @@ using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
 using PSPad.App.Pages;
+using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Inbox;
