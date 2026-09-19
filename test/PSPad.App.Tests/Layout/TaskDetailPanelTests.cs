@@ -1,6 +1,8 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using PSPad.Abstractions;
 using PSPad.App.Layout;
+using PSPad.App.State.Viewport;
 using PSPad.Module.Tasks.Recurrence;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
@@ -132,7 +134,8 @@ public class TaskDetailPanelTests : Bunit.TestContext
     public void OnASmallViewportTheDrawerFillsTheFullWidthInsteadOfAFixedColumn()
     {
         var task = NewTask("Buy milk");
-        AppTestHost.Arrange(this, User, Today, isDesktop: false, task);
+        AppTestHost.Arrange(this, User, Today, task);
+        Services.AddSingleton<IViewport>(new AppTestHost.FakeViewport(isDesktop: false));
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
 

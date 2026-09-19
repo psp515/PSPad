@@ -85,6 +85,3 @@ html, body {
     }
 }
 
-.pspad-inbox-expanded {
-    grid-column: 1 / -1;
-}

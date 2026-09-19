@@ -1,0 +1,29 @@
+@using Microsoft.AspNetCore.Components.Web
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField T="string" @bind-Value="_text" Placeholder="Capture" AutoFocus="true"
+                      Variant="Variant.Outlined" Immediate="true" OnKeyDown="@OnKeyDown" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => Dialog.Cancel())">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(_text)"
+                   OnClick="@(() => Dialog.Close(DialogResult.Ok(_text)))">
+            Add
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance Dialog { get; set; } = null!;
+
+    string _text = "";
+
+    void OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !string.IsNullOrWhiteSpace(_text))
+        {
+            Dialog.Close(DialogResult.Ok(_text));
+        }
+    }
+}

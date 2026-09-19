@@ -1,0 +1,13 @@
+@using PSPad.Module.Tasks.Inbox
+
+<MudPaper Outlined="true">
+    <div class="pspad-inbox-item pa-3" style="cursor:pointer" @onclick="@(() => OnOpen.InvokeAsync(Item))">
+        <MudText Typo="Typo.body2">@Item.Text</MudText>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public InboxItem Item { get; set; } = null!;
+
+    [Parameter] public EventCallback<InboxItem> OnOpen { get; set; }
+}

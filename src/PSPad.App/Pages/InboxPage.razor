@@ -3,21 +3,13 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
-@using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Inbox
-@using PSPad.Module.Tasks.Lists
 @inject IDocumentStore<Inbox> InboxStore
-@inject IDocumentStore<Area> AreaStore
-@inject IDocumentStore<TaskList> ListStore
 @inject AppState State
 @inject CommandSender Sender
+@inject IDialogService Dialogs
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Inbox</MudText>
-
-<MudTextField T="string" @bind-Value="_capture" @ref="_field" Placeholder="Capture"
-              Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense"
-              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Add"
-              OnKeyDown="@OnCaptureKey" Class="mb-4" />
 
 @if (!_loaded)
 {
@@ -25,79 +17,27 @@
 }
 else
 {
-    <MudPaper Outlined="true">
-        <div class="pspad-grid">
-            @foreach (var item in Items)
-            {
-                <div class="px-3 py-2 @(_expanded == item.Id ? "pspad-inbox-expanded" : "")">
-                    <div class="d-flex align-center gap-2">
-                        <div class="flex-grow-1 pspad-inbox-item" style="cursor:pointer"
-                             @onclick="@(() => Expand(item))">
-                            <MudText Typo="Typo.body2">@item.Text</MudText>
-                        </div>
-                        <MudIconButton Class="pspad-inbox-discard" Size="Size.Small"
-                                       Icon="@Icons.Material.Filled.Delete"
-                                       OnClick="@(() => DiscardAsync(item))" />
-                    </div>
-
-                    @if (_expanded == item.Id)
-                    {
-                        <div class="d-flex flex-column gap-2 mt-2">
-                            <MudText Typo="Typo.subtitle2">@item.Text</MudText>
-
-                            <MudSelect T="Guid" Value="@_areaId" ValueChanged="@OnAreaChanged" Label="Area"
-                                       Margin="Margin.Dense" Variant="Variant.Outlined">
-                                @foreach (var area in _areas)
-                                {
-                                    <MudSelectItem T="Guid" Value="@area.Id">@area.Name</MudSelectItem>
-                                }
-                            </MudSelect>
-
-                            <MudSelect T="Guid" @bind-Value="_listId" Label="List"
-                                       Margin="Margin.Dense" Variant="Variant.Outlined">
-                                @if (ListsIn(_areaId).Count == 0)
-                                {
-                                    <MudSelectItem T="Guid" Value="@Guid.Empty">No lists in this area</MudSelectItem>
-                                }
-                                else
-                                {
-                                    @foreach (var list in ListsIn(_areaId))
-                                    {
-                                        <MudSelectItem T="Guid" Value="@list.Id">@list.Name</MudSelectItem>
-                                    }
-                                }
-                            </MudSelect>
-
-                            <MudButton Class="pspad-inbox-move" Variant="Variant.Filled" Color="Color.Primary"
-                                       Disabled="@(_listId == Guid.Empty)"
-                                       OnClick="@(() => MoveAsync(item))">
-                                Move
-                            </MudButton>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
-
-        @if (Items.Count == 0)
+    <div class="pspad-grid">
+        @foreach (var item in Items)
         {
-            <MudText Typo="Typo.body2" Class="pa-4">Nothing captured.</MudText>
+            <InboxItemCard Item="@item" OnOpen="@Open" />
         }
-    </MudPaper>
+    </div>
+
+    @if (Items.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="pa-4">Nothing captured.</MudText>
+    }
 }
+
+<InboxItemPanel Item="@_openItem" InboxId="@(_inbox?.Id ?? Guid.Empty)" OnClose="@Close" OnChanged="@ReloadAsync" />
+
+<MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@CaptureAsync" />
 
 @code {
     bool _loaded;
     Inbox? _inbox;
-    IReadOnlyList<Area> _areas = [];
-    IReadOnlyList<TaskList> _lists = [];
-
-    string _capture = "";
-    MudTextField<string>? _field;
-
-    Guid? _expanded;
-    Guid _areaId;
-    Guid _listId;
+    InboxItem? _openItem;
 
     IReadOnlyList<InboxItem> Items => _inbox?.Items ?? [];
 
@@ -108,82 +48,30 @@ else
         _inbox = (await InboxStore.LoadAllAsync(State.UserId, CancellationToken.None))
             .FirstOrDefault(inbox => !inbox.Deleted);
 
-        var areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
-
-        var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        _lists = [.. lists.Where(list => !list.Deleted).OrderBy(list => list.Position)];
-
         _loaded = true;
     }
 
-    IReadOnlyList<TaskList> ListsIn(Guid areaId) => [.. _lists.Where(list => list.AreaId == areaId)];
+    void Open(InboxItem item) => _openItem = item;
 
-    void Expand(InboxItem item)
-    {
-        if (_expanded == item.Id)
-        {
-            _expanded = null;
-            return;
-        }
+    void Close() => _openItem = null;
 
-        _expanded = item.Id;
-        _areaId = _areas.Count > 0 ? _areas[0].Id : Guid.Empty;
-        _listId = ListsIn(_areaId).FirstOrDefault()?.Id ?? Guid.Empty;
-    }
-
-    void OnAreaChanged(Guid areaId)
-    {
-        _areaId = areaId;
-        _listId = ListsIn(areaId).FirstOrDefault()?.Id ?? Guid.Empty;
-    }
-
-    async Task OnCaptureKey(KeyboardEventArgs args)
-    {
-        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_capture) || _inbox is null)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new CaptureToInbox(
-            Guid.NewGuid(), State.UserId, _inbox.Id, Guid.NewGuid(), _capture));
-
-        _capture = "";
-        await ReloadAsync();
-
-        if (_field is not null)
-        {
-            await _field.FocusAsync();
-        }
-    }
-
-    async Task MoveAsync(InboxItem item)
-    {
-        if (_inbox is null || _listId == Guid.Empty)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new OrganiseInboxItem(
-            Guid.NewGuid(), State.UserId, _inbox.Id, item.Id, _listId, Guid.NewGuid()));
-
-        _expanded = null;
-        await ReloadAsync();
-    }
-
-    async Task DiscardAsync(InboxItem item)
+    async Task CaptureAsync()
     {
         if (_inbox is null)
         {
             return;
         }
 
-        await Sender.SendAsync(new DiscardInboxItem(Guid.NewGuid(), State.UserId, _inbox.Id, item.Id));
+        var dialog = await Dialogs.ShowAsync<CaptureDialog>("Capture");
+        var result = await dialog.Result;
 
-        if (_expanded == item.Id)
+        if (result is null || result.Canceled || result.Data is not string text || string.IsNullOrWhiteSpace(text))
         {
-            _expanded = null;
+            return;
         }
+
+        await Sender.SendAsync(new CaptureToInbox(
+            Guid.NewGuid(), State.UserId, _inbox.Id, Guid.NewGuid(), text));
 
         await ReloadAsync();
     }
