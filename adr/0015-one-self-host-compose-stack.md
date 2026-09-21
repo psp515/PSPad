@@ -2,7 +2,7 @@
 title: One .env-driven self-host compose stack
 tags: [deployment, security, identity]
 date: 2026-09-14
-status: Active
+status: Active (realm and client naming amended by ADR-0026)
 ---
 
 # ADR-0015: One `.env`-driven self-host compose stack

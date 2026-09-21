@@ -29,7 +29,7 @@ the old one's status line to point at the new number.
 | [0012](0012-extract-ordering-into-its-own-module.md) | Extract element ordering into its own module, out of the Tasks domain | Proposed | 2026-09-12 | architecture, domain, ui, future-work |
 | [0013](0013-responsive-shell-and-per-device-theme.md) | Keep sections and areas on separate navigation surfaces, and the theme per device | Superseded by [0014](0014-one-navigation-tree-at-every-width.md) | 2026-09-12 | ui, offline, identity |
 | [0014](0014-one-navigation-tree-at-every-width.md) | One navigation tree at every width, revealed rather than rebuilt | Active (supersedes [0013](0013-responsive-shell-and-per-device-theme.md); Goals' placement superseded by [0017](0017-promote-goals-to-a-sidebar-row.md); History's placement superseded by [0020](0020-history-sidebar-row-and-settings-screen.md)) | 2026-09-12 | ui, offline, identity |
-| [0015](0015-one-self-host-compose-stack.md) | One `.env`-driven self-host compose stack | Active | 2026-09-14 | deployment, security, identity |
+| [0015](0015-one-self-host-compose-stack.md) | One `.env`-driven self-host compose stack | Active (realm and client naming amended by [0026](0026-one-shared-realm-for-every-self-hosted-app.md)) | 2026-09-14 | deployment, security, identity |
 | [0016](0016-documentation-site.md) | A documentation site in Astro, published to GitHub Pages | Active | 2026-09-14 | documentation, tooling, deployment |
 | [0017](0017-promote-goals-to-a-sidebar-row.md) | Promote Goals to a permanent sidebar row | Active (supersedes Goals' placement in [0014](0014-one-navigation-tree-at-every-width.md); History's placement here superseded by [0020](0020-history-sidebar-row-and-settings-screen.md)) | 2026-09-15 | ui, domain |
 | [0018](0018-purge-local-replica-on-user-switch.md) | Purge the local replica and outbox when the signed-in user changes | Active | 2026-09-15 | offline, sync, identity |
@@ -40,6 +40,7 @@ the old one's status line to point at the new number.
 | [0023](0023-sidebar-search-removed-footer-added.md) | Pull local search out of the sidebar for now, give the drawer a footer | Active (amends [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md); temporarily supersedes `ui-redesign-2-design.md`'s local-search decision) | 2026-09-17 | ui |
 | [0024](0024-authentication-callback-route-off-appshell.md) | Keep the OIDC login-callback route off AppShell's layout | Active | 2026-09-17 | identity, sync, offline |
 | [0025](0025-purge-on-any-user-mismatch-including-no-recorded-owner.md) | Purge local data on any signed-in/recorded-owner mismatch, including no recorded owner yet | Active (refines [0018](0018-purge-local-replica-on-user-switch.md)) | 2026-09-17 | offline, sync, identity |
+| [0026](0026-one-shared-realm-for-every-self-hosted-app.md) | One shared Keycloak realm for every self-hosted application | Active (amends [0015](0015-one-self-host-compose-stack.md)) | 2026-09-21 | identity, deployment, architecture |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

@@ -89,8 +89,8 @@ jobs:
           docker run -d --name pspad-app-ci -p 5001:8080 \
             -e API_BASE_ADDRESS=http://localhost:5000 \
             -e APP_BASE_ADDRESS=http://localhost:5001 \
-            -e KEYCLOAK_AUTHORITY=http://localhost:8080/realms/pspad \
-            -e KEYCLOAK_CLIENT_ID=pspad-app \
+            -e KEYCLOAK_AUTHORITY=http://localhost:8080/realms/psplace \
+            -e KEYCLOAK_CLIENT_ID=pspad-frontend \
             pspad-app:ci
           for i in $(seq 1 20); do
             if curl -sf localhost:5001/ >/dev/null; then break; fi
@@ -99,7 +99,7 @@ jobs:
           type=$(curl -s -o /dev/null -w '%{content_type}' localhost:5001/)
           echo "index content-type: $type"
           case "$type" in text/html*) ;; *) echo "the app is not served as HTML"; docker logs pspad-app-ci; exit 1 ;; esac
-          curl -sf localhost:5001/appsettings.json | grep -q pspad-app
+          curl -sf localhost:5001/appsettings.json | grep -q pspad-frontend
 
       - if: always()
         run: docker rm -f pspad-app-ci || true

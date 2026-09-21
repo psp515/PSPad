@@ -132,8 +132,8 @@ cd PSPad</code></pre>
       <li>
         <strong>Update the Keycloak client too, or sign-in fails.</strong> The bundled realm
         ships with <code>http://localhost:5001/*</code> baked into its redirect URI — changing
-        <code>APP_BASE_ADDRESS</code> doesn't touch it. Realm <strong>pspad</strong> →
-        <strong>Clients</strong> → <strong>pspad-app</strong> → update
+        <code>APP_BASE_ADDRESS</code> doesn't touch it. Realm <strong>psplace</strong> →
+        <strong>Clients</strong> → <strong>pspad-frontend</strong> → update
         <strong>Valid redirect URIs</strong>. <strong>Web origins</strong> follows
         automatically (it's <code>+</code>, unless you've changed it).
       </li>
@@ -150,6 +150,14 @@ cd PSPad</code></pre>
       <li><code>pspad_mongo-keyfile</code> — the replica-set key. Lose it and <code>mongo-data</code> won't start.</li>
       <li><code>pspad_keycloak-data</code> — accounts and realm config.</li>
     </ul>
+    <Callout kind="warning" title="Never pass -v to docker compose down">
+      <p>
+        <code>down -v</code> deletes <code>pspad_keycloak-data</code>, and with it every
+        account. PSPad keys its users by the Keycloak user's UUID, so accounts recreated
+        afterwards are new people — the old areas, lists and tasks stay in MongoDB, owned by
+        a user that can no longer sign in. <code>down</code> on its own is safe.
+      </p>
+    </Callout>
     <p>Dump the database:</p>
     <pre><code>docker compose -f docker/compose.yaml exec -T mongo \
   sh -c 'mongodump --archive --username pspad --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' \
