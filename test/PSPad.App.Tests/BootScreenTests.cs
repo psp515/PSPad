@@ -32,6 +32,22 @@ public class BootScreenTests
         Assert.DoesNotContain("#app {", Markup);
     }
 
+    [Fact]
+    public void ItKeepsTheSplashOutsideTheAppElementSoBlazorCannotDropIt()
+    {
+        var app = Markup.IndexOf("<div id=\"app\">", StringComparison.Ordinal);
+        var boot = Markup.IndexOf("class=\"pspad-boot\"", StringComparison.Ordinal);
+
+        Assert.True(boot > 0);
+        Assert.True(boot < app || Markup.IndexOf("</div>", app, StringComparison.Ordinal) < boot);
+    }
+
+    [Fact]
+    public void ItLoadsTheBootModuleThatTearsTheSplashDown()
+    {
+        Assert.Contains("js/boot.js", Markup);
+    }
+
     static string PathToIndex()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

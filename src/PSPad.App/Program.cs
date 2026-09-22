@@ -1,10 +1,13 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.JSInterop;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App;
 using PSPad.App.Api;
+using PSPad.App.Auth;
 using PSPad.App.State;
 using PSPad.App.State.Dispatch;
 using PSPad.App.State.Outbox;
@@ -27,6 +30,18 @@ builder.Services.AddOidcAuthentication(options =>
     options.ProviderOptions.DefaultScopes.Add("email");
 });
 
+var keycloakAuthority = builder.Configuration["Keycloak:Authority"]!;
+var keycloakClientId = builder.Configuration["Keycloak:ClientId"]!;
+
+builder.Services.AddScoped<ILocalSessionStore, LocalSessionStore>();
+builder.Services.AddScoped(services => new TokenRefresher(
+    new HttpClient(), services.GetRequiredService<IClock>(), keycloakAuthority, keycloakClientId));
+builder.Services.AddScoped<SessionBootstrapper>();
+builder.Services.AddScoped<LocalAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(
+    services => services.GetRequiredService<LocalAuthenticationStateProvider>());
+builder.Services.AddScoped<SessionAuthorizationHandler>();
+
 builder.Services.AddScoped<IReplica, IndexedDbReplica>();
 builder.Services.AddScoped<IOutbox, IndexedDbOutbox>();
 builder.Services.AddScoped(typeof(IDocumentStore<>), typeof(ReplicaDocumentStore<>));
@@ -41,12 +56,7 @@ builder.Services.AddPSPadCommands();
 var apiBaseAddress = builder.Configuration["Api:BaseAddress"]!;
 
 builder.Services.AddHttpClient<PSPadApiClient>(client => client.BaseAddress = new Uri(apiBaseAddress))
-    .AddHttpMessageHandler(sp =>
-    {
-        var handler = sp.GetRequiredService<AuthorizationMessageHandler>();
-        handler.ConfigureHandler(authorizedUrls: [apiBaseAddress]);
-        return handler;
-    });
+    .AddHttpMessageHandler<SessionAuthorizationHandler>();
 
 builder.Services.AddScoped<AppState>();
 builder.Services.AddScoped<ThemePreference>();
@@ -59,4 +69,20 @@ builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<SyncCoordinator>();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+var bootstrapper = host.Services.GetRequiredService<SessionBootstrapper>();
+var boot = await host.Services.GetRequiredService<IJSRuntime>()
+    .InvokeAsync<IJSObjectReference>("import", "./js/boot.js");
+
+try
+{
+    await bootstrapper.StartAsync();
+}
+finally
+{
+    // Any bootstrap failure must still reveal the app: a held splash is an unrecoverable blank screen.
+    await boot.InvokeVoidAsync("done");
+}
+
+await host.RunAsync();
