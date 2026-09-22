@@ -43,6 +43,11 @@ builder.Services.AddScoped<IRemoteAuthenticationService<RemoteAuthenticationStat
         .OfType<IRemoteAuthenticationService<RemoteAuthenticationState>>()
         .Single());
 
+builder.Services.AddScoped<IAccessTokenProvider>(services =>
+    services.GetServices<AuthenticationStateProvider>()
+        .OfType<IAccessTokenProvider>()
+        .Single());
+
 builder.Services.AddSingleton<LocalAuthenticationStateProvider>();
 builder.Services.AddSingleton<AuthenticationStateProvider>(
     services => services.GetRequiredService<LocalAuthenticationStateProvider>());

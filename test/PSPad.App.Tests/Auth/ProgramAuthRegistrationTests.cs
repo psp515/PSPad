@@ -51,6 +51,19 @@ public class ProgramAuthRegistrationTests
     }
 
     [Fact]
+    public async Task ItStillResolvesTheOidcLibrarysAccessTokenProviderDespiteTheLocalOverride()
+    {
+        await using var services = BuildServices();
+
+        using var scope = services.CreateScope();
+
+        var resolved = scope.ServiceProvider.GetRequiredService<IAccessTokenProvider>();
+
+        Assert.IsType<RemoteAuthenticationService<RemoteAuthenticationState, RemoteUserAccount, OidcProviderOptions>>(
+            resolved);
+    }
+
+    [Fact]
     public async Task ItSharesOneTokenRefresherAcrossScopes()
     {
         await using var services = BuildServices();
@@ -86,6 +99,11 @@ public class ProgramAuthRegistrationTests
         collection.AddScoped<IRemoteAuthenticationService<RemoteAuthenticationState>>(services =>
             services.GetServices<AuthenticationStateProvider>()
                 .OfType<IRemoteAuthenticationService<RemoteAuthenticationState>>()
+                .Single());
+
+        collection.AddScoped<IAccessTokenProvider>(services =>
+            services.GetServices<AuthenticationStateProvider>()
+                .OfType<IAccessTokenProvider>()
                 .Single());
 
         collection.AddSingleton<LocalAuthenticationStateProvider>();
