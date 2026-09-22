@@ -33,12 +33,12 @@ builder.Services.AddOidcAuthentication(options =>
 var keycloakAuthority = builder.Configuration["Keycloak:Authority"]!;
 var keycloakClientId = builder.Configuration["Keycloak:ClientId"]!;
 
-builder.Services.AddScoped<ILocalSessionStore, LocalSessionStore>();
-builder.Services.AddScoped(services => new TokenRefresher(
+builder.Services.AddSingleton<ILocalSessionStore, LocalSessionStore>();
+builder.Services.AddSingleton(services => new TokenRefresher(
     new HttpClient(), services.GetRequiredService<IClock>(), keycloakAuthority, keycloakClientId));
 builder.Services.AddScoped<SessionBootstrapper>();
-builder.Services.AddScoped<LocalAuthenticationStateProvider>();
-builder.Services.AddScoped<AuthenticationStateProvider>(
+builder.Services.AddSingleton<LocalAuthenticationStateProvider>();
+builder.Services.AddSingleton<AuthenticationStateProvider>(
     services => services.GetRequiredService<LocalAuthenticationStateProvider>());
 builder.Services.AddScoped<SessionAuthorizationHandler>();
 
@@ -47,7 +47,7 @@ builder.Services.AddScoped<IOutbox, IndexedDbOutbox>();
 builder.Services.AddScoped(typeof(IDocumentStore<>), typeof(ReplicaDocumentStore<>));
 builder.Services.AddScoped<ReplicaUnitOfWork>();
 builder.Services.AddScoped<IUnitOfWork>(services => services.GetRequiredService<ReplicaUnitOfWork>());
-builder.Services.AddScoped<IClock, BrowserClock>();
+builder.Services.AddSingleton<IClock, BrowserClock>();
 builder.Services.AddScoped<CommandSender>();
 builder.Services.AddScoped<ReplicaOwnership>();
 builder.Services.AddTransient<IViewport, BrowserViewport>();
@@ -71,18 +71,26 @@ builder.Services.AddScoped<SyncCoordinator>();
 
 var host = builder.Build();
 
-var bootstrapper = host.Services.GetRequiredService<SessionBootstrapper>();
-var boot = await host.Services.GetRequiredService<IJSRuntime>()
-    .InvokeAsync<IJSObjectReference>("import", "./js/boot.js");
+IJSObjectReference? boot = null;
 
 try
 {
+    boot = await host.Services.GetRequiredService<IJSRuntime>()
+        .InvokeAsync<IJSObjectReference>("import", "./js/boot.js");
+
+    var bootstrapper = host.Services.GetRequiredService<SessionBootstrapper>();
     await bootstrapper.StartAsync();
+}
+catch
+{
 }
 finally
 {
     // Any bootstrap failure must still reveal the app: a held splash is an unrecoverable blank screen.
-    await boot.InvokeVoidAsync("done");
+    if (boot is not null)
+    {
+        await boot.InvokeVoidAsync("done");
+    }
 }
 
 await host.RunAsync();
