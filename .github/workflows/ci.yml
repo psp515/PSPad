@@ -38,10 +38,18 @@ jobs:
   api-image:
     runs-on: ubuntu-latest
     needs: build-and-unit-test
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - run: docker build -f src/PSPad.Api/Dockerfile -t pspad-api:ci .
+      - run: |
+          docker build -f src/PSPad.Api/Dockerfile \
+            -t pspad-api:ci \
+            -t ghcr.io/psp515/pspad-backend:latest \
+            -t ghcr.io/psp515/pspad-backend:${{ github.sha }} \
+            .
 
       - name: Start Mongo for smoke test
         run: |
@@ -70,6 +78,13 @@ jobs:
           docker logs pspad-api-ci
           exit 1
 
+      - name: Push image
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push ghcr.io/psp515/pspad-backend:latest
+          docker push ghcr.io/psp515/pspad-backend:${{ github.sha }}
+
       - if: always()
         run: |
           docker rm -f pspad-api-ci || true
@@ -79,18 +94,26 @@ jobs:
   app-image:
     runs-on: ubuntu-latest
     needs: build-and-unit-test
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - run: docker build -f src/PSPad.App/Dockerfile -t pspad-app:ci .
+      - run: |
+          docker build -f src/PSPad.App/Dockerfile \
+            -t pspad-app:ci \
+            -t ghcr.io/psp515/pspad-frontend:latest \
+            -t ghcr.io/psp515/pspad-frontend:${{ github.sha }} \
+            .
 
       - name: Serve the app and check what it serves
         run: |
           docker run -d --name pspad-app-ci -p 5001:8080 \
             -e API_BASE_ADDRESS=http://localhost:5000 \
             -e APP_BASE_ADDRESS=http://localhost:5001 \
-            -e KEYCLOAK_AUTHORITY=http://localhost:8080/realms/pspad \
-            -e KEYCLOAK_CLIENT_ID=pspad-app \
+            -e KEYCLOAK_AUTHORITY=http://localhost:8080/realms/psplace \
+            -e KEYCLOAK_CLIENT_ID=pspad-frontend \
             pspad-app:ci
           for i in $(seq 1 20); do
             if curl -sf localhost:5001/ >/dev/null; then break; fi
@@ -99,7 +122,28 @@ jobs:
           type=$(curl -s -o /dev/null -w '%{content_type}' localhost:5001/)
           echo "index content-type: $type"
           case "$type" in text/html*) ;; *) echo "the app is not served as HTML"; docker logs pspad-app-ci; exit 1 ;; esac
-          curl -sf localhost:5001/appsettings.json | grep -q pspad-app
+          curl -sf localhost:5001/appsettings.json | grep -q pspad-frontend
+
+      - name: Push image
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push ghcr.io/psp515/pspad-frontend:latest
+          docker push ghcr.io/psp515/pspad-frontend:${{ github.sha }}
 
       - if: always()
         run: docker rm -f pspad-app-ci || true
+
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [integration-test, api-image, app-image]
+    steps:
+      - name: Trigger update on the VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: sudo /opt/pspad/update.sh

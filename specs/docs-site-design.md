@@ -293,8 +293,8 @@ description on the install page:
 | `MONGO_PASSWORD` | Password for the `pspad` MongoDB root user. Compose builds the connection string from it. |
 | `MONGO_DATABASE` | Database name. |
 | `KEYCLOAK_AUTHORITY` | Realm URL as the **browser** reaches it. The WASM client redirects here. |
-| `KEYCLOAK_AUDIENCE` | Audience the API validates on incoming tokens. `pspad-api`. |
-| `KEYCLOAK_CLIENT_ID` | Public client the browser authenticates as. `pspad-app`. |
+| `KEYCLOAK_AUDIENCE` | Audience the API validates on incoming tokens. `pspad-backend`. |
+| `KEYCLOAK_CLIENT_ID` | Public client the browser authenticates as. `pspad-frontend`. |
 | `KEYCLOAK_ADMIN_USER` | Bootstrap admin, first start only. |
 | `KEYCLOAK_ADMIN_PASSWORD` | Bootstrap admin password, first start only. |
 | `KEYCLOAK_HOSTNAME` | Public URL Keycloak issues its own links against (`KC_HOSTNAME`). |
