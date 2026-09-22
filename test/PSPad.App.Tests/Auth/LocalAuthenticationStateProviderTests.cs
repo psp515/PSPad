@@ -34,6 +34,16 @@ public class LocalAuthenticationStateProviderTests
     }
 
     [Fact]
+    public async Task ItStaysAnonymousWhenTheStoreThrows()
+    {
+        var provider = new LocalAuthenticationStateProvider(new ThrowingLocalSessionStore());
+
+        var state = await provider.GetAuthenticationStateAsync();
+
+        Assert.False(state.User.Identity?.IsAuthenticated);
+    }
+
+    [Fact]
     public async Task ItPublishesSignIn()
     {
         var provider = new LocalAuthenticationStateProvider(new InMemoryLocalSessionStore());

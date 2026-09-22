@@ -13,7 +13,15 @@ public sealed class LocalAuthenticationStateProvider(ILocalSessionStore sessions
     {
         if (!_loaded)
         {
-            _session = await sessions.LoadAsync();
+            try
+            {
+                _session = await sessions.LoadAsync();
+            }
+            catch
+            {
+                _session = null;
+            }
+
             _loaded = true;
         }
 
