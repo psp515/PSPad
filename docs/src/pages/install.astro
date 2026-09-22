@@ -85,7 +85,7 @@ cd PSPad</code></pre>
           (<code>http://localhost:8080</code> by default) and sign in with
           <code>KEYCLOAK_ADMIN_USER</code> / <code>KEYCLOAK_ADMIN_PASSWORD</code>.
         </li>
-        <li>Switch realm from <strong>master</strong> to <strong>pspad</strong>.</li>
+        <li>Switch realm from <strong>master</strong> to <strong>psplace</strong>.</li>
         <li>
           <strong>Users</strong> → <strong>Create new user</strong>. Fill in username, email,
           first and last name.
@@ -109,6 +109,15 @@ cd PSPad</code></pre>
           The app is offline-first: new tasks save to your browser immediately and sync to
           the server every 20–30 seconds. Restart the stack right after creating something
           and it's gone — it never made it to MongoDB.
+        </p>
+      </Callout>
+      <Callout title="Sessions are kept long on purpose">
+        <p>
+          The bundled realm keeps sessions for <strong>30 days idle, 90 days maximum</strong> —
+          long enough that an installed PWA stays signed in for as long as the app's own
+          offline trust window allows. Realm <strong>psplace</strong> is shared across every
+          self-hosted application it serves, so this lifetime applies to all of them, not
+          only PSPad.
         </p>
       </Callout>
     </Step>
