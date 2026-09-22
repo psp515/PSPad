@@ -1,3 +1,7 @@
 #!/bin/sh
 set -e
-envsubst < /usr/share/nginx/html/appsettings.template.json > /usr/share/nginx/html/appsettings.json
+root=/usr/share/nginx/html
+envsubst < "$root/appsettings.template.json" > "$root/appsettings.json"
+# gzip_static would keep serving the publish-time copy, which envsubst never touches.
+rm -f "$root/appsettings.json.br"
+gzip -9 -c "$root/appsettings.json" > "$root/appsettings.json.gz"
