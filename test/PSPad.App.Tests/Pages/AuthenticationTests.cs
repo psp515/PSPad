@@ -151,6 +151,23 @@ public class AuthenticationTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItWritesNothingWhenTheProfileCarriesNoUserId()
+    {
+        var sessions = new InMemoryLocalSessionStore();
+        Arrange(
+            sessions,
+            new StubMeHandler(
+                HttpStatusCode.OK, new MeResponse(Guid.Empty, "Zoe", "zoe@example.com", "Europe/Warsaw")),
+            completeSignInStatus: RemoteAuthenticationStatus.Success,
+            refreshToken: "refresh-token-value");
+
+        Render<PSPad.App.Pages.Authentication>(
+            parameters => parameters.Add(p => p.Action, "login-callback"));
+
+        Assert.Null(sessions.Current);
+    }
+
+    [Fact]
     public async Task ACompletedLogOutClearsTheLocalSessionAndTheReplica()
     {
         var sessions = new InMemoryLocalSessionStore(

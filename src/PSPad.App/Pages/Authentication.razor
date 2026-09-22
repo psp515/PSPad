@@ -52,14 +52,12 @@
                 return;
             }
 
-            var me = await Api.MeAsync();
+            var account = (await Api.MeAsync()).Sanitized();
 
-            if (me is null)
+            if (account is null)
             {
                 return;
             }
-
-            var account = me.Sanitized();
 
             var session = new LocalSession(
                 account.UserId, account.DisplayName, account.Email, account.TimeZone,

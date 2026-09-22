@@ -142,11 +142,11 @@
 
     async Task RefreshAccountAsync()
     {
-        MeResponse? fetched;
+        MeResponse? me;
 
         try
         {
-            fetched = await Api.MeAsync();
+            me = (await Api.MeAsync()).Sanitized();
         }
         catch (Exception exception)
         {
@@ -154,12 +154,10 @@
             return;
         }
 
-        if (fetched is null)
+        if (me is null)
         {
             return;
         }
-
-        var me = fetched.Sanitized();
 
         _displayName = me.DisplayName;
         _email = me.Email;

@@ -101,15 +101,13 @@
 
     public async Task ApplyTimeZoneAsync(string timeZone)
     {
-        var fetched = await Api.SetTimeZoneAsync(timeZone);
+        var me = (await Api.SetTimeZoneAsync(timeZone)).Sanitized();
 
-        if (fetched is null)
+        if (me is null)
         {
             _rejected = true;
             return;
         }
-
-        var me = fetched.Sanitized();
 
         _rejected = false;
         State.TimeZone = me.TimeZone;
