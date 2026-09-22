@@ -4,9 +4,56 @@
    anonymous session for the rest of the SPA's lifetime (its own layout is never remounted
    by the client-side redirect that follows). Keeping this route off AppShell removes the race. *@
 @layout AuthenticationLayout
+@using Microsoft.JSInterop
+@using PSPad.Abstractions
+@using PSPad.App.Api
+@using PSPad.App.Auth
+@using PSPad.App.Components
+@inject IJSRuntime Js
+@inject IConfiguration Configuration
+@inject ILocalSessionStore Sessions
+@inject LocalAuthenticationStateProvider AuthProvider
+@inject PSPadApiClient Api
+@inject IClock Clock
 
-<RemoteAuthenticatorView Action="@Action" />
+<RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="@CaptureSessionAsync">
+    <LoggingIn><BrandSplash /></LoggingIn>
+    <CompletingLoggingIn><BrandSplash /></CompletingLoggingIn>
+    <LogOut><BrandSplash /></LogOut>
+    <LogOutSucceeded><BrandSplash /></LogOutSucceeded>
+</RemoteAuthenticatorView>
 
 @code {
     [Parameter] public string? Action { get; set; }
+
+    async Task CaptureSessionAsync()
+    {
+        var module = await Js.InvokeAsync<IJSObjectReference>("import", "./js/session.js");
+
+        var refreshToken = await module.InvokeAsync<string?>(
+            "captureOidcRefreshToken",
+            Configuration["Keycloak:Authority"],
+            Configuration["Keycloak:ClientId"]);
+
+        if (string.IsNullOrEmpty(refreshToken))
+        {
+            return;
+        }
+
+        var me = await Api.MeAsync();
+
+        if (me is null)
+        {
+            return;
+        }
+
+        var account = me.Sanitized();
+
+        var session = new LocalSession(
+            account.UserId, account.DisplayName, account.Email, account.TimeZone,
+            refreshToken, Clock.UtcNow);
+
+        await Sessions.SaveAsync(session);
+        AuthProvider.SignedIn(session);
+    }
 }

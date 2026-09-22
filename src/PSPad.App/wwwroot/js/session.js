@@ -11,3 +11,15 @@ export function save(value) {
 export function clear() {
   return run('session', 'readwrite', session => session.clear());
 }
+
+export function captureOidcRefreshToken(authority, clientId) {
+  const raw = sessionStorage.getItem(`oidc.user:${authority}:${clientId}`);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw).refresh_token ?? null;
+  } catch {
+    return null;
+  }
+}
