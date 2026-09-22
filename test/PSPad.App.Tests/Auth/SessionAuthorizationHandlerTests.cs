@@ -55,6 +55,44 @@ public class SessionAuthorizationHandlerTests
         Assert.Null(captured.Request?.Headers.Authorization);
     }
 
+    [Fact]
+    public async Task ItRefreshesWhenTheCachedTokenIsInsideTheMargin()
+    {
+        var queue = new QueuingHandler(
+            $$"""{"access_token":"first","expires_in":10,"refresh_token":"r1"}""",
+            $$"""{"access_token":"second","expires_in":300,"refresh_token":"r2"}""");
+        var refresher = new TokenRefresher(
+            new HttpClient(queue), new FixedClock(Now),
+            "http://localhost:8080/realms/psplace", "pspad-frontend");
+        await refresher.RefreshAsync("stored");
+
+        var captured = new CapturingHandler();
+        var client = Client(refresher, new InMemoryLocalSessionStore(Session()), captured);
+
+        await client.GetAsync("http://api.test/me", TestContext.Current.CancellationToken);
+
+        Assert.Equal("second", captured.Request?.Headers.Authorization?.Parameter);
+    }
+
+    [Fact]
+    public async Task ItReusesACachedTokenOutsideTheMarginWithoutRefreshing()
+    {
+        var queue = new QueuingHandler(
+            $$"""{"access_token":"first","expires_in":300,"refresh_token":"r1"}""");
+        var refresher = new TokenRefresher(
+            new HttpClient(queue), new FixedClock(Now),
+            "http://localhost:8080/realms/psplace", "pspad-frontend");
+        await refresher.RefreshAsync("stored");
+
+        var captured = new CapturingHandler();
+        var client = Client(refresher, new InMemoryLocalSessionStore(Session()), captured);
+
+        await client.GetAsync("http://api.test/me", TestContext.Current.CancellationToken);
+
+        Assert.Equal("first", captured.Request?.Headers.Authorization?.Parameter);
+        Assert.Equal(1, queue.RequestCount);
+    }
+
     static async Task<TokenRefresher> RefresherWithToken(int expiresIn)
     {
         var refresher = new TokenRefresher(
@@ -101,6 +139,23 @@ public class SessionAuthorizationHandlerTests
             {
                 Content = new StringContent(body)
             });
+    }
+
+    sealed class QueuingHandler(params string[] bodies) : HttpMessageHandler
+    {
+        readonly Queue<string> bodies = new(bodies);
+
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(bodies.Dequeue())
+            });
+        }
     }
 
     sealed class ThrowingHandler : HttpMessageHandler
