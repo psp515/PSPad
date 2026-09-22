@@ -121,7 +121,7 @@
 
         if (session is not null)
         {
-            await RefreshAccountAsync(session);
+            await RefreshAccountAsync();
         }
 
         ReadOpenTask();
@@ -140,7 +140,7 @@
         }
     }
 
-    async Task RefreshAccountAsync(LocalSession session)
+    async Task RefreshAccountAsync()
     {
         MeResponse? fetched;
 
@@ -169,12 +169,19 @@
         State.Today = TodayRule.TodayIn(
             DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
 
-        await Sessions.SaveAsync(session with
+        // The fetch itself may have rotated the refresh token and stamped the contact time,
+        // so the session read before it started is already stale by here.
+        var current = await SessionOrNullAsync();
+
+        if (current is not null)
         {
-            DisplayName = me.DisplayName,
-            Email = me.Email,
-            TimeZone = me.TimeZone
-        });
+            await Sessions.SaveAsync(current with
+            {
+                DisplayName = me.DisplayName,
+                Email = me.Email,
+                TimeZone = me.TimeZone
+            });
+        }
 
         StateHasChanged();
     }

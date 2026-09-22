@@ -267,6 +267,24 @@ public class AppShellTests : Bunit.TestContext
         Assert.Empty(shell.FindComponents<BrandLoader>());
     }
 
+    [Fact]
+    public void ItKeepsTheTokenAndContactTimeWrittenWhileTheAccountFetchWasInFlight()
+    {
+        var signedIn = new DateTimeOffset(2026, 9, 15, 8, 0, 0, TimeSpan.Zero);
+        var refreshed = new DateTimeOffset(2026, 9, 22, 8, 0, 0, TimeSpan.Zero);
+        var store = new InMemoryLocalSessionStore(
+            new LocalSession(User, "Zoe Session", "zoe@example.com", "UTC", "r0", signedIn));
+        Arrange(
+            sessionStore: store,
+            onMeRequest: () => store.SaveAsync(
+                store.Current! with { RefreshToken = "r1", LastServerContactUtc = refreshed }));
+
+        Render<AppShell>();
+
+        Assert.Equal("r1", store.Current?.RefreshToken);
+        Assert.Equal(refreshed, store.Current?.LastServerContactUtc);
+    }
+
     void Arrange(
         string displayName = "Ada Lovelace",
         string email = "ada@example.com",
@@ -274,6 +292,8 @@ public class AppShellTests : Bunit.TestContext
         bool accountFetchFails = false,
         bool hasSession = true,
         MeResponse? meResponseOverride = null,
+        InMemoryLocalSessionStore? sessionStore = null,
+        Action? onMeRequest = null,
         params Aggregate[] documents)
     {
         var today = new DateOnly(2026, 9, 12);
@@ -284,7 +304,7 @@ public class AppShellTests : Bunit.TestContext
             new ReplicaDocumentStore<Module.Tasks.Inbox.Inbox>(replica),
             new AppState { UserId = User, Today = today }));
 
-        Services.AddSingleton<ILocalSessionStore>(new InMemoryLocalSessionStore(
+        Services.AddSingleton<ILocalSessionStore>(sessionStore ?? new InMemoryLocalSessionStore(
             hasSession
                 ? new LocalSession(
                     User, "Zoe Session", "zoe@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow)
@@ -293,7 +313,7 @@ public class AppShellTests : Bunit.TestContext
         var meResponse = meResponseOverride ?? new MeResponse(User, displayName, email, "UTC");
         HttpMessageHandler handler = accountFetchFails
             ? new ThrowingMeHandler()
-            : new FakeMeHandler(meResponse);
+            : new FakeMeHandler(meResponse, onMeRequest);
 
         Services.AddSingleton(new PSPadApiClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }));
         Services.AddSingleton<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
@@ -346,13 +366,17 @@ public class AppShellTests : Bunit.TestContext
 #pragma warning restore CS0067
     }
 
-    sealed class FakeMeHandler(MeResponse response) : HttpMessageHandler
+    sealed class FakeMeHandler(MeResponse response, Action? onRequest = null) : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            onRequest?.Invoke();
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = JsonContent.Create(response)
             });
+        }
     }
 
     sealed class ThrowingMeHandler : HttpMessageHandler
