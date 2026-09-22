@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using Microsoft.AspNetCore.Components.Authorization;
 using PSPad.Abstractions;
 using PSPad.App.Auth;
@@ -174,6 +175,32 @@ public class SessionAuthorizationHandlerTests
         Assert.Null(captured.Request?.Headers.Authorization);
         Assert.Equal(0, sessions.ClearCalls);
         Assert.Equal(0, signOuts);
+    }
+
+    [Fact]
+    public async Task ItReleasesTheGateBeforeNotifyingSignOut()
+    {
+        var refresher = new TokenRefresher(
+            new HttpClient(new RevokedHandler()), new FixedClock(Now),
+            "http://localhost:8080/realms/psplace", "pspad-frontend");
+        var sessions = new InMemoryLocalSessionStore(Session());
+        var authenticationState = new LocalAuthenticationStateProvider(sessions);
+        var captured = new CapturingHandler();
+        var handler = new SessionAuthorizationHandler(
+            refresher, sessions, new FixedClock(Now), authenticationState)
+        {
+            InnerHandler = captured
+        };
+        var gate = (SemaphoreSlim)typeof(SessionAuthorizationHandler)
+            .GetField("gate", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(handler)!;
+        int? gateCountDuringNotification = null;
+        authenticationState.AuthenticationStateChanged += _ =>
+            gateCountDuringNotification = gate.CurrentCount;
+
+        await new HttpClient(handler).GetAsync("http://api.test/me", TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, gateCountDuringNotification);
     }
 
     static async Task<TokenRefresher> RefresherWithToken(int expiresIn)

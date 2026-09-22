@@ -35,6 +35,8 @@ public sealed class SessionAuthorizationHandler(
 
         await gate.WaitAsync();
 
+        var signOut = false;
+
         try
         {
             if (CachedTokenValid())
@@ -73,21 +75,26 @@ public sealed class SessionAuthorizationHandler(
 
             if (outcome is RefreshOutcome.Revoked)
             {
-                return await HandleRevokedAsync(session);
+                signOut = await ClearRevokedSessionAsync(session);
             }
-
-            return null;
         }
         finally
         {
             gate.Release();
         }
+
+        if (signOut)
+        {
+            authenticationState.SignedOut();
+        }
+
+        return null;
     }
 
     bool CachedTokenValid() =>
         refresher.AccessToken is not null && refresher.AccessTokenExpiresAt - Margin > clock.UtcNow;
 
-    async Task<string?> HandleRevokedAsync(LocalSession attempted)
+    async Task<bool> ClearRevokedSessionAsync(LocalSession attempted)
     {
         LocalSession? current;
 
@@ -97,12 +104,12 @@ public sealed class SessionAuthorizationHandler(
         }
         catch
         {
-            return null;
+            return false;
         }
 
         if (current is null || current.RefreshToken != attempted.RefreshToken)
         {
-            return null;
+            return false;
         }
 
         try
@@ -111,11 +118,9 @@ public sealed class SessionAuthorizationHandler(
         }
         catch
         {
-            return null;
+            return false;
         }
 
-        authenticationState.SignedOut();
-
-        return null;
+        return true;
     }
 }
