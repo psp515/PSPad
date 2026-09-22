@@ -285,6 +285,35 @@ public class AppShellTests : Bunit.TestContext
         Assert.Equal(refreshed, store.Current?.LastServerContactUtc);
     }
 
+    [Fact]
+    public void ItTakesTodayFromTheRegisteredClockAndTheSessionTimeZone()
+    {
+        var store = new InMemoryLocalSessionStore(new LocalSession(
+            User, "Zoe Session", "zoe@example.com", "Etc/GMT+12", "refresh-token", DateTimeOffset.UtcNow));
+        Arrange(
+            sessionStore: store,
+            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Etc/GMT+12"));
+
+        Render<AppShell>();
+
+        Assert.Equal(new DateOnly(2026, 9, 11), Services.GetRequiredService<AppState>().Today);
+    }
+
+    [Fact]
+    public void ItStaysReadyOnATimeZoneTheRuntimeDoesNotCarry()
+    {
+        var store = new InMemoryLocalSessionStore(new LocalSession(
+            User, "Zoe Session", "zoe@example.com", "Mars/Olympus", "refresh-token", DateTimeOffset.UtcNow));
+        Arrange(
+            sessionStore: store,
+            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Mars/Olympus"));
+
+        var shell = Render<AppShell>();
+
+        Assert.Empty(shell.FindComponents<BrandLoader>());
+        Assert.Equal(new DateOnly(2026, 9, 12), Services.GetRequiredService<AppState>().Today);
+    }
+
     void Arrange(
         string displayName = "Ada Lovelace",
         string email = "ada@example.com",

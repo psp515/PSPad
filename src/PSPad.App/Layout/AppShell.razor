@@ -24,6 +24,7 @@
 @inject NavigationManager Navigation
 @inject IViewport Viewport
 @inject ILocalSessionStore Sessions
+@inject IClock Clock
 @implements IDisposable
 @implements IAsyncDisposable
 
@@ -102,8 +103,7 @@
             State.DisplayName = session.DisplayName;
             State.Email = session.Email;
             State.TimeZone = session.TimeZone;
-            State.Today = TodayRule.TodayIn(
-                DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(session.TimeZone));
+            State.Today = TodayIn(session.TimeZone);
 
             try
             {
@@ -166,8 +166,7 @@
         State.DisplayName = me.DisplayName;
         State.Email = me.Email;
         State.TimeZone = me.TimeZone;
-        State.Today = TodayRule.TodayIn(
-            DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
+        State.Today = TodayIn(me.TimeZone);
 
         // The fetch itself may have rotated the refresh token and stamped the contact time,
         // so the session read before it started is already stale by here.
@@ -184,6 +183,19 @@
         }
 
         StateHasChanged();
+    }
+
+    DateOnly TodayIn(string timeZone)
+    {
+        try
+        {
+            return TodayRule.TodayIn(Clock.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(timeZone));
+        }
+        catch (Exception exception) when (exception is TimeZoneNotFoundException or InvalidTimeZoneException)
+        {
+            Console.Error.WriteLine($"Unknown time zone '{timeZone}': {exception.Message}");
+            return TodayRule.TodayIn(Clock.UtcNow, TimeZoneInfo.Utc);
+        }
     }
 
     void OnDesktopChanged(bool isDesktop)
