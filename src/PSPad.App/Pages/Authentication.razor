@@ -15,9 +15,11 @@
 @inject LocalAuthenticationStateProvider AuthProvider
 @inject PSPadApiClient Api
 @inject TokenRefresher Refresher
+@inject LocalSignOut SignOut
 @inject IClock Clock
 
-<RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="@CaptureSessionAsync">
+<RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="@CaptureSessionAsync"
+                         OnLogOutSucceeded="@SignOut.ClearAsync">
     <LoggingIn><BrandSplash /></LoggingIn>
     <CompletingLoggingIn><BrandSplash /></CompletingLoggingIn>
     <LogOut><BrandSplash /></LogOut>

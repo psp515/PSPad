@@ -2,12 +2,16 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using PSPad.App.Api;
+using PSPad.App.Auth;
 using PSPad.App.Pages;
 using PSPad.App.State;
 using PSPad.App.State.Outbox;
+using PSPad.App.State.Replica;
 using PSPad.App.Tests;
+using PSPad.App.Tests.Auth;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Today;
 using PSPad.TestInfrastructure;
@@ -19,6 +23,10 @@ public class SettingsPageTests : Bunit.TestContext
 {
     static readonly Guid User = Guid.NewGuid();
     static readonly DateOnly Today = new(2026, 3, 10);
+
+    InMemoryLocalSessionStore? _sessions;
+    InMemoryReplica? _replica;
+    LocalAuthenticationStateProvider? _authProvider;
 
     [Fact]
     public void ItShowsTheAccountName()
@@ -82,13 +90,47 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ItOffersSignOut()
+    public async Task SigningOutClearsTheLocalSessionAndTheReplicaAndNotifiesTheStateProvider()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
+        var notifications = 0;
+        _authProvider!.AuthenticationStateChanged += _ => notifications++;
 
         var page = Render<SettingsPage>();
+        page.Find(".pspad-sign-out").Click();
 
-        Assert.Contains("/authentication/logout", page.Markup);
+        Assert.Null(_sessions!.Current);
+        Assert.Null(await _replica!.OwnerAsync());
+        Assert.Equal(1, notifications);
+    }
+
+    [Fact]
+    public async Task SigningOutKeepsTheOutbox()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var outbox = Services.GetRequiredService<IOutbox>();
+        await outbox.AppendAsync(
+            Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
+
+        var page = Render<SettingsPage>();
+        page.Find(".pspad-sign-out").Click();
+
+        Assert.Equal(1, await outbox.CountAsync());
+    }
+
+    [Fact]
+    public void SigningOutClearsBeforeLeavingForKeycloakSoAnInterruptedSignOutStillSignsOut()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        bool? clearedWhenLeaving = null;
+        navigation.LocationChanged += (_, _) => clearedWhenLeaving = _sessions!.Current is null;
+
+        var page = Render<SettingsPage>();
+        page.Find(".pspad-sign-out").Click();
+
+        Assert.True(clearedWhenLeaving);
+        Assert.EndsWith("authentication/logout", navigation.Uri);
     }
 
     [Fact]
@@ -105,7 +147,13 @@ public class SettingsPageTests : Bunit.TestContext
 
     AppState Arrange(string displayName, string email, bool respondWithNullTimeZone = false)
     {
-        AppTestHost.Arrange(this, User, Today);
+        _replica = AppTestHost.Arrange(this, User, Today);
+        _sessions = new InMemoryLocalSessionStore(
+            new LocalSession(User, displayName, email, "UTC", "refresh-token", DateTimeOffset.UtcNow));
+        _authProvider = new LocalAuthenticationStateProvider(_sessions);
+        Services.AddSingleton<ILocalSessionStore>(_sessions);
+        Services.AddSingleton(_authProvider);
+        Services.AddSingleton(new LocalSignOut(_sessions, _replica, _authProvider));
 
         var state = new AppState
         {

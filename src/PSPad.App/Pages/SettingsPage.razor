@@ -1,5 +1,6 @@
 @page "/settings"
 @using PSPad.App.Api
+@using PSPad.App.Auth
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.App.State.Outbox
@@ -10,6 +11,8 @@
 @inject ThemePreference Preference
 @inject IOutbox Outbox
 @inject CommandSender Sender
+@inject LocalSignOut SignOut
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Settings</MudText>
@@ -63,7 +66,7 @@
     </MudText>
 </MudPaper>
 
-<MudButton Class="pspad-sign-out" Href="/authentication/logout" StartIcon="@Icons.Material.Filled.Logout"
+<MudButton Class="pspad-sign-out" OnClick="@SignOutAsync" StartIcon="@Icons.Material.Filled.Logout"
            Color="Color.Error" Variant="Variant.Outlined">
     Sign out
 </MudButton>
@@ -85,6 +88,14 @@
     }
 
     void OnCommandSent() => InvokeAsync(RefreshPendingAsync);
+
+    async Task SignOutAsync()
+    {
+        // Clearing before the redirect leaves the app is what makes an interrupted or offline
+        // sign-out still a sign-out: the Keycloak round trip may never come back.
+        await SignOut.ClearAsync();
+        Navigation.NavigateTo("authentication/logout");
+    }
 
     public void Dispose() => Sender.Sent -= OnCommandSent;
 

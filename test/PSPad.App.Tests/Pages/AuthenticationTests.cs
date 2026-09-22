@@ -13,6 +13,7 @@ using PSPad.App.Api;
 using PSPad.App.Auth;
 using PSPad.App.Layout;
 using PSPad.App.Pages;
+using PSPad.App.State.Replica;
 using PSPad.App.Tests.Auth;
 using PSPad.Contracts;
 using PSPad.TestInfrastructure;
@@ -22,6 +23,8 @@ namespace PSPad.App.Tests.Pages;
 [UnitTest]
 public class AuthenticationTests : Bunit.TestContext
 {
+    readonly InMemoryReplica _replica = new();
+
     [Fact]
     public void TheLoginCallbackRouteNeverMountsAppShell()
     {
@@ -147,6 +150,27 @@ public class AuthenticationTests : Bunit.TestContext
         Assert.Null(sessions.Current);
     }
 
+    [Fact]
+    public async Task ACompletedLogOutClearsTheLocalSessionAndTheReplica()
+    {
+        var sessions = new InMemoryLocalSessionStore(
+            new LocalSession(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "r0", DateTimeOffset.UtcNow));
+        Arrange(sessions, new StubMeHandler(HttpStatusCode.NotFound, null));
+        JSInterop.Setup<RemoteAuthenticationResult<RemoteAuthenticationState>>(
+                "AuthenticationService.completeSignOut", _ => true)
+            .SetResult(new RemoteAuthenticationResult<RemoteAuthenticationState>
+            {
+                Status = RemoteAuthenticationStatus.Success,
+                State = new RemoteAuthenticationState { ReturnUrl = "/" }
+            });
+
+        Render<PSPad.App.Pages.Authentication>(
+            parameters => parameters.Add(p => p.Action, "logout-callback"));
+
+        Assert.Null(sessions.Current);
+        Assert.Null(await _replica.OwnerAsync());
+    }
+
     LocalAuthenticationStateProvider Arrange(
         ILocalSessionStore sessions,
         HttpMessageHandler meHandler,
@@ -183,10 +207,13 @@ public class AuthenticationTests : Bunit.TestContext
 
         var clock = new FixedClock();
         var authProvider = new LocalAuthenticationStateProvider(sessions);
+        _replica.SetOwnerAsync(Guid.NewGuid()).GetAwaiter().GetResult();
+        Services.AddSingleton<IReplica>(_replica);
         Services.AddSingleton<IClock>(clock);
         Services.AddSingleton(sessions);
         Services.AddSingleton(authProvider);
         Services.AddSingleton<AuthenticationStateProvider>(authProvider);
+        Services.AddSingleton(new LocalSignOut(sessions, _replica, authProvider));
 
         var refresher = new TokenRefresher(
             new HttpClient(tokenEndpoint ?? new RotatingTokenEndpoint()), clock,
