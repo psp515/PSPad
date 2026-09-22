@@ -28,32 +28,39 @@
 
     async Task CaptureSessionAsync()
     {
-        var module = await Js.InvokeAsync<IJSObjectReference>("import", "./js/session.js");
-
-        var refreshToken = await module.InvokeAsync<string?>(
-            "captureOidcRefreshToken",
-            Configuration["Keycloak:Authority"],
-            Configuration["Keycloak:ClientId"]);
-
-        if (string.IsNullOrEmpty(refreshToken))
+        try
         {
-            return;
+            var module = await Js.InvokeAsync<IJSObjectReference>("import", "./js/session.js");
+
+            var refreshToken = await module.InvokeAsync<string?>(
+                "captureOidcRefreshToken",
+                Configuration["Keycloak:Authority"],
+                Configuration["Keycloak:ClientId"]);
+
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return;
+            }
+
+            var me = await Api.MeAsync();
+
+            if (me is null)
+            {
+                return;
+            }
+
+            var account = me.Sanitized();
+
+            var session = new LocalSession(
+                account.UserId, account.DisplayName, account.Email, account.TimeZone,
+                refreshToken, Clock.UtcNow);
+
+            await Sessions.SaveAsync(session);
+            AuthProvider.SignedIn(session);
         }
-
-        var me = await Api.MeAsync();
-
-        if (me is null)
+        catch (Exception exception)
         {
-            return;
+            Console.Error.WriteLine($"Session capture failed: {exception.Message}");
         }
-
-        var account = me.Sanitized();
-
-        var session = new LocalSession(
-            account.UserId, account.DisplayName, account.Email, account.TimeZone,
-            refreshToken, Clock.UtcNow);
-
-        await Sessions.SaveAsync(session);
-        AuthProvider.SignedIn(session);
     }
 }

@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http.Json;
 using System.Reflection;
 using Bunit;
 using Microsoft.AspNetCore.Components;
@@ -11,6 +13,8 @@ using PSPad.App.Api;
 using PSPad.App.Auth;
 using PSPad.App.Layout;
 using PSPad.App.Pages;
+using PSPad.App.Tests.Auth;
+using PSPad.Contracts;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Pages;
@@ -39,7 +43,9 @@ public class AuthenticationTests : Bunit.TestContext
     [Fact]
     public void ItShowsTheBrandMarkInsteadOfTheLibraryText()
     {
-        Arrange();
+        Arrange(
+            new InMemoryLocalSessionStore(),
+            new StubMeHandler(HttpStatusCode.NotFound, null));
 
         var page = Render<PSPad.App.Pages.Authentication>(
             parameters => parameters.Add(p => p.Action, "login-callback"));
@@ -48,7 +54,70 @@ public class AuthenticationTests : Bunit.TestContext
         Assert.DoesNotContain("Completing login", page.Markup);
     }
 
-    void Arrange()
+    [Fact]
+    public void ItCapturesTheSessionAfterASuccessfulLogin()
+    {
+        var userId = Guid.NewGuid();
+        var sessions = new InMemoryLocalSessionStore();
+        var authProvider = Arrange(
+            sessions,
+            new StubMeHandler(HttpStatusCode.OK, new MeResponse(userId, "Zoe", "zoe@example.com", "Europe/Warsaw")),
+            completeSignInStatus: RemoteAuthenticationStatus.Success,
+            refreshToken: "refresh-token-value");
+
+        var notified = 0;
+        authProvider.AuthenticationStateChanged += _ => notified++;
+
+        Render<PSPad.App.Pages.Authentication>(
+            parameters => parameters.Add(p => p.Action, "login-callback"));
+
+        Assert.NotNull(sessions.Current);
+        Assert.Equal(userId, sessions.Current!.UserId);
+        Assert.Equal("Zoe", sessions.Current.DisplayName);
+        Assert.Equal("zoe@example.com", sessions.Current.Email);
+        Assert.Equal("Europe/Warsaw", sessions.Current.TimeZone);
+        Assert.Equal("refresh-token-value", sessions.Current.RefreshToken);
+        Assert.Equal(1, notified);
+    }
+
+    [Fact]
+    public void ItWritesNothingWhenNoRefreshTokenIsCaptured()
+    {
+        var sessions = new InMemoryLocalSessionStore();
+        Arrange(
+            sessions,
+            new StubMeHandler(
+                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw")),
+            completeSignInStatus: RemoteAuthenticationStatus.Success,
+            refreshToken: null);
+
+        Render<PSPad.App.Pages.Authentication>(
+            parameters => parameters.Add(p => p.Action, "login-callback"));
+
+        Assert.Null(sessions.Current);
+    }
+
+    [Fact]
+    public void ItWritesNothingWhenTheProfileFetchFails()
+    {
+        var sessions = new InMemoryLocalSessionStore();
+        Arrange(
+            sessions,
+            new StubMeHandler(HttpStatusCode.InternalServerError, null),
+            completeSignInStatus: RemoteAuthenticationStatus.Success,
+            refreshToken: "refresh-token-value");
+
+        Render<PSPad.App.Pages.Authentication>(
+            parameters => parameters.Add(p => p.Action, "login-callback"));
+
+        Assert.Null(sessions.Current);
+    }
+
+    LocalAuthenticationStateProvider Arrange(
+        ILocalSessionStore sessions,
+        HttpMessageHandler meHandler,
+        RemoteAuthenticationStatus completeSignInStatus = RemoteAuthenticationStatus.OperationCompleted,
+        string? refreshToken = null)
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.Options = new ServiceProviderOptions { ValidateScopes = false };
@@ -58,8 +127,11 @@ public class AuthenticationTests : Bunit.TestContext
                 "AuthenticationService.completeSignIn", _ => true)
             .SetResult(new RemoteAuthenticationResult<RemoteAuthenticationState>
             {
-                Status = RemoteAuthenticationStatus.OperationCompleted
+                Status = completeSignInStatus,
+                State = new RemoteAuthenticationState { ReturnUrl = "/" }
             });
+
+        JSInterop.Setup<string?>("captureOidcRefreshToken", _ => true).SetResult(refreshToken);
 
         Services.AddOidcAuthentication(options =>
         {
@@ -75,11 +147,12 @@ public class AuthenticationTests : Bunit.TestContext
                 .Single());
 
         Services.AddSingleton<IClock>(new FixedClock());
-        Services.AddSingleton<ILocalSessionStore>(new FakeLocalSessionStore());
+        Services.AddSingleton(sessions);
         Services.AddSingleton<LocalAuthenticationStateProvider>();
         Services.AddSingleton<AuthenticationStateProvider>(
             services => services.GetRequiredService<LocalAuthenticationStateProvider>());
-        Services.AddSingleton(new PSPadApiClient(new HttpClient()));
+        Services.AddSingleton(new PSPadApiClient(
+            new HttpClient(meHandler) { BaseAddress = new Uri("http://localhost/") }));
 
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -89,19 +162,27 @@ public class AuthenticationTests : Bunit.TestContext
             })
             .Build();
         Services.AddSingleton<IConfiguration>(configuration);
+
+        return Services.GetRequiredService<LocalAuthenticationStateProvider>();
     }
 
     sealed class FixedClock : IClock
     {
-        public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
+        public DateTimeOffset UtcNow => new(2026, 9, 22, 12, 0, 0, TimeSpan.Zero);
     }
 
-    sealed class FakeLocalSessionStore : ILocalSessionStore
+    sealed class StubMeHandler(HttpStatusCode status, MeResponse? body) : HttpMessageHandler
     {
-        public Task<LocalSession?> LoadAsync() => Task.FromResult<LocalSession?>(null);
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var response = new HttpResponseMessage(status);
+            if (body is not null)
+            {
+                response.Content = JsonContent.Create(body);
+            }
 
-        public Task SaveAsync(LocalSession session) => Task.CompletedTask;
-
-        public Task ClearAsync() => Task.CompletedTask;
+            return Task.FromResult(response);
+        }
     }
 }
