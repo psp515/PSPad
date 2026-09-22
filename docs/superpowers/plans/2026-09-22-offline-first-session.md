@@ -20,6 +20,7 @@
 - Time comes from the injected `IClock` (`UtcNow` is `DateTimeOffset`). Never `DateTime.UtcNow`.
 - A refresh failure is a sign-out **only** on HTTP 400 carrying `invalid_grant`. Every transport failure, timeout and 5xx is offline.
 - On trust-window expiry: clear the replica and the session, **never** the outbox.
+- **Every component that reads `ILocalSessionStore` treats a throwing store as "no session", never as an exception** (spec §7: "IndexedDB unreadable → treat as no session. Login."). In production the store is IndexedDB JS interop and can throw `JSException` when site data is blocked. The catch is narrow — around the store call only, never a blanket catch that would swallow the component's own programming errors. Each such component carries a regression test using a throwing `ILocalSessionStore` fake.
 - English in code, comments, commits and docs.
 - Run `dotnet test --project test/PSPad.App.Tests --filter Category=Unit` before each commit. The `--project` flag is required on this SDK; the bare path form fails.
 
@@ -824,6 +825,24 @@ public class SessionAuthorizationHandlerTests
     }
 
     [Fact]
+    public async Task ItSendsUnauthenticatedWhenTheSessionStoreThrows()
+    {
+        var refresher = new TokenRefresher(
+            new HttpClient(new ThrowingHandler()), new FixedClock(Now),
+            "http://localhost:8080/realms/psplace", "pspad-frontend");
+        var captured = new CapturingHandler();
+        var handler = new SessionAuthorizationHandler(
+            refresher, new ThrowingLocalSessionStore(), new FixedClock(Now))
+        {
+            InnerHandler = captured
+        };
+
+        await new HttpClient(handler).GetAsync("http://api.test/me");
+
+        Assert.Null(captured.Request?.Headers.Authorization);
+    }
+
+    [Fact]
     public async Task ItSendsUnauthenticatedWhenOfflineWithNoUsableToken()
     {
         var refresher = new TokenRefresher(
@@ -939,7 +958,16 @@ public sealed class SessionAuthorizationHandler(
             return refresher.AccessToken;
         }
 
-        var session = await sessions.LoadAsync();
+        LocalSession? session;
+
+        try
+        {
+            session = await sessions.LoadAsync();
+        }
+        catch
+        {
+            return null;
+        }
 
         if (session is null)
         {
@@ -1166,10 +1194,10 @@ Expected: FAIL — the shell renders `BrandLoader` and the retry link.
 
 - [ ] **Step 3: Seed state from the session**
 
-In `AppShell.razor`, inject the store (`@inject ILocalSessionStore Sessions`) and replace `OnInitializedAsync`'s auth branch and `LoadAccountAsync` with:
+In `AppShell.razor`, inject the store (`@inject ILocalSessionStore Sessions`) and replace `OnInitializedAsync`'s auth branch and `LoadAccountAsync` with the following. `SessionOrNullAsync` is a small helper wrapping `Sessions.LoadAsync()` in a try/catch that returns `null` — a store that cannot be read must leave the shell ready and anonymous, never throw out of `OnInitializedAsync`:
 
 ```csharp
-        var session = await Sessions.LoadAsync();
+        var session = await SessionOrNullAsync();
 
         if (session is not null)
         {
