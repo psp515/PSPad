@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Components.Authorization;
 using PSPad.Abstractions;
 using PSPad.App.Auth;
 using PSPad.TestInfrastructure;
@@ -30,8 +31,9 @@ public class SessionAuthorizationHandlerTests
             new HttpClient(new ThrowingHandler()), new FixedClock(Now),
             "http://localhost:8080/realms/psplace", "pspad-frontend");
         var captured = new CapturingHandler();
+        var sessions = new ThrowingLocalSessionStore();
         var handler = new SessionAuthorizationHandler(
-            refresher, new ThrowingLocalSessionStore(), new FixedClock(Now))
+            refresher, sessions, new FixedClock(Now), new LocalAuthenticationStateProvider(sessions))
         {
             InnerHandler = captured
         };
@@ -67,11 +69,14 @@ public class SessionAuthorizationHandlerTests
         await refresher.RefreshAsync("stored");
 
         var captured = new CapturingHandler();
-        var client = Client(refresher, new InMemoryLocalSessionStore(Session()), captured);
+        var sessions = new InMemoryLocalSessionStore(Session());
+        var client = Client(refresher, sessions, captured);
 
         await client.GetAsync("http://api.test/me", TestContext.Current.CancellationToken);
 
         Assert.Equal("second", captured.Request?.Headers.Authorization?.Parameter);
+        Assert.Equal("r2", sessions.Current?.RefreshToken);
+        Assert.Equal(Now, sessions.Current?.LastServerContactUtc);
     }
 
     [Fact]
@@ -93,6 +98,84 @@ public class SessionAuthorizationHandlerTests
         Assert.Equal(1, queue.RequestCount);
     }
 
+    [Fact]
+    public async Task ItRefreshesOnceForOverlappingRequests()
+    {
+        var tokenResponse = new TaskCompletionSource<HttpResponseMessage>();
+        var tokenEndpoint = new GatedHandler(tokenResponse.Task);
+        var refresher = new TokenRefresher(
+            new HttpClient(tokenEndpoint), new FixedClock(Now),
+            "http://localhost:8080/realms/psplace", "pspad-frontend");
+        var captured = new MultiCapturingHandler();
+        var client = Client(refresher, new InMemoryLocalSessionStore(Session()), captured);
+
+        var first = client.GetAsync("http://api.test/me", TestContext.Current.CancellationToken);
+        var second = client.GetAsync("http://api.test/me", TestContext.Current.CancellationToken);
+
+        tokenResponse.SetResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                $$"""{"access_token":"shared","expires_in":300,"refresh_token":"rotated"}""")
+        });
+
+        await Task.WhenAll(first, second);
+
+        Assert.Equal(1, tokenEndpoint.RequestCount);
+        Assert.Equal(2, captured.Requests.Count);
+        Assert.All(captured.Requests, r => Assert.Equal("shared", r.Headers.Authorization?.Parameter));
+    }
+
+    [Fact]
+    public async Task ItSignsOutWhenTheAttemptedTokenWasStillCurrentAndRevoked()
+    {
+        var refresher = new TokenRefresher(
+            new HttpClient(new RevokedHandler()), new FixedClock(Now),
+            "http://localhost:8080/realms/psplace", "pspad-frontend");
+        var sessions = new InMemoryLocalSessionStore(Session());
+        var authenticationState = new LocalAuthenticationStateProvider(sessions);
+        var signOuts = 0;
+        authenticationState.AuthenticationStateChanged += _ => signOuts++;
+        var captured = new CapturingHandler();
+        var handler = new SessionAuthorizationHandler(
+            refresher, sessions, new FixedClock(Now), authenticationState)
+        {
+            InnerHandler = captured
+        };
+
+        await new HttpClient(handler).GetAsync("http://api.test/me", TestContext.Current.CancellationToken);
+
+        Assert.Null(captured.Request?.Headers.Authorization);
+        Assert.Null(sessions.Current);
+        Assert.Equal(1, sessions.Clears);
+        Assert.Equal(1, signOuts);
+    }
+
+    [Fact]
+    public async Task ItStaysOfflineWithoutSigningOutWhenAnotherContextAlreadyRotatedTheToken()
+    {
+        var refresher = new TokenRefresher(
+            new HttpClient(new RevokedHandler()), new FixedClock(Now),
+            "http://localhost:8080/realms/psplace", "pspad-frontend");
+        var attempted = Session();
+        var afterRotation = attempted with { RefreshToken = "rotated-elsewhere" };
+        var sessions = new RotatingLocalSessionStore(attempted, afterRotation);
+        var authenticationState = new LocalAuthenticationStateProvider(sessions);
+        var signOuts = 0;
+        authenticationState.AuthenticationStateChanged += _ => signOuts++;
+        var captured = new CapturingHandler();
+        var handler = new SessionAuthorizationHandler(
+            refresher, sessions, new FixedClock(Now), authenticationState)
+        {
+            InnerHandler = captured
+        };
+
+        await new HttpClient(handler).GetAsync("http://api.test/me", TestContext.Current.CancellationToken);
+
+        Assert.Null(captured.Request?.Headers.Authorization);
+        Assert.Equal(0, sessions.ClearCalls);
+        Assert.Equal(0, signOuts);
+    }
+
     static async Task<TokenRefresher> RefresherWithToken(int expiresIn)
     {
         var refresher = new TokenRefresher(
@@ -108,7 +191,8 @@ public class SessionAuthorizationHandlerTests
     static HttpClient Client(
         TokenRefresher refresher, InMemoryLocalSessionStore sessions, HttpMessageHandler inner)
     {
-        var handler = new SessionAuthorizationHandler(refresher, sessions, new FixedClock(Now))
+        var handler = new SessionAuthorizationHandler(
+            refresher, sessions, new FixedClock(Now), new LocalAuthenticationStateProvider(sessions))
         {
             InnerHandler = inner
         };
@@ -163,6 +247,62 @@ public class SessionAuthorizationHandlerTests
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken) =>
             throw new HttpRequestException("offline");
+    }
+
+    sealed class RevokedHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent("""{"error":"invalid_grant"}""")
+            });
+    }
+
+    sealed class GatedHandler(Task<HttpResponseMessage> response) : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            return response;
+        }
+    }
+
+    sealed class MultiCapturingHandler : HttpMessageHandler
+    {
+        public List<HttpRequestMessage> Requests { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests.Add(request);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        }
+    }
+
+    sealed class RotatingLocalSessionStore(LocalSession first, LocalSession afterRotation)
+        : ILocalSessionStore
+    {
+        int loads;
+
+        public int ClearCalls { get; private set; }
+
+        public Task<LocalSession?> LoadAsync()
+        {
+            loads++;
+            return Task.FromResult<LocalSession?>(loads == 1 ? first : afterRotation);
+        }
+
+        public Task SaveAsync(LocalSession session) => Task.CompletedTask;
+
+        public Task ClearAsync()
+        {
+            ClearCalls++;
+            return Task.CompletedTask;
+        }
     }
 
     sealed class FixedClock(DateTimeOffset now) : IClock
