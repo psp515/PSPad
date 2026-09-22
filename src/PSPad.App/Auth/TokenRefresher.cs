@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 
@@ -44,9 +45,20 @@ public sealed class TokenRefresher(HttpClient http, IClock clock, string authori
             return new RefreshOutcome.Offline();
         }
 
-        var payload = await response.Content.ReadFromJsonAsync<TokenResponse>();
+        TokenResponse? payload;
 
-        if (payload is null)
+        try
+        {
+            payload = await response.Content.ReadFromJsonAsync<TokenResponse>();
+        }
+        catch (JsonException)
+        {
+            return new RefreshOutcome.Offline();
+        }
+
+        if (payload is null
+            || string.IsNullOrEmpty(payload.AccessToken)
+            || string.IsNullOrEmpty(payload.RefreshToken))
         {
             return new RefreshOutcome.Offline();
         }

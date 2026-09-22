@@ -50,6 +50,32 @@ public class TokenRefresherTests
     }
 
     [Fact]
+    public async Task ItTreatsANonInvalidGrantBadRequestAsOffline()
+    {
+        var refresher = Refresher(Respond(HttpStatusCode.BadRequest,
+            """{"error":"invalid_request"}"""));
+
+        Assert.IsType<RefreshOutcome.Offline>(await refresher.RefreshAsync("stored"));
+    }
+
+    [Fact]
+    public async Task ItTreatsAMalformedSuccessBodyAsOffline()
+    {
+        var refresher = Refresher(Respond(HttpStatusCode.OK, "not json at all"));
+
+        Assert.IsType<RefreshOutcome.Offline>(await refresher.RefreshAsync("stored"));
+    }
+
+    [Fact]
+    public async Task ItTreatsASuccessBodyMissingTheRefreshTokenAsOffline()
+    {
+        var refresher = Refresher(Respond(HttpStatusCode.OK,
+            """{"access_token":"at","expires_in":300}"""));
+
+        Assert.IsType<RefreshOutcome.Offline>(await refresher.RefreshAsync("stored"));
+    }
+
+    [Fact]
     public async Task ItCachesTheAccessTokenForTheHandler()
     {
         var refresher = Refresher(Respond(HttpStatusCode.OK,
