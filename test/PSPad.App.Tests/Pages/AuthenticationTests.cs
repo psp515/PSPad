@@ -76,8 +76,42 @@ public class AuthenticationTests : Bunit.TestContext
         Assert.Equal("Zoe", sessions.Current.DisplayName);
         Assert.Equal("zoe@example.com", sessions.Current.Email);
         Assert.Equal("Europe/Warsaw", sessions.Current.TimeZone);
-        Assert.Equal("refresh-token-value", sessions.Current.RefreshToken);
         Assert.Equal(1, notified);
+    }
+
+    [Fact]
+    public void ItStoresTheRotatedRefreshTokenRatherThanTheCapturedOne()
+    {
+        var sessions = new InMemoryLocalSessionStore();
+        Arrange(
+            sessions,
+            new StubMeHandler(
+                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw")),
+            completeSignInStatus: RemoteAuthenticationStatus.Success,
+            refreshToken: "refresh-token-value");
+
+        Render<PSPad.App.Pages.Authentication>(
+            parameters => parameters.Add(p => p.Action, "login-callback"));
+
+        Assert.Equal("rotated-refresh-token", sessions.Current?.RefreshToken);
+    }
+
+    [Fact]
+    public void ItWritesNothingWhenTheTokenExchangeDoesNotRenew()
+    {
+        var sessions = new InMemoryLocalSessionStore();
+        Arrange(
+            sessions,
+            new StubMeHandler(
+                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw")),
+            completeSignInStatus: RemoteAuthenticationStatus.Success,
+            refreshToken: "refresh-token-value",
+            tokenEndpoint: new UnreachableTokenEndpoint());
+
+        Render<PSPad.App.Pages.Authentication>(
+            parameters => parameters.Add(p => p.Action, "login-callback"));
+
+        Assert.Null(sessions.Current);
     }
 
     [Fact]
@@ -117,7 +151,8 @@ public class AuthenticationTests : Bunit.TestContext
         ILocalSessionStore sessions,
         HttpMessageHandler meHandler,
         RemoteAuthenticationStatus completeSignInStatus = RemoteAuthenticationStatus.OperationCompleted,
-        string? refreshToken = null)
+        string? refreshToken = null,
+        HttpMessageHandler? tokenEndpoint = null)
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.Options = new ServiceProviderOptions { ValidateScopes = false };
@@ -146,13 +181,27 @@ public class AuthenticationTests : Bunit.TestContext
                 .OfType<IRemoteAuthenticationService<RemoteAuthenticationState>>()
                 .Single());
 
-        Services.AddSingleton<IClock>(new FixedClock());
+        var clock = new FixedClock();
+        var authProvider = new LocalAuthenticationStateProvider(sessions);
+        Services.AddSingleton<IClock>(clock);
         Services.AddSingleton(sessions);
-        Services.AddSingleton<LocalAuthenticationStateProvider>();
-        Services.AddSingleton<AuthenticationStateProvider>(
-            services => services.GetRequiredService<LocalAuthenticationStateProvider>());
+        Services.AddSingleton(authProvider);
+        Services.AddSingleton<AuthenticationStateProvider>(authProvider);
+
+        var refresher = new TokenRefresher(
+            new HttpClient(tokenEndpoint ?? new RotatingTokenEndpoint()), clock,
+            "http://localhost:8080/realms/pspad", "pspad-frontend");
+        Services.AddSingleton(refresher);
+
+        // The pipeline is the real one on purpose: a bare HttpClient over the /api/me stub would
+        // carry an Authorization header no SessionAuthorizationHandler ever had to produce.
+        var authorized = new SessionAuthorizationHandler(refresher, sessions, clock, authProvider)
+        {
+            InnerHandler = new BearerRequiredHandler(meHandler)
+        };
+
         Services.AddSingleton(new PSPadApiClient(
-            new HttpClient(meHandler) { BaseAddress = new Uri("http://localhost/") }));
+            new HttpClient(authorized) { BaseAddress = new Uri("http://localhost/") }));
 
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -163,7 +212,7 @@ public class AuthenticationTests : Bunit.TestContext
             .Build();
         Services.AddSingleton<IConfiguration>(configuration);
 
-        return Services.GetRequiredService<LocalAuthenticationStateProvider>();
+        return authProvider;
     }
 
     sealed class FixedClock : IClock
@@ -184,5 +233,32 @@ public class AuthenticationTests : Bunit.TestContext
 
             return Task.FromResult(response);
         }
+    }
+
+    sealed class BearerRequiredHandler(HttpMessageHandler authorized) : DelegatingHandler(authorized)
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            request.Headers.Authorization is null
+                ? Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized))
+                : base.SendAsync(request, cancellationToken);
+    }
+
+    sealed class RotatingTokenEndpoint : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"access_token":"at","expires_in":300,"refresh_token":"rotated-refresh-token"}""")
+            });
+    }
+
+    sealed class UnreachableTokenEndpoint : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw new HttpRequestException("offline");
     }
 }

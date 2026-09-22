@@ -14,6 +14,7 @@
 @inject ILocalSessionStore Sessions
 @inject LocalAuthenticationStateProvider AuthProvider
 @inject PSPadApiClient Api
+@inject TokenRefresher Refresher
 @inject IClock Clock
 
 <RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="@CaptureSessionAsync">
@@ -42,6 +43,13 @@
                 return;
             }
 
+            // No session exists yet, so the handler has no stored token to refresh from: this
+            // exchange is what puts a bearer token on the /api/me call below.
+            if (await Refresher.RefreshAsync(refreshToken) is not RefreshOutcome.Renewed renewed)
+            {
+                return;
+            }
+
             var me = await Api.MeAsync();
 
             if (me is null)
@@ -53,7 +61,7 @@
 
             var session = new LocalSession(
                 account.UserId, account.DisplayName, account.Email, account.TimeZone,
-                refreshToken, Clock.UtcNow);
+                renewed.RefreshToken, Clock.UtcNow);
 
             await Sessions.SaveAsync(session);
             AuthProvider.SignedIn(session);
