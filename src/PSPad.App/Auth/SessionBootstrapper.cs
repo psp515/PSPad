@@ -9,7 +9,15 @@ public sealed class SessionBootstrapper(ILocalSessionStore sessions, IReplica re
 
     public async Task<SessionStartup> StartAsync()
     {
-        var session = await sessions.LoadAsync();
+        LocalSession? session;
+        try
+        {
+            session = await sessions.LoadAsync();
+        }
+        catch (Exception)
+        {
+            return SessionStartup.NoSession;
+        }
 
         if (session is null)
         {
@@ -18,9 +26,16 @@ public sealed class SessionBootstrapper(ILocalSessionStore sessions, IReplica re
 
         if (clock.UtcNow - session.LastServerContactUtc > TrustWindow)
         {
-            // The outbox survives: the replica is re-fetchable from the server, locally authored commands are not.
-            await replica.ClearAsync();
-            await sessions.ClearAsync();
+            try
+            {
+                // The outbox survives: the replica is re-fetchable from the server, locally authored commands are not.
+                await replica.ClearAsync();
+                await sessions.ClearAsync();
+            }
+            catch (Exception)
+            {
+            }
+
             return SessionStartup.NoSession;
         }
 

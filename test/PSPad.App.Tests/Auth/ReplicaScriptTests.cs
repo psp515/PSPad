@@ -28,6 +28,13 @@ public class ReplicaScriptTests
     }
 
     [Fact]
+    public void ItKeepsTheOutboxOutOfTheClearedStores()
+    {
+        var clear = Replica[Replica.IndexOf("export function clearReplica", StringComparison.Ordinal)..];
+        Assert.DoesNotContain("outbox", clear);
+    }
+
+    [Fact]
     public void ItSharesOneDatabaseOpener()
     {
         Assert.Contains("from './replica.js'", Session);

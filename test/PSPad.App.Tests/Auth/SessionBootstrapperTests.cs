@@ -1,6 +1,5 @@
 using PSPad.Abstractions;
 using PSPad.App.Auth;
-using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.TestInfrastructure;
 
@@ -47,15 +46,12 @@ public class SessionBootstrapperTests
     }
 
     [Fact]
-    public async Task ItLeavesTheOutboxAloneOnExpiry()
+    public async Task ItReportsNoSessionWhenTheStoreThrows()
     {
-        var sessions = new InMemoryLocalSessionStore(Session(Now.AddDays(-30)));
-        var outbox = new InMemoryOutbox();
-        await outbox.AppendAsync(Guid.NewGuid(), null!);
+        var sessions = new ThrowingLocalSessionStore();
+        var bootstrapper = new SessionBootstrapper(sessions, new InMemoryReplica(), new FixedClock(Now));
 
-        await Bootstrapper(sessions).StartAsync();
-
-        Assert.Equal(1, await outbox.CountAsync());
+        Assert.Equal(SessionStartup.NoSession, await bootstrapper.StartAsync());
     }
 
     static SessionBootstrapper Bootstrapper(
@@ -68,5 +64,14 @@ public class SessionBootstrapperTests
     sealed class FixedClock(DateTimeOffset now) : IClock
     {
         public DateTimeOffset UtcNow => now;
+    }
+
+    sealed class ThrowingLocalSessionStore : ILocalSessionStore
+    {
+        public Task<LocalSession?> LoadAsync() => throw new InvalidOperationException("IndexedDB unreadable");
+
+        public Task SaveAsync(LocalSession session) => throw new InvalidOperationException("IndexedDB unreadable");
+
+        public Task ClearAsync() => throw new InvalidOperationException("IndexedDB unreadable");
     }
 }
