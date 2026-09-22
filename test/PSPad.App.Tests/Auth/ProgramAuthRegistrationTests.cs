@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,6 +37,20 @@ public class ProgramAuthRegistrationTests
     }
 
     [Fact]
+    public async Task ItStillResolvesTheOidcLibrarysRemoteAuthenticationServiceDespiteTheLocalOverride()
+    {
+        await using var services = BuildServices();
+
+        using var scope = services.CreateScope();
+
+        var resolved = scope.ServiceProvider
+            .GetRequiredService<IRemoteAuthenticationService<RemoteAuthenticationState>>();
+
+        Assert.IsType<RemoteAuthenticationService<RemoteAuthenticationState, RemoteUserAccount, OidcProviderOptions>>(
+            resolved);
+    }
+
+    [Fact]
     public async Task ItSharesOneTokenRefresherAcrossScopes()
     {
         await using var services = BuildServices();
@@ -61,17 +76,33 @@ public class ProgramAuthRegistrationTests
         });
 
         collection.AddSingleton<IJSRuntime, ThrowingJSRuntime>();
+        collection.AddSingleton<NavigationManager, FakeNavigationManager>();
         collection.AddSingleton<IClock, BrowserClock>();
         collection.AddSingleton<ILocalSessionStore, LocalSessionStore>();
         collection.AddSingleton(services => new TokenRefresher(
             new HttpClient(), services.GetRequiredService<IClock>(),
             "http://localhost:8080/realms/pspad", "pspad-frontend"));
+
+        collection.AddScoped<IRemoteAuthenticationService<RemoteAuthenticationState>>(services =>
+            services.GetServices<AuthenticationStateProvider>()
+                .OfType<IRemoteAuthenticationService<RemoteAuthenticationState>>()
+                .Single());
+
         collection.AddSingleton<LocalAuthenticationStateProvider>();
         collection.AddSingleton<AuthenticationStateProvider>(
             services => services.GetRequiredService<LocalAuthenticationStateProvider>());
         collection.AddScoped<SessionAuthorizationHandler>();
 
         return collection.BuildServiceProvider(validateScopes: true);
+    }
+
+    sealed class FakeNavigationManager : NavigationManager
+    {
+        public FakeNavigationManager() => Initialize("http://localhost/", "http://localhost/");
+
+        protected override void NavigateToCore(string uri, bool forceLoad)
+        {
+        }
     }
 
     sealed class ThrowingJSRuntime : IJSRuntime

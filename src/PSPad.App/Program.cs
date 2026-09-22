@@ -37,6 +37,12 @@ builder.Services.AddSingleton<ILocalSessionStore, LocalSessionStore>();
 builder.Services.AddSingleton(services => new TokenRefresher(
     new HttpClient(), services.GetRequiredService<IClock>(), keycloakAuthority, keycloakClientId));
 builder.Services.AddScoped<SessionBootstrapper>();
+
+builder.Services.AddScoped<IRemoteAuthenticationService<RemoteAuthenticationState>>(services =>
+    services.GetServices<AuthenticationStateProvider>()
+        .OfType<IRemoteAuthenticationService<RemoteAuthenticationState>>()
+        .Single());
+
 builder.Services.AddSingleton<LocalAuthenticationStateProvider>();
 builder.Services.AddSingleton<AuthenticationStateProvider>(
     services => services.GetRequiredService<LocalAuthenticationStateProvider>());
