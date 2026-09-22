@@ -300,12 +300,19 @@ public class SessionAuthorizationHandlerTests
 
     sealed class MultiCapturingHandler : HttpMessageHandler
     {
+        // Both requests reach here outside the handler's gate, genuinely in parallel.
+        readonly Lock guard = new();
+
         public List<HttpRequestMessage> Requests { get; } = [];
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            Requests.Add(request);
+            lock (guard)
+            {
+                Requests.Add(request);
+            }
+
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
         }
     }
