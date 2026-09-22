@@ -21,7 +21,7 @@
 - A refresh failure is a sign-out **only** on HTTP 400 carrying `invalid_grant`. Every transport failure, timeout and 5xx is offline.
 - On trust-window expiry: clear the replica and the session, **never** the outbox.
 - English in code, comments, commits and docs.
-- Run `dotnet test --filter Category=Unit` before each commit.
+- Run `dotnet test --project test/PSPad.App.Tests --filter Category=Unit` before each commit. The `--project` flag is required on this SDK; the bare path form fails.
 
 ---
 
@@ -1388,7 +1388,7 @@ Replace the body of `src/PSPad.App/Pages/Authentication.razor`, keeping the comm
 }
 ```
 
-If `RemoteAuthenticatorView` in this package version exposes no `OnLogInSucceeded` callback, call `CaptureSessionAsync` from `OnAfterRenderAsync` when `Action == "login-callback"` and the library reports authenticated, guarded by a `bool _captured` so it runs once.
+`OnLogInSucceeded` exists on `RemoteAuthenticatorViewCore<TState>` in 10.0.12 (verified against the package's XML docs), as do `LoggingIn`, `CompletingLoggingIn`, `LogOut` and `LogOutSucceeded`. It is an `EventCallback` carrying the remote authentication state — if binding a no-argument method fails to compile, give `CaptureSessionAsync` a `RemoteAuthenticationState` parameter and ignore it.
 
 - [ ] **Step 6: Run tests to verify they pass**
 
