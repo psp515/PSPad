@@ -15,6 +15,12 @@ public class ReplicaScriptTests
     }
 
     [Fact]
+    public void ItSettlesTheOpenWhenAnotherTabBlocksTheUpgrade()
+    {
+        Assert.Contains("request.onblocked", Replica);
+    }
+
+    [Fact]
     public void ItCreatesTheSessionStore()
     {
         Assert.Contains("'session'", Replica);

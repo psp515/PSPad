@@ -54,6 +54,20 @@ public class SessionBootstrapperTests
         Assert.Equal(SessionStartup.NoSession, await bootstrapper.StartAsync());
     }
 
+    [Fact]
+    public async Task ItGivesUpWhenTheSessionStoreNeverAnswers()
+    {
+        var bootstrapper = new SessionBootstrapper(
+            new StallingLocalSessionStore(), new InMemoryReplica(), new FixedClock(Now));
+
+        var start = bootstrapper.StartAsync(TimeSpan.FromMilliseconds(50));
+        var finished = await Task.WhenAny(
+            start, Task.Delay(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken));
+
+        Assert.Same(start, finished);
+        Assert.Equal(SessionStartup.NoSession, await start);
+    }
+
     static SessionBootstrapper Bootstrapper(
         InMemoryLocalSessionStore sessions, InMemoryReplica? replica = null) =>
         new(sessions, replica ?? new InMemoryReplica(), new FixedClock(Now));
@@ -64,5 +78,14 @@ public class SessionBootstrapperTests
     sealed class FixedClock(DateTimeOffset now) : IClock
     {
         public DateTimeOffset UtcNow => now;
+    }
+
+    sealed class StallingLocalSessionStore : ILocalSessionStore
+    {
+        public Task<LocalSession?> LoadAsync() => new TaskCompletionSource<LocalSession?>().Task;
+
+        public Task SaveAsync(LocalSession session) => Task.CompletedTask;
+
+        public Task ClearAsync() => Task.CompletedTask;
     }
 }

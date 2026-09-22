@@ -7,7 +7,24 @@ public sealed class SessionBootstrapper(ILocalSessionStore sessions, IReplica re
 {
     public static readonly TimeSpan TrustWindow = TimeSpan.FromDays(7);
 
-    public async Task<SessionStartup> StartAsync()
+    public static readonly TimeSpan BootTimeout = TimeSpan.FromSeconds(5);
+
+    public Task<SessionStartup> StartAsync() => StartAsync(BootTimeout);
+
+    public async Task<SessionStartup> StartAsync(TimeSpan timeout)
+    {
+        try
+        {
+            // A boot that fails is recoverable; a boot that hangs on stalled interop is not.
+            return await DecideAsync().WaitAsync(timeout);
+        }
+        catch (TimeoutException)
+        {
+            return SessionStartup.NoSession;
+        }
+    }
+
+    async Task<SessionStartup> DecideAsync()
     {
         LocalSession? session;
         try

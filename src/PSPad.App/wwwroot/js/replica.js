@@ -23,6 +23,9 @@ export function open() {
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
+    // A version upgrade blocked by a connection in another tab settles neither onsuccess nor
+    // onerror, so without this the promise never resolves and never rejects.
+    request.onblocked = () => reject(new Error('IndexedDB upgrade blocked by another open tab'));
   });
 }
 
