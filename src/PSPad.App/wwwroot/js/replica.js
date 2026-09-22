@@ -1,7 +1,7 @@
 const DB_NAME = 'pspad';
-const VERSION = 1;
+const VERSION = 2;
 
-function open() {
+export function open() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, VERSION);
     request.onupgradeneeded = () => {
@@ -17,13 +17,16 @@ function open() {
         // autoIncrement gives strict append order for free, matching the outbox's ordering guarantee.
         db.createObjectStore('outbox', { keyPath: 'position', autoIncrement: true });
       }
+      if (!db.objectStoreNames.contains('session')) {
+        db.createObjectStore('session', { keyPath: 'key' });
+      }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 }
 
-function run(store, mode, work) {
+export function run(store, mode, work) {
   return open().then(db => new Promise((resolve, reject) => {
     const transaction = db.transaction(store, mode);
     const request = work(transaction.objectStore(store));
