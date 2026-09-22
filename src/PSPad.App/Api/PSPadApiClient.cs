@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using PSPad.Contracts;
 
 namespace PSPad.App.Api;
@@ -19,11 +18,6 @@ public sealed class PSPadApiClient(HttpClient http) : IHistorySource, ISyncApi
                 ? await response.Content.ReadFromJsonAsync<MeResponse>()
                 : null;
         }
-        catch (AccessTokenNotAvailableException expired)
-        {
-            expired.Redirect();
-            return null;
-        }
         catch (HttpRequestException)
         {
             return null;
@@ -32,17 +26,9 @@ public sealed class PSPadApiClient(HttpClient http) : IHistorySource, ISyncApi
 
     public async Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes)
     {
-        try
-        {
-            var response = await http.PostAsJsonAsync("api/commands", envelopes);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<CommandResponse[]>() ?? [];
-        }
-        catch (AccessTokenNotAvailableException expired)
-        {
-            expired.Redirect();
-            return [];
-        }
+        var response = await http.PostAsJsonAsync("api/commands", envelopes);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<CommandResponse[]>() ?? [];
     }
 
     public Task<SyncResponse?> SyncAsync(long since) => GetAsync<SyncResponse>($"api/sync?since={since}");
@@ -56,16 +42,5 @@ public sealed class PSPadApiClient(HttpClient http) : IHistorySource, ISyncApi
     Task<IReadOnlyList<HistoryEntry>> IHistorySource.ReadAsync(long? before, int limit) =>
         HistoryAsync(before, limit);
 
-    async Task<T?> GetAsync<T>(string uri)
-    {
-        try
-        {
-            return await http.GetFromJsonAsync<T>(uri);
-        }
-        catch (AccessTokenNotAvailableException expired)
-        {
-            expired.Redirect();
-            return default;
-        }
-    }
+    Task<T?> GetAsync<T>(string uri) => http.GetFromJsonAsync<T>(uri);
 }
