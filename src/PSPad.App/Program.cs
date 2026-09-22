@@ -71,6 +71,8 @@ builder.Services.AddScoped<SyncCoordinator>();
 
 var host = builder.Build();
 
+// Any bootstrap or teardown failure must still reveal the app: a held splash is an unrecoverable
+// blank screen, so nothing below is allowed to escape and skip host.RunAsync().
 IJSObjectReference? boot = null;
 
 try
@@ -81,16 +83,21 @@ try
     var bootstrapper = host.Services.GetRequiredService<SessionBootstrapper>();
     await bootstrapper.StartAsync();
 }
-catch
+catch (Exception exception)
 {
+    Console.Error.WriteLine($"Session bootstrap failed: {exception.Message}");
 }
-finally
+
+try
 {
-    // Any bootstrap failure must still reveal the app: a held splash is an unrecoverable blank screen.
     if (boot is not null)
     {
         await boot.InvokeVoidAsync("done");
     }
+}
+catch (Exception exception)
+{
+    Console.Error.WriteLine($"Boot splash teardown failed: {exception.Message}");
 }
 
 await host.RunAsync();

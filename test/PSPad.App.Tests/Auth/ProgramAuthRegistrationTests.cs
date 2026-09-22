@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using PSPad.Abstractions;
@@ -12,7 +13,7 @@ namespace PSPad.App.Tests.Auth;
 public class ProgramAuthRegistrationTests
 {
     [Fact]
-    public async Task ItResolvesAuthenticationStateProviderToTheLocalImplementation()
+    public async Task ItResolvesAuthenticationStateProviderToTheLocalImplementationOverTheOidcLibrarysOwn()
     {
         await using var services = BuildServices();
 
@@ -50,6 +51,14 @@ public class ProgramAuthRegistrationTests
     static ServiceProvider BuildServices()
     {
         var collection = new ServiceCollection();
+
+        collection.AddOidcAuthentication(options =>
+        {
+            options.ProviderOptions.Authority = "http://localhost:8080/realms/pspad";
+            options.ProviderOptions.ClientId = "pspad-frontend";
+            options.ProviderOptions.ResponseType = "code";
+            options.ProviderOptions.DefaultScopes.Add("email");
+        });
 
         collection.AddSingleton<IJSRuntime, ThrowingJSRuntime>();
         collection.AddSingleton<IClock, BrowserClock>();
