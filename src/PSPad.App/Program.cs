@@ -80,13 +80,8 @@ var host = builder.Build();
 
 // Any bootstrap or teardown failure must still reveal the app: a held splash is an unrecoverable
 // blank screen, so nothing below is allowed to escape and skip host.RunAsync().
-IJSObjectReference? boot = null;
-
 try
 {
-    boot = await host.Services.GetRequiredService<IJSRuntime>()
-        .InvokeAsync<IJSObjectReference>("import", "./js/boot.js");
-
     var bootstrapper = host.Services.GetRequiredService<SessionBootstrapper>();
     await bootstrapper.StartAsync();
 }
@@ -97,10 +92,7 @@ catch (Exception exception)
 
 try
 {
-    if (boot is not null)
-    {
-        await boot.InvokeVoidAsync("done");
-    }
+    await host.Services.GetRequiredService<IJSRuntime>().InvokeVoidAsync("pspadBoot.done");
 }
 catch (Exception exception)
 {

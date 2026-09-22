@@ -6,6 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PSPad</title>
     <script>
+        window.pspadBoot = {
+            done: function () {
+                var splash = document.querySelector('.pspad-boot');
+                if (splash) { splash.remove(); }
+            }
+        };
+    </script>
+    <script>
         (function () {
             var stored = null;
             try { stored = localStorage.getItem('pspad.theme'); } catch (error) { }
@@ -83,7 +91,6 @@
     <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
-    <script type="module" src="js/boot.js"></script>
 </body>
 
 </html>

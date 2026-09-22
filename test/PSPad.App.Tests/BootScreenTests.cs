@@ -6,6 +6,7 @@ namespace PSPad.App.Tests;
 public class BootScreenTests
 {
     static readonly string Markup = File.ReadAllText(PathToIndex());
+    static readonly string Program = File.ReadAllText(PathToProgram());
 
     [Fact]
     public void ItCarriesTheBrandCheckPath()
@@ -43,12 +44,24 @@ public class BootScreenTests
     }
 
     [Fact]
-    public void ItLoadsTheBootModuleThatTearsTheSplashDown()
+    public void ItDefinesTheSplashTeardownInlineSoNoModuleLoadCanFailBeforeIt()
     {
-        Assert.Contains("js/boot.js", Markup);
+        Assert.Contains("window.pspadBoot", Markup);
+        Assert.DoesNotContain("js/boot.js", Markup);
     }
 
-    static string PathToIndex()
+    [Fact]
+    public void TheClientCallsThatTeardownRatherThanImportingAModule()
+    {
+        Assert.Contains("\"pspadBoot.done\"", Program);
+        Assert.DoesNotContain("boot.js", Program);
+    }
+
+    static string PathToProgram() => Path.Combine(AppRoot(), "Program.cs");
+
+    static string PathToIndex() => Path.Combine(AppRoot(), "wwwroot", "index.html");
+
+    static string AppRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
@@ -57,7 +70,6 @@ public class BootScreenTests
             directory = directory.Parent;
         }
 
-        return Path.Combine(
-            directory!.FullName, "src", "PSPad.App", "wwwroot", "index.html");
+        return Path.Combine(directory!.FullName, "src", "PSPad.App");
     }
 }
