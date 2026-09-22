@@ -1,5 +1,4 @@
 @inherits LayoutComponentBase
-@using Microsoft.AspNetCore.Components.Authorization
 @using PSPad.Abstractions
 @using PSPad.App.Api
 @using PSPad.App.Auth
@@ -74,8 +73,6 @@
 </MudLayout>
 
 @code {
-    [CascadingParameter] Task<AuthenticationState>? AuthStateTask { get; set; }
-
     MudThemeProvider? _themeProvider;
     bool _themeReady;
     bool _ready;
@@ -107,8 +104,16 @@
             State.TimeZone = session.TimeZone;
             State.Today = TodayRule.TodayIn(
                 DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(session.TimeZone));
-            await Ownership.EnsureCurrentUserAsync(session.UserId);
-            await ReloadAreasAndCountsAsync();
+
+            try
+            {
+                await Ownership.EnsureCurrentUserAsync(session.UserId);
+                await ReloadAreasAndCountsAsync();
+            }
+            catch (Exception exception)
+            {
+                Console.Error.WriteLine($"Local replica load failed: {exception.Message}");
+            }
         }
 
         _ready = true;

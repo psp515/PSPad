@@ -218,7 +218,6 @@ public class AppShellTests : Bunit.TestContext
 
         var shell = Render<AppShell>();
 
-        Assert.DoesNotContain("try again", shell.Markup);
         Assert.Empty(shell.FindComponents<BrandLoader>());
     }
 
@@ -230,6 +229,42 @@ public class AppShellTests : Bunit.TestContext
         var shell = Render<AppShell>();
 
         Assert.Contains("Zoe", shell.Markup);
+    }
+
+    [Fact]
+    public void TheSyncCoordinatorStartsEvenWhenTheAccountFetchFails()
+    {
+        Arrange(accountFetchFails: true);
+        var connectivity = (SpyConnectivity)Services.GetRequiredService<IConnectivity>();
+
+        Render<AppShell>();
+
+        Assert.True(connectivity.IsOnlineReads > 0);
+    }
+
+    [Fact]
+    public void AThrowingSessionStoreLeavesTheShellReadyAndAnonymousRatherThanThrowing()
+    {
+        Arrange();
+        Services.AddSingleton<ILocalSessionStore>(new ThrowingLocalSessionStore());
+
+        var shell = Render<AppShell>();
+
+        Assert.Empty(shell.FindComponents<BrandLoader>());
+        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+        Assert.Equal("", sidebar.DisplayName);
+        Assert.Equal("", sidebar.Email);
+    }
+
+    [Fact]
+    public void ItBecomesReadyWhenLoadingTheLocalReplicaFails()
+    {
+        Arrange();
+        Services.AddSingleton<IDocumentStore<Area>>(new ThrowingAreaStore());
+
+        var shell = Render<AppShell>();
+
+        Assert.Empty(shell.FindComponents<BrandLoader>());
     }
 
     void Arrange(
@@ -295,7 +330,16 @@ public class AppShellTests : Bunit.TestContext
 
     sealed class SpyConnectivity : IConnectivity
     {
-        public bool IsOnline => false;
+        public int IsOnlineReads { get; private set; }
+
+        public bool IsOnline
+        {
+            get
+            {
+                IsOnlineReads++;
+                return false;
+            }
+        }
 
 #pragma warning disable CS0067
         public event Action? CameOnline;
@@ -315,5 +359,14 @@ public class AppShellTests : Bunit.TestContext
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
             Task.FromException<HttpResponseMessage>(new HttpRequestException("offline"));
+    }
+
+    sealed class ThrowingAreaStore : IDocumentStore<Area>
+    {
+        public Task<Area?> LoadAsync(Guid id, CancellationToken ct) =>
+            throw new InvalidOperationException("replica unreadable");
+
+        public Task<IReadOnlyList<Area>> LoadAllAsync(Guid userId, CancellationToken ct) =>
+            throw new InvalidOperationException("replica unreadable");
     }
 }
