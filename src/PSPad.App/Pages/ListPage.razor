@@ -66,6 +66,8 @@ else
 @code {
     [Parameter] public Guid ListId { get; set; }
 
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
     bool _loaded;
     TaskList? _list;
     IReadOnlyList<TodoTask> _open = [];

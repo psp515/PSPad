@@ -73,7 +73,20 @@ else
     IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
     string _newGoalName = "";
 
-    protected override async Task OnInitializedAsync() => await ReloadAsync();
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
+    int _rendered = -1;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_rendered == SyncRevision)
+        {
+            return;
+        }
+
+        _rendered = SyncRevision;
+        await ReloadAsync();
+    }
 
     async Task ReloadAsync()
     {

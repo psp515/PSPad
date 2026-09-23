@@ -65,7 +65,9 @@
         <MudContainer MaxWidth="MaxWidth.Large" Class="my-4 pspad-content">
             @if (_ready)
             {
-                @Body
+                <CascadingValue Value="@Coordinator.Revision" Name="SyncRevision">
+                    @Body
+                </CascadingValue>
             }
             else
             {

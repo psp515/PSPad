@@ -60,6 +60,8 @@ else
 @code {
     [Parameter] public Guid AreaId { get; set; }
 
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
     bool _loaded;
     Area? _area;
     IReadOnlyList<TaskList> _lists = [];
