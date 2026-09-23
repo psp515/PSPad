@@ -101,6 +101,7 @@
         await Viewport.SubscribeAsync(OnDesktopChanged);
 
         var session = await SessionOrNullAsync();
+        var nothingLocalYet = false;
 
         if (session is not null)
         {
@@ -112,19 +113,22 @@
             State.TimeZone = session.TimeZone;
             State.Today = TodayIn(session.TimeZone);
 
-            try
-            {
-                await Ownership.EnsureCurrentUserAsync(session.UserId);
-                await ReloadAreasAndCountsAsync();
-            }
-            catch (Exception exception)
-            {
-                Console.Error.WriteLine($"Local replica load failed: {exception.Message}");
-            }
+            nothingLocalYet = await TakeOwnershipAndReportEmptyAsync(session.UserId);
+            await LoadLocalDataAsync();
+        }
+
+        Coordinator.Start();
+
+        if (nothingLocalYet)
+        {
+            // Signing in wipes the replica, so there is nothing to draw until the first pull
+            // lands. Rendering the empty app over a full account reads as lost data, and leaves
+            // the user looking at it for as long as the pull takes.
+            await FirstPullAsync();
+            await LoadLocalDataAsync();
         }
 
         _ready = true;
-        Coordinator.Start();
 
         if (session is not null)
         {
@@ -132,6 +136,48 @@
         }
 
         ReadOpenTask();
+    }
+
+    async Task<bool> TakeOwnershipAndReportEmptyAsync(Guid userId)
+    {
+        try
+        {
+            await Ownership.EnsureCurrentUserAsync(userId);
+            return await Ownership.NothingSyncedYetAsync();
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Local replica ownership check failed: {exception.Message}");
+            return false;
+        }
+    }
+
+    async Task LoadLocalDataAsync()
+    {
+        try
+        {
+            await ReloadAreasAndCountsAsync();
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Local replica load failed: {exception.Message}");
+        }
+    }
+
+    static readonly TimeSpan FirstPullTimeout = TimeSpan.FromSeconds(10);
+
+    async Task FirstPullAsync()
+    {
+        try
+        {
+            // A held splash is an unrecoverable blank screen, so a pull that never answers
+            // still has to let the app through.
+            await Coordinator.Started.WaitAsync(FirstPullTimeout);
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"First pull after sign-in did not finish: {exception.Message}");
+        }
     }
 
     async Task<LocalSession?> SessionOrNullAsync()

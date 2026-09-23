@@ -64,6 +64,27 @@ public class SyncCoordinatorTests : Bunit.TestContext
         Assert.Equal(2, coordinator.Revision);
     }
 
+    [Fact]
+    public async Task StartingHandsBackTheFirstPullSoTheShellCanWaitForIt()
+    {
+        // The shell has nothing to render on a device holding none of this user's data, so it
+        // needs something to await rather than a notification it has to hope arrives.
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"));
+
+        coordinator.Start();
+        await coordinator.Started;
+
+        Assert.Equal(1, coordinator.Revision);
+    }
+
+    [Fact]
+    public void ThereIsSomethingToAwaitEvenBeforeAnythingHasStarted()
+    {
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"));
+
+        Assert.True(coordinator.Started.IsCompleted);
+    }
+
     static SyncResponse AnAreaCalled(string name)
     {
         var area = new Area();

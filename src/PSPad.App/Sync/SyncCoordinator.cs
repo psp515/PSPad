@@ -13,6 +13,8 @@ public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity
 
     public int Revision { get; private set; }
 
+    public Task Started { get; private set; } = Task.CompletedTask;
+
     public event Action? Changed;
 
     public void Start()
@@ -24,7 +26,7 @@ public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity
 
         _started = true;
         connectivity.CameOnline += () => _ = SyncNowAsync();
-        _ = SyncNowAsync();
+        Started = SyncNowAsync();
         _ = LoopAsync();
     }
 

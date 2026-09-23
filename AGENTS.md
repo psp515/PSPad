@@ -336,7 +336,9 @@ fragments rather than the library's default text. `adr/0028` (sign-out ends
 the Keycloak session directly; signed-out visitors land on a public `/welcome`
 screen) is `Active` and built on this branch as well, and amends `adr/0027`'s
 sign-out consequence. `adr/0029` (a sync revision cascades from `AppShell` so
-replica-backed screens redraw when data lands) is `Active` and built here too.
+replica-backed screens redraw when data lands) is `Active` and built here too,
+as is `adr/0030` (the shell waits for the first pull on a device holding
+nothing for this user), which amends it.
 
 ---
 

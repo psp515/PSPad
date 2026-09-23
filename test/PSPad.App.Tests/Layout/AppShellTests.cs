@@ -314,6 +314,58 @@ public class AppShellTests : Bunit.TestContext
         Assert.Equal(new DateOnly(2026, 9, 12), Services.GetRequiredService<AppState>().Today);
     }
 
+    [Fact]
+    public void ASignInWithNothingStoredLocallyWaitsForTheFirstPullBeforeShowingTheApp()
+    {
+        // Signing in wipes the replica. Rendering the app from it while the pull is still in
+        // flight shows the user an empty account and calls it loaded.
+        Arrange();
+        var pull = new TaskCompletionSource<SyncResponse?>();
+        Services.AddSingleton<ISyncApi>(new GatedSyncApi(pull.Task));
+        Services.AddSingleton<IConnectivity>(new AlwaysOnline());
+
+        var shell = Render<AppShell>();
+
+        Assert.NotEmpty(shell.FindComponents<BrandLoader>());
+
+        pull.SetResult(new SyncResponse(9, new Dictionary<string, System.Text.Json.JsonElement[]>(), []));
+
+        shell.WaitForAssertion(() => Assert.Empty(shell.FindComponents<BrandLoader>()));
+    }
+
+    [Fact]
+    public async Task ADeviceThatHasPulledBeforeShowsItsDataWithoutWaitingForTheServer()
+    {
+        // The whole point of the local replica: a relaunch opens on stored data, server or no server.
+        Arrange();
+        Services.AddSingleton<ISyncApi>(new GatedSyncApi(new TaskCompletionSource<SyncResponse?>().Task));
+        Services.AddSingleton<IConnectivity>(new AlwaysOnline());
+        await Services.GetRequiredService<IReplica>().SetMarkerAsync(12);
+
+        var shell = Render<AppShell>();
+
+        Assert.Empty(shell.FindComponents<BrandLoader>());
+    }
+
+    sealed class AlwaysOnline : IConnectivity
+    {
+        public bool IsOnline => true;
+
+#pragma warning disable CS0067
+        public event Action? CameOnline;
+
+        public event Action? Changed;
+#pragma warning restore CS0067
+    }
+
+    sealed class GatedSyncApi(Task<SyncResponse?> pull) : ISyncApi
+    {
+        public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
+            Task.FromResult<IReadOnlyList<CommandResponse>>([]);
+
+        public Task<SyncResponse?> SyncAsync(long since) => pull;
+    }
+
     void Arrange(
         string displayName = "Ada Lovelace",
         string email = "ada@example.com",

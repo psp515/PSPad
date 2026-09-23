@@ -43,7 +43,8 @@ the old one's status line to point at the new number.
 | [0026](0026-one-shared-realm-for-every-self-hosted-app.md) | One shared Keycloak realm for every self-hosted application | Active (amends [0015](0015-one-self-host-compose-stack.md)) | 2026-09-21 | identity, deployment, architecture |
 | [0027](0027-local-session-gates-the-app-not-the-access-token.md) | A durable local session, not the access token, decides whether the app opens | Active (amends [0024](0024-authentication-callback-route-off-appshell.md)'s consequence; sign-out amended by [0028](0028-sign-out-ends-the-keycloak-session-directly.md)) | 2026-09-22 | identity, offline, sync, ui |
 | [0028](0028-sign-out-ends-the-keycloak-session-directly.md) | Sign-out ends the Keycloak session directly, and anonymous visitors land on a public welcome screen | Active (amends [0027](0027-local-session-gates-the-app-not-the-access-token.md)'s sign-out consequence) | 2026-09-23 | identity, offline, ui, security |
-| [0029](0029-sync-revision-cascades-to-replica-backed-screens.md) | A sync revision cascades from AppShell so replica-backed screens redraw when data lands | Active | 2026-09-23 | ui, sync, offline |
+| [0029](0029-sync-revision-cascades-to-replica-backed-screens.md) | A sync revision cascades from AppShell so replica-backed screens redraw when data lands | Active (amended by [0030](0030-the-shell-waits-for-the-first-pull-on-a-device-holding-nothing.md)) | 2026-09-23 | ui, sync, offline |
+| [0030](0030-the-shell-waits-for-the-first-pull-on-a-device-holding-nothing.md) | The shell waits for the first pull on a device holding nothing for this user | Active (amends [0029](0029-sync-revision-cascades-to-replica-backed-screens.md)) | 2026-09-23 | ui, sync, offline, identity |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

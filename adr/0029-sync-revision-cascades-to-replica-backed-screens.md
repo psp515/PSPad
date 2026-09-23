@@ -2,7 +2,7 @@
 title: A sync revision cascades from AppShell so replica-backed screens redraw when data lands
 tags: [ui, sync, offline]
 date: 2026-09-23
-status: Active
+status: Active (amended by ADR-0030)
 ---
 
 # ADR-0029: A sync revision cascades from AppShell so replica-backed screens redraw when data lands
