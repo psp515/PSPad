@@ -147,6 +147,21 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void SigningOutAnnouncesTheAnonymousStateOnlyOnceTheLogoutRouteIsReached()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        var routeWhenAnnounced = new List<string>();
+        _authProvider!.AuthenticationStateChanged += _ => routeWhenAnnounced.Add(navigation.Uri);
+
+        var page = Render<SettingsPage>();
+        page.Find(".pspad-sign-out").Click();
+
+        Assert.All(routeWhenAnnounced, route => Assert.EndsWith("authentication/logout", route));
+        Assert.NotEmpty(routeWhenAnnounced);
+    }
+
+    [Fact]
     public void ItOffersTheThreeThemeModes()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");

@@ -9,6 +9,14 @@ public sealed class LocalSignOut(
 {
     public async Task ClearAsync()
     {
+        await ClearStorageAsync();
+        Announce();
+    }
+
+    public void Announce() => authenticationState.SignedOut();
+
+    public async Task ClearStorageAsync()
+    {
         try
         {
             // The outbox survives: the replica comes back from the server, locally authored commands do not.
@@ -27,7 +35,5 @@ public sealed class LocalSignOut(
         {
             Console.Error.WriteLine($"Session clear on sign-out failed: {exception.Message}");
         }
-
-        authenticationState.SignedOut();
     }
 }
