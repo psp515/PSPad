@@ -183,18 +183,7 @@
         StateHasChanged();
     }
 
-    DateOnly TodayIn(string timeZone)
-    {
-        try
-        {
-            return TodayRule.TodayIn(Clock.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(timeZone));
-        }
-        catch (Exception exception) when (exception is TimeZoneNotFoundException or InvalidTimeZoneException)
-        {
-            Console.Error.WriteLine($"Unknown time zone '{timeZone}': {exception.Message}");
-            return TodayRule.TodayIn(Clock.UtcNow, TimeZoneInfo.Utc);
-        }
-    }
+    DateOnly TodayIn(string timeZone) => LocalToday.In(Clock.UtcNow, timeZone);
 
     void OnDesktopChanged(bool isDesktop)
     {

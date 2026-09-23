@@ -1,4 +1,5 @@
 @page "/settings"
+@using PSPad.Abstractions
 @using PSPad.App.Api
 @using PSPad.App.Auth
 @using PSPad.App.State
@@ -13,6 +14,7 @@
 @inject CommandSender Sender
 @inject LocalSignOut SignOut
 @inject NavigationManager Navigation
+@inject IClock Clock
 @implements IDisposable
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Settings</MudText>
@@ -111,8 +113,7 @@
 
         _rejected = false;
         State.TimeZone = me.TimeZone;
-        State.Today = TodayRule.TodayIn(
-            DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
+        State.Today = LocalToday.In(Clock.UtcNow, me.TimeZone);
         StateHasChanged();
     }
 }

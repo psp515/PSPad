@@ -49,7 +49,8 @@ public class SettingsPageTests : Bunit.TestContext
 
         Assert.Equal("Pacific/Kiritimati", state.TimeZone);
         Assert.Equal(
-            TodayRule.TodayIn(DateTimeOffset.UtcNow,
+            TodayRule.TodayIn(
+                new DateTimeOffset(Today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero),
                 TimeZoneInfo.FindSystemTimeZoneById("Pacific/Kiritimati")),
             state.Today);
     }
@@ -63,6 +64,18 @@ public class SettingsPageTests : Bunit.TestContext
         await page.InvokeAsync(() => page.Instance.ApplyTimeZoneAsync("Pacific/Kiritimati"));
 
         Assert.Equal("Etc/UTC", state.TimeZone);
+    }
+
+    [Fact]
+    public async Task ATimeZoneTheBrowserCannotResolveFallsBackToUtcInsteadOfThrowing()
+    {
+        var state = Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+        await page.InvokeAsync(() => page.Instance.ApplyTimeZoneAsync("Mars/Olympus_Mons"));
+
+        Assert.Equal("Mars/Olympus_Mons", state.TimeZone);
+        Assert.Equal(Today, state.Today);
     }
 
     [Fact]
