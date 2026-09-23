@@ -152,7 +152,7 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        page.Find(".pspad-grid");
+        page.Find(".mud-grid");
     }
 
     [Fact]

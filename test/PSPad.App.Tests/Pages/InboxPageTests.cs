@@ -146,7 +146,7 @@ public class InboxPageTests : Bunit.TestContext
 
         var page = Render<InboxPage>();
 
-        page.Find(".pspad-grid");
+        page.Find(".mud-grid");
     }
 
     [Fact]

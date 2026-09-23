@@ -13,7 +13,7 @@ public class SkeletonTests : Bunit.TestContext
     {
         var skeleton = Render<RowSkeleton>(parameters => parameters.Add(row => row.Count, 4));
 
-        Assert.Equal(4, skeleton.FindAll(".pspad-row-skeleton").Count);
+        Assert.Equal(4, skeleton.FindAll(".mud-grid-item").Count);
     }
 
     [Fact]
@@ -21,7 +21,7 @@ public class SkeletonTests : Bunit.TestContext
     {
         var skeleton = Render<CardSkeleton>(parameters => parameters.Add(card => card.Count, 2));
 
-        Assert.Equal(2, skeleton.FindAll(".pspad-card-skeleton").Count);
+        Assert.Equal(2, skeleton.FindAll(".mud-grid-item").Count);
     }
 
     [Fact]
@@ -29,14 +29,14 @@ public class SkeletonTests : Bunit.TestContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
 
-        Assert.NotNull(Render<RowSkeleton>().Find(".pspad-grid .pspad-row-skeleton"));
-        Assert.NotNull(Render<CardSkeleton>().Find(".pspad-grid .pspad-card-skeleton"));
+        Assert.NotNull(Render<RowSkeleton>().Find(".mud-grid .mud-grid-item"));
+        Assert.NotNull(Render<CardSkeleton>().Find(".mud-grid .mud-grid-item"));
     }
 
     [Fact]
     public void ARowSkeletonMarksItselfAsALiveLoadingRegion()
     {
-        var root = Render<RowSkeleton>().Find(".pspad-grid");
+        var root = Render<RowSkeleton>().Find(".mud-grid");
 
         Assert.Equal("status", root.GetAttribute("role"));
         Assert.Equal("true", root.GetAttribute("aria-busy"));
@@ -45,7 +45,7 @@ public class SkeletonTests : Bunit.TestContext
     [Fact]
     public void ACardSkeletonMarksItselfAsALiveLoadingRegion()
     {
-        var root = Render<CardSkeleton>().Find(".pspad-grid");
+        var root = Render<CardSkeleton>().Find(".mud-grid");
 
         Assert.Equal("status", root.GetAttribute("role"));
         Assert.Equal("true", root.GetAttribute("aria-busy"));

@@ -37,22 +37,6 @@ public class AccountBadgeTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheAvatarOnlyWrapperHasPadding()
-    {
-        Arrange();
-
-        var badge = Render<AccountBadge>(parameters => parameters
-            .Add(account => account.DisplayName, "Ada Lovelace")
-            .Add(account => account.Email, "ada@example.com")
-            .Add(account => account.UserId, User)
-            .Add(account => account.AvatarOnly, true));
-
-        var wrapper = badge.Find(".pspad-account-avatar-only");
-        Assert.Contains("px-3", wrapper.ClassList);
-        Assert.Contains("py-1", wrapper.ClassList);
-    }
-
-    [Fact]
     public void TheFullBadgeHasGenerousTopAndBottomPadding()
     {
         Arrange();

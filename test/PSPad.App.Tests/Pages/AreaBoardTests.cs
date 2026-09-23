@@ -128,7 +128,7 @@ public class AreaBoardTests : Bunit.TestContext
 
         var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
 
-        page.Find(".pspad-grid");
+        page.Find(".mud-grid");
     }
 
     [Fact]

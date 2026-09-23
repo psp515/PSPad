@@ -33,34 +33,38 @@ else
         <MudText Typo="Typo.body2">No goals yet.</MudText>
     }
 
-    <div class="pspad-grid">
+    <MudGrid Spacing="4">
         @foreach (var goal in _active)
         {
-            <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
-                      OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
-                      OnAchieve="@(() => AchieveAsync(goal))"
-                      OnReopen="@(() => ReopenAsync(goal))"
-                      OnRename="@(() => RenameAsync(goal))"
-                      OnDelete="@(() => DeleteAsync(goal))" />
+            <MudItem xs="12" sm="6" md="4" xl="3">
+                <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
+                          OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
+                          OnAchieve="@(() => AchieveAsync(goal))"
+                          OnReopen="@(() => ReopenAsync(goal))"
+                          OnRename="@(() => RenameAsync(goal))"
+                          OnDelete="@(() => DeleteAsync(goal))" />
+            </MudItem>
         }
-    </div>
+    </MudGrid>
 }
 
 @if (_achieved.Count > 0)
 {
     <MudExpansionPanels Elevation="0" Class="mt-4">
         <MudExpansionPanel Text="@($"Achieved ({_achieved.Count})")">
-            <div class="pspad-grid">
+            <MudGrid Spacing="4">
                 @foreach (var goal in _achieved)
                 {
-                    <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
-                              OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
-                              OnAchieve="@(() => AchieveAsync(goal))"
-                              OnReopen="@(() => ReopenAsync(goal))"
-                              OnRename="@(() => RenameAsync(goal))"
-                              OnDelete="@(() => DeleteAsync(goal))" />
+                    <MudItem xs="12" sm="6" md="4" xl="3">
+                        <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
+                                  OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
+                                  OnAchieve="@(() => AchieveAsync(goal))"
+                                  OnReopen="@(() => ReopenAsync(goal))"
+                                  OnRename="@(() => RenameAsync(goal))"
+                                  OnDelete="@(() => DeleteAsync(goal))" />
+                    </MudItem>
                 }
-            </div>
+            </MudGrid>
         </MudExpansionPanel>
     </MudExpansionPanels>
 }

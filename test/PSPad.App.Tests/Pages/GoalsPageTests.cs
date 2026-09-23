@@ -48,7 +48,7 @@ public class GoalsPageTests : Bunit.TestContext
 
         var page = Render<GoalsPage>();
 
-        page.Find(".pspad-grid");
+        page.Find(".mud-grid");
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class GoalsPageTests : Bunit.TestContext
         Arrange(NewGoal("Eat healthier", achieved: true));
 
         var page = Render<GoalsPage>();
-        var grids = page.FindAll(".pspad-grid");
+        var grids = page.FindAll(".mud-grid");
 
         Assert.Contains(grids, grid => grid.TextContent.Contains("Eat healthier"));
     }

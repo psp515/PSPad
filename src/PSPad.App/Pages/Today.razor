@@ -26,13 +26,15 @@ else
     {
         <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">Overdue</MudText>
         <MudPaper Outlined="true" Class="mb-4">
-            <div class="pspad-grid">
+            <MudGrid Spacing="4">
                 @foreach (var task in _overdue)
                 {
-                    <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
-                             OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+                    <MudItem xs="12" sm="6" md="4" xl="3">
+                        <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
+                                 OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+                    </MudItem>
                 }
-            </div>
+            </MudGrid>
         </MudPaper>
     }
 
@@ -41,13 +43,15 @@ else
         <MudPaper Outlined="true">
             @if (_due.Count > 0)
             {
-                <div class="pspad-grid">
+                <MudGrid Spacing="4">
                     @foreach (var task in _due)
                     {
-                        <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
-                                 OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+                        <MudItem xs="12" sm="6" md="4" xl="3">
+                            <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
+                                     OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+                        </MudItem>
                     }
-                </div>
+                </MudGrid>
             }
             else
             {
@@ -60,13 +64,15 @@ else
     {
         <MudExpansionPanels Elevation="0" Class="mt-4">
             <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
-                <div class="pspad-grid">
+                <MudGrid Spacing="4">
                     @foreach (var task in _done)
                     {
-                        <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
-                                 OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+                        <MudItem xs="12" sm="6" md="4" xl="3">
+                            <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
+                                     OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+                        </MudItem>
                     }
-                </div>
+                </MudGrid>
             </MudExpansionPanel>
         </MudExpansionPanels>
     }

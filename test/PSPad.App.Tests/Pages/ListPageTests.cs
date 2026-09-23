@@ -84,7 +84,7 @@ public class ListPageTests : Bunit.TestContext
 
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
-        page.Find(".pspad-grid");
+        page.Find(".mud-grid");
     }
 
     [Fact]
