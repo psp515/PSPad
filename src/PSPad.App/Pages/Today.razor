@@ -1,4 +1,5 @@
 @page "/"
+@attribute [Authorize]
 @using PSPad.Abstractions
 @using PSPad.App.Components
 @using PSPad.App.State
@@ -78,7 +79,20 @@ else
     IReadOnlyList<TodoTask> _done = [];
     IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
 
-    protected override async Task OnInitializedAsync() => await ReloadAsync();
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
+    int _rendered = -1;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_rendered == SyncRevision)
+        {
+            return;
+        }
+
+        _rendered = SyncRevision;
+        await ReloadAsync();
+    }
 
     async Task ReloadAsync()
     {

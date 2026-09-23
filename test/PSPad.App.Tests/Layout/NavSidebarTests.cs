@@ -8,6 +8,7 @@ using PSPad.App.State.Replica;
 using PSPad.App.Tests;
 using PSPad.App.Theme;
 using PSPad.Module.Tasks.Areas;
+using PSPad.App.Sync;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Layout;
@@ -214,6 +215,22 @@ public class NavSidebarTests : Bunit.TestContext
 
         var footer = sidebar.Find(".pspad-sidebar-footer");
         Assert.Equal(2, footer.Children.Length);
+    }
+
+    [Fact]
+    public void TheFooterGainsAConnectionStatusOnlyWhenSomethingIsWrong()
+    {
+        Arrange();
+        var reachability = Services.GetRequiredService<ServerReachability>();
+
+        var healthy = Render(Areas("Dom"));
+
+        Assert.Empty(healthy.FindComponents<ConnectionStatus>().Single().FindAll(".pspad-connection-status"));
+
+        reachability.Failed(browserIsOnline: true);
+        var troubled = Render(Areas("Dom"));
+
+        Assert.NotEmpty(troubled.FindAll(".pspad-connection-status"));
     }
 
     [Fact]

@@ -10,17 +10,17 @@ using MudBlazor;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App.Api;
+using PSPad.App.Auth;
 using PSPad.App.Components;
 using PSPad.App.Layout;
 using PSPad.App.State;
-using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.State.Viewport;
 using PSPad.App.Sync;
+using PSPad.App.Tests.Auth;
 using PSPad.App.Theme;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Areas;
-using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Layout;
@@ -150,7 +150,7 @@ public class AppShellTests : Bunit.TestContext
     [Fact]
     public void ItRendersSafelyForAnUnauthenticatedUser()
     {
-        Arrange();
+        Arrange(hasSession: false);
 
         var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(
             Task.FromResult(new AuthenticationState(new ClaimsPrincipal()))));
@@ -159,158 +159,6 @@ public class AppShellTests : Bunit.TestContext
         var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
         Assert.Equal("", sidebar.Email);
         Assert.Equal("", sidebar.DisplayName);
-    }
-
-    [Fact]
-    public void ItShowsTheBrandLoaderUntilTheShellIsReady()
-    {
-        Arrange(meHangs: true);
-        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
-
-        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
-
-        Assert.Single(shell.FindComponents<BrandLoader>());
-    }
-
-    [Fact]
-    public void ARetriedAccountFetchStillLoadsNormallyOnceItSucceeds()
-    {
-        Arrange(meFailures: 1);
-        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
-
-        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
-
-        shell.WaitForAssertion(() =>
-        {
-            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
-            Assert.Equal(User, sidebar.UserId);
-            Assert.Equal("Ada Lovelace", sidebar.DisplayName);
-        }, TimeSpan.FromSeconds(2));
-    }
-
-    [Fact]
-    public void WhenTheAccountNeverLoadsTheShellShowsARecoverableMessageInsteadOfRenderingBroken()
-    {
-        Arrange(meFailures: 10);
-        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
-
-        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
-
-        shell.WaitForAssertion(() =>
-        {
-            Assert.Empty(shell.FindComponents<BrandLoader>());
-            Assert.Single(shell.FindComponents<MudAlert>());
-            Assert.Contains("couldn't load your account", shell.Markup, StringComparison.OrdinalIgnoreCase);
-        }, TimeSpan.FromSeconds(2));
-
-        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
-        Assert.Equal("", sidebar.DisplayName);
-    }
-
-    [Fact]
-    public void WhenTheAccountFetchTimesOutTheShellShowsARecoverableMessageInsteadOfCrashing()
-    {
-        Arrange(meTimesOut: true);
-        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
-
-        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
-
-        shell.WaitForAssertion(() =>
-        {
-            Assert.Empty(shell.FindComponents<BrandLoader>());
-            Assert.Single(shell.FindComponents<MudAlert>());
-            Assert.Contains("couldn't load your account", shell.Markup, StringComparison.OrdinalIgnoreCase);
-        }, TimeSpan.FromSeconds(2));
-    }
-
-    [Fact]
-    public void WhenTheAccountNeverLoadsTheSidebarDisablesCommandCreatingActions()
-    {
-        Arrange(meFailures: 10);
-        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
-
-        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
-
-        shell.WaitForAssertion(() =>
-        {
-            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
-            Assert.True(sidebar.Disabled);
-        }, TimeSpan.FromSeconds(2));
-    }
-
-    [Fact]
-    public void TheSidebarIsDisabledWhileTheAccountFetchIsStillInFlight()
-    {
-        Arrange(meHangs: true);
-        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
-
-        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
-
-        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
-        Assert.True(sidebar.Disabled);
-    }
-
-    [Fact]
-    public void TheTaskDetailPanelIsDisabledWhileTheAccountFetchIsStillInFlight()
-    {
-        Arrange(meHangs: true);
-        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
-
-        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
-
-        Assert.True(shell.FindComponent<TaskDetailPanel>().Instance.Disabled);
-    }
-
-    [Fact]
-    public async Task TheTaskDetailPanelDoesNotEmitACommandWhileTheAccountIsUnavailable()
-    {
-        var task = NewTask("Buy milk");
-        Arrange(meFailures: 10, documents: [task]);
-        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
-        var navigation = Services.GetRequiredService<BunitNavigationManager>();
-        navigation.NavigateTo($"lists/{Guid.NewGuid()}?task={task.Id}");
-
-        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
-
-        shell.WaitForAssertion(() => Assert.Single(shell.FindComponents<MudAlert>()), TimeSpan.FromSeconds(2));
-        shell.WaitForAssertion(
-            () => Assert.NotEmpty(shell.FindAll(".pspad-task-done input")), TimeSpan.FromSeconds(2));
-
-        var outbox = Services.GetRequiredService<IOutbox>();
-        shell.Find(".pspad-task-done input").Change(true);
-
-        Assert.Equal(0, await outbox.CountAsync());
-    }
-
-    [Fact]
-    public void RetryingFromTheRecoverableMessageLoadsTheAccount()
-    {
-        Arrange(meFailures: 10);
-        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
-        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
-        shell.WaitForAssertion(() => Assert.Single(shell.FindComponents<MudAlert>()), TimeSpan.FromSeconds(2));
-
-        _meHandler!.FailuresRemaining = 0;
-        shell.InvokeAsync(() => shell.Find(".pspad-account-retry").Click());
-
-        shell.WaitForAssertion(() =>
-        {
-            var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
-            Assert.Equal(User, sidebar.UserId);
-        }, TimeSpan.FromSeconds(2));
-    }
-
-    [Fact]
-    public void WhenTheAccountFetchFailsTheSyncCoordinatorNeverStartsPushingTheStaleOutbox()
-    {
-        Arrange(meFailures: 10);
-        var connectivity = (SpyConnectivity)Services.GetRequiredService<IConnectivity>();
-        var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
-
-        var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
-
-        shell.WaitForAssertion(() => Assert.Single(shell.FindComponents<MudAlert>()), TimeSpan.FromSeconds(2));
-        Assert.Equal(0, connectivity.IsOnlineReads);
     }
 
     [Fact]
@@ -363,16 +211,208 @@ public class AppShellTests : Bunit.TestContext
         });
     }
 
-    FakeMeHandler? _meHandler;
+    [Fact]
+    public void ItBecomesReadyOfflineWhenTheAccountFetchFails()
+    {
+        Arrange(accountFetchFails: true);
+
+        var shell = Render<AppShell>();
+
+        Assert.Empty(shell.FindComponents<BrandLoader>());
+    }
+
+    [Fact]
+    public void ItTakesIdentityFromTheSessionWithoutTheServer()
+    {
+        Arrange(accountFetchFails: true);
+
+        var shell = Render<AppShell>();
+
+        Assert.Contains("Zoe", shell.Markup);
+    }
+
+    [Fact]
+    public void TheSyncCoordinatorStartsEvenWhenTheAccountFetchFails()
+    {
+        Arrange(accountFetchFails: true);
+        var connectivity = (SpyConnectivity)Services.GetRequiredService<IConnectivity>();
+
+        Render<AppShell>();
+
+        Assert.True(connectivity.IsOnlineReads > 0);
+    }
+
+    [Fact]
+    public void AThrowingSessionStoreLeavesTheShellReadyAndAnonymousRatherThanThrowing()
+    {
+        Arrange();
+        Services.AddSingleton<ILocalSessionStore>(new ThrowingLocalSessionStore());
+
+        var shell = Render<AppShell>();
+
+        Assert.Empty(shell.FindComponents<BrandLoader>());
+        var sidebar = shell.FindComponents<NavSidebar>()[0].Instance;
+        Assert.Equal("", sidebar.DisplayName);
+        Assert.Equal("", sidebar.Email);
+    }
+
+    [Fact]
+    public void ItBecomesReadyWhenLoadingTheLocalReplicaFails()
+    {
+        Arrange();
+        Services.AddSingleton<IDocumentStore<Area>>(new ThrowingAreaStore());
+
+        var shell = Render<AppShell>();
+
+        Assert.Empty(shell.FindComponents<BrandLoader>());
+    }
+
+    [Fact]
+    public void ItKeepsTheTokenAndContactTimeWrittenWhileTheAccountFetchWasInFlight()
+    {
+        var signedIn = new DateTimeOffset(2026, 9, 15, 8, 0, 0, TimeSpan.Zero);
+        var refreshed = new DateTimeOffset(2026, 9, 22, 8, 0, 0, TimeSpan.Zero);
+        var store = new InMemoryLocalSessionStore(
+            new LocalSession(User, "Zoe Session", "zoe@example.com", "UTC", "r0", signedIn));
+        Arrange(
+            sessionStore: store,
+            onMeRequest: () => store.SaveAsync(
+                store.Current! with { RefreshToken = "r1", LastServerContactUtc = refreshed }));
+
+        Render<AppShell>();
+
+        Assert.Equal("r1", store.Current?.RefreshToken);
+        Assert.Equal(refreshed, store.Current?.LastServerContactUtc);
+    }
+
+    [Fact]
+    public void ItTakesTodayFromTheRegisteredClockAndTheSessionTimeZone()
+    {
+        var store = new InMemoryLocalSessionStore(new LocalSession(
+            User, "Zoe Session", "zoe@example.com", "Etc/GMT+12", "refresh-token", DateTimeOffset.UtcNow));
+        Arrange(
+            sessionStore: store,
+            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Etc/GMT+12"));
+
+        Render<AppShell>();
+
+        Assert.Equal(new DateOnly(2026, 9, 11), Services.GetRequiredService<AppState>().Today);
+    }
+
+    [Fact]
+    public void ItStaysReadyOnATimeZoneTheRuntimeDoesNotCarry()
+    {
+        var store = new InMemoryLocalSessionStore(new LocalSession(
+            User, "Zoe Session", "zoe@example.com", "Mars/Olympus", "refresh-token", DateTimeOffset.UtcNow));
+        Arrange(
+            sessionStore: store,
+            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Mars/Olympus"));
+
+        var shell = Render<AppShell>();
+
+        Assert.Empty(shell.FindComponents<BrandLoader>());
+        Assert.Equal(new DateOnly(2026, 9, 12), Services.GetRequiredService<AppState>().Today);
+    }
+
+    [Fact]
+    public void ASignInWithNothingStoredLocallyWaitsForTheFirstPullBeforeShowingTheApp()
+    {
+        // Signing in wipes the replica. Rendering the app from it while the pull is still in
+        // flight shows the user an empty account and calls it loaded.
+        Arrange();
+        var pull = new TaskCompletionSource<SyncResponse?>();
+        Services.AddSingleton<ISyncApi>(new GatedSyncApi(pull.Task));
+        Services.AddSingleton<IConnectivity>(new AlwaysOnline());
+
+        var shell = Render<AppShell>();
+
+        Assert.NotEmpty(shell.FindComponents<BrandLoader>());
+
+        pull.SetResult(new SyncResponse(9, new Dictionary<string, System.Text.Json.JsonElement[]>(), []));
+
+        shell.WaitForAssertion(() => Assert.Empty(shell.FindComponents<BrandLoader>()));
+    }
+
+    [Fact]
+    public async Task ADeviceThatHasPulledBeforeShowsItsDataWithoutWaitingForTheServer()
+    {
+        // The whole point of the local replica: a relaunch opens on stored data, server or no server.
+        Arrange();
+        Services.AddSingleton<ISyncApi>(new GatedSyncApi(new TaskCompletionSource<SyncResponse?>().Task));
+        Services.AddSingleton<IConnectivity>(new AlwaysOnline());
+        await Services.GetRequiredService<IReplica>().SetMarkerAsync(12);
+
+        var shell = Render<AppShell>();
+
+        Assert.Empty(shell.FindComponents<BrandLoader>());
+    }
+
+    [Fact]
+    public async Task ASignInAfterTheAnonymousRedirectStillWaitsForItsOwnFirstPull()
+    {
+        // AuthorizeRouteView renders the signed-out redirect inside this shell, so by the time
+        // the signed-in shell mounts the coordinator has already run -- and finished -- a pull
+        // that had no session behind it.
+        var store = new InMemoryLocalSessionStore(null);
+        Arrange(sessionStore: store);
+        var pull = new TaskCompletionSource<SyncResponse?>();
+        Services.AddSingleton<ISyncApi>(new QueuedSyncApi(
+            Task.FromResult<SyncResponse?>(null), pull.Task));
+        Services.AddSingleton<IConnectivity>(new AlwaysOnline());
+
+        Render<AppShell>();
+        await DisposeComponentsAsync();
+
+        await store.SaveAsync(new LocalSession(
+            User, "Zoe Session", "zoe@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow));
+        var shell = Render<AppShell>();
+
+        Assert.NotEmpty(shell.FindComponents<BrandLoader>());
+
+        pull.SetResult(new SyncResponse(9, new Dictionary<string, System.Text.Json.JsonElement[]>(), []));
+
+        shell.WaitForAssertion(() => Assert.Empty(shell.FindComponents<BrandLoader>()));
+    }
+
+    sealed class QueuedSyncApi(params Task<SyncResponse?>[] pulls) : ISyncApi
+    {
+        int _call;
+
+        public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
+            Task.FromResult<IReadOnlyList<CommandResponse>>([]);
+
+        public Task<SyncResponse?> SyncAsync(long since) =>
+            pulls[Math.Min(_call++, pulls.Length - 1)];
+    }
+
+    sealed class AlwaysOnline : IConnectivity
+    {
+        public bool IsOnline => true;
+
+#pragma warning disable CS0067
+        public event Action? CameOnline;
+
+        public event Action? Changed;
+#pragma warning restore CS0067
+    }
+
+    sealed class GatedSyncApi(Task<SyncResponse?> pull) : ISyncApi
+    {
+        public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
+            Task.FromResult<IReadOnlyList<CommandResponse>>([]);
+
+        public Task<SyncResponse?> SyncAsync(long since) => pull;
+    }
 
     void Arrange(
         string displayName = "Ada Lovelace",
         string email = "ada@example.com",
         string? emailClaim = "ada@example.com",
-        int meFailures = 0,
-        bool meHangs = false,
-        bool meTimesOut = false,
+        bool accountFetchFails = false,
+        bool hasSession = true,
         MeResponse? meResponseOverride = null,
+        InMemoryLocalSessionStore? sessionStore = null,
+        Action? onMeRequest = null,
         params Aggregate[] documents)
     {
         var today = new DateOnly(2026, 9, 12);
@@ -383,21 +423,16 @@ public class AppShellTests : Bunit.TestContext
             new ReplicaDocumentStore<Module.Tasks.Inbox.Inbox>(replica),
             new AppState { UserId = User, Today = today }));
 
+        Services.AddSingleton<ILocalSessionStore>(sessionStore ?? new InMemoryLocalSessionStore(
+            hasSession
+                ? new LocalSession(
+                    User, "Zoe Session", "zoe@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow)
+                : null));
+
         var meResponse = meResponseOverride ?? new MeResponse(User, displayName, email, "UTC");
-        HttpMessageHandler handler;
-        if (meHangs)
-        {
-            handler = new HangingMeHandler();
-        }
-        else if (meTimesOut)
-        {
-            handler = new TimingOutMeHandler();
-        }
-        else
-        {
-            _meHandler = new FakeMeHandler(meResponse) { FailuresRemaining = meFailures };
-            handler = _meHandler;
-        }
+        HttpMessageHandler handler = accountFetchFails
+            ? new ThrowingMeHandler()
+            : new FakeMeHandler(meResponse, onMeRequest);
 
         Services.AddSingleton(new PSPadApiClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }));
         Services.AddSingleton<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
@@ -420,15 +455,6 @@ public class AppShellTests : Bunit.TestContext
         return area;
     }
 
-    static TodoTask NewTask(string name)
-    {
-        var task = new TodoTask();
-        task.ApplyAll(TodoTask.Decide(
-            null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name),
-            DateTimeOffset.UnixEpoch));
-        return task;
-    }
-
     static Task<AuthenticationState> AuthenticatedAs(string name, string? emailClaim)
     {
         var claims = new List<Claim> { new(ClaimTypes.Name, name) };
@@ -439,6 +465,24 @@ public class AppShellTests : Bunit.TestContext
 
         var identity = new ClaimsIdentity(claims, "test");
         return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
+    }
+
+    [Fact]
+    public void LosingTheServerWarnsTheUserOnceRatherThanOnlyTheConsole()
+    {
+        Arrange();
+        var reachability = Services.GetRequiredService<ServerReachability>();
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+
+        Render<AppShell>();
+
+        reachability.Failed(browserIsOnline: true);
+        reachability.Failed(browserIsOnline: true);
+
+        var shown = snackbar.ShownSnackbars.ToList();
+        Assert.Single(shown);
+        Assert.Contains("server", shown[0].Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(Severity.Warning, shown[0].Severity);
     }
 
     sealed class SpyConnectivity : IConnectivity
@@ -456,20 +500,16 @@ public class AppShellTests : Bunit.TestContext
 
 #pragma warning disable CS0067
         public event Action? CameOnline;
+
+        public event Action? Changed;
 #pragma warning restore CS0067
     }
 
-    sealed class FakeMeHandler(MeResponse response) : HttpMessageHandler
+    sealed class FakeMeHandler(MeResponse response, Action? onRequest = null) : HttpMessageHandler
     {
-        public int FailuresRemaining { get; set; }
-
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
-            if (FailuresRemaining > 0)
-            {
-                FailuresRemaining--;
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
-            }
+            onRequest?.Invoke();
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -478,15 +518,18 @@ public class AppShellTests : Bunit.TestContext
         }
     }
 
-    sealed class HangingMeHandler : HttpMessageHandler
+    sealed class ThrowingMeHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
-            new TaskCompletionSource<HttpResponseMessage>().Task;
+            Task.FromException<HttpResponseMessage>(new HttpRequestException("offline"));
     }
 
-    sealed class TimingOutMeHandler : HttpMessageHandler
+    sealed class ThrowingAreaStore : IDocumentStore<Area>
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
-            Task.FromException<HttpResponseMessage>(new TaskCanceledException());
+        public Task<Area?> LoadAsync(Guid id, CancellationToken ct) =>
+            throw new InvalidOperationException("replica unreadable");
+
+        public Task<IReadOnlyList<Area>> LoadAllAsync(Guid userId, CancellationToken ct) =>
+            throw new InvalidOperationException("replica unreadable");
     }
 }

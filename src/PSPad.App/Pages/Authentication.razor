@@ -4,9 +4,71 @@
    anonymous session for the rest of the SPA's lifetime (its own layout is never remounted
    by the client-side redirect that follows). Keeping this route off AppShell removes the race. *@
 @layout AuthenticationLayout
+@using Microsoft.JSInterop
+@using PSPad.Abstractions
+@using PSPad.App.Api
+@using PSPad.App.Auth
+@using PSPad.App.Components
+@inject IJSRuntime Js
+@inject IConfiguration Configuration
+@inject ILocalSessionStore Sessions
+@inject LocalAuthenticationStateProvider AuthProvider
+@inject PSPadApiClient Api
+@inject TokenRefresher Refresher
+@inject LocalSignOut SignOut
+@inject IClock Clock
 
-<RemoteAuthenticatorView Action="@Action" />
+<RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="@CaptureSessionAsync"
+                         OnLogOutSucceeded="@SignOut.ClearAsync">
+    <LoggingIn><BrandSplash /></LoggingIn>
+    <CompletingLoggingIn><BrandSplash /></CompletingLoggingIn>
+    <LogOut><BrandSplash /></LogOut>
+    <LogOutSucceeded><BrandSplash /></LogOutSucceeded>
+</RemoteAuthenticatorView>
 
 @code {
     [Parameter] public string? Action { get; set; }
+
+    async Task CaptureSessionAsync()
+    {
+        try
+        {
+            var module = await Js.InvokeAsync<IJSObjectReference>("import", "./js/session.js");
+
+            var refreshToken = await module.InvokeAsync<string?>(
+                "captureOidcRefreshToken",
+                Configuration["Keycloak:Authority"],
+                Configuration["Keycloak:ClientId"]);
+
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return;
+            }
+
+            // No session exists yet, so the handler has no stored token to refresh from: this
+            // exchange is what puts a bearer token on the /api/me call below.
+            if (await Refresher.RefreshAsync(refreshToken) is not RefreshOutcome.Renewed renewed)
+            {
+                return;
+            }
+
+            var account = (await Api.MeAsync()).Sanitized();
+
+            if (account is null)
+            {
+                return;
+            }
+
+            var session = new LocalSession(
+                account.UserId, account.DisplayName, account.Email, account.TimeZone,
+                renewed.RefreshToken, Clock.UtcNow);
+
+            await Sessions.SaveAsync(session);
+            AuthProvider.SignedIn(session);
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Session capture failed: {exception.Message}");
+        }
+    }
 }

@@ -26,6 +26,44 @@ public class ReplicaOwnershipTests
     }
 
     [Fact]
+    public async Task AFreshSignInReportsThatTheDeviceHoldsNothingYet()
+    {
+        var replica = new InMemoryReplica();
+        var ownership = new ReplicaOwnership(replica, new InMemoryOutbox());
+
+        await ownership.EnsureCurrentUserAsync(Guid.NewGuid());
+
+        Assert.True(await ownership.NothingSyncedYetAsync());
+    }
+
+    [Fact]
+    public async Task ADeviceThatHasPulledBeforeIsNotReportedAsEmpty()
+    {
+        var replica = new InMemoryReplica();
+        var user = Guid.NewGuid();
+        var ownership = new ReplicaOwnership(replica, new InMemoryOutbox());
+        await ownership.EnsureCurrentUserAsync(user);
+        await replica.SetMarkerAsync(41);
+
+        await ownership.EnsureCurrentUserAsync(user);
+
+        Assert.False(await ownership.NothingSyncedYetAsync());
+    }
+
+    [Fact]
+    public async Task SigningInAsSomeoneElseMakesTheDeviceEmptyAgain()
+    {
+        var replica = new InMemoryReplica();
+        var ownership = new ReplicaOwnership(replica, new InMemoryOutbox());
+        await ownership.EnsureCurrentUserAsync(Guid.NewGuid());
+        await replica.SetMarkerAsync(41);
+
+        await ownership.EnsureCurrentUserAsync(Guid.NewGuid());
+
+        Assert.True(await ownership.NothingSyncedYetAsync());
+    }
+
+    [Fact]
     public async Task DataQueuedBeforeAnyOwnerWasEverRecordedIsClearedToo()
     {
         var replica = new InMemoryReplica();

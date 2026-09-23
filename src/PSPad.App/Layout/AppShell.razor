@@ -1,7 +1,7 @@
 @inherits LayoutComponentBase
-@using Microsoft.AspNetCore.Components.Authorization
 @using PSPad.Abstractions
 @using PSPad.App.Api
+@using PSPad.App.Auth
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
@@ -23,6 +23,11 @@
 @inject IDocumentStore<Area> AreaStore
 @inject NavigationManager Navigation
 @inject IViewport Viewport
+@inject ILocalSessionStore Sessions
+@inject IClock Clock
+@inject ServerReachability Reachability
+@inject IConnectivity Connectivity
+@inject ISnackbar Snackbar
 @implements IDisposable
 @implements IAsyncDisposable
 
@@ -36,6 +41,7 @@
         <MudIconButton id="pspad-drawer-toggle" Class="d-md-none" Icon="@Icons.Material.Filled.Menu"
                        Color="Color.Inherit" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
         <MudSpacer />
+        <ConnectionStatus />
         <AccountBadge Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
                       AvatarOnly="true" />
     </MudAppBar>
@@ -59,14 +65,9 @@
         <MudContainer MaxWidth="MaxWidth.Large" Class="my-4 pspad-content">
             @if (_ready)
             {
-                @Body
-            }
-            else if (_accountUnavailable)
-            {
-                <MudAlert Severity="Severity.Warning" Class="pspad-account-unavailable">
-                    Couldn't load your account. Check your connection, then
-                    <MudLink Class="pspad-account-retry" OnClick="@RetryAccountAsync">try again</MudLink>.
-                </MudAlert>
+                <CascadingValue Value="@Coordinator.Revision" Name="SyncRevision">
+                    @Body
+                </CascadingValue>
             }
             else
             {
@@ -79,12 +80,9 @@
 </MudLayout>
 
 @code {
-    [CascadingParameter] Task<AuthenticationState>? AuthStateTask { get; set; }
-
     MudThemeProvider? _themeProvider;
     bool _themeReady;
     bool _ready;
-    bool _accountUnavailable;
     bool _drawerOpen;
     bool _isDesktop = true;
     string _email = "";
@@ -95,89 +93,150 @@
     protected override async Task OnInitializedAsync()
     {
         Coordinator.Changed += OnSyncChanged;
+        Reachability.Changed += OnReachabilityChanged;
         Preference.Changed += OnPreferenceChanged;
         Sender.Sent += OnCommandSent;
         Navigation.LocationChanged += OnLocationChanged;
 
         await Viewport.SubscribeAsync(OnDesktopChanged);
 
-        var authState = AuthStateTask is null ? null : await AuthStateTask;
-        if (authState?.User.Identity?.IsAuthenticated == true)
+        var session = await SessionOrNullAsync();
+        var nothingLocalYet = false;
+
+        if (session is not null)
         {
-            await LoadAccountAsync();
+            _displayName = session.DisplayName;
+            _email = session.Email;
+            State.UserId = session.UserId;
+            State.DisplayName = session.DisplayName;
+            State.Email = session.Email;
+            State.TimeZone = session.TimeZone;
+            State.Today = TodayIn(session.TimeZone);
+
+            nothingLocalYet = await TakeOwnershipAndReportEmptyAsync(session.UserId);
+            await LoadLocalDataAsync();
         }
-        else
+
+        Coordinator.Start();
+
+        if (nothingLocalYet)
         {
-            _ready = true;
-            Coordinator.Start();
+            // Signing in wipes the replica, so there is nothing to draw until the first pull
+            // lands. Rendering the empty app over a full account reads as lost data, and leaves
+            // the user looking at it for as long as the pull takes.
+            await FirstPullAsync();
+            await LoadLocalDataAsync();
+        }
+
+        _ready = true;
+
+        if (session is not null)
+        {
+            await RefreshAccountAsync();
         }
 
         ReadOpenTask();
     }
 
-    async Task LoadAccountAsync()
+    async Task<bool> TakeOwnershipAndReportEmptyAsync(Guid userId)
     {
-        var fetched = await FetchAccountAsync();
-
-        if (fetched is null)
+        try
         {
-            _accountUnavailable = true;
+            await Ownership.EnsureCurrentUserAsync(userId);
+            return await Ownership.NothingSyncedYetAsync();
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Local replica ownership check failed: {exception.Message}");
+            return false;
+        }
+    }
+
+    async Task LoadLocalDataAsync()
+    {
+        try
+        {
+            await ReloadAreasAndCountsAsync();
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Local replica load failed: {exception.Message}");
+        }
+    }
+
+    static readonly TimeSpan FirstPullTimeout = TimeSpan.FromSeconds(10);
+
+    async Task FirstPullAsync()
+    {
+        try
+        {
+            // A held splash is an unrecoverable blank screen, so a pull that never answers
+            // still has to let the app through.
+            await Coordinator.Started.WaitAsync(FirstPullTimeout);
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"First pull after sign-in did not finish: {exception.Message}");
+        }
+    }
+
+    async Task<LocalSession?> SessionOrNullAsync()
+    {
+        try
+        {
+            return await Sessions.LoadAsync();
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Session load failed: {exception.Message}");
+            return null;
+        }
+    }
+
+    async Task RefreshAccountAsync()
+    {
+        MeResponse? me;
+
+        try
+        {
+            me = (await Api.MeAsync()).Sanitized();
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Account refresh failed: {exception.Message}");
             return;
         }
 
-        var me = fetched.Sanitized();
+        if (me is null)
+        {
+            return;
+        }
 
-        _accountUnavailable = false;
         _displayName = me.DisplayName;
         _email = me.Email;
-        State.UserId = me.UserId;
         State.DisplayName = me.DisplayName;
         State.Email = me.Email;
         State.TimeZone = me.TimeZone;
-        State.Today = TodayRule.TodayIn(
-            DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
-        await Ownership.EnsureCurrentUserAsync(me.UserId);
-        await ReloadAreasAndCountsAsync();
+        State.Today = TodayIn(me.TimeZone);
 
-        _ready = true;
-        Coordinator.Start();
-    }
+        // The fetch itself may have rotated the refresh token and stamped the contact time,
+        // so the session read before it started is already stale by here.
+        var current = await SessionOrNullAsync();
 
-    async Task<MeResponse?> FetchAccountAsync()
-    {
-        const int attempts = 3;
-
-        for (var attempt = 0; attempt < attempts; attempt++)
+        if (current is not null)
         {
-            try
+            await Sessions.SaveAsync(current with
             {
-                var me = await Api.MeAsync();
-                if (me is not null)
-                {
-                    return me;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"Account fetch failed: {ex.Message}");
-            }
-
-            if (attempt < attempts - 1)
-            {
-                // The WASM auth library can briefly report "authenticated" before its token cache
-                // catches up right after a sign-in redirect -- this closes that window without a
-                // long, user-visible stall.
-                await Task.Delay(TimeSpan.FromMilliseconds(200));
-            }
+                DisplayName = me.DisplayName,
+                Email = me.Email,
+                TimeZone = me.TimeZone
+            });
         }
 
-        return null;
+        StateHasChanged();
     }
 
-    async Task RetryAccountAsync()
-    {
-        await LoadAccountAsync();
-    }
+    DateOnly TodayIn(string timeZone) => LocalToday.In(Clock.UtcNow, timeZone);
 
     void OnDesktopChanged(bool isDesktop)
     {
@@ -267,11 +326,22 @@
 
     void OnSyncChanged() => InvokeAsync(ReloadAreasAndCountsAsync);
 
+    void OnReachabilityChanged() => InvokeAsync(() =>
+    {
+        if (!Reachability.IsReachable)
+        {
+            Snackbar.Add("Can't reach the server. Working from local data.", Severity.Warning);
+        }
+
+        StateHasChanged();
+    });
+
     void OnCommandSent() => InvokeAsync(ReloadAreasAndCountsAsync);
 
     public void Dispose()
     {
         Coordinator.Changed -= OnSyncChanged;
+        Reachability.Changed -= OnReachabilityChanged;
         Preference.Changed -= OnPreferenceChanged;
         Sender.Sent -= OnCommandSent;
         Navigation.LocationChanged -= OnLocationChanged;

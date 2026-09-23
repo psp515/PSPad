@@ -1,4 +1,5 @@
 @page "/lists/{ListId:guid}"
+@attribute [Authorize]
 @using PSPad.Abstractions
 @using PSPad.App.Components
 @using PSPad.App.State
@@ -64,6 +65,8 @@ else
 
 @code {
     [Parameter] public Guid ListId { get; set; }
+
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
 
     bool _loaded;
     TaskList? _list;

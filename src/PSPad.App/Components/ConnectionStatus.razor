@@ -1,0 +1,35 @@
+@using PSPad.App.Sync
+@inject IConnectivity Connectivity
+@inject ServerReachability Reachability
+@implements IDisposable
+
+@if (!Connectivity.IsOnline)
+{
+    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default"
+             Icon="@Icons.Material.Filled.CloudOff" Class="pspad-connection-status">
+        Offline
+    </MudChip>
+}
+else if (!Reachability.IsReachable)
+{
+    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Warning"
+             Icon="@Icons.Material.Filled.CloudOff" Class="pspad-connection-status">
+        Server unreachable
+    </MudChip>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        Connectivity.Changed += OnChanged;
+        Reachability.Changed += OnChanged;
+    }
+
+    void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Connectivity.Changed -= OnChanged;
+        Reachability.Changed -= OnChanged;
+    }
+}

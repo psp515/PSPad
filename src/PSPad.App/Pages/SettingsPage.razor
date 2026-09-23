@@ -1,15 +1,24 @@
 @page "/settings"
+@attribute [Authorize]
+@using PSPad.Abstractions
 @using PSPad.App.Api
+@using PSPad.App.Auth
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.App.State.Outbox
+@using PSPad.App.Sync
 @using PSPad.App.Theme
 @using PSPad.Module.Tasks.Today
+@inject IConfiguration Configuration
+@inject IConnectivity Connectivity
 @inject PSPadApiClient Api
 @inject AppState State
 @inject ThemePreference Preference
 @inject IOutbox Outbox
 @inject CommandSender Sender
+@inject LocalSignOut SignOut
+@inject NavigationManager Navigation
+@inject IClock Clock
 @implements IDisposable
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Settings</MudText>
@@ -63,7 +72,7 @@
     </MudText>
 </MudPaper>
 
-<MudButton Class="pspad-sign-out" Href="/authentication/logout" StartIcon="@Icons.Material.Filled.Logout"
+<MudButton Class="pspad-sign-out" OnClick="@SignOutAsync" StartIcon="@Icons.Material.Filled.Logout"
            Color="Color.Error" Variant="Variant.Outlined">
     Sign out
 </MudButton>
@@ -86,24 +95,44 @@
 
     void OnCommandSent() => InvokeAsync(RefreshPendingAsync);
 
+    async Task SignOutAsync()
+    {
+        // Clearing before the redirect leaves the app is what makes an interrupted or offline
+        // sign-out still a sign-out: the Keycloak round trip may never come back.
+        await SignOut.ClearStorageAsync();
+
+        if (!Connectivity.IsOnline)
+        {
+            // Announcing the anonymous state while still on a route that requires authorization
+            // would send AuthorizeRouteView back to the login page.
+            Navigation.NavigateTo("welcome");
+            SignOut.Announce();
+            return;
+        }
+
+        Navigation.NavigateTo(
+            KeycloakEndSession.UrlFor(
+                Configuration["Keycloak:Authority"]!,
+                Configuration["Keycloak:ClientId"]!,
+                Navigation.ToAbsoluteUri("welcome").ToString()),
+            forceLoad: true);
+    }
+
     public void Dispose() => Sender.Sent -= OnCommandSent;
 
     public async Task ApplyTimeZoneAsync(string timeZone)
     {
-        var fetched = await Api.SetTimeZoneAsync(timeZone);
+        var me = (await Api.SetTimeZoneAsync(timeZone)).Sanitized();
 
-        if (fetched is null)
+        if (me is null)
         {
             _rejected = true;
             return;
         }
 
-        var me = fetched.Sanitized();
-
         _rejected = false;
         State.TimeZone = me.TimeZone;
-        State.Today = TodayRule.TodayIn(
-            DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(me.TimeZone));
+        State.Today = LocalToday.In(Clock.UtcNow, me.TimeZone);
         StateHasChanged();
     }
 }

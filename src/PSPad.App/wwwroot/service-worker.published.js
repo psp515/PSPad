@@ -51,5 +51,15 @@ async function onFetch(event) {
         cachedResponse = await cache.match(request);
     }
 
-    return cachedResponse || fetch(event.request);
+    if (cachedResponse) {
+        return cachedResponse;
+    }
+
+    try {
+        return await fetch(event.request);
+    } catch {
+        // An unreachable server is a supported state: answer the page rather than
+        // rejecting, which the browser reports as an uncaught error in the worker.
+        return new Response('', { status: 503, statusText: 'Service Unavailable' });
+    }
 }

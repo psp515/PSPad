@@ -6,6 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PSPad</title>
     <script>
+        window.pspadBoot = {
+            done: function () {
+                var splash = document.querySelector('.pspad-boot');
+                if (splash) { splash.remove(); }
+            }
+        };
+    </script>
+    <script>
         (function () {
             var stored = null;
             try { stored = localStorage.getItem('pspad.theme'); } catch (error) { }
@@ -25,6 +33,7 @@
             align-items: center;
             justify-content: center;
             background: var(--pspad-boot-bg);
+            z-index: 9999;
         }
 
         .pspad-boot-mark { width: 96px; height: 96px; }
@@ -59,18 +68,18 @@
 </head>
 
 <body>
-    <div id="app">
-        <div class="pspad-boot">
-            <svg class="pspad-boot-mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"
-                 role="img" aria-label="Loading PSPad">
-                <rect width="512" height="512" rx="112" fill="#4E7A5E" />
-                <path d="M160,96 h160 l80,80 v208 a32,32 0 0 1 -32,32 h-208 a32,32 0 0 1 -32,-32 v-256 a32,32 0 0 1 32,-32 z"
-                      fill="#FFFFFF" />
-                <path d="M320,96 l80,80 h-48 a32,32 0 0 1 -32,-32 z" fill="#CFE0D5" />
-                <path class="pspad-boot-check" d="M184,272 l48,48 l96,-120" fill="none" stroke="#4E7A5E"
-                      stroke-width="40" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-        </div>
+    <div id="app"></div>
+
+    <div class="pspad-boot">
+        <svg class="pspad-boot-mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"
+             role="img" aria-label="Loading PSPad">
+            <rect width="512" height="512" rx="112" fill="#4E7A5E" />
+            <path d="M160,96 h160 l80,80 v208 a32,32 0 0 1 -32,32 h-208 a32,32 0 0 1 -32,-32 v-256 a32,32 0 0 1 32,-32 z"
+                  fill="#FFFFFF" />
+            <path d="M320,96 l80,80 h-48 a32,32 0 0 1 -32,-32 z" fill="#CFE0D5" />
+            <path class="pspad-boot-check" d="M184,272 l48,48 l96,-120" fill="none" stroke="#4E7A5E"
+                  stroke-width="40" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
     </div>
 
     <div id="blazor-error-ui">

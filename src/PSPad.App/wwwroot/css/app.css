@@ -2,6 +2,13 @@ html, body {
     margin: 0;
 }
 
+/* FocusOnNavigate parks focus on the routed screen's heading so a screen reader lands there.
+   The heading is not a control, so the ring the browser draws around it offers a click that
+   does nothing. */
+h1[tabindex="-1"]:focus {
+    outline: none;
+}
+
 .pspad-account-badge {
     width: 100%;
 }
@@ -85,3 +92,164 @@ html, body {
     }
 }
 
+
+.pspad-welcome {
+    --pspad-welcome-bg: #F7F8F5;
+    --pspad-welcome-surface: #FFFFFF;
+    --pspad-welcome-text: #1E2A22;
+    --pspad-welcome-muted: #66736B;
+    --pspad-welcome-lines: #D5DED7;
+    --pspad-welcome-primary: #4E7A5E;
+    --pspad-welcome-on-primary: #FFFFFF;
+
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 48px 24px 64px;
+    background: var(--pspad-welcome-bg);
+    color: var(--pspad-welcome-text);
+    font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+[data-theme="dark"] .pspad-welcome {
+    --pspad-welcome-bg: #141815;
+    --pspad-welcome-surface: #1C211D;
+    --pspad-welcome-text: #E4E9E4;
+    --pspad-welcome-muted: #94A199;
+    --pspad-welcome-lines: #2C332E;
+    --pspad-welcome-primary: #8FBF9F;
+    --pspad-welcome-on-primary: #141815;
+}
+
+.pspad-welcome-hero,
+.pspad-welcome-proof {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+.pspad-welcome-hero {
+    padding: 32px 0 56px;
+    text-align: center;
+}
+
+.pspad-welcome-hero .pspad-boot-mark {
+    width: 72px;
+    height: 72px;
+}
+
+.pspad-welcome-hero h1 {
+    margin: 20px 0 12px;
+    font-size: clamp(1.9rem, 5vw, 3rem);
+    line-height: 1.15;
+}
+
+.pspad-welcome-claim {
+    margin: 0 auto;
+    max-width: 52ch;
+    font-size: 1.15rem;
+    color: var(--pspad-welcome-muted);
+}
+
+.pspad-welcome-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 32px;
+}
+
+.pspad-welcome-button {
+    display: inline-block;
+    padding: 12px 24px;
+    border: 1px solid var(--pspad-welcome-primary);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.pspad-welcome-login {
+    background: var(--pspad-welcome-primary);
+    color: var(--pspad-welcome-on-primary);
+}
+
+.pspad-welcome-docs {
+    background: transparent;
+    color: var(--pspad-welcome-primary);
+}
+
+.pspad-welcome-button:hover {
+    filter: brightness(1.08);
+}
+
+.pspad-welcome-proof {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(1, 1fr);
+}
+
+@media (min-width: 600px) {
+    .pspad-welcome-proof {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 960px) {
+    .pspad-welcome-proof {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@supports (animation-timeline: view()) {
+    .pspad-welcome-proof {
+        animation: pspad-welcome-flow-up linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 25%;
+    }
+}
+
+@keyframes pspad-welcome-flow-up {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.pspad-welcome-card {
+    padding: 20px;
+    border: 1px solid var(--pspad-welcome-lines);
+    border-left: 4px solid var(--pspad-welcome-primary);
+    border-radius: 8px;
+    background: var(--pspad-welcome-surface);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pspad-welcome-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgb(0 0 0 / 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pspad-welcome-proof {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+
+    .pspad-welcome-card {
+        transition: none;
+    }
+}
+
+.pspad-welcome-card h2 {
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+}
+
+.pspad-welcome-card p {
+    margin: 0;
+    color: var(--pspad-welcome-muted);
+}

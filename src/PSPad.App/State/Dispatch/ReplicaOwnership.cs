@@ -20,4 +20,8 @@ public sealed class ReplicaOwnership(IReplica replica, IOutbox outbox)
 
         await replica.SetOwnerAsync(userId);
     }
+
+    // The marker only moves once a pull has landed, so a zero means this device holds none of
+    // this user's data yet -- not that it is merely behind.
+    public async Task<bool> NothingSyncedYetAsync() => await replica.MarkerAsync() == 0;
 }
