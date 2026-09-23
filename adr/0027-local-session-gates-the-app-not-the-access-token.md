@@ -57,6 +57,16 @@ Renewal becomes a direct `grant_type=refresh_token` call to Keycloak's token
 endpoint, and a refresh failure is treated as a sign-out only when Keycloak
 answers `400 invalid_grant` — never on a transport failure.
 
+That gate is enforced by `@attribute [Authorize]` on every routable page except
+`/authentication/{action}` and the not-found page, so a device with no local
+session at all is redirected to sign in rather than rendering the shell around
+empty data. Before this decision the de-facto gate was `AppShell`'s `/api/me`
+fetch, which had to be removed for the app to open offline; without an explicit
+attribute in its place, `AuthorizeRouteView`'s `NotAuthorized` branch never runs
+and `RedirectToLogin` is unreachable. A guard test asserts the attribute is
+present on every routable page, because a new page silently added without it is
+the way this hole reopens.
+
 The iframe renewal has no supported off-switch — `OidcProviderOptions` exposes
 no `AutomaticSilentRenew`, the setting being hard-coded in the shipped
 `AuthenticationService.js` — so it is disarmed rather than disabled. Its timer
