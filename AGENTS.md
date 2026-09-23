@@ -316,6 +316,12 @@ not, and stay authoritative:
   identity data (display name, time zone), a settings screen, a single brand
   mark from first paint through loading skeletons, wider-screen grid layouts,
   and the History screen's burndown chart.
+- `specs/offline-first-session-design.md` — the offline-first session model: a
+  durable `LocalSession` in IndexedDB, not a live access token, decides whether
+  the app opens; the token is reduced to a credential for calling the API, and
+  its absence means *offline*, never *sign in again*. Read it for anything
+  touching the boot sequence, the authentication state provider, token refresh
+  or the login and logout screens.
 
 That polish pass's plans — identity fixes, the burndown chart, loading and
 grid work, settings and nav — are merged on this branch. `adr/0012`
@@ -323,7 +329,10 @@ grid work, settings and nav — are merged on this branch. `adr/0012`
 cleanup: dead account-menu arrow removed, Settings and App info as sidebar
 rows, area actions moved to a FAB) and `adr/0023` (search pulled from the
 sidebar for now, drawer footer with date/time and license) are `Active` and
-built on this branch.
+built on this branch. `adr/0027` (a durable local session, not the access
+token, gates the app) is `Active` and built on this branch too; it amends
+`adr/0024`'s consequence, since the login-callback route now renders branded
+fragments rather than the library's default text.
 
 ---
 

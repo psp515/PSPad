@@ -2,7 +2,7 @@
 title: Keep the OIDC login-callback route off AppShell's layout
 tags: [identity, sync, offline]
 date: 2026-09-17
-status: Active
+status: Active (consequence amended by ADR-0027)
 ---
 
 # ADR-0024: Keep the OIDC login-callback route off AppShell's layout
@@ -73,7 +73,10 @@ rather than patched by making the check retry or reactive.
 The login-callback route no longer has access to MudBlazor's providers
 (`MudThemeProvider`, dialogs, snackbar) that live inside `AppShell` — fine,
 since `RemoteAuthenticatorView`'s own UI is a brief, unstyled "processing"
-message. Any other route that must render outside `AppShell` in the future
+message. [ADR-0027](0027-local-session-gates-the-app-not-the-access-token.md)'s
+D9 amends that last point: the route now supplies branded fragments of its own
+in place of the library's default text. The route arrangement decided here is
+unchanged. Any other route that must render outside `AppShell` in the future
 follows the same `@layout` pattern rather than growing a second conditional
 inside `AppShell` itself. If `AppShell` ever needs its own OIDC-callback
 awareness again (unlikely, since none of its data-loading logic applies

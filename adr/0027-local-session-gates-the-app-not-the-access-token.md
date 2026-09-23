@@ -67,6 +67,30 @@ replacing the state provider and attaching bearer tokens with our own
 `RemoteAuthenticatorView` on `/authentication/*` as the only resolver, so the
 timer never arms during normal use.
 
+Both of those library services are registered by `AddRemoteAuthentication` as
+factories that cast `AuthenticationStateProvider` to them, so overriding that
+registration poisons both: `IRemoteAuthenticationService` broke interactive
+login outright, and `IAccessTokenProvider` is its dormant twin. Both are
+therefore registered explicitly, resolving the library's own service out of
+`GetServices<AuthenticationStateProvider>()` rather than by cast.
+
+`specs/offline-first-session-design.md`'s D7 is correct for cold starts only.
+The shipped `AuthenticationService.js` constructs its `UserManager` with no
+`automaticSilentRenew` override, so oidc-client-ts's default `true` applies
+and that library prefers the `refresh_token` grant when one is present. After
+an interactive login `RemoteAuthenticatorView` has constructed that
+`UserManager`, so its renewal timer *is* armed for the remainder of that
+page's life, against the very refresh token we just captured. This is harmless
+only because `docker/keycloak/realm-psplace.json` leaves `revokeRefreshToken`
+at Keycloak's default `false`: with revocation on, the library renewing from
+the pre-rotation token would invalidate the chain our `LocalSession` holds.
+Turning that setting on is therefore not a realm-only change.
+
+Signing out explicitly clears the `LocalSession` and the replica and keeps the
+outbox, exactly as the trust window lapsing does, and it happens before the
+browser leaves for Keycloak's end-session endpoint so an interrupted or
+offline sign-out is still a sign-out.
+
 Local identity expires after **7 days** without successful server contact. On
 expiry the replica is cleared and the outbox is kept, leaving its disposition
 to the existing ownership rules in ADR-0018 and
