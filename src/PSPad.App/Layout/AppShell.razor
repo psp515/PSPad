@@ -42,8 +42,6 @@
                        Color="Color.Inherit" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
         <MudSpacer />
         <ConnectionStatus />
-        <AccountBadge Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
-                      AvatarOnly="true" />
     </MudAppBar>
 
     <MudDrawer Variant="DrawerVariant.Persistent" Open="@_isDesktop" Elevation="1"

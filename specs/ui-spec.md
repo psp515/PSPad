@@ -90,6 +90,10 @@ default branch before the first callback, flashing the wrong navigation on
 load. Both branches live in the DOM at all times, separated only by CSS
 resolved before first paint.
 
+**Mobile app bar.** Below `md`, a dense `MudAppBar` carries only the
+hamburger and `ConnectionStatus`. No account avatar — identity lives in the
+sidebar's `AccountBadge`, one tap away behind the hamburger.
+
 ---
 
 ## 3. Page structure
