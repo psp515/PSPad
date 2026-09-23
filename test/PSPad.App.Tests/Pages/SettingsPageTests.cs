@@ -3,8 +3,10 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Bunit;
 using Bunit.TestDoubles;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PSPad.App.Api;
+using PSPad.App.Sync;
 using PSPad.App.Auth;
 using PSPad.App.Pages;
 using PSPad.App.State;
@@ -103,18 +105,15 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task SigningOutClearsTheLocalSessionAndTheReplicaAndNotifiesTheStateProvider()
+    public async Task SigningOutClearsTheLocalSessionAndTheReplica()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
-        var notifications = 0;
-        _authProvider!.AuthenticationStateChanged += _ => notifications++;
 
         var page = Render<SettingsPage>();
         page.Find(".pspad-sign-out").Click();
 
         Assert.Null(_sessions!.Current);
         Assert.Null(await _replica!.OwnerAsync());
-        Assert.Equal(1, notifications);
     }
 
     [Fact]
@@ -136,20 +135,39 @@ public class SettingsPageTests : Bunit.TestContext
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
         var navigation = Services.GetRequiredService<BunitNavigationManager>();
-        bool? clearedWhenLeaving = null;
-        navigation.LocationChanged += (_, _) => clearedWhenLeaving = _sessions!.Current is null;
+        string? whereWeStillWere = null;
+
+        var page = Render<SettingsPage>();
+        _sessions!.Cleared = () => whereWeStillWere = navigation.Uri;
+        page.Find(".pspad-sign-out").Click();
+
+        Assert.Equal("http://localhost/", whereWeStillWere);
+        Assert.StartsWith("http://localhost:8080/", navigation.Uri);
+    }
+
+    [Fact]
+    public void SigningOutEndsTheKeycloakSessionAndComesBackToTheWelcomeScreen()
+    {
+        // Dropping only the local session leaves Keycloak's own alive, and the next authorization
+        // bounce signs the same user straight back in without ever asking.
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
 
         var page = Render<SettingsPage>();
         page.Find(".pspad-sign-out").Click();
 
-        Assert.True(clearedWhenLeaving);
-        Assert.EndsWith("authentication/logout", navigation.Uri);
+        Assert.StartsWith(
+            "http://localhost:8080/realms/psplace/protocol/openid-connect/logout?", navigation.Uri);
+        Assert.Contains("client_id=pspad-frontend", navigation.Uri);
+        Assert.Contains(
+            $"post_logout_redirect_uri={Uri.EscapeDataString("http://localhost/welcome")}",
+            navigation.Uri);
     }
 
     [Fact]
-    public void SigningOutAnnouncesTheAnonymousStateOnlyOnceTheLogoutRouteIsReached()
+    public void SigningOutStaysLocalAndAnonymousWhenThereIsNoNetworkToReachKeycloakOn()
     {
-        Arrange(displayName: "Ada", email: "ada@example.com");
+        Arrange(displayName: "Ada", email: "ada@example.com", online: false);
         var navigation = Services.GetRequiredService<BunitNavigationManager>();
         var routeWhenAnnounced = new List<string>();
         _authProvider!.AuthenticationStateChanged += _ => routeWhenAnnounced.Add(navigation.Uri);
@@ -157,7 +175,8 @@ public class SettingsPageTests : Bunit.TestContext
         var page = Render<SettingsPage>();
         page.Find(".pspad-sign-out").Click();
 
-        Assert.All(routeWhenAnnounced, route => Assert.EndsWith("authentication/logout", route));
+        Assert.Equal("http://localhost/welcome", navigation.Uri);
+        Assert.All(routeWhenAnnounced, route => Assert.EndsWith("/welcome", route));
         Assert.NotEmpty(routeWhenAnnounced);
     }
 
@@ -173,9 +192,18 @@ public class SettingsPageTests : Bunit.TestContext
         Assert.Contains("Dark", page.Markup);
     }
 
-    AppState Arrange(string displayName, string email, bool respondWithNullTimeZone = false)
+    AppState Arrange(
+        string displayName, string email, bool respondWithNullTimeZone = false, bool online = true)
     {
         _replica = AppTestHost.Arrange(this, User, Today);
+        Services.AddSingleton<IConnectivity>(new FixedConnectivity(online));
+        Services.AddSingleton<IConfiguration>(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Keycloak:Authority"] = "http://localhost:8080/realms/psplace",
+                ["Keycloak:ClientId"] = "pspad-frontend"
+            })
+            .Build());
         _sessions = new InMemoryLocalSessionStore(
             new LocalSession(User, displayName, email, "UTC", "refresh-token", DateTimeOffset.UtcNow));
         _authProvider = new LocalAuthenticationStateProvider(_sessions);
@@ -199,6 +227,17 @@ public class SettingsPageTests : Bunit.TestContext
         }));
 
         return state;
+    }
+
+    sealed class FixedConnectivity(bool online) : IConnectivity
+    {
+        public bool IsOnline => online;
+
+#pragma warning disable CS0067
+        public event Action? CameOnline;
+
+        public event Action? Changed;
+#pragma warning restore CS0067
     }
 
     sealed class EchoTimeZoneHandler(Guid userId, string displayName, string email, bool respondWithNullTimeZone)

@@ -41,6 +41,14 @@ public class ReplicaScriptTests
     }
 
     [Fact]
+    public void ClearingTheSessionAlsoDropsTheCredentialsTheOidcLibraryLeftInSessionStorage()
+    {
+        // A refresh token the app no longer owns is still a credential sitting on the device.
+        Assert.Contains("clearOidcCredentials();", Session);
+        Assert.Contains("key.startsWith('oidc.')", Session);
+    }
+
+    [Fact]
     public void ItSharesOneDatabaseOpener()
     {
         Assert.Contains("from './replica.js'", Session);

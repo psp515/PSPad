@@ -41,7 +41,8 @@ the old one's status line to point at the new number.
 | [0024](0024-authentication-callback-route-off-appshell.md) | Keep the OIDC login-callback route off AppShell's layout | Active (consequence amended by [0027](0027-local-session-gates-the-app-not-the-access-token.md)) | 2026-09-17 | identity, sync, offline |
 | [0025](0025-purge-on-any-user-mismatch-including-no-recorded-owner.md) | Purge local data on any signed-in/recorded-owner mismatch, including no recorded owner yet | Active (refines [0018](0018-purge-local-replica-on-user-switch.md)) | 2026-09-17 | offline, sync, identity |
 | [0026](0026-one-shared-realm-for-every-self-hosted-app.md) | One shared Keycloak realm for every self-hosted application | Active (amends [0015](0015-one-self-host-compose-stack.md)) | 2026-09-21 | identity, deployment, architecture |
-| [0027](0027-local-session-gates-the-app-not-the-access-token.md) | A durable local session, not the access token, decides whether the app opens | Active (amends [0024](0024-authentication-callback-route-off-appshell.md)'s consequence) | 2026-09-22 | identity, offline, sync, ui |
+| [0027](0027-local-session-gates-the-app-not-the-access-token.md) | A durable local session, not the access token, decides whether the app opens | Active (amends [0024](0024-authentication-callback-route-off-appshell.md)'s consequence; sign-out amended by [0028](0028-sign-out-ends-the-keycloak-session-directly.md)) | 2026-09-22 | identity, offline, sync, ui |
+| [0028](0028-sign-out-ends-the-keycloak-session-directly.md) | Sign-out ends the Keycloak session directly, and anonymous visitors land on a public welcome screen | Active (amends [0027](0027-local-session-gates-the-app-not-the-access-token.md)'s sign-out consequence) | 2026-09-23 | identity, offline, ui, security |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

@@ -332,7 +332,10 @@ sidebar for now, drawer footer with date/time and license) are `Active` and
 built on this branch. `adr/0027` (a durable local session, not the access
 token, gates the app) is `Active` and built on this branch too; it amends
 `adr/0024`'s consequence, since the login-callback route now renders branded
-fragments rather than the library's default text.
+fragments rather than the library's default text. `adr/0028` (sign-out ends
+the Keycloak session directly; signed-out visitors land on a public `/welcome`
+screen) is `Active` and built on this branch as well, and amends `adr/0027`'s
+sign-out consequence.
 
 ---
 

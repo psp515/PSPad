@@ -8,7 +8,8 @@ namespace PSPad.App.Tests.Auth;
 [UnitTest]
 public class RoutablePageAuthorizationTests
 {
-    static readonly Type[] PublicByDesign = [typeof(Authentication), typeof(NotFound)];
+    static readonly Type[] PublicByDesign =
+        [typeof(Authentication), typeof(Welcome), typeof(NotFound)];
 
     static readonly Type[] Guarded = typeof(App).Assembly.GetTypes()
         .Where(type => type.GetCustomAttributes(typeof(RouteAttribute), false).Length > 0)
@@ -38,6 +39,13 @@ public class RoutablePageAuthorizationTests
     public void TheAuthenticationRouteStaysReachableWithoutASession()
     {
         Assert.Empty(typeof(Authentication).GetCustomAttributes(typeof(AuthorizeAttribute), true));
+    }
+
+    [Fact]
+    public void TheWelcomeRouteStaysReachableWithoutASession()
+    {
+        // It is the screen a signed-out visitor is sent to; guarding it would loop.
+        Assert.Empty(typeof(Welcome).GetCustomAttributes(typeof(AuthorizeAttribute), true));
     }
 
     [Fact]

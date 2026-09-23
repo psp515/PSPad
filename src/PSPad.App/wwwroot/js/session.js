@@ -9,7 +9,21 @@ export function save(value) {
 }
 
 export function clear() {
+  clearOidcCredentials();
   return run('session', 'readwrite', session => session.clear());
+}
+
+function clearOidcCredentials() {
+  const stale = [];
+
+  for (let index = 0; index < sessionStorage.length; index += 1) {
+    const key = sessionStorage.key(index);
+    if (key && key.startsWith('oidc.')) {
+      stale.push(key);
+    }
+  }
+
+  stale.forEach(key => sessionStorage.removeItem(key));
 }
 
 export function captureOidcRefreshToken(authority, clientId) {

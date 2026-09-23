@@ -2,7 +2,7 @@
 title: A durable local session, not the access token, decides whether the app opens
 tags: [identity, offline, sync, ui]
 date: 2026-09-22
-status: Active
+status: Active (sign-out amended by ADR-0028)
 ---
 
 # ADR-0027: A durable local session, not the access token, decides whether the app opens

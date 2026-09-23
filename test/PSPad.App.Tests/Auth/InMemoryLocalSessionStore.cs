@@ -8,6 +8,8 @@ public sealed class InMemoryLocalSessionStore(LocalSession? session = null) : IL
 
     public int Clears { get; private set; }
 
+    public Action? Cleared { get; set; }
+
     public Task<LocalSession?> LoadAsync() => Task.FromResult(Current);
 
     public Task SaveAsync(LocalSession value)
@@ -20,6 +22,7 @@ public sealed class InMemoryLocalSessionStore(LocalSession? session = null) : IL
     {
         Current = null;
         Clears++;
+        Cleared?.Invoke();
         return Task.CompletedTask;
     }
 }

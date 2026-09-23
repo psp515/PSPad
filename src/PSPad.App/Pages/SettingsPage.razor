@@ -6,8 +6,11 @@
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.App.State.Outbox
+@using PSPad.App.Sync
 @using PSPad.App.Theme
 @using PSPad.Module.Tasks.Today
+@inject IConfiguration Configuration
+@inject IConnectivity Connectivity
 @inject PSPadApiClient Api
 @inject AppState State
 @inject ThemePreference Preference
@@ -97,10 +100,22 @@
         // Clearing before the redirect leaves the app is what makes an interrupted or offline
         // sign-out still a sign-out: the Keycloak round trip may never come back.
         await SignOut.ClearStorageAsync();
-        // Announcing the anonymous state while still on a route that requires authorization
-        // would send AuthorizeRouteView to the login page instead of the logout one.
-        Navigation.NavigateTo("authentication/logout");
-        SignOut.Announce();
+
+        if (!Connectivity.IsOnline)
+        {
+            // Announcing the anonymous state while still on a route that requires authorization
+            // would send AuthorizeRouteView back to the login page.
+            Navigation.NavigateTo("welcome");
+            SignOut.Announce();
+            return;
+        }
+
+        Navigation.NavigateTo(
+            KeycloakEndSession.UrlFor(
+                Configuration["Keycloak:Authority"]!,
+                Configuration["Keycloak:ClientId"]!,
+                Navigation.ToAbsoluteUri("welcome").ToString()),
+            forceLoad: true);
     }
 
     public void Dispose() => Sender.Sent -= OnCommandSent;
