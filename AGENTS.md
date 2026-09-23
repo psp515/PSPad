@@ -150,7 +150,9 @@ test/
   PSPad.TestInfrastructure/     Mongo fixture, trait constants, architecture guards
 brand/                   icon.svg — the single icon master
 docs/                    Astro documentation site, published to GitHub Pages
-specs/                   design specs — slice 1, and the client redesigns
+specs/                   design specs — ui-spec.md and backend-spec.md are the
+                         standing rulebooks; superseded design narratives
+                         live in git history, not the working tree
 adr/                     architecture decision records + index and template
 .superpowers/sdd/        working plans for in-flight features (not committed)
 docker/                  compose files, keycloak realm, nginx config
@@ -295,36 +297,21 @@ that one exists for running the app.
 
 Slice 1 is built and merged: foundation, tasks core, recurrence and Today, API
 and persistence, identity, history, PWA client, offline sync, responsive UI
-shell. The numbered plans that drove it are gone; the specs behind them are
-not, and stay authoritative:
+shell. The numbered plans that drove it are gone; two standing rulebooks
+replaced the narrative design specs that drove the work (`slice-design.md`,
+`offline-first-session-design.md`, `ui-ux-redesign-design.md`,
+`ui-redesign-2-design.md`, `ui-polish-design.md` — their content lives in
+`git log -- specs/`, not the working tree, and the ADRs they produced stay in
+`adr/`):
 
-- `specs/slice-design.md` — slice 1 end to end: project layout, command
-  pipeline, storage and index shapes, domain rules, sync, identity, HTTP
-  surface, containers, testing.
-- `specs/ui-ux-redesign-design.md` — the client's first redesign: theming, the
-  FAB contract, the breakpoint shell. Its navigation decisions (D1, D2, D4, D6,
-  D8) are superseded; its theme and `TaskRow` reasoning still stand.
-- `specs/ui-redesign-2-design.md` — the current client design: one navigation
-  tree at every width, area screens of list cards, the task detail overlay,
-  inline creation, local search, the sage palette. Its D6/D7 (no FAB; `⋯`
-  menu on the thing) are superseded for areas only by `adr/0022` — area
-  rename/delete now lives on a FAB on the area's own page; lists are
-  unaffected. Its local-search decision is temporarily superseded by
-  `adr/0023` — the sidebar's search field is gone and `/search` is
-  unreachable from the UI until it gets a new home.
-- `specs/ui-polish-design.md` — the current client's polish pass: correct
-  identity data (display name, time zone), a settings screen, a single brand
-  mark from first paint through loading skeletons, wider-screen grid layouts,
-  and the History screen's burndown chart.
-- `specs/offline-first-session-design.md` — the offline-first session model: a
-  durable `LocalSession` in IndexedDB, not a live access token, decides whether
-  the app opens; the token is reduced to a credential for calling the API, and
-  its absence means *offline*, never *sign in again*. Read it for anything
-  touching the boot sequence, the authentication state provider, token refresh
-  or the login and logout screens.
+- `specs/ui-spec.md` — component choice, layout and spacing, page structure,
+  visual/theming and navigation/auth screen shapes. Authoritative for
+  anything touching the client's UI.
+- `specs/backend-spec.md` — project layout, command pipeline, storage and
+  index shapes, domain rules, sync, identity and session, HTTP surface,
+  containers. Authoritative for anything below the UI.
 
-That polish pass's plans — identity fixes, the burndown chart, loading and
-grid work, settings and nav — are merged on this branch. `adr/0012`
+Both are rulebooks describing current behaviour, not history. `adr/0012`
 (ordering module) is still `Proposed` and still unbuilt. `adr/0022` (drawer
 cleanup: dead account-menu arrow removed, Settings and App info as sidebar
 rows, area actions moved to a FAB) and `adr/0023` (search pulled from the
@@ -379,14 +366,14 @@ that outlives its plans is committed to `specs/<topic>-design.md`; in-flight
 plans live under `.superpowers/sdd/<feature>/` and are not committed.
 
 **Specs are a knowledge source, not history.** Before work on a subsystem,
-read the spec that covers it — `specs/slice-design.md` for anything touching
-the command pipeline, storage shape, domain rules, sync or the HTTP surface;
-`specs/ui-redesign-2-design.md` for anything touching the client's
-navigation, theme or screens, with `specs/ui-ux-redesign-design.md` behind it
-as the superseded first pass. They answer *what the intended behaviour is*
-at a level the code does not state and AGENTS.md only summarises. Where a
-spec and an ADR disagree, the ADR wins — it is the decision of record; where
-a spec and the code disagree, say so rather than silently following either.
+read the spec that covers it — `specs/backend-spec.md` for anything touching
+the command pipeline, storage shape, domain rules, sync, identity/session or
+the HTTP surface; `specs/ui-spec.md` for anything touching the client's
+component choice, layout, page structure, theming or navigation. They answer
+*what the intended behaviour is* at a level the code does not state and
+AGENTS.md only summarises. Where a spec and an ADR disagree, the ADR wins —
+it is the decision of record; where a spec and the code disagree, say so
+rather than silently following either.
 
 **Docs ship with the change.** A change to what a self-hoster runs (compose
 services, environment variables, secrets, ports) updates

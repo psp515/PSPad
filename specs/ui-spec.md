@@ -1,0 +1,236 @@
+# UI Spec
+
+Standing rules for building `PSPad.App` screens so every page looks and
+behaves like it belongs to the same product. This is a rulebook, not a
+history — it states what the client does now and how to extend it
+consistently. For *why* a given rule exists, the superseded design
+narratives (`ui-ux-redesign-design.md`, `ui-redesign-2-design.md`,
+`ui-polish-design.md`) and the ADRs they cite are in git history
+(`git log -- specs/`); the ADRs themselves stay in `adr/` and remain the
+decision record where a rule traces back to one.
+
+Where this spec and an ADR disagree, the ADR wins. Where this spec and the
+code disagree, say so rather than silently following either.
+
+---
+
+## 1. Component choice
+
+**Reach for a MudBlazor component before writing custom markup or a new
+`pspad-*` CSS class.** A custom class is for things MudBlazor genuinely has
+no component for — the brand mark, page-specific chrome — never a
+substitute for a component that already exists.
+
+| Need | Use | Not |
+|---|---|---|
+| A responsive card/row grid | `MudGrid` + `MudItem` | a hand-rolled CSS `display: grid` class |
+| A bordered/elevated container (card, panel, row group) | `MudPaper` | a `<div>` with a custom border class |
+| A button, icon button, floating action button | `MudButton` / `MudIconButton` / `MudFab` | a styled `<button>` |
+| A dropdown of actions on one item | `MudMenu` + `MudMenuItem` | a custom popover |
+| A modal confirmation or input | `MudDialog` via `IDialogService` | a hand-rolled overlay |
+| A form field | `MudTextField` / `MudSelect` / `MudCheckBox` | a bare `<input>` |
+| A loading placeholder | `MudSkeleton`, wrapped in `MudPaper` where the real content has a border | an empty `<div>` |
+| Vertical/horizontal flex spacing | `MudStack`, or `d-flex`/`gap-*` utility classes | inline `style` margins |
+| A chart | `MudChart` | a third-party charting library |
+
+Before adding a new `pspad-*` class, check this table first. If nothing
+fits, the class is legitimate — but it means the styling is specific to
+PSPad's brand or a one-off page need, not a generic layout or component
+problem MudBlazor already solves.
+
+---
+
+## 2. Layout & spacing
+
+**Card/row grids.** Every place a list of cards or rows is drawn uses
+`MudGrid Spacing="4"`, one `MudItem xs="12" sm="6" md="4" xl="3"` per item:
+
+```razor
+<MudGrid Spacing="4">
+    @foreach (var item in items)
+    {
+        <MudItem xs="12" sm="6" md="4" xl="3">
+            <Card ... />
+        </MudItem>
+    }
+</MudGrid>
+```
+
+One column on a phone, two on a tablet, three inside the app's
+`MaxWidth.Large` container, four once the viewport passes MudBlazor's `xl`
+breakpoint (1920px). `sm`/`md`/`xl` (600px/960px/1920px) match
+`BrowserViewport`'s own `Breakpoint.MdAndUp` split used for the sidebar, so
+the grid and the shell agree on where "wide enough" starts. Row-flow, not
+column-flow — DOM order stays reading order for keyboard and screen-reader
+navigation.
+
+Applied on: `AreaBoard` (list cards), `GoalsPage` (goal cards, active and
+achieved separately), `Today` (overdue, due and completed each as their own
+grid), `InboxPage`, `ListPage` (open and completed separately), and both
+skeleton components (`RowSkeleton`, `CardSkeleton`).
+
+**Spacing scale.**
+
+| Use | Value |
+|---|---|
+| Grid gap between cards/rows | `Spacing="4"` on `MudGrid` |
+| Card interior padding | `pa-3` |
+| Row interior padding | `px-3 py-2` |
+| Space below a page title | `mb-4` |
+| Space between stacked sections | `mt-4` / `mb-4` |
+
+**Containers.** Page content sits in the app's `MaxWidth.Large` container
+(set once in `AppShell`) — individual pages never set their own max width.
+
+**Sidebar breakpoint.** The sidebar is permanent at `md`+ (≥960px) and a
+temporary drawer behind a hamburger below it, using MudBlazor's display
+utilities (`d-none d-md-flex` / `d-md-none`), never `MudHidden` — `MudHidden`
+resolves through `IBreakpointService`'s JS round trip and renders its
+default branch before the first callback, flashing the wrong navigation on
+load. Both branches live in the DOM at all times, separated only by CSS
+resolved before first paint.
+
+---
+
+## 3. Page structure
+
+**Every page gated on `_loaded`.** A page carries `bool _loaded`, set true
+only at the end of its data reload. Until then it renders a skeleton
+(`RowSkeleton` or `CardSkeleton`), never an empty state or a "Nothing here"
+message — a screen must never show an empty state it has not verified.
+
+**Title pattern.** A page's title is `<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Title</MudText>`,
+rendered both in the loading and loaded branches so nothing jumps on load.
+
+**Shared row/card components, never duplicated per screen.** One
+`TaskRow` renders in My Day, list cards, the list screen and search
+results. One `ListCard`, one `GoalCard`, one `InboxItemCard`. A single
+component per concept means a rule like never-overdue-for-recurring-tasks
+cannot drift between the screens that display it.
+
+**Task detail is an overlay, addressed by query string.** Clicking a task
+appends `?task={taskId}` to the current route; `TaskDetailPanel` renders as
+a slide-in overlay (full-screen below `md`) without reflowing the page. The
+query string, not component state, so back-navigation closes the panel
+without leaving the screen, and a task is linkable.
+
+**Creation is offered where the thing is created**, never through a
+floating action button competing with an inline affordance on the same
+screen:
+
+| Thing | Where |
+|---|---|
+| Task | `+` icon in a list card's header (opens `AddTaskDialog`); inline field at the foot of the list screen |
+| List | `+ New list` at the foot of an area screen |
+| Area | `+ New area` pinned in the sidebar |
+| Goal | inline field at the top of the Goals page |
+| Inbox capture | a permanently open field at the top of the Inbox |
+
+**Rename/delete on the thing.** Lists carry a `⋯` menu (`ThingMenu`) in
+their card header and on the list screen's title. Areas are the one
+exception: rename/delete live on a `MudFab` (`Icons.Material.Filled.MoreHoriz`)
+on the area's own page, opposite the `+ New list` FAB — not in the sidebar
+row, which stays a plain, scannable destination.
+
+**Empty top-level FAB budget.** Outside the area-page exception above, the
+client has no page-level FAB for creation; a FAB is only for the area
+rename/delete menu described above.
+
+---
+
+## 4. Visual & theming
+
+**Palette.** Defined once in `Theme/PSPadTheme.cs`, never hardcoded as a
+hex literal in a component. Sage green as an accent on near-neutral
+grounds, not a tint across the whole interface:
+
+| Token | Light | Dark |
+|---|---|---|
+| Primary | `#4E7A5E` | `#8FBF9F` |
+| Secondary | `#6E8F7C` | `#7FAE94` |
+| Error | `#B3261E` | `#F2A9A2` |
+| Warning | `#B26A00` | `#E0B252` |
+| Background | `#F7F8F5` | `#141815` |
+| Surface | `#FFFFFF` | `#1C211D` |
+| Drawer/Appbar background | `#EDF1EA` | `#171C18` |
+| TextPrimary | `#1E2A22` | `#E4E9E4` |
+| TextSecondary | `#66736B` | `#94A199` |
+
+Theme is **System / Light / Dark**, per device, held in `localStorage` via
+`ThemePreference` — never on the `User` aggregate. It lives in
+`SettingsPage`, not the account badge or any menu (a three-way toggle
+nested in a menu item is not reliably keyboard-reachable).
+
+**Typography scale.**
+
+| Typo | Use |
+|---|---|
+| `Typo.h5` | page title, `Color.Primary` |
+| `Typo.subtitle2` | card/section header (list name, goal name) |
+| `Typo.body1` / `Typo.body2` | primary row/card content |
+| `Typo.caption` | metadata (due date, counts, timestamps) |
+
+**Color usage.** `Color.Primary` for the interactive/brand accent,
+`Color.Error` for overdue and destructive affordances, `Color.Default` for
+neutral icons. Never an inline hex color in markup — go through a `Color`
+enum value or a palette-driven CSS variable.
+
+**Icons.** Material icons via `Icons.Material.Filled.*` / `Icons.Material.Outlined.*`.
+Filled = active/set state, Outlined = inactive/unset state — e.g. a starred
+task shows `Filled.Star`, an unstarred one shows `Outlined.StarBorder`.
+
+**One brand mark, boot to first screen.** `wwwroot/index.html` inlines the
+`brand/icon.svg` mark (sage tile, animated check-path draw) as the boot
+splash, painted before `MudBlazor.min.css` and before WASM starts. The same
+mark renders inside the app via `Components/BrandLoader.razor` wherever the
+shell would otherwise show a bare spinner, and on the four `Authentication.razor`
+fragments (`LoggingIn`, `CompletingLoggingIn`, `LogOut`, `LogOutSucceeded`) —
+never the library's default unstyled text. A `data-theme` attribute is
+stamped on `<html>` from `localStorage["pspad.theme"]` before first paint
+(falling back to `prefers-color-scheme`) so the boot splash never flashes
+the wrong theme.
+
+**Charts.** `MudChart` (bundled with MudBlazor, no extra dependency) takes
+the sage palette for free — the History screen's burndown chart is the one
+example.
+
+---
+
+## 5. Navigation & auth screen shapes
+
+**Sidebar**, top to bottom, one navigation tree at every width: a
+non-interactive `AccountBadge` (avatar, display name, email — a label, not
+a control), then a nav group of **My Day / Inbox / Goals / History**,
+divider, the user's areas in `Position` order plus **+ New area**, divider,
+**Settings** / **App info**, then a spacer, then a footer (connection
+status, current date/time, "PSPad · GPL v3"). There is no search field in
+the sidebar (temporarily unreachable from the UI, tracked as a known gap,
+not a page to recreate speculatively) and no dropdown on the account badge.
+
+**Routes:**
+
+| Route | Screen |
+|---|---|
+| `/` | My Day |
+| `/inbox` | Inbox |
+| `/areas/{areaId}` | area screen — list cards |
+| `/lists/{listId}` | list screen |
+| `/goals` | Goals |
+| `/history` | History + burndown chart |
+| `/settings` | Settings (account, time zone, theme, sync status) |
+| `/app-info` | version, license, docs/repo links |
+| `/search` | search results (currently unreachable from the UI) |
+| `/welcome` | public, signed-out landing screen |
+| `/authentication/{action}` | OIDC login/logout flow, branded fragments |
+| `?task={taskId}` | task detail overlay, on any of the above |
+
+**Signed-out visitors land on `/welcome`**, not a bare login redirect.
+Sign-out ends the Keycloak session directly rather than only clearing local
+state. The boot splash is held — no application chrome renders — until the
+client has decided whether it is opening with a local session or sending
+the user to sign in; see `specs/backend-spec.md` §6 for the decision
+itself.
+
+**Never build a second settings surface.** Account-level config (time zone,
+theme, sign-out) belongs on `/settings`. Per-item actions belong on the
+item (`⋯` menu, or the area's own FAB per §3). There is no third pattern.
