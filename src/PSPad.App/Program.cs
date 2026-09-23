@@ -87,6 +87,7 @@ builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>
 builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<SyncCoordinator>();
+builder.Services.AddScoped<ISyncTrigger>(sp => sp.GetRequiredService<SyncCoordinator>());
 
 var host = builder.Build();
 

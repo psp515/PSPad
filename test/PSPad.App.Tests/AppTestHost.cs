@@ -54,7 +54,7 @@ public static class AppTestHost
         collapse.LoadAsync().GetAwaiter().GetResult();
         context.Services.AddSingleton(collapse);
 
-        context.Services.AddSingleton(services => new CommandSender(services, work));
+        context.Services.AddSingleton(services => new CommandSender(services, work, new NoOpSyncTrigger()));
         context.Services.AddSingleton(new ReplicaOwnership(replica, outbox));
         context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop: true));
         context.Services.AddSingleton<ServerReachability>();
@@ -88,5 +88,10 @@ public static class AppTestHost
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    sealed class NoOpSyncTrigger : ISyncTrigger
+    {
+        public Task SyncNowAsync() => Task.CompletedTask;
     }
 }

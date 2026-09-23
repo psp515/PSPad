@@ -1,8 +1,9 @@
 using PSPad.Abstractions;
+using PSPad.App.Sync;
 
 namespace PSPad.App.State.Dispatch;
 
-public sealed class CommandSender(IServiceProvider services, ReplicaUnitOfWork work)
+public sealed class CommandSender(IServiceProvider services, ReplicaUnitOfWork work, ISyncTrigger sync)
 {
     public event Action? Sent;
 
@@ -22,6 +23,7 @@ public sealed class CommandSender(IServiceProvider services, ReplicaUnitOfWork w
         if (result.Accepted)
         {
             Sent?.Invoke();
+            _ = sync.SyncNowAsync();
         }
 
         return result;
