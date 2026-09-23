@@ -103,25 +103,53 @@ h1[tabindex="-1"]:focus {
 
 .pspad-welcome-hero {
     padding: 32px 0 56px;
+}
+
+.pspad-welcome-hero-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: center;
+    justify-items: center;
+    gap: 20px;
     text-align: center;
 }
 
-.pspad-welcome-hero .pspad-boot-mark {
-    width: 72px;
-    height: 72px;
+@media (min-width: 600px) {
+    .pspad-welcome-hero-grid {
+        grid-template-columns: auto 1fr;
+        justify-items: start;
+        text-align: left;
+        gap: 40px;
+    }
+}
+
+.pspad-welcome-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pspad-welcome-icon .pspad-boot-mark {
+    width: 140px;
+    height: 140px;
 }
 
 .pspad-welcome-hero h1 {
-    margin: 20px 0 12px;
+    margin: 0 0 8px;
     font-size: clamp(1.9rem, 5vw, 3rem);
     line-height: 1.15;
 }
 
-.pspad-welcome-claim {
-    margin: 0 auto;
-    max-width: 52ch;
-    font-size: 1.15rem;
-    color: var(--pspad-welcome-muted);
+.pspad-welcome-tagline {
+    display: inline-block;
+    font-size: 1.05rem;
+    color: var(--pspad-welcome-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.pspad-welcome-tagline:hover {
+    filter: brightness(1.1);
 }
 
 .pspad-welcome-actions {
@@ -129,7 +157,18 @@ h1[tabindex="-1"]:focus {
     flex-wrap: wrap;
     gap: 12px;
     justify-content: center;
-    margin-top: 32px;
+    margin-top: 24px;
+}
+
+@media (min-width: 600px) {
+    .pspad-welcome-actions {
+        justify-content: flex-start;
+    }
+}
+
+.pspad-welcome-demo {
+    max-width: 960px;
+    margin: 0 auto 48px;
 }
 
 .pspad-welcome-button {

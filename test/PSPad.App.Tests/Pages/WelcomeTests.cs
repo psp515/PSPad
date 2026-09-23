@@ -12,6 +12,10 @@ namespace PSPad.App.Tests.Pages;
 [UnitTest]
 public class WelcomeTests : Bunit.TestContext
 {
+    static readonly DateOnly Today = new(2026, 3, 10);
+
+    public WelcomeTests() => AppTestHost.Arrange(this, Guid.NewGuid(), Today);
+
     [Fact]
     public void ItNeverMountsAppShell()
     {
@@ -24,13 +28,22 @@ public class WelcomeTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ItLeadsWithTheBrandAndTheClaim()
+    public void ItLeadsWithTheBrandAndTheHeadline()
     {
         var page = Render<Welcome>();
 
         Assert.Contains("pspad-boot-mark", page.Markup);
-        Assert.Contains("Your day, on your own hardware.", page.Markup);
-        Assert.Contains("A self-hosted GTD notepad.", page.Markup);
+        Assert.Contains("Your day, planned.", page.Markup);
+    }
+
+    [Fact]
+    public void TheTaglineLinksToWhatGtdIs()
+    {
+        var page = Render<Welcome>();
+
+        var tagline = page.Find(".pspad-welcome-tagline");
+        Assert.Contains("An approach for GTD techniques", tagline.TextContent);
+        Assert.Equal("https://en.wikipedia.org/wiki/Getting_Things_Done", tagline.GetAttribute("href"));
     }
 
     [Fact]
@@ -62,6 +75,18 @@ public class WelcomeTests : Bunit.TestContext
         var page = Render<Welcome>();
 
         Assert.Equal("https://psp515.com/pspad", page.Find(".pspad-welcome-docs").GetAttribute("href"));
+    }
+
+    [Fact]
+    public void ItPreviewsMyDayWithRealTaskRows()
+    {
+        var page = Render<Welcome>();
+
+        Assert.Contains("Renew the domain", page.Markup);
+        Assert.Contains("Draft the release notes", page.Markup);
+        Assert.Contains("Read a book", page.Markup);
+        Assert.Contains("Water the plants", page.Markup);
+        Assert.Equal(4, page.FindComponents<PSPad.App.Components.TaskRow>().Count);
     }
 
     [Fact]

@@ -1,22 +1,49 @@
 @page "/welcome"
 @layout PublicLayout
+@using PSPad.Abstractions
 @using PSPad.App.Auth
 @using PSPad.App.Components
 @using PSPad.App.Layout
+@using PSPad.App.Theme
+@using PSPad.Module.Tasks.Recurrence
+@using PSPad.Module.Tasks.Tasks
 @inject NavigationManager Navigation
+@inject IClock Clock
+@inject ThemePreference Preference
 
 <div class="pspad-welcome">
+    <MudThemeProvider @ref="_themeProvider" Theme="@PSPadTheme.Instance" IsDarkMode="@Preference.IsDark" />
+
     <header class="pspad-welcome-hero">
-        <BrandMark />
-        <h1>Your day, on your own hardware.</h1>
-        <p class="pspad-welcome-claim">A self-hosted GTD notepad.</p>
-        <p class="pspad-welcome-actions">
-            <a class="pspad-welcome-button pspad-welcome-login" href="@LoginUrl">Log in</a>
-            <a class="pspad-welcome-button pspad-welcome-docs" href="https://psp515.com/pspad">
-                See what it does
-            </a>
-        </p>
+        <div class="pspad-welcome-hero-grid">
+            <div class="pspad-welcome-icon">
+                <BrandMark />
+            </div>
+            <div>
+                <h1>Your day, planned.</h1>
+                <a class="pspad-welcome-tagline" href="https://en.wikipedia.org/wiki/Getting_Things_Done"
+                   target="_blank" rel="noopener noreferrer">
+                    An approach for GTD techniques
+                </a>
+                <p class="pspad-welcome-actions">
+                    <a class="pspad-welcome-button pspad-welcome-login" href="@LoginUrl">Log in</a>
+                    <a class="pspad-welcome-button pspad-welcome-docs" href="https://psp515.com/pspad">
+                        Docs
+                    </a>
+                </p>
+            </div>
+        </div>
     </header>
+
+    <section class="pspad-welcome-demo">
+        <MudText Typo="Typo.subtitle1" Class="mb-2">My Day</MudText>
+        <MudPaper Outlined="true">
+            @foreach (var task in DemoTasks)
+            {
+                <TaskRow Task="@task" Today="@Today" />
+            }
+        </MudPaper>
+    </section>
 
     <section class="pspad-welcome-proof">
         @foreach (var (title, body) in Proof)
@@ -40,6 +67,13 @@
         ("Works with no signal", "The whole app runs offline and syncs when you are back.")
     ];
 
+    MudThemeProvider? _themeProvider;
+    bool _themeReady;
+
+    DateOnly Today => DateOnly.FromDateTime(Clock.UtcNow.UtcDateTime);
+
+    IReadOnlyList<TodoTask> DemoTasks = [];
+
     string LoginUrl
     {
         get
@@ -51,4 +85,54 @@
                 : $"authentication/login?returnUrl={Uri.EscapeDataString(returnUrl)}";
         }
     }
+
+    protected override void OnInitialized() => DemoTasks = BuildDemoTasks();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _themeProvider is null || _themeReady)
+        {
+            return;
+        }
+
+        _themeReady = true;
+        var systemPrefersDark = await _themeProvider.GetSystemDarkModeAsync();
+        await Preference.InitialiseAsync(systemPrefersDark);
+        StateHasChanged();
+    }
+
+    IReadOnlyList<TodoTask> BuildDemoTasks()
+    {
+        var listId = Guid.NewGuid();
+        var user = Guid.NewGuid();
+        var now = Clock.UtcNow;
+
+        var renewDomain = NewTask(listId, user, now, "Renew the domain");
+        Due(renewDomain, user, now, Today.AddDays(-1));
+
+        var draftReleaseNotes = NewTask(listId, user, now, "Draft the release notes");
+        Due(draftReleaseNotes, user, now, Today);
+
+        var readABook = NewTask(listId, user, now, "Read a book");
+        Recur(readABook, user, now, Today.AddDays(-30));
+
+        var waterThePlants = NewTask(listId, user, now, "Water the plants");
+        Due(waterThePlants, user, now, Today);
+
+        return [renewDomain, draftReleaseNotes, readABook, waterThePlants];
+    }
+
+    static TodoTask NewTask(Guid listId, Guid user, DateTimeOffset now, string name)
+    {
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(null, new CreateTask(Guid.NewGuid(), user, Guid.NewGuid(), listId, name), now));
+        return task;
+    }
+
+    static void Due(TodoTask task, Guid user, DateTimeOffset now, DateOnly dueOn) =>
+        task.ApplyAll(TodoTask.Decide(task, new SetTaskDueDate(Guid.NewGuid(), user, task.Id, dueOn), now));
+
+    static void Recur(TodoTask task, Guid user, DateTimeOffset now, DateOnly from) =>
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskRecurrence(Guid.NewGuid(), user, task.Id, RecurrenceRule.Daily(from)), now));
 }
