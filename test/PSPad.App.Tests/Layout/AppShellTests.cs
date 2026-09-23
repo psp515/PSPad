@@ -347,6 +347,44 @@ public class AppShellTests : Bunit.TestContext
         Assert.Empty(shell.FindComponents<BrandLoader>());
     }
 
+    [Fact]
+    public async Task ASignInAfterTheAnonymousRedirectStillWaitsForItsOwnFirstPull()
+    {
+        // AuthorizeRouteView renders the signed-out redirect inside this shell, so by the time
+        // the signed-in shell mounts the coordinator has already run -- and finished -- a pull
+        // that had no session behind it.
+        var store = new InMemoryLocalSessionStore(null);
+        Arrange(sessionStore: store);
+        var pull = new TaskCompletionSource<SyncResponse?>();
+        Services.AddSingleton<ISyncApi>(new QueuedSyncApi(
+            Task.FromResult<SyncResponse?>(null), pull.Task));
+        Services.AddSingleton<IConnectivity>(new AlwaysOnline());
+
+        Render<AppShell>();
+        await DisposeComponentsAsync();
+
+        await store.SaveAsync(new LocalSession(
+            User, "Zoe Session", "zoe@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow));
+        var shell = Render<AppShell>();
+
+        Assert.NotEmpty(shell.FindComponents<BrandLoader>());
+
+        pull.SetResult(new SyncResponse(9, new Dictionary<string, System.Text.Json.JsonElement[]>(), []));
+
+        shell.WaitForAssertion(() => Assert.Empty(shell.FindComponents<BrandLoader>()));
+    }
+
+    sealed class QueuedSyncApi(params Task<SyncResponse?>[] pulls) : ISyncApi
+    {
+        int _call;
+
+        public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
+            Task.FromResult<IReadOnlyList<CommandResponse>>([]);
+
+        public Task<SyncResponse?> SyncAsync(long since) =>
+            pulls[Math.Min(_call++, pulls.Length - 1)];
+    }
+
     sealed class AlwaysOnline : IConnectivity
     {
         public bool IsOnline => true;

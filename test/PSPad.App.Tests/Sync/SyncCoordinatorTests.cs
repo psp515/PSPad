@@ -78,6 +78,23 @@ public class SyncCoordinatorTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task StartingAgainHandsBackAFreshPullRatherThanTheOneFromBeforeTheSignIn()
+    {
+        // AuthorizeRouteView renders the anonymous redirect inside AppShell, so the shell starts
+        // the coordinator once while signed out and again once signed in. A latched first pull
+        // would hand the signed-in shell a task that had already finished with no session.
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"));
+
+        coordinator.Start();
+        await coordinator.Started;
+
+        coordinator.Start();
+        await coordinator.Started;
+
+        Assert.Equal(2, coordinator.Revision);
+    }
+
+    [Fact]
     public void ThereIsSomethingToAwaitEvenBeforeAnythingHasStarted()
     {
         var coordinator = CoordinatorFor(AnAreaCalled("Dom"));

@@ -338,7 +338,9 @@ screen) is `Active` and built on this branch as well, and amends `adr/0027`'s
 sign-out consequence. `adr/0029` (a sync revision cascades from `AppShell` so
 replica-backed screens redraw when data lands) is `Active` and built here too,
 as is `adr/0030` (the shell waits for the first pull on a device holding
-nothing for this user), which amends it.
+nothing for this user), which amends it, and `adr/0031` (every `Start` hands
+back its own pull, because `AuthorizeRouteView` mounts the shell once signed
+out and once signed in), which supplies the mechanism 0030 needed.
 
 ---
 

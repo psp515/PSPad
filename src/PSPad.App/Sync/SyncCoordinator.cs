@@ -19,15 +19,17 @@ public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity
 
     public void Start()
     {
-        if (_started)
+        if (!_started)
         {
-            return;
+            _started = true;
+            connectivity.CameOnline += () => _ = SyncNowAsync();
+            _ = LoopAsync();
         }
 
-        _started = true;
-        connectivity.CameOnline += () => _ = SyncNowAsync();
+        // The shell starts the coordinator once for the signed-out redirect it renders and again
+        // once signed in. Handing the second caller the first pull would hand it a task that
+        // already finished with no session behind it.
         Started = SyncNowAsync();
-        _ = LoopAsync();
     }
 
     async Task LoopAsync()
