@@ -377,6 +377,24 @@ public class AppShellTests : Bunit.TestContext
         return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
     }
 
+    [Fact]
+    public void LosingTheServerWarnsTheUserOnceRatherThanOnlyTheConsole()
+    {
+        Arrange();
+        var reachability = Services.GetRequiredService<ServerReachability>();
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+
+        Render<AppShell>();
+
+        reachability.Failed(browserIsOnline: true);
+        reachability.Failed(browserIsOnline: true);
+
+        var shown = snackbar.ShownSnackbars.ToList();
+        Assert.Single(shown);
+        Assert.Contains("server", shown[0].Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(Severity.Warning, shown[0].Severity);
+    }
+
     sealed class SpyConnectivity : IConnectivity
     {
         public int IsOnlineReads { get; private set; }
@@ -392,6 +410,8 @@ public class AppShellTests : Bunit.TestContext
 
 #pragma warning disable CS0067
         public event Action? CameOnline;
+
+        public event Action? Changed;
 #pragma warning restore CS0067
     }
 

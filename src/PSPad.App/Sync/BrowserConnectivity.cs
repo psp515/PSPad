@@ -18,6 +18,8 @@ public sealed class BrowserConnectivity : IConnectivity, IAsyncDisposable
 
     public event Action? CameOnline;
 
+    public event Action? Changed;
+
     async Task InitializeAsync()
     {
         _module = await _js.InvokeAsync<IJSObjectReference>("import", "./js/connectivity.js");
@@ -30,10 +32,15 @@ public sealed class BrowserConnectivity : IConnectivity, IAsyncDisposable
     {
         IsOnline = true;
         CameOnline?.Invoke();
+        Changed?.Invoke();
     }
 
     [JSInvokable]
-    public void OnOffline() => IsOnline = false;
+    public void OnOffline()
+    {
+        IsOnline = false;
+        Changed?.Invoke();
+    }
 
     public async ValueTask DisposeAsync()
     {

@@ -1,3 +1,4 @@
+using PSPad.App.Sync;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
@@ -56,8 +57,21 @@ public static class AppTestHost
         context.Services.AddSingleton(services => new CommandSender(services, work));
         context.Services.AddSingleton(new ReplicaOwnership(replica, outbox));
         context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop: true));
+        context.Services.AddSingleton<ServerReachability>();
+        context.Services.AddSingleton<IConnectivity>(new AlwaysOnline());
 
         return replica;
+    }
+
+    sealed class AlwaysOnline : IConnectivity
+    {
+        public bool IsOnline => true;
+
+#pragma warning disable CS0067
+        public event Action? CameOnline;
+
+        public event Action? Changed;
+#pragma warning restore CS0067
     }
 
     sealed class FixedClock(DateOnly today) : IClock

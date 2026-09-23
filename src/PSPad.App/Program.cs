@@ -67,8 +67,15 @@ builder.Services.AddPSPadCommands();
 
 var apiBaseAddress = builder.Configuration["Api:BaseAddress"]!;
 
+builder.Services.AddSingleton<ServerReachability>();
+builder.Services.AddScoped<ServerReachabilityHandler>();
+
 builder.Services.AddHttpClient<PSPadApiClient>(client => client.BaseAddress = new Uri(apiBaseAddress))
+    .AddHttpMessageHandler<ServerReachabilityHandler>()
     .AddHttpMessageHandler<SessionAuthorizationHandler>();
+
+// An unreachable server is a supported state here, not a fault worth a stack trace per request.
+builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
 
 builder.Services.AddScoped<AppState>();
 builder.Services.AddScoped<ThemePreference>();

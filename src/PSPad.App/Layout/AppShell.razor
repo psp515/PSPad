@@ -25,6 +25,9 @@
 @inject IViewport Viewport
 @inject ILocalSessionStore Sessions
 @inject IClock Clock
+@inject ServerReachability Reachability
+@inject IConnectivity Connectivity
+@inject ISnackbar Snackbar
 @implements IDisposable
 @implements IAsyncDisposable
 
@@ -38,6 +41,7 @@
         <MudIconButton id="pspad-drawer-toggle" Class="d-md-none" Icon="@Icons.Material.Filled.Menu"
                        Color="Color.Inherit" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
         <MudSpacer />
+        <ConnectionStatus />
         <AccountBadge Email="@_email" DisplayName="@_displayName" UserId="@State.UserId"
                       AvatarOnly="true" />
     </MudAppBar>
@@ -87,6 +91,7 @@
     protected override async Task OnInitializedAsync()
     {
         Coordinator.Changed += OnSyncChanged;
+        Reachability.Changed += OnReachabilityChanged;
         Preference.Changed += OnPreferenceChanged;
         Sender.Sent += OnCommandSent;
         Navigation.LocationChanged += OnLocationChanged;
@@ -273,11 +278,22 @@
 
     void OnSyncChanged() => InvokeAsync(ReloadAreasAndCountsAsync);
 
+    void OnReachabilityChanged() => InvokeAsync(() =>
+    {
+        if (!Reachability.IsReachable)
+        {
+            Snackbar.Add("Can't reach the server. Working from local data.", Severity.Warning);
+        }
+
+        StateHasChanged();
+    });
+
     void OnCommandSent() => InvokeAsync(ReloadAreasAndCountsAsync);
 
     public void Dispose()
     {
         Coordinator.Changed -= OnSyncChanged;
+        Reachability.Changed -= OnReachabilityChanged;
         Preference.Changed -= OnPreferenceChanged;
         Sender.Sent -= OnCommandSent;
         Navigation.LocationChanged -= OnLocationChanged;
