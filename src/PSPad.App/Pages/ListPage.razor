@@ -27,26 +27,30 @@ else if (_list is not null)
     </div>
 
     <MudPaper Outlined="true">
-        <div class="pspad-grid">
+        <MudGrid Spacing="4">
             @foreach (var task in _open)
             {
-                <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
-                         OnOpen="@Open" />
+                <MudItem xs="12" sm="6" md="4" xl="3">
+                    <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
+                             OnOpen="@Open" />
+                </MudItem>
             }
-        </div>
+        </MudGrid>
 
         @if (_done.Count > 0)
         {
             <MudDivider />
             <MudExpansionPanels Elevation="0">
                 <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
-                    <div class="pspad-grid">
+                    <MudGrid Spacing="4">
                         @foreach (var task in _done)
                         {
-                            <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync"
-                                     OnStar="@StarAsync" OnOpen="@Open" />
+                            <MudItem xs="12" sm="6" md="4" xl="3">
+                                <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync"
+                                         OnStar="@StarAsync" OnOpen="@Open" />
+                            </MudItem>
                         }
-                    </div>
+                    </MudGrid>
                 </MudExpansionPanel>
             </MudExpansionPanels>
         }

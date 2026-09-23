@@ -419,6 +419,14 @@ claim green without running the suite.
 **Keep the Tasks module pure.** An infrastructure dependency inside
 `PSPad.Module.Tasks` breaks AD-3 and AD-4. Find another way.
 
+**Prefer MudBlazor components over custom markup.** Before adding a new
+`pspad-*` CSS class or a hand-rolled `<div>` layout, check whether a
+MudBlazor component already does it — grids are `MudGrid`/`MudItem`, cards
+and bordered containers are `MudPaper`. A custom class is for things
+MudBlazor genuinely has no component for (brand marks, page-specific
+theming), not a substitute for one that exists. See `specs/ui-spec.md` for
+the fuller ruleset.
+
 **Never add an audit table.** History comes from events (AD-2).
 
 **Every test gets a category trait** (§7). Unmarked test is a broken test.

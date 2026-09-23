@@ -1,12 +1,14 @@
-<div class="pspad-grid" role="status" aria-busy="true">
+<MudGrid Spacing="4" role="status" aria-busy="true">
     @for (var index = 0; index < Count; index++)
     {
-        <div class="pspad-row-skeleton px-3 py-2">
-            <MudSkeleton SkeletonType="SkeletonType.Text" Width="70%" />
-            <MudSkeleton SkeletonType="SkeletonType.Text" Width="35%" Height="12px" />
-        </div>
+        <MudItem xs="12" sm="6" md="4" xl="3">
+            <MudPaper Outlined="true" Class="px-3 py-2">
+                <MudSkeleton SkeletonType="SkeletonType.Text" Width="70%" />
+                <MudSkeleton SkeletonType="SkeletonType.Text" Width="35%" Height="12px" />
+            </MudPaper>
+        </MudItem>
     }
-</div>
+</MudGrid>
 
 @code {
     [Parameter] public int Count { get; set; } = 5;

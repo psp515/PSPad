@@ -68,31 +68,6 @@ h1[tabindex="-1"]:focus {
     .pspad-brand-loader .pspad-boot-check { animation: none; stroke-dashoffset: 0; }
 }
 
-.pspad-grid {
-    display: grid;
-    gap: 16px;
-    grid-template-columns: repeat(1, 1fr);
-}
-
-@media (min-width: 600px) {
-    .pspad-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (min-width: 960px) {
-    .pspad-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-@media (min-width: 1920px) {
-    .pspad-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-
-
 .pspad-welcome {
     --pspad-welcome-bg: #F7F8F5;
     --pspad-welcome-surface: #FFFFFF;
