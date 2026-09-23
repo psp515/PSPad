@@ -90,13 +90,14 @@ public class WelcomeTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ItShowsWhatTheAppDoes()
+    public void ItNoLongerListsTheFeatureCards()
     {
+        // The hero and the My Day preview are the whole screen now -- feature detail lives on the docs site.
         var page = Render<Welcome>();
 
-        Assert.Contains("One Today screen", page.Markup);
-        Assert.Contains("One Inbox", page.Markup);
-        Assert.Contains("Areas and lists", page.Markup);
+        Assert.DoesNotContain("One Today screen", page.Markup);
+        Assert.DoesNotContain("One Inbox", page.Markup);
+        Assert.DoesNotContain("Areas and lists", page.Markup);
     }
 
     [Theory]

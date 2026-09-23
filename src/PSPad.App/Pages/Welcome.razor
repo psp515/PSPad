@@ -14,59 +14,37 @@
 <div class="pspad-welcome">
     <MudThemeProvider @ref="_themeProvider" Theme="@PSPadTheme.Instance" IsDarkMode="@Preference.IsDark" />
 
-    <header class="pspad-welcome-hero">
-        <div class="pspad-welcome-hero-grid">
+    <div class="pspad-welcome-content">
+        <header class="pspad-welcome-text">
             <div class="pspad-welcome-icon">
                 <BrandMark />
             </div>
-            <div>
-                <h1>Your day, planned.</h1>
-                <a class="pspad-welcome-tagline" href="https://en.wikipedia.org/wiki/Getting_Things_Done"
-                   target="_blank" rel="noopener noreferrer">
-                    An approach for GTD techniques
+            <h1>Your day, planned.</h1>
+            <a class="pspad-welcome-tagline" href="https://en.wikipedia.org/wiki/Getting_Things_Done"
+               target="_blank" rel="noopener noreferrer">
+                An approach for GTD techniques
+            </a>
+            <p class="pspad-welcome-actions">
+                <a class="pspad-welcome-button pspad-welcome-login" href="@LoginUrl">Log in</a>
+                <a class="pspad-welcome-button pspad-welcome-docs" href="https://psp515.com/pspad">
+                    Docs
                 </a>
-                <p class="pspad-welcome-actions">
-                    <a class="pspad-welcome-button pspad-welcome-login" href="@LoginUrl">Log in</a>
-                    <a class="pspad-welcome-button pspad-welcome-docs" href="https://psp515.com/pspad">
-                        Docs
-                    </a>
-                </p>
-            </div>
-        </div>
-    </header>
+            </p>
+        </header>
 
-    <section class="pspad-welcome-demo">
-        <MudText Typo="Typo.subtitle1" Class="mb-2">My Day</MudText>
-        <MudPaper Outlined="true">
-            @foreach (var task in DemoTasks)
-            {
-                <TaskRow Task="@task" Today="@Today" />
-            }
-        </MudPaper>
-    </section>
-
-    <section class="pspad-welcome-proof">
-        @foreach (var (title, body) in Proof)
-        {
-            <article class="pspad-welcome-card">
-                <h2>@title</h2>
-                <p>@body</p>
-            </article>
-        }
-    </section>
+        <section class="pspad-welcome-demo">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">My Day</MudText>
+            <MudPaper Outlined="true">
+                @foreach (var task in DemoTasks)
+                {
+                    <TaskRow Task="@task" Today="@Today" />
+                }
+            </MudPaper>
+        </section>
+    </div>
 </div>
 
 @code {
-    static readonly (string Title, string Body)[] Proof =
-    [
-        ("One Today screen", "What's due, overdue first, in your own time zone."),
-        ("One Inbox", "Capture anything. Decide where it goes later."),
-        ("Areas and lists", "Work, home, side projects — each with its own lists."),
-        ("Tasks and steps", "Due dates, priorities, goals, and steps on every task."),
-        ("Yours, and multi-user", "Your hardware, your Keycloak, your data."),
-        ("Works with no signal", "The whole app runs offline and syncs when you are back.")
-    ];
-
     MudThemeProvider? _themeProvider;
     bool _themeReady;
 
