@@ -2,7 +2,7 @@
 title: Every Start hands back its own pull, because the shell mounts once signed out and once signed in
 tags: [sync, identity, ui, offline]
 date: 2026-09-23
-status: Active (amends ADR-0030)
+status: Active (amends ADR-0030; concurrency contract refined by ADR-0032)
 ---
 
 # ADR-0031: Every Start hands back its own pull, because the shell mounts once signed out and once signed in

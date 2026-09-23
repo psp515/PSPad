@@ -4,10 +4,13 @@ using PSPad.App.State.Outbox;
 namespace PSPad.App.Sync;
 
 public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity, IOutbox outbox, ISnackbar snackbar)
+    : ISyncTrigger
 {
     static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(60);
 
     bool _started;
+    Task? _inFlight;
+    bool _rerunRequested;
 
     public int PendingCount { get; private set; }
 
@@ -44,7 +47,32 @@ public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity
         }
     }
 
-    public async Task SyncNowAsync()
+    // A command handler and the poll loop can both call this within the same tick. PushAsync
+    // peeks the outbox without removing entries until its response lands, so two overlapping
+    // runs would peek and resend the same batch -- callers that arrive mid-run share the
+    // in-flight task and get one guaranteed follow-up pass instead of a second parallel run.
+    public Task SyncNowAsync()
+    {
+        if (_inFlight is { IsCompleted: false })
+        {
+            _rerunRequested = true;
+            return _inFlight;
+        }
+
+        _inFlight = RunAsync();
+        return _inFlight;
+    }
+
+    async Task RunAsync()
+    {
+        do
+        {
+            _rerunRequested = false;
+            await RunOnceAsync();
+        } while (_rerunRequested);
+    }
+
+    async Task RunOnceAsync()
     {
         if (connectivity.IsOnline)
         {

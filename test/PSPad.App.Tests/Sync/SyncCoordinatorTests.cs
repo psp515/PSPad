@@ -102,6 +102,34 @@ public class SyncCoordinatorTests : Bunit.TestContext
         Assert.True(coordinator.Started.IsCompleted);
     }
 
+    [Fact]
+    public async Task OverlappingCallsShareOneRunAndQueueExactlyOneFollowUpPass()
+    {
+        // CommandSender will call this after every command; two commands queued in quick
+        // succession must not run SyncService.SyncAsync twice in parallel -- PushAsync peeks
+        // the outbox without removing entries until the response lands, so a second concurrent
+        // push would peek and resend the same batch.
+        Services.AddMudServices();
+        var outbox = new InMemoryOutbox();
+        var api = new GatedApi(AnAreaCalled("Dom"));
+        var coordinator = new SyncCoordinator(
+            new SyncService(api, new InMemoryReplica(), outbox),
+            new FixedConnectivity(true),
+            outbox,
+            Services.GetRequiredService<ISnackbar>());
+
+        var first = coordinator.SyncNowAsync();
+        var second = coordinator.SyncNowAsync();
+
+        Assert.Same(first, second);
+        Assert.Equal(1, api.SyncCalls);
+
+        api.Release();
+        await first;
+
+        Assert.Equal(2, api.SyncCalls);
+    }
+
     static SyncResponse AnAreaCalled(string name)
     {
         var area = new Area();
@@ -153,5 +181,24 @@ public class SyncCoordinatorTests : Bunit.TestContext
 
         public event Action? Changed;
 #pragma warning restore CS0067
+    }
+
+    sealed class GatedApi(SyncResponse pull) : ISyncApi
+    {
+        readonly TaskCompletionSource _gate = new();
+
+        public int SyncCalls { get; private set; }
+
+        public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
+            Task.FromResult<IReadOnlyList<CommandResponse>>([]);
+
+        public async Task<SyncResponse?> SyncAsync(long since)
+        {
+            SyncCalls++;
+            await _gate.Task;
+            return pull;
+        }
+
+        public void Release() => _gate.SetResult();
     }
 }
