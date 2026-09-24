@@ -246,3 +246,43 @@ h1[tabindex="-1"]:focus {
 .pspad-muted {
     color: var(--mud-palette-text-secondary) !important;
 }
+
+.pspad-step {
+    min-height: 44px;
+    padding: 0 4px;
+    border-radius: 6px;
+}
+
+.pspad-step:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.pspad-step .mud-checkbox {
+    margin: 0;
+}
+
+.pspad-step-lead {
+    display: inline-flex;
+    justify-content: center;
+    width: 44px;
+    flex-shrink: 0;
+}
+
+.pspad-step-remove {
+    opacity: 0.55;
+}
+
+.pspad-step:hover .pspad-step-remove,
+.pspad-step-remove:focus-visible {
+    opacity: 1;
+}
+
+.pspad-step-add .mud-input {
+    margin-top: 0 !important;
+}
+
+.pspad-step-add input {
+    padding: 0 !important;
+    height: 20px;
+    font-size: var(--mud-typography-body2-size);
+}

@@ -38,14 +38,14 @@
 
         @if (_task is not null)
         {
-            <div class="pl-4 pr-2 pb-2">
+            <div class="pl-5 pr-3 pb-3">
                 <StepList Task="@_task" UserId="@State.UserId" Disabled="@Disabled" Changed="@ReloadAsync" />
             </div>
         }
 
         <MudDivider />
 
-        <div class="py-2 px-1 d-flex flex-column">
+        <div class="py-2 px-2 d-flex flex-column gap-1">
             <DueDateRow Value="@DueOn" ValueChanged="@DueDateAsync" Today="@State.Today"
                         Disabled="@(Disabled || _task?.IsRecurring == true)" />
 

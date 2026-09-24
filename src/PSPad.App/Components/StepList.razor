@@ -5,10 +5,11 @@
 <div class="pspad-steps d-flex flex-column">
     @foreach (var step in Task.Steps)
     {
-        <div class="pspad-step d-flex align-center">
-            <MudCheckBox T="bool" Value="@step.Checked" ValueChanged="@(value => CheckAsync(step, value))"
-                         Color="Color.Primary" Dense="true" Disabled="@Disabled" />
-            <MudText Typo="Typo.body2" Class="flex-grow-1"
+        <div class="pspad-step d-flex align-center gap-1">
+            <MudCheckBox T="bool" Class="pspad-step-check" Value="@step.Checked"
+                         ValueChanged="@(value => CheckAsync(step, value))" Color="Color.Primary"
+                         Size="Size.Small" Disabled="@Disabled" aria-label="@step.Name" />
+            <MudText Typo="Typo.body2" Class="@($"flex-grow-1 pspad-step-name {(step.Checked ? "pspad-muted" : "")}")"
                      Style="@(step.Checked ? "text-decoration:line-through" : "")">@step.Name</MudText>
             <MudIconButton Class="pspad-step-remove" Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
                            aria-label="@($"Remove {step.Name}")" Disabled="@Disabled"
@@ -16,11 +17,14 @@
         </div>
     }
 
-    <MudTextField T="string" Class="pspad-step-add" @bind-Value="_newStep"
-                  Placeholder="@(Task.Steps.Count == 0 ? "Add step" : "Next step")" Underline="false"
-                  Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync"
-                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Add"
-                  AdornmentColor="Color.Primary" OnAdornmentClick="@AddAsync" />
+    <div class="pspad-step pspad-step-add-row d-flex align-center gap-1">
+        <span class="pspad-step-lead">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary" />
+        </span>
+        <MudTextField T="string" Class="pspad-step-add flex-grow-1 mt-0" @bind-Value="_newStep"
+                      Placeholder="@(Task.Steps.Count == 0 ? "Add step" : "Next step")" Underline="false"
+                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
+    </div>
 </div>
 
 @code {
