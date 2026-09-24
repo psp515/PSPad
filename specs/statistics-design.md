@@ -63,11 +63,16 @@ public interface IDomainEventDispatcher
     Task PublishAsync(IReadOnlyList<DomainEventEnvelope> events, CancellationToken ct);
 }
 
-public interface IDomainEventHandler<in TEvent> where TEvent : DomainEvent
+public interface IDomainEventHandler
 {
     Task HandleAsync(DomainEventEnvelope envelope, CancellationToken ct);
 }
 ```
+
+The handler is deliberately not generic. Statistics has two of them — records and
+labels — and each switches on the event type exactly as `Aggregate.When` already
+does. A generic `IDomainEventHandler<TEvent>` would buy nothing but reflection to
+resolve the closed type at dispatch.
 
 `MongoUnitOfWork.CommitAsync` already assigns every event its `seq` inside the
 transaction. After `CommitTransactionAsync` returns it publishes those
@@ -76,7 +81,7 @@ command into a failed one — the write did succeed.
 
 The in-process dispatcher writes to a bounded `Channel<DomainEventEnvelope>`.
 A single `DomainEventPump : BackgroundService` drains it, opening a DI scope per
-batch and resolving `IDomainEventHandler<T>`.
+batch and resolving every registered `IDomainEventHandler`.
 
 **Startup replay.** Before draining, the pump reads Statistics' stored
 `lastProcessedSeq` and replays `events` from there to the head through the same
