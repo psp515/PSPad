@@ -24,6 +24,22 @@ public sealed class PSPadApiClient(HttpClient http) : IHistorySource, ISyncApi
         }
     }
 
+    public async Task<DeleteAccountResponse?> DeleteAccountAsync()
+    {
+        try
+        {
+            var response = await http.DeleteAsync("api/account");
+
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<DeleteAccountResponse>()
+                : null;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+    }
+
     public async Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes)
     {
         var response = await http.PostAsJsonAsync("api/commands", envelopes);
