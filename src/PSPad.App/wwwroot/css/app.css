@@ -32,13 +32,6 @@ h1[tabindex="-1"]:focus {
     z-index: 1200;
 }
 
-.pspad-area-fab {
-    position: fixed;
-    bottom: 24px;
-    left: 24px;
-    z-index: 1200;
-}
-
 .pspad-brand-loader {
     display: flex;
     align-items: center;

@@ -41,18 +41,17 @@ else if (_area is not null)
         }
     </MudGrid>
 
-    <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Label="New list"
-            Class="pspad-fab" OnClick="@NewListAsync" />
-
-    <MudMenu Class="pspad-area-fab" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft">
-        <ActivatorContent>
-            <MudFab Color="Color.Default" StartIcon="@Icons.Material.Filled.MoreHoriz" />
-        </ActivatorContent>
-        <ChildContent>
-            <MudMenuItem OnClick="@RenameAreaAsync">Rename</MudMenuItem>
-            <MudMenuItem OnClick="@DeleteAreaAsync">Delete</MudMenuItem>
-        </ChildContent>
-    </MudMenu>
+    <PageFabMenu>
+        <MudTooltip Text="New list">
+            <MudMenuItem OnClick="@NewListAsync" Icon="@Icons.Material.Filled.Add" />
+        </MudTooltip>
+        <MudTooltip Text="Rename area">
+            <MudMenuItem OnClick="@RenameAreaAsync" Icon="@Icons.Material.Filled.Edit" />
+        </MudTooltip>
+        <MudTooltip Text="Delete area">
+            <MudMenuItem OnClick="@DeleteAreaAsync" Icon="@Icons.Material.Filled.Delete" />
+        </MudTooltip>
+    </PageFabMenu>
 }
 else
 {
