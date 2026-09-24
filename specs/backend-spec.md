@@ -304,7 +304,7 @@ redirect. The Keycloak realm sets `ssoSessionIdleTimeout` (30 days) and
 the 7-day local trust window, or the server invalidates the refresh token
 before the client-side window becomes the effective bound.
 
-**Account deletion** (`DELETE /api/account`, see `adr/0033`) is the one
+**Account deletion** (`DELETE /api/account`, see `adr/0034`) is the one
 operation in the system that is not an `ICommand`. It can't run offline or
 through the outbox — there is nothing left to sync a queued "delete
 everything" against — and no aggregate owns "all of a user's data," so it

@@ -5,7 +5,7 @@ date: 2026-09-24
 status: Active
 ---
 
-# ADR-0033: Account deletion bypasses the command pipeline for a generic cross-collection wipe
+# ADR-0034: Account deletion bypasses the command pipeline for a generic cross-collection wipe
 
 ## Context
 

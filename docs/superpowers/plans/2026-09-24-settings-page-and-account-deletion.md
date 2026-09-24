@@ -4,11 +4,11 @@
 
 **Goal:** Close GitHub issue #23 — rework `SettingsPage` (theme as a list selector, a searchable time zone, a responsive grid, sign-out relocated into the Account card) and add a working, fully-synchronous account-deletion flow (all of a user's data plus their Keycloak login).
 
-**Architecture:** The UI changes are a straight edit of `SettingsPage.razor` following patterns already established elsewhere in the client (`MudGrid`/`MudItem`, `MudAutocomplete`, the `Dialogs.ShowAsync<T>` idiom). Account deletion is a single non-command endpoint (`DELETE /api/account`, per `adr/0033`) that wipes every MongoDB collection for the caller's `userId` inside one transaction, then calls Keycloak's Admin REST API using the bootstrap master-realm admin credentials already in `docker/.env.example`. The client confirms via a type-your-email dialog, awaits the call inline, then clears its replica, outbox and session before landing on `/welcome`.
+**Architecture:** The UI changes are a straight edit of `SettingsPage.razor` following patterns already established elsewhere in the client (`MudGrid`/`MudItem`, `MudAutocomplete`, the `Dialogs.ShowAsync<T>` idiom). Account deletion is a single non-command endpoint (`DELETE /api/account`, per `adr/0034`) that wipes every MongoDB collection for the caller's `userId` inside one transaction, then calls Keycloak's Admin REST API using the bootstrap master-realm admin credentials already in `docker/.env.example`. The client confirms via a type-your-email dialog, awaits the call inline, then clears its replica, outbox and session before landing on `/welcome`.
 
 **Tech Stack:** .NET 10, Blazor WebAssembly, MudBlazor 9.9.0, MongoDB.Driver, xUnit, bUnit, Testcontainers.
 
-**Spec:** `specs/ui-spec.md` (§2, §4, §5 — grid, theme/time zone controls, Danger zone) and `specs/backend-spec.md` (§6, §7 — `DELETE /api/account` mechanics), `adr/0033-account-deletion-bypasses-the-command-pipeline.md`.
+**Spec:** `specs/ui-spec.md` (§2, §4, §5 — grid, theme/time zone controls, Danger zone) and `specs/backend-spec.md` (§6, §7 — `DELETE /api/account` mechanics), `adr/0034-account-deletion-bypasses-the-command-pipeline.md`.
 
 ## Global Constraints
 
@@ -976,7 +976,7 @@ In `docker/compose.yaml`, under the `api` service's `environment:` block, add tw
       Keycloak__AdminPassword: ${KEYCLOAK_ADMIN_PASSWORD}
 ```
 
-`KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD` already exist in `docker/.env.example` with description comments (they provision Keycloak's own bootstrap admin) — no `.env.example` change needed, per `adr/0033`'s decision to reuse them rather than add a new realm client.
+`KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD` already exist in `docker/.env.example` with description comments (they provision Keycloak's own bootstrap admin) — no `.env.example` change needed, per `adr/0034`'s decision to reuse them rather than add a new realm client.
 
 - [ ] **Step 3: Run tests to verify they pass**
 
@@ -1565,6 +1565,6 @@ Expected: all PASS.
 
 - [ ] **Manually verify in the running app** (optional but recommended before closing #23): use the `run` skill to launch the compose stack, sign in, and confirm — the theme list, the searchable time zone, the grid at a wide viewport, sign-out inside the Account card, and a full delete-account round trip against a real Keycloak.
 
-- [ ] **Update AGENTS.md §8** once this branch is merged, adding `adr/0033` to the list of ADRs built on the branch, per AGENTS.md's own "any new or changed architectural decision gets an ADR, immediately" and "§5/ADR set never drift apart" rules. Not done as part of this plan's tasks because §8 describes what is already merged on `main`, not in-flight work.
+- [x] **Update AGENTS.md §8** once this branch is merged, adding `adr/0034` to the list of ADRs built on the branch, per AGENTS.md's own "any new or changed architectural decision gets an ADR, immediately" and "§5/ADR set never drift apart" rules. Done as part of the final review's fix wave (renumbered from 0033 to 0034 when merging main, which had independently claimed 0033 for `adr/0033-one-fab-per-page-action-set.md`).
 
 - [ ] **Update `docs/src/pages/features.astro`** (per AGENTS.md "Docs ship with the change") to mention account deletion as a capability, since it is new user-facing scope. Check the file's existing structure before editing — out of scope for this plan's file list since it wasn't explored during brainstorming; do this as a small follow-up edit before or alongside the PR that merges this branch.

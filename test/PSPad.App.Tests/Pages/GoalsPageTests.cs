@@ -1,6 +1,5 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.Abstractions;
@@ -168,17 +167,28 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task TypingIntoTheNewGoalFieldCreatesItInTheReplica()
+    public async Task ClickingTheFabOpensADialogThatCreatesTheGoalInTheReplica()
     {
         var replica = Arrange();
 
-        var page = Render<GoalsPage>();
-        var input = page.Find("input[placeholder='New goal']");
-        input.Input("Learn to bake");
-        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        var page = Render(BuildGoalsPageWithPopovers());
+        page.Find(".pspad-fab").Click();
+        var dialog = page.FindComponent<MudDialogProvider>();
+        dialog.Find("div.mud-dialog input").Input("Learn to bake");
+        dialog.FindAll("button").Last().Click();
 
         var goals = await replica.LoadAllAsync<Goal>(User);
         Assert.Contains(goals, goal => goal.Name == "Learn to bake");
+    }
+
+    [Fact]
+    public void TheInlineNewGoalFieldIsGone()
+    {
+        Arrange();
+
+        var page = Render<GoalsPage>();
+
+        Assert.Empty(page.FindAll("input[placeholder='New goal']"));
     }
 
     [Fact]

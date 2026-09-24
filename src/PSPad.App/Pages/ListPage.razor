@@ -4,10 +4,12 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<TodoTask> TaskStore
+@inject IDocumentStore<Goal> GoalStore
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -20,13 +22,13 @@
 }
 else if (_list is not null)
 {
-    <div class="d-flex align-center mb-4">
-        <MudText Typo="Typo.h5" Color="Color.Primary">@_list.Name</MudText>
-        <ThingMenu Class="pspad-list-menu ml-2"
-                   OnRename="@RenameAsync" OnDelete="@DeleteAsync" />
-    </div>
+    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">@_list.Name</MudText>
 
     <MudPaper Outlined="true">
+        @if (_open.Count == 0 && _done.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="pa-4">No tasks yet.</MudText>
+        }
         <MudGrid Spacing="4">
             @foreach (var task in _open)
             {
@@ -54,13 +56,22 @@ else if (_list is not null)
                 </MudExpansionPanel>
             </MudExpansionPanels>
         }
-
-        <MudDivider />
-        <MudTextField T="string" @bind-Value="_newTask" Placeholder="Add task" Immediate="true"
-                      Variant="Variant.Text" Margin="Margin.Dense" Class="px-3"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Add"
-                      OnKeyDown="@OnKeyDown" />
     </MudPaper>
+
+    <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
+        <MudTooltip Text="Add task">
+            <MudFabMenuItem OnClick="@AddTaskAsync" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
+                            Size="Size.Small" UserAttributes="@AddTaskAttributes" />
+        </MudTooltip>
+        <MudTooltip Text="Rename list">
+            <MudFabMenuItem OnClick="@RenameAsync" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
+                            Size="Size.Small" UserAttributes="@RenameListAttributes" />
+        </MudTooltip>
+        <MudTooltip Text="Delete list">
+            <MudFabMenuItem OnClick="@DeleteAsync" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Primary"
+                            Size="Size.Small" UserAttributes="@DeleteListAttributes" />
+        </MudTooltip>
+    </MudFabMenu>
 }
 else
 {
@@ -76,7 +87,12 @@ else
     TaskList? _list;
     IReadOnlyList<TodoTask> _open = [];
     IReadOnlyList<TodoTask> _done = [];
-    string _newTask = "";
+    IReadOnlyList<Goal> _goals = [];
+
+    static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
+    static readonly Dictionary<string, object> AddTaskAttributes = new() { ["aria-label"] = "Add task" };
+    static readonly Dictionary<string, object> RenameListAttributes = new() { ["aria-label"] = "Rename list" };
+    static readonly Dictionary<string, object> DeleteListAttributes = new() { ["aria-label"] = "Delete list" };
 
     protected override async Task OnParametersSetAsync() => await ReloadAsync();
 
@@ -90,6 +106,7 @@ else
 
         _open = [.. mine.Where(task => task.CompletedAt is null)];
         _done = [.. mine.Where(task => task.CompletedAt is not null)];
+        _goals = await GoalStore.LoadAllAsync(State.UserId, CancellationToken.None);
 
         _loaded = true;
     }
@@ -169,17 +186,40 @@ else
         await ReloadAsync();
     }
 
-    async Task OnKeyDown(KeyboardEventArgs args)
+    async Task AddTaskAsync()
     {
-        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_newTask))
+        var parameters = new DialogParameters<AddTaskDialog> { { dialog => dialog.Goals, _goals } };
+        var dialog = await Dialogs.ShowAsync<AddTaskDialog>("New task", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled || result.Data is not AddTaskResult task || task.Name.Length == 0)
         {
             return;
         }
 
-        await Sender.SendAsync(new CreateTask(
-            Guid.NewGuid(), State.UserId, Guid.NewGuid(), ListId, _newTask));
+        var taskId = Guid.NewGuid();
+        await Sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, taskId, ListId, task.Name));
 
-        _newTask = "";
+        if (task.DueOn is not null)
+        {
+            await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, taskId, task.DueOn));
+        }
+
+        if (task.Priority != Priority.None)
+        {
+            await Sender.SendAsync(new SetTaskPriority(Guid.NewGuid(), State.UserId, taskId, task.Priority));
+        }
+
+        if (task.GoalId is not null)
+        {
+            await Sender.SendAsync(new LinkTaskToGoal(Guid.NewGuid(), State.UserId, taskId, task.GoalId));
+        }
+
+        if (task.Starred)
+        {
+            await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, taskId, true));
+        }
+
         await ReloadAsync();
     }
 }

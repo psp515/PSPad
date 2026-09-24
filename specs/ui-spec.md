@@ -126,27 +126,39 @@ a slide-in overlay (full-screen below `md`) without reflowing the page. The
 query string, not component state, so back-navigation closes the panel
 without leaving the screen, and a task is linkable.
 
-**Creation is offered where the thing is created**, never through a
-floating action button competing with an inline affordance on the same
-screen:
+**Every page has a page-level action set** — creating the thing the page
+is about, renaming or deleting that thing — distinct from the item-level
+actions each card or row already carries (a list card's own `⋯`/`+`, a
+goal card's achieve/reopen, an inbox item's open). A page's action set
+drives exactly one bottom-right affordance, a bare `MudFab` or a `MudFab`
+wrapped in a `MudMenu`, both pinned with the `pspad-fab` CSS class. Built
+directly on each page, not through a shared component — each page's FAB is
+a handful of lines specific to that page's own actions:
 
-| Thing | Where |
-|---|---|
-| Task | `+` icon in a list card's header (opens `AddTaskDialog`); inline field at the foot of the list screen |
-| List | `+ New list` at the foot of an area screen |
-| Area | `+ New area` pinned in the sidebar |
-| Goal | inline field at the top of the Goals page |
-| Inbox capture | a permanently open field at the top of the Inbox |
+- **Zero actions** → no FAB.
+- **One action** → a plain `MudFab`, performing the action directly
+  (typically opening a dialog).
+- **Two or more actions** → one `MudFab` opening a `MudMenu` ("FAB Menu")
+  listing every action. Never a second FAB, never a header `⋯` competing
+  with it.
 
-**Rename/delete on the thing.** Lists carry a `⋯` menu (`ThingMenu`) in
-their card header and on the list screen's title. Areas are the one
-exception: rename/delete live on a `MudFab` (`Icons.Material.Filled.MoreHoriz`)
-on the area's own page, opposite the `+ New list` FAB — not in the sidebar
-row, which stays a plain, scannable destination.
+FAB Menu items (`MudMenuItem`) are icon-only, wrapped in `MudTooltip` for
+the accessible label — a visible text label is a last resort, only when no
+icon reads unambiguously on its own.
 
-**Empty top-level FAB budget.** Outside the area-page exception above, the
-client has no page-level FAB for creation; a FAB is only for the area
-rename/delete menu described above.
+| Page | Page-level actions | Result |
+|---|---|---|
+| Area | New list, Rename area, Delete area | FAB Menu |
+| Goals | Add goal | plain `MudFab` → `NameDialog` |
+| List | Add task, Rename list, Delete list | FAB Menu |
+| Inbox | Capture | plain `MudFab` → `CaptureDialog` |
+| My Day, Settings, History | none | no FAB |
+
+`+ New area` stays pinned in the sidebar — it is not a page's own action,
+it belongs to the sidebar's area list. Item-level rename/delete stays on
+the item's own `⋯` (`ThingMenu`) wherever the item is a card or row inside
+a page, e.g. `ListCard`'s and `GoalCard`'s own menus on `AreaBoard` and
+`GoalsPage` — those are untouched by the page-level rule above.
 
 ---
 
@@ -252,7 +264,7 @@ itself.
 
 **Never build a second settings surface.** Account-level config (time zone,
 theme, sign-out, account deletion) belongs on `/settings`. Per-item actions
-belong on the item (`⋯` menu, or the area's own FAB per §3). There is no
+belong on the item (`⋯` menu, or the page's own FAB per §3). There is no
 third pattern.
 
 **Sign-out lives inside the Account card**, under the avatar/name/email

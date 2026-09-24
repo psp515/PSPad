@@ -2,7 +2,7 @@
 title: Kill the dead account-menu arrow — Settings and App info become sidebar rows, area actions move to a FAB on the area page
 tags: [ui, identity, domain]
 date: 2026-09-17
-status: Active (amends [0020](0020-history-sidebar-row-and-settings-screen.md); supersedes [ui-redesign-2-design.md](../specs/ui-redesign-2-design.md) D6/D7 for area actions only)
+status: Active (amends [0020](0020-history-sidebar-row-and-settings-screen.md); supersedes [ui-redesign-2-design.md](../specs/ui-redesign-2-design.md) D6/D7 for area actions only; area-FAB arrangement amended by [0033](0033-one-fab-per-page-action-set.md))
 ---
 
 # ADR-0022: Kill the dead account-menu arrow — Settings and App info become sidebar rows, area actions move to a FAB on the area page
