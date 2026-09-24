@@ -53,6 +53,7 @@ builder.Services.AddSingleton<AuthenticationStateProvider>(
     services => services.GetRequiredService<LocalAuthenticationStateProvider>());
 builder.Services.AddScoped<SessionAuthorizationHandler>();
 builder.Services.AddScoped<LocalSignOut>();
+builder.Services.AddScoped<LocalAccountDeletion>();
 
 builder.Services.AddScoped<IReplica, IndexedDbReplica>();
 builder.Services.AddScoped<IOutbox, IndexedDbOutbox>();
