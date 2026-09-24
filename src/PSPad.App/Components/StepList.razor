@@ -2,25 +2,60 @@
 @using PSPad.Module.Tasks.Tasks
 @inject IServiceProvider Services
 
-<MudList T="string">
+<div class="pspad-steps d-flex flex-column">
+    <MudText Typo="Typo.caption">
+        @(Task.Steps.Count == 0 ? "Steps" : $"Steps · {Task.Steps.Count(step => step.Checked)} / {Task.Steps.Count}")
+    </MudText>
+
     @foreach (var step in Task.Steps)
     {
-        <MudListItem T="string">
-            <div class="d-flex align-center gap-2">
-                <input type="checkbox" checked="@step.Checked" disabled="@Disabled"
-                       @onchange="@(args => CheckAsync(step, (bool)args.Value!))" />
-                <MudText>@step.Name</MudText>
-                <MudButton Size="Size.Small" Disabled="@Disabled" OnClick="@(() => RemoveAsync(step))">remove</MudButton>
-            </div>
-        </MudListItem>
+        <div class="pspad-step d-flex align-center">
+            <MudCheckBox T="bool" Value="@step.Checked" ValueChanged="@(value => CheckAsync(step, value))"
+                         Color="Color.Primary" Dense="true" Disabled="@Disabled" />
+            <MudText Typo="Typo.body2" Class="flex-grow-1"
+                     Style="@(step.Checked ? "text-decoration:line-through" : "")">@step.Name</MudText>
+            <MudIconButton Class="pspad-step-remove" Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
+                           aria-label="@($"Remove {step.Name}")" Disabled="@Disabled"
+                           OnClick="@(() => RemoveAsync(step))" />
+        </div>
     }
-</MudList>
+
+    <MudTextField T="string" Class="pspad-step-add" @bind-Value="_newStep" Placeholder="Add step"
+                  Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Add"
+                  OnAdornmentClick="@AddAsync" />
+</div>
 
 @code {
     [Parameter, EditorRequired] public TodoTask Task { get; set; } = null!;
     [Parameter] public Guid UserId { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
+
+    string _newStep = "";
+
+    async System.Threading.Tasks.Task AddOnEnterAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await AddAsync();
+        }
+    }
+
+    async System.Threading.Tasks.Task AddAsync()
+    {
+        var name = _newStep.Trim();
+
+        if (Disabled || name.Length == 0)
+        {
+            return;
+        }
+
+        _newStep = "";
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new AddStep(Guid.NewGuid(), UserId, Task.Id, Guid.NewGuid(), name));
+        await Changed.InvokeAsync();
+    }
 
     async System.Threading.Tasks.Task CheckAsync(Step step, bool @checked)
     {

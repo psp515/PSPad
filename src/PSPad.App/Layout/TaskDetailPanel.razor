@@ -32,17 +32,21 @@
                       AutoFocus="@(Mode == PanelMode.Add)" Disabled="@Disabled" />
     </Header>
     <ChildContent>
-        <div class="pa-3 d-flex flex-column gap-3">
-            <MudDatePicker Class="pspad-task-due" Label="Due date" Date="@DueDate" DateChanged="@DueDateAsync"
+        <div class="pa-3 d-flex flex-column gap-4">
+            <DueDatePicker Value="@DueOn" ValueChanged="@DueDateAsync" Today="@State.Today"
                            Disabled="@(Disabled || _task?.IsRecurring == true)" />
 
-            <MudSelect T="Priority" Class="pspad-task-priority" Value="@Priority" ValueChanged="@PriorityAsync"
-                       Label="Priority" Disabled="@Disabled">
-                @foreach (var priority in Enum.GetValues<Priority>())
-                {
-                    <MudSelectItem T="Priority" Value="@priority">@priority</MudSelectItem>
-                }
-            </MudSelect>
+            <div class="d-flex flex-column gap-1">
+                <MudText Typo="Typo.caption">Priority</MudText>
+                <MudToggleGroup T="Priority" Class="pspad-task-priority" Value="@Priority"
+                                ValueChanged="@PriorityAsync" Color="Color.Primary" Size="Size.Small"
+                                Outlined="true" Delimiters="true" Disabled="@Disabled">
+                    @foreach (var priority in Enum.GetValues<Priority>())
+                    {
+                        <MudToggleItem Value="@priority" Text="@priority.ToString()" />
+                    }
+                </MudToggleGroup>
+            </div>
 
             <MudSelect T="Guid?" Class="pspad-task-goal" Value="@GoalId" ValueChanged="@LinkGoalAsync"
                        Label="Goal" Disabled="@Disabled">
@@ -52,41 +56,41 @@
                     <MudSelectItem T="Guid?" Value="@((Guid?)goal.Id)">@goal.Name</MudSelectItem>
                 }
             </MudSelect>
-        </div>
 
-        @if (_task is not null)
-        {
-            <MudDivider />
-
-            <div class="pa-3 d-flex flex-column gap-3">
+            @if (_task is not null)
+            {
                 <RecurrenceEditor Task="@_task" UserId="@State.UserId" Today="@State.Today"
                                   Disabled="@Disabled" Changed="@ReloadAsync" />
 
                 <StepList Task="@_task" UserId="@State.UserId" Disabled="@Disabled" Changed="@ReloadAsync" />
-            </div>
+            }
+        </div>
+    </ChildContent>
+    <Footer>
+        @if (_task is not null)
+        {
+            <div class="d-flex flex-column gap-2 pspad-task-actions">
+                <MudText Typo="Typo.overline">Actions</MudText>
 
-            <MudDivider />
+                <div class="d-flex gap-2">
+                    <MudSelect T="Guid" Class="pspad-task-area flex-1" Value="@_moveAreaId"
+                               ValueChanged="@MoveAreaChanged" Label="Area" Dense="true" Disabled="@Disabled">
+                        @foreach (var area in _areas)
+                        {
+                            <MudSelectItem T="Guid" Value="@area.Id">@area.Name</MudSelectItem>
+                        }
+                    </MudSelect>
 
-            <div class="pa-3 d-flex flex-column gap-3 pspad-task-actions">
-                <MudText Typo="Typo.subtitle2">Actions</MudText>
+                    <MudSelect T="Guid" Class="pspad-task-list flex-1" @bind-Value="_moveListId" Label="List"
+                               Dense="true" Disabled="@Disabled">
+                        @foreach (var list in ListsIn(_moveAreaId))
+                        {
+                            <MudSelectItem T="Guid" Value="@list.Id">@list.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </div>
 
-                <MudSelect T="Guid" Class="pspad-task-area" Value="@_moveAreaId" ValueChanged="@MoveAreaChanged"
-                           Label="Area" Disabled="@Disabled">
-                    @foreach (var area in _areas)
-                    {
-                        <MudSelectItem T="Guid" Value="@area.Id">@area.Name</MudSelectItem>
-                    }
-                </MudSelect>
-
-                <MudSelect T="Guid" Class="pspad-task-list" @bind-Value="_moveListId" Label="List"
-                           Disabled="@Disabled">
-                    @foreach (var list in ListsIn(_moveAreaId))
-                    {
-                        <MudSelectItem T="Guid" Value="@list.Id">@list.Name</MudSelectItem>
-                    }
-                </MudSelect>
-
-                <div class="d-flex align-center">
+                <div class="d-flex align-center mt-2">
                     <MudButton Class="pspad-task-move" Variant="Variant.Filled" Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.DriveFileMove"
                                Disabled="@(Disabled || !MoveChanged)" OnClick="@MoveAsync">
@@ -101,7 +105,7 @@
                 </div>
             </div>
         }
-    </ChildContent>
+    </Footer>
 </DetailPanel>
 
 @code {
@@ -152,7 +156,7 @@
 
     Guid? GoalId => _task is null ? _draft.GoalId : _task.GoalId;
 
-    DateTime? DueDate => _task is null ? _draft.DueDate : _task.DueOn?.ToDateTime(TimeOnly.MinValue);
+    DateOnly? DueOn => _task is null ? _draft.DueOn : _task.DueOn;
 
     bool Done => _task is not null && (_task.IsRecurring
         ? _task.CompletedDays.Contains(State.Today)
@@ -220,10 +224,9 @@
         var taskId = Guid.NewGuid();
         await Sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, taskId, listId, name));
 
-        if (_draft.DueDate is { } due)
+        if (_draft.DueOn is { } due)
         {
-            await Sender.SendAsync(new SetTaskDueDate(
-                Guid.NewGuid(), State.UserId, taskId, DateOnly.FromDateTime(due)));
+            await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, taskId, due));
         }
 
         if (_draft.Priority != Priority.None)
@@ -284,7 +287,7 @@
         await ReloadAsync();
     }
 
-    async Task DueDateAsync(DateTime? date)
+    async Task DueDateAsync(DateOnly? dueOn)
     {
         if (Disabled)
         {
@@ -293,11 +296,10 @@
 
         if (_task is null)
         {
-            _draft.DueDate = date;
+            _draft.DueOn = dueOn;
             return;
         }
 
-        var dueOn = date is null ? null : (DateOnly?)DateOnly.FromDateTime(date.Value);
         await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, _task.Id, dueOn));
         await ReloadAsync();
     }
@@ -387,7 +389,7 @@
     {
         public string Name { get; set; } = "";
 
-        public DateTime? DueDate { get; set; }
+        public DateOnly? DueOn { get; set; }
 
         public Priority Priority { get; set; } = Priority.None;
 

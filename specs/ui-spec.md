@@ -136,8 +136,11 @@ only right-anchored detail drawer: 360px from `md` up, full width below it.
 Its header row holds an X close button top-left, a title (`Typo.h5` from
 `md` up, `Typo.h6` below) and a `HeaderActions` slot on the right for
 toggles such as the star; the labelled name field sits under it (`Header`
-slot), then scrolling content, then an optional bottom bar with Save on the
-left (filled, primary) and Delete on the right (text, `Color.Error`). Each
+slot), then scrolling content, then a footer pinned to the bottom of the
+drawer (`Footer` slot plus an optional bar with Save on the left, filled
+primary, and Delete on the right, text `Color.Error`). Dividers inside the
+panel carry `flex-grow-0` — `MudDivider` grows by default and would
+otherwise stretch into an empty band inside the flex column. Each
 button renders only when its callback is bound. An existing thing's fields
 save as they change — each edit is its own command, so there is no Save for
 it. Save exists only while creating, where nothing is written until the
@@ -146,13 +149,23 @@ whole draft is committed.
 **One task form for add, edit and view.** `TaskDetailPanel` is a single
 component whose mode follows from its parameters — *Add* (`?task=new`),
 *Edit* (an existing task), *View* (an existing task while the shell is not
-ready: every control disabled). Top to bottom: header (title, done checkbox
-outside Add, star); **Name**; due date, priority, goal; recurrence and
-steps (outside Add — room for later task fields goes here); then an
-**Actions** section (outside Add) with Area and List pickers and two filled
-buttons — **Move** on the left, grey (disabled) until the picked list
-differs from the task's current one, and **Delete** on the right in
-`Color.Error`.
+ready: every control disabled). Top to bottom:
+
+1. Header — title, done checkbox (outside Add), star.
+2. **Name**.
+3. **Due date** — `DueDatePicker`: a clearable `MudDatePicker` for an exact
+   day, with quick-pick `MudChip`s under it (Today, Tomorrow, In 2 days,
+   Next week = the next Monday), computed from the user's today; the chip
+   matching the current value is filled.
+4. **Priority** — a `MudToggleGroup` of the four fixed levels.
+5. **Goal** — `MudSelect`.
+6. Repeats and **Steps** (outside Add) — `StepList` with a checked/total
+   count, `MudCheckBox` rows, a remove icon and an "Add step" field (Enter
+   adds). Room for later task fields goes here.
+7. **Actions**, pinned in the panel footer (outside Add) — Area and List
+   pickers side by side, then two filled buttons: **Move** on the left, grey
+   (disabled) until the picked list differs from the task's current one, and
+   **Delete** on the right in `Color.Error`.
 
 **Empty states share one component.** A page or board with no items yet
 shows `Components/EmptyState.razor` as the first cell of its grid, sized

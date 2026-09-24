@@ -23,32 +23,39 @@
                 </div>
             }
 
-            <MudDivider />
+            <MudDivider Class="flex-grow-0" />
 
             <div class="flex-grow-1" style="overflow-y:auto">
                 @ChildContent
             </div>
 
-            @if (OnSave.HasDelegate || OnDelete.HasDelegate)
+            @if (Footer is not null || OnSave.HasDelegate || OnDelete.HasDelegate)
             {
-                <MudDivider />
+                <MudDivider Class="flex-grow-0" />
 
-                <div class="d-flex align-center pa-3">
-                    @if (OnSave.HasDelegate)
+                <div class="pspad-panel-footer pa-3 d-flex flex-column gap-3">
+                    @Footer
+
+                    @if (OnSave.HasDelegate || OnDelete.HasDelegate)
                     {
-                        <MudButton Class="pspad-panel-save" Variant="Variant.Filled" Color="Color.Primary"
-                                   Disabled="@(Disabled || !CanSave)" OnClick="@OnSave">
-                            @SaveText
-                        </MudButton>
-                    }
-                    <MudSpacer />
-                    @if (OnDelete.HasDelegate)
-                    {
-                        <MudButton Class="pspad-panel-delete" Variant="Variant.Text" Color="Color.Error"
-                                   StartIcon="@Icons.Material.Filled.Delete" Disabled="@Disabled"
-                                   OnClick="@OnDelete">
-                            @DeleteText
-                        </MudButton>
+                        <div class="d-flex align-center">
+                            @if (OnSave.HasDelegate)
+                            {
+                                <MudButton Class="pspad-panel-save" Variant="Variant.Filled" Color="Color.Primary"
+                                           Disabled="@(Disabled || !CanSave)" OnClick="@OnSave">
+                                    @SaveText
+                                </MudButton>
+                            }
+                            <MudSpacer />
+                            @if (OnDelete.HasDelegate)
+                            {
+                                <MudButton Class="pspad-panel-delete" Variant="Variant.Text" Color="Color.Error"
+                                           StartIcon="@Icons.Material.Filled.Delete" Disabled="@Disabled"
+                                           OnClick="@OnDelete">
+                                    @DeleteText
+                                </MudButton>
+                            }
+                        </div>
                     }
                 </div>
             }
@@ -66,6 +73,8 @@
     [Parameter] public RenderFragment? Header { get; set; }
 
     [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public RenderFragment? Footer { get; set; }
 
     [Parameter] public EventCallback OnClose { get; set; }
 

@@ -283,6 +283,61 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ActionsArePinnedToTheBottomOfThePanel()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        panel.Find(".pspad-panel-footer .pspad-task-actions");
+        Assert.Empty(panel.FindAll(".flex-grow-1 .pspad-task-actions"));
+    }
+
+    [Fact]
+    public async Task AQuickPickSetsTheDueDateStraightAway()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        panel.FindAll(".pspad-due-quick")[1].Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(Today.AddDays(1), reloaded!.DueOn);
+    }
+
+    [Fact]
+    public async Task PickingAPriorityAppliesItStraightAway()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        panel.FindAll(".pspad-task-priority .mud-toggle-item")[(int)Priority.High].Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(Priority.High, reloaded!.Priority);
+    }
+
+    [Fact]
+    public async Task ANewTaskKeepsItsQuickPickedDueDateAndPriority()
+    {
+        var listId = Guid.NewGuid();
+        var replica = AppTestHost.Arrange(this, User, Today);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)listId));
+        panel.Find(".pspad-task-name-field input").Input("Kup chleb");
+        panel.FindAll(".pspad-due-quick")[2].Click();
+        panel.FindAll(".pspad-task-priority .mud-toggle-item")[(int)Priority.Medium].Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal(Today.AddDays(2), created.DueOn);
+        Assert.Equal(Priority.Medium, created.Priority);
+    }
+
+    [Fact]
     public void MoveSitsLeftOfDeleteAndBothAreFilled()
     {
         var task = NewTask("Buy milk");

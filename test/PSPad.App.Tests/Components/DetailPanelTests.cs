@@ -111,4 +111,28 @@ public class DetailPanelTests : Bunit.TestContext
 
         Assert.Contains("100%", panel.Find(".mud-drawer").GetAttribute("style"));
     }
+
+    [Fact]
+    public void TheFooterIsPinnedBelowTheScrollingContent()
+    {
+        var panel = Render<DetailPanel>(parameters => parameters
+            .Add(p => p.Open, true)
+            .Add(p => p.ChildContent, (RenderFragment)(builder => builder.AddContent(0, "Body text")))
+            .Add(p => p.Footer, (RenderFragment)(builder => builder.AddContent(0, "Footer text"))));
+
+        var footer = panel.Find(".pspad-panel-footer");
+        Assert.Contains("Footer text", footer.TextContent);
+        Assert.True(panel.Markup.IndexOf("Body text", StringComparison.Ordinal)
+                    < panel.Markup.IndexOf("Footer text", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void DividersDoNotStretchIntoGaps()
+    {
+        var panel = Render<DetailPanel>(parameters => parameters
+            .Add(p => p.Open, true)
+            .Add(p => p.Footer, (RenderFragment)(builder => builder.AddContent(0, "Footer text"))));
+
+        Assert.All(panel.FindAll("hr.mud-divider"), divider => Assert.Contains("flex-grow-0", divider.ClassName));
+    }
 }
