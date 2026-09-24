@@ -1,0 +1,12 @@
+<MudMenu Class="pspad-fab" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight">
+    <ActivatorContent>
+        <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" />
+    </ActivatorContent>
+    <ChildContent>
+        @ChildContent
+    </ChildContent>
+</MudMenu>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
