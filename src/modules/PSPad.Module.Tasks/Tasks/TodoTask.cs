@@ -97,7 +97,7 @@ public sealed class TodoTask : Aggregate
                 var linking = Require(task, link.UserId);
                 return linking.GoalId == link.GoalId
                     ? []
-                    : [new TaskLinkedToGoal(linking.Id, link.UserId, at, link.GoalId)];
+                    : [new TaskLinkedToGoal(linking.Id, link.UserId, at, link.GoalId, linking.Name)];
 
             case MoveTaskToList move:
                 var moving = Require(task, move.UserId);
@@ -108,7 +108,7 @@ public sealed class TodoTask : Aggregate
 
                 return moving.ListId == move.ListId
                     ? []
-                    : [new TaskMovedToList(moving.Id, move.UserId, at, move.ListId)];
+                    : [new TaskMovedToList(moving.Id, move.UserId, at, move.ListId, moving.Name)];
 
             case CompleteTask complete:
                 var completing = Require(task, complete.UserId);
@@ -119,17 +119,21 @@ public sealed class TodoTask : Aggregate
 
                 return completing.CompletedAt is not null
                     ? []
-                    : [new TaskCompleted(completing.Id, complete.UserId, at)];
+                    : [new TaskCompleted(
+                        completing.Id, complete.UserId, at,
+                        completing.Name, completing.ListId, completing.GoalId, completing.DueOn)];
 
             case ReopenTask reopen:
                 var reopening = Require(task, reopen.UserId);
                 return reopening.CompletedAt is null
                     ? []
-                    : [new TaskReopened(reopening.Id, reopen.UserId, at)];
+                    : [new TaskReopened(reopening.Id, reopen.UserId, at, reopening.Name, reopening.ListId)];
 
             case DeleteTask delete:
                 var deleting = Require(task, delete.UserId);
-                return deleting.Deleted ? [] : [new TaskDeleted(deleting.Id, delete.UserId, at)];
+                return deleting.Deleted
+                    ? []
+                    : [new TaskDeleted(deleting.Id, delete.UserId, at, deleting.Name)];
 
             case AddStep add:
                 var adding = Require(task, add.UserId);
@@ -199,7 +203,8 @@ public sealed class TodoTask : Aggregate
                 return ticking.CompletedDays.Contains(occurrence.Day) == occurrence.Completed
                     ? []
                     : [new OccurrenceCompleted(
-                        ticking.Id, occurrence.UserId, at, occurrence.Day, occurrence.Completed)];
+                        ticking.Id, occurrence.UserId, at, occurrence.Day, occurrence.Completed,
+                        ticking.Name, ticking.ListId, ticking.GoalId)];
 
             default:
                 throw new DomainRejectedException($"A task cannot handle {command.GetType().Name}.");
