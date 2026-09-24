@@ -47,11 +47,16 @@ cd PSPad</code></pre>
           different to each. Running an external Keycloak? Set both to the same address.
         </p>
       </Callout>
-      <Callout title="The admin credentials apply once">
+      <Callout kind="warning" title="The admin credentials apply once to Keycloak, but the API keeps reading them">
         <p>
           <code>KEYCLOAK_ADMIN_USER</code> and <code>KEYCLOAK_ADMIN_PASSWORD</code> only
-          apply on the very first start. Change the password in the Keycloak console
-          afterwards — editing <code>.env</code> later does nothing.
+          bootstrap Keycloak itself on the very first start — change the password in the
+          Keycloak console afterwards and editing <code>.env</code> does nothing to Keycloak.
+          But the <code>api</code> container reads these same two variables at runtime, every
+          time it calls Keycloak's admin API to delete a user's login on account deletion.
+          Rotate the password in the Keycloak console without also updating <code>.env</code>
+          and restarting <code>api</code>, and account deletion keeps wiping the user's data
+          but silently stops removing their Keycloak login.
         </p>
       </Callout>
     </Step>

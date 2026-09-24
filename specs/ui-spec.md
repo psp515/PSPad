@@ -38,6 +38,13 @@ fits, the class is legitimate — but it means the styling is specific to
 PSPad's brand or a one-off page need, not a generic layout or component
 problem MudBlazor already solves.
 
+Not every `pspad-*` class carries a CSS rule. Several exist purely as a
+stable selector for tests to find a MudBlazor element that has no other
+reliable hook (`pspad-sign-out`, `pspad-account-card`, `pspad-delete-account`,
+`pspad-confirm-email`, `pspad-confirm-delete`). Don't "clean up" an
+apparently-unstyled `pspad-*` class without checking whether a test depends
+on it first.
+
 ---
 
 ## 2. Layout & spacing
