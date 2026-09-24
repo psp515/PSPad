@@ -1,6 +1,5 @@
 using MongoDB.Driver;
 using PSPad.Abstractions;
-using PSPad.Infrastructure.Events;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
@@ -11,13 +10,19 @@ namespace PSPad.Api.Tests.Persistence;
 [Collection(MongoCollection.Name)]
 public class MongoUnitOfWorkTests(MongoFixture fixture)
 {
+    sealed class NoDispatcher : IDomainEventDispatcher
+    {
+        public Task PublishAsync(IReadOnlyList<DomainEventEnvelope> events, CancellationToken ct) =>
+            Task.CompletedTask;
+    }
+
     [Fact]
     public async Task CommittingWritesTheAggregateTheEventAndTheCommandId()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         var user = Guid.NewGuid();
         var context = TestContext.For(fixture);
-        var work = new MongoUnitOfWork(context, new NullDomainEventDispatcher());
+        var work = new MongoUnitOfWork(context, new NoDispatcher());
         var commandId = Guid.NewGuid();
         var (area, events) = NewArea(user);
 
@@ -44,11 +49,11 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var (first, firstEvents) = NewArea(user);
         var (second, secondEvents) = NewArea(user);
 
-        var work = new MongoUnitOfWork(context, new NullDomainEventDispatcher());
+        var work = new MongoUnitOfWork(context, new NoDispatcher());
         work.Stage(first, firstEvents);
         await work.CommitAsync(Guid.NewGuid(), user, ct);
 
-        var later = new MongoUnitOfWork(context, new NullDomainEventDispatcher());
+        var later = new MongoUnitOfWork(context, new NoDispatcher());
         later.Stage(second, secondEvents);
         await later.CommitAsync(Guid.NewGuid(), user, ct);
 
@@ -68,11 +73,11 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var commandId = Guid.NewGuid();
         var (area, events) = NewArea(user);
 
-        var first = new MongoUnitOfWork(context, new NullDomainEventDispatcher());
+        var first = new MongoUnitOfWork(context, new NoDispatcher());
         first.Stage(area, events);
         await first.CommitAsync(commandId, user, ct);
 
-        var replay = new MongoUnitOfWork(context, new NullDomainEventDispatcher());
+        var replay = new MongoUnitOfWork(context, new NoDispatcher());
         replay.Stage(area, events);
         await replay.CommitAsync(commandId, user, ct);
 

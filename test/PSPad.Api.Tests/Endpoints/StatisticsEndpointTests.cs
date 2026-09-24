@@ -99,23 +99,37 @@ public class StatisticsEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
-    public async Task AnotherUsersRecordsAreInvisible()
+    public async Task AnotherUsersWorkIsInvisibleInTheFeedAndTheOverview()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         await using var factory = new ApiFactory(fixture);
         var theirs = factory.ClientFor(Guid.NewGuid().ToString());
         var them = await UserId(theirs, ct);
         var theirTaskId = await SeedTask(theirs, them, "Their errand", ct);
+        await Post(theirs, new CompleteTask(Guid.NewGuid(), them, theirTaskId), ct);
         await EventuallyAsync(
-            () => Records(theirs, "", ct),
-            feed => feed.Any(record => record.TaskId == theirTaskId),
+            () => Overview(theirs, "?days=30", ct),
+            view => view.Tiles.DoneToday > 0,
             ct);
 
         var mine = factory.ClientFor(Guid.NewGuid().ToString());
         await UserId(mine, ct);
-        var records = await Records(mine, "", ct);
+        var myRecords = await Records(mine, "", ct);
+        var myOverview = await Overview(mine, "?days=30", ct);
+        var theirRecords = await Records(theirs, "", ct);
+        var theirOverview = await Overview(theirs, "?days=30", ct);
 
-        Assert.Empty(records);
+        Assert.Empty(myRecords);
+        Assert.Equal(0, myOverview.Tiles.DoneToday);
+        Assert.Equal(0, myOverview.Tiles.OpenedToday);
+        Assert.Equal(0, myOverview.Tiles.DoneThisWeek);
+        Assert.All(myOverview.Opened, point => Assert.Equal(0, point.Count));
+        Assert.All(myOverview.Outstanding, point => Assert.Equal(0, point.Count));
+        Assert.All(myOverview.Completions, point => Assert.Equal(0, point.Planned + point.Unplanned));
+
+        Assert.Contains(theirRecords, record => record.TaskId == theirTaskId);
+        Assert.Equal(1, theirOverview.Tiles.DoneToday);
+        Assert.Equal(1, theirOverview.Tiles.OpenedToday);
     }
 
     [Fact]
