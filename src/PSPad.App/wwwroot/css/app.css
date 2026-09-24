@@ -22,6 +22,45 @@ h1[tabindex="-1"]:focus {
     opacity: 0.55;
 }
 
+.pspad-heatmap {
+    display: grid;
+    grid-template-rows: repeat(7, 12px);
+    grid-auto-columns: 12px;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 4px 0;
+}
+
+.pspad-heatmap-cell {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    box-sizing: border-box;
+    border: 1px solid var(--mud-palette-divider);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
+}
+
+.pspad-heatmap-cell[data-level="1"] {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-surface));
+}
+
+.pspad-heatmap-cell[data-level="2"] {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 48%, var(--mud-palette-surface));
+}
+
+.pspad-heatmap-cell[data-level="3"] {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 72%, var(--mud-palette-surface));
+}
+
+.pspad-heatmap-cell[data-level="4"] {
+    background-color: var(--mud-palette-primary);
+}
+
+.pspad-heatmap-cell[data-today="true"] {
+    border-color: var(--mud-palette-primary);
+    border-width: 2px;
+}
+
 .pspad-account-identity .mud-typography {
     display: block;
     overflow: hidden;

@@ -1,0 +1,57 @@
+@using PSPad.Contracts
+
+<div class="pspad-heatmap">
+    @foreach (var day in Days)
+    {
+        <div class="pspad-heatmap-cell"
+             data-level="@LevelOf(day.Count)"
+             data-today="@(day.Day == Today ? "true" : "false")"
+             style="@PositionOf(day.Day)"
+             title="@LabelOf(day)"
+             aria-label="@LabelOf(day)">
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<DailyCountView> Days { get; set; } = [];
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    int Maximum => Days.Count == 0 ? 0 : Days.Max(day => day.Count);
+
+    int LevelOf(int count)
+    {
+        if (count <= 0 || Maximum <= 0)
+        {
+            return 0;
+        }
+
+        var ratio = (double)count / Maximum;
+
+        return ratio switch
+        {
+            <= 0.25 => 1,
+            <= 0.5 => 2,
+            <= 0.75 => 3,
+            _ => 4
+        };
+    }
+
+    static string LabelOf(DailyCountView day) => $"{day.Day:yyyy-MM-dd}: {day.Count} completed";
+
+    string PositionOf(DateOnly day) => $"grid-row:{(int)day.DayOfWeek + 1};grid-column:{ColumnOf(day) + 1};";
+
+    int ColumnOf(DateOnly day)
+    {
+        if (Days.Count == 0)
+        {
+            return 0;
+        }
+
+        var first = Days[0].Day;
+        var weekStart = first.AddDays(-(int)first.DayOfWeek);
+
+        return (day.DayNumber - weekStart.DayNumber) / 7;
+    }
+}

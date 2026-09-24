@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using MudBlazor;
@@ -44,6 +45,51 @@ public class StatisticsPageTests : Bunit.TestContext
         Assert.NotEmpty(page.FindComponents<MudAlert>());
         var tile = page.FindComponents<StatTile>().Single(t => t.Instance.Label == "Done today");
         Assert.Equal(7, tile.Instance.Value);
+    }
+
+    [Fact]
+    public void TheSevenDayTileIsLabelledLastSevenDaysNotThisWeek()
+    {
+        var source = new FakeStatisticsSource { Overview = Overview(doneToday: 0) };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        Assert.Contains("Last 7 days", page.Markup);
+    }
+
+    [Fact]
+    public void TheHistoryRouteRedirectsToStatistics()
+    {
+        var source = new FakeStatisticsSource { Overview = Overview(doneToday: 0) };
+        Arrange(source, NewCache());
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo("/history");
+
+        Render<StatisticsPage>();
+
+        Assert.Equal("http://localhost/statistics", navigation.Uri);
+    }
+
+    [Fact]
+    public async Task SelectingADifferentRangeRefetchesAndRerendersTheTiles()
+    {
+        var source = new FakeStatisticsSource
+        {
+            OverviewsByDays =
+            {
+                [30] = Overview(doneToday: 1),
+                [90] = Overview(doneToday: 9)
+            }
+        };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+        page.FindAll("button").First(button => button.TextContent.Trim() == "90 days").Click();
+
+        var tile = page.FindComponents<StatTile>().Single(t => t.Instance.Label == "Done today");
+        Assert.Equal(9, tile.Instance.Value);
+        Assert.Contains(90, source.RequestedDays);
     }
 
     [Fact]
@@ -107,6 +153,10 @@ public class StatisticsPageTests : Bunit.TestContext
     {
         public StatisticsOverview? Overview { get; set; }
 
+        public Dictionary<int, StatisticsOverview> OverviewsByDays { get; } = [];
+
+        public List<int> RequestedDays { get; } = [];
+
         public IReadOnlyList<StatisticsRecordView> Records { get; set; } = [];
 
         public bool Fails { get; set; }
@@ -117,8 +167,9 @@ public class StatisticsPageTests : Bunit.TestContext
 
         public async Task<StatisticsOverview?> OverviewAsync(int days)
         {
+            RequestedDays.Add(days);
             await GateAsync();
-            return Overview;
+            return OverviewsByDays.TryGetValue(days, out var overview) ? overview : Overview;
         }
 
         public async Task<IReadOnlyList<StatisticsRecordView>> RecordsAsync(long? before, int limit)
