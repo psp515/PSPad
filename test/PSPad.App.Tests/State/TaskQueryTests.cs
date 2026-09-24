@@ -36,4 +36,34 @@ public class TaskQueryTests
             $"https://pspad.local/lists/{list}",
             TaskQuery.Without($"https://pspad.local/lists/{list}?task={id}"));
     }
+
+    [Fact]
+    public void ANewTaskQueryNamesTheListItGoesInto()
+    {
+        var list = Guid.NewGuid();
+
+        Assert.Equal(list, TaskQuery.NewTaskListFrom($"https://pspad.local/lists/{list}?task=new&list={list}"));
+    }
+
+    [Fact]
+    public void ANewTaskQueryOpensNoExistingTask()
+    {
+        Assert.Null(TaskQuery.From($"https://pspad.local/?task=new&list={Guid.NewGuid()}"));
+    }
+
+    [Fact]
+    public void AnExistingTaskQueryIsNotANewTask()
+    {
+        Assert.Null(TaskQuery.NewTaskListFrom($"https://pspad.local/?task={Guid.NewGuid()}"));
+    }
+
+    [Fact]
+    public void ForNewTaskReplacesAnyOpenQueryOnTheSameScreen()
+    {
+        var list = Guid.NewGuid();
+
+        Assert.Equal(
+            $"https://pspad.local/lists/{list}?task=new&list={list}",
+            TaskQuery.ForNewTask($"https://pspad.local/lists/{list}?task={Guid.NewGuid()}", list));
+    }
 }

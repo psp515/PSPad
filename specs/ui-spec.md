@@ -113,6 +113,9 @@ message — a screen must never show an empty state it has not verified.
 
 **Title pattern.** A page's title is `<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Title</MudText>`,
 rendered both in the loading and loaded branches so nothing jumps on load.
+A screen nested under another (a list under its area) puts a back
+`MudIconButton` (`ArrowBack`, `Color.Primary`) to the left of its title,
+linking to the parent screen.
 
 **Shared row/card components, never duplicated per screen.** One
 `TaskRow` renders in My Day, list cards, the list screen and search
@@ -124,7 +127,24 @@ cannot drift between the screens that display it.
 appends `?task={taskId}` to the current route; `TaskDetailPanel` renders as
 a slide-in overlay (full-screen below `md`) without reflowing the page. The
 query string, not component state, so back-navigation closes the panel
-without leaving the screen, and a task is linkable.
+without leaving the screen, and a task is linkable. Adding a task uses the
+same panel in its new-task mode, addressed as `?task=new&list={listId}`
+(`TaskQuery.ForNewTask`) — never an inline field or a dialog.
+
+**Detail panels share one shell.** `Components/DetailPanel.razor` is the
+only right-anchored detail drawer: 360px from `md` up, full width below it;
+an X close button top-left beside a short title; the editable name under
+that header (`Header` fragment); scrolling content; and a bottom action bar
+with Save on the left (filled, primary) and Delete on the right (text,
+`Color.Error`). Each button renders only when its callback is bound. An
+existing thing's fields save as they change — each edit is its own command,
+so there is no Save for it, only Delete. Save exists only while creating,
+where nothing is written until the whole draft is committed.
+
+**Empty states share one component.** A page or board with no items yet
+shows `Components/EmptyState.razor` in place of its grid: an outlined
+`MudPaper` with an icon, a message, and a button that starts creating the
+first item. Only after `_loaded` — see above.
 
 **Every page has a page-level action set** — creating the thing the page
 is about, renaming or deleting that thing — distinct from the item-level
@@ -150,7 +170,7 @@ icon reads unambiguously on its own.
 |---|---|---|
 | Area | New list, Rename area, Delete area | FAB Menu |
 | Goals | Add goal | plain `MudFab` → `NameDialog` |
-| List | Add task, Rename list, Delete list | FAB Menu |
+| List | Add task (→ new-task panel), Rename list, Delete list | FAB Menu |
 | Inbox | Capture | plain `MudFab` → `CaptureDialog` |
 | My Day, Settings, History | none | no FAB |
 

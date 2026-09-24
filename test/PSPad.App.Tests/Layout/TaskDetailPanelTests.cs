@@ -49,7 +49,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
             .Add(p => p.TaskId, (Guid?)task.Id)
             .Add(p => p.OnClose, () => closed = true));
 
-        panel.Find(".pspad-task-close").Click();
+        panel.Find(".pspad-panel-close").Click();
 
         Assert.True(closed);
     }
@@ -140,6 +140,96 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
 
         Assert.Contains("100%", panel.Find(".mud-drawer").GetAttribute("style"));
+    }
+
+    [Fact]
+    public void AnExistingTaskSavesAsItIsEditedSoItOffersDeleteButNoSave()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Empty(panel.FindAll(".pspad-panel-save"));
+        Assert.Contains("Delete task", panel.Find(".pspad-panel-delete").TextContent);
+    }
+
+    [Fact]
+    public async Task EditingTheNameRenamesTheTaskStraightAway()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        panel.Find(".pspad-task-name-field input").Change("Buy oat milk");
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal("Buy oat milk", reloaded!.Name);
+    }
+
+    [Fact]
+    public async Task DeletingRemovesTheTaskAndCloses()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+        var closed = false;
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters
+            .Add(p => p.TaskId, (Guid?)task.Id)
+            .Add(p => p.OnClose, () => closed = true));
+        panel.Find(".pspad-panel-delete").Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.True(reloaded!.Deleted);
+        Assert.True(closed);
+    }
+
+    [Fact]
+    public void ANewTaskOffersAddButNoDeleteAndWaitsForAName()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)Guid.NewGuid()));
+
+        Assert.Contains("New task", panel.Markup);
+        Assert.Empty(panel.FindAll(".pspad-panel-delete"));
+        Assert.True(panel.Find(".pspad-panel-save").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task AddingANewTaskCreatesItInTheListAndCloses()
+    {
+        var listId = Guid.NewGuid();
+        var replica = AppTestHost.Arrange(this, User, Today);
+        var closed = false;
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters
+            .Add(p => p.NewInList, (Guid?)listId)
+            .Add(p => p.OnClose, () => closed = true));
+        panel.Find(".pspad-task-name-field input").Input("Kup chleb");
+        panel.Find(".pspad-new-task-star").Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        var tasks = await replica.LoadAllAsync<TodoTask>(User);
+        var created = Assert.Single(tasks);
+        Assert.Equal(listId, created.ListId);
+        Assert.Equal("Kup chleb", created.Name);
+        Assert.True(created.Starred);
+        Assert.True(closed);
+    }
+
+    [Fact]
+    public async Task ANewTaskIsNotCreatedWhileDisabled()
+    {
+        var replica = AppTestHost.Arrange(this, User, Today);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters
+            .Add(p => p.NewInList, (Guid?)Guid.NewGuid())
+            .Add(p => p.Disabled, true));
+        panel.Find(".pspad-task-name-field input").Input("Kup chleb");
+
+        Assert.True(panel.Find(".pspad-panel-save").HasAttribute("disabled"));
+        Assert.Empty(await replica.LoadAllAsync<TodoTask>(User));
     }
 
     static TodoTask NewTask(string name)

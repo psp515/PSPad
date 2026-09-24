@@ -74,7 +74,7 @@
         </MudContainer>
     </MudMainContent>
 
-    <TaskDetailPanel TaskId="@_openTask" OnClose="@CloseTask" Disabled="@(!_ready)" />
+    <TaskDetailPanel TaskId="@_openTask" NewInList="@_newTaskList" OnClose="@CloseTask" Disabled="@(!_ready)" />
 </MudLayout>
 
 @code {
@@ -87,6 +87,7 @@
     string _displayName = "";
     IReadOnlyList<Area> _areas = [];
     Guid? _openTask;
+    Guid? _newTaskList;
 
     protected override async Task OnInitializedAsync()
     {
@@ -247,6 +248,7 @@
     void ReadOpenTask()
     {
         _openTask = TaskQuery.From(Navigation.Uri);
+        _newTaskList = TaskQuery.NewTaskListFrom(Navigation.Uri);
     }
 
     void CloseTask() => Navigation.NavigateTo(TaskQuery.Without(Navigation.Uri));
