@@ -54,15 +54,13 @@
 
 <MudPaper Outlined="true" Class="pa-4 mb-4">
     <MudText Typo="Typo.subtitle2" Class="mb-3">Theme</MudText>
-    <MudButtonGroup Size="Size.Small" Variant="Variant.Text">
+    <MudSelect T="ThemeMode" Value="@Preference.Mode" ValueChanged="@SelectThemeAsync"
+               Variant="Variant.Outlined" Margin="Margin.Dense">
         @foreach (var mode in Enum.GetValues<ThemeMode>())
         {
-            <MudButton OnClick="@(() => Preference.SetAsync(mode))"
-                       Color="@(Preference.Mode == mode ? Color.Primary : Color.Default)">
-                @mode
-            </MudButton>
+            <MudSelectItem T="ThemeMode" Value="@mode">@mode</MudSelectItem>
         }
-    </MudButtonGroup>
+    </MudSelect>
 </MudPaper>
 
 <MudPaper Outlined="true" Class="pa-4 mb-4">
@@ -135,4 +133,6 @@
         State.Today = LocalToday.In(Clock.UtcNow, me.TimeZone);
         StateHasChanged();
     }
+
+    public Task SelectThemeAsync(ThemeMode mode) => Preference.SetAsync(mode);
 }

@@ -5,6 +5,7 @@ using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using PSPad.App.Api;
 using PSPad.App.Sync;
 using PSPad.App.Auth;
@@ -14,6 +15,7 @@ using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Tests;
 using PSPad.App.Tests.Auth;
+using PSPad.App.Theme;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Today;
 using PSPad.TestInfrastructure;
@@ -187,9 +189,34 @@ public class SettingsPageTests : Bunit.TestContext
 
         var page = Render<SettingsPage>();
 
-        Assert.Contains("System", page.Markup);
-        Assert.Contains("Light", page.Markup);
-        Assert.Contains("Dark", page.Markup);
+        var items = page.FindComponents<MudSelectItem<ThemeMode>>();
+        Assert.Equal(3, items.Count);
+        var modes = items.Select(item => item.Instance.Value).ToList();
+        Assert.Contains(ThemeMode.System, modes);
+        Assert.Contains(ThemeMode.Light, modes);
+        Assert.Contains(ThemeMode.Dark, modes);
+    }
+
+    [Fact]
+    public async Task SelectingATimeZoneAppliesItThroughThePreference()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+        await page.InvokeAsync(() => page.Instance.SelectThemeAsync(ThemeMode.Dark));
+
+        Assert.Equal(ThemeMode.Dark, Services.GetRequiredService<ThemePreference>().Mode);
+    }
+
+    [Fact]
+    public void TheThemeControlIsASelectNotAButtonGroup()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.Empty(page.FindAll(".mud-button-group"));
+        Assert.NotEmpty(page.FindAll(".mud-select"));
     }
 
     AppState Arrange(
