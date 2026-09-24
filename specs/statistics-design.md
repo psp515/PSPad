@@ -162,9 +162,15 @@ dependency.
 ### `statistics_labels`
 
 `(Id, UserId, Kind: Area | List | Goal, Name, Deleted)`, projected from
-`AreaCreated/Renamed/Deleted`, `TaskListCreated/Renamed/MovedToArea/Deleted`,
+`AreaCreated/Renamed/Deleted`, `TaskListCreated/Renamed/Deleted`,
 `GoalCreated/Renamed/Deleted`. A deleted list still has a name in the feed, and
 no name lookup ever reaches into Tasks.
+
+`TaskListMovedToArea` is deliberately not projected: a label carries a name, not
+a parent, so moving a list between areas changes nothing here. The feed shows a
+record's list and goal, never its area — an area would need the list-to-area
+mapping *as it was at the time*, which is a second historical dimension this
+slice does not buy.
 
 ### `statistics_state`
 
