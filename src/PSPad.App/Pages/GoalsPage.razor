@@ -17,11 +17,6 @@
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Goals</MudText>
 
-<MudTextField T="string" @bind-Value="_newGoalName" Placeholder="New goal" Immediate="true"
-              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4"
-              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Add"
-              OnKeyDown="@OnKeyDown" />
-
 @if (!_loaded)
 {
     <CardSkeleton Count="3" />
@@ -69,13 +64,14 @@ else
     </MudExpansionPanels>
 }
 
+<MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@AddGoalAsync" />
+
 @code {
     bool _loaded;
     IReadOnlyList<Goal> _active = [];
     IReadOnlyList<Goal> _achieved = [];
     IReadOnlyList<TodoTask> _tasks = [];
     IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
-    string _newGoalName = "";
 
     [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
 
@@ -136,15 +132,18 @@ else
         await ReloadAsync();
     }
 
-    async Task OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
+    async Task AddGoalAsync()
     {
-        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_newGoalName))
+        var parameters = new DialogParameters<NameDialog> { { dialog => dialog.Title, "Goal name" } };
+        var dialog = await Dialogs.ShowAsync<NameDialog>("New goal", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
         {
             return;
         }
 
-        await Sender.SendAsync(new CreateGoal(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _newGoalName));
-        _newGoalName = "";
+        await Sender.SendAsync(new CreateGoal(Guid.NewGuid(), State.UserId, Guid.NewGuid(), name));
         await ReloadAsync();
     }
 
