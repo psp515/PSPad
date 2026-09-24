@@ -34,6 +34,28 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItShowsAnEmptyStateWhenTheListHasNoTasks()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Contains("No tasks yet.", page.Markup);
+    }
+
+    [Fact]
+    public void ItDoesNotShowTheEmptyStateWhenTheListHasTasks()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, NewTask(list.Id, "Mleko"));
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.DoesNotContain("No tasks yet.", page.Markup);
+    }
+
+    [Fact]
     public void TasksFromOtherListsAreNotThere()
     {
         var mine = NewList("Zakupy");
@@ -85,6 +107,18 @@ public class ListPageTests : Bunit.TestContext
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
         page.Find(".mud-grid");
+    }
+
+    [Fact]
+    public void TheListHasExactlyOneFabMenu()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        page.Find(".pspad-fab");
+        Assert.Single(page.FindAll(".mud-fab-menu-button"));
     }
 
     [Fact]
@@ -151,15 +185,17 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task TypingIntoTheAddTaskFieldCreatesTheTaskInTheReplica()
+    public async Task AddTaskFromTheFabMenuOpensADialogThatCreatesTheTaskInTheReplica()
     {
         var list = NewList("Zakupy");
         var replica = Arrange(list);
 
-        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
-        var input = page.Find("input[placeholder='Add task']");
-        input.Input("Kup chleb");
-        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        var page = Render(BuildListPageWithDialogs(list.Id));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[0].Click();
+        var dialog = page.FindComponent<MudDialogProvider>();
+        dialog.Find("input[placeholder='Task name']").Input("Kup chleb");
+        dialog.FindAll("button").Last().Click();
 
         var tasks = await replica.LoadAllAsync<TodoTask>(User);
         Assert.Contains(tasks, task => task.ListId == list.Id && task.Name == "Kup chleb");
@@ -180,14 +216,14 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task RenamingFromTheTitleMenuRenamesTheList()
+    public async Task RenamingFromTheFabMenuRenamesTheList()
     {
         var list = NewList("Zakupy");
         var replica = Arrange(list);
 
         var page = Render(BuildListPageWithDialogs(list.Id));
-        page.Find(".pspad-list-menu button").Click();
-        page.FindAll(".mud-menu-item")[0].Click();
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[1].Click();
 
         var field = page.Find("div.mud-dialog input");
         field.Input("Zakupy tygodniowe");
@@ -195,6 +231,52 @@ public class ListPageTests : Bunit.TestContext
 
         var stored = await replica.LoadAsync<TaskList>(list.Id);
         Assert.Equal("Zakupy tygodniowe", stored!.Name);
+    }
+
+    [Fact]
+    public async Task DeletingFromTheFabMenuNavigatesToTheArea()
+    {
+        var list = NewList("Zakupy");
+        var replica = Arrange(list);
+
+        var page = Render(BuildListPageWithDialogs(list.Id));
+        var navigation = page.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/lists/{list.Id}");
+
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[2].Click();
+        page.FindAll("div.mud-dialog button").Last().Click();
+
+        var stored = await replica.LoadAsync<TaskList>(list.Id);
+        Assert.True(stored!.Deleted);
+        Assert.EndsWith($"/areas/{list.AreaId}", navigation.Uri);
+    }
+
+    [Fact]
+    public void TheFabMenuItemsCarryAnAccessibleNameMatchingTheirTooltip()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list);
+
+        var page = Render(BuildListPageWithDialogs(list.Id));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+
+        var items = page.FindAll(".mud-fab-menu-item");
+        Assert.Equal("Add task", items[0].GetAttribute("aria-label"));
+        Assert.Equal("Rename list", items[1].GetAttribute("aria-label"));
+        Assert.Equal("Delete list", items[2].GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public void TheInlineAddTaskFieldAndHeaderMenuAreGone()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Empty(page.FindAll("input[placeholder='Add task']"));
+        Assert.Empty(page.FindAll(".pspad-list-menu"));
     }
 
     // ThingMenu's MudMenu and IDialogService's MudDialogProvider both portal their open

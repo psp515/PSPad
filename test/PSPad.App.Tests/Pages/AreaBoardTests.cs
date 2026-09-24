@@ -144,17 +144,6 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
-    public void NewListIsOffered()
-    {
-        var area = NewArea("Dom");
-        Arrange(area);
-
-        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
-
-        Assert.Contains("New list", page.Markup);
-    }
-
-    [Fact]
     public async Task ClickingACardsAddTaskIconOpensADialogThatCreatesTheTaskInTheReplica()
     {
         var area = NewArea("Dom");
@@ -216,25 +205,74 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheAreaCarriesAnActionsFab()
+    public void TheAreaHasExactlyOneFabMenu()
     {
         var area = NewArea("Dom");
         Arrange(area);
 
         var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
 
-        page.Find(".pspad-area-fab");
+        page.Find(".pspad-fab");
+        Assert.Single(page.FindAll(".mud-fab-menu-button"));
     }
 
     [Fact]
-    public async Task RenamingTheAreaFromItsFabUpdatesTheReplica()
+    public void TheFabMenuOffersThreeIconOnlyItems()
+    {
+        var area = NewArea("Dom");
+        Arrange(area);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+
+        var items = page.FindAll(".mud-fab-menu-item");
+        Assert.Equal(3, items.Count);
+        Assert.All(items, item => Assert.NotNull(item.QuerySelector("svg")));
+        Assert.All(items, item => Assert.True(string.IsNullOrWhiteSpace(item.TextContent)));
+    }
+
+    [Fact]
+    public void TheFabMenuItemsCarryAnAccessibleNameMatchingTheirTooltip()
+    {
+        var area = NewArea("Dom");
+        Arrange(area);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+
+        var items = page.FindAll(".mud-fab-menu-item");
+        Assert.Equal("New list", items[0].GetAttribute("aria-label"));
+        Assert.Equal("Rename area", items[1].GetAttribute("aria-label"));
+        Assert.Equal("Delete area", items[2].GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public async Task NewListFromTheFabMenuCreatesItInTheReplica()
     {
         var area = NewArea("Dom");
         var replica = Arrange(area);
 
         var page = Render(BuildAreaBoardWithDialogs(area.Id));
-        page.Find(".pspad-area-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
-        page.FindAll(".mud-menu-item")[0].Click();
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[0].Click();
+
+        var field = page.Find("div.mud-dialog input");
+        field.Input("Ogród");
+        page.FindAll("div.mud-dialog button").Last().Click();
+
+        var lists = await replica.LoadAllAsync<TaskList>(User);
+        Assert.Contains(lists, list => list.AreaId == area.Id && list.Name == "Ogród");
+    }
+
+    [Fact]
+    public async Task RenamingTheAreaFromItsFabMenuUpdatesTheReplica()
+    {
+        var area = NewArea("Dom");
+        var replica = Arrange(area);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[1].Click();
 
         var field = page.Find("div.mud-dialog input");
         field.Input("Domownicy");
@@ -245,18 +283,22 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task DeletingTheAreaFromItsFabNavigatesHome()
+    public async Task DeletingTheAreaFromItsFabMenuNavigatesHome()
     {
         var area = NewArea("Dom");
         var replica = Arrange(area);
 
         var page = Render(BuildAreaBoardWithDialogs(area.Id));
-        page.Find(".pspad-area-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
-        page.FindAll(".mud-menu-item")[1].Click();
+        var navigation = page.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/areas/{area.Id}");
+
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[2].Click();
         page.FindAll("div.mud-dialog button").Last().Click();
 
         var stored = await replica.LoadAsync<Area>(area.Id);
         Assert.True(stored!.Deleted);
+        Assert.Equal(navigation.BaseUri, navigation.Uri);
     }
 
     // Both ThingMenu's MudMenu and IDialogService's MudDialogProvider portal their open
