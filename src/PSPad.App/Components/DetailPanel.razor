@@ -1,0 +1,101 @@
+@using PSPad.App.State.Viewport
+@inject IViewport Viewport
+@implements IAsyncDisposable
+
+<MudDrawer Open="@Open" OpenChanged="@OnOpenChanged" Anchor="Anchor.Right"
+           Variant="DrawerVariant.Temporary" Elevation="6" Width="@(_isDesktop ? "360px" : "100%")"
+           OverlayAutoClose="true" Class="@($"pspad-detail-panel {Class}")">
+    @if (Open)
+    {
+        <div class="d-flex flex-column" style="height:100%">
+            <div class="d-flex align-center gap-2 px-2 py-2">
+                <MudIconButton Class="pspad-panel-close" Size="Size.Small" Icon="@Icons.Material.Filled.Close"
+                               aria-label="Close" OnClick="@OnClose" />
+                <MudText Typo="Typo.subtitle2">@Title</MudText>
+            </div>
+
+            @if (Header is not null)
+            {
+                <div class="px-3 pb-2">
+                    @Header
+                </div>
+            }
+
+            <MudDivider />
+
+            <div class="flex-grow-1" style="overflow-y:auto">
+                @ChildContent
+            </div>
+
+            @if (OnSave.HasDelegate || OnDelete.HasDelegate)
+            {
+                <MudDivider />
+
+                <div class="d-flex align-center pa-3">
+                    @if (OnSave.HasDelegate)
+                    {
+                        <MudButton Class="pspad-panel-save" Variant="Variant.Filled" Color="Color.Primary"
+                                   Disabled="@(Disabled || !CanSave)" OnClick="@OnSave">
+                            @SaveText
+                        </MudButton>
+                    }
+                    <MudSpacer />
+                    @if (OnDelete.HasDelegate)
+                    {
+                        <MudButton Class="pspad-panel-delete" Variant="Variant.Text" Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Delete" Disabled="@Disabled"
+                                   OnClick="@OnDelete">
+                            @DeleteText
+                        </MudButton>
+                    }
+                </div>
+            }
+        </div>
+    }
+</MudDrawer>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+
+    [Parameter] public string Title { get; set; } = "";
+
+    [Parameter] public RenderFragment? Header { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    [Parameter] public string SaveText { get; set; } = "Save";
+
+    [Parameter] public string DeleteText { get; set; } = "Delete";
+
+    [Parameter] public bool CanSave { get; set; } = true;
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+
+    bool _isDesktop = true;
+
+    protected override async Task OnInitializedAsync() => await Viewport.SubscribeAsync(OnDesktopChanged);
+
+    void OnDesktopChanged(bool isDesktop)
+    {
+        _isDesktop = isDesktop;
+        InvokeAsync(StateHasChanged);
+    }
+
+    async Task OnOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync() => await Viewport.DisposeAsync();
+}

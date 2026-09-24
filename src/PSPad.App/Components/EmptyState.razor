@@ -1,0 +1,21 @@
+<MudPaper Outlined="true" Class="pspad-empty-state pa-6 d-flex flex-column align-center gap-3">
+    <MudIcon Icon="@Icon" Color="Color.Primary" Size="Size.Large" />
+    <MudText Typo="Typo.body1" Align="Align.Center">@Message</MudText>
+    @if (OnCreate.HasDelegate)
+    {
+        <MudButton Class="pspad-empty-create" Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="@OnCreate">
+            @CreateText
+        </MudButton>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public string Icon { get; set; } = Icons.Material.Outlined.Inbox;
+
+    [Parameter, EditorRequired] public string Message { get; set; } = "";
+
+    [Parameter] public string CreateText { get; set; } = "Create";
+
+    [Parameter] public EventCallback OnCreate { get; set; }
+}
