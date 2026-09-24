@@ -133,9 +133,17 @@ public sealed class StatisticsRecord
 
 public enum RecordKind
 {
-    Created, Completed, Reopened, Deleted, Moved, LinkedToGoal, OccurrenceTicked
+    Created, Completed, Reopened, Deleted, Moved, LinkedToGoal,
+    OccurrenceTicked, OccurrenceUnticked
 }
 ```
+
+`OccurrenceCompleted` is a toggle — it carries a `bool Completed`, so ticking a
+recurring day and taking that tick back emit the same event type. Both become
+records. Dropping the untick would leave the earlier tick's record standing and
+over-count that day forever, and records are immutable and seq-keyed, so
+deleting the tick is not available either. §7 says how the charts resolve a day
+that was ticked and un-ticked.
 
 Records are never updated or deleted by user action. There are no Statistics
 commands and no write endpoints.
