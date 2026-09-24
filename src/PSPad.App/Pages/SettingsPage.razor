@@ -27,7 +27,7 @@
     <MudItem xs="12" sm="6" md="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4 pspad-account-card">
             <MudText Typo="Typo.subtitle2" Class="mb-3">Account</MudText>
-            <div class="d-flex align-center gap-3">
+            <div class="d-flex align-center gap-3 mb-3">
                 <MudAvatar Style="@($"background:{AvatarColor.For(State.UserId)};color:#FFFFFF")" Size="Size.Large">
                     @AvatarColor.InitialOf(State.DisplayName.Length > 0 ? State.DisplayName : State.Email)
                 </MudAvatar>
@@ -36,6 +36,10 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary">@State.Email</MudText>
                 </div>
             </div>
+            <MudButton Class="pspad-sign-out" OnClick="@SignOutAsync" StartIcon="@Icons.Material.Filled.Logout"
+                       Color="Color.Error" Variant="Variant.Outlined">
+                Sign out
+            </MudButton>
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" md="4" xl="3">
@@ -72,11 +76,6 @@
         </MudPaper>
     </MudItem>
 </MudGrid>
-
-<MudButton Class="pspad-sign-out" OnClick="@SignOutAsync" StartIcon="@Icons.Material.Filled.Logout"
-           Color="Color.Error" Variant="Variant.Outlined">
-    Sign out
-</MudButton>
 
 @code {
     bool _rejected;
