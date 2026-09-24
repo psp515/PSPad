@@ -149,23 +149,35 @@ whole draft is committed.
 **One task form for add, edit and view.** `TaskDetailPanel` is a single
 component whose mode follows from its parameters — *Add* (`?task=new`),
 *Edit* (an existing task), *View* (an existing task while the shell is not
-ready: every control disabled). Top to bottom:
+ready: every control disabled). Modelled on Microsoft To Do's detail pane
+and Todoist's task view: the task itself on top, its properties as
+one-line rows under it, nothing boxed in a form. Top to bottom:
 
-1. Header — title, done checkbox (outside Add), star.
-2. **Name**.
-3. **Due date** — `DueDatePicker`: a clearable `MudDatePicker` for an exact
-   day, with quick-pick `MudChip`s under it (Today, Tomorrow, In 2 days,
-   Next week = the next Monday), computed from the user's today; the chip
-   matching the current value is filled.
-4. **Priority** — a `MudToggleGroup` of the four fixed levels.
-5. **Goal** — `MudSelect`.
-6. Repeats and **Steps** (outside Add) — `StepList` with a checked/total
-   count, `MudCheckBox` rows, a remove icon and an "Add step" field (Enter
-   adds). Room for later task fields goes here.
-7. **Actions**, pinned in the panel footer (outside Add) — Area and List
-   pickers side by side, then two filled buttons: **Move** on the left, grey
-   (disabled) until the picked list differs from the task's current one, and
-   **Delete** on the right in `Color.Error`.
+1. Header — X, the task's place as `Area › List` (`New task · Area › List`
+   in Add) in `Typo.body2`, star on the right.
+2. Done checkbox (outside Add) beside the name, an unboxed `Typo.h6`
+   `MudTextField` with no underline or label.
+3. **Steps** (outside Add) — `StepList`: `MudCheckBox` rows with a remove
+   icon, then an unboxed "Add step"/"Next step" field (Enter adds).
+4. Property rows, each a `PropertyRow` — icon · label · value, the whole
+   row a `MudMenu` activator; an empty value reads in the muted text colour
+   ("No due date", "Never", "No goal"), a clearable one carries a trailing
+   ✕:
+   - **Due** (`DueDateRow`) — Today / Tomorrow / In 2 days / Next week (the
+     next Monday), each with its date, then "Pick a date…" opening a
+     `MudDatePicker` dialog; the value reads relatively (Today, Tomorrow,
+     Yesterday, `ddd, d MMM`), in `Color.Error` when overdue.
+   - **Repeat** (`RecurrenceEditor`, outside Add) — Daily, Weekdays, Weekly
+     on today's weekday, Monthly on today's day, Never; a repeating task
+     shows its last seven occurrences as chips under the row.
+   - **Priority** — the four fixed levels with coloured dots.
+   - **Goal** — the user's goals.
+   - **List** (outside Add) — lists grouped under area headings; picking
+     one moves the task at once. There is no Move button.
+   Room for later task fields (note, reminders) goes under the rows.
+5. Footer — "Created …" on the left, a red trash `MudIconButton` on the
+   right that asks via `ConfirmDialog` before deleting. In Add the footer
+   holds only **Add task**.
 
 **Empty states share one component.** A page or board with no items yet
 shows `Components/EmptyState.razor` as the first cell of its grid, sized

@@ -223,3 +223,26 @@ h1[tabindex="-1"]:focus {
 .pspad-empty-state-clickable:focus-visible {
     border-color: var(--mud-palette-primary) !important;
 }
+
+.pspad-property-activator {
+    text-transform: none !important;
+    font-weight: 400 !important;
+    padding: 10px 12px !important;
+}
+
+.pspad-property-activator .mud-button-label {
+    justify-content: flex-start;
+}
+
+.pspad-property-label {
+    min-width: 72px;
+    text-align: left;
+}
+
+.pspad-property-value {
+    text-align: left;
+}
+
+.pspad-muted {
+    color: var(--mud-palette-text-secondary) !important;
+}

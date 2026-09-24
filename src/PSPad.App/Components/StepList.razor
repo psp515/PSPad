@@ -3,10 +3,6 @@
 @inject IServiceProvider Services
 
 <div class="pspad-steps d-flex flex-column">
-    <MudText Typo="Typo.caption">
-        @(Task.Steps.Count == 0 ? "Steps" : $"Steps · {Task.Steps.Count(step => step.Checked)} / {Task.Steps.Count}")
-    </MudText>
-
     @foreach (var step in Task.Steps)
     {
         <div class="pspad-step d-flex align-center">
@@ -20,10 +16,11 @@
         </div>
     }
 
-    <MudTextField T="string" Class="pspad-step-add" @bind-Value="_newStep" Placeholder="Add step"
+    <MudTextField T="string" Class="pspad-step-add" @bind-Value="_newStep"
+                  Placeholder="@(Task.Steps.Count == 0 ? "Add step" : "Next step")" Underline="false"
                   Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync"
                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Add"
-                  OnAdornmentClick="@AddAsync" />
+                  AdornmentColor="Color.Primary" OnAdornmentClick="@AddAsync" />
 </div>
 
 @code {

@@ -58,24 +58,6 @@ public class StepListTests : Bunit.TestContext
         Assert.Empty(stored!.Steps);
     }
 
-    [Fact]
-    public void TheHeadingCountsCheckedSteps()
-    {
-        var task = NewTask();
-        var stepId = Guid.NewGuid();
-        task.ApplyAll(TodoTask.Decide(
-            task, new AddStep(Guid.NewGuid(), User, task.Id, stepId, "a"), DateTimeOffset.UnixEpoch));
-        task.ApplyAll(TodoTask.Decide(
-            task, new AddStep(Guid.NewGuid(), User, task.Id, Guid.NewGuid(), "b"), DateTimeOffset.UnixEpoch));
-        task.ApplyAll(TodoTask.Decide(
-            task, new CheckStep(Guid.NewGuid(), User, task.Id, stepId, true), DateTimeOffset.UnixEpoch));
-        AppTestHost.Arrange(this, User, Today, task);
-
-        var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
-
-        Assert.Contains("Steps · 1 / 2", steps.Markup);
-    }
-
     static TodoTask NewTask()
     {
         var task = new TodoTask();

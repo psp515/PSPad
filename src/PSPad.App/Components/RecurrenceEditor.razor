@@ -3,20 +3,35 @@
 @using PSPad.Module.Tasks.Tasks
 @inject IServiceProvider Services
 
-<div>
-    <MudSwitch T="bool" Value="@(Task.Recurrence is not null)" ValueChanged="@ToggleAsync" Label="Repeats"
-               Disabled="@Disabled" />
+<PropertyRow Class="pspad-task-repeat" Icon="@Icons.Material.Outlined.Repeat" Label="Repeat"
+             Value="@Describe(Task.Recurrence)" HasValue="@(Task.Recurrence is not null)" Disabled="@Disabled"
+             OnClear="@(() => SetAsync(null))">
+    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => SetAsync(RecurrenceRule.Daily(Today)))">Daily</MudMenuItem>
+    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => SetAsync(Weekdays(Today)))">Weekdays</MudMenuItem>
+    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => SetAsync(RecurrenceRule.Weekly(Today, Today.DayOfWeek)))">
+        @($"Weekly on {Today:dddd}")
+    </MudMenuItem>
+    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => SetAsync(RecurrenceRule.MonthlyOnDay(Today, Today.Day)))">
+        @($"Monthly on day {Today.Day}")
+    </MudMenuItem>
+    <MudDivider />
+    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => SetAsync(null))">Never</MudMenuItem>
+</PropertyRow>
 
-    @if (Task.Recurrence is not null)
-    {
-        <div class="d-flex gap-1 mt-2">
-            @foreach (var occurrence in Occurrences.Between(Task, Today.AddDays(-13), Today, Today))
-            {
-                <span class="repeat-day">@occurrence.Day.ToString("MM-dd"): @Label(occurrence.Status)</span>
-            }
-        </div>
-    }
-</div>
+@if (Task.Recurrence is not null)
+{
+    <div class="d-flex flex-wrap gap-1 px-3 pb-2 pspad-repeat-history">
+        @foreach (var occurrence in Occurrences.Between(Task, Today.AddDays(-6), Today, Today))
+        {
+            <MudTooltip Text="@($"{occurrence.Day:ddd, d MMM}: {Label(occurrence.Status)}")">
+                <MudChip T="string" Size="Size.Small" Class="ma-0 repeat-day" Variant="Variant.Outlined"
+                         Color="@ColorOf(occurrence.Status)">
+                    @($"{occurrence.Day:ddd} · {Label(occurrence.Status)}")
+                </MudChip>
+            </MudTooltip>
+        }
+    </div>
+}
 
 @code {
     [Parameter, EditorRequired] public TodoTask Task { get; set; } = null!;
@@ -25,6 +40,21 @@
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
 
+    static RecurrenceRule Weekdays(DateOnly today) => RecurrenceRule.Weekly(
+        today, DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday);
+
+    public static string Describe(RecurrenceRule? rule) => rule switch
+    {
+        null => "Never",
+        { Kind: RecurrenceKind.Daily } => "Daily",
+        { Kind: RecurrenceKind.Weekly, Days.Count: 5 } r when !r.Days.Contains(DayOfWeek.Saturday)
+            && !r.Days.Contains(DayOfWeek.Sunday) => "Weekdays",
+        { Kind: RecurrenceKind.Weekly } r =>
+            "Weekly on " + string.Join(", ", r.Days.OrderBy(day => ((int)day + 6) % 7).Select(day => day.ToString()[..3])),
+        { Kind: RecurrenceKind.MonthlyOnDay } r => $"Monthly on day {r.DayOfMonth}",
+        _ => "Custom"
+    };
+
     static string Label(OccurrenceStatus status) => status switch
     {
         OccurrenceStatus.Done => "Done",
@@ -32,15 +62,21 @@
         _ => "Skipped"
     };
 
-    async System.Threading.Tasks.Task ToggleAsync(bool repeats)
+    static Color ColorOf(OccurrenceStatus status) => status switch
     {
-        if (Disabled)
+        OccurrenceStatus.Done => Color.Primary,
+        OccurrenceStatus.Pending => Color.Default,
+        _ => Color.Secondary
+    };
+
+    async System.Threading.Tasks.Task SetAsync(RecurrenceRule? rule)
+    {
+        if (Disabled || (rule is null && Task.Recurrence is null))
         {
             return;
         }
 
         var sender = Services.GetRequiredService<CommandSender>();
-        var rule = repeats ? RecurrenceRule.Daily(Today) : null;
         await sender.SendAsync(new SetTaskRecurrence(Guid.NewGuid(), UserId, Task.Id, rule));
         await Changed.InvokeAsync();
     }

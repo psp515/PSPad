@@ -1,0 +1,80 @@
+<PropertyRow Class="pspad-task-due" Icon="@Icons.Material.Outlined.Event" Label="Due" Value="@Describe(Value, Today)"
+             HasValue="@(Value is not null)" ValueColor="@(Value < Today ? Color.Error : Color.Default)"
+             Disabled="@Disabled" OnClear="@(() => ChooseAsync(null))">
+    @foreach (var pick in QuickPicks(Today))
+    {
+        <MudMenuItem Class="pspad-due-quick" OnClick="@(() => ChooseAsync(pick.Day))">
+            <div class="d-flex align-center gap-4">
+                <span class="flex-grow-1">@pick.Label</span>
+                <MudText Typo="Typo.caption" Class="pspad-muted">@pick.Day.ToString("ddd, d MMM")</MudText>
+            </div>
+        </MudMenuItem>
+    }
+    <MudDivider />
+    <MudMenuItem Class="pspad-due-pick" Icon="@Icons.Material.Outlined.CalendarMonth" OnClick="@OpenPickerAsync">
+        Pick a date…
+    </MudMenuItem>
+</PropertyRow>
+
+<MudDatePicker @ref="_picker" Class="d-none" PickerVariant="PickerVariant.Dialog" Date="@AsDateTime(Value)"
+               DateChanged="@PickedAsync" Disabled="@Disabled" />
+
+@code {
+    [Parameter] public DateOnly? Value { get; set; }
+
+    [Parameter] public EventCallback<DateOnly?> ValueChanged { get; set; }
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    MudDatePicker? _picker;
+
+    public sealed record QuickPick(string Label, DateOnly Day);
+
+    public static IReadOnlyList<QuickPick> QuickPicks(DateOnly today) =>
+    [
+        new("Today", today),
+        new("Tomorrow", today.AddDays(1)),
+        new("In 2 days", today.AddDays(2)),
+        new("Next week", NextMonday(today))
+    ];
+
+    public static string Describe(DateOnly? day, DateOnly today) => day switch
+    {
+        null => "No due date",
+        { } d when d == today => "Today",
+        { } d when d == today.AddDays(1) => "Tomorrow",
+        { } d when d == today.AddDays(-1) => "Yesterday",
+        { } d when d.Year == today.Year => d.ToString("ddd, d MMM"),
+        { } d => d.ToString("ddd, d MMM yyyy")
+    };
+
+    static DateOnly NextMonday(DateOnly today)
+    {
+        var daysAhead = ((int)DayOfWeek.Monday - (int)today.DayOfWeek + 7) % 7;
+        return today.AddDays(daysAhead == 0 ? 7 : daysAhead);
+    }
+
+    static DateTime? AsDateTime(DateOnly? day) => day?.ToDateTime(TimeOnly.MinValue);
+
+    async Task OpenPickerAsync()
+    {
+        if (_picker is not null && !Disabled)
+        {
+            await _picker.OpenAsync();
+        }
+    }
+
+    Task PickedAsync(DateTime? date) => ChooseAsync(date is null ? null : DateOnly.FromDateTime(date.Value));
+
+    async Task ChooseAsync(DateOnly? day)
+    {
+        if (Disabled || day == Value)
+        {
+            return;
+        }
+
+        await ValueChanged.InvokeAsync(day);
+    }
+}

@@ -12,97 +12,109 @@
 @inject IDocumentStore<Goal> Goals
 @inject AppState State
 @inject CommandSender Sender
+@inject IDialogService Dialogs
 
-<DetailPanel Open="@(Mode != PanelMode.Closed)" Title="@Title" OnClose="@OnClose"
+<DetailPanel Open="@(Mode != PanelMode.Closed)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose"
              OnSave="@SaveCallback" SaveText="Add task" CanSave="@(!string.IsNullOrWhiteSpace(_draft.Name))"
              Disabled="@Disabled">
     <HeaderActions>
-        @if (_task is not null)
-        {
-            <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync"
-                         Color="Color.Primary" Disabled="@Disabled" aria-label="Done" />
-        }
         <MudIconButton Class="pspad-task-star" Color="Color.Primary" Disabled="@Disabled"
                        Icon="@(Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                       aria-label="Star" OnClick="@ToggleStarAsync" />
+                       aria-label="@(Starred ? "Unstar" : "Star")" OnClick="@ToggleStarAsync" />
     </HeaderActions>
-    <Header>
-        <MudTextField T="string" Class="pspad-task-name-field" Label="Name" Value="@Name"
-                      ValueChanged="@NameChangedAsync" Immediate="@(Mode == PanelMode.Add)"
-                      AutoFocus="@(Mode == PanelMode.Add)" Disabled="@Disabled" />
-    </Header>
     <ChildContent>
-        <div class="pa-3 d-flex flex-column gap-4">
-            <DueDatePicker Value="@DueOn" ValueChanged="@DueDateAsync" Today="@State.Today"
-                           Disabled="@(Disabled || _task?.IsRecurring == true)" />
+        <div class="d-flex align-center gap-1 px-2 pt-3 pb-1">
+            @if (_task is not null)
+            {
+                <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync"
+                             Color="Color.Primary" Disabled="@Disabled" aria-label="Done" />
+            }
+            <MudTextField T="string" Class="@($"pspad-task-name-field flex-grow-1 {(_task is null ? "px-2" : "")}")"
+                          Value="@Name" ValueChanged="@NameChangedAsync" Placeholder="Task name"
+                          Typo="Typo.h6" Underline="false" Immediate="@(Mode == PanelMode.Add)"
+                          AutoFocus="@(Mode == PanelMode.Add)" Disabled="@Disabled"
+                          Style="@(Done ? "text-decoration:line-through" : "")" />
+        </div>
 
-            <div class="d-flex flex-column gap-1">
-                <MudText Typo="Typo.caption">Priority</MudText>
-                <MudToggleGroup T="Priority" Class="pspad-task-priority" Value="@Priority"
-                                ValueChanged="@PriorityAsync" Color="Color.Primary" Size="Size.Small"
-                                Outlined="true" Delimiters="true" Disabled="@Disabled">
-                    @foreach (var priority in Enum.GetValues<Priority>())
-                    {
-                        <MudToggleItem Value="@priority" Text="@priority.ToString()" />
-                    }
-                </MudToggleGroup>
+        @if (_task is not null)
+        {
+            <div class="pl-4 pr-2 pb-2">
+                <StepList Task="@_task" UserId="@State.UserId" Disabled="@Disabled" Changed="@ReloadAsync" />
             </div>
+        }
 
-            <MudSelect T="Guid?" Class="pspad-task-goal" Value="@GoalId" ValueChanged="@LinkGoalAsync"
-                       Label="Goal" Disabled="@Disabled">
-                <MudSelectItem T="Guid?" Value="@((Guid?)null)">None</MudSelectItem>
-                @foreach (var goal in _goals)
-                {
-                    <MudSelectItem T="Guid?" Value="@((Guid?)goal.Id)">@goal.Name</MudSelectItem>
-                }
-            </MudSelect>
+        <MudDivider />
+
+        <div class="py-2 px-1 d-flex flex-column">
+            <DueDateRow Value="@DueOn" ValueChanged="@DueDateAsync" Today="@State.Today"
+                        Disabled="@(Disabled || _task?.IsRecurring == true)" />
 
             @if (_task is not null)
             {
                 <RecurrenceEditor Task="@_task" UserId="@State.UserId" Today="@State.Today"
                                   Disabled="@Disabled" Changed="@ReloadAsync" />
+            }
 
-                <StepList Task="@_task" UserId="@State.UserId" Disabled="@Disabled" Changed="@ReloadAsync" />
+            <PropertyRow Class="pspad-task-priority" Icon="@Icons.Material.Outlined.Flag" Label="Priority"
+                         Value="@Priority.ToString()" HasValue="@(Priority != Priority.None)"
+                         ValueIcon="@(Priority == Priority.None ? null : Icons.Material.Filled.Circle)"
+                         ValueColor="@PriorityColor(Priority)" Disabled="@Disabled">
+                @foreach (var priority in Enum.GetValues<Priority>())
+                {
+                    <MudMenuItem Class="pspad-priority-option" OnClick="@(() => PriorityAsync(priority))">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@(priority == Priority.None ? Icons.Material.Outlined.Circle : Icons.Material.Filled.Circle)"
+                                     Size="Size.Small" Color="@PriorityColor(priority)" />
+                            @priority
+                        </div>
+                    </MudMenuItem>
+                }
+            </PropertyRow>
+
+            <PropertyRow Class="pspad-task-goal" Icon="@Icons.Material.Outlined.TrackChanges" Label="Goal"
+                         Value="@(GoalName ?? "No goal")" HasValue="@(GoalName is not null)" Disabled="@Disabled"
+                         OnClear="@(() => LinkGoalAsync(null))">
+                @if (_goals.Count == 0)
+                {
+                    <MudMenuItem Disabled="true">No goals yet</MudMenuItem>
+                }
+                @foreach (var goal in _goals)
+                {
+                    <MudMenuItem Class="pspad-goal-option" OnClick="@(() => LinkGoalAsync(goal.Id))">@goal.Name</MudMenuItem>
+                }
+            </PropertyRow>
+
+            @if (_task is not null)
+            {
+                <PropertyRow Class="pspad-task-list" Icon="@Icons.Material.Outlined.Folder" Label="List"
+                             Value="@(PathOf(_task.ListId) ?? "No list")" HasValue="@(PathOf(_task.ListId) is not null)"
+                             Disabled="@Disabled">
+                    @foreach (var area in _areas)
+                    {
+                        <MudText Typo="Typo.overline" Class="px-4 pt-2 d-block">@area.Name</MudText>
+                        @foreach (var list in _lists.Where(list => list.AreaId == area.Id))
+                        {
+                            <MudMenuItem Class="pspad-list-option" OnClick="@(() => MoveToListAsync(list.Id))"
+                                         Icon="@(list.Id == _task.ListId ? Icons.Material.Filled.Check : null)">
+                                @list.Name
+                            </MudMenuItem>
+                        }
+                    }
+                </PropertyRow>
             }
         </div>
     </ChildContent>
     <Footer>
         @if (_task is not null)
         {
-            <div class="d-flex flex-column gap-2 pspad-task-actions">
-                <MudText Typo="Typo.overline">Actions</MudText>
-
-                <div class="d-flex gap-2">
-                    <MudSelect T="Guid" Class="pspad-task-area flex-1" Value="@_moveAreaId"
-                               ValueChanged="@MoveAreaChanged" Label="Area" Dense="true" Disabled="@Disabled">
-                        @foreach (var area in _areas)
-                        {
-                            <MudSelectItem T="Guid" Value="@area.Id">@area.Name</MudSelectItem>
-                        }
-                    </MudSelect>
-
-                    <MudSelect T="Guid" Class="pspad-task-list flex-1" @bind-Value="_moveListId" Label="List"
-                               Dense="true" Disabled="@Disabled">
-                        @foreach (var list in ListsIn(_moveAreaId))
-                        {
-                            <MudSelectItem T="Guid" Value="@list.Id">@list.Name</MudSelectItem>
-                        }
-                    </MudSelect>
-                </div>
-
-                <div class="d-flex align-center mt-2">
-                    <MudButton Class="pspad-task-move" Variant="Variant.Filled" Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.DriveFileMove"
-                               Disabled="@(Disabled || !MoveChanged)" OnClick="@MoveAsync">
-                        Move
-                    </MudButton>
-                    <MudSpacer />
-                    <MudButton Class="pspad-task-delete" Variant="Variant.Filled" Color="Color.Error"
-                               StartIcon="@Icons.Material.Filled.Delete" Disabled="@Disabled"
-                               OnClick="@DeleteAsync">
-                        Delete
-                    </MudButton>
-                </div>
+            <div class="d-flex align-center pspad-task-footer">
+                <MudText Typo="Typo.caption" Class="pspad-muted">@CreatedText</MudText>
+                <MudSpacer />
+                <MudTooltip Text="Delete task">
+                    <MudIconButton Class="pspad-task-delete" Icon="@Icons.Material.Outlined.Delete"
+                                   Color="Color.Error" aria-label="Delete task" Disabled="@Disabled"
+                                   OnClick="@DeleteAsync" />
+                </MudTooltip>
             </div>
         }
     </Footer>
@@ -125,9 +137,6 @@
     IReadOnlyList<Goal> _goals = [];
     Guid? _draftFor;
     TaskDraft _draft = new();
-    Guid? _moveFor;
-    Guid _moveAreaId;
-    Guid _moveListId;
 
     PanelMode Mode => (_task, NewInList, Disabled) switch
     {
@@ -139,9 +148,9 @@
 
     string Title => Mode switch
     {
-        PanelMode.Add => "New task",
-        PanelMode.Edit => "Edit task",
-        _ => "Task"
+        PanelMode.Add => PathOf(NewInList!.Value) is { } path ? $"New task · {path}" : "New task",
+        PanelMode.Closed => "",
+        _ => PathOf(_task!.ListId) ?? "Task"
     };
 
     EventCallback SaveCallback => Mode == PanelMode.Add
@@ -156,13 +165,36 @@
 
     Guid? GoalId => _task is null ? _draft.GoalId : _task.GoalId;
 
+    string? GoalName => _goals.FirstOrDefault(goal => goal.Id == GoalId)?.Name;
+
     DateOnly? DueOn => _task is null ? _draft.DueOn : _task.DueOn;
 
     bool Done => _task is not null && (_task.IsRecurring
         ? _task.CompletedDays.Contains(State.Today)
         : _task.CompletedAt is not null);
 
-    bool MoveChanged => _task is not null && _moveListId != Guid.Empty && _moveListId != _task.ListId;
+    string CreatedText => _task?.CreatedAt is { } created ? $"Created {created:ddd, d MMM yyyy}" : "";
+
+    static Color PriorityColor(Priority priority) => priority switch
+    {
+        Priority.High => Color.Error,
+        Priority.Medium => Color.Warning,
+        Priority.Low => Color.Info,
+        _ => Color.Default
+    };
+
+    string? PathOf(Guid listId)
+    {
+        var list = _lists.FirstOrDefault(list => list.Id == listId);
+
+        if (list is null)
+        {
+            return null;
+        }
+
+        var area = _areas.FirstOrDefault(area => area.Id == list.AreaId);
+        return area is null ? list.Name : $"{area.Name} › {list.Name}";
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -190,26 +222,6 @@
         _lists = [.. lists.Where(list => !list.Deleted).OrderBy(list => list.Position)];
         var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
         _goals = [.. goals.Where(goal => !goal.Deleted)];
-
-        if (_task is not null && _moveFor != _task.Id)
-        {
-            ResetMoveTarget();
-        }
-    }
-
-    void ResetMoveTarget()
-    {
-        _moveFor = _task!.Id;
-        _moveListId = _task.ListId;
-        _moveAreaId = _lists.FirstOrDefault(list => list.Id == _task.ListId)?.AreaId ?? Guid.Empty;
-    }
-
-    IReadOnlyList<TaskList> ListsIn(Guid areaId) => [.. _lists.Where(list => list.AreaId == areaId)];
-
-    void MoveAreaChanged(Guid areaId)
-    {
-        _moveAreaId = areaId;
-        _moveListId = ListsIn(areaId).FirstOrDefault()?.Id ?? Guid.Empty;
     }
 
     async Task CreateAsync()
@@ -306,7 +318,7 @@
 
     async Task PriorityAsync(Priority priority)
     {
-        if (Disabled)
+        if (Disabled || priority == Priority)
         {
             return;
         }
@@ -323,7 +335,7 @@
 
     async Task LinkGoalAsync(Guid? goalId)
     {
-        if (Disabled)
+        if (Disabled || goalId == GoalId)
         {
             return;
         }
@@ -362,21 +374,32 @@
         await ReloadAsync();
     }
 
-    async Task MoveAsync()
+    async Task MoveToListAsync(Guid listId)
     {
-        if (Disabled || !MoveChanged)
+        if (Disabled || _task is null || listId == _task.ListId)
         {
             return;
         }
 
-        await Sender.SendAsync(new MoveTaskToList(Guid.NewGuid(), State.UserId, _task!.Id, _moveListId));
+        await Sender.SendAsync(new MoveTaskToList(Guid.NewGuid(), State.UserId, _task.Id, listId));
         await ReloadAsync();
-        ResetMoveTarget();
     }
 
     async Task DeleteAsync()
     {
         if (Disabled || _task is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, $"Delete “{_task.Name}”?" }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete task", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
         {
             return;
         }

@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using Microsoft.Extensions.DependencyInjection;
@@ -147,18 +148,6 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public void AnExistingTaskSavesAsItIsEditedSoItOffersDeleteButNoSave()
-    {
-        var task = NewTask("Buy milk");
-        AppTestHost.Arrange(this, User, Today, task);
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-
-        Assert.Empty(panel.FindAll(".pspad-panel-save"));
-        Assert.Contains("Delete", panel.Find(".pspad-task-delete").TextContent);
-    }
-
-    [Fact]
     public async Task EditingTheNameRenamesTheTaskStraightAway()
     {
         var task = NewTask("Buy milk");
@@ -172,23 +161,6 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task DeletingRemovesTheTaskAndCloses()
-    {
-        var task = NewTask("Buy milk");
-        var replica = AppTestHost.Arrange(this, User, Today, task);
-        var closed = false;
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters
-            .Add(p => p.TaskId, (Guid?)task.Id)
-            .Add(p => p.OnClose, () => closed = true));
-        panel.Find(".pspad-task-delete").Click();
-
-        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
-        Assert.True(reloaded!.Deleted);
-        Assert.True(closed);
-    }
-
-    [Fact]
     public void ANewTaskOffersAddButNoDeleteAndWaitsForAName()
     {
         AppTestHost.Arrange(this, User, Today);
@@ -197,7 +169,6 @@ public class TaskDetailPanelTests : Bunit.TestContext
 
         Assert.Contains("New task", panel.Markup);
         Assert.Empty(panel.FindAll(".pspad-task-delete"));
-        Assert.Empty(panel.FindAll(".pspad-task-actions"));
         Assert.True(panel.Find(".pspad-panel-save").HasAttribute("disabled"));
     }
 
@@ -238,157 +209,6 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheHeaderCarriesALargeTitleAndTheStar()
-    {
-        var task = NewTask("Buy milk");
-        AppTestHost.Arrange(this, User, Today, task);
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-
-        var title = panel.Find(".pspad-panel-title");
-        Assert.Contains("Edit task", title.TextContent);
-        Assert.Contains("mud-typography-h5", title.ClassName);
-        var markup = panel.Markup;
-        Assert.True(markup.IndexOf("pspad-task-star", StringComparison.Ordinal)
-                    < markup.IndexOf("pspad-task-name-field", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void TheNameIsALabelledFieldUnderTheHeader()
-    {
-        var task = NewTask("Buy milk");
-        AppTestHost.Arrange(this, User, Today, task);
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-
-        Assert.Contains("Name", panel.Find(".pspad-task-name-field label").TextContent);
-        Assert.Equal("Buy milk", panel.Find(".pspad-task-name-field input").GetAttribute("value"));
-    }
-
-    [Fact]
-    public void DatePriorityAndGoalComeFirstAndActionsComeLast()
-    {
-        var task = NewTask("Buy milk");
-        AppTestHost.Arrange(this, User, Today, task);
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-
-        var markup = panel.Markup;
-        var due = markup.IndexOf("pspad-task-due", StringComparison.Ordinal);
-        var priority = markup.IndexOf("pspad-task-priority", StringComparison.Ordinal);
-        var goal = markup.IndexOf("pspad-task-goal", StringComparison.Ordinal);
-        var actions = markup.IndexOf("pspad-task-actions", StringComparison.Ordinal);
-        Assert.True(due < priority && priority < goal && goal < actions);
-        Assert.Contains("Actions", panel.Find(".pspad-task-actions").TextContent);
-    }
-
-    [Fact]
-    public void ActionsArePinnedToTheBottomOfThePanel()
-    {
-        var task = NewTask("Buy milk");
-        AppTestHost.Arrange(this, User, Today, task);
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-
-        panel.Find(".pspad-panel-footer .pspad-task-actions");
-        Assert.Empty(panel.FindAll(".flex-grow-1 .pspad-task-actions"));
-    }
-
-    [Fact]
-    public async Task AQuickPickSetsTheDueDateStraightAway()
-    {
-        var task = NewTask("Buy milk");
-        var replica = AppTestHost.Arrange(this, User, Today, task);
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-        panel.FindAll(".pspad-due-quick")[1].Click();
-
-        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
-        Assert.Equal(Today.AddDays(1), reloaded!.DueOn);
-    }
-
-    [Fact]
-    public async Task PickingAPriorityAppliesItStraightAway()
-    {
-        var task = NewTask("Buy milk");
-        var replica = AppTestHost.Arrange(this, User, Today, task);
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-        panel.FindAll(".pspad-task-priority .mud-toggle-item")[(int)Priority.High].Click();
-
-        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
-        Assert.Equal(Priority.High, reloaded!.Priority);
-    }
-
-    [Fact]
-    public async Task ANewTaskKeepsItsQuickPickedDueDateAndPriority()
-    {
-        var listId = Guid.NewGuid();
-        var replica = AppTestHost.Arrange(this, User, Today);
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)listId));
-        panel.Find(".pspad-task-name-field input").Input("Kup chleb");
-        panel.FindAll(".pspad-due-quick")[2].Click();
-        panel.FindAll(".pspad-task-priority .mud-toggle-item")[(int)Priority.Medium].Click();
-        panel.Find(".pspad-panel-save").Click();
-
-        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
-        Assert.Equal(Today.AddDays(2), created.DueOn);
-        Assert.Equal(Priority.Medium, created.Priority);
-    }
-
-    [Fact]
-    public void MoveSitsLeftOfDeleteAndBothAreFilled()
-    {
-        var task = NewTask("Buy milk");
-        AppTestHost.Arrange(this, User, Today, task);
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-
-        var markup = panel.Markup;
-        Assert.True(markup.IndexOf("pspad-task-move", StringComparison.Ordinal)
-                    < markup.IndexOf("pspad-task-delete", StringComparison.Ordinal));
-        Assert.Contains("mud-button-filled", panel.Find(".pspad-task-move").ClassName);
-        Assert.Contains("mud-button-filled-error", panel.Find(".pspad-task-delete").ClassName);
-    }
-
-    [Fact]
-    public void MoveStaysGreyWhileTheAreaAndListAreUnchanged()
-    {
-        var area = NewArea("Dom");
-        var list = NewList(area.Id, "Zakupy");
-        var task = NewTask("Buy milk", list.Id);
-        AppTestHost.Arrange(this, User, Today, area, list, task);
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-
-        Assert.True(panel.Find(".pspad-task-move").HasAttribute("disabled"));
-    }
-
-    [Fact]
-    public async Task PickingAnotherAreaAndListEnablesMoveWhichMovesTheTask()
-    {
-        var home = NewArea("Dom");
-        var work = NewArea("Praca");
-        var shopping = NewList(home.Id, "Zakupy");
-        var office = NewList(work.Id, "Biuro");
-        var task = NewTask("Buy milk", shopping.Id);
-        var replica = AppTestHost.Arrange(this, User, Today, home, work, shopping, office, task);
-
-        var panel = Render(WithPopovers(task.Id));
-        panel.Find(".pspad-task-area").MouseDown();
-        panel.FindAll(".mud-list-item").Single(item => item.TextContent.Contains("Praca")).Click();
-
-        var move = panel.Find(".pspad-task-move");
-        Assert.False(move.HasAttribute("disabled"));
-        move.Click();
-
-        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
-        Assert.Equal(office.Id, reloaded!.ListId);
-        panel.WaitForAssertion(() => Assert.True(panel.Find(".pspad-task-move").HasAttribute("disabled")));
-    }
-
-    [Fact]
     public void InViewModeEveryControlIsDisabled()
     {
         var task = NewTask("Buy milk");
@@ -398,20 +218,222 @@ public class TaskDetailPanelTests : Bunit.TestContext
             .Add(p => p.TaskId, (Guid?)task.Id)
             .Add(p => p.Disabled, true));
 
-        Assert.Contains("Task", panel.Find(".pspad-panel-title").TextContent);
         Assert.True(panel.Find(".pspad-task-name-field input").HasAttribute("disabled"));
         Assert.True(panel.Find(".pspad-task-delete").HasAttribute("disabled"));
         Assert.True(panel.Find(".pspad-task-star").HasAttribute("disabled"));
     }
 
-    RenderFragment WithPopovers(Guid taskId) => builder =>
+    [Fact]
+    public void TheHeaderShowsWhereTheTaskLivesAndTheStar()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        var task = NewTask("Buy milk", list.Id);
+        AppTestHost.Arrange(this, User, Today, area, list, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Equal("Dom › Zakupy", panel.Find(".pspad-panel-title").TextContent.Trim());
+        panel.Find(".pspad-task-star");
+    }
+
+    [Fact]
+    public void TheNameIsALargeUnboxedFieldBesideTheDoneCheckbox()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        var field = panel.Find(".pspad-task-name-field");
+        Assert.Equal("Buy milk", field.QuerySelector("input")!.GetAttribute("value"));
+        Assert.Contains("mud-typography-h6", field.InnerHtml);
+        Assert.DoesNotContain("mud-input-underline", field.InnerHtml);
+        Assert.True(panel.Markup.IndexOf("pspad-task-done", StringComparison.Ordinal)
+                    < panel.Markup.IndexOf("pspad-task-name-field", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void StepsFollowTheNameAndPropertyRowsFollowTheSteps()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        var order = new[] { "pspad-task-name-field", "pspad-steps", "pspad-task-due", "pspad-task-repeat",
+            "pspad-task-priority", "pspad-task-goal", "pspad-task-list" }
+            .Select(marker => panel.Markup.IndexOf(marker, StringComparison.Ordinal))
+            .ToArray();
+        Assert.DoesNotContain(-1, order);
+        Assert.Equal(order.Order(), order);
+    }
+
+    [Fact]
+    public void TheFooterCarriesTheCreatedDateAndADeleteIconButNoSave()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        var footer = panel.Find(".pspad-panel-footer");
+        Assert.Contains("Created", footer.TextContent);
+        Assert.NotNull(footer.QuerySelector(".pspad-task-delete"));
+        Assert.Empty(panel.FindAll(".pspad-panel-save"));
+    }
+
+    [Fact]
+    public async Task DeletingAsksFirstThenRemovesTheTask()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        panel.Find(".pspad-task-delete").Click();
+        panel.FindAll("div.mud-dialog button").Last().Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.True(reloaded!.Deleted);
+    }
+
+    [Fact]
+    public async Task CancellingTheDeleteKeepsTheTask()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        panel.Find(".pspad-task-delete").Click();
+        panel.FindAll("div.mud-dialog button").First().Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.False(reloaded!.Deleted);
+    }
+
+    [Fact]
+    public async Task AQuickPickFromTheDueMenuSetsTheDateStraightAway()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-due");
+        panel.FindAll(".pspad-due-quick")[1].Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(Today.AddDays(1), reloaded!.DueOn);
+        panel.WaitForAssertion(() => Assert.Contains("Tomorrow", panel.Find(".pspad-task-due").TextContent));
+    }
+
+    [Fact]
+    public async Task ClearingTheDueDateRemovesIt()
+    {
+        var task = NewTask("Buy milk");
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, Today), DateTimeOffset.UnixEpoch));
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        panel.Find(".pspad-task-due .pspad-property-clear").Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Null(reloaded!.DueOn);
+    }
+
+    [Fact]
+    public async Task PickingAPriorityFromItsMenuAppliesIt()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-priority");
+        panel.FindAll(".pspad-priority-option")[(int)Priority.High].Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(Priority.High, reloaded!.Priority);
+    }
+
+    [Fact]
+    public async Task PickingARepeatFromItsMenuMakesTheTaskRecurring()
+    {
+        var task = NewTask("Read a book");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.FindAll(".pspad-repeat-option")[0].Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.True(reloaded!.IsRecurring);
+        panel.WaitForAssertion(() => Assert.Contains("Daily", panel.Find(".pspad-task-repeat").TextContent));
+    }
+
+    [Fact]
+    public async Task PickingAListInAnotherAreaMovesTheTaskAtOnce()
+    {
+        var home = NewArea("Dom");
+        var work = NewArea("Praca");
+        var shopping = NewList(home.Id, "Zakupy");
+        var office = NewList(work.Id, "Biuro");
+        var task = NewTask("Buy milk", shopping.Id);
+        var replica = AppTestHost.Arrange(this, User, Today, home, work, shopping, office, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-list");
+        panel.FindAll(".pspad-list-option").Single(item => item.TextContent.Contains("Biuro")).Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(office.Id, reloaded!.ListId);
+        panel.WaitForAssertion(() => Assert.Contains("Praca › Biuro", panel.Find(".pspad-panel-title").TextContent));
+    }
+
+    [Fact]
+    public async Task ANewTaskKeepsWhatItsMenusPicked()
+    {
+        var listId = Guid.NewGuid();
+        var replica = AppTestHost.Arrange(this, User, Today);
+
+        var panel = RenderWithOverlays(newInList: listId);
+        panel.Find(".pspad-task-name-field input").Input("Kup chleb");
+        OpenRow(panel, ".pspad-task-due");
+        panel.FindAll(".pspad-due-quick")[2].Click();
+        OpenRow(panel, ".pspad-task-priority");
+        panel.FindAll(".pspad-priority-option")[(int)Priority.Medium].Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal(Today.AddDays(2), created.DueOn);
+        Assert.Equal(Priority.Medium, created.Priority);
+    }
+
+    [Fact]
+    public void ANewTaskHasNoStepsRepeatOrListRow()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)Guid.NewGuid()));
+
+        Assert.Empty(panel.FindAll(".pspad-steps"));
+        Assert.Empty(panel.FindAll(".pspad-task-repeat"));
+        Assert.Empty(panel.FindAll(".pspad-task-list"));
+    }
+
+    IRenderedComponent<ContainerFragment> RenderWithOverlays(Guid? taskId = null, Guid? newInList = null) => Render(builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
         builder.CloseComponent();
-        builder.OpenComponent<TaskDetailPanel>(1);
-        builder.AddAttribute(2, nameof(TaskDetailPanel.TaskId), (Guid?)taskId);
+        builder.OpenComponent<MudDialogProvider>(1);
         builder.CloseComponent();
-    };
+        builder.OpenComponent<TaskDetailPanel>(2);
+        builder.AddAttribute(3, nameof(TaskDetailPanel.TaskId), taskId);
+        builder.AddAttribute(4, nameof(TaskDetailPanel.NewInList), newInList);
+        builder.CloseComponent();
+    });
+
+    static void OpenRow(IRenderedComponent<ContainerFragment> panel, string row) =>
+        panel.Find($"{row} .pspad-property-activator").Click();
 
     static Area NewArea(string name)
     {
