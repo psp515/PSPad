@@ -58,22 +58,20 @@ else if (_list is not null)
         }
     </MudPaper>
 
-    <MudMenu Class="pspad-fab" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight">
-        <ActivatorContent>
-            <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" UserAttributes="@ActivatorAttributes" />
-        </ActivatorContent>
-        <ChildContent>
-            <MudTooltip Text="Add task">
-                <MudMenuItem OnClick="@AddTaskAsync" Icon="@Icons.Material.Filled.Add" UserAttributes="@AddTaskAttributes" />
-            </MudTooltip>
-            <MudTooltip Text="Rename list">
-                <MudMenuItem OnClick="@RenameAsync" Icon="@Icons.Material.Filled.Edit" UserAttributes="@RenameListAttributes" />
-            </MudTooltip>
-            <MudTooltip Text="Delete list">
-                <MudMenuItem OnClick="@DeleteAsync" Icon="@Icons.Material.Filled.Delete" UserAttributes="@DeleteListAttributes" />
-            </MudTooltip>
-        </ChildContent>
-    </MudMenu>
+    <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
+        <MudTooltip Text="Add task">
+            <MudFabMenuItem OnClick="@AddTaskAsync" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
+                            Size="Size.Small" UserAttributes="@AddTaskAttributes" />
+        </MudTooltip>
+        <MudTooltip Text="Rename list">
+            <MudFabMenuItem OnClick="@RenameAsync" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
+                            Size="Size.Small" UserAttributes="@RenameListAttributes" />
+        </MudTooltip>
+        <MudTooltip Text="Delete list">
+            <MudFabMenuItem OnClick="@DeleteAsync" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Primary"
+                            Size="Size.Small" UserAttributes="@DeleteListAttributes" />
+        </MudTooltip>
+    </MudFabMenu>
 }
 else
 {

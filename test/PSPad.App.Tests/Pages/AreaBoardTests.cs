@@ -213,7 +213,7 @@ public class AreaBoardTests : Bunit.TestContext
         var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
 
         page.Find(".pspad-fab");
-        Assert.Single(page.FindAll(".mud-fab"));
+        Assert.Single(page.FindAll(".mud-fab-menu-button"));
     }
 
     [Fact]
@@ -223,9 +223,9 @@ public class AreaBoardTests : Bunit.TestContext
         Arrange(area);
 
         var page = Render(BuildAreaBoardWithDialogs(area.Id));
-        page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
 
-        var items = page.FindAll(".mud-menu-item");
+        var items = page.FindAll(".mud-fab-menu-item");
         Assert.Equal(3, items.Count);
         Assert.All(items, item => Assert.NotNull(item.QuerySelector("svg")));
         Assert.All(items, item => Assert.True(string.IsNullOrWhiteSpace(item.TextContent)));
@@ -238,9 +238,9 @@ public class AreaBoardTests : Bunit.TestContext
         Arrange(area);
 
         var page = Render(BuildAreaBoardWithDialogs(area.Id));
-        page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
 
-        var items = page.FindAll(".mud-menu-item");
+        var items = page.FindAll(".mud-fab-menu-item");
         Assert.Equal("New list", items[0].GetAttribute("aria-label"));
         Assert.Equal("Rename area", items[1].GetAttribute("aria-label"));
         Assert.Equal("Delete area", items[2].GetAttribute("aria-label"));
@@ -253,8 +253,8 @@ public class AreaBoardTests : Bunit.TestContext
         var replica = Arrange(area);
 
         var page = Render(BuildAreaBoardWithDialogs(area.Id));
-        page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
-        page.FindAll(".mud-menu-item")[0].Click();
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[0].Click();
 
         var field = page.Find("div.mud-dialog input");
         field.Input("Ogród");
@@ -271,8 +271,8 @@ public class AreaBoardTests : Bunit.TestContext
         var replica = Arrange(area);
 
         var page = Render(BuildAreaBoardWithDialogs(area.Id));
-        page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
-        page.FindAll(".mud-menu-item")[1].Click();
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[1].Click();
 
         var field = page.Find("div.mud-dialog input");
         field.Input("Domownicy");
@@ -292,8 +292,8 @@ public class AreaBoardTests : Bunit.TestContext
         var navigation = page.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/areas/{area.Id}");
 
-        page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
-        page.FindAll(".mud-menu-item")[2].Click();
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[2].Click();
         page.FindAll("div.mud-dialog button").Last().Click();
 
         var stored = await replica.LoadAsync<Area>(area.Id);

@@ -118,7 +118,7 @@ public class ListPageTests : Bunit.TestContext
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
         page.Find(".pspad-fab");
-        Assert.Single(page.FindAll(".mud-fab"));
+        Assert.Single(page.FindAll(".mud-fab-menu-button"));
     }
 
     [Fact]
@@ -191,8 +191,8 @@ public class ListPageTests : Bunit.TestContext
         var replica = Arrange(list);
 
         var page = Render(BuildListPageWithDialogs(list.Id));
-        page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
-        page.FindAll(".mud-menu-item")[0].Click();
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[0].Click();
         var dialog = page.FindComponent<MudDialogProvider>();
         dialog.Find("input[placeholder='Task name']").Input("Kup chleb");
         dialog.FindAll("button").Last().Click();
@@ -222,8 +222,8 @@ public class ListPageTests : Bunit.TestContext
         var replica = Arrange(list);
 
         var page = Render(BuildListPageWithDialogs(list.Id));
-        page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
-        page.FindAll(".mud-menu-item")[1].Click();
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[1].Click();
 
         var field = page.Find("div.mud-dialog input");
         field.Input("Zakupy tygodniowe");
@@ -243,8 +243,8 @@ public class ListPageTests : Bunit.TestContext
         var navigation = page.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/lists/{list.Id}");
 
-        page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
-        page.FindAll(".mud-menu-item")[2].Click();
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[2].Click();
         page.FindAll("div.mud-dialog button").Last().Click();
 
         var stored = await replica.LoadAsync<TaskList>(list.Id);
@@ -259,9 +259,9 @@ public class ListPageTests : Bunit.TestContext
         Arrange(list);
 
         var page = Render(BuildListPageWithDialogs(list.Id));
-        page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
 
-        var items = page.FindAll(".mud-menu-item");
+        var items = page.FindAll(".mud-fab-menu-item");
         Assert.Equal("Add task", items[0].GetAttribute("aria-label"));
         Assert.Equal("Rename list", items[1].GetAttribute("aria-label"));
         Assert.Equal("Delete list", items[2].GetAttribute("aria-label"));
