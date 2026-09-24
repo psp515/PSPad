@@ -36,6 +36,8 @@ public class StatisticsChartsTests
             OccurrenceDay = occurrenceDay
         };
 
+    static IReadOnlySet<Guid> Open(params Guid[] ids) => ids.ToHashSet();
+
     static StatisticsLabel Goal(Guid id, string name, bool deleted = false) =>
         new() { Id = id, UserId = User, Kind = LabelKind.Goal, Name = name, Deleted = deleted };
 
@@ -198,7 +200,9 @@ public class StatisticsChartsTests
     [Fact]
     public void OutstandingStartsFromTheOpeningBalanceNotZero()
     {
-        var series = StatisticsCharts.Outstanding([], Today, 3, Zone, 5);
+        var series = StatisticsCharts.Outstanding(
+            [], Today, 3, Zone,
+            Open(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
 
         Assert.Equal(new[] { 5, 5, 5 }, series.Select(point => point.Count));
     }
@@ -206,13 +210,16 @@ public class StatisticsChartsTests
     [Fact]
     public void OutstandingRisesOnCreateAndFallsOnCompleteAndDelete()
     {
+        var finished = Guid.NewGuid();
+        var dropped = Guid.NewGuid();
+
         var series = StatisticsCharts.Outstanding(
         [
-            Record(1, RecordKind.Created, Today.AddDays(-2)),
-            Record(2, RecordKind.Created, Today.AddDays(-2)),
-            Record(3, RecordKind.Completed, Today.AddDays(-1)),
-            Record(4, RecordKind.Deleted, Today)
-        ], Today, 3, Zone, 0);
+            Record(1, RecordKind.Created, Today.AddDays(-2), finished),
+            Record(2, RecordKind.Created, Today.AddDays(-2), dropped),
+            Record(3, RecordKind.Completed, Today.AddDays(-1), finished),
+            Record(4, RecordKind.Deleted, Today, dropped)
+        ], Today, 3, Zone, Open());
 
         Assert.Equal(new[] { 2, 1, 0 }, series.Select(point => point.Count));
     }
@@ -227,7 +234,7 @@ public class StatisticsChartsTests
             Record(1, RecordKind.Created, Today.AddDays(-2), task),
             Record(2, RecordKind.Completed, Today.AddDays(-1), task),
             Record(3, RecordKind.Reopened, Today, task)
-        ], Today, 3, Zone, 0);
+        ], Today, 3, Zone, Open());
 
         Assert.Equal(new[] { 1, 0, 1 }, series.Select(point => point.Count));
     }
@@ -239,9 +246,66 @@ public class StatisticsChartsTests
         [
             Record(1, RecordKind.Created, Today.AddDays(-9)),
             Record(2, RecordKind.Created, Today)
-        ], Today, 3, Zone, 4);
+        ], Today, 3, Zone,
+            Open(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
 
         Assert.Equal(new[] { 5, 5, 6 }, series.Select(point => point.Count));
+    }
+
+    [Fact]
+    public void ATaskCompletedThenDeletedLeavesTheLineOnlyOnce()
+    {
+        var task = Guid.NewGuid();
+
+        var series = StatisticsCharts.Outstanding(
+        [
+            Record(1, RecordKind.Created, Today.AddDays(-2), task),
+            Record(2, RecordKind.Completed, Today.AddDays(-1), task),
+            Record(3, RecordKind.Deleted, Today, task)
+        ], Today, 3, Zone, Open());
+
+        Assert.Equal(new[] { 1, 0, 0 }, series.Select(point => point.Count));
+    }
+
+    [Fact]
+    public void ATaskDeletedWhileStillOpenLeavesTheLineExactlyOnce()
+    {
+        var dropped = Guid.NewGuid();
+        var kept = Guid.NewGuid();
+
+        var series = StatisticsCharts.Outstanding(
+        [
+            Record(1, RecordKind.Created, Today.AddDays(-2), dropped),
+            Record(2, RecordKind.Created, Today.AddDays(-2), kept),
+            Record(3, RecordKind.Deleted, Today.AddDays(-1), dropped)
+        ], Today, 3, Zone, Open());
+
+        Assert.Equal(new[] { 2, 1, 1 }, series.Select(point => point.Count));
+    }
+
+    [Fact]
+    public void CompletingATaskOpenedBeforeTheWindowDropsTheLine()
+    {
+        var task = Guid.NewGuid();
+        var untouched = Guid.NewGuid();
+
+        var series = StatisticsCharts.Outstanding(
+            [Record(1, RecordKind.Completed, Today.AddDays(-1), task)],
+            Today, 3, Zone, Open(task, untouched));
+
+        Assert.Equal(new[] { 2, 1, 1 }, series.Select(point => point.Count));
+    }
+
+    [Fact]
+    public void DeletingATaskThatWasNeverOpenIsANoOp()
+    {
+        var stranger = Guid.NewGuid();
+
+        var series = StatisticsCharts.Outstanding(
+            [Record(1, RecordKind.Deleted, Today.AddDays(-1), stranger)],
+            Today, 3, Zone, Open(Guid.NewGuid()));
+
+        Assert.Equal(new[] { 1, 1, 1 }, series.Select(point => point.Count));
     }
 
     [Fact]
@@ -263,16 +327,15 @@ public class StatisticsChartsTests
         var completions = StatisticsCharts.Completions(deleted, Today, 3, Zone);
         var heatmap = StatisticsCharts.Heatmap(deleted, Today, 3, Zone);
         var bars = StatisticsCharts.ByGoal(deleted, [Goal(goal, "Fitness")]);
-        var outstanding = StatisticsCharts.Outstanding(deleted, Today, 3, Zone, 0);
-        var whileAlive = StatisticsCharts.Outstanding(alive, Today, 3, Zone, 0);
+        var outstanding = StatisticsCharts.Outstanding(deleted, Today, 3, Zone, Open());
+        var whileAlive = StatisticsCharts.Outstanding(alive, Today, 3, Zone, Open());
 
         Assert.Equal(new[] { 0, 1, 0 }, completions.Select(point => point.Planned));
         Assert.Equal(new[] { 0, 0, 0 }, completions.Select(point => point.Unplanned));
         Assert.Equal(new[] { 0, 1, 0 }, heatmap.Select(point => point.Count));
         Assert.Equal(1, Assert.Single(bars, bar => bar.GoalId == goal).Count);
-        Assert.Equal(whileAlive.Take(2), outstanding.Take(2));
-        Assert.Equal(1, outstanding[0].Count);
-        Assert.True(outstanding[^1].Count < whileAlive[^1].Count);
+        Assert.Equal(new[] { 1, 0, 0 }, outstanding.Select(point => point.Count));
+        Assert.Equal(whileAlive, outstanding);
     }
 
     [Fact]
@@ -357,7 +420,7 @@ public class StatisticsChartsTests
     {
         var completions = StatisticsCharts.Completions([], Today, 30, Zone);
         var opened = StatisticsCharts.Opened([], Today, 30, Zone);
-        var outstanding = StatisticsCharts.Outstanding([], Today, 30, Zone, 0);
+        var outstanding = StatisticsCharts.Outstanding([], Today, 30, Zone, Open());
         var heatmap = StatisticsCharts.Heatmap([], Today, 30, Zone);
 
         Assert.Equal(30, completions.Count);
@@ -377,22 +440,46 @@ public class StatisticsChartsTests
     [Fact]
     public void TilesCountTodayTheWeekAndTheNetChangeOverTheRange()
     {
-        var tiles = StatisticsCharts.Tiles(
-        [
-            Record(1, RecordKind.Created, Today.AddDays(-20)),
-            Record(2, RecordKind.Created, Today.AddDays(-20)),
-            Record(3, RecordKind.Created, Today),
-            Record(4, RecordKind.Created, Today),
-            Record(5, RecordKind.Completed, Today, dueOn: Today),
-            Record(6, RecordKind.Completed, Today.AddDays(-3)),
-            Record(7, RecordKind.Completed, Today.AddDays(-10)),
-            Record(8, RecordKind.OccurrenceTicked, Today, occurrenceDay: Today),
-            Record(9, RecordKind.Deleted, Today.AddDays(-1))
-        ], Today, 7, Zone);
+        var carried = Guid.NewGuid();
+        var older = Guid.NewGuid();
+        var finished = Guid.NewGuid();
+        var fresh = Guid.NewGuid();
 
+        StatisticsRecord[] records =
+        [
+            Record(1, RecordKind.Created, Today.AddDays(-3), carried),
+            Record(2, RecordKind.Created, Today, finished),
+            Record(3, RecordKind.Created, Today, fresh),
+            Record(4, RecordKind.Completed, Today, finished, dueOn: Today),
+            Record(5, RecordKind.Completed, Today.AddDays(-3), older),
+            Record(6, RecordKind.OccurrenceTicked, Today, occurrenceDay: Today)
+        ];
+
+        var outstanding = StatisticsCharts.Outstanding(records, Today, 7, Zone, Open(older));
+        var tiles = StatisticsCharts.Tiles(records, outstanding, Today, Zone);
+
+        Assert.Equal(new[] { 1, 1, 1, 1, 1, 1, 2 }, outstanding.Select(point => point.Count));
         Assert.Equal(2, tiles.DoneToday);
         Assert.Equal(2, tiles.OpenedToday);
         Assert.Equal(3, tiles.DoneThisWeek);
+        Assert.Equal(1, tiles.NetChange);
+    }
+
+    [Fact]
+    public void TheNetChangeTileIsTheOutstandingLinesOwnDelta()
+    {
+        var kept = Guid.NewGuid();
+
+        StatisticsRecord[] records =
+        [
+            Record(1, RecordKind.Created, Today.AddDays(-2), kept),
+            Record(2, RecordKind.Completed, Today, kept)
+        ];
+
+        var outstanding = StatisticsCharts.Outstanding(records, Today, 3, Zone, Open());
+        var tiles = StatisticsCharts.Tiles(records, outstanding, Today, Zone);
+
+        Assert.Equal(outstanding[^1].Count - outstanding[0].Count, tiles.NetChange);
         Assert.Equal(-1, tiles.NetChange);
     }
 
@@ -405,7 +492,7 @@ public class StatisticsChartsTests
         [
             Record(1, RecordKind.OccurrenceTicked, Today, task, occurrenceDay: Today),
             Record(2, RecordKind.OccurrenceUnticked, Today, task, occurrenceDay: Today)
-        ], Today, 7, Zone);
+        ], [], Today, Zone);
 
         Assert.Equal(0, tiles.DoneToday);
         Assert.Equal(0, tiles.DoneThisWeek);
@@ -420,12 +507,11 @@ public class StatisticsChartsTests
         [
             Record(1, RecordKind.Created, Today, at: lateInUtc),
             Record(2, RecordKind.Completed, Today, at: lateInUtc)
-        ], Today, 7, Zone);
+        ], [], Today, Zone);
 
         Assert.Equal(1, tiles.OpenedToday);
         Assert.Equal(1, tiles.DoneToday);
         Assert.Equal(1, tiles.DoneThisWeek);
-        Assert.Equal(0, tiles.NetChange);
     }
 
     [Fact]
@@ -446,7 +532,7 @@ public class StatisticsChartsTests
         var lateInUtc = new DateTimeOffset(2026, 9, 23, 23, 30, 0, TimeSpan.Zero);
 
         var series = StatisticsCharts.Outstanding(
-            [Record(1, RecordKind.Created, Today, at: lateInUtc)], Today, 3, Zone, 0);
+            [Record(1, RecordKind.Created, Today, at: lateInUtc)], Today, 3, Zone, Open());
 
         Assert.Equal(new[] { 0, 0, 1 }, series.Select(point => point.Count));
     }

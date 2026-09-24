@@ -40,43 +40,40 @@ public static class StatisticsCharts
             .ToList();
     }
 
-    // openingOpen counts only records older than the oldest one passed in, so records that
-    // predate the first charted day are folded into it here rather than counted twice.
+    // openAtStart holds the tasks whose latest lifecycle record is older than the oldest record
+    // passed in, so records predating the first charted day fold into the set exactly once.
     public static IReadOnlyList<DailyCount> Outstanding(
         IReadOnlyList<StatisticsRecord> records, DateOnly today, int days, TimeZoneInfo zone,
-        int openingOpen)
+        IReadOnlySet<Guid> openAtStart)
     {
         var first = today.AddDays(1 - days);
-        var deltas = new Dictionary<DateOnly, int>();
-        var running = openingOpen;
+        var lifecycle = records
+            .Where(record => IsLifecycle(record.Kind))
+            .Select(record => (Record: record, Day: DayOf(record.At, zone)))
+            .OrderBy(entry => entry.Day)
+            .ThenBy(entry => entry.Record.Id)
+            .ToList();
 
-        foreach (var record in records)
+        var open = new HashSet<Guid>(openAtStart);
+
+        foreach (var entry in lifecycle.Where(entry => entry.Day < first))
         {
-            var delta = OpenDelta(record.Kind);
-
-            if (delta == 0)
-            {
-                continue;
-            }
-
-            var day = DayOf(record.At, zone);
-
-            if (day < first)
-            {
-                running += delta;
-            }
-            else if (day <= today)
-            {
-                deltas[day] = deltas.GetValueOrDefault(day) + delta;
-            }
+            Apply(open, entry.Record);
         }
 
+        var charted = lifecycle.Where(entry => Within(entry.Day, first, today)).ToList();
         var points = new List<DailyCount>();
+        var cursor = 0;
 
         foreach (var day in Range(today, days))
         {
-            running += deltas.GetValueOrDefault(day);
-            points.Add(new DailyCount(day, running));
+            while (cursor < charted.Count && charted[cursor].Day <= day)
+            {
+                Apply(open, charted[cursor].Record);
+                cursor++;
+            }
+
+            points.Add(new DailyCount(day, open.Count));
         }
 
         return points;
@@ -124,10 +121,10 @@ public static class StatisticsCharts
             .ToList();
 
     public static StatisticsTiles Tiles(
-        IReadOnlyList<StatisticsRecord> records, DateOnly today, int days, TimeZoneInfo zone)
+        IReadOnlyList<StatisticsRecord> records, IReadOnlyList<DailyCount> outstanding,
+        DateOnly today, TimeZoneInfo zone)
     {
         var completions = CompletionDays(records, zone).ToList();
-        var first = today.AddDays(1 - days);
         var weekStart = today.AddDays(1 - WeekLength);
 
         return new StatisticsTiles(
@@ -136,9 +133,7 @@ public static class StatisticsCharts
                 record.Kind == RecordKind.Created && DayOf(record.At, zone) == today),
             completions.Count(completion =>
                 completion.Day >= weekStart && completion.Day <= today),
-            records
-                .Where(record => Within(DayOf(record.At, zone), first, today))
-                .Sum(record => OpenDelta(record.Kind)));
+            outstanding.Count == 0 ? 0 : outstanding[^1].Count - outstanding[0].Count);
     }
 
     static IEnumerable<(DateOnly Day, bool Planned)> CompletionDays(
@@ -168,12 +163,21 @@ public static class StatisticsCharts
     static bool IsOccurrence(RecordKind kind) =>
         kind is RecordKind.OccurrenceTicked or RecordKind.OccurrenceUnticked;
 
-    static int OpenDelta(RecordKind kind) => kind switch
+    static bool IsLifecycle(RecordKind kind) =>
+        kind is RecordKind.Created or RecordKind.Reopened
+            or RecordKind.Completed or RecordKind.Deleted;
+
+    static void Apply(HashSet<Guid> open, StatisticsRecord record)
     {
-        RecordKind.Created or RecordKind.Reopened => 1,
-        RecordKind.Completed or RecordKind.Deleted => -1,
-        _ => 0
-    };
+        if (record.Kind is RecordKind.Created or RecordKind.Reopened)
+        {
+            open.Add(record.TaskId);
+        }
+        else
+        {
+            open.Remove(record.TaskId);
+        }
+    }
 
     static string NameOf(Guid goalId, IReadOnlyDictionary<Guid, string> names) =>
         names.TryGetValue(goalId, out var name) ? name : UnknownGoal;

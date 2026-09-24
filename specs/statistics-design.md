@@ -232,7 +232,7 @@ Days are bucketed at query time in the user's time zone.
 |---|---|---|
 | Completions per day (stacked bar) | how much of what I did was on the plan | `Completed` + `OccurrenceTicked` per day, split planned / unplanned |
 | Tasks opened per day (line) | am I taking on more than I finish | `Created` per day |
-| Open tasks outstanding (line) | the burndown, truthfully | running `Created − Completed − Deleted + Reopened` |
+| Open tasks outstanding (line) | the burndown, truthfully | count of tasks whose latest lifecycle record is `Created` or `Reopened` |
 | Where the work went (horizontal bars) | is my effort going where I said | `Completed` records **and resolved occurrence ticks** grouped by `GoalId`, ranked, with an explicit *no goal* bar |
 | Consistency heatmap | am I showing up | one cell per day shaded by completion count |
 
