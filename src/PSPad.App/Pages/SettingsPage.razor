@@ -38,13 +38,9 @@
 
 <MudPaper Outlined="true" Class="pa-4 mb-4">
     <MudText Typo="Typo.subtitle2" Class="mb-3">Time zone</MudText>
-    <MudSelect T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
-               Variant="Variant.Outlined" Margin="Margin.Dense">
-        @foreach (var zone in TimeZoneInfo.GetSystemTimeZones().OrderBy(zone => zone.Id))
-        {
-            <MudSelectItem T="string" Value="@zone.Id">@zone.Id</MudSelectItem>
-        }
-    </MudSelect>
+    <MudAutocomplete T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
+                      SearchFunc="@SearchTimeZonesAsync"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" ResetValueOnEmptyText="false" />
     <MudText Typo="Typo.caption">The time zone is saved on the server, so it needs a connection.</MudText>
     @if (_rejected)
     {
@@ -78,6 +74,9 @@
 @code {
     bool _rejected;
     int _pendingCommands;
+
+    static readonly string[] TimeZoneIds =
+        TimeZoneInfo.GetSystemTimeZones().Select(zone => zone.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray();
 
     protected override async Task OnInitializedAsync()
     {
@@ -135,4 +134,9 @@
     }
 
     public Task SelectThemeAsync(ThemeMode mode) => Preference.SetAsync(mode);
+
+    public Task<IEnumerable<string>> SearchTimeZonesAsync(string value, CancellationToken ct) =>
+        Task.FromResult(string.IsNullOrWhiteSpace(value)
+            ? TimeZoneIds.AsEnumerable()
+            : TimeZoneIds.Where(id => id.Contains(value, StringComparison.OrdinalIgnoreCase)));
 }

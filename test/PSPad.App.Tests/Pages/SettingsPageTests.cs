@@ -219,6 +219,28 @@ public class SettingsPageTests : Bunit.TestContext
         Assert.NotEmpty(page.FindAll(".mud-select"));
     }
 
+    [Fact]
+    public void TheTimeZonePickerIsSearchableRatherThanAFlatDropdown()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.NotEmpty(page.FindAll(".mud-autocomplete"));
+    }
+
+    [Fact]
+    public async Task TypingNarrowsTheTimeZoneSearchResultsCaseInsensitively()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+        var matches = await page.Instance.SearchTimeZonesAsync("warsaw", CancellationToken.None);
+
+        Assert.Contains("Europe/Warsaw", matches);
+        Assert.DoesNotContain("Pacific/Kiritimati", matches);
+    }
+
     AppState Arrange(
         string displayName, string email, bool respondWithNullTimeZone = false, bool online = true)
     {
