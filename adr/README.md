@@ -47,6 +47,7 @@ the old one's status line to point at the new number.
 | [0030](0030-the-shell-waits-for-the-first-pull-on-a-device-holding-nothing.md) | The shell waits for the first pull on a device holding nothing for this user | Active (amends [0029](0029-sync-revision-cascades-to-replica-backed-screens.md); mechanism corrected by [0031](0031-every-start-hands-back-its-own-pull.md)) | 2026-09-23 | ui, sync, offline, identity |
 | [0031](0031-every-start-hands-back-its-own-pull.md) | Every Start hands back its own pull, because the shell mounts once signed out and once signed in | Active (amends [0030](0030-the-shell-waits-for-the-first-pull-on-a-device-holding-nothing.md); concurrency contract refined by [0032](0032-command-triggered-sync-coalesces-overlapping-runs.md)) | 2026-09-23 | sync, identity, ui, offline |
 | [0032](0032-command-triggered-sync-coalesces-overlapping-runs.md) | Every accepted command triggers a sync, and overlapping runs coalesce | Active (refines [0031](0031-every-start-hands-back-its-own-pull.md)'s concurrency contract) | 2026-09-23 | sync, offline, ui, architecture |
+| [0033](0033-one-fab-per-page-action-set.md) | One FAB per page's action set — zero, a plain FAB, or a FAB Menu | Active (amends [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md)) | 2026-09-24 | ui |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
