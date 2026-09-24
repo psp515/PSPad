@@ -248,21 +248,31 @@ public class StatisticsChartsTests
     public void DeletingATaskLeavesEarlierDaysUntouched()
     {
         var task = Guid.NewGuid();
-        var twoDaysAgo = Today.AddDays(-2);
+        var goal = Guid.NewGuid();
+        var born = Today.AddDays(-2);
+        var finished = Today.AddDays(-1);
 
-        StatisticsRecord[] records =
+        StatisticsRecord[] alive =
         [
-            Record(1, RecordKind.Completed, twoDaysAgo, task, dueOn: twoDaysAgo),
-            Record(2, RecordKind.Deleted, Today, task)
+            Record(1, RecordKind.Created, born, task),
+            Record(2, RecordKind.Completed, finished, task, dueOn: finished, goalId: goal)
         ];
 
-        var completions = StatisticsCharts.Completions(records, Today, 3, Zone);
-        var heatmap = StatisticsCharts.Heatmap(records, Today, 3, Zone);
+        StatisticsRecord[] deleted = [.. alive, Record(3, RecordKind.Deleted, Today, task)];
 
-        Assert.Equal(1, completions[0].Planned);
-        Assert.Equal(0, completions[2].Planned);
-        Assert.Equal(0, completions[2].Unplanned);
-        Assert.Equal(new[] { 1, 0, 0 }, heatmap.Select(point => point.Count));
+        var completions = StatisticsCharts.Completions(deleted, Today, 3, Zone);
+        var heatmap = StatisticsCharts.Heatmap(deleted, Today, 3, Zone);
+        var bars = StatisticsCharts.ByGoal(deleted, [Goal(goal, "Fitness")]);
+        var outstanding = StatisticsCharts.Outstanding(deleted, Today, 3, Zone, 0);
+        var whileAlive = StatisticsCharts.Outstanding(alive, Today, 3, Zone, 0);
+
+        Assert.Equal(new[] { 0, 1, 0 }, completions.Select(point => point.Planned));
+        Assert.Equal(new[] { 0, 0, 0 }, completions.Select(point => point.Unplanned));
+        Assert.Equal(new[] { 0, 1, 0 }, heatmap.Select(point => point.Count));
+        Assert.Equal(1, Assert.Single(bars, bar => bar.GoalId == goal).Count);
+        Assert.Equal(whileAlive.Take(2), outstanding.Take(2));
+        Assert.Equal(1, outstanding[0].Count);
+        Assert.True(outstanding[^1].Count < whileAlive[^1].Count);
     }
 
     [Fact]
@@ -370,14 +380,15 @@ public class StatisticsChartsTests
         var tiles = StatisticsCharts.Tiles(
         [
             Record(1, RecordKind.Created, Today.AddDays(-20)),
-            Record(2, RecordKind.Created, Today),
+            Record(2, RecordKind.Created, Today.AddDays(-20)),
             Record(3, RecordKind.Created, Today),
-            Record(4, RecordKind.Completed, Today, dueOn: Today),
-            Record(5, RecordKind.Completed, Today.AddDays(-3)),
-            Record(6, RecordKind.Completed, Today.AddDays(-20)),
-            Record(7, RecordKind.OccurrenceTicked, Today, occurrenceDay: Today),
-            Record(8, RecordKind.Deleted, Today.AddDays(-1))
-        ], Today, Zone);
+            Record(4, RecordKind.Created, Today),
+            Record(5, RecordKind.Completed, Today, dueOn: Today),
+            Record(6, RecordKind.Completed, Today.AddDays(-3)),
+            Record(7, RecordKind.Completed, Today.AddDays(-10)),
+            Record(8, RecordKind.OccurrenceTicked, Today, occurrenceDay: Today),
+            Record(9, RecordKind.Deleted, Today.AddDays(-1))
+        ], Today, 7, Zone);
 
         Assert.Equal(2, tiles.DoneToday);
         Assert.Equal(2, tiles.OpenedToday);
@@ -394,9 +405,101 @@ public class StatisticsChartsTests
         [
             Record(1, RecordKind.OccurrenceTicked, Today, task, occurrenceDay: Today),
             Record(2, RecordKind.OccurrenceUnticked, Today, task, occurrenceDay: Today)
-        ], Today, Zone);
+        ], Today, 7, Zone);
 
         Assert.Equal(0, tiles.DoneToday);
         Assert.Equal(0, tiles.DoneThisWeek);
+    }
+
+    [Fact]
+    public void TilesBucketTodayInTheUsersZoneNotUtc()
+    {
+        var lateInUtc = new DateTimeOffset(2026, 9, 23, 23, 30, 0, TimeSpan.Zero);
+
+        var tiles = StatisticsCharts.Tiles(
+        [
+            Record(1, RecordKind.Created, Today, at: lateInUtc),
+            Record(2, RecordKind.Completed, Today, at: lateInUtc)
+        ], Today, 7, Zone);
+
+        Assert.Equal(1, tiles.OpenedToday);
+        Assert.Equal(1, tiles.DoneToday);
+        Assert.Equal(1, tiles.DoneThisWeek);
+        Assert.Equal(0, tiles.NetChange);
+    }
+
+    [Fact]
+    public void OpenedBucketsInTheUsersZoneNotUtc()
+    {
+        var lateInUtc = new DateTimeOffset(2026, 9, 23, 23, 30, 0, TimeSpan.Zero);
+
+        var series = StatisticsCharts.Opened(
+            [Record(1, RecordKind.Created, Today, at: lateInUtc)], Today, 3, Zone);
+
+        Assert.Equal(new DateOnly(2026, 9, 23), series[1].Day);
+        Assert.Equal(new[] { 0, 0, 1 }, series.Select(point => point.Count));
+    }
+
+    [Fact]
+    public void OutstandingBucketsInTheUsersZoneNotUtc()
+    {
+        var lateInUtc = new DateTimeOffset(2026, 9, 23, 23, 30, 0, TimeSpan.Zero);
+
+        var series = StatisticsCharts.Outstanding(
+            [Record(1, RecordKind.Created, Today, at: lateInUtc)], Today, 3, Zone, 0);
+
+        Assert.Equal(new[] { 0, 0, 1 }, series.Select(point => point.Count));
+    }
+
+    [Fact]
+    public void TheLatestOccurrenceRecordIsTheHighestIdNotTheLastSeen()
+    {
+        var task = Guid.NewGuid();
+        var early = new DateTimeOffset(Today.ToDateTime(new TimeOnly(10, 0)), TimeSpan.FromHours(2));
+        var late = new DateTimeOffset(Today.ToDateTime(new TimeOnly(11, 0)), TimeSpan.FromHours(2));
+
+        var series = StatisticsCharts.Completions(
+        [
+            Record(3, RecordKind.OccurrenceTicked, Today, task, occurrenceDay: Today, at: early),
+            Record(2, RecordKind.OccurrenceUnticked, Today, task, occurrenceDay: Today, at: late)
+        ], Today, 3, Zone);
+
+        Assert.Equal(1, series[^1].Planned);
+    }
+
+    [Fact]
+    public void AGoalLinkedHabitsTicksCountTowardsItsBar()
+    {
+        var goal = Guid.NewGuid();
+        var habit = Guid.NewGuid();
+
+        var bars = StatisticsCharts.ByGoal(
+        [
+            Record(1, RecordKind.Completed, Today, goalId: goal),
+            Record(2, RecordKind.OccurrenceTicked, Today.AddDays(-1), habit,
+                goalId: goal, occurrenceDay: Today.AddDays(-1)),
+            Record(3, RecordKind.OccurrenceTicked, Today, habit,
+                goalId: goal, occurrenceDay: Today)
+        ], [Goal(goal, "Fitness")]);
+
+        Assert.Equal(3, Assert.Single(bars, bar => bar.GoalId == goal).Count);
+    }
+
+    [Fact]
+    public void AGoalLinkedHabitDayTheUserTookBackDoesNotCountTowardsItsBar()
+    {
+        var goal = Guid.NewGuid();
+        var habit = Guid.NewGuid();
+
+        var bars = StatisticsCharts.ByGoal(
+        [
+            Record(1, RecordKind.Completed, Today, goalId: goal),
+            Record(2, RecordKind.OccurrenceTicked, Today, habit,
+                goalId: goal, occurrenceDay: Today),
+            Record(3, RecordKind.OccurrenceUnticked, Today, habit,
+                goalId: goal, occurrenceDay: Today)
+        ], [Goal(goal, "Fitness")]);
+
+        Assert.Equal(1, Assert.Single(bars, bar => bar.GoalId == goal).Count);
     }
 }

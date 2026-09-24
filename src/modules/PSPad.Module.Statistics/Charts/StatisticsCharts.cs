@@ -40,6 +40,8 @@ public static class StatisticsCharts
             .ToList();
     }
 
+    // openingOpen counts only records older than the oldest one passed in, so records that
+    // predate the first charted day are folded into it here rather than counted twice.
     public static IReadOnlyList<DailyCount> Outstanding(
         IReadOnlyList<StatisticsRecord> records, DateOnly today, int days, TimeZoneInfo zone,
         int openingOpen)
@@ -93,7 +95,9 @@ public static class StatisticsCharts
         var totals = new Dictionary<Guid, int>();
         var withoutGoal = 0;
 
-        foreach (var record in records.Where(record => record.Kind == RecordKind.Completed))
+        foreach (var record in records
+                     .Where(record => record.Kind == RecordKind.Completed)
+                     .Concat(FinalOccurrenceTicks(records)))
         {
             if (record.GoalId is { } goalId)
             {
@@ -120,9 +124,10 @@ public static class StatisticsCharts
             .ToList();
 
     public static StatisticsTiles Tiles(
-        IReadOnlyList<StatisticsRecord> records, DateOnly today, TimeZoneInfo zone)
+        IReadOnlyList<StatisticsRecord> records, DateOnly today, int days, TimeZoneInfo zone)
     {
         var completions = CompletionDays(records, zone).ToList();
+        var first = today.AddDays(1 - days);
         var weekStart = today.AddDays(1 - WeekLength);
 
         return new StatisticsTiles(
@@ -131,7 +136,9 @@ public static class StatisticsCharts
                 record.Kind == RecordKind.Created && DayOf(record.At, zone) == today),
             completions.Count(completion =>
                 completion.Day >= weekStart && completion.Day <= today),
-            records.Sum(record => OpenDelta(record.Kind)));
+            records
+                .Where(record => Within(DayOf(record.At, zone), first, today))
+                .Sum(record => OpenDelta(record.Kind)));
     }
 
     static IEnumerable<(DateOnly Day, bool Planned)> CompletionDays(
@@ -146,17 +153,17 @@ public static class StatisticsCharts
 
         foreach (var tick in FinalOccurrenceTicks(records))
         {
-            yield return (tick, true);
+            yield return (tick.OccurrenceDay!.Value, true);
         }
     }
 
-    static IEnumerable<DateOnly> FinalOccurrenceTicks(IReadOnlyList<StatisticsRecord> records) =>
+    static IEnumerable<StatisticsRecord> FinalOccurrenceTicks(
+        IReadOnlyList<StatisticsRecord> records) =>
         records
             .Where(record => record.OccurrenceDay is not null && IsOccurrence(record.Kind))
             .GroupBy(record => (record.TaskId, record.OccurrenceDay))
             .Select(group => group.MaxBy(record => record.Id)!)
-            .Where(record => record.Kind == RecordKind.OccurrenceTicked)
-            .Select(record => record.OccurrenceDay!.Value);
+            .Where(record => record.Kind == RecordKind.OccurrenceTicked);
 
     static bool IsOccurrence(RecordKind kind) =>
         kind is RecordKind.OccurrenceTicked or RecordKind.OccurrenceUnticked;
@@ -170,6 +177,9 @@ public static class StatisticsCharts
 
     static string NameOf(Guid goalId, IReadOnlyDictionary<Guid, string> names) =>
         names.TryGetValue(goalId, out var name) ? name : UnknownGoal;
+
+    static bool Within(DateOnly day, DateOnly first, DateOnly last) =>
+        day >= first && day <= last;
 
     static IEnumerable<DateOnly> Range(DateOnly today, int days) =>
         Enumerable.Range(0, Math.Max(days, 0)).Select(offset => today.AddDays(offset + 1 - days));
