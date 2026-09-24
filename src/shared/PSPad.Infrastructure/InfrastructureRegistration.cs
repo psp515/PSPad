@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PSPad.Abstractions;
+using PSPad.Infrastructure.Events;
 using PSPad.Infrastructure.Mongo;
 
 namespace PSPad.Infrastructure;
@@ -28,6 +29,7 @@ public static class InfrastructureRegistration
         services.AddSingleton<MongoContext>();
         services.AddScoped(typeof(IDocumentStore<>), typeof(MongoDocumentStore<>));
         services.AddScoped<IUnitOfWork, MongoUnitOfWork>();
+        services.AddSingleton<IDomainEventDispatcher, NullDomainEventDispatcher>();
         services.AddSingleton<IClock, SystemClock>();
 
         return services;

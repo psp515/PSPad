@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using PSPad.Abstractions;
+using PSPad.Infrastructure.Events;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
@@ -16,7 +17,7 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         var user = Guid.NewGuid();
         var context = TestContext.For(fixture);
-        var work = new MongoUnitOfWork(context);
+        var work = new MongoUnitOfWork(context, new NullDomainEventDispatcher());
         var commandId = Guid.NewGuid();
         var (area, events) = NewArea(user);
 
@@ -43,11 +44,11 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var (first, firstEvents) = NewArea(user);
         var (second, secondEvents) = NewArea(user);
 
-        var work = new MongoUnitOfWork(context);
+        var work = new MongoUnitOfWork(context, new NullDomainEventDispatcher());
         work.Stage(first, firstEvents);
         await work.CommitAsync(Guid.NewGuid(), user, ct);
 
-        var later = new MongoUnitOfWork(context);
+        var later = new MongoUnitOfWork(context, new NullDomainEventDispatcher());
         later.Stage(second, secondEvents);
         await later.CommitAsync(Guid.NewGuid(), user, ct);
 
@@ -67,11 +68,11 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var commandId = Guid.NewGuid();
         var (area, events) = NewArea(user);
 
-        var first = new MongoUnitOfWork(context);
+        var first = new MongoUnitOfWork(context, new NullDomainEventDispatcher());
         first.Stage(area, events);
         await first.CommitAsync(commandId, user, ct);
 
-        var replay = new MongoUnitOfWork(context);
+        var replay = new MongoUnitOfWork(context, new NullDomainEventDispatcher());
         replay.Stage(area, events);
         await replay.CommitAsync(commandId, user, ct);
 

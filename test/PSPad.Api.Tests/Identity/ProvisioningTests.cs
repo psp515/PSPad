@@ -3,6 +3,7 @@ using MongoDB.Driver;
 using PSPad.Api.Identity;
 using PSPad.Api.Tests.Persistence;
 using PSPad.Infrastructure;
+using PSPad.Infrastructure.Events;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Identity;
 using PSPad.Module.Identity.Provisioning;
@@ -62,6 +63,6 @@ public class ProvisioningTests(MongoFixture fixture)
             new MongoDocumentStore<User>(context),
             new MongoDocumentStore<Area>(context),
             new MongoDocumentStore<Inbox>(context),
-            new MongoUnitOfWork(context),
+            new MongoUnitOfWork(context, new NullDomainEventDispatcher()),
             new SystemClock());
 }
