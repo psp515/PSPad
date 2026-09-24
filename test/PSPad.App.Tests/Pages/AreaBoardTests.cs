@@ -232,6 +232,21 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheFabMenuItemsCarryAnAccessibleNameMatchingTheirTooltip()
+    {
+        var area = NewArea("Dom");
+        Arrange(area);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        var items = page.FindAll(".mud-menu-item");
+        Assert.Equal("New list", items[0].GetAttribute("aria-label"));
+        Assert.Equal("Rename area", items[1].GetAttribute("aria-label"));
+        Assert.Equal("Delete area", items[2].GetAttribute("aria-label"));
+    }
+
+    [Fact]
     public async Task NewListFromTheFabMenuCreatesItInTheReplica()
     {
         var area = NewArea("Dom");
@@ -274,12 +289,16 @@ public class AreaBoardTests : Bunit.TestContext
         var replica = Arrange(area);
 
         var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        var navigation = page.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/areas/{area.Id}");
+
         page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
         page.FindAll(".mud-menu-item")[2].Click();
         page.FindAll("div.mud-dialog button").Last().Click();
 
         var stored = await replica.LoadAsync<Area>(area.Id);
         Assert.True(stored!.Deleted);
+        Assert.Equal(navigation.BaseUri, navigation.Uri);
     }
 
     // Both ThingMenu's MudMenu and IDialogService's MudDialogProvider portal their open

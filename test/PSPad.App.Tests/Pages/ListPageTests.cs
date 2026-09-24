@@ -34,6 +34,28 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItShowsAnEmptyStateWhenTheListHasNoTasks()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Contains("No tasks yet.", page.Markup);
+    }
+
+    [Fact]
+    public void ItDoesNotShowTheEmptyStateWhenTheListHasTasks()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, NewTask(list.Id, "Mleko"));
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.DoesNotContain("No tasks yet.", page.Markup);
+    }
+
+    [Fact]
     public void TasksFromOtherListsAreNotThere()
     {
         var mine = NewList("Zakupy");
@@ -85,6 +107,18 @@ public class ListPageTests : Bunit.TestContext
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
         page.Find(".mud-grid");
+    }
+
+    [Fact]
+    public void TheListHasExactlyOneFabMenu()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        page.Find(".pspad-fab");
+        Assert.Single(page.FindAll(".mud-fab"));
     }
 
     [Fact]
@@ -206,12 +240,31 @@ public class ListPageTests : Bunit.TestContext
         var replica = Arrange(list);
 
         var page = Render(BuildListPageWithDialogs(list.Id));
+        var navigation = page.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/lists/{list.Id}");
+
         page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
         page.FindAll(".mud-menu-item")[2].Click();
         page.FindAll("div.mud-dialog button").Last().Click();
 
         var stored = await replica.LoadAsync<TaskList>(list.Id);
         Assert.True(stored!.Deleted);
+        Assert.EndsWith($"/areas/{list.AreaId}", navigation.Uri);
+    }
+
+    [Fact]
+    public void TheFabMenuItemsCarryAnAccessibleNameMatchingTheirTooltip()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list);
+
+        var page = Render(BuildListPageWithDialogs(list.Id));
+        page.Find(".pspad-fab .mud-menu-activator").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        var items = page.FindAll(".mud-menu-item");
+        Assert.Equal("Add task", items[0].GetAttribute("aria-label"));
+        Assert.Equal("Rename list", items[1].GetAttribute("aria-label"));
+        Assert.Equal("Delete list", items[2].GetAttribute("aria-label"));
     }
 
     [Fact]

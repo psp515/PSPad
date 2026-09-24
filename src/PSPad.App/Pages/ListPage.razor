@@ -25,6 +25,10 @@ else if (_list is not null)
     <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">@_list.Name</MudText>
 
     <MudPaper Outlined="true">
+        @if (_open.Count == 0 && _done.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="pa-4">No tasks yet.</MudText>
+        }
         <MudGrid Spacing="4">
             @foreach (var task in _open)
             {
@@ -56,13 +60,13 @@ else if (_list is not null)
 
     <PageFabMenu>
         <MudTooltip Text="Add task">
-            <MudMenuItem OnClick="@AddTaskAsync" Icon="@Icons.Material.Filled.Add" />
+            <MudMenuItem OnClick="@AddTaskAsync" Icon="@Icons.Material.Filled.Add" UserAttributes="@AddTaskAttributes" />
         </MudTooltip>
         <MudTooltip Text="Rename list">
-            <MudMenuItem OnClick="@RenameAsync" Icon="@Icons.Material.Filled.Edit" />
+            <MudMenuItem OnClick="@RenameAsync" Icon="@Icons.Material.Filled.Edit" UserAttributes="@RenameListAttributes" />
         </MudTooltip>
         <MudTooltip Text="Delete list">
-            <MudMenuItem OnClick="@DeleteAsync" Icon="@Icons.Material.Filled.Delete" />
+            <MudMenuItem OnClick="@DeleteAsync" Icon="@Icons.Material.Filled.Delete" UserAttributes="@DeleteListAttributes" />
         </MudTooltip>
     </PageFabMenu>
 }
@@ -81,6 +85,10 @@ else
     IReadOnlyList<TodoTask> _open = [];
     IReadOnlyList<TodoTask> _done = [];
     IReadOnlyList<Goal> _goals = [];
+
+    static readonly Dictionary<string, object> AddTaskAttributes = new() { ["aria-label"] = "Add task" };
+    static readonly Dictionary<string, object> RenameListAttributes = new() { ["aria-label"] = "Rename list" };
+    static readonly Dictionary<string, object> DeleteListAttributes = new() { ["aria-label"] = "Delete list" };
 
     protected override async Task OnParametersSetAsync() => await ReloadAsync();
 

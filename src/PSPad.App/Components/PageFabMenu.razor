@@ -1,6 +1,6 @@
 <MudMenu Class="pspad-fab" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight">
     <ActivatorContent>
-        <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" />
+        <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" UserAttributes="@ActivatorAttributes" />
     </ActivatorContent>
     <ChildContent>
         @ChildContent
@@ -9,4 +9,6 @@
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
 }

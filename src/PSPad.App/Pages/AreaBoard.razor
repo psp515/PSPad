@@ -43,13 +43,13 @@ else if (_area is not null)
 
     <PageFabMenu>
         <MudTooltip Text="New list">
-            <MudMenuItem OnClick="@NewListAsync" Icon="@Icons.Material.Filled.Add" />
+            <MudMenuItem OnClick="@NewListAsync" Icon="@Icons.Material.Filled.Add" UserAttributes="@NewListAttributes" />
         </MudTooltip>
         <MudTooltip Text="Rename area">
-            <MudMenuItem OnClick="@RenameAreaAsync" Icon="@Icons.Material.Filled.Edit" />
+            <MudMenuItem OnClick="@RenameAreaAsync" Icon="@Icons.Material.Filled.Edit" UserAttributes="@RenameAreaAttributes" />
         </MudTooltip>
         <MudTooltip Text="Delete area">
-            <MudMenuItem OnClick="@DeleteAreaAsync" Icon="@Icons.Material.Filled.Delete" />
+            <MudMenuItem OnClick="@DeleteAreaAsync" Icon="@Icons.Material.Filled.Delete" UserAttributes="@DeleteAreaAttributes" />
         </MudTooltip>
     </PageFabMenu>
 }
@@ -68,6 +68,10 @@ else
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<TodoTask> _tasks = [];
     IReadOnlyList<Goal> _goals = [];
+
+    static readonly Dictionary<string, object> NewListAttributes = new() { ["aria-label"] = "New list" };
+    static readonly Dictionary<string, object> RenameAreaAttributes = new() { ["aria-label"] = "Rename area" };
+    static readonly Dictionary<string, object> DeleteAreaAttributes = new() { ["aria-label"] = "Delete area" };
 
     protected override async Task OnParametersSetAsync() => await ReloadAsync();
 

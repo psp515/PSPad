@@ -27,6 +27,16 @@ public class PageFabMenuTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheActivatorCarriesAnAccessibleName()
+    {
+        var page = Render(WithOnePlainItem());
+
+        var activator = page.Find(".pspad-fab .mud-menu-activator button");
+
+        Assert.Equal("Actions", activator.GetAttribute("aria-label"));
+    }
+
+    [Fact]
     public void ClickingTheActivatorOpensTheMenuAndShowsItsItem()
     {
         var page = Render(WithOnePlainItem());
