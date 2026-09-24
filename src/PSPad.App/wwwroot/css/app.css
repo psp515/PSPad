@@ -18,6 +18,10 @@ h1[tabindex="-1"]:focus {
     overflow: hidden;
 }
 
+.pspad-record-gone {
+    opacity: 0.55;
+}
+
 .pspad-account-identity .mud-typography {
     display: block;
     overflow: hidden;

@@ -1,0 +1,197 @@
+@page "/statistics"
+@page "/history"
+@attribute [Authorize]
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.Statistics
+@using PSPad.Contracts
+@inject IStatisticsSource Source
+@inject StatisticsCache Cache
+@inject AppState State
+@inject IClock Clock
+@inject NavigationManager Navigation
+
+@if (!_redirectedFromHistory)
+{
+    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Statistics</MudText>
+
+    @if (_offline)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            Offline — showing the last numbers we have.
+        </MudAlert>
+    }
+
+    @if (!_loaded)
+    {
+        <RowSkeleton Count="4" />
+    }
+    else
+    {
+        @if (_overview is { } overview)
+        {
+            <MudGrid Spacing="4" Class="mb-4">
+                <MudItem xs="6" sm="3">
+                    <StatTile Label="Done today" Value="@overview.Tiles.DoneToday" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <StatTile Label="Opened today" Value="@overview.Tiles.OpenedToday" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <StatTile Label="Last 7 days" Value="@overview.Tiles.DoneThisWeek" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <StatTile Label="Net change" Value="@overview.Tiles.NetChange" Signed="true" />
+                </MudItem>
+            </MudGrid>
+
+            @if (_updatedAt is not null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
+                    @UpdatedLabel()
+                </MudText>
+            }
+        }
+
+        @foreach (var day in _records.GroupBy(DayOf))
+        {
+            <MudText Typo="Typo.subtitle1" Class="mt-4">@day.Key.ToString("d MMM yyyy")</MudText>
+            @foreach (var record in day)
+            {
+                @if (record.CurrentStatus == "Gone")
+                {
+                    <MudPaper Outlined="true" Class="mb-2 pspad-record-gone">
+                        <div class="px-3 py-2">
+                            <RecordRow Record="@record" />
+                        </div>
+                    </MudPaper>
+                }
+                else
+                {
+                    <MudPaper Outlined="true" Class="mb-2">
+                        <div class="px-3 py-2" style="cursor:pointer" @onclick="@(() => Open(record))">
+                            <RecordRow Record="@record" />
+                        </div>
+                    </MudPaper>
+                }
+            }
+        }
+
+        @if (_records.Count > 0)
+        {
+            <MudButton OnClick="@LoadOlderAsync">load older</MudButton>
+        }
+    }
+}
+
+@code {
+    const int RecordsPageSize = 50;
+    const int DefaultDays = 30;
+
+    bool _redirectedFromHistory;
+    bool _loaded;
+    bool _offline;
+    int _days = DefaultDays;
+    StatisticsOverview? _overview;
+    IReadOnlyList<StatisticsRecordView> _records = [];
+    DateTimeOffset? _updatedAt;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OnHistoryRoute())
+        {
+            _redirectedFromHistory = true;
+            Navigation.NavigateTo("/statistics", replace: true);
+            return;
+        }
+
+        _overview = await Cache.ReadAsync(_days);
+        _loaded = _overview is not null;
+
+        await RefreshAsync();
+    }
+
+    bool OnHistoryRoute() =>
+        Navigation.ToBaseRelativePath(Navigation.Uri).Split('?')[0].TrimEnd('/')
+            .Equals("history", StringComparison.OrdinalIgnoreCase);
+
+    async Task RefreshAsync()
+    {
+        try
+        {
+            var overview = await Source.OverviewAsync(_days);
+            var records = await Source.RecordsAsync(null, RecordsPageSize);
+
+            if (overview is not null)
+            {
+                _overview = overview;
+                await Cache.WriteAsync(_days, overview);
+            }
+
+            _records = records;
+            _updatedAt = Clock.UtcNow;
+            _offline = false;
+        }
+        catch (HttpRequestException)
+        {
+            _offline = true;
+        }
+
+        _loaded = true;
+    }
+
+    async Task LoadOlderAsync()
+    {
+        if (_records.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var older = await Source.RecordsAsync(_records[^1].Seq, RecordsPageSize);
+            _records = [.. _records, .. older];
+            _offline = false;
+        }
+        catch (HttpRequestException)
+        {
+            _offline = true;
+        }
+    }
+
+    void Open(StatisticsRecordView record) =>
+        Navigation.NavigateTo($"{Navigation.Uri.Split('?')[0]}?task={record.TaskId}");
+
+    DateOnly DayOf(StatisticsRecordView record) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(record.At, Zone).Date);
+
+    TimeZoneInfo Zone
+    {
+        get
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(State.TimeZone);
+            }
+            catch (Exception exception) when (exception is TimeZoneNotFoundException or InvalidTimeZoneException)
+            {
+                Console.Error.WriteLine($"Unknown time zone '{State.TimeZone}': {exception.Message}");
+                return TimeZoneInfo.Utc;
+            }
+        }
+    }
+
+    string UpdatedLabel()
+    {
+        var delta = Clock.UtcNow - _updatedAt!.Value;
+
+        return delta switch
+        {
+            _ when delta < TimeSpan.FromSeconds(45) => "updated just now",
+            _ when delta < TimeSpan.FromMinutes(60) => $"updated {(int)delta.TotalMinutes}m ago",
+            _ when delta < TimeSpan.FromHours(24) => $"updated {(int)delta.TotalHours}h ago",
+            _ => $"updated {(int)delta.TotalDays}d ago"
+        };
+    }
+}

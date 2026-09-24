@@ -8,6 +8,7 @@ using PSPad.App.State.Dispatch;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.State.Viewport;
+using PSPad.App.Statistics;
 using PSPad.App.Theme;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Goals;
@@ -54,8 +55,11 @@ public static class AppTestHost
         collapse.LoadAsync().GetAwaiter().GetResult();
         context.Services.AddSingleton(collapse);
 
+        var statisticsCache = new StatisticsCache(context.JSInterop.JSRuntime);
+        context.Services.AddSingleton(statisticsCache);
+
         context.Services.AddSingleton(services => new CommandSender(services, work, new NoOpSyncTrigger()));
-        context.Services.AddSingleton(new ReplicaOwnership(replica, outbox));
+        context.Services.AddSingleton(new ReplicaOwnership(replica, outbox, statisticsCache));
         context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop: true));
         context.Services.AddSingleton<ServerReachability>();
         context.Services.AddSingleton<IConnectivity>(new AlwaysOnline());

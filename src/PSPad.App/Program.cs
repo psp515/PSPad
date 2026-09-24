@@ -14,6 +14,7 @@ using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.State.Search;
 using PSPad.App.State.Viewport;
+using PSPad.App.Statistics;
 using PSPad.App.Sync;
 using PSPad.App.Theme;
 
@@ -83,7 +84,8 @@ builder.Services.AddScoped<ThemePreference>();
 builder.Services.AddScoped<CardCollapseState>();
 builder.Services.AddScoped<ReplicaSearch>();
 builder.Services.AddScoped<SidebarCounts>();
-builder.Services.AddScoped<IHistorySource>(sp => sp.GetRequiredService<PSPadApiClient>());
+builder.Services.AddScoped<StatisticsCache>();
+builder.Services.AddScoped<IStatisticsSource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();
 builder.Services.AddScoped<SyncService>();

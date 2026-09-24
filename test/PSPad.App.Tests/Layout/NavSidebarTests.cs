@@ -22,7 +22,7 @@ public class NavSidebarTests : Bunit.TestContext
     [InlineData("My Day")]
     [InlineData("Inbox")]
     [InlineData("Goals")]
-    [InlineData("History")]
+    [InlineData("Statistics")]
     [InlineData("New area")]
     [InlineData("Settings")]
     [InlineData("App info")]
@@ -90,14 +90,14 @@ public class NavSidebarTests : Bunit.TestContext
     }
 
     [Fact]
-    public void GoalsAndHistoryAreBothSidebarRows()
+    public void GoalsAndStatisticsAreBothSidebarRows()
     {
         Arrange();
 
         var sidebar = Render(Areas("Dom"));
 
         Assert.Contains("/goals\"", sidebar.Markup);
-        Assert.Contains("/history\"", sidebar.Markup);
+        Assert.Contains("/statistics\"", sidebar.Markup);
     }
 
     [Fact]

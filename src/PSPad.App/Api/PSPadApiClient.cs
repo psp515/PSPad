@@ -1,9 +1,10 @@
 using System.Net.Http.Json;
+using PSPad.App.Statistics;
 using PSPad.Contracts;
 
 namespace PSPad.App.Api;
 
-public sealed class PSPadApiClient(HttpClient http) : IHistorySource, ISyncApi
+public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi
 {
     public Task<MeResponse?> MeAsync() => GetAsync<MeResponse>("api/me");
 
@@ -49,14 +50,16 @@ public sealed class PSPadApiClient(HttpClient http) : IHistorySource, ISyncApi
 
     public Task<SyncResponse?> SyncAsync(long since) => GetAsync<SyncResponse>($"api/sync?since={since}");
 
-    public async Task<IReadOnlyList<HistoryEntry>> HistoryAsync(long? before, int limit)
-    {
-        var query = before is null ? $"api/history?limit={limit}" : $"api/history?limit={limit}&before={before}";
-        return await GetAsync<HistoryEntry[]>(query) ?? [];
-    }
+    public Task<StatisticsOverview?> OverviewAsync(int days) =>
+        GetAsync<StatisticsOverview>($"api/statistics/overview?days={days}");
 
-    Task<IReadOnlyList<HistoryEntry>> IHistorySource.ReadAsync(long? before, int limit) =>
-        HistoryAsync(before, limit);
+    public async Task<IReadOnlyList<StatisticsRecordView>> RecordsAsync(long? before, int limit)
+    {
+        var query = before is null
+            ? $"api/statistics/records?limit={limit}"
+            : $"api/statistics/records?limit={limit}&before={before}";
+        return await GetAsync<StatisticsRecordView[]>(query) ?? [];
+    }
 
     Task<T?> GetAsync<T>(string uri) => http.GetFromJsonAsync<T>(uri);
 }

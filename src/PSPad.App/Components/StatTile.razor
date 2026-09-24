@@ -1,0 +1,16 @@
+<MudPaper Outlined="true" Class="pa-3">
+    <MudText Typo="Typo.h5" Color="@ValueColor">@FormattedValue</MudText>
+    <MudText Typo="Typo.caption" Color="Color.Secondary">@Label</MudText>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    [Parameter] public int Value { get; set; }
+
+    [Parameter] public bool Signed { get; set; }
+
+    string FormattedValue => Signed && Value > 0 ? $"+{Value}" : Value.ToString();
+
+    Color ValueColor => Signed && Value < 0 ? Color.Error : Color.Primary;
+}
