@@ -2,7 +2,7 @@
 title: Backfill TodoTask.CreatedAt from TaskCreated, and bump seq so delta sync delivers it
 tags: [persistence, sync, analytics]
 date: 2026-09-16
-status: Active
+status: Active (`BurndownRule` and the client-side burndown chart described here are deleted and superseded by [0037](0037-statistics-owns-denormalised-records.md)'s outstanding-open chart; the `CreatedAt` backfill and the `SyncReader` marker fix stand unaffected)
 ---
 
 # ADR-0019: Backfill TodoTask.CreatedAt from TaskCreated, and bump seq so delta sync delivers it

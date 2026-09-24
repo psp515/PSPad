@@ -3,13 +3,13 @@
 Standing rules for the command pipeline, storage, sync, identity and HTTP
 surface — everything below the UI. This is a rulebook, not a history: it
 states what the system does now. For *why*, the superseded design
-narratives (`slice-design.md`, `offline-first-session-design.md`) are in
-git history (`git log -- specs/`); the ADRs they produced stay in `adr/`
-and remain the decision record.
+narratives (`slice-design.md`, `offline-first-session-design.md`,
+`statistics-design.md`) are in git history (`git log -- specs/`); the ADRs
+they produced stay in `adr/` and remain the decision record.
 
 Where this spec and an ADR disagree, the ADR wins. Where this spec and the
 code disagree, say so rather than silently following either. AGENTS.md §5
-(AD-1…AD-9) is the terse architectural summary this spec expands on —
+(AD-1…AD-10) is the terse architectural summary this spec expands on —
 read that first for the "why one modular monolith", this for the mechanics.
 
 ---
@@ -46,7 +46,7 @@ References run one way only:
 | `PSPad.Abstractions` | nothing |
 | `PSPad.Contracts` | `PSPad.Abstractions` |
 | `PSPad.Module.Tasks` | `PSPad.Abstractions` — and nothing else. This is the purity rule (AD-4) |
-| `PSPad.Module.Statistics` | `PSPad.Abstractions`, `PSPad.Contracts` |
+| `PSPad.Module.Statistics` | `PSPad.Abstractions`, `PSPad.Contracts`, `PSPad.Module.Tasks` (event types only, for its handlers' `switch` patterns) |
 | `PSPad.Module.Identity` | `PSPad.Abstractions`, `PSPad.Contracts` |
 | `PSPad.Infrastructure` | `PSPad.Abstractions`, `PSPad.Contracts` — never a module |
 | `PSPad.Api` | everything |
@@ -60,8 +60,9 @@ edits and server state agree.
 
 Enforced by architecture guard tests, not just this document: no
 `MongoDB.*`/`Microsoft.AspNetCore.*`/`System.Net.Http` inside
-`PSPad.Module.Tasks` or `PSPad.Abstractions`; no module reference inside
-`PSPad.Infrastructure`.
+`PSPad.Module.Tasks` or `PSPad.Abstractions`; no `PSPad.Infrastructure`/
+`MongoDB.*`/`Microsoft.AspNetCore.*` inside `PSPad.Module.Statistics`; no
+module reference inside `PSPad.Infrastructure`.
 
 ---
 
@@ -197,13 +198,10 @@ not stated there:
   Reordering rewrites the affected range rather than using fractional
   keys — ranges are short, and the rewrite touches one document.
 - `TodoTask.CreatedAt` is set in `When(TaskCreated)` from the event's `At`.
-  `BurndownRule` (`PSPad.Module.Tasks/Analytics/`) is the pure, WASM-safe
-  engine computing the burndown chart client-side: `open(d)` counts tasks
-  created on or before `d`, not yet completed by `d`, not deleted;
-  `completed(d)` counts tasks and recurrence occurrences completed on `d`;
-  days bucket in the **user's time zone**; recurring templates are
-  excluded from the open line (they never close, so they'd sit on it as a
-  permanent flat offset — same shape of argument as never-overdue).
+  It backs delta sync and was originally added to feed the now-deleted
+  client-side burndown chart (`adr/0019`); the equivalent chart is now
+  `StatisticsCharts.Outstanding`, server-side, derived from
+  `statistics_records` — see §9.
 - A goal's status is `InProgress`, `Achieved` or `NotAchieved`, set by
   `SetGoalStatus`. It is derived from two stored flags, `achieved` and
   `notAchieved`, never stored as its own field. Documents written before
@@ -410,16 +408,101 @@ keycloak behind a reverse proxy terminating TLS.
 
 ---
 
-## 9. Out of scope
+## 9. Statistics
+
+`PSPad.Module.Statistics` is a bounded context, not a view over `events`.
+It owns three collections (`statistics_records`, `statistics_labels`,
+`statistics_state`, all in §3) and writes them only from domain events —
+there are no Statistics commands and no write endpoint. Current task state
+(`TodoTask`) is never read to decide what a chart shows; only
+`statistics_records` is.
+
+**Event dispatch.** `MongoUnitOfWork.CommitAsync` publishes the events it
+just committed, as `DomainEventEnvelope(Seq, DomainEvent)`, through
+`IDomainEventDispatcher` **after** `CommitTransactionAsync` returns — never
+inside the transaction. The default `ChannelDomainEventDispatcher` writes to
+a bounded, single-reader `Channel<DomainEventEnvelope>`. A dispatch failure
+at publish time is caught and logged; the write already committed, so it
+never fails an accepted command (`adr/0036`).
+
+**The pump and replay.** One `DomainEventPump : BackgroundService` drains
+the channel. Before draining anything, it resolves `IDomainEventReplay` in
+its own DI scope and calls `CatchUpAsync`, which reads
+`statistics_state.lastProcessedSeq`, replays `events` forward from there in
+batches of 500 through every registered `IDomainEventHandler`
+(`StatisticsRecordProjection`, `StatisticsLabelProjection`), and advances
+the marker after each batch. Only after replay finishes does the pump start
+draining live envelopes, resolving a fresh scope and every handler per
+batch. A handler that throws is caught and logged — one bad handler cannot
+take the pump down — but **the marker is written only by replay, never by
+the live drain loop**: if the live loop advanced it too, a swallowed
+handler failure would be permanent and silent. Leaving it untouched means
+every event dispatched live is replayed again from the marker on the next
+boot, whether or not its handler already succeeded — the deliberate cost of
+`adr/0036`.
+
+`DomainEventCatalogue` (mirroring `CommandCatalogue`) maps a stored event's
+type name back to its CLR type for replay's JSON deserialization.
+
+**Records are immutable and idempotent by construction.**
+`StatisticsRecord.Id` is the source event's `seq`, so a duplicate dispatch
+or a replay upserts over the same row rather than duplicating it.
+
+**Record shape and enrichment.** `StatisticsRecord` (fields in §3) is built
+from its source event's payload alone — no live lookup at projection time.
+`TaskCompleted`, `TaskReopened`, `TaskDeleted`, `TaskMovedToList`,
+`TaskLinkedToGoal` and `OccurrenceCompleted` all carry `Name` (and
+`ListId`/`GoalId`/`DueOn` where relevant) for this reason; `TaskCreated`
+already did. Events stored before this enrichment deserialize with those
+fields empty — `StatisticsReader` falls back to `ITaskSnapshotSource` for
+the task's current name, or renders `(deleted task)` if the task is gone.
+`OccurrenceCompleted` is a toggle (`bool Completed`): ticking a recurring
+day and un-ticking it produce two records, `OccurrenceTicked` and
+`OccurrenceUnticked` — never an update to the first. A chart that needs the
+current tick state resolves each `(TaskId, OccurrenceDay)` pair to its
+highest-`Id` record. `statistics_labels` is a separate projection
+(`AreaCreated`/`Renamed`/`Deleted`, `TaskListCreated`/`Renamed`/`Deleted`,
+`GoalCreated`/`Renamed`/`Deleted`) resolving area/list/goal names for the
+feed without Statistics ever reading `Tasks`' own collections;
+`TaskListMovedToArea` is not projected, since a label carries a name, not a
+parent. See `adr/0037` for why this is a read-side projection and not a
+second audit trail alongside `events`.
+
+**Charts derive only from `statistics_records`** (`StatisticsCharts`, in
+`PSPad.Module.Statistics/Charts/`), never from `TodoTask`, so a deleted or
+renamed task never rewrites what a past day's chart showed:
+
+- Completions per day, split planned/unplanned.
+- Tasks opened per day.
+- Outstanding-open count per day — the burndown chart's server-side
+  successor, replacing the deleted `BurndownRule` (`adr/0019`). A task is
+  open iff its latest lifecycle record (`Created`, `Reopened`, `Completed`,
+  `Deleted`) is `Created` or `Reopened` — not a signed running total, which
+  would double-decrement a task that is completed and then deleted.
+  Lifecycle records are ordered by `(bucketed day, Id)`, not `Id` alone,
+  because an offline-authored command can commit days after it was created
+  and so carry a higher `seq` than a same-day command issued elsewhere;
+  ordering by `seq` alone would apply it to the wrong day's running total.
+- Work by goal, ranked, with an explicit "No goal" bar.
+- A consistency heatmap — one cell per day, shaded by completion count.
+
+**Cross-module read.** Current task status for the feed's `CurrentStatus`
+column comes through a port Statistics declares and `PSPad.Api` implements:
+`ITaskSnapshotSource.CurrentAsync(taskIds)` → `TaskSnapshot(TaskStatus,
+Name)`, one batched call per feed page, never per row. Statistics never
+touches `IDocumentStore<TodoTask>` directly.
+
+## 10. Out of scope
 
 Habits, annual plans, integrations, the print domain, reference materials,
 push reminders, thought of the day, list types beyond plain — unchanged
-from AGENTS.md §3. Server-side analytics endpoints; the burndown chart is
-computed client-side only (§4). Mid-session token renewal beyond the
+from AGENTS.md §3. Retention or archival of `statistics_records` —
+unbounded, same as `events` (§3, §11). Mid-session token renewal beyond the
 on-demand refresh described in §6. Offline sign-in for a device that has
 never signed in — impossible, the first token exchange requires Keycloak.
 
-## 10. Open
+## 11. Open
 
-Retention for the event log and recurrence occurrences — unbounded, or
-archived per year. Deferred until there is enough data to measure.
+Retention for the event log, recurrence occurrences and `statistics_records`
+— unbounded, or archived per year. Deferred until there is enough data to
+measure.

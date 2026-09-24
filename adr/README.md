@@ -24,7 +24,7 @@ the old one's status line to point at the new number.
 | [0007](0007-recurrence-as-template-and-occurrences.md) | Model recurrence as a template plus derived occurrences, never a rolling date | Active | 2026-09-11 | architecture, domain, recurrence |
 | [0008](0008-aggregate-boundaries.md) | Aggregate boundaries — Area, TaskList, TodoTask, Goal, Inbox, User | Active | 2026-09-11 | architecture, domain, aggregates |
 | [0009](0009-integration-tests-own-their-database.md) | Integration tests own a real, disposable MongoDB via Testcontainers | Active | 2026-09-12 | testing, persistence |
-| [0010](0010-modular-monolith-three-modules.md) | Split the modular monolith into three separate module projects | Active (supersedes [0001](0001-vertical-slice-folders-in-one-project.md)) | 2026-09-12 | architecture, modularity |
+| [0010](0010-modular-monolith-three-modules.md) | Split the modular monolith into three separate module projects | Active (supersedes [0001](0001-vertical-slice-folders-in-one-project.md); `PSPad.Module.History` renamed to `PSPad.Module.Statistics` by [0036](0036-history-renamed-to-statistics.md)) | 2026-09-12 | architecture, modularity |
 | [0011](0011-aggregate-documents-are-truth.md) | Aggregate documents are truth; events are the log beside them | Active (supersedes [0002](0002-cqrs-event-sourced-write-side.md)) | 2026-09-12 | architecture, persistence, event-sourcing |
 | [0012](0012-extract-ordering-into-its-own-module.md) | Extract element ordering into its own module, out of the Tasks domain | Proposed | 2026-09-12 | architecture, domain, ui, future-work |
 | [0013](0013-responsive-shell-and-per-device-theme.md) | Keep sections and areas on separate navigation surfaces, and the theme per device | Superseded by [0014](0014-one-navigation-tree-at-every-width.md) | 2026-09-12 | ui, offline, identity |
@@ -33,8 +33,8 @@ the old one's status line to point at the new number.
 | [0016](0016-documentation-site.md) | A documentation site in Astro, published to GitHub Pages | Active | 2026-09-14 | documentation, tooling, deployment |
 | [0017](0017-promote-goals-to-a-sidebar-row.md) | Promote Goals to a permanent sidebar row | Active (supersedes Goals' placement in [0014](0014-one-navigation-tree-at-every-width.md); History's placement here superseded by [0020](0020-history-sidebar-row-and-settings-screen.md)) | 2026-09-15 | ui, domain |
 | [0018](0018-purge-local-replica-on-user-switch.md) | Purge the local replica and outbox when the signed-in user changes | Active | 2026-09-15 | offline, sync, identity |
-| [0019](0019-created-at-on-todo-task-and-burndown-backfill.md) | Backfill TodoTask.CreatedAt from TaskCreated, and bump seq so delta sync delivers it | Active | 2026-09-16 | persistence, sync, analytics |
-| [0020](0020-history-sidebar-row-and-settings-screen.md) | History as a sidebar row, theme and sync status into a Settings screen | Active (amends [0014](0014-one-navigation-tree-at-every-width.md); supersedes History's placement in [0017](0017-promote-goals-to-a-sidebar-row.md)) | 2026-09-16 | ui, identity |
+| [0019](0019-created-at-on-todo-task-and-burndown-backfill.md) | Backfill TodoTask.CreatedAt from TaskCreated, and bump seq so delta sync delivers it | Active (`BurndownRule` and its chart superseded by [0035](0035-statistics-owns-denormalised-records.md); `CreatedAt` backfill and sync marker fix unaffected) | 2026-09-16 | persistence, sync, analytics |
+| [0020](0020-history-sidebar-row-and-settings-screen.md) | History as a sidebar row, theme and sync status into a Settings screen | Active (amends [0014](0014-one-navigation-tree-at-every-width.md); supersedes History's placement in [0017](0017-promote-goals-to-a-sidebar-row.md); History renamed to Statistics by [0036](0036-history-renamed-to-statistics.md)) | 2026-09-16 | ui, identity |
 | [0021](0021-drop-structurally-rejected-outbox-commands.md) | Drop structurally rejected outbox commands instead of retrying forever | Active (refines [0005](0005-offline-conflicts-last-write-wins.md)) | 2026-09-16 | architecture, offline, sync, contracts |
 | [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md) | Kill the dead account-menu arrow — Settings and App info become sidebar rows, area actions move to a FAB on the area page | Active (amends [0020](0020-history-sidebar-row-and-settings-screen.md); supersedes `ui-redesign-2-design.md` D6/D7 for area actions only) | 2026-09-17 | ui, identity, domain |
 | [0023](0023-sidebar-search-removed-footer-added.md) | Pull local search out of the sidebar for now, give the drawer a footer | Active (amends [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md); temporarily supersedes `ui-redesign-2-design.md`'s local-search decision) | 2026-09-17 | ui |
@@ -50,8 +50,11 @@ the old one's status line to point at the new number.
 | [0033](0033-one-fab-per-page-action-set.md) | One FAB per page's action set — zero, a plain FAB, or a FAB Menu | Active (amends [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md)) | 2026-09-24 | ui |
 | [0034](0034-account-deletion-bypasses-the-command-pipeline.md) | Account deletion bypasses the command pipeline for a generic cross-collection wipe | Active | 2026-09-24 | identity, persistence, architecture, security |
 | [0035](0035-starred-is-its-own-my-day-section.md) | Starred tasks get their own My Day section, not the Today rule | Active | 2026-09-25 | domain, today, ui |
+| [0036](0036-domain-events-dispatched-after-commit.md) | Domain events are dispatched asynchronously after commit and replayed from a marker on startup | Active | 2026-09-24 | architecture, events, persistence |
+| [0037](0037-statistics-owns-denormalised-records.md) | Statistics owns denormalized read-only records projected from the log, and domain events carry what consumers need | Active | 2026-09-24 | architecture, persistence, analytics |
+| [0038](0038-history-renamed-to-statistics.md) | History renamed to Statistics | Active (amends [0020](0020-history-sidebar-row-and-settings-screen.md)) | 2026-09-24 | ui, architecture, domain |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
-AGENTS.md stays the terse day-to-day reference (AD-1 … AD-9); this index is
+AGENTS.md stays the terse day-to-day reference (AD-1 … AD-10); this index is
 where the reasoning and rejected alternatives behind each one live.

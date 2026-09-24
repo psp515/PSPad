@@ -5,9 +5,9 @@ behaves like it belongs to the same product. This is a rulebook, not a
 history — it states what the client does now and how to extend it
 consistently. For *why* a given rule exists, the superseded design
 narratives (`ui-ux-redesign-design.md`, `ui-redesign-2-design.md`,
-`ui-polish-design.md`) and the ADRs they cite are in git history
-(`git log -- specs/`); the ADRs themselves stay in `adr/` and remain the
-decision record where a rule traces back to one.
+`ui-polish-design.md`, `statistics-design.md`) and the ADRs they cite are in
+git history (`git log -- specs/`); the ADRs themselves stay in `adr/` and
+remain the decision record where a rule traces back to one.
 
 Where this spec and an ADR disagree, the ADR wins. Where this spec and the
 code disagree, say so rather than silently following either.
@@ -32,6 +32,7 @@ substitute for a component that already exists.
 | A loading placeholder | `MudSkeleton`, wrapped in `MudPaper` where the real content has a border | an empty `<div>` |
 | Vertical/horizontal flex spacing | `MudStack`, or `d-flex`/`gap-*` utility classes | inline `style` margins |
 | A chart | `MudChart` | a third-party charting library |
+| A calendar-style consistency heatmap | a custom `pspad-heatmap` CSS grid | `MudChart`'s `ChartType.HeatMap` |
 
 Before adding a new `pspad-*` class, check this table first. If nothing
 fits, the class is legitimate — but it means the styling is specific to
@@ -44,6 +45,16 @@ reliable hook (`pspad-sign-out`, `pspad-account-card`, `pspad-delete-account`,
 `pspad-confirm-email`, `pspad-confirm-delete`). Don't "clean up" an
 apparently-unstyled `pspad-*` class without checking whether a test depends
 on it first.
+
+**The one exception on record: the statistics screen's consistency
+heatmap** (`Statistics/ConsistencyHeatmap.razor`, `.pspad-heatmap` /
+`.pspad-heatmap-cell` in `wwwroot/css/app.css`). MudBlazor ships
+`ChartType.HeatMap`, but it is a generic matrix chart — it gives neither
+day-of-week calendar alignment nor a per-cell `title`/`aria-label`, and
+without those the grid is a wall of coloured squares a screen reader cannot
+read. A hand-rolled CSS grid earns its place here for exactly the reason
+the table above says a custom class ever can: MudBlazor genuinely has no
+component that does this.
 
 ---
 
@@ -256,6 +267,19 @@ the create action — `role="button"`, focusable, Enter/Space or a click
 starts creating the first item; no separate button. Only after `_loaded` —
 see above.
 
+**The statistics screen (`StatisticsPage`, `/statistics`) is server-rendered
+data over plain REST, not the replica** — no IndexedDB, no outbox, no
+command pipeline. It is its own layout, not the §2 card grid: a `MudGrid`
+of tiles (`sm="3" xs="6"`), four charts (`md="6" xs="12"`), then the
+consistency heatmap and the record feed each full width. The last
+successful payload is cached in `localStorage` keyed by range, rendered
+immediately on load, then refreshed behind it — an *updated
+&lt;relative time&gt;* stamp and an offline banner cover the gap when a
+refresh fails. That cache is user data: it purges on the same
+signed-in/owner-mismatch path ADR-0018 and ADR-0025 already purge the
+replica and outbox on, so a second user on the same device never sees the
+first user's numbers before the first fetch lands.
+
 **Every page has a page-level action set** — creating the thing the page
 is about, renaming or deleting that thing — distinct from the item-level
 actions each card or row already carries (a list card's own `⋯`/`+`, a
@@ -282,7 +306,7 @@ icon reads unambiguously on its own.
 | Goals | Add goal (→ new-goal panel) | plain `MudFab` |
 | List | Add task (→ new-task panel), Rename list, Delete list | FAB Menu |
 | Inbox | Capture (→ capture panel) | plain `MudFab` |
-| My Day, Settings, History | none | no FAB |
+| My Day, Settings, Statistics | none | no FAB |
 
 `+ New area` stays pinned in the sidebar — it is not a page's own action,
 it belongs to the sidebar's area list. Item-level rename/delete stays on
@@ -352,8 +376,8 @@ stamped on `<html>` from `localStorage["pspad.theme"]` before first paint
 the wrong theme.
 
 **Charts.** `MudChart` (bundled with MudBlazor, no extra dependency) takes
-the sage palette for free — the History screen's burndown chart is the one
-example.
+the sage palette for free — the statistics screen's four charts (daily
+completions, tasks opened, outstanding-open, work by goal) are the example.
 
 ---
 
@@ -361,7 +385,7 @@ example.
 
 **Sidebar**, top to bottom, one navigation tree at every width: a
 non-interactive `AccountBadge` (avatar, display name, email — a label, not
-a control), then a nav group of **My Day / Inbox / Goals / History**,
+a control), then a nav group of **My Day / Inbox / Goals / Statistics**,
 divider, the user's areas in `Position` order plus **+ New area**, divider,
 **Settings** / **App info**, then a spacer, then a footer (connection
 status, current date/time, "PSPad · GPL v3"). There is no search field in
@@ -377,7 +401,8 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/areas/{areaId}` | area screen — list cards |
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |
-| `/history` | History + burndown chart |
+| `/statistics` | Statistics — tiles, four charts, consistency heatmap, record feed |
+| `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
 | `/settings` | Settings (account + sign-out, time zone, theme, sync status, delete account) |
 | `/app-info` | version, license, docs/repo links |
 | `/search` | search results (currently unreachable from the UI) |
