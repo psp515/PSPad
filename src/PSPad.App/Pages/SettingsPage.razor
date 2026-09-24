@@ -3,6 +3,7 @@
 @using PSPad.Abstractions
 @using PSPad.App.Api
 @using PSPad.App.Auth
+@using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.App.State.Outbox
@@ -19,67 +20,88 @@
 @inject LocalSignOut SignOut
 @inject NavigationManager Navigation
 @inject IClock Clock
+@inject IDialogService Dialogs
+@inject LocalAccountDeletion AccountDeletion
 @implements IDisposable
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Settings</MudText>
 
-<MudPaper Outlined="true" Class="pa-4 mb-4">
-    <MudText Typo="Typo.subtitle2" Class="mb-3">Account</MudText>
-    <div class="d-flex align-center gap-3">
-        <MudAvatar Style="@($"background:{AvatarColor.For(State.UserId)};color:#FFFFFF")" Size="Size.Large">
-            @AvatarColor.InitialOf(State.DisplayName.Length > 0 ? State.DisplayName : State.Email)
-        </MudAvatar>
-        <div>
-            <MudText Typo="Typo.body1">@State.DisplayName</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@State.Email</MudText>
-        </div>
-    </div>
-</MudPaper>
-
-<MudPaper Outlined="true" Class="pa-4 mb-4">
-    <MudText Typo="Typo.subtitle2" Class="mb-3">Time zone</MudText>
-    <MudSelect T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
-               Variant="Variant.Outlined" Margin="Margin.Dense">
-        @foreach (var zone in TimeZoneInfo.GetSystemTimeZones().OrderBy(zone => zone.Id))
-        {
-            <MudSelectItem T="string" Value="@zone.Id">@zone.Id</MudSelectItem>
-        }
-    </MudSelect>
-    <MudText Typo="Typo.caption">The time zone is saved on the server, so it needs a connection.</MudText>
-    @if (_rejected)
-    {
-        <MudText Typo="Typo.caption" Color="Color.Error">That change did not go through.</MudText>
-    }
-</MudPaper>
-
-<MudPaper Outlined="true" Class="pa-4 mb-4">
-    <MudText Typo="Typo.subtitle2" Class="mb-3">Theme</MudText>
-    <MudButtonGroup Size="Size.Small" Variant="Variant.Text">
-        @foreach (var mode in Enum.GetValues<ThemeMode>())
-        {
-            <MudButton OnClick="@(() => Preference.SetAsync(mode))"
-                       Color="@(Preference.Mode == mode ? Color.Primary : Color.Default)">
-                @mode
+<MudGrid Spacing="4">
+    <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudPaper Outlined="true" Class="pa-4 pspad-account-card">
+            <MudText Typo="Typo.subtitle2" Class="mb-3">Account</MudText>
+            <div class="d-flex align-center gap-3 mb-3">
+                <MudAvatar Style="@($"background:{AvatarColor.For(State.UserId)};color:#FFFFFF")" Size="Size.Large">
+                    @AvatarColor.InitialOf(State.DisplayName.Length > 0 ? State.DisplayName : State.Email)
+                </MudAvatar>
+                <div>
+                    <MudText Typo="Typo.body1">@State.DisplayName</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@State.Email</MudText>
+                </div>
+            </div>
+            <MudButton Class="pspad-sign-out" OnClick="@SignOutAsync" StartIcon="@Icons.Material.Filled.Logout"
+                       Color="Color.Error" Variant="Variant.Outlined">
+                Sign out
             </MudButton>
-        }
-    </MudButtonGroup>
-</MudPaper>
-
-<MudPaper Outlined="true" Class="pa-4 mb-4">
-    <MudText Typo="Typo.subtitle2" Class="mb-3">Sync</MudText>
-    <MudText Typo="Typo.body2">
-        @(_pendingCommands == 0 ? "Everything is synced." : $"{_pendingCommands} pending")
-    </MudText>
-</MudPaper>
-
-<MudButton Class="pspad-sign-out" OnClick="@SignOutAsync" StartIcon="@Icons.Material.Filled.Logout"
-           Color="Color.Error" Variant="Variant.Outlined">
-    Sign out
-</MudButton>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudPaper Outlined="true" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Class="mb-3">Time zone</MudText>
+            <MudAutocomplete T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
+                              SearchFunc="@SearchTimeZonesAsync"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" ResetValueOnEmptyText="false" />
+            <MudText Typo="Typo.caption">The time zone is saved on the server, so it needs a connection.</MudText>
+            @if (_rejected)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">That change did not go through.</MudText>
+            }
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudPaper Outlined="true" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Class="mb-3">Theme</MudText>
+            <MudSelect T="ThemeMode" Value="@Preference.Mode" ValueChanged="@SelectThemeAsync"
+                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var mode in Enum.GetValues<ThemeMode>())
+                {
+                    <MudSelectItem T="ThemeMode" Value="@mode">@mode</MudSelectItem>
+                }
+            </MudSelect>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudPaper Outlined="true" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Class="mb-3">Sync</MudText>
+            <MudText Typo="Typo.body2">
+                @(_pendingCommands == 0 ? "Everything is synced." : $"{_pendingCommands} pending")
+            </MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudPaper Outlined="true" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-3">Danger zone</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                Permanently deletes your account and everything in it.
+            </MudText>
+            <MudButton Class="pspad-delete-account" Color="Color.Error" Variant="Variant.Outlined"
+                       Disabled="@(!Connectivity.IsOnline)" OnClick="@OpenDeleteAccountDialogAsync">
+                Delete account
+            </MudButton>
+            @if (!Connectivity.IsOnline)
+            {
+                <MudText Typo="Typo.caption" Class="mt-2">Requires a connection.</MudText>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
 
 @code {
     bool _rejected;
     int _pendingCommands;
+
+    static readonly string[] TimeZoneIds =
+        TimeZoneInfo.GetSystemTimeZones().Select(zone => zone.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray();
 
     protected override async Task OnInitializedAsync()
     {
@@ -134,5 +156,30 @@
         State.TimeZone = me.TimeZone;
         State.Today = LocalToday.In(Clock.UtcNow, me.TimeZone);
         StateHasChanged();
+    }
+
+    public Task SelectThemeAsync(ThemeMode mode) => Preference.SetAsync(mode);
+
+    public Task<IEnumerable<string>> SearchTimeZonesAsync(string value, CancellationToken ct) =>
+        Task.FromResult(string.IsNullOrWhiteSpace(value)
+            ? TimeZoneIds.AsEnumerable()
+            : TimeZoneIds.Where(id => id.Contains(value, StringComparison.OrdinalIgnoreCase)));
+
+    async Task OpenDeleteAccountDialogAsync()
+    {
+        var parameters = new DialogParameters<DeleteAccountDialog> { { dialog => dialog.Email, State.Email } };
+        var dialog = await Dialogs.ShowAsync<DeleteAccountDialog>("Delete account", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        // Clearing before the redirect leaves the app is what makes an interrupted deletion
+        // still finish signing the browser out of an account that is already gone server-side.
+        await AccountDeletion.ClearStorageAsync();
+        Navigation.NavigateTo("welcome");
+        AccountDeletion.Announce();
     }
 }

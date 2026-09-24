@@ -38,6 +38,42 @@ public class PSPadApiClientTests
         Assert.Null(await client.SetTimeZoneAsync("Mars/Olympus_Mons"));
     }
 
+    [Fact]
+    public async Task DeleteAccountAsyncReturnsTheParsedResponseOnSuccess()
+    {
+        var client = new PSPadApiClient(new HttpClient(new DeleteAccountHandler(HttpStatusCode.OK, """{"keycloakRemoved":true}"""))
+        {
+            BaseAddress = new Uri("http://localhost")
+        });
+
+        var result = await client.DeleteAccountAsync();
+
+        Assert.NotNull(result);
+        Assert.True(result!.KeycloakRemoved);
+    }
+
+    [Fact]
+    public async Task DeleteAccountAsyncReturnsNullOnFailureStatus()
+    {
+        var client = new PSPadApiClient(new HttpClient(new DeleteAccountHandler(HttpStatusCode.InternalServerError, ""))
+        {
+            BaseAddress = new Uri("http://localhost")
+        });
+
+        Assert.Null(await client.DeleteAccountAsync());
+    }
+
+    [Fact]
+    public async Task DeleteAccountAsyncReturnsNullWhenOffline()
+    {
+        var client = new PSPadApiClient(new HttpClient(new ThrowingHandler())
+        {
+            BaseAddress = new Uri("http://localhost")
+        });
+
+        Assert.Null(await client.DeleteAccountAsync());
+    }
+
     sealed class StubHandler : HttpMessageHandler
     {
         readonly MeResponse? _response;
@@ -72,5 +108,19 @@ public class PSPadApiClientTests
 
             return new HttpResponseMessage(_statusCode);
         }
+    }
+
+    sealed class DeleteAccountHandler(HttpStatusCode status, string body) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body) });
+    }
+
+    sealed class ThrowingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw new HttpRequestException("offline");
     }
 }

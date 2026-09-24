@@ -30,6 +30,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
 
 builder.Services.AddScoped<ICurrentUser, ClaimsCurrentUser>();
+builder.Services.Configure<KeycloakAdminOptions>(builder.Configuration.GetSection(KeycloakAdminOptions.Section));
+builder.Services.AddHttpClient<IKeycloakAdminClient, KeycloakAdminClient>();
 builder.Services.AddScoped<UserProvisioner>();
 builder.Services.AddScoped<CommandDispatcher>();
 builder.Services.AddScoped<SyncReader>();
@@ -49,6 +51,7 @@ api.MapCommandEndpoints();
 api.MapSyncEndpoints();
 api.MapTodayEndpoints();
 api.MapMeEndpoints();
+api.MapAccountEndpoints();
 api.MapHistoryEndpoints();
 
 await MongoIndexes.EnsureAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);

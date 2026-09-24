@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using PSPad.Api.Identity;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Api.Tests;
 
-public sealed class ApiFactory(MongoFixture fixture) : WebApplicationFactory<Program>
+public sealed class ApiFactory(MongoFixture fixture, IKeycloakAdminClient? keycloakAdminClient = null)
+    : WebApplicationFactory<Program>
 {
     protected override IHost CreateHost(IHostBuilder builder)
     {
@@ -29,6 +31,11 @@ public sealed class ApiFactory(MongoFixture fixture) : WebApplicationFactory<Pro
             services.AddAuthentication(TestAuthenticationHandler.Scheme)
                 .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
                     TestAuthenticationHandler.Scheme, _ => { });
+
+            if (keycloakAdminClient is not null)
+            {
+                services.AddSingleton(keycloakAdminClient);
+            }
         });
 
     public HttpClient ClientFor(

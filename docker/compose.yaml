@@ -12,6 +12,8 @@ services:
       Keycloak__Authority: ${KEYCLOAK_INTERNAL_AUTHORITY}
       Keycloak__Audience: ${KEYCLOAK_AUDIENCE}
       Keycloak__RequireHttpsMetadata: "false"
+      Keycloak__AdminUser: ${KEYCLOAK_ADMIN_USER}
+      Keycloak__AdminPassword: ${KEYCLOAK_ADMIN_PASSWORD}
       Cors__AllowedOrigins__0: ${APP_BASE_ADDRESS}
     ports:
       - "5000:8080"
