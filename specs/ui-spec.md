@@ -122,13 +122,15 @@ without leaving the screen, and a task is linkable.
 is about, renaming or deleting that thing — distinct from the item-level
 actions each card or row already carries (a list card's own `⋯`/`+`, a
 goal card's achieve/reopen, an inbox item's open). A page's action set
-drives exactly one bottom-right affordance, via the shared `PageFabMenu`
-component or a bare `MudFab`, both pinned with the `pspad-fab` CSS class:
+drives exactly one bottom-right affordance, a bare `MudFab` or a `MudFab`
+wrapped in a `MudMenu`, both pinned with the `pspad-fab` CSS class. Built
+directly on each page, not through a shared component — each page's FAB is
+a handful of lines specific to that page's own actions:
 
 - **Zero actions** → no FAB.
 - **One action** → a plain `MudFab`, performing the action directly
   (typically opening a dialog).
-- **Two or more actions** → one `MudFab` opening a `MudMenu` (`PageFabMenu`)
+- **Two or more actions** → one `MudFab` opening a `MudMenu` ("FAB Menu")
   listing every action. Never a second FAB, never a header `⋯` competing
   with it.
 
@@ -138,9 +140,9 @@ icon reads unambiguously on its own.
 
 | Page | Page-level actions | Result |
 |---|---|---|
-| Area | New list, Rename area, Delete area | `PageFabMenu` |
+| Area | New list, Rename area, Delete area | FAB Menu |
 | Goals | Add goal | plain `MudFab` → `NameDialog` |
-| List | Add task, Rename list, Delete list | `PageFabMenu` |
+| List | Add task, Rename list, Delete list | FAB Menu |
 | Inbox | Capture | plain `MudFab` → `CaptureDialog` |
 | My Day, Settings, History | none | no FAB |
 

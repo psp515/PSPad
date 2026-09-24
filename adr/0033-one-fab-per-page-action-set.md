@@ -43,21 +43,36 @@ actions there are:
 - **Zero actions** → no FAB at all.
 - **One action** → a plain `MudFab`.
 - **Two or more actions** → one `MudFab` activator opening a `MudMenu`
-  ("FAB Menu", the shared `PageFabMenu.razor` component), whose items are
-  icon-only `MudMenuItem`s wrapped in a `MudTooltip` carrying the visible
-  label.
+  ("FAB Menu"), whose items are icon-only `MudMenuItem`s wrapped in a
+  `MudTooltip` carrying the visible label.
 
 This supersedes ADR-0022's "opposite corner, two FABs" arrangement for
-areas specifically: `AreaBoard.razor` now shows one `PageFabMenu` with New
+areas specifically: `AreaBoard.razor` now shows one FAB Menu with New
 list / Rename area / Delete area. The same shape now applies uniformly to
 `GoalsPage.razor` (one action — Achieve/Reopen/Delete stay per-card, so the
 page-level action is just "new goal" — a plain `MudFab`) and
 `ListPage.razor` (three actions — Add task / Rename list / Delete list — a
-`PageFabMenu`, replacing its old inline add-task field and header `⋯`
+FAB Menu, replacing its old inline add-task field and header `⋯`
 menu). Item-level actions (rename/delete a single list's card on
 `AreaBoard`, a single goal's card on `GoalsPage`) are unaffected and keep
 using `ThingMenu` on the card/row itself — this ADR governs only the
 page's own subject.
+
+Each page builds its own `MudMenu`/`MudFab` markup directly — a page's FAB
+is a handful of lines living in that page's own `.razor` file, not a call
+into a shared component. An initial version of this decision routed every
+FAB Menu through one shared `PageFabMenu.razor` wrapper; that was reverted
+after manual testing in a real deployed build (`docker compose build && up`)
+found the FAB on `AreaBoard` didn't open at all, and `ListPage` showed no
+FAB Menu — behavior every bUnit test for the component and the pages using
+it missed entirely (517/517 green at the time). The exact mechanism was not
+root-caused before reverting — the maintainer's call was to decentralize
+first rather than debug a component boundary the tests couldn't exercise
+usefully. Three near-identical blocks of markup are directly debuggable in
+place, at the cost of the duplication a shared component would have saved;
+that tradeoff is judged worth it here specifically because the shared
+version's one indirection is what hid a real production bug from every
+layer of review this branch had.
 
 ## Considered alternatives
 
@@ -73,6 +88,11 @@ page's own subject.
   not a default — icon plus tooltip keeps the menu compact and consistent
   with Material FAB conventions, and a tooltip is enough for a sighted,
   pointer-driven user to identify an unfamiliar icon.
+- **A shared `PageFabMenu.razor` component wrapping the `MudMenu`/`MudFab`
+  pattern once for every page to call.** Tried first, reverted: it built
+  and passed 517/517 bUnit tests, but failed in a real deployed build —
+  `AreaBoard`'s FAB didn't open, `ListPage` showed no FAB Menu at all.
+  Decentralizing to per-page markup fixed it; see Decision above.
 
 ## Consequences
 
@@ -89,7 +109,7 @@ touch input — `MudTooltip` is hover/focus-driven and does nothing on a
 touchscreen, which this project's "works on phone" vision treats as a hard
 requirement. That gap is closed in the same push that wrote this ADR, by
 adding `aria-label` (via each component's `UserAttributes`) to every FAB
-Menu item and to the `PageFabMenu` activator itself — but it is worth
+Menu item and to each page's FAB activator itself — but it is worth
 recording here as an honest consequence of standardizing on an icon-only
 FAB Menu: every future FAB Menu item this pattern produces needs the same
 `aria-label` discipline, and nothing in the pattern enforces it structurally

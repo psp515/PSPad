@@ -41,17 +41,22 @@ else if (_area is not null)
         }
     </MudGrid>
 
-    <PageFabMenu>
-        <MudTooltip Text="New list">
-            <MudMenuItem OnClick="@NewListAsync" Icon="@Icons.Material.Filled.Add" UserAttributes="@NewListAttributes" />
-        </MudTooltip>
-        <MudTooltip Text="Rename area">
-            <MudMenuItem OnClick="@RenameAreaAsync" Icon="@Icons.Material.Filled.Edit" UserAttributes="@RenameAreaAttributes" />
-        </MudTooltip>
-        <MudTooltip Text="Delete area">
-            <MudMenuItem OnClick="@DeleteAreaAsync" Icon="@Icons.Material.Filled.Delete" UserAttributes="@DeleteAreaAttributes" />
-        </MudTooltip>
-    </PageFabMenu>
+    <MudMenu Class="pspad-fab" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight">
+        <ActivatorContent>
+            <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" UserAttributes="@ActivatorAttributes" />
+        </ActivatorContent>
+        <ChildContent>
+            <MudTooltip Text="New list">
+                <MudMenuItem OnClick="@NewListAsync" Icon="@Icons.Material.Filled.Add" UserAttributes="@NewListAttributes" />
+            </MudTooltip>
+            <MudTooltip Text="Rename area">
+                <MudMenuItem OnClick="@RenameAreaAsync" Icon="@Icons.Material.Filled.Edit" UserAttributes="@RenameAreaAttributes" />
+            </MudTooltip>
+            <MudTooltip Text="Delete area">
+                <MudMenuItem OnClick="@DeleteAreaAsync" Icon="@Icons.Material.Filled.Delete" UserAttributes="@DeleteAreaAttributes" />
+            </MudTooltip>
+        </ChildContent>
+    </MudMenu>
 }
 else
 {
@@ -69,6 +74,7 @@ else
     IReadOnlyList<TodoTask> _tasks = [];
     IReadOnlyList<Goal> _goals = [];
 
+    static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
     static readonly Dictionary<string, object> NewListAttributes = new() { ["aria-label"] = "New list" };
     static readonly Dictionary<string, object> RenameAreaAttributes = new() { ["aria-label"] = "Rename area" };
     static readonly Dictionary<string, object> DeleteAreaAttributes = new() { ["aria-label"] = "Delete area" };
