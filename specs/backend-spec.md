@@ -304,6 +304,41 @@ redirect. The Keycloak realm sets `ssoSessionIdleTimeout` (30 days) and
 the 7-day local trust window, or the server invalidates the refresh token
 before the client-side window becomes the effective bound.
 
+**Account deletion** (`DELETE /api/account`, see `adr/0033`) is the one
+operation in the system that is not an `ICommand`. It can't run offline or
+through the outbox — there is nothing left to sync a queued "delete
+everything" against — and no aggregate owns "all of a user's data," so it
+does not fit the load/decide/apply/stage shape §2 describes. It is handled
+directly in `PSPad.Api`:
+
+1. In one MongoDB transaction, enumerate every collection in the database
+   (`Database.ListCollectionNames()`) and run
+   `DeleteMany({ userId: callerId })` against each — including `events` and
+   `processed_commands`. No collection name is hardcoded, so a new aggregate
+   added later (a habit, a yearly goal) is covered with no code change here.
+2. Only once that transaction commits, call Keycloak's Admin REST API
+   (`DELETE /admin/realms/{realm}/users/{sub}`), authenticating with the
+   existing bootstrap master-realm admin credentials
+   (`KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD`) — no new realm client
+   or service account. Mongo data is deleted first: if the Keycloak call
+   then fails (retried a couple of times inline), the failure mode is an
+   orphaned, empty Keycloak login an admin can clean up manually, never
+   surviving personal data with nowhere left to request its own deletion.
+   The response is `200 { keycloakRemoved: true }` on full success, or still
+   `200 { keycloakRemoved: false }` after the retries are exhausted — the
+   data is already irreversibly gone either way, so the client's job is to
+   report which parts finished, not to fail the request. A failure before
+   the Mongo transaction commits is the only case that returns a non-2xx,
+   and it means nothing was deleted.
+3. There is no local password to check (no local password store exists at
+   all — Keycloak is the only sign-in path, §6 above), so the client-side
+   confirmation is a typed-email match, not a password prompt. That is a UX
+   safeguard against misclicks, not the authorization boundary — the caller's
+   own validated JWT `sub` is, and the handler only ever deletes that id.
+4. The caller is authenticated but the operation still requires
+   connectivity; it does not go through the offline session model in the
+   table above.
+
 ---
 
 ## 7. HTTP surface
@@ -316,6 +351,7 @@ before the client-side window becomes the effective bound.
 | `GET` | `/api/history?before=&limit=` | Action history, newest first |
 | `GET` | `/api/me` | Current user; provisions on first call, heals display name |
 | `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only) |
+| `DELETE` | `/api/account` | Delete the caller's account: every Mongo document scoped to their `userId`, then their Keycloak user. Not a command — see §6 |
 | `GET` | `/health` | Liveness, unauthenticated |
 
 Writes go through one endpoint because every write is a command and the

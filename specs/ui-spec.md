@@ -66,8 +66,9 @@ navigation.
 
 Applied on: `AreaBoard` (list cards), `GoalsPage` (goal cards, active and
 achieved separately), `Today` (overdue, due and completed each as their own
-grid), `InboxPage`, `ListPage` (open and completed separately), and both
-skeleton components (`RowSkeleton`, `CardSkeleton`).
+grid), `InboxPage`, `ListPage` (open and completed separately),
+`SettingsPage` (Account, Time zone, Theme, Sync, Danger zone each their own
+card), and both skeleton components (`RowSkeleton`, `CardSkeleton`).
 
 **Spacing scale.**
 
@@ -162,8 +163,15 @@ grounds, not a tint across the whole interface:
 
 Theme is **System / Light / Dark**, per device, held in `localStorage` via
 `ThemePreference` — never on the `User` aggregate. It lives in
-`SettingsPage`, not the account badge or any menu (a three-way toggle
-nested in a menu item is not reliably keyboard-reachable).
+`SettingsPage`, not the account badge or any menu (a control nested in a
+menu item is not reliably keyboard-reachable), picked from a `MudSelect`
+list — the same dropdown pattern as the time zone picker below it, not a
+button group.
+
+Time zone uses `MudAutocomplete` (type-to-filter over
+`TimeZoneInfo.GetSystemTimeZones()`), not a plain `MudSelect` — a flat,
+alphabetical list of 400+ IANA zone ids is unusable without narrowing by
+typing.
 
 **Typography scale.**
 
@@ -221,7 +229,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |
 | `/history` | History + burndown chart |
-| `/settings` | Settings (account, time zone, theme, sync status) |
+| `/settings` | Settings (account + sign-out, time zone, theme, sync status, delete account) |
 | `/app-info` | version, license, docs/repo links |
 | `/search` | search results (currently unreachable from the UI) |
 | `/welcome` | public, signed-out landing screen |
@@ -236,5 +244,22 @@ the user to sign in; see `specs/backend-spec.md` §6 for the decision
 itself.
 
 **Never build a second settings surface.** Account-level config (time zone,
-theme, sign-out) belongs on `/settings`. Per-item actions belong on the
-item (`⋯` menu, or the area's own FAB per §3). There is no third pattern.
+theme, sign-out, account deletion) belongs on `/settings`. Per-item actions
+belong on the item (`⋯` menu, or the area's own FAB per §3). There is no
+third pattern.
+
+**Sign-out lives inside the Account card**, under the avatar/name/email
+block — not a standalone button elsewhere on the page.
+
+**Account deletion is a "Danger zone" card**, last on the page, `Color.Error`
+styling. Its button opens a `MudDialog` that asks the person to type their
+own email address before the delete button enables (type-to-confirm, exact
+match on `State.Email` trimmed and case-insensitive — there is no password
+to check; see `specs/backend-spec.md` §6). The dialog awaits the delete call
+inline (spinner, no redirect) and requires connectivity — same online check
+as sign-out. A `keycloakRemoved: false` response still counts as success —
+the dialog says the account's data is gone and sign-in removal needs an
+administrator — and either way the client deletes its entire IndexedDB
+database (not just the replica; the outbox too, unlike sign-out) and the
+`oidc.*` `sessionStorage` keys, then lands on `/welcome`, same destination
+as sign-out.
