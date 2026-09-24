@@ -2,6 +2,16 @@
 
 Supersedes the History module. Drives GitHub issue #21.
 
+A design narrative, not a rulebook, and therefore temporary. This repo keeps
+two standing rulebooks — `specs/backend-spec.md` and `specs/ui-spec.md` — and
+retires narratives into git history once their work is built, as
+`slice-design.md` and the UI redesign specs already were. When this is
+implemented, its standing rules fold into those two files and this one is
+deleted; the reasoning and the rejected alternatives survive in ADRs 0034–0036.
+
+Where this and an ADR disagree, the ADR wins. Where this and the code
+disagree, say so rather than silently following either.
+
 ---
 
 ## 1. Why
@@ -288,14 +298,14 @@ completion count.
 
 Written with the change, not after.
 
-- **0033** — domain events dispatched asynchronously after commit, replayed
+- **0034** — domain events dispatched asynchronously after commit, replayed
   from a marker on startup.
-- **0034** — Statistics owns denormalized read-only records projected from the
+- **0035** — Statistics owns denormalized read-only records projected from the
   log, and domain events carry what consumers need. Must explicitly reconcile
   with ADR-0011's *"never write a parallel audit table"*: a read-side
   projection is not an audit table, and the write side still writes exactly one
   log — but that sentence reads as a contradiction without the explanation.
-- **0035** — History renamed to Statistics; route and sidebar row. Amends
+- **0036** — History renamed to Statistics; route and sidebar row. Amends
   ADR-0020.
 
 AGENTS.md §2, §3, §5 and §8 are updated in the same work: the subsystem row,
