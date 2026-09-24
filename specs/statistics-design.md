@@ -246,8 +246,10 @@ usually the largest, and seeing that is the insight.
 The outstanding-open line replaces `BurndownRule`, which is deleted along with
 its tests and the `Analytics` folder in the Tasks module.
 
-The heatmap has no MudBlazor equivalent and is a custom CSS grid. Habits
-(subsystem 4) reuses it for streaks.
+The heatmap is a custom CSS grid. MudBlazor does ship a `ChartType.HeatMap`, but
+a generic matrix chart gives neither day-of-week calendar alignment nor a
+per-cell `title`/`aria-label`, and without those the grid is a wall of coloured
+squares a screen reader cannot read. Habits (subsystem 4) reuses it for streaks.
 
 **Tiles** above the charts: done today, opened today, done this week, net change
 over the range (opened − closed, signed). Same aggregation the charts already

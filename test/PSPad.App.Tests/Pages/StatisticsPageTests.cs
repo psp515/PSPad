@@ -93,6 +93,78 @@ public class StatisticsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void CompletionsChartRendersThePlannedAndUnplannedSeriesPerDay()
+    {
+        var source = new FakeStatisticsSource { Overview = FullOverview() };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var chart = page.FindComponents<MudChart<double>>()
+            .Single(c => c.Instance.ChartSeries.Any(series => series.Name == "Planned"));
+        var planned = chart.Instance.ChartSeries.Single(series => series.Name == "Planned");
+        var unplanned = chart.Instance.ChartSeries.Single(series => series.Name == "Unplanned");
+
+        Assert.Equal([1d, 3d, 5d], planned.Data.Values);
+        Assert.Equal([2d, 4d, 6d], unplanned.Data.Values);
+        Assert.Equal(["03-08", "03-09", "03-10"], chart.Instance.ChartLabels);
+    }
+
+    [Fact]
+    public void OpenedChartRendersTheOpenedCountsPerDay()
+    {
+        var source = new FakeStatisticsSource { Overview = FullOverview() };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var chart = page.FindComponents<MudChart<double>>()
+            .Single(c => c.Instance.ChartSeries.Any(series => series.Name == "Opened"));
+        var opened = chart.Instance.ChartSeries.Single();
+
+        Assert.Equal([2d, 4d, 6d], opened.Data.Values);
+        Assert.Equal(["03-08", "03-09", "03-10"], chart.Instance.ChartLabels);
+    }
+
+    [Fact]
+    public void OutstandingChartRendersTheOutstandingCountsPerDay()
+    {
+        var source = new FakeStatisticsSource { Overview = FullOverview() };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var chart = page.FindComponents<MudChart<double>>()
+            .Single(c => c.Instance.ChartSeries.Any(series => series.Name == "Outstanding"));
+        var outstanding = chart.Instance.ChartSeries.Single();
+
+        Assert.Equal([10d, 8d, 6d], outstanding.Data.Values);
+        Assert.Equal(["03-08", "03-09", "03-10"], chart.Instance.ChartLabels);
+    }
+
+    [Fact]
+    public void ByGoalRendersARowPerGoalIncludingTheExplicitNoGoalBar()
+    {
+        var source = new FakeStatisticsSource { Overview = FullOverview() };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var group = page.FindAll("[role='group']")
+            .Single(element => element.QuerySelector("[role='progressbar']") is not null);
+        var names = group.QuerySelectorAll(".mud-typography-body2")
+            .Select(element => element.TextContent.Trim())
+            .ToList();
+        var bars = group.QuerySelectorAll("[role='progressbar']");
+        var values = bars.Select(bar => int.Parse(bar.GetAttribute("aria-valuenow")!)).ToList();
+        var maxes = bars.Select(bar => int.Parse(bar.GetAttribute("aria-valuemax")!)).ToList();
+
+        Assert.Equal(["Health", "Home", "No goal"], names);
+        Assert.Equal([7, 3, 5], values);
+        Assert.All(maxes, max => Assert.Equal(7, max));
+    }
+
+    [Fact]
     public void ARecordFinishedMoreThanOnceShowsItsCount()
     {
         var source = new FakeStatisticsSource
@@ -135,6 +207,35 @@ public class StatisticsPageTests : Bunit.TestContext
 
     static StatisticsOverview Overview(int doneToday) =>
         new(new StatisticsTilesView(doneToday, 0, 0, 0), [], [], [], [], []);
+
+    static StatisticsOverview FullOverview() =>
+        new(
+            new StatisticsTilesView(0, 0, 0, 0),
+            [
+                new DailyCompletionsView(new DateOnly(2026, 3, 8), Planned: 1, Unplanned: 2),
+                new DailyCompletionsView(new DateOnly(2026, 3, 9), Planned: 3, Unplanned: 4),
+                new DailyCompletionsView(new DateOnly(2026, 3, 10), Planned: 5, Unplanned: 6)
+            ],
+            [
+                new DailyCountView(new DateOnly(2026, 3, 8), 2),
+                new DailyCountView(new DateOnly(2026, 3, 9), 4),
+                new DailyCountView(new DateOnly(2026, 3, 10), 6)
+            ],
+            [
+                new DailyCountView(new DateOnly(2026, 3, 8), 10),
+                new DailyCountView(new DateOnly(2026, 3, 9), 8),
+                new DailyCountView(new DateOnly(2026, 3, 10), 6)
+            ],
+            [
+                new GoalTotalView(Guid.NewGuid(), "Health", 7),
+                new GoalTotalView(Guid.NewGuid(), "Home", 3),
+                new GoalTotalView(null, "No goal", 5)
+            ],
+            [
+                new DailyCountView(new DateOnly(2026, 3, 8), 3),
+                new DailyCountView(new DateOnly(2026, 3, 9), 7),
+                new DailyCountView(new DateOnly(2026, 3, 10), 11)
+            ]);
 
     static StatisticsRecordView Record(
         string taskName, int? completionNumber, string status, Guid? taskId = null) =>
