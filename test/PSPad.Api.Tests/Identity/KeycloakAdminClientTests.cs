@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PSPad.Api.Identity;
 using PSPad.TestInfrastructure;
@@ -82,13 +83,59 @@ public class KeycloakAdminClientTests
         Assert.Equal(3, handler.Requests.Count);
     }
 
-    static KeycloakAdminClient Client(HttpMessageHandler handler) =>
+    [Fact]
+    public async Task ExhaustingEveryRetryLogsAWarningSoAnAdministratorHasSomethingToNotice()
+    {
+        var handler = new ScriptedHandler(
+            Respond(HttpStatusCode.OK, """{"access_token":"admin-token"}"""),
+            Respond(HttpStatusCode.InternalServerError, ""),
+            Respond(HttpStatusCode.OK, """{"access_token":"admin-token"}"""),
+            Respond(HttpStatusCode.InternalServerError, ""),
+            Respond(HttpStatusCode.OK, """{"access_token":"admin-token"}"""),
+            Respond(HttpStatusCode.InternalServerError, ""));
+        var logger = new RecordingLogger<KeycloakAdminClient>();
+
+        var result = await Client(handler, logger).DeleteUserAsync("kc-subject", CancellationToken.None);
+
+        Assert.False(result);
+        Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task AFailedTokenFetchLogsAWarning()
+    {
+        var handler = new ScriptedHandler(
+            Respond(HttpStatusCode.Unauthorized, ""),
+            Respond(HttpStatusCode.Unauthorized, ""),
+            Respond(HttpStatusCode.Unauthorized, ""));
+        var logger = new RecordingLogger<KeycloakAdminClient>();
+
+        await Client(handler, logger).DeleteUserAsync("kc-subject", CancellationToken.None);
+
+        Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Warning);
+    }
+
+    static KeycloakAdminClient Client(HttpMessageHandler handler, ILogger<KeycloakAdminClient>? logger = null) =>
         new(new HttpClient(handler), Options.Create(new KeycloakAdminOptions
         {
             Authority = "http://localhost:8080/realms/psplace",
             AdminUser = "admin",
             AdminPassword = "admin"
-        }));
+        }), logger ?? new RecordingLogger<KeycloakAdminClient>());
+
+    sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter) =>
+            Entries.Add((logLevel, formatter(state, exception)));
+    }
 
     static (HttpStatusCode Status, string Body) Respond(HttpStatusCode status, string body) => (status, body);
 
