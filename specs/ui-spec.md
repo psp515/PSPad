@@ -259,7 +259,8 @@ to check; see `specs/backend-spec.md` §6). The dialog awaits the delete call
 inline (spinner, no redirect) and requires connectivity — same online check
 as sign-out. A `keycloakRemoved: false` response still counts as success —
 the dialog says the account's data is gone and sign-in removal needs an
-administrator — and either way the client deletes its entire IndexedDB
-database (not just the replica; the outbox too, unlike sign-out) and the
-`oidc.*` `sessionStorage` keys, then lands on `/welcome`, same destination
-as sign-out.
+administrator — and either way the client clears everything local: the
+replica, the outbox too (unlike sign-out, which keeps it), and the session
+store/tokens — composing the three existing `IReplica`/`IOutbox`/
+`ILocalSessionStore.ClearAsync()` calls rather than adding new storage
+interop — then lands on `/welcome`, same destination as sign-out.
