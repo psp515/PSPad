@@ -3,6 +3,7 @@
 @using PSPad.Abstractions
 @using PSPad.App.Api
 @using PSPad.App.Auth
+@using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.App.State.Outbox
@@ -19,6 +20,8 @@
 @inject LocalSignOut SignOut
 @inject NavigationManager Navigation
 @inject IClock Clock
+@inject IDialogService Dialogs
+@inject LocalAccountDeletion AccountDeletion
 @implements IDisposable
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Settings</MudText>
@@ -73,6 +76,22 @@
             <MudText Typo="Typo.body2">
                 @(_pendingCommands == 0 ? "Everything is synced." : $"{_pendingCommands} pending")
             </MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudPaper Outlined="true" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-3">Danger zone</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                Permanently deletes your account and everything in it.
+            </MudText>
+            <MudButton Class="pspad-delete-account" Color="Color.Error" Variant="Variant.Outlined"
+                       Disabled="@(!Connectivity.IsOnline)" OnClick="@OpenDeleteAccountDialogAsync">
+                Delete account
+            </MudButton>
+            @if (!Connectivity.IsOnline)
+            {
+                <MudText Typo="Typo.caption" Class="mt-2">Requires a connection.</MudText>
+            }
         </MudPaper>
     </MudItem>
 </MudGrid>
@@ -145,4 +164,19 @@
         Task.FromResult(string.IsNullOrWhiteSpace(value)
             ? TimeZoneIds.AsEnumerable()
             : TimeZoneIds.Where(id => id.Contains(value, StringComparison.OrdinalIgnoreCase)));
+
+    async Task OpenDeleteAccountDialogAsync()
+    {
+        var parameters = new DialogParameters<DeleteAccountDialog> { { dialog => dialog.Email, State.Email } };
+        var dialog = await Dialogs.ShowAsync<DeleteAccountDialog>("Delete account", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        await AccountDeletion.ClearAsync();
+        Navigation.NavigateTo("welcome");
+    }
 }

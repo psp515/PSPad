@@ -3,12 +3,15 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Bunit;
 using Bunit.TestDoubles;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.App.Api;
 using PSPad.App.Sync;
 using PSPad.App.Auth;
+using PSPad.App.Components;
 using PSPad.App.Pages;
 using PSPad.App.State;
 using PSPad.App.State.Outbox;
@@ -261,8 +264,87 @@ public class SettingsPageTests : Bunit.TestContext
         Assert.NotEmpty(page.FindAll(".pspad-account-card .pspad-sign-out"));
     }
 
+    [Fact]
+    public void TheDangerZoneCardOffersAccountDeletion()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.NotEmpty(page.FindAll(".pspad-delete-account"));
+        Assert.False(page.Find(".pspad-delete-account").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void TheDeleteAccountButtonIsDisabledWhenOffline()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com", online: false);
+
+        var page = Render<SettingsPage>();
+
+        Assert.True(page.Find(".pspad-delete-account").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void TheDeleteConfirmButtonStaysDisabledUntilTheEmailMatches()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        page.Find(".pspad-delete-account").Click();
+
+        Assert.True(page.Find(".pspad-confirm-delete").HasAttribute("disabled"));
+
+        page.Find(".pspad-confirm-email input").Input("someone-else@example.com");
+        Assert.True(page.Find(".pspad-confirm-delete").HasAttribute("disabled"));
+
+        page.Find(".pspad-confirm-email input").Input("ADA@EXAMPLE.COM");
+        Assert.False(page.Find(".pspad-confirm-delete").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task ConfirmingDeletesTheAccountClearsLocalStateAndReturnsToWelcome()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        page.Find(".pspad-delete-account").Click();
+        page.Find(".pspad-confirm-email input").Input("ada@example.com");
+        await page.InvokeAsync(() => page.Find(".pspad-confirm-delete").Click());
+
+        Assert.Null(_sessions!.Current);
+        Assert.Null(await _replica!.OwnerAsync());
+        Assert.Equal("http://localhost/welcome", navigation.Uri);
+    }
+
+    [Fact]
+    public void AFailedDeleteShowsAnErrorAndKeepsTheDialogOpen()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com", accountDeleteFails: true);
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        page.Find(".pspad-delete-account").Click();
+        page.Find(".pspad-confirm-email input").Input("ada@example.com");
+        page.Find(".pspad-confirm-delete").Click();
+
+        Assert.Contains("Something went wrong", page.Markup);
+        Assert.NotEmpty(page.FindAll(".pspad-confirm-delete"));
+    }
+
+    RenderFragment BuildSettingsPageWithDialogs() => builder =>
+    {
+        builder.OpenComponent<MudPopoverProvider>(0);
+        builder.CloseComponent();
+        builder.OpenComponent<MudDialogProvider>(1);
+        builder.CloseComponent();
+        builder.OpenComponent<SettingsPage>(2);
+        builder.CloseComponent();
+    };
+
     AppState Arrange(
-        string displayName, string email, bool respondWithNullTimeZone = false, bool online = true)
+        string displayName, string email, bool respondWithNullTimeZone = false, bool online = true,
+        bool accountDeleteFails = false)
     {
         _replica = AppTestHost.Arrange(this, User, Today);
         Services.AddSingleton<IConnectivity>(new FixedConnectivity(online));
@@ -290,10 +372,13 @@ public class SettingsPageTests : Bunit.TestContext
         Services.AddSingleton(state);
 
         Services.AddSingleton(new PSPadApiClient(
-            new HttpClient(new EchoTimeZoneHandler(User, displayName, email, respondWithNullTimeZone))
+            new HttpClient(new StubApiHandler(User, displayName, email, respondWithNullTimeZone, accountDeleteFails))
         {
             BaseAddress = new Uri("http://localhost/")
         }));
+
+        Services.AddSingleton<LocalAccountDeletion>(services => new LocalAccountDeletion(
+            _sessions, _replica, services.GetRequiredService<IOutbox>(), _authProvider));
 
         return state;
     }
@@ -309,12 +394,23 @@ public class SettingsPageTests : Bunit.TestContext
 #pragma warning restore CS0067
     }
 
-    sealed class EchoTimeZoneHandler(Guid userId, string displayName, string email, bool respondWithNullTimeZone)
+    sealed class StubApiHandler(
+        Guid userId, string displayName, string email, bool respondWithNullTimeZone, bool accountDeleteFails)
         : HttpMessageHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (request.Method == HttpMethod.Delete)
+            {
+                return accountDeleteFails
+                    ? new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                    : new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("""{"keycloakRemoved":true}""")
+                    };
+            }
+
             var body = await request.Content!.ReadFromJsonAsync<SetTimeZoneRequest>(cancellationToken);
             var timeZone = respondWithNullTimeZone ? null! : body!.TimeZone;
 
