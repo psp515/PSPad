@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace PSPad.Module.History;
+namespace PSPad.Module.Statistics;
 
 public static partial class HistoryDescriptions
 {

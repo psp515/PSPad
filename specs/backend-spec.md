@@ -27,15 +27,15 @@ src/
     PSPad.Infrastructure/       Mongo client, connection string, generic repository, Keycloak/JWT, DI registration
   modules/
     PSPad.Module.Tasks/         areas, lists, Inbox, tasks, steps, goals, recurrence, Today — pure, WASM-safe
-    PSPad.Module.History/       queries over the event log
+    PSPad.Module.Statistics/    queries over the event log
     PSPad.Module.Identity/      User, time zone, first-sign-in provisioning
 test/
-  PSPad.Module.Tasks.Tests/     unit only
-  PSPad.Module.History.Tests/   unit only
-  PSPad.Module.Identity.Tests/  unit only
-  PSPad.Api.Tests/              integration, Testcontainers MongoDB
-  PSPad.App.Tests/              unit + bUnit
-  PSPad.TestInfrastructure/     Mongo fixture, category attributes, architecture guards
+  PSPad.Module.Tasks.Tests/       unit only
+  PSPad.Module.Statistics.Tests/  unit only
+  PSPad.Module.Identity.Tests/    unit only
+  PSPad.Api.Tests/                integration, Testcontainers MongoDB
+  PSPad.App.Tests/                unit + bUnit
+  PSPad.TestInfrastructure/       Mongo fixture, category attributes, architecture guards
 docker/                         compose files, Keycloak realm, nginx config
 ```
 
@@ -46,7 +46,7 @@ References run one way only:
 | `PSPad.Abstractions` | nothing |
 | `PSPad.Contracts` | `PSPad.Abstractions` |
 | `PSPad.Module.Tasks` | `PSPad.Abstractions` — and nothing else. This is the purity rule (AD-4) |
-| `PSPad.Module.History` | `PSPad.Abstractions`, `PSPad.Contracts` |
+| `PSPad.Module.Statistics` | `PSPad.Abstractions`, `PSPad.Contracts` |
 | `PSPad.Module.Identity` | `PSPad.Abstractions`, `PSPad.Contracts` |
 | `PSPad.Infrastructure` | `PSPad.Abstractions`, `PSPad.Contracts` — never a module |
 | `PSPad.Api` | everything |

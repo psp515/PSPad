@@ -1,5 +1,5 @@
 using PSPad.Api.Identity;
-using PSPad.Module.History;
+using PSPad.Module.Statistics;
 
 namespace PSPad.Api.Endpoints;
 

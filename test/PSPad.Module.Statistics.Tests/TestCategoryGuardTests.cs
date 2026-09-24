@@ -1,7 +1,7 @@
 using System.Reflection;
 using PSPad.TestInfrastructure;
 
-namespace PSPad.Module.History.Tests;
+namespace PSPad.Module.Statistics.Tests;
 
 [UnitTest]
 public class TestCategoryGuardTests

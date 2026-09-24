@@ -1,7 +1,7 @@
 using MongoDB.Driver;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
-using PSPad.Module.History;
+using PSPad.Module.Statistics;
 
 namespace PSPad.Api.History;
 

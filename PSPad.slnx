@@ -10,14 +10,14 @@
   </Folder>
   <Folder Name="/src/modules/">
     <Project Path="src/modules/PSPad.Module.Tasks/PSPad.Module.Tasks.csproj" />
-    <Project Path="src/modules/PSPad.Module.History/PSPad.Module.History.csproj" />
+    <Project Path="src/modules/PSPad.Module.Statistics/PSPad.Module.Statistics.csproj" />
     <Project Path="src/modules/PSPad.Module.Identity/PSPad.Module.Identity.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/PSPad.TestInfrastructure/PSPad.TestInfrastructure.csproj" />
     <Project Path="test/PSPad.Module.Tasks.Tests/PSPad.Module.Tasks.Tests.csproj" />
     <Project Path="test/PSPad.Module.Identity.Tests/PSPad.Module.Identity.Tests.csproj" />
-    <Project Path="test/PSPad.Module.History.Tests/PSPad.Module.History.Tests.csproj" />
+    <Project Path="test/PSPad.Module.Statistics.Tests/PSPad.Module.Statistics.Tests.csproj" />
     <Project Path="test/PSPad.Api.Tests/PSPad.Api.Tests.csproj" />
     <Project Path="test/PSPad.App.Tests/PSPad.App.Tests.csproj" />
   </Folder>

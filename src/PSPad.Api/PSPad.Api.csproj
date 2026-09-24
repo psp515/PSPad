@@ -5,7 +5,7 @@
     <ProjectReference Include="..\shared\PSPad.Contracts\PSPad.Contracts.csproj" />
     <ProjectReference Include="..\shared\PSPad.Infrastructure\PSPad.Infrastructure.csproj" />
     <ProjectReference Include="..\modules\PSPad.Module.Tasks\PSPad.Module.Tasks.csproj" />
-    <ProjectReference Include="..\modules\PSPad.Module.History\PSPad.Module.History.csproj" />
+    <ProjectReference Include="..\modules\PSPad.Module.Statistics\PSPad.Module.Statistics.csproj" />
     <ProjectReference Include="..\modules\PSPad.Module.Identity\PSPad.Module.Identity.csproj" />
   </ItemGroup>
 

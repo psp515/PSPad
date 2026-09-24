@@ -1,6 +1,6 @@
 using PSPad.Contracts;
 
-namespace PSPad.Module.History;
+namespace PSPad.Module.Statistics;
 
 public interface IEventLog
 {

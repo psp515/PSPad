@@ -6,7 +6,7 @@ using PSPad.Api.Identity;
 using PSPad.Api.Sync;
 using PSPad.Infrastructure;
 using PSPad.Infrastructure.Mongo;
-using PSPad.Module.History;
+using PSPad.Module.Statistics;
 
 var builder = WebApplication.CreateBuilder(args);
 
