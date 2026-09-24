@@ -29,8 +29,12 @@ else if (_list is not null)
 
     @if (_open.Count == 0 && _done.Count == 0)
     {
-        <EmptyState Icon="@Icons.Material.Outlined.TaskAlt" Message="No tasks yet." CreateText="Add task"
-                    OnCreate="@AddTask" />
+        <MudGrid Spacing="4">
+            <MudItem xs="12" sm="6" md="4" xl="3">
+                <EmptyState Icon="@Icons.Material.Outlined.TaskAlt" Message="No tasks yet." CreateText="Add task"
+                            OnCreate="@AddTask" />
+            </MudItem>
+        </MudGrid>
     }
     else
     {

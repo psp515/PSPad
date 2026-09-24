@@ -1,13 +1,9 @@
-<MudPaper Outlined="true" Class="pspad-empty-state pa-6 d-flex flex-column align-center gap-3">
+<MudPaper Outlined="true" Class="@($"pspad-empty-state pa-4 d-flex flex-column align-center gap-2 {(Clickable ? "pspad-empty-state-clickable" : "")}")"
+          role="@(Clickable ? "button" : null)" tabindex="@(Clickable ? "0" : null)"
+          aria-label="@(Clickable ? CreateText : null)"
+          @onclick="@CreateAsync" @onkeydown="@KeyAsync">
     <MudIcon Icon="@Icon" Color="Color.Primary" Size="Size.Large" />
-    <MudText Typo="Typo.body1" Align="Align.Center">@Message</MudText>
-    @if (OnCreate.HasDelegate)
-    {
-        <MudButton Class="pspad-empty-create" Variant="Variant.Outlined" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.Add" OnClick="@OnCreate">
-            @CreateText
-        </MudButton>
-    }
+    <MudText Typo="Typo.body2" Align="Align.Center">@Message</MudText>
 </MudPaper>
 
 @code {
@@ -18,4 +14,22 @@
     [Parameter] public string CreateText { get; set; } = "Create";
 
     [Parameter] public EventCallback OnCreate { get; set; }
+
+    bool Clickable => OnCreate.HasDelegate;
+
+    async Task CreateAsync()
+    {
+        if (Clickable)
+        {
+            await OnCreate.InvokeAsync();
+        }
+    }
+
+    async Task KeyAsync(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or " ")
+        {
+            await CreateAsync();
+        }
+    }
 }

@@ -132,19 +132,35 @@ same panel in its new-task mode, addressed as `?task=new&list={listId}`
 (`TaskQuery.ForNewTask`) — never an inline field or a dialog.
 
 **Detail panels share one shell.** `Components/DetailPanel.razor` is the
-only right-anchored detail drawer: 360px from `md` up, full width below it;
-an X close button top-left beside a short title; the editable name under
-that header (`Header` fragment); scrolling content; and a bottom action bar
-with Save on the left (filled, primary) and Delete on the right (text,
-`Color.Error`). Each button renders only when its callback is bound. An
-existing thing's fields save as they change — each edit is its own command,
-so there is no Save for it, only Delete. Save exists only while creating,
-where nothing is written until the whole draft is committed.
+only right-anchored detail drawer: 360px from `md` up, full width below it.
+Its header row holds an X close button top-left, a title (`Typo.h5` from
+`md` up, `Typo.h6` below) and a `HeaderActions` slot on the right for
+toggles such as the star; the labelled name field sits under it (`Header`
+slot), then scrolling content, then an optional bottom bar with Save on the
+left (filled, primary) and Delete on the right (text, `Color.Error`). Each
+button renders only when its callback is bound. An existing thing's fields
+save as they change — each edit is its own command, so there is no Save for
+it. Save exists only while creating, where nothing is written until the
+whole draft is committed.
+
+**One task form for add, edit and view.** `TaskDetailPanel` is a single
+component whose mode follows from its parameters — *Add* (`?task=new`),
+*Edit* (an existing task), *View* (an existing task while the shell is not
+ready: every control disabled). Top to bottom: header (title, done checkbox
+outside Add, star); **Name**; due date, priority, goal; recurrence and
+steps (outside Add — room for later task fields goes here); then an
+**Actions** section (outside Add) with Area and List pickers and two filled
+buttons — **Move** on the left, grey (disabled) until the picked list
+differs from the task's current one, and **Delete** on the right in
+`Color.Error`.
 
 **Empty states share one component.** A page or board with no items yet
-shows `Components/EmptyState.razor` in place of its grid: an outlined
-`MudPaper` with an icon, a message, and a button that starts creating the
-first item. Only after `_loaded` — see above.
+shows `Components/EmptyState.razor` as the first cell of its grid, sized
+like one card (`MudItem xs="12" sm="6" md="4" xl="3"`): an outlined
+`MudPaper` with a dashed border, an icon and a message. The whole card is
+the create action — `role="button"`, focusable, Enter/Space or a click
+starts creating the first item; no separate button. Only after `_loaded` —
+see above.
 
 **Every page has a page-level action set** — creating the thing the page
 is about, renaming or deleting that thing — distinct from the item-level

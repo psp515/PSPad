@@ -8,10 +8,12 @@
     @if (Open)
     {
         <div class="d-flex flex-column" style="height:100%">
-            <div class="d-flex align-center gap-2 px-2 py-2">
-                <MudIconButton Class="pspad-panel-close" Size="Size.Small" Icon="@Icons.Material.Filled.Close"
+            <div class="d-flex align-center gap-2 px-2 py-3">
+                <MudIconButton Class="pspad-panel-close" Icon="@Icons.Material.Filled.Close"
                                aria-label="Close" OnClick="@OnClose" />
-                <MudText Typo="Typo.subtitle2">@Title</MudText>
+                <MudText Class="pspad-panel-title" Typo="@(_isDesktop ? Typo.h5 : Typo.h6)">@Title</MudText>
+                <MudSpacer />
+                @HeaderActions
             </div>
 
             @if (Header is not null)
@@ -58,6 +60,8 @@
     [Parameter] public bool Open { get; set; }
 
     [Parameter] public string Title { get; set; } = "";
+
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
 
     [Parameter] public RenderFragment? Header { get; set; }
 

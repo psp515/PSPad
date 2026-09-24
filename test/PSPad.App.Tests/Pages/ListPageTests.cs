@@ -209,9 +209,10 @@ public class ListPageTests : Bunit.TestContext
 
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
         var navigation = page.Services.GetRequiredService<NavigationManager>();
-        page.Find(".pspad-empty-create").Click();
+        page.Find(".pspad-empty-state").Click();
 
         Assert.Single(page.FindComponents<EmptyState>());
+        page.Find(".mud-grid-item > .pspad-empty-state");
         Assert.EndsWith($"?task=new&list={list.Id}", navigation.Uri);
     }
 

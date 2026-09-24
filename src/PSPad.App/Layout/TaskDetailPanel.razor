@@ -2,113 +2,103 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<TodoTask> Store
+@inject IDocumentStore<Area> Areas
 @inject IDocumentStore<TaskList> Lists
 @inject IDocumentStore<Goal> Goals
 @inject AppState State
 @inject CommandSender Sender
 
-<DetailPanel Open="@IsOpen" Title="@(_task is null ? "New task" : "Task")" OnClose="@OnClose"
+<DetailPanel Open="@(Mode != PanelMode.Closed)" Title="@Title" OnClose="@OnClose"
              OnSave="@SaveCallback" SaveText="Add task" CanSave="@(!string.IsNullOrWhiteSpace(_draft.Name))"
-             OnDelete="@DeleteCallback" DeleteText="Delete task" Disabled="@Disabled">
-    <Header>
+             Disabled="@Disabled">
+    <HeaderActions>
         @if (_task is not null)
         {
-            <div class="d-flex align-center gap-2">
-                <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync"
-                             Color="Color.Primary" Disabled="@Disabled" />
-                <MudTextField T="string" Class="pspad-task-name-field" Value="@_task.Name"
-                              ValueChanged="@RenameAsync" Variant="Variant.Text" Immediate="false"
-                              Disabled="@Disabled" />
-                <MudIconButton Size="Size.Small" Color="Color.Primary" Disabled="@Disabled"
-                               Icon="@(_task.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                               OnClick="@(() => StarAsync(!_task.Starred))" />
-            </div>
+            <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync"
+                         Color="Color.Primary" Disabled="@Disabled" aria-label="Done" />
         }
-        else if (NewInList is not null)
-        {
-            <div class="d-flex align-center gap-2">
-                <MudTextField T="string" Class="pspad-task-name-field" @bind-Value="_draft.Name"
-                              Placeholder="Task name" Variant="Variant.Text" Immediate="true" AutoFocus="true"
-                              Disabled="@Disabled" />
-                <MudIconButton Class="pspad-new-task-star" Size="Size.Small" Color="Color.Primary"
-                               Disabled="@Disabled"
-                               Icon="@(_draft.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                               OnClick="@(() => _draft.Starred = !_draft.Starred)" />
-            </div>
-        }
+        <MudIconButton Class="pspad-task-star" Color="Color.Primary" Disabled="@Disabled"
+                       Icon="@(Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                       aria-label="Star" OnClick="@ToggleStarAsync" />
+    </HeaderActions>
+    <Header>
+        <MudTextField T="string" Class="pspad-task-name-field" Label="Name" Value="@Name"
+                      ValueChanged="@NameChangedAsync" Immediate="@(Mode == PanelMode.Add)"
+                      AutoFocus="@(Mode == PanelMode.Add)" Disabled="@Disabled" />
     </Header>
     <ChildContent>
+        <div class="pa-3 d-flex flex-column gap-3">
+            <MudDatePicker Class="pspad-task-due" Label="Due date" Date="@DueDate" DateChanged="@DueDateAsync"
+                           Disabled="@(Disabled || _task?.IsRecurring == true)" />
+
+            <MudSelect T="Priority" Class="pspad-task-priority" Value="@Priority" ValueChanged="@PriorityAsync"
+                       Label="Priority" Disabled="@Disabled">
+                @foreach (var priority in Enum.GetValues<Priority>())
+                {
+                    <MudSelectItem T="Priority" Value="@priority">@priority</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="Guid?" Class="pspad-task-goal" Value="@GoalId" ValueChanged="@LinkGoalAsync"
+                       Label="Goal" Disabled="@Disabled">
+                <MudSelectItem T="Guid?" Value="@((Guid?)null)">None</MudSelectItem>
+                @foreach (var goal in _goals)
+                {
+                    <MudSelectItem T="Guid?" Value="@((Guid?)goal.Id)">@goal.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+
         @if (_task is not null)
         {
-            <div class="pa-3">
+            <MudDivider />
+
+            <div class="pa-3 d-flex flex-column gap-3">
+                <RecurrenceEditor Task="@_task" UserId="@State.UserId" Today="@State.Today"
+                                  Disabled="@Disabled" Changed="@ReloadAsync" />
+
                 <StepList Task="@_task" UserId="@State.UserId" Disabled="@Disabled" Changed="@ReloadAsync" />
             </div>
 
             <MudDivider />
 
-            <div class="pa-3 d-flex flex-column gap-3">
-                <MudDatePicker Label="Due date" Date="@DueDate" DateChanged="@DueDateAsync"
-                               Disabled="@(_task.IsRecurring || Disabled)" />
+            <div class="pa-3 d-flex flex-column gap-3 pspad-task-actions">
+                <MudText Typo="Typo.subtitle2">Actions</MudText>
 
-                <RecurrenceEditor Task="@_task" UserId="@State.UserId" Today="@State.Today"
-                                  Disabled="@Disabled" Changed="@ReloadAsync" />
-
-                <MudSelect T="Priority" Value="@_task.Priority" ValueChanged="@PriorityAsync" Label="Priority"
-                           Disabled="@Disabled">
-                    @foreach (var priority in Enum.GetValues<Priority>())
+                <MudSelect T="Guid" Class="pspad-task-area" Value="@_moveAreaId" ValueChanged="@MoveAreaChanged"
+                           Label="Area" Disabled="@Disabled">
+                    @foreach (var area in _areas)
                     {
-                        <MudSelectItem T="Priority" Value="@priority">@priority</MudSelectItem>
+                        <MudSelectItem T="Guid" Value="@area.Id">@area.Name</MudSelectItem>
                     }
                 </MudSelect>
 
-                <MudSelect T="Guid?" Value="@_task.GoalId" ValueChanged="@LinkGoalAsync" Label="Goal"
+                <MudSelect T="Guid" Class="pspad-task-list" @bind-Value="_moveListId" Label="List"
                            Disabled="@Disabled">
-                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">None</MudSelectItem>
-                    @foreach (var goal in _goals)
-                    {
-                        <MudSelectItem T="Guid?" Value="@((Guid?)goal.Id)">@goal.Name</MudSelectItem>
-                    }
-                </MudSelect>
-
-                <MudSelect T="Guid" Value="@_task.ListId" ValueChanged="@MoveToListAsync" Label="List"
-                           Disabled="@Disabled">
-                    @foreach (var list in _lists)
+                    @foreach (var list in ListsIn(_moveAreaId))
                     {
                         <MudSelectItem T="Guid" Value="@list.Id">@list.Name</MudSelectItem>
                     }
                 </MudSelect>
-            </div>
-        }
-        else if (NewInList is not null)
-        {
-            <div class="pa-3 d-flex flex-column gap-3">
-                <MudDatePicker Label="Due date" @bind-Date="_draft.DueDate" Disabled="@Disabled" />
 
-                <MudSelect T="Priority" @bind-Value="_draft.Priority" Label="Priority" Disabled="@Disabled">
-                    @foreach (var priority in Enum.GetValues<Priority>())
-                    {
-                        <MudSelectItem T="Priority" Value="@priority">@priority</MudSelectItem>
-                    }
-                </MudSelect>
-
-                <MudSelect T="Guid?" @bind-Value="_draft.GoalId" Label="Goal" Disabled="@Disabled">
-                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">None</MudSelectItem>
-                    @foreach (var goal in _goals)
-                    {
-                        <MudSelectItem T="Guid?" Value="@((Guid?)goal.Id)">@goal.Name</MudSelectItem>
-                    }
-                </MudSelect>
-
-                <MudSelect T="Guid" @bind-Value="_draft.ListId" Label="List" Disabled="@Disabled">
-                    @foreach (var list in _lists)
-                    {
-                        <MudSelectItem T="Guid" Value="@list.Id">@list.Name</MudSelectItem>
-                    }
-                </MudSelect>
+                <div class="d-flex align-center">
+                    <MudButton Class="pspad-task-move" Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.DriveFileMove"
+                               Disabled="@(Disabled || !MoveChanged)" OnClick="@MoveAsync">
+                        Move
+                    </MudButton>
+                    <MudSpacer />
+                    <MudButton Class="pspad-task-delete" Variant="Variant.Filled" Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.Delete" Disabled="@Disabled"
+                               OnClick="@DeleteAsync">
+                        Delete
+                    </MudButton>
+                </div>
             </div>
         }
     </ChildContent>
@@ -123,34 +113,59 @@
 
     [Parameter] public EventCallback OnClose { get; set; }
 
+    enum PanelMode { Closed, Add, Edit, View }
+
     TodoTask? _task;
+    IReadOnlyList<Area> _areas = [];
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<Goal> _goals = [];
     Guid? _draftFor;
     TaskDraft _draft = new();
+    Guid? _moveFor;
+    Guid _moveAreaId;
+    Guid _moveListId;
 
-    bool IsOpen => _task is not null || NewInList is not null;
+    PanelMode Mode => (_task, NewInList, Disabled) switch
+    {
+        ({ }, _, true) => PanelMode.View,
+        ({ }, _, false) => PanelMode.Edit,
+        (null, { }, _) => PanelMode.Add,
+        _ => PanelMode.Closed
+    };
 
-    EventCallback SaveCallback => _task is null && NewInList is not null
+    string Title => Mode switch
+    {
+        PanelMode.Add => "New task",
+        PanelMode.Edit => "Edit task",
+        _ => "Task"
+    };
+
+    EventCallback SaveCallback => Mode == PanelMode.Add
         ? EventCallback.Factory.Create(this, CreateAsync)
         : default;
 
-    EventCallback DeleteCallback => _task is not null
-        ? EventCallback.Factory.Create(this, DeleteAsync)
-        : default;
+    string Name => _task?.Name ?? _draft.Name;
+
+    bool Starred => _task?.Starred ?? _draft.Starred;
+
+    Priority Priority => _task?.Priority ?? _draft.Priority;
+
+    Guid? GoalId => _task is null ? _draft.GoalId : _task.GoalId;
+
+    DateTime? DueDate => _task is null ? _draft.DueDate : _task.DueOn?.ToDateTime(TimeOnly.MinValue);
 
     bool Done => _task is not null && (_task.IsRecurring
         ? _task.CompletedDays.Contains(State.Today)
         : _task.CompletedAt is not null);
 
-    DateTime? DueDate => _task?.DueOn?.ToDateTime(TimeOnly.MinValue);
+    bool MoveChanged => _task is not null && _moveListId != Guid.Empty && _moveListId != _task.ListId;
 
     protected override async Task OnParametersSetAsync()
     {
         if (NewInList != _draftFor)
         {
             _draftFor = NewInList;
-            _draft = new TaskDraft { ListId = NewInList ?? Guid.Empty };
+            _draft = new TaskDraft();
         }
 
         await ReloadAsync();
@@ -165,23 +180,45 @@
             return;
         }
 
+        var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
+        _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
         var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
         _lists = [.. lists.Where(list => !list.Deleted).OrderBy(list => list.Position)];
         var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
         _goals = [.. goals.Where(goal => !goal.Deleted)];
+
+        if (_task is not null && _moveFor != _task.Id)
+        {
+            ResetMoveTarget();
+        }
+    }
+
+    void ResetMoveTarget()
+    {
+        _moveFor = _task!.Id;
+        _moveListId = _task.ListId;
+        _moveAreaId = _lists.FirstOrDefault(list => list.Id == _task.ListId)?.AreaId ?? Guid.Empty;
+    }
+
+    IReadOnlyList<TaskList> ListsIn(Guid areaId) => [.. _lists.Where(list => list.AreaId == areaId)];
+
+    void MoveAreaChanged(Guid areaId)
+    {
+        _moveAreaId = areaId;
+        _moveListId = ListsIn(areaId).FirstOrDefault()?.Id ?? Guid.Empty;
     }
 
     async Task CreateAsync()
     {
         var name = _draft.Name.Trim();
 
-        if (Disabled || name.Length == 0)
+        if (Disabled || NewInList is not { } listId || name.Length == 0)
         {
             return;
         }
 
         var taskId = Guid.NewGuid();
-        await Sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, taskId, _draft.ListId, name));
+        await Sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, taskId, listId, name));
 
         if (_draft.DueDate is { } due)
         {
@@ -204,13 +241,24 @@
             await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, taskId, true));
         }
 
-        _draft = new TaskDraft { ListId = _draft.ListId };
+        _draft = new TaskDraft();
         await OnClose.InvokeAsync();
     }
 
-    async Task RenameAsync(string name)
+    async Task NameChangedAsync(string name)
     {
-        if (Disabled || string.IsNullOrWhiteSpace(name) || name.Trim() == _task!.Name)
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_task is null)
+        {
+            _draft.Name = name;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(name) || name.Trim() == _task.Name)
         {
             return;
         }
@@ -219,14 +267,83 @@
         await ReloadAsync();
     }
 
-    async Task CompleteAsync(bool completed)
+    async Task ToggleStarAsync()
     {
         if (Disabled)
         {
             return;
         }
 
-        if (_task!.IsRecurring)
+        if (_task is null)
+        {
+            _draft.Starred = !_draft.Starred;
+            return;
+        }
+
+        await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, _task.Id, !_task.Starred));
+        await ReloadAsync();
+    }
+
+    async Task DueDateAsync(DateTime? date)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_task is null)
+        {
+            _draft.DueDate = date;
+            return;
+        }
+
+        var dueOn = date is null ? null : (DateOnly?)DateOnly.FromDateTime(date.Value);
+        await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, _task.Id, dueOn));
+        await ReloadAsync();
+    }
+
+    async Task PriorityAsync(Priority priority)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_task is null)
+        {
+            _draft.Priority = priority;
+            return;
+        }
+
+        await Sender.SendAsync(new SetTaskPriority(Guid.NewGuid(), State.UserId, _task.Id, priority));
+        await ReloadAsync();
+    }
+
+    async Task LinkGoalAsync(Guid? goalId)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_task is null)
+        {
+            _draft.GoalId = goalId;
+            return;
+        }
+
+        await Sender.SendAsync(new LinkTaskToGoal(Guid.NewGuid(), State.UserId, _task.Id, goalId));
+        await ReloadAsync();
+    }
+
+    async Task CompleteAsync(bool completed)
+    {
+        if (Disabled || _task is null)
+        {
+            return;
+        }
+
+        if (_task.IsRecurring)
         {
             await Sender.SendAsync(new CompleteOccurrence(
                 Guid.NewGuid(), State.UserId, _task.Id, State.Today, completed));
@@ -243,60 +360,16 @@
         await ReloadAsync();
     }
 
-    async Task StarAsync(bool starred)
+    async Task MoveAsync()
     {
-        if (Disabled)
+        if (Disabled || !MoveChanged)
         {
             return;
         }
 
-        await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, _task!.Id, starred));
+        await Sender.SendAsync(new MoveTaskToList(Guid.NewGuid(), State.UserId, _task!.Id, _moveListId));
         await ReloadAsync();
-    }
-
-    async Task PriorityAsync(Priority priority)
-    {
-        if (Disabled)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new SetTaskPriority(Guid.NewGuid(), State.UserId, _task!.Id, priority));
-        await ReloadAsync();
-    }
-
-    async Task DueDateAsync(DateTime? date)
-    {
-        if (Disabled)
-        {
-            return;
-        }
-
-        var dueOn = date is null ? null : (DateOnly?)DateOnly.FromDateTime(date.Value);
-        await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, _task!.Id, dueOn));
-        await ReloadAsync();
-    }
-
-    async Task MoveToListAsync(Guid listId)
-    {
-        if (Disabled)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new MoveTaskToList(Guid.NewGuid(), State.UserId, _task!.Id, listId));
-        await ReloadAsync();
-    }
-
-    async Task LinkGoalAsync(Guid? goalId)
-    {
-        if (Disabled)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new LinkTaskToGoal(Guid.NewGuid(), State.UserId, _task!.Id, goalId));
-        await ReloadAsync();
+        ResetMoveTarget();
     }
 
     async Task DeleteAsync()
@@ -319,8 +392,6 @@
         public Priority Priority { get; set; } = Priority.None;
 
         public Guid? GoalId { get; set; }
-
-        public Guid ListId { get; set; }
 
         public bool Starred { get; set; }
     }

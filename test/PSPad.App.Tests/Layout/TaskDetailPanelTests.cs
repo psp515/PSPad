@@ -1,8 +1,12 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
+using MudBlazor;
 using Microsoft.Extensions.DependencyInjection;
 using PSPad.Abstractions;
 using PSPad.App.Layout;
 using PSPad.App.State.Viewport;
+using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Recurrence;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
@@ -151,7 +155,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
 
         Assert.Empty(panel.FindAll(".pspad-panel-save"));
-        Assert.Contains("Delete task", panel.Find(".pspad-panel-delete").TextContent);
+        Assert.Contains("Delete", panel.Find(".pspad-task-delete").TextContent);
     }
 
     [Fact]
@@ -177,7 +181,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var panel = Render<TaskDetailPanel>(parameters => parameters
             .Add(p => p.TaskId, (Guid?)task.Id)
             .Add(p => p.OnClose, () => closed = true));
-        panel.Find(".pspad-panel-delete").Click();
+        panel.Find(".pspad-task-delete").Click();
 
         var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
         Assert.True(reloaded!.Deleted);
@@ -192,7 +196,8 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)Guid.NewGuid()));
 
         Assert.Contains("New task", panel.Markup);
-        Assert.Empty(panel.FindAll(".pspad-panel-delete"));
+        Assert.Empty(panel.FindAll(".pspad-task-delete"));
+        Assert.Empty(panel.FindAll(".pspad-task-actions"));
         Assert.True(panel.Find(".pspad-panel-save").HasAttribute("disabled"));
     }
 
@@ -207,7 +212,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
             .Add(p => p.NewInList, (Guid?)listId)
             .Add(p => p.OnClose, () => closed = true));
         panel.Find(".pspad-task-name-field input").Input("Kup chleb");
-        panel.Find(".pspad-new-task-star").Click();
+        panel.Find(".pspad-task-star").Click();
         panel.Find(".pspad-panel-save").Click();
 
         var tasks = await replica.LoadAllAsync<TodoTask>(User);
@@ -232,11 +237,149 @@ public class TaskDetailPanelTests : Bunit.TestContext
         Assert.Empty(await replica.LoadAllAsync<TodoTask>(User));
     }
 
-    static TodoTask NewTask(string name)
+    [Fact]
+    public void TheHeaderCarriesALargeTitleAndTheStar()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        var title = panel.Find(".pspad-panel-title");
+        Assert.Contains("Edit task", title.TextContent);
+        Assert.Contains("mud-typography-h5", title.ClassName);
+        var markup = panel.Markup;
+        Assert.True(markup.IndexOf("pspad-task-star", StringComparison.Ordinal)
+                    < markup.IndexOf("pspad-task-name-field", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TheNameIsALabelledFieldUnderTheHeader()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Contains("Name", panel.Find(".pspad-task-name-field label").TextContent);
+        Assert.Equal("Buy milk", panel.Find(".pspad-task-name-field input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void DatePriorityAndGoalComeFirstAndActionsComeLast()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        var markup = panel.Markup;
+        var due = markup.IndexOf("pspad-task-due", StringComparison.Ordinal);
+        var priority = markup.IndexOf("pspad-task-priority", StringComparison.Ordinal);
+        var goal = markup.IndexOf("pspad-task-goal", StringComparison.Ordinal);
+        var actions = markup.IndexOf("pspad-task-actions", StringComparison.Ordinal);
+        Assert.True(due < priority && priority < goal && goal < actions);
+        Assert.Contains("Actions", panel.Find(".pspad-task-actions").TextContent);
+    }
+
+    [Fact]
+    public void MoveSitsLeftOfDeleteAndBothAreFilled()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        var markup = panel.Markup;
+        Assert.True(markup.IndexOf("pspad-task-move", StringComparison.Ordinal)
+                    < markup.IndexOf("pspad-task-delete", StringComparison.Ordinal));
+        Assert.Contains("mud-button-filled", panel.Find(".pspad-task-move").ClassName);
+        Assert.Contains("mud-button-filled-error", panel.Find(".pspad-task-delete").ClassName);
+    }
+
+    [Fact]
+    public void MoveStaysGreyWhileTheAreaAndListAreUnchanged()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        var task = NewTask("Buy milk", list.Id);
+        AppTestHost.Arrange(this, User, Today, area, list, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.True(panel.Find(".pspad-task-move").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task PickingAnotherAreaAndListEnablesMoveWhichMovesTheTask()
+    {
+        var home = NewArea("Dom");
+        var work = NewArea("Praca");
+        var shopping = NewList(home.Id, "Zakupy");
+        var office = NewList(work.Id, "Biuro");
+        var task = NewTask("Buy milk", shopping.Id);
+        var replica = AppTestHost.Arrange(this, User, Today, home, work, shopping, office, task);
+
+        var panel = Render(WithPopovers(task.Id));
+        panel.Find(".pspad-task-area").MouseDown();
+        panel.FindAll(".mud-list-item").Single(item => item.TextContent.Contains("Praca")).Click();
+
+        var move = panel.Find(".pspad-task-move");
+        Assert.False(move.HasAttribute("disabled"));
+        move.Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(office.Id, reloaded!.ListId);
+        panel.WaitForAssertion(() => Assert.True(panel.Find(".pspad-task-move").HasAttribute("disabled")));
+    }
+
+    [Fact]
+    public void InViewModeEveryControlIsDisabled()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters
+            .Add(p => p.TaskId, (Guid?)task.Id)
+            .Add(p => p.Disabled, true));
+
+        Assert.Contains("Task", panel.Find(".pspad-panel-title").TextContent);
+        Assert.True(panel.Find(".pspad-task-name-field input").HasAttribute("disabled"));
+        Assert.True(panel.Find(".pspad-task-delete").HasAttribute("disabled"));
+        Assert.True(panel.Find(".pspad-task-star").HasAttribute("disabled"));
+    }
+
+    RenderFragment WithPopovers(Guid taskId) => builder =>
+    {
+        builder.OpenComponent<MudPopoverProvider>(0);
+        builder.CloseComponent();
+        builder.OpenComponent<TaskDetailPanel>(1);
+        builder.AddAttribute(2, nameof(TaskDetailPanel.TaskId), (Guid?)taskId);
+        builder.CloseComponent();
+    };
+
+    static Area NewArea(string name)
+    {
+        var area = new Area();
+        area.ApplyAll(Area.Decide(
+            null, new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), name, 0), DateTimeOffset.UnixEpoch));
+        return area;
+    }
+
+    static TaskList NewList(Guid areaId, string name)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0),
+            DateTimeOffset.UnixEpoch));
+        return list;
+    }
+
+    static TodoTask NewTask(string name, Guid? listId = null)
     {
         var task = new TodoTask();
         task.ApplyAll(TodoTask.Decide(
-            null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name),
+            null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), listId ?? Guid.NewGuid(), name),
             DateTimeOffset.UnixEpoch));
         return task;
     }

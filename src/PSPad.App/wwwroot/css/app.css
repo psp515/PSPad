@@ -209,3 +209,17 @@ h1[tabindex="-1"]:focus {
 .pspad-welcome-button:hover {
     filter: brightness(1.08);
 }
+
+.pspad-empty-state {
+    border-style: dashed !important;
+    border-width: 2px !important;
+}
+
+.pspad-empty-state-clickable {
+    cursor: pointer;
+}
+
+.pspad-empty-state-clickable:hover,
+.pspad-empty-state-clickable:focus-visible {
+    border-color: var(--mud-palette-primary) !important;
+}
