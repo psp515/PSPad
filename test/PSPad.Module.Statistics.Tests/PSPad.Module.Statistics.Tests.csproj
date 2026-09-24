@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\modules\PSPad.Module.Statistics\PSPad.Module.Statistics.csproj" />
+    <ProjectReference Include="..\..\src\modules\PSPad.Module.Tasks\PSPad.Module.Tasks.csproj" />
     <ProjectReference Include="..\PSPad.TestInfrastructure\PSPad.TestInfrastructure.csproj" />
   </ItemGroup>
 

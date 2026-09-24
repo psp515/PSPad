@@ -3,7 +3,7 @@ using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Statistics;
 
-namespace PSPad.Api.History;
+namespace PSPad.Api.Statistics;
 
 public sealed class MongoEventLog(MongoContext context) : IEventLog
 {
@@ -23,9 +23,24 @@ public sealed class MongoEventLog(MongoContext context) : IEventLog
             .Limit(limit)
             .ToListAsync(ct);
 
-        return events
+        return Project(events);
+    }
+
+    public async Task<IReadOnlyList<RecordedEvent>> ReadForwardAsync(
+        long afterSeq, int limit, CancellationToken ct)
+    {
+        var events = await context.Collection<StoredEvent>("events")
+            .Find(Builders<StoredEvent>.Filter.Gt(entry => entry.Seq, afterSeq))
+            .SortBy(entry => entry.Seq)
+            .Limit(limit)
+            .ToListAsync(ct);
+
+        return Project(events);
+    }
+
+    static RecordedEvent[] Project(IEnumerable<StoredEvent> events) =>
+        events
             .Select(entry => new RecordedEvent(
                 entry.Seq, entry.AggregateType, entry.AggregateId, entry.Type, entry.Payload, entry.At))
             .ToArray();
-    }
 }

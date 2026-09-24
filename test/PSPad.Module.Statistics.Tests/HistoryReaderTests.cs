@@ -22,6 +22,10 @@ public class HistoryReaderTests
             LastLimit = limit;
             return Task.FromResult<IReadOnlyList<RecordedEvent>>(events);
         }
+
+        public Task<IReadOnlyList<RecordedEvent>> ReadForwardAsync(
+            long afterSeq, int limit, CancellationToken ct) =>
+            throw new NotSupportedException();
     }
 
     [Fact]

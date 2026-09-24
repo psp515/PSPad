@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using PSPad.Api.Commands;
 using PSPad.Api.Endpoints;
-using PSPad.Api.History;
 using PSPad.Api.Identity;
+using PSPad.Api.Statistics;
 using PSPad.Api.Sync;
 using PSPad.Infrastructure;
 using PSPad.Infrastructure.Mongo;

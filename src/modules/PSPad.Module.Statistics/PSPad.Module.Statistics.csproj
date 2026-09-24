@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\shared\PSPad.Abstractions\PSPad.Abstractions.csproj" />
     <ProjectReference Include="..\..\shared\PSPad.Contracts\PSPad.Contracts.csproj" />
+    <ProjectReference Include="..\PSPad.Module.Tasks\PSPad.Module.Tasks.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
