@@ -1,24 +1,43 @@
 <MudDialog>
     <DialogContent>
-        <MudText Typo="Typo.body1" Class="mb-3">
-            This permanently deletes your account and everything in it. Type
-            <strong>@Email</strong> to confirm.
-        </MudText>
-        <MudTextField T="string" @bind-Value="_confirmation" Label="Email" Immediate="true"
-                      AutoFocus="true" Disabled="@_deleting" Class="pspad-confirm-email" />
-        @if (_error)
+        @if (_keycloakOrphaned)
         {
-            <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-2">
-                Something went wrong. Your data may already be gone — try again, or contact your administrator.
+            <MudText Typo="Typo.body1" Class="pspad-delete-partial">
+                Your data is gone. Removing your sign-in still needs an administrator.
             </MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.body1" Class="mb-3">
+                This permanently deletes your account and everything in it. Type
+                <strong>@Email</strong> to confirm.
+            </MudText>
+            <MudTextField T="string" @bind-Value="_confirmation" Label="Email" Immediate="true"
+                          AutoFocus="true" Disabled="@_deleting" Class="pspad-confirm-email" />
+            @if (_error)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-2">
+                    Something went wrong. Your data may already be gone — try again, or contact your administrator.
+                </MudText>
+            }
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="@Cancel" Disabled="@_deleting">Cancel</MudButton>
-        <MudButton Class="pspad-confirm-delete" Color="Color.Error" Variant="Variant.Filled"
-                   OnClick="@DeleteAsync" Disabled="@(!Confirmed || _deleting)">
-            @(_deleting ? "Deleting…" : "Delete account")
-        </MudButton>
+        @if (_keycloakOrphaned)
+        {
+            <MudButton Class="pspad-confirm-delete" Color="Color.Primary" Variant="Variant.Filled"
+                       OnClick="@(() => Dialog.Close(DialogResult.Ok(true)))">
+                Continue
+            </MudButton>
+        }
+        else
+        {
+            <MudButton OnClick="@Cancel" Disabled="@_deleting">Cancel</MudButton>
+            <MudButton Class="pspad-confirm-delete" Color="Color.Error" Variant="Variant.Filled"
+                       OnClick="@DeleteAsync" Disabled="@(!Confirmed || _deleting)">
+                @(_deleting ? "Deleting…" : "Delete account")
+            </MudButton>
+        }
     </DialogActions>
 </MudDialog>
 
@@ -32,8 +51,9 @@
     string _confirmation = "";
     bool _deleting;
     bool _error;
+    bool _keycloakOrphaned;
 
-    bool Confirmed => string.Equals(_confirmation.Trim(), Email, StringComparison.OrdinalIgnoreCase);
+    bool Confirmed => Email.Length > 0 && string.Equals(_confirmation.Trim(), Email, StringComparison.OrdinalIgnoreCase);
 
     async Task DeleteAsync()
     {
@@ -49,7 +69,14 @@
             return;
         }
 
-        Dialog.Close(DialogResult.Ok(true));
+        if (response.KeycloakRemoved)
+        {
+            Dialog.Close(DialogResult.Ok(true));
+            return;
+        }
+
+        _deleting = false;
+        _keycloakOrphaned = true;
     }
 
     void Cancel() => Dialog.Cancel();

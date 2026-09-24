@@ -176,7 +176,10 @@
             return;
         }
 
-        await AccountDeletion.ClearAsync();
+        // Clearing before the redirect leaves the app is what makes an interrupted deletion
+        // still finish signing the browser out of an account that is already gone server-side.
+        await AccountDeletion.ClearStorageAsync();
         Navigation.NavigateTo("welcome");
+        AccountDeletion.Announce();
     }
 }

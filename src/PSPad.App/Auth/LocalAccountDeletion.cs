@@ -11,9 +11,39 @@ public sealed class LocalAccountDeletion(
 {
     public async Task ClearAsync()
     {
-        await replica.ClearAsync();
-        await outbox.ClearAsync();
-        await sessions.ClearAsync();
-        authenticationState.SignedOut();
+        await ClearStorageAsync();
+        Announce();
+    }
+
+    public void Announce() => authenticationState.SignedOut();
+
+    public async Task ClearStorageAsync()
+    {
+        try
+        {
+            await replica.ClearAsync();
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Replica clear on account deletion failed: {exception.Message}");
+        }
+
+        try
+        {
+            await outbox.ClearAsync();
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Outbox clear on account deletion failed: {exception.Message}");
+        }
+
+        try
+        {
+            await sessions.ClearAsync();
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Session clear on account deletion failed: {exception.Message}");
+        }
     }
 }
