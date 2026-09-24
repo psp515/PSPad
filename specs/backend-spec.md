@@ -23,7 +23,7 @@ src/
   PSPad.App/                   Blazor WASM PWA, MudBlazor, IndexedDB replica + outbox, Dockerfile (nginx)
   shared/
     PSPad.Abstractions/        ICommandHandler<T>, IDocumentStore<T>, IUnitOfWork, IClock, Aggregate
-    PSPad.Contracts/            wire shapes: command envelope, sync DTOs, history DTOs
+    PSPad.Contracts/            wire shapes: command envelope, sync DTOs, statistics DTOs
     PSPad.Infrastructure/       Mongo client, connection string, generic repository, Keycloak/JWT, DI registration
   modules/
     PSPad.Module.Tasks/         areas, lists, Inbox, tasks, steps, goals, recurrence, Today — pure, WASM-safe
@@ -137,9 +137,12 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `inboxes` | one per user | `items[]` |
 | `tasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `completedDays[]`, `createdAt` |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
-| `events` | action history and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
+| `events` | the domain event log and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
+| `statistics_records` | the statistics feed and every chart | `_id` = the event's `seq`, `userId`, `at`, `kind`, `taskId`, `taskName`, `listId`, `goalId`, `dueOn`, `occurrenceDay`, `completionNumber` |
+| `statistics_labels` | area, list and goal names for the feed | `_id` = the aggregate's id, `userId`, `kind`, `name`, `deleted` |
+| `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq` |
 
 Every aggregate document carries `_id` (GUID), `userId`, `version`
 (optimistic concurrency), `seq` (sequence of the last touching event) and
@@ -152,11 +155,17 @@ transaction; the returned value stamps both the event and the aggregate's
 
 **Indexes.**
 
-- `events`: `{userId: 1, seq: 1}`, `{userId: 1, at: -1}` (history screen)
+- `events`: `{userId: 1, seq: 1}`, `{userId: 1, at: -1}`, `{seq: 1}` — the last
+  one serves startup replay, which reads forward across every user ordered by
+  `seq` alone and so cannot use either compound index
 - every aggregate collection: `{userId: 1, seq: 1}` (delta sync)
 - `tasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`
 - `lists`: `{userId: 1, areaId: 1}`
 - `processed_commands`: TTL index on `at`, 30 days
+- `statistics_records`: `{userId: 1, _id: -1}` (the feed page),
+  `{userId: 1, kind: 1, at: 1}` (the charts' window),
+  `{userId: 1, taskId: 1, kind: 1}` (the completion counter)
+- `statistics_labels`: `{userId: 1}`
 
 ---
 
@@ -366,7 +375,8 @@ directly in `PSPad.Api`:
 | `POST` | `/api/commands` | Execute a batch of commands. The only write endpoint |
 | `GET` | `/api/sync?since=` | Delta pull |
 | `GET` | `/api/today` | Server-side Today, for a cold client |
-| `GET` | `/api/history?before=&limit=` | Action history, newest first |
+| `GET` | `/api/statistics/records?before=&limit=` | The statistics feed, newest first. `limit` clamps to 1..200, default 50 |
+| `GET` | `/api/statistics/overview?days=` | Tiles and the five chart series. `days` is 30, 90 or 365, default 30 |
 | `GET` | `/api/me` | Current user; provisions on first call, heals display name |
 | `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only) |
 | `DELETE` | `/api/account` | Delete the caller's account: every Mongo document scoped to their `userId`, then their Keycloak user. Not a command — see §6 |

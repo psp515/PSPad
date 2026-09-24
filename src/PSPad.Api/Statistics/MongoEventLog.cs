@@ -7,25 +7,6 @@ namespace PSPad.Api.Statistics;
 
 public sealed class MongoEventLog(MongoContext context) : IEventLog
 {
-    public async Task<IReadOnlyList<RecordedEvent>> ReadAsync(
-        Guid userId, long? before, int limit, CancellationToken ct)
-    {
-        var filter = Builders<StoredEvent>.Filter.Eq(entry => entry.UserId, userId);
-
-        if (before is not null)
-        {
-            filter &= Builders<StoredEvent>.Filter.Lt(entry => entry.Seq, before.Value);
-        }
-
-        var events = await context.Collection<StoredEvent>("events")
-            .Find(filter)
-            .SortByDescending(entry => entry.Seq)
-            .Limit(limit)
-            .ToListAsync(ct);
-
-        return Project(events);
-    }
-
     public async Task<IReadOnlyList<RecordedEvent>> ReadForwardAsync(
         long afterSeq, int limit, CancellationToken ct)
     {

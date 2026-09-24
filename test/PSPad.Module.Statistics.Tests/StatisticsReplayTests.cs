@@ -16,10 +16,6 @@ public class StatisticsReplayTests
     {
         public List<long> ReadsFrom { get; } = [];
 
-        public Task<IReadOnlyList<RecordedEvent>> ReadAsync(
-            Guid userId, long? before, int limit, CancellationToken ct) =>
-            throw new NotSupportedException();
-
         public Task<IReadOnlyList<RecordedEvent>> ReadForwardAsync(
             long afterSeq, int limit, CancellationToken ct)
         {

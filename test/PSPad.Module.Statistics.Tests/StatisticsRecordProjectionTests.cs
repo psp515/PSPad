@@ -31,6 +31,9 @@ public class StatisticsRecordProjectionTests
 
         public Task<IReadOnlyList<StatisticsRecord>> SinceAsync(Guid userId, DateTimeOffset from, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<StatisticsRecord>>(Saved);
+
+        public Task<IReadOnlySet<Guid>> OpenTaskIdsBeforeAsync(Guid userId, DateTimeOffset from, CancellationToken ct) =>
+            throw new NotSupportedException();
     }
 
     [Fact]

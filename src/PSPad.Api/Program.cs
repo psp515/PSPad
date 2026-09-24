@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using PSPad.Abstractions;
 using PSPad.Api.Commands;
 using PSPad.Api.Endpoints;
 using PSPad.Api.Identity;
 using PSPad.Api.Statistics;
 using PSPad.Api.Sync;
 using PSPad.Infrastructure;
+using PSPad.Infrastructure.Events;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Statistics;
 
@@ -35,8 +37,22 @@ builder.Services.AddHttpClient<IKeycloakAdminClient, KeycloakAdminClient>();
 builder.Services.AddScoped<UserProvisioner>();
 builder.Services.AddScoped<CommandDispatcher>();
 builder.Services.AddScoped<SyncReader>();
+// One instance, two registrations: MongoUnitOfWork publishes through the interface and the
+// pump reads the concrete type's channel, so a second instance would swallow every live event.
+builder.Services.AddSingleton<ChannelDomainEventDispatcher>();
+builder.Services.AddSingleton<IDomainEventDispatcher>(sp =>
+    sp.GetRequiredService<ChannelDomainEventDispatcher>());
 builder.Services.AddScoped<IEventLog, MongoEventLog>();
-builder.Services.AddScoped<HistoryReader>();
+builder.Services.AddScoped<IStatisticsStore, MongoStatisticsStore>();
+builder.Services.AddScoped<ILabelStore, MongoLabelStore>();
+builder.Services.AddScoped<IProjectionMarker, MongoProjectionMarker>();
+builder.Services.AddScoped<ITaskSnapshotSource, MongoTaskSnapshotSource>();
+builder.Services.AddScoped<IDomainEventHandler, StatisticsRecordProjection>();
+builder.Services.AddScoped<IDomainEventHandler, StatisticsLabelProjection>();
+builder.Services.AddScoped<IDomainEventReplay, StatisticsReplay>();
+builder.Services.AddScoped<StatisticsReader>();
+builder.Services.AddScoped<StatisticsOverviewReader>();
+builder.Services.AddHostedService<DomainEventPump>();
 
 var app = builder.Build();
 
@@ -52,7 +68,7 @@ api.MapSyncEndpoints();
 api.MapTodayEndpoints();
 api.MapMeEndpoints();
 api.MapAccountEndpoints();
-api.MapHistoryEndpoints();
+api.MapStatisticsEndpoints();
 
 await MongoIndexes.EnsureAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 await MongoBackfill.EnsureCreatedAtAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
