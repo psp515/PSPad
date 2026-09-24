@@ -241,6 +241,16 @@ public class SettingsPageTests : Bunit.TestContext
         Assert.DoesNotContain("Pacific/Kiritimati", matches);
     }
 
+    [Fact]
+    public void TheCardsSitInAResponsiveGrid()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.NotEmpty(page.FindAll(".mud-grid"));
+    }
+
     AppState Arrange(
         string displayName, string email, bool respondWithNullTimeZone = false, bool online = true)
     {

@@ -23,48 +23,55 @@
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Settings</MudText>
 
-<MudPaper Outlined="true" Class="pa-4 mb-4">
-    <MudText Typo="Typo.subtitle2" Class="mb-3">Account</MudText>
-    <div class="d-flex align-center gap-3">
-        <MudAvatar Style="@($"background:{AvatarColor.For(State.UserId)};color:#FFFFFF")" Size="Size.Large">
-            @AvatarColor.InitialOf(State.DisplayName.Length > 0 ? State.DisplayName : State.Email)
-        </MudAvatar>
-        <div>
-            <MudText Typo="Typo.body1">@State.DisplayName</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@State.Email</MudText>
-        </div>
-    </div>
-</MudPaper>
-
-<MudPaper Outlined="true" Class="pa-4 mb-4">
-    <MudText Typo="Typo.subtitle2" Class="mb-3">Time zone</MudText>
-    <MudAutocomplete T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
-                      SearchFunc="@SearchTimeZonesAsync"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" ResetValueOnEmptyText="false" />
-    <MudText Typo="Typo.caption">The time zone is saved on the server, so it needs a connection.</MudText>
-    @if (_rejected)
-    {
-        <MudText Typo="Typo.caption" Color="Color.Error">That change did not go through.</MudText>
-    }
-</MudPaper>
-
-<MudPaper Outlined="true" Class="pa-4 mb-4">
-    <MudText Typo="Typo.subtitle2" Class="mb-3">Theme</MudText>
-    <MudSelect T="ThemeMode" Value="@Preference.Mode" ValueChanged="@SelectThemeAsync"
-               Variant="Variant.Outlined" Margin="Margin.Dense">
-        @foreach (var mode in Enum.GetValues<ThemeMode>())
-        {
-            <MudSelectItem T="ThemeMode" Value="@mode">@mode</MudSelectItem>
-        }
-    </MudSelect>
-</MudPaper>
-
-<MudPaper Outlined="true" Class="pa-4 mb-4">
-    <MudText Typo="Typo.subtitle2" Class="mb-3">Sync</MudText>
-    <MudText Typo="Typo.body2">
-        @(_pendingCommands == 0 ? "Everything is synced." : $"{_pendingCommands} pending")
-    </MudText>
-</MudPaper>
+<MudGrid Spacing="4">
+    <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudPaper Outlined="true" Class="pa-4 pspad-account-card">
+            <MudText Typo="Typo.subtitle2" Class="mb-3">Account</MudText>
+            <div class="d-flex align-center gap-3">
+                <MudAvatar Style="@($"background:{AvatarColor.For(State.UserId)};color:#FFFFFF")" Size="Size.Large">
+                    @AvatarColor.InitialOf(State.DisplayName.Length > 0 ? State.DisplayName : State.Email)
+                </MudAvatar>
+                <div>
+                    <MudText Typo="Typo.body1">@State.DisplayName</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@State.Email</MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudPaper Outlined="true" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Class="mb-3">Time zone</MudText>
+            <MudAutocomplete T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
+                              SearchFunc="@SearchTimeZonesAsync"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" ResetValueOnEmptyText="false" />
+            <MudText Typo="Typo.caption">The time zone is saved on the server, so it needs a connection.</MudText>
+            @if (_rejected)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">That change did not go through.</MudText>
+            }
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudPaper Outlined="true" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Class="mb-3">Theme</MudText>
+            <MudSelect T="ThemeMode" Value="@Preference.Mode" ValueChanged="@SelectThemeAsync"
+                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var mode in Enum.GetValues<ThemeMode>())
+                {
+                    <MudSelectItem T="ThemeMode" Value="@mode">@mode</MudSelectItem>
+                }
+            </MudSelect>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudPaper Outlined="true" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Class="mb-3">Sync</MudText>
+            <MudText Typo="Typo.body2">
+                @(_pendingCommands == 0 ? "Everything is synced." : $"{_pendingCommands} pending")
+            </MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
 
 <MudButton Class="pspad-sign-out" OnClick="@SignOutAsync" StartIcon="@Icons.Material.Filled.Logout"
            Color="Color.Error" Variant="Variant.Outlined">
