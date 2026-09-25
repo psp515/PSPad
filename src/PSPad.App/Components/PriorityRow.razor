@@ -1,0 +1,33 @@
+@using PSPad.Module.Tasks.Tasks
+
+<PropertyRow Class="pspad-task-priority" Icon="@Icons.Material.Outlined.Flag" Label="Priority"
+             Value="@Value.ToString()" HasValue="@(Value != Priority.None)"
+             ValueIcon="@(Value == Priority.None ? null : Icons.Material.Filled.Circle)"
+             ValueColor="@ColorOf(Value)" Disabled="@Disabled">
+    @foreach (var priority in Enum.GetValues<Priority>())
+    {
+        <MudMenuItem Class="pspad-priority-option" OnClick="@(() => ValueChanged.InvokeAsync(priority))">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@(priority == Priority.None ? Icons.Material.Outlined.Circle : Icons.Material.Filled.Circle)"
+                         Size="Size.Small" Color="@ColorOf(priority)" />
+                @priority
+            </div>
+        </MudMenuItem>
+    }
+</PropertyRow>
+
+@code {
+    [Parameter] public Priority Value { get; set; }
+
+    [Parameter] public EventCallback<Priority> ValueChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    public static Color ColorOf(Priority priority) => priority switch
+    {
+        Priority.High => Color.Error,
+        Priority.Medium => Color.Warning,
+        Priority.Low => Color.Info,
+        _ => Color.Default
+    };
+}

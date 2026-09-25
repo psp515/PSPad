@@ -25,6 +25,17 @@ public class InboxItemCardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItShowsWhenTheItemWasCaptured()
+    {
+        AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
+        var item = NewItem("Kupić mleko");
+
+        var card = Render<InboxItemCard>(parameters => parameters.Add(p => p.Item, item));
+
+        Assert.Contains(item.CapturedAt.ToLocalTime().ToString("d MMM"), card.Find(".pspad-inbox-item-captured").TextContent);
+    }
+
+    [Fact]
     public void ClickingItRaisesOnOpenWithTheItem()
     {
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));

@@ -3,6 +3,9 @@
 <MudPaper Outlined="true">
     <div class="pspad-inbox-item pa-3" style="cursor:pointer" @onclick="@(() => OnOpen.InvokeAsync(Item))">
         <MudText Typo="Typo.body2">@Item.Text</MudText>
+        <MudText Typo="Typo.caption" Class="pspad-inbox-item-captured pspad-muted">
+            @Item.CapturedAt.ToLocalTime().ToString("d MMM, HH:mm")
+        </MudText>
     </div>
 </MudPaper>
 

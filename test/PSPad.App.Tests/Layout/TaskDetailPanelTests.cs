@@ -7,6 +7,7 @@ using PSPad.Abstractions;
 using PSPad.App.Layout;
 using PSPad.App.State.Viewport;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Recurrence;
 using PSPad.Module.Tasks.Tasks;
@@ -431,6 +432,32 @@ public class TaskDetailPanelTests : Bunit.TestContext
         builder.AddAttribute(4, nameof(TaskDetailPanel.NewInList), newInList);
         builder.CloseComponent();
     });
+
+    [Fact]
+    public void TheGoalMenuOffersOnlyGoalsInProgressButStillNamesALinkedClosedGoal()
+    {
+        var open = NewGoalWith("Zdrowie", GoalStatus.InProgress);
+        var done = NewGoalWith("Maraton", GoalStatus.Achieved);
+        var task = NewTask("Run");
+        task.ApplyAll(TodoTask.Decide(task, new LinkTaskToGoal(Guid.NewGuid(), User, task.Id, done.Id), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task, open, done);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        Assert.Contains("Maraton", panel.Find(".pspad-task-goal").TextContent);
+        OpenRow(panel, ".pspad-task-goal");
+
+        Assert.Equal(["Zdrowie"], panel.FindAll(".pspad-goal-option").Select(option => option.TextContent.Trim()));
+    }
+
+    static PSPad.Module.Tasks.Goals.Goal NewGoalWith(string name, PSPad.Module.Tasks.Goals.GoalStatus status)
+    {
+        var goal = new PSPad.Module.Tasks.Goals.Goal();
+        goal.ApplyAll(PSPad.Module.Tasks.Goals.Goal.Decide(null,
+            new PSPad.Module.Tasks.Goals.CreateGoal(Guid.NewGuid(), User, Guid.NewGuid(), name), DateTimeOffset.UnixEpoch));
+        goal.ApplyAll(PSPad.Module.Tasks.Goals.Goal.Decide(goal,
+            new PSPad.Module.Tasks.Goals.SetGoalStatus(Guid.NewGuid(), User, goal.Id, status), DateTimeOffset.UnixEpoch));
+        return goal;
+    }
 
     static void OpenRow(IRenderedComponent<ContainerFragment> panel, string row) =>
         panel.Find($"{row} .pspad-property-activator").Click();

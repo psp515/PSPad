@@ -209,6 +209,26 @@ the two closing statuses.
 
 Areas and goals are never created or renamed through `NameDialog`.
 
+**Inbox items use the same shell.** `Layout/InboxItemPanel.razor` is
+addressed as `?inbox=new` (the Inbox FAB or its empty state) or
+`?inbox={itemId}` (tapping an item card), via `InboxQuery`.
+- **Capture:** only a Name field, with **Add** at the bottom left; Enter
+  also adds. The item keeps the time it was captured, which its card shows.
+- **An existing item** opens as a convert-to-task form: Name, then
+  `ListRow`, `DueDateRow`, `PriorityRow` and `GoalRow`, plus a star in the
+  header. The Name field is the item's own text and saves as it commits
+  (`RenameInboxItem`), so an item can be reworded without being converted.
+  - **Convert to task** on the left sends `OrganiseInboxItem` and then only
+    the edits that differ from the defaults, so one tap files a finished
+    task.
+  - **Discard** on the right removes the item.
+  - The List row starts on the list used for the previous conversion
+    (`AppState.LastInboxListId`), falling back to the first list.
+- `PriorityRow`, `GoalRow` and `ListRow` are shared with `TaskDetailPanel`.
+  `GoalRow` offers only In progress goals, but still names a linked goal
+  that has since closed.
+  The Inbox never uses a dialog to capture.
+
 **Empty states share one component.** A page or board with no items yet
 shows `Components/EmptyState.razor` as the first cell of its grid, sized
 like one card (`MudItem xs="12" sm="6" md="4" xl="3"`): an outlined
@@ -242,7 +262,7 @@ icon reads unambiguously on its own.
 | Area | New list, Edit area (→ area panel), Delete area | FAB Menu |
 | Goals | Add goal (→ new-goal panel) | plain `MudFab` |
 | List | Add task (→ new-task panel), Rename list, Delete list | FAB Menu |
-| Inbox | Capture | plain `MudFab` → `CaptureDialog` |
+| Inbox | Capture (→ capture panel) | plain `MudFab` |
 | My Day, Settings, History | none | no FAB |
 
 `+ New area` stays pinned in the sidebar — it is not a page's own action,
@@ -347,6 +367,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `?task={taskId}` | task detail overlay, on any of the above |
 | `?area={areaId}`, `?area=new` | area detail overlay, on any of the above |
 | `?goal={goalId}`, `?goal=new` | goal detail overlay, on any of the above |
+| `?inbox={itemId}`, `?inbox=new` | inbox item overlay, on any of the above |
 
 **Signed-out visitors land on `/welcome`**, not a bare login redirect.
 Sign-out ends the Keycloak session directly rather than only clearing local

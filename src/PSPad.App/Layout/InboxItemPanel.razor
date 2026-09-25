@@ -1,0 +1,220 @@
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Goals
+@using PSPad.Module.Tasks.Inbox
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Tasks
+@inject IDocumentStore<Inbox> Inboxes
+@inject IDocumentStore<Area> Areas
+@inject IDocumentStore<TaskList> Lists
+@inject IDocumentStore<Goal> Goals
+@inject AppState State
+@inject CommandSender Sender
+@inject NavigationManager Navigation
+
+<DetailPanel Open="@(IsNew || _item is not null)" Title="@(IsNew ? "Capture" : "Inbox item")" OnClose="@OnClose"
+             OnSave="@SaveCallback" SaveText="@(IsNew ? "Add" : "Convert to task")" CanSave="@CanSave"
+             OnDelete="@DeleteCallback" DeleteText="Discard" Disabled="@Disabled">
+    <HeaderActions>
+        @if (_item is not null)
+        {
+            <MudIconButton Class="pspad-inbox-star" Color="Color.Primary" Disabled="@Disabled"
+                           Icon="@(_draft.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                           aria-label="@(_draft.Starred ? "Unstar" : "Star")"
+                           OnClick="@(() => _draft.Starred = !_draft.Starred)" />
+        }
+    </HeaderActions>
+    <ChildContent>
+        <div class="pa-4">
+            @if (_item is null)
+            {
+                <MudTextField T="string" Class="pspad-inbox-name-field" Label="Name" Variant="Variant.Outlined"
+                              @bind-Value="_draft.Name" Immediate="true" AutoFocus="true" Disabled="@Disabled"
+                              OnKeyDown="@AddOnEnterAsync" />
+            }
+            else
+            {
+                <MudTextField T="string" Class="pspad-inbox-name-field" Label="Name" Variant="Variant.Outlined"
+                              Value="@_item.Text" ValueChanged="@RenameAsync" Disabled="@Disabled" />
+            }
+        </div>
+
+        @if (_item is not null)
+        {
+            <div class="px-2 pb-2 d-flex flex-column gap-1">
+                <ListRow Areas="@_areas" Lists="@_lists" Value="@_draft.ListId"
+                         ValueChanged="@(listId => _draft.ListId = listId)" Disabled="@Disabled" />
+                <DueDateRow Value="@_draft.DueOn" ValueChanged="@(dueOn => _draft.DueOn = dueOn)"
+                            Today="@State.Today" Disabled="@Disabled" />
+                <PriorityRow Value="@_draft.Priority" ValueChanged="@(priority => _draft.Priority = priority)"
+                             Disabled="@Disabled" />
+                <GoalRow Goals="@_goals" Value="@_draft.GoalId" ValueChanged="@(goalId => _draft.GoalId = goalId)"
+                         Disabled="@Disabled" />
+            </div>
+        }
+    </ChildContent>
+    <Footer>
+        @if (_item is not null)
+        {
+            <MudText Typo="Typo.caption" Class="pspad-inbox-captured pspad-muted">
+                @($"Captured {_item.CapturedAt.ToLocalTime():ddd, d MMM yyyy, HH:mm}")
+            </MudText>
+        }
+    </Footer>
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? ItemId { get; set; }
+
+    [Parameter] public bool IsNew { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    Inbox? _inbox;
+    InboxItem? _item;
+    Guid? _draftFor;
+    bool _draftIsNew;
+    IReadOnlyList<Area> _areas = [];
+    IReadOnlyList<TaskList> _lists = [];
+    IReadOnlyList<Goal> _goals = [];
+    Draft _draft = new();
+
+    bool CanSave => IsNew ? !string.IsNullOrWhiteSpace(_draft.Name) : _draft.ListId is not null;
+
+    EventCallback SaveCallback => IsNew || _item is not null
+        ? EventCallback.Factory.Create(this, SaveAsync)
+        : default;
+
+    EventCallback DeleteCallback => _item is not null
+        ? EventCallback.Factory.Create(this, DiscardAsync)
+        : default;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _inbox = (await Inboxes.LoadAllAsync(State.UserId, CancellationToken.None))
+            .FirstOrDefault(inbox => !inbox.Deleted);
+        _item = ItemId is null ? null : _inbox?.Items.FirstOrDefault(item => item.Id == ItemId);
+
+        if (_item is not null)
+        {
+            var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
+            _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
+            var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
+            _lists = [.. lists.Where(list => !list.Deleted && _areas.Any(area => area.Id == list.AreaId))
+                .OrderBy(list => _areas.ToList().FindIndex(area => area.Id == list.AreaId))
+                .ThenBy(list => list.Position)];
+            var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
+            _goals = [.. goals.Where(goal => !goal.Deleted)];
+        }
+
+        if (_draftFor != _item?.Id || _draftIsNew != IsNew)
+        {
+            _draftFor = _item?.Id;
+            _draftIsNew = IsNew;
+            _draft = new Draft { ListId = DefaultListId() };
+        }
+    }
+
+    Guid? DefaultListId() =>
+        _lists.Any(list => list.Id == State.LastInboxListId) ? State.LastInboxListId : _lists.FirstOrDefault()?.Id;
+
+    async Task RenameAsync(string text)
+    {
+        if (Disabled || _inbox is null || _item is null || string.IsNullOrWhiteSpace(text) || text.Trim() == _item.Text)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new RenameInboxItem(Guid.NewGuid(), State.UserId, _inbox.Id, _item.Id, text.Trim()));
+        _inbox = await Inboxes.LoadAsync(_inbox.Id, CancellationToken.None);
+        _item = _inbox?.Items.FirstOrDefault(item => item.Id == _item.Id);
+    }
+
+    async Task AddOnEnterAsync(KeyboardEventArgs args)
+    {
+        if (IsNew && args.Key == "Enter")
+        {
+            await SaveAsync();
+        }
+    }
+
+    async Task SaveAsync()
+    {
+        if (Disabled || _inbox is null || !CanSave)
+        {
+            return;
+        }
+
+        if (IsNew)
+        {
+            await Sender.SendAsync(new CaptureToInbox(
+                Guid.NewGuid(), State.UserId, _inbox.Id, Guid.NewGuid(), _draft.Name.Trim()));
+        }
+        else if (_item is not null && _draft.ListId is { } listId)
+        {
+            await ConvertAsync(_item, listId);
+        }
+
+        _draft = new Draft();
+        Navigation.NavigateTo(QueryString.Without(Navigation.Uri));
+    }
+
+    async Task ConvertAsync(InboxItem item, Guid listId)
+    {
+        var userId = State.UserId;
+        var taskId = Guid.NewGuid();
+        await Sender.SendAsync(new OrganiseInboxItem(Guid.NewGuid(), userId, _inbox!.Id, item.Id, listId, taskId));
+        State.LastInboxListId = listId;
+
+        if (_draft.DueOn is { } due)
+        {
+            await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), userId, taskId, due));
+        }
+
+        if (_draft.Priority != Priority.None)
+        {
+            await Sender.SendAsync(new SetTaskPriority(Guid.NewGuid(), userId, taskId, _draft.Priority));
+        }
+
+        if (_draft.GoalId is not null)
+        {
+            await Sender.SendAsync(new LinkTaskToGoal(Guid.NewGuid(), userId, taskId, _draft.GoalId));
+        }
+
+        if (_draft.Starred)
+        {
+            await Sender.SendAsync(new StarTask(Guid.NewGuid(), userId, taskId, true));
+        }
+    }
+
+    async Task DiscardAsync()
+    {
+        if (Disabled || _inbox is null || _item is null)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new DiscardInboxItem(Guid.NewGuid(), State.UserId, _inbox.Id, _item.Id));
+        Navigation.NavigateTo(QueryString.Without(Navigation.Uri));
+    }
+
+    sealed class Draft
+    {
+        public string Name { get; set; } = "";
+
+        public Guid? ListId { get; set; }
+
+        public DateOnly? DueOn { get; set; }
+
+        public Priority Priority { get; set; } = Priority.None;
+
+        public Guid? GoalId { get; set; }
+
+        public bool Starred { get; set; }
+    }
+}
