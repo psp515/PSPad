@@ -90,6 +90,42 @@ public class InboxTests
     }
 
     [Fact]
+    public void RenamingAnItemKeepsItsPlaceAndCaptureTime()
+    {
+        var inbox = WithItems("call the dentist", "buy a gift");
+        var item = inbox.Items[0];
+
+        inbox.ApplyAll(InboxAggregate.Decide(inbox,
+            new RenameInboxItem(Guid.NewGuid(), User, inbox.Id, item.Id, "  call the dentist on Monday "), Now.AddHours(1)));
+
+        var renamed = inbox.Items[0];
+        Assert.Equal("call the dentist on Monday", renamed.Text);
+        Assert.Equal(item.Id, renamed.Id);
+        Assert.Equal(item.CapturedAt, renamed.CapturedAt);
+        Assert.Equal(item.Position, renamed.Position);
+    }
+
+    [Fact]
+    public void RenamingToTheSameTextProducesNoEvent()
+    {
+        var inbox = WithItems("call the dentist");
+
+        Assert.Empty(InboxAggregate.Decide(inbox,
+            new RenameInboxItem(Guid.NewGuid(), User, inbox.Id, inbox.Items[0].Id, "call the dentist"), Now));
+    }
+
+    [Fact]
+    public void RenamingToBlankTextOrAMissingItemIsRejected()
+    {
+        var inbox = WithItems("call the dentist");
+
+        Assert.Throws<DomainRejectedException>(() => InboxAggregate.Decide(inbox,
+            new RenameInboxItem(Guid.NewGuid(), User, inbox.Id, inbox.Items[0].Id, " "), Now));
+        Assert.Throws<DomainRejectedException>(() => InboxAggregate.Decide(inbox,
+            new RenameInboxItem(Guid.NewGuid(), User, inbox.Id, Guid.NewGuid(), "x"), Now));
+    }
+
+    [Fact]
     public void CapturingWithARepeatedIdIsIgnored()
     {
         var inbox = WithItems("call the dentist");

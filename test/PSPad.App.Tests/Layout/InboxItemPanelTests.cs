@@ -112,7 +112,7 @@ public class InboxItemPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, inbox, area, shopping, repairs, goal);
 
         var panel = RenderWithOverlays(inbox.Items[0].Id);
-        panel.Find(".pspad-inbox-name-field input").Input("Kupić mleko owsiane");
+        panel.Find(".pspad-inbox-name-field input").Change("Kupić mleko owsiane");
         OpenRow(panel, ".pspad-task-list");
         panel.FindAll(".pspad-list-option")[1].Click();
         OpenRow(panel, ".pspad-task-due");
@@ -132,6 +132,41 @@ public class InboxItemPanelTests : Bunit.TestContext
         Assert.Equal(goal.Id, task.GoalId);
         Assert.True(task.Starred);
         Assert.Empty((await replica.LoadAsync<Inbox>(inbox.Id))!.Items);
+    }
+
+    [Fact]
+    public async Task RenamingAnItemSavesItWithoutConvertingIt()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        var inbox = NewInbox("Kupić mleko");
+        var replica = AppTestHost.Arrange(this, User, Today, inbox, area, list);
+        var itemId = inbox.Items[0].Id;
+
+        var panel = Render<InboxItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)itemId));
+        panel.Find(".pspad-inbox-name-field input").Change("Kupić mleko owsiane");
+
+        var stored = await replica.LoadAsync<Inbox>(inbox.Id);
+        Assert.Equal("Kupić mleko owsiane", Assert.Single(stored!.Items).Text);
+        Assert.Empty(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Empty(panel.FindAll(".pspad-panel-save[disabled]"));
+    }
+
+    [Fact]
+    public void OnlyGoalsInProgressAreOffered()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        var open = NewGoal("Zdrowie");
+        var done = NewGoal("Maraton");
+        done.ApplyAll(Goal.Decide(done, new SetGoalStatus(Guid.NewGuid(), User, done.Id, GoalStatus.Achieved), DateTimeOffset.UnixEpoch));
+        var inbox = NewInbox("Kupić mleko");
+        AppTestHost.Arrange(this, User, Today, inbox, area, list, open, done);
+
+        var panel = RenderWithOverlays(inbox.Items[0].Id);
+        OpenRow(panel, ".pspad-task-goal");
+
+        Assert.Equal(["Zdrowie"], panel.FindAll(".pspad-goal-option").Select(option => option.TextContent.Trim()));
     }
 
     [Fact]

@@ -29,9 +29,17 @@
     </HeaderActions>
     <ChildContent>
         <div class="pa-4">
-            <MudTextField T="string" Class="pspad-inbox-name-field" Label="Name" Variant="Variant.Outlined"
-                          @bind-Value="_draft.Name" Immediate="true" AutoFocus="@IsNew" Disabled="@Disabled"
-                          OnKeyDown="@AddOnEnterAsync" />
+            @if (_item is null)
+            {
+                <MudTextField T="string" Class="pspad-inbox-name-field" Label="Name" Variant="Variant.Outlined"
+                              @bind-Value="_draft.Name" Immediate="true" AutoFocus="true" Disabled="@Disabled"
+                              OnKeyDown="@AddOnEnterAsync" />
+            }
+            else
+            {
+                <MudTextField T="string" Class="pspad-inbox-name-field" Label="Name" Variant="Variant.Outlined"
+                              Value="@_item.Text" ValueChanged="@RenameAsync" Disabled="@Disabled" />
+            }
         </div>
 
         @if (_item is not null)
@@ -76,7 +84,7 @@
     IReadOnlyList<Goal> _goals = [];
     Draft _draft = new();
 
-    bool CanSave => !string.IsNullOrWhiteSpace(_draft.Name) && (IsNew || _draft.ListId is not null);
+    bool CanSave => IsNew ? !string.IsNullOrWhiteSpace(_draft.Name) : _draft.ListId is not null;
 
     EventCallback SaveCallback => IsNew || _item is not null
         ? EventCallback.Factory.Create(this, SaveAsync)
@@ -101,19 +109,31 @@
                 .OrderBy(list => _areas.ToList().FindIndex(area => area.Id == list.AreaId))
                 .ThenBy(list => list.Position)];
             var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
-            _goals = [.. goals.Where(goal => !goal.Deleted && goal.Status == GoalStatus.InProgress)];
+            _goals = [.. goals.Where(goal => !goal.Deleted)];
         }
 
         if (_draftFor != _item?.Id || _draftIsNew != IsNew)
         {
             _draftFor = _item?.Id;
             _draftIsNew = IsNew;
-            _draft = new Draft { Name = _item?.Text ?? "", ListId = DefaultListId() };
+            _draft = new Draft { ListId = DefaultListId() };
         }
     }
 
     Guid? DefaultListId() =>
         _lists.Any(list => list.Id == State.LastInboxListId) ? State.LastInboxListId : _lists.FirstOrDefault()?.Id;
+
+    async Task RenameAsync(string text)
+    {
+        if (Disabled || _inbox is null || _item is null || string.IsNullOrWhiteSpace(text) || text.Trim() == _item.Text)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new RenameInboxItem(Guid.NewGuid(), State.UserId, _inbox.Id, _item.Id, text.Trim()));
+        _inbox = await Inboxes.LoadAsync(_inbox.Id, CancellationToken.None);
+        _item = _inbox?.Items.FirstOrDefault(item => item.Id == _item.Id);
+    }
 
     async Task AddOnEnterAsync(KeyboardEventArgs args)
     {
@@ -150,13 +170,6 @@
         var taskId = Guid.NewGuid();
         await Sender.SendAsync(new OrganiseInboxItem(Guid.NewGuid(), userId, _inbox!.Id, item.Id, listId, taskId));
         State.LastInboxListId = listId;
-
-        var name = _draft.Name.Trim();
-
-        if (name != item.Text)
-        {
-            await Sender.SendAsync(new RenameTask(Guid.NewGuid(), userId, taskId, name));
-        }
 
         if (_draft.DueOn is { } due)
         {

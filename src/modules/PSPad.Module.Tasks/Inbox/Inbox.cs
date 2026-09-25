@@ -38,6 +38,14 @@ public sealed class Inbox : Aggregate
                 return [new InboxItemOrganised(
                     organising.Id, organise.UserId, at, organise.ItemId, organise.TaskId, organise.ListId)];
 
+            case RenameInboxItem rename:
+                var renaming = Require(inbox, rename.UserId);
+                var item = RequireItem(renaming, rename.ItemId);
+                var renamed = RequireText(rename.Text);
+                return item.Text == renamed
+                    ? []
+                    : [new InboxItemRenamed(renaming.Id, rename.UserId, at, rename.ItemId, renamed)];
+
             case DiscardInboxItem discard:
                 var discarding = Require(inbox, discard.UserId);
                 RequireItem(discarding, discard.ItemId);
@@ -62,6 +70,14 @@ public sealed class Inbox : Aggregate
             case InboxItemOrganised organised:
                 _items.RemoveAll(item => item.Id == organised.ItemId);
                 Densify();
+                break;
+            case InboxItemRenamed renamed:
+                var index = _items.FindIndex(item => item.Id == renamed.ItemId);
+                if (index >= 0)
+                {
+                    _items[index] = _items[index] with { Text = renamed.Text };
+                }
+
                 break;
             case InboxItemDiscarded discarded:
                 _items.RemoveAll(item => item.Id == discarded.ItemId);

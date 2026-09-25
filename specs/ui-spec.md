@@ -214,9 +214,10 @@ addressed as `?inbox=new` (the Inbox FAB or its empty state) or
 `?inbox={itemId}` (tapping an item card), via `InboxQuery`.
 - **Capture:** only a Name field, with **Add** at the bottom left; Enter
   also adds. The item keeps the time it was captured, which its card shows.
-- **An existing item** opens as a convert-to-task form: Name (pre-filled
-  with the item's text), then `ListRow`, `DueDateRow`, `PriorityRow` and
-  `GoalRow` (in-progress goals only), plus a star in the header.
+- **An existing item** opens as a convert-to-task form: Name, then
+  `ListRow`, `DueDateRow`, `PriorityRow` and `GoalRow`, plus a star in the
+  header. The Name field is the item's own text and saves as it commits
+  (`RenameInboxItem`), so an item can be reworded without being converted.
   - **Convert to task** on the left sends `OrganiseInboxItem` and then only
     the edits that differ from the defaults, so one tap files a finished
     task.
@@ -224,6 +225,8 @@ addressed as `?inbox=new` (the Inbox FAB or its empty state) or
   - The List row starts on the list used for the previous conversion
     (`AppState.LastInboxListId`), falling back to the first list.
 - `PriorityRow`, `GoalRow` and `ListRow` are shared with `TaskDetailPanel`.
+  `GoalRow` offers only In progress goals, but still names a linked goal
+  that has since closed.
   The Inbox never uses a dialog to capture.
 
 **Empty states share one component.** A page or board with no items yet

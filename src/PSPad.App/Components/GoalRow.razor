@@ -3,11 +3,11 @@
 <PropertyRow Class="pspad-task-goal" Icon="@Icons.Material.Outlined.TrackChanges" Label="Goal"
              Value="@(Name ?? "No goal")" HasValue="@(Name is not null)" Disabled="@Disabled"
              OnClear="@(() => ValueChanged.InvokeAsync(null))">
-    @if (Goals.Count == 0)
+    @if (Options.Count == 0)
     {
-        <MudMenuItem Disabled="true">No goals yet</MudMenuItem>
+        <MudMenuItem Disabled="true">No goals in progress</MudMenuItem>
     }
-    @foreach (var goal in Goals)
+    @foreach (var goal in Options)
     {
         <MudMenuItem Class="pspad-goal-option" OnClick="@(() => ValueChanged.InvokeAsync(goal.Id))">@goal.Name</MudMenuItem>
     }
@@ -21,6 +21,8 @@
     [Parameter] public EventCallback<Guid?> ValueChanged { get; set; }
 
     [Parameter] public bool Disabled { get; set; }
+
+    IReadOnlyList<Goal> Options => [.. Goals.Where(goal => goal.Status == GoalStatus.InProgress)];
 
     string? Name => Goals.FirstOrDefault(goal => goal.Id == Value)?.Name;
 }
