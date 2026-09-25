@@ -46,31 +46,31 @@
                 </MudItem>
             </MudGrid>
 
-            @if (_updatedAt is not null)
-            {
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
-                    @UpdatedLabel()
-                </MudText>
-            }
+            <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-4">
+                <MudToggleGroup T="int" Value="_days" ValueChanged="SetDaysAsync"
+                                 SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary">
+                    <MudToggleItem Value="30" Text="30 days" />
+                    <MudToggleItem Value="90" Text="90 days" />
+                    <MudToggleItem Value="365" Text="365 days" />
+                </MudToggleGroup>
 
-            <MudButtonGroup Size="Size.Small" Variant="Variant.Text" Class="mb-4">
-                <MudButton OnClick="@(() => SetDaysAsync(30))" Color="@(_days == 30 ? Color.Primary : Color.Default)">
-                    30 days
-                </MudButton>
-                <MudButton OnClick="@(() => SetDaysAsync(90))" Color="@(_days == 90 ? Color.Primary : Color.Default)">
-                    90 days
-                </MudButton>
-                <MudButton OnClick="@(() => SetDaysAsync(365))" Color="@(_days == 365 ? Color.Primary : Color.Default)">
-                    365 days
-                </MudButton>
-            </MudButtonGroup>
+                @if (_updatedAt is not null)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @UpdatedLabel()
+                    </MudText>
+                }
+            </div>
 
             var completionsSeries = CompletionsSeries(overview);
             var completionsLabels = LabelsOf(overview.Completions, day => day.Day);
+            var completionsOptions = StackedAxisOptions(overview.Completions);
             var openedSeries = LineSeries("Opened", overview.Opened);
             var openedLabels = LabelsOf(overview.Opened, day => day.Day);
+            var openedOptions = LineAxisOptions(overview.Opened);
             var outstandingSeries = LineSeries("Outstanding", overview.Outstanding);
             var outstandingLabels = LabelsOf(overview.Outstanding, day => day.Day);
+            var outstandingOptions = LineAxisOptions(overview.Outstanding);
             var maxGoalCount = Math.Max(overview.ByGoal.Count == 0 ? 0 : overview.ByGoal.Max(goal => goal.Count), 1);
 
             <MudGrid Spacing="4" Class="mb-4">
@@ -78,21 +78,24 @@
                     <MudPaper Outlined="true" Class="pa-3">
                         <MudText Typo="Typo.subtitle2" Class="mb-1">Completions per day</MudText>
                         <MudChart ChartType="ChartType.StackedBar" ChartSeries="@completionsSeries"
-                                  ChartLabels="@completionsLabels" Width="100%" Height="260px" />
+                                  ChartLabels="@completionsLabels" ChartOptions="@completionsOptions"
+                                  Width="100%" Height="260px" />
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pa-3">
                         <MudText Typo="Typo.subtitle2" Class="mb-1">Tasks opened per day</MudText>
                         <MudChart ChartType="ChartType.Line" ChartSeries="@openedSeries"
-                                  ChartLabels="@openedLabels" Width="100%" Height="260px" />
+                                  ChartLabels="@openedLabels" ChartOptions="@openedOptions"
+                                  Width="100%" Height="260px" />
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pa-3">
                         <MudText Typo="Typo.subtitle2" Class="mb-1">Open tasks outstanding</MudText>
                         <MudChart ChartType="ChartType.Line" ChartSeries="@outstandingSeries"
-                                  ChartLabels="@outstandingLabels" Width="100%" Height="260px" />
+                                  ChartLabels="@outstandingLabels" ChartOptions="@outstandingOptions"
+                                  Width="100%" Height="260px" />
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="12" md="6">
@@ -240,8 +243,64 @@
         new ChartSeries<double> { Name = name, Data = points.Select(point => (double)point.Count).ToArray() }
     ];
 
-    static string[] LabelsOf<T>(IReadOnlyList<T> points, Func<T, DateOnly> dayOf) =>
-        [.. points.Select(point => dayOf(point).ToString("MM-dd"))];
+    const int TargetLabelCount = 7;
+    const int TargetYAxisTicks = 5;
+    const int MaxYAxisTicks = 6;
+
+    static string[] LabelsOf<T>(IReadOnlyList<T> points, Func<T, DateOnly> dayOf)
+    {
+        var count = points.Count;
+
+        if (count == 0)
+        {
+            return [];
+        }
+
+        var format = count > 90 ? "MMM yyyy" : "MM-dd";
+        var step = Math.Max(1, (int)Math.Ceiling(count / (double)TargetLabelCount));
+        var labels = new string[count];
+
+        for (var index = 0; index < count; index++)
+        {
+            var keep = index % step == 0 || index == count - 1;
+            labels[index] = keep ? dayOf(points[index]).ToString(format) : "";
+        }
+
+        return labels;
+    }
+
+    static StackedBarChartOptions StackedAxisOptions(IReadOnlyList<DailyCompletionsView> days)
+    {
+        var max = days.Count == 0 ? 0 : days.Max(day => day.Planned + day.Unplanned);
+        return new StackedBarChartOptions { YAxisTicks = NiceYAxisStep(max), MaxNumYAxisTicks = MaxYAxisTicks };
+    }
+
+    static LineChartOptions LineAxisOptions(IReadOnlyList<DailyCountView> points)
+    {
+        var max = points.Count == 0 ? 0 : points.Max(point => point.Count);
+        return new LineChartOptions { YAxisTicks = NiceYAxisStep(max), MaxNumYAxisTicks = MaxYAxisTicks };
+    }
+
+    static int NiceYAxisStep(double max)
+    {
+        if (max <= 0)
+        {
+            return 1;
+        }
+
+        var rawStep = max / TargetYAxisTicks;
+        var magnitude = Math.Pow(10, Math.Floor(Math.Log10(rawStep)));
+        var normalized = rawStep / magnitude;
+        var niceNormalized = normalized switch
+        {
+            <= 1 => 1,
+            <= 2 => 2,
+            <= 5 => 5,
+            _ => 10
+        };
+
+        return Math.Max(1, (int)Math.Round(niceNormalized * magnitude));
+    }
 
     async Task LoadOlderAsync()
     {

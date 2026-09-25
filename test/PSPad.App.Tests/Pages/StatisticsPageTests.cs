@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -85,12 +86,31 @@ public class StatisticsPageTests : Bunit.TestContext
         Arrange(source, NewCache());
 
         var page = Render<StatisticsPage>();
-        page.FindAll("button").First(button => button.TextContent.Trim() == "90 days").Click();
+        page.FindAll(".mud-toggle-item").First(item => item.TextContent.Trim() == "90 days").Click();
 
         var tile = page.FindComponents<StatTile>().Single(t => t.Instance.Label == "Done today");
         Assert.Equal(9, tile.Instance.Value);
         Assert.Contains(90, source.RequestedDays);
+        Assert.Equal("true", RangeButton(page, "90 days").GetAttribute("aria-checked"));
+        Assert.Equal("false", RangeButton(page, "30 days").GetAttribute("aria-checked"));
+        Assert.Equal("false", RangeButton(page, "365 days").GetAttribute("aria-checked"));
     }
+
+    [Fact]
+    public void TheThirtyDayRangeIsSelectedByDefault()
+    {
+        var source = new FakeStatisticsSource { Overview = Overview(doneToday: 0) };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        Assert.Equal("true", RangeButton(page, "30 days").GetAttribute("aria-checked"));
+        Assert.Equal("false", RangeButton(page, "90 days").GetAttribute("aria-checked"));
+        Assert.Equal("false", RangeButton(page, "365 days").GetAttribute("aria-checked"));
+    }
+
+    static IElement RangeButton(IRenderedComponent<StatisticsPage> page, string text) =>
+        page.FindAll(".mud-toggle-item").Single(item => item.TextContent.Trim() == text);
 
     [Fact]
     public void CompletionsChartRendersThePlannedAndUnplannedSeriesPerDay()
@@ -140,6 +160,118 @@ public class StatisticsPageTests : Bunit.TestContext
 
         Assert.Equal([10d, 8d, 6d], outstanding.Data.Values);
         Assert.Equal(["03-08", "03-09", "03-10"], chart.Instance.ChartLabels);
+    }
+
+    [Theory]
+    [InlineData(30, 7)]
+    [InlineData(90, 8)]
+    [InlineData(365, 8)]
+    public void ChartLabelsAreThinnedToAReadableCountAcrossRanges(int days, int expectedVisibleLabels)
+    {
+        var source = new FakeStatisticsSource { Overview = RangeOverview(days, maxValue: 5) };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var chart = OutstandingChart(page);
+
+        Assert.Equal(days, chart.Instance.ChartLabels.Length);
+        Assert.Equal(expectedVisibleLabels, chart.Instance.ChartLabels.Count(label => label.Length > 0));
+        Assert.NotEqual("", chart.Instance.ChartLabels[0]);
+        Assert.NotEqual("", chart.Instance.ChartLabels[^1]);
+    }
+
+    [Fact]
+    public void ChartLabelsStayNumericAtTheShorterRanges()
+    {
+        var source = new FakeStatisticsSource { Overview = RangeOverview(30, maxValue: 5) };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var populated = OutstandingChart(page).Instance.ChartLabels.Where(label => label.Length > 0);
+
+        Assert.All(populated, label => Assert.Matches(@"^\d{2}-\d{2}$", label));
+    }
+
+    [Fact]
+    public void ChartLabelsSwitchToMonthAndYearAtTheYearLongRange()
+    {
+        var source = new FakeStatisticsSource { Overview = RangeOverview(365, maxValue: 5) };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var populated = OutstandingChart(page).Instance.ChartLabels.Where(label => label.Length > 0);
+
+        Assert.All(populated, label => Assert.Matches(@"^[A-Za-z]{3} \d{4}$", label));
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(40, 10)]
+    [InlineData(0, 1)]
+    public void OutstandingChartYAxisScalesToTheData(int max, int expectedTicks)
+    {
+        var source = new FakeStatisticsSource { Overview = RangeOverview(30, max) };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var options = Assert.IsType<LineChartOptions>(OutstandingChart(page).Instance.ChartOptions);
+        Assert.Equal(expectedTicks, options.YAxisTicks);
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(40, 10)]
+    [InlineData(0, 1)]
+    public void CompletionsChartYAxisScalesToTheStackedTotal(int max, int expectedTicks)
+    {
+        var source = new FakeStatisticsSource { Overview = RangeOverview(30, max) };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var chart = page.FindComponents<MudChart<double>>()
+            .Single(c => c.Instance.ChartSeries.Any(series => series.Name == "Planned"));
+        var options = Assert.IsType<StackedBarChartOptions>(chart.Instance.ChartOptions);
+
+        Assert.Equal(expectedTicks, options.YAxisTicks);
+    }
+
+    [Fact]
+    public void AnAllZeroRangeRendersWithoutThrowing()
+    {
+        var source = new FakeStatisticsSource { Overview = RangeOverview(30, maxValue: 0) };
+        Arrange(source, NewCache());
+
+        var exception = Xunit.Record.Exception(() => Render<StatisticsPage>());
+
+        Assert.Null(exception);
+    }
+
+    static IRenderedComponent<MudChart<double>> OutstandingChart(IRenderedComponent<StatisticsPage> page) =>
+        page.FindComponents<MudChart<double>>()
+            .Single(c => c.Instance.ChartSeries.Any(series => series.Name == "Outstanding"));
+
+    static StatisticsOverview RangeOverview(int days, int maxValue)
+    {
+        var start = Today.AddDays(-(days - 1));
+        var completions = Enumerable.Range(0, days)
+            .Select(i => new DailyCompletionsView(start.AddDays(i), i == days - 1 ? maxValue : 0, 0))
+            .ToList();
+        var counts = Enumerable.Range(0, days)
+            .Select(i => new DailyCountView(start.AddDays(i), i == days - 1 ? maxValue : 0))
+            .ToList();
+
+        return new StatisticsOverview(
+            new StatisticsTilesView(0, 0, 0, 0),
+            completions,
+            counts,
+            counts,
+            [],
+            counts);
     }
 
     [Fact]
