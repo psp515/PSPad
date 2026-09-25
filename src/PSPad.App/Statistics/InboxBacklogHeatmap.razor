@@ -34,7 +34,7 @@
 
     int Columns => Math.Max(Weeks.Count, 1);
 
-    int CellMax => Columns switch { <= 8 => 96, <= 20 => 64, _ => 44 };
+    int CellMax => Columns switch { <= 8 => 30, <= 20 => 22, _ => 16 };
 
     int Maximum => Weeks.Count == 0 ? 0 : Weeks.Max(week => week.Count);
 

@@ -38,15 +38,15 @@ h1[tabindex="-1"]:focus {
 .pspad-heatmap-grid {
     display: grid;
     grid-template-columns: auto repeat(var(--pspad-heatmap-columns), minmax(11px, 1fr));
-    gap: 4px;
+    gap: 2px;
     align-items: center;
     max-width: calc(var(--pspad-heatmap-columns) * var(--pspad-heatmap-cell-max) + 3rem);
 }
 
 .pspad-heatmap-weeks {
     display: grid;
-    grid-template-columns: repeat(var(--pspad-heatmap-columns), minmax(14px, 1fr));
-    gap: 4px;
+    grid-template-columns: repeat(var(--pspad-heatmap-columns), minmax(11px, 1fr));
+    gap: 2px;
     align-items: center;
     max-width: calc(var(--pspad-heatmap-columns) * var(--pspad-heatmap-cell-max));
 }
@@ -62,10 +62,6 @@ h1[tabindex="-1"]:focus {
 .pspad-heatmap-week {
     width: 100%;
     aspect-ratio: 1;
-}
-
-.pspad-heatmap-week {
-    min-height: 24px;
 }
 
 .pspad-heatmap-swatch[data-level="1"] {

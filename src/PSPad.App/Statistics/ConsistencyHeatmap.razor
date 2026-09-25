@@ -41,7 +41,7 @@
 
     int Columns => Days.Count == 0 ? 1 : ColumnOf(Days[^1].Day) + 1;
 
-    int CellMax => Columns switch { <= 6 => 64, <= 14 => 44, _ => 34 };
+    int CellMax => Columns switch { <= 6 => 30, <= 14 => 22, _ => 16 };
 
     static string LabelOf(DailyCountView day) => $"{day.Day:yyyy-MM-dd}: {day.Count} completed";
 

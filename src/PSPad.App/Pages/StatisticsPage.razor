@@ -118,15 +118,20 @@
                 </MudItem>
             </MudGrid>
 
-            <MudPaper Outlined="true" Class="pa-3 mb-4">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Consistency</MudText>
-                <ConsistencyHeatmap Days="@overview.Heatmap" Today="@State.Today" />
-            </MudPaper>
-
-            <MudPaper Outlined="true" Class="pa-3 mb-4">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Inbox backlog left at each week's end</MudText>
-                <InboxBacklogHeatmap Weeks="@overview.InboxBacklog" Today="@State.Today" />
-            </MudPaper>
+            <MudGrid Spacing="4" Class="mb-4">
+                <MudItem xs="12" md="6">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Consistency</MudText>
+                        <ConsistencyHeatmap Days="@overview.Heatmap" Today="@State.Today" />
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Inbox backlog left at each week's end</MudText>
+                        <InboxBacklogHeatmap Weeks="@overview.InboxBacklog" Today="@State.Today" />
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
         }
 
         <MudExpansionPanels Elevation="0" Outlined="true" Class="mb-4">

@@ -58,9 +58,13 @@ read. A hand-rolled CSS grid earns its place here for exactly the reason
 the table above says a custom class ever can: MudBlazor genuinely has no
 component that does this.
 
-Both grids scale to the panel they sit in rather than hugging its corner:
-the column track is `minmax(11px, 1fr)` with a per-cell cap in the grid's
-`max-width`, so 5 week columns at the 30-day range grow to roughly 34px
+The two panels sit side by side at `md` and up (`MudItem xs="12" md="6"`
+each, matching the chart grid above them) and stack to full width below
+that breakpoint — half the panel width they had stacked, which is why
+their cells are capped smaller than a full-width heatmap would need. Both
+grids scale to the panel they sit in rather than hugging its corner: the
+column track is `minmax(11px, 1fr)` with a per-cell cap in the grid's
+`max-width`, so 5 week columns at the 30-day range grow to roughly 30px
 cells while 53 columns at 365 days stay legible and hand the overflow to
 `.pspad-heatmap-scroll`. Each carries month labels along the top, the daily
 grid adds Mon/Wed/Fri down the side, and each ends in a `HeatmapKey` — the
