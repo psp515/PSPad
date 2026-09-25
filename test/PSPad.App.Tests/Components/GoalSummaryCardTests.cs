@@ -54,6 +54,50 @@ public class GoalSummaryCardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AGoalInProgressShowsItsDueDateAndAProgressBar()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var goal = NewGoal("Run a marathon", GoalStatus.InProgress, Today.AddDays(1));
+
+        var card = Render<GoalSummaryCard>(parameters => parameters
+            .Add(p => p.Goal, goal)
+            .Add(p => p.Today, Today)
+            .Add(p => p.Tasks, [NewTask("Buy shoes", done: true), NewTask("Train")]));
+
+        Assert.Contains("Due Tomorrow", card.Find(".pspad-goal-summary-due").TextContent);
+        Assert.DoesNotContain("mud-error-text", card.Find(".pspad-goal-summary-due").ClassName);
+        Assert.Contains("1 of 2 tasks done", card.Find(".pspad-goal-summary-tasks").TextContent);
+        Assert.Contains("pspad-goal-summary-in-progress", card.Find(".pspad-goal-summary").ClassName);
+        Assert.Single(card.FindAll(".mud-progress-linear"));
+    }
+
+    [Fact]
+    public void AGoalInProgressPastItsDueDateReadsInTheErrorColour()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var goal = NewGoal("Run a marathon", GoalStatus.InProgress, Today.AddDays(-1));
+
+        var card = Render<GoalSummaryCard>(parameters => parameters
+            .Add(p => p.Goal, goal)
+            .Add(p => p.Today, Today));
+
+        Assert.Contains("Due Yesterday", card.Find(".pspad-goal-summary-due").TextContent);
+        Assert.Contains("mud-error-text", card.Find(".pspad-goal-summary-due").ClassName);
+    }
+
+    [Fact]
+    public void AnUndatedGoalInProgressHasNoDueLine()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var card = Render<GoalSummaryCard>(parameters => parameters
+            .Add(p => p.Goal, NewGoal("Run a marathon", GoalStatus.InProgress))
+            .Add(p => p.Today, Today));
+
+        Assert.Empty(card.FindAll(".pspad-goal-summary-due"));
+    }
+
+    [Fact]
     public void ClickingOrPressingEnterOpensIt()
     {
         AppTestHost.Arrange(this, User, Today);

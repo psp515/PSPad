@@ -4,85 +4,103 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Tasks
 @using PSPad.Module.Tasks.Today
 @inject IDocumentStore<TodoTask> TaskStore
 @inject IDocumentStore<TaskList> ListStore
+@inject IDocumentStore<Goal> GoalStore
 @inject AppState State
 @inject CommandSender Sender
 @inject NavigationManager Navigation
 
+<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">My Day</MudText>
+
 @if (!_loaded)
 {
-    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">My Day</MudText>
     <RowSkeleton Count="6" />
 }
 else
 {
-    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">My Day</MudText>
-
-    @if (_overdue.Count > 0)
+    @if (_plan.Overdue.Count > 0)
     {
-        <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">Overdue</MudText>
-        <MudPaper Outlined="true" Class="mb-4">
+        <section class="pspad-day-overdue mb-4">
+            <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">Overdue</MudText>
+            <MudPaper Outlined="true">@Rows(_plan.Overdue)</MudPaper>
+        </section>
+    }
+
+    @if (_plan.Today.Count > 0 || _plan.Overdue.Count == 0)
+    {
+        <section class="pspad-day-today mb-4">
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-2">Today</MudText>
+            <MudPaper Outlined="true">
+                @if (_plan.Today.Count > 0)
+                {
+                    @Rows(_plan.Today)
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Class="pa-4">Nothing due today.</MudText>
+                }
+            </MudPaper>
+        </section>
+    }
+
+    @if (_plan.Tomorrow.Count > 0)
+    {
+        <section class="pspad-day-tomorrow mb-4">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Tomorrow</MudText>
+            <MudPaper Outlined="true">@Rows(_plan.Tomorrow)</MudPaper>
+        </section>
+    }
+
+    @if (_goals.Count > 0)
+    {
+        <section class="pspad-day-goals mb-4">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Goals in progress</MudText>
             <MudGrid Spacing="4">
-                @foreach (var task in _overdue)
+                @foreach (var goal in _goals)
                 {
                     <MudItem xs="12" sm="6" md="4" xl="3">
-                        <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
-                                 OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+                        <GoalSummaryCard Goal="@goal" Tasks="@TasksOf(goal.Id)" Today="@State.Today"
+                                         OnOpen="@(() => OpenGoal(goal))" />
                     </MudItem>
                 }
             </MudGrid>
-        </MudPaper>
+        </section>
     }
 
-    @if (_due.Count > 0 || _overdue.Count == 0)
+    @if (_plan.Completed.Count > 0 || _plan.Upcoming.Count > 0)
     {
-        <MudPaper Outlined="true">
-            @if (_due.Count > 0)
+        <MudExpansionPanels Elevation="0" MultiExpansion="true">
+            @if (_plan.Completed.Count > 0)
             {
-                <MudGrid Spacing="4">
-                    @foreach (var task in _due)
-                    {
-                        <MudItem xs="12" sm="6" md="4" xl="3">
-                            <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
-                                     OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
-                        </MudItem>
-                    }
-                </MudGrid>
+                <MudExpansionPanel Class="pspad-day-completed" Text="@($"Completed ({_plan.Completed.Count})")">
+                    @Rows(_plan.Completed)
+                </MudExpansionPanel>
             }
-            else
+            @if (_plan.Upcoming.Count > 0)
             {
-                <MudText Typo="Typo.body2" Class="pa-4">Nothing due today.</MudText>
-            }
-        </MudPaper>
-    }
-
-    @if (_done.Count > 0)
-    {
-        <MudExpansionPanels Elevation="0" Class="mt-4">
-            <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
-                <MudGrid Spacing="4">
-                    @foreach (var task in _done)
+                <MudExpansionPanel Class="pspad-day-upcoming" Text="@($"Upcoming ({_plan.Upcoming.Count})")">
+                    @foreach (var day in _plan.Upcoming.GroupBy(entry => entry.DueOn!.Value))
                     {
-                        <MudItem xs="12" sm="6" md="4" xl="3">
-                            <TaskRow Task="@task" Today="@State.Today" ListName="@NameOf(task.ListId)"
-                                     OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
-                        </MudItem>
+                        <MudText Typo="Typo.caption" Class="pspad-muted d-block px-3 pt-3">@DueDateRow.Describe(day.Key, State.Today)</MudText>
+                        @Rows([.. day])
                     }
-                </MudGrid>
-            </MudExpansionPanel>
+                </MudExpansionPanel>
+            }
         </MudExpansionPanels>
     }
 }
 
 @code {
     bool _loaded;
-    IReadOnlyList<TodoTask> _overdue = [];
-    IReadOnlyList<TodoTask> _due = [];
-    IReadOnlyList<TodoTask> _done = [];
+    DayPlan _plan = new([], [], [], [], []);
+    IReadOnlyList<Goal> _goals = [];
+    IReadOnlyList<TodoTask> _tasks = [];
+    IReadOnlyDictionary<Guid, TodoTask> _byId = new Dictionary<Guid, TodoTask>();
     IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
 
     [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
@@ -104,43 +122,53 @@ else
     {
         var tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
         var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var goals = await GoalStore.LoadAllAsync(State.UserId, CancellationToken.None);
 
         _listNames = lists.Where(list => !list.Deleted).ToDictionary(list => list.Id, list => list.Name);
-
-        var byId = tasks.ToDictionary(task => task.Id);
-        var entries = TodayRule.Select(tasks, State.Today);
-
-        _overdue = [.. entries.Where(entry => entry.Overdue).Select(entry => byId[entry.TaskId])];
-        _due = [.. entries.Where(entry => !entry.Overdue).Select(entry => byId[entry.TaskId])];
-
-        var zone = TimeZoneInfo.FindSystemTimeZoneById(State.TimeZone);
-        _done =
+        _tasks = tasks;
+        _byId = tasks.ToDictionary(task => task.Id);
+        _plan = TodayRule.Plan(tasks, State.Today, LocalToday.Zone(State.TimeZone));
+        _goals =
         [
-            .. tasks
-                .Where(task => !task.Deleted && CompletedToday(task, zone))
-                .OrderByDescending(task => task.CompletedAt)
-                .ThenBy(task => task.Name)
+            .. goals
+                .Where(goal => !goal.Deleted && goal.Status == GoalStatus.InProgress)
+                .OrderBy(goal => goal.DueOn ?? DateOnly.MaxValue)
+                .ThenBy(goal => goal.Name, StringComparer.OrdinalIgnoreCase)
         ];
 
         _loaded = true;
     }
 
-    bool CompletedToday(TodoTask task, TimeZoneInfo zone) =>
-        task.CompletedDays.Contains(State.Today)
-        || (task.CompletedAt is { } at
-            && DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(at, zone).DateTime) == State.Today);
+    RenderFragment Rows(IReadOnlyList<TodayEntry> entries) =>
+        @<MudGrid Spacing="4">
+            @foreach (var entry in entries)
+            {
+                var task = _byId[entry.TaskId];
+                var day = DayOf(entry);
+                <MudItem xs="12" sm="6" md="4" xl="3">
+                    <TaskRow Task="@task" Today="@day" ListName="@NameOf(task.ListId)"
+                             OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />
+                </MudItem>
+            }
+        </MudGrid>;
+
+    DateOnly DayOf(TodayEntry entry) => entry.Recurring ? entry.DueOn ?? State.Today : State.Today;
+
+    IReadOnlyList<TodoTask> TasksOf(Guid goalId) => [.. _tasks.Where(task => task.GoalId == goalId)];
 
     string? NameOf(Guid listId) => _listNames.TryGetValue(listId, out var name) ? name : null;
 
     void Open(TodoTask task) =>
         Navigation.NavigateTo($"{Navigation.Uri.Split('?')[0]}?task={task.Id}");
 
-    async Task ToggleAsync(TodoTask task)
+    void OpenGoal(Goal goal) => Navigation.NavigateTo(GoalQuery.For(Navigation.Uri, goal.Id));
+
+    async Task ToggleAsync(TodoTask task, DateOnly day)
     {
         if (task.IsRecurring)
         {
             await Sender.SendAsync(new CompleteOccurrence(
-                Guid.NewGuid(), State.UserId, task.Id, State.Today, !task.CompletedDays.Contains(State.Today)));
+                Guid.NewGuid(), State.UserId, task.Id, day, !task.CompletedDays.Contains(day)));
         }
         else if (task.CompletedAt is null)
         {

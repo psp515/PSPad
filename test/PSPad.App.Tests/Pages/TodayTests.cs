@@ -6,6 +6,7 @@ using PSPad.App.Components;
 using PSPad.App.Pages;
 using PSPad.App.State;
 using PSPad.App.State.Replica;
+using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Recurrence;
@@ -58,14 +59,151 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ATaskDueTomorrowIsNotOnTheScreen()
+    public void ATaskDueTomorrowHasItsOwnSection()
     {
         var list = NewList("Zakupy");
-        Arrange(list, Due(list.Id, "Later", Today.AddDays(1)));
+        Arrange(list, Due(list.Id, "Later", Today.AddDays(1)), Due(list.Id, "Now", Today));
 
         var page = Render<Today>();
 
-        Assert.DoesNotContain("Later", page.Markup);
+        var tomorrow = page.Find(".pspad-day-tomorrow");
+        Assert.Contains("Tomorrow", tomorrow.TextContent);
+        Assert.Contains("Later", tomorrow.TextContent);
+        Assert.DoesNotContain("Now", tomorrow.TextContent);
+    }
+
+    [Fact]
+    public void TheTomorrowSectionIsAbsentWhenNothingIsDueTomorrow()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Now", Today));
+
+        var page = Render<Today>();
+
+        Assert.Empty(page.FindAll(".pspad-day-tomorrow"));
+    }
+
+    [Fact]
+    public void UpcomingListsTheRestOfTheWeekGroupedByDay()
+    {
+        var list = NewList("Zakupy");
+        Arrange(
+            list,
+            Due(list.Id, "Dentist", Today.AddDays(3)),
+            Due(list.Id, "Tomorrowish", Today.AddDays(1)),
+            Due(list.Id, "Next month", Today.AddDays(8)));
+
+        var page = Render<Today>();
+
+        var upcoming = page.Find(".pspad-day-upcoming");
+        Assert.Contains("Upcoming (1)", upcoming.TextContent);
+        Assert.Contains("Tue, 15 Sep", upcoming.TextContent);
+        Assert.Contains("Dentist", upcoming.TextContent);
+        Assert.DoesNotContain("Tomorrowish", upcoming.TextContent);
+        Assert.DoesNotContain("Next month", page.Markup);
+    }
+
+    [Fact]
+    public void ADailyTaskShowsTodayAndAgainTomorrow()
+    {
+        var list = NewList("Regularne");
+        Arrange(list, Recurring(list.Id, "Read a book", Today.AddDays(-7)));
+
+        var page = Render<Today>();
+
+        Assert.Contains("Read a book", page.Find(".pspad-day-tomorrow").TextContent);
+        Assert.Empty(page.FindAll(".pspad-day-upcoming"));
+    }
+
+    [Fact]
+    public async Task TickingTomorrowsOccurrenceCompletesTomorrowNotToday()
+    {
+        var list = NewList("Regularne");
+        var task = Recurring(list.Id, "Read a book", Today.AddDays(-7));
+        var replica = Arrange(list, task);
+
+        var page = Render<Today>();
+        page.Find(".pspad-day-tomorrow input.mud-checkbox-input").Change(true);
+
+        var stored = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Contains(Today.AddDays(1), stored!.CompletedDays);
+        Assert.DoesNotContain(Today, stored.CompletedDays);
+    }
+
+    [Fact]
+    public void GoalsInProgressSitBetweenTomorrowAndCompleted()
+    {
+        var list = NewList("Zakupy");
+        var done = Due(list.Id, "Masło", Today);
+        done.ApplyAll(TodoTask.Decide(
+            done, new CompleteTask(Guid.NewGuid(), User, done.Id),
+            new DateTimeOffset(Today.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero)));
+        Arrange(
+            list, done, Due(list.Id, "Later", Today.AddDays(1)),
+            NewGoal("Run a marathon", GoalStatus.InProgress, Today.AddDays(5)));
+
+        var page = Render<Today>();
+
+        var markup = page.Markup;
+        var goals = markup.IndexOf("Goals in progress");
+        Assert.True(goals > markup.IndexOf("Later"));
+        Assert.True(goals < markup.IndexOf("Completed (1)"));
+        Assert.Contains("Run a marathon", page.Find(".pspad-day-goals").TextContent);
+    }
+
+    [Fact]
+    public void OnlyGoalsInProgressAreListedSoonestFirst()
+    {
+        Arrange(
+            NewGoal("Undated", GoalStatus.InProgress),
+            NewGoal("Later", GoalStatus.InProgress, Today.AddDays(20)),
+            NewGoal("Sooner", GoalStatus.InProgress, Today.AddDays(2)),
+            NewGoal("Done", GoalStatus.Achieved),
+            NewGoal("Dropped", GoalStatus.NotAchieved));
+
+        var page = Render<Today>();
+
+        Assert.Equal(
+            ["Sooner", "Later", "Undated"],
+            page.FindAll(".pspad-day-goals .pspad-goal-summary-name").Select(name => name.TextContent));
+    }
+
+    [Fact]
+    public void TheGoalsSectionIsAbsentWhenNoGoalIsInProgress()
+    {
+        Arrange(NewGoal("Done", GoalStatus.Achieved));
+
+        var page = Render<Today>();
+
+        Assert.DoesNotContain("Goals in progress", page.Markup);
+    }
+
+    [Fact]
+    public void AGoalCountsItsLinkedTasks()
+    {
+        var list = NewList("Zakupy");
+        var goal = NewGoal("Run a marathon", GoalStatus.InProgress);
+        var linked = Due(list.Id, "Train", Today);
+        linked.ApplyAll(TodoTask.Decide(
+            linked, new LinkTaskToGoal(Guid.NewGuid(), User, linked.Id, goal.Id), DateTimeOffset.UnixEpoch));
+        Arrange(list, goal, linked);
+
+        var page = Render<Today>();
+
+        Assert.Contains("0 of 1 task done", page.Find(".pspad-day-goals").TextContent);
+    }
+
+    [Fact]
+    public void ClickingAGoalOpensItsPanel()
+    {
+        var goal = NewGoal("Run a marathon", GoalStatus.InProgress);
+        Arrange(goal);
+
+        var page = Render<Today>();
+        page.Find(".pspad-goal-summary").Click();
+
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        Assert.Contains($"?goal={goal.Id}", navigation.Uri);
     }
 
     [Fact]
@@ -214,6 +352,15 @@ public class TodayTests : Bunit.TestContext
 
         public Task<IReadOnlyList<TodoTask>> LoadAllAsync(Guid userId, CancellationToken ct) =>
             new TaskCompletionSource<IReadOnlyList<TodoTask>>().Task;
+    }
+
+    static Goal NewGoal(string name, GoalStatus status, DateOnly? dueOn = null)
+    {
+        var goal = new Goal();
+        goal.ApplyAll(Goal.Decide(null, new CreateGoal(Guid.NewGuid(), User, Guid.NewGuid(), name), DateTimeOffset.UnixEpoch));
+        goal.ApplyAll(Goal.Decide(goal, new SetGoalStatus(Guid.NewGuid(), User, goal.Id, status), DateTimeOffset.UnixEpoch));
+        goal.ApplyAll(Goal.Decide(goal, new SetGoalDueDate(Guid.NewGuid(), User, goal.Id, dueOn), DateTimeOffset.UnixEpoch));
+        return goal;
     }
 
     static TaskList NewList(string name)

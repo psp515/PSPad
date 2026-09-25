@@ -72,8 +72,8 @@ column-flow — DOM order stays reading order for keyboard and screen-reader
 navigation.
 
 Applied on: `AreaBoard` (list cards), `GoalsPage` (goal cards, active and
-achieved separately), `Today` (overdue, due and completed each as their own
-grid), `InboxPage`, `ListPage` (open and completed separately),
+achieved separately), `Today` (overdue, today, tomorrow, goals in progress,
+completed and upcoming each as their own grid), `InboxPage`, `ListPage` (open and completed separately),
 `SettingsPage` (Account, Time zone, Theme, Sync, Danger zone each their own
 card), and both skeleton components (`RowSkeleton`, `CardSkeleton`).
 
@@ -116,6 +116,17 @@ rendered both in the loading and loaded branches so nothing jumps on load.
 A screen nested under another (a list under its area) puts a back
 `MudIconButton` (`ArrowBack`, `Color.Primary`) to the left of its title,
 linking to the parent screen.
+
+**My Day sections.** Top to bottom: **Overdue** (`Color.Error` heading),
+**Today**, **Tomorrow**, **Goals in progress**, then one `MudExpansionPanels`
+holding **Completed (N)** and **Upcoming (N)**, both collapsed by default.
+Every section hides when empty, except Today, which says "Nothing due
+today." when Overdue is empty too. Upcoming groups its rows under a muted
+caption per day (`DueDateRow.Describe`). Membership comes from
+`TodayRule.Plan`, never from the page. A recurring row ahead of today
+ticks the occurrence on its own day, not today's. Goals in progress are
+`GoalSummaryCard`s ordered by due date, undated last, and open
+`?goal={id}`.
 
 **Shared row/card components, never duplicated per screen.** One
 `TaskRow` renders in My Day, list cards, the list screen and search
@@ -199,7 +210,10 @@ the two closing statuses.
   It is an outlined paper with a status-coloured left accent (success or
   error) and the status icon, showing only the name and "N of M tasks
   done". It has no progress bar and no due date. The whole summary opens
-  the goal panel.
+  the goal panel. An in-progress goal (My Day only) gets a primary accent
+  and a flag icon, and adds a "Due …" caption (`Color.Error` once passed,
+  omitted when undated) and a thin `MudProgressLinear` when tasks are
+  linked.
 - New: **Add area** / **Add goal** sits on the left of the footer, and
   Enter also adds. A new area then opens its screen; a new goal closes the
   panel.
