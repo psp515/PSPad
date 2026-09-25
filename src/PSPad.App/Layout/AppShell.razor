@@ -75,6 +75,7 @@
 
     <TaskDetailPanel TaskId="@_openTask" NewInList="@_newTaskList" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <AreaDetailPanel AreaId="@_openArea" IsNew="@_newArea" OnClose="@ClosePanel" Disabled="@(!_ready)" />
+    <GoalDetailPanel GoalId="@_openGoal" IsNew="@_newGoal" OnClose="@ClosePanel" Disabled="@(!_ready)" />
 </MudLayout>
 
 @code {
@@ -90,6 +91,8 @@
     Guid? _newTaskList;
     Guid? _openArea;
     bool _newArea;
+    Guid? _openGoal;
+    bool _newGoal;
 
     protected override async Task OnInitializedAsync()
     {
@@ -251,6 +254,8 @@
         _newTaskList = TaskQuery.NewTaskListFrom(Navigation.Uri);
         _openArea = AreaQuery.From(Navigation.Uri);
         _newArea = AreaQuery.IsNew(Navigation.Uri);
+        _openGoal = GoalQuery.From(Navigation.Uri);
+        _newGoal = GoalQuery.IsNew(Navigation.Uri);
     }
 
     void ClosePanel() => Navigation.NavigateTo(TaskQuery.Without(Navigation.Uri));

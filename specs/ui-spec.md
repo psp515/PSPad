@@ -179,14 +179,21 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    right that asks via `ConfirmDialog` before deleting. In Add the footer
    holds only **Add task**.
 
-**Area detail uses the same shell.** `Layout/AreaDetailPanel.razor`,
-addressed as `?area=new` (sidebar **+ New area**) or `?area={areaId}`
-(the area's **Edit area** FAB item), both via `AreaQuery`. It holds only an
-outlined **Name** field under the header. New: **Add area** on the left of
-the footer (Enter also adds), then the app opens the new area's screen.
-Existing: the name saves when the field commits, no Save; **Delete area**
-on the right asks via `ConfirmDialog`, then goes home. Areas are never
-created or renamed through `NameDialog`.
+**Area and goal detail use the same shell.** `Layout/AreaDetailPanel.razor`
+is addressed as `?area=new` (sidebar **+ New area**) or `?area={areaId}`
+(the area's **Edit area** FAB item), via `AreaQuery`.
+`Layout/GoalDetailPanel.razor` is addressed as `?goal=new` (the Goals FAB,
+or the empty state) or `?goal={goalId}` (a goal card's name, or its
+**Rename**), via `GoalQuery`. Both open with an outlined **Name** field
+under the header, and a goal adds an **Achieved** `MudSwitch`.
+- New: **Add area** / **Add goal** sits on the left of the footer, and
+  Enter also adds. A new area then opens its screen; a new goal closes the
+  panel.
+- Existing: fields save as they change, with no Save. **Delete area** /
+  **Delete goal** sits on the right and asks via `ConfirmDialog` first.
+  Deleting an area goes home; deleting a goal closes the panel.
+
+Areas and goals are never created or renamed through `NameDialog`.
 
 **Empty states share one component.** A page or board with no items yet
 shows `Components/EmptyState.razor` as the first cell of its grid, sized
@@ -219,7 +226,7 @@ icon reads unambiguously on its own.
 | Page | Page-level actions | Result |
 |---|---|---|
 | Area | New list, Edit area (→ area panel), Delete area | FAB Menu |
-| Goals | Add goal | plain `MudFab` → `NameDialog` |
+| Goals | Add goal (→ new-goal panel) | plain `MudFab` |
 | List | Add task (→ new-task panel), Rename list, Delete list | FAB Menu |
 | Inbox | Capture | plain `MudFab` → `CaptureDialog` |
 | My Day, Settings, History | none | no FAB |
@@ -325,6 +332,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/authentication/{action}` | OIDC login/logout flow, branded fragments |
 | `?task={taskId}` | task detail overlay, on any of the above |
 | `?area={areaId}`, `?area=new` | area detail overlay, on any of the above |
+| `?goal={goalId}`, `?goal=new` | goal detail overlay, on any of the above |
 
 **Signed-out visitors land on `/welcome`**, not a bare login redirect.
 Sign-out ends the Keycloak session directly rather than only clearing local

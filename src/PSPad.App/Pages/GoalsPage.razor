@@ -14,6 +14,7 @@
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Goals</MudText>
 
@@ -23,12 +24,14 @@
 }
 else
 {
-    @if (_active.Count == 0 && _achieved.Count == 0)
-    {
-        <MudText Typo="Typo.body2">No goals yet.</MudText>
-    }
-
     <MudGrid Spacing="4">
+        @if (_active.Count == 0 && _achieved.Count == 0)
+        {
+            <MudItem xs="12" sm="6" md="4" xl="3">
+                <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="No goals yet." CreateText="Add goal"
+                            OnCreate="@AddGoal" />
+            </MudItem>
+        }
         @foreach (var goal in _active)
         {
             <MudItem xs="12" sm="6" md="4" xl="3">
@@ -36,7 +39,8 @@ else
                           OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
                           OnAchieve="@(() => AchieveAsync(goal))"
                           OnReopen="@(() => ReopenAsync(goal))"
-                          OnRename="@(() => RenameAsync(goal))"
+                          OnEdit="@(() => EditGoal(goal))"
+                          OnRename="@(() => EditGoal(goal))"
                           OnDelete="@(() => DeleteAsync(goal))" />
             </MudItem>
         }
@@ -55,7 +59,8 @@ else
                                   OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
                                   OnAchieve="@(() => AchieveAsync(goal))"
                                   OnReopen="@(() => ReopenAsync(goal))"
-                                  OnRename="@(() => RenameAsync(goal))"
+                                  OnEdit="@(() => EditGoal(goal))"
+                          OnRename="@(() => EditGoal(goal))"
                                   OnDelete="@(() => DeleteAsync(goal))" />
                     </MudItem>
                 }
@@ -64,7 +69,7 @@ else
     </MudExpansionPanels>
 }
 
-<MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@AddGoalAsync" />
+<MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@AddGoal" UserAttributes="@FabAttributes" />
 
 @code {
     bool _loaded;
@@ -76,6 +81,16 @@ else
     [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
 
     int _rendered = -1;
+
+    static readonly Dictionary<string, object> FabAttributes = new() { ["aria-label"] = "Add goal" };
+
+    protected override void OnInitialized() => Sender.Sent += OnCommandSent;
+
+    void OnCommandSent() => InvokeAsync(async () =>
+    {
+        await ReloadAsync();
+        StateHasChanged();
+    });
 
     protected override async Task OnParametersSetAsync()
     {
@@ -123,59 +138,25 @@ else
             await Sender.SendAsync(new ReopenTask(Guid.NewGuid(), State.UserId, task.Id));
         }
 
-        await ReloadAsync();
     }
 
     async Task StarAsync(TodoTask task)
     {
         await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, task.Id, !task.Starred));
-        await ReloadAsync();
     }
 
-    async Task AddGoalAsync()
-    {
-        var parameters = new DialogParameters<NameDialog> { { dialog => dialog.Title, "Goal name" } };
-        var dialog = await Dialogs.ShowAsync<NameDialog>("New goal", parameters);
-        var result = await dialog.Result;
+    void AddGoal() => Navigation.NavigateTo(GoalQuery.ForNew(Navigation.Uri));
 
-        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new CreateGoal(Guid.NewGuid(), State.UserId, Guid.NewGuid(), name));
-        await ReloadAsync();
-    }
-
-    async Task RenameAsync(Goal goal)
-    {
-        var parameters = new DialogParameters<NameDialog>
-        {
-            { dialog => dialog.Title, "Goal name" },
-            { dialog => dialog.Value, goal.Name }
-        };
-        var dialog = await Dialogs.ShowAsync<NameDialog>("Rename goal", parameters);
-        var result = await dialog.Result;
-
-        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new RenameGoal(Guid.NewGuid(), State.UserId, goal.Id, name));
-        await ReloadAsync();
-    }
+    void EditGoal(Goal goal) => Navigation.NavigateTo(GoalQuery.For(Navigation.Uri, goal.Id));
 
     async Task AchieveAsync(Goal goal)
     {
         await Sender.SendAsync(new AchieveGoal(Guid.NewGuid(), State.UserId, goal.Id));
-        await ReloadAsync();
     }
 
     async Task ReopenAsync(Goal goal)
     {
         await Sender.SendAsync(new ReopenGoal(Guid.NewGuid(), State.UserId, goal.Id));
-        await ReloadAsync();
     }
 
     async Task DeleteAsync(Goal goal)
@@ -193,6 +174,7 @@ else
         }
 
         await Sender.SendAsync(new DeleteGoal(Guid.NewGuid(), State.UserId, goal.Id));
-        await ReloadAsync();
     }
+
+    public void Dispose() => Sender.Sent -= OnCommandSent;
 }

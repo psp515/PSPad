@@ -8,7 +8,8 @@
         <MudIconButton Size="Size.Small"
                        Icon="@(Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)"
                        OnClick="@(() => Collapse.ToggleAsync(Goal.Id))" />
-        <MudText Typo="Typo.subtitle2" Class="flex-grow-1">@Goal.Name</MudText>
+        <MudLink Class="pspad-goal-name flex-grow-1" Typo="Typo.subtitle2" Underline="Underline.None"
+                 OnClick="@OnEdit">@Goal.Name</MudLink>
         <MudText Typo="Typo.caption" Class="pspad-open-count">@($"{Open.Count} open")</MudText>
         <ThingMenu Class="pspad-goal-menu" OnRename="@OnRename" OnDelete="@OnDelete">
             <Extra>
@@ -67,6 +68,8 @@
     [Parameter] public EventCallback OnAchieve { get; set; }
 
     [Parameter] public EventCallback OnReopen { get; set; }
+
+    [Parameter] public EventCallback OnEdit { get; set; }
 
     [Parameter] public EventCallback OnRename { get; set; }
 

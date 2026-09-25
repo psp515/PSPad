@@ -31,13 +31,55 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ItShowsNoGoalsYetWhenThereAreNone()
+    public void WithNoGoalsTheEmptyStateOpensTheNewGoalPanel()
+    {
+        Arrange();
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/goals");
+
+        var page = Render<GoalsPage>();
+        var empty = page.FindComponent<EmptyState>();
+        Assert.Contains("No goals yet.", empty.Markup);
+        empty.Find(".pspad-empty-state").Click();
+
+        Assert.EndsWith("/goals?goal=new", navigation.Uri);
+    }
+
+    [Fact]
+    public void WithGoalsThereIsNoEmptyState()
+    {
+        Arrange(NewGoal("Eat healthier"));
+
+        var page = Render<GoalsPage>();
+
+        Assert.Empty(page.FindComponents<EmptyState>());
+    }
+
+    [Fact]
+    public void ClickingAGoalsNameOpensItsPanel()
+    {
+        var goal = NewGoal("Eat healthier");
+        Arrange(goal);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/goals");
+
+        var page = Render<GoalsPage>();
+        page.Find(".pspad-goal-name").Click();
+
+        Assert.EndsWith($"/goals?goal={goal.Id}", navigation.Uri);
+    }
+
+    [Fact]
+    public async Task AGoalSentFromElsewhereShowsUpWithoutAReload()
     {
         Arrange();
 
         var page = Render<GoalsPage>();
+        var sender = Services.GetRequiredService<PSPad.App.State.Dispatch.CommandSender>();
+        await page.InvokeAsync(() => sender.SendAsync(
+            new CreateGoal(Guid.NewGuid(), User, Guid.NewGuid(), "Learn to bake")));
 
-        Assert.Contains("No goals yet.", page.Markup);
+        page.WaitForAssertion(() => Assert.Contains("Learn to bake", page.Markup));
     }
 
     [Fact]
@@ -167,18 +209,18 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task ClickingTheFabOpensADialogThatCreatesTheGoalInTheReplica()
+    public void ClickingTheFabOpensTheNewGoalPanel()
     {
-        var replica = Arrange();
+        Arrange();
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/goals");
 
-        var page = Render(BuildGoalsPageWithPopovers());
-        page.Find(".pspad-fab").Click();
-        var dialog = page.FindComponent<MudDialogProvider>();
-        dialog.Find("div.mud-dialog input").Input("Learn to bake");
-        dialog.FindAll("button").Last().Click();
+        var page = Render<GoalsPage>();
+        var fab = page.Find(".pspad-fab");
+        Assert.Equal("Add goal", fab.GetAttribute("aria-label"));
+        fab.Click();
 
-        var goals = await replica.LoadAllAsync<Goal>(User);
-        Assert.Contains(goals, goal => goal.Name == "Learn to bake");
+        Assert.EndsWith("/goals?goal=new", navigation.Uri);
     }
 
     [Fact]
