@@ -1,12 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using PSPad.Abstractions;
 
 namespace PSPad.Infrastructure.Events;
 
 public sealed class DomainEventPump(
     ChannelDomainEventDispatcher dispatcher,
-    IServiceScopeFactory scopes) : BackgroundService
+    IServiceScopeFactory scopes,
+    ILogger<DomainEventPump> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -27,10 +29,13 @@ public sealed class DomainEventPump(
                 {
                     await handler.HandleAsync(envelope, stoppingToken);
                 }
-                catch (Exception exception)
+                catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
                 {
-                    Console.Error.WriteLine(
-                        $"Handler {handler.GetType().Name} failed on seq {envelope.Seq}: {exception.Message}");
+                    logger.LogError(
+                        exception,
+                        "Handler {Handler} failed on seq {Seq}; the projection marker stays behind it, so the next start replays it.",
+                        handler.GetType().Name,
+                        envelope.Seq);
                 }
             }
         }

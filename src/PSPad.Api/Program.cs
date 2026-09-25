@@ -37,8 +37,7 @@ builder.Services.AddHttpClient<IKeycloakAdminClient, KeycloakAdminClient>();
 builder.Services.AddScoped<UserProvisioner>();
 builder.Services.AddScoped<CommandDispatcher>();
 builder.Services.AddScoped<SyncReader>();
-// One instance, two registrations: MongoUnitOfWork publishes through the interface and the
-// pump reads the concrete type's channel, so a second instance would swallow every live event.
+// Two registrations of one instance: a second would hand the pump a channel nothing writes to.
 builder.Services.AddSingleton<ChannelDomainEventDispatcher>();
 builder.Services.AddSingleton<IDomainEventDispatcher>(sp =>
     sp.GetRequiredService<ChannelDomainEventDispatcher>());

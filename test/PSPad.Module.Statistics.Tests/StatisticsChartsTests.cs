@@ -253,6 +253,24 @@ public class StatisticsChartsTests
     }
 
     [Fact]
+    public void OutstandingAppliesARecordOnItsOwnDayNotAfterEveryLowerSeq()
+    {
+        var carried = Guid.NewGuid();
+        var completedOffline = Guid.NewGuid();
+
+        StatisticsRecord[] records =
+        [
+            Record(1, RecordKind.Created, Today.AddDays(-3), carried),
+            Record(2, RecordKind.Created, Today),
+            Record(3, RecordKind.Completed, Today.AddDays(-3), completedOffline)
+        ];
+
+        var series = StatisticsCharts.Outstanding(records, Today, 4, Zone, Open(completedOffline));
+
+        Assert.Equal(new[] { 1, 1, 1, 2 }, series.Select(point => point.Count));
+    }
+
+    [Fact]
     public void ATaskCompletedThenDeletedLeavesTheLineOnlyOnce()
     {
         var task = Guid.NewGuid();

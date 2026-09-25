@@ -31,14 +31,13 @@ public static class MongoIndexes
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("areaId")),
             cancellationToken: ct);
 
-        // Replay reads the log forward across every user ordered by seq alone, which no
-        // compound index starting at userId can serve.
         await context.Collection<BsonDocument>("events").Indexes.CreateManyAsync(
         [
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("seq")),
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Descending("at")),
+            // Replay reads forward across every user by seq alone, which no userId-first index serves.
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("seq"))
         ], ct);

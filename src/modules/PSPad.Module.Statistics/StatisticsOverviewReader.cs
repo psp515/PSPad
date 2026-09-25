@@ -14,8 +14,7 @@ public sealed class StatisticsOverviewReader(IStatisticsStore store, ILabelStore
         var range = OfferedRanges.Contains(days) ? days : DefaultRange;
         var from = StartOfDay(today.AddDays(1 - range), zone);
 
-        // Both reads take the same instant so every record falls on exactly one side of it:
-        // inside the window it is charted, outside it folds into the outstanding line's start.
+        // One instant for both reads, so every record is either charted or in the opening balance, never both.
         var records = await store.SinceAsync(userId, from, ct);
         var openAtStart = await store.OpenTaskIdsBeforeAsync(userId, from, ct);
         var known = await labels.AllAsync(userId, ct);

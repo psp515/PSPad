@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using PSPad.Api.Identity;
@@ -69,6 +70,6 @@ public class ProvisioningTests(MongoFixture fixture)
             new MongoDocumentStore<User>(context),
             new MongoDocumentStore<Area>(context),
             new MongoDocumentStore<Inbox>(context),
-            new MongoUnitOfWork(context, new NoDispatcher()),
+            new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance),
             new SystemClock());
 }

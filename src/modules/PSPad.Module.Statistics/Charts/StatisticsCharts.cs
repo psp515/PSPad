@@ -40,8 +40,7 @@ public static class StatisticsCharts
             .ToList();
     }
 
-    // openAtStart holds the tasks whose latest lifecycle record is older than the oldest record
-    // passed in, so records predating the first charted day fold into the set exactly once.
+    // openAtStart carries the tasks left open by records older than any passed in, which nothing here could derive.
     public static IReadOnlyList<DailyCount> Outstanding(
         IReadOnlyList<StatisticsRecord> records, DateOnly today, int days, TimeZoneInfo zone,
         IReadOnlySet<Guid> openAtStart)

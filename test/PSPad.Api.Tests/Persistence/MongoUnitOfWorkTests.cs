@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Driver;
 using PSPad.Abstractions;
 using PSPad.Infrastructure.Mongo;
@@ -22,7 +23,7 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         var user = Guid.NewGuid();
         var context = TestContext.For(fixture);
-        var work = new MongoUnitOfWork(context, new NoDispatcher());
+        var work = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
         var commandId = Guid.NewGuid();
         var (area, events) = NewArea(user);
 
@@ -49,11 +50,11 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var (first, firstEvents) = NewArea(user);
         var (second, secondEvents) = NewArea(user);
 
-        var work = new MongoUnitOfWork(context, new NoDispatcher());
+        var work = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
         work.Stage(first, firstEvents);
         await work.CommitAsync(Guid.NewGuid(), user, ct);
 
-        var later = new MongoUnitOfWork(context, new NoDispatcher());
+        var later = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
         later.Stage(second, secondEvents);
         await later.CommitAsync(Guid.NewGuid(), user, ct);
 
@@ -73,11 +74,11 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var commandId = Guid.NewGuid();
         var (area, events) = NewArea(user);
 
-        var first = new MongoUnitOfWork(context, new NoDispatcher());
+        var first = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
         first.Stage(area, events);
         await first.CommitAsync(commandId, user, ct);
 
-        var replay = new MongoUnitOfWork(context, new NoDispatcher());
+        var replay = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
         replay.Stage(area, events);
         await replay.CommitAsync(commandId, user, ct);
 

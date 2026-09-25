@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using PSPad.Abstractions;
 using PSPad.Infrastructure.Events;
 using PSPad.TestInfrastructure;
@@ -74,7 +75,8 @@ public class DomainEventPumpTests
     }
 
     static DomainEventPump PumpOver(ChannelDomainEventDispatcher dispatcher, IServiceProvider provider) =>
-        new(dispatcher, provider.GetRequiredService<IServiceScopeFactory>());
+        new(dispatcher, provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<DomainEventPump>.Instance);
 
     [Fact(Timeout = 30000)]
     public async Task NothingIsDeliveredUntilReplayHasCaughtUp()

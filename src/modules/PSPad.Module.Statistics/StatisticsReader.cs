@@ -55,8 +55,7 @@ public sealed class StatisticsReader(
             snapshot.Status.ToString());
     }
 
-    // An empty TaskName means the record was projected from an event stored before the
-    // lifecycle events carried one, so the live task is the only source left for it.
+    // An empty TaskName means a pre-enrichment event, where the live task is the only name left to offer.
     static string NameOf(StatisticsRecord record, TaskSnapshot snapshot) =>
         !string.IsNullOrEmpty(record.TaskName)
             ? record.TaskName

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging.Abstractions;
 using PSPad.Abstractions;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Tasks;
@@ -29,6 +30,14 @@ public class StatisticsReplayTests
         }
     }
 
+    sealed class FailingEventLog : IEventLog
+    {
+        public Task<IReadOnlyList<RecordedEvent>> ReadForwardAsync(
+            long afterSeq, int limit, CancellationToken ct) =>
+            Task.FromException<IReadOnlyList<RecordedEvent>>(
+                new TimeoutException("the log is unreachable"));
+    }
+
     sealed class FakeMarker(long start) : IProjectionMarker
     {
         public List<long> Written { get; } = [];
@@ -56,6 +65,14 @@ public class StatisticsReplayTests
         }
     }
 
+    sealed class ThrowingHandler(long failsOn) : IDomainEventHandler
+    {
+        public Task HandleAsync(DomainEventEnvelope envelope, CancellationToken ct) =>
+            envelope.Seq == failsOn
+                ? Task.FromException(new InvalidOperationException("projection failed"))
+                : Task.CompletedTask;
+    }
+
     static RecordedEvent Created(long seq) =>
         new(seq, "TodoTask", Guid.NewGuid(), "TaskCreated",
             JsonSerializer.Serialize(
@@ -65,6 +82,12 @@ public class StatisticsReplayTests
     static RecordedEvent Unknown(long seq) =>
         new(seq, "User", Guid.NewGuid(), "UserProvisioned", "{}", At);
 
+    static RecordedEvent Corrupt(long seq) =>
+        new(seq, "TodoTask", Guid.NewGuid(), "TaskCreated", "{ truncated", At);
+
+    static StatisticsReplay Replay(IEventLog log, IProjectionMarker marker, params IDomainEventHandler[] handlers) =>
+        new(log, marker, handlers, NullLogger<StatisticsReplay>.Instance);
+
     [Fact]
     public async Task ReplayResumesFromTheStoredMarker()
     {
@@ -72,7 +95,7 @@ public class StatisticsReplayTests
         var marker = new FakeMarker(2);
         var handler = new RecordingHandler();
 
-        await new StatisticsReplay(log, marker, [handler]).CatchUpAsync(TestContext.Current.CancellationToken);
+        await Replay(log, marker, handler).CatchUpAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal([3], handler.Seen);
         Assert.Equal(2, log.ReadsFrom[0]);
@@ -84,7 +107,7 @@ public class StatisticsReplayTests
         var log = new FakeEventLog(Created(4), Created(9));
         var marker = new FakeMarker(0);
 
-        await new StatisticsReplay(log, marker, [new RecordingHandler()])
+        await Replay(log, marker, new RecordingHandler())
             .CatchUpAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(9, marker.Current);
@@ -98,7 +121,7 @@ public class StatisticsReplayTests
         var marker = new FakeMarker(0);
         var handler = new RecordingHandler();
 
-        await new StatisticsReplay(log, marker, [handler]).CatchUpAsync(TestContext.Current.CancellationToken);
+        await Replay(log, marker, handler).CatchUpAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(501, handler.Seen.Count);
         Assert.Equal(501, marker.Current);
@@ -112,10 +135,63 @@ public class StatisticsReplayTests
         var marker = new FakeMarker(0);
         var handler = new RecordingHandler();
 
-        await new StatisticsReplay(log, marker, [handler]).CatchUpAsync(TestContext.Current.CancellationToken);
+        await Replay(log, marker, handler).CatchUpAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal([6], handler.Seen);
         Assert.Equal(6, marker.Current);
+    }
+
+    [Fact]
+    public async Task ACorruptPayloadStopsThePassInsteadOfEscapingToTheHost()
+    {
+        var log = new FakeEventLog(Created(1), Corrupt(2), Created(3));
+        var marker = new FakeMarker(0);
+        var handler = new RecordingHandler();
+
+        await Replay(log, marker, handler).CatchUpAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([1], handler.Seen);
+        Assert.Equal(1, marker.Current);
+    }
+
+    [Fact]
+    public async Task AThrowingHandlerStopsThePassWithTheMarkerBehindTheFailingEvent()
+    {
+        var log = new FakeEventLog(Created(1), Created(2), Created(3));
+        var marker = new FakeMarker(0);
+        var recording = new RecordingHandler();
+
+        await Replay(log, marker, recording, new ThrowingHandler(2))
+            .CatchUpAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([1, 2], recording.Seen);
+        Assert.Equal(1, marker.Current);
+        Assert.Equal([1], marker.Written);
+    }
+
+    [Fact]
+    public async Task AFailureOnTheFirstEventOfAPassLeavesTheMarkerUntouched()
+    {
+        var log = new FakeEventLog(Created(7), Created(8));
+        var marker = new FakeMarker(6);
+
+        await Replay(log, marker, new ThrowingHandler(7))
+            .CatchUpAsync(TestContext.Current.CancellationToken);
+
+        Assert.Empty(marker.Written);
+        Assert.Equal(6, marker.Current);
+    }
+
+    [Fact]
+    public async Task AnUnreachableLogLeavesTheMarkerAloneInsteadOfEscapingToTheHost()
+    {
+        var marker = new FakeMarker(4);
+
+        await Replay(new FailingEventLog(), marker, new RecordingHandler())
+            .CatchUpAsync(TestContext.Current.CancellationToken);
+
+        Assert.Empty(marker.Written);
+        Assert.Equal(4, marker.Current);
     }
 
     [Fact]
@@ -124,7 +200,7 @@ public class StatisticsReplayTests
         var log = new FakeEventLog();
         var marker = new FakeMarker(12);
 
-        await new StatisticsReplay(log, marker, [new RecordingHandler()])
+        await Replay(log, marker, new RecordingHandler())
             .CatchUpAsync(TestContext.Current.CancellationToken);
 
         Assert.Empty(marker.Written);

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Driver;
 using PSPad.Abstractions;
 using PSPad.Infrastructure.Mongo;
@@ -68,5 +69,5 @@ public class DomainEventPublishingTests(MongoFixture fixture)
     }
 
     MongoUnitOfWork NewUnitOfWork(IDomainEventDispatcher dispatcher) =>
-        new(TestContext.For(fixture), dispatcher);
+        new(TestContext.For(fixture), dispatcher, NullLogger<MongoUnitOfWork>.Instance);
 }

@@ -1,10 +1,13 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using PSPad.Abstractions;
 
 namespace PSPad.Infrastructure.Mongo;
 
-public sealed class MongoUnitOfWork(MongoContext context, IDomainEventDispatcher dispatcher) : IUnitOfWork
+public sealed class MongoUnitOfWork(
+    MongoContext context, IDomainEventDispatcher dispatcher, ILogger<MongoUnitOfWork> logger)
+    : IUnitOfWork
 {
     readonly List<(Aggregate Aggregate, IReadOnlyList<DomainEvent> Events)> _staged = [];
     readonly SequenceSource _sequence = new(context);
@@ -81,7 +84,11 @@ public sealed class MongoUnitOfWork(MongoContext context, IDomainEventDispatcher
             catch (Exception exception)
             {
                 // The transaction already committed; a dispatch failure must never fail an accepted command.
-                Console.Error.WriteLine($"Domain event dispatch failed: {exception.Message}");
+                logger.LogError(
+                    exception,
+                    "Publishing {Count} committed domain events failed for command {CommandId}; the next start replays them from the projection marker.",
+                    published.Count,
+                    commandId);
             }
         }
         catch
