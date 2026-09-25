@@ -10,16 +10,19 @@
                        OnClick="@(() => Collapse.ToggleAsync(Goal.Id))" />
         <MudLink Class="pspad-goal-name flex-grow-1" Typo="Typo.subtitle2" Underline="Underline.None"
                  OnClick="@OnEdit">@Goal.Name</MudLink>
-        <MudText Typo="Typo.caption" Class="pspad-open-count">@($"{Open.Count} open")</MudText>
+        @if (Goal.DueOn is { } due)
+        {
+            <MudText Typo="Typo.caption" Class="pspad-goal-due flex-shrink-0" Style="white-space:nowrap"
+                     Color="@(IsOverdue ? Color.Error : Color.Inherit)">@DueDateRow.Describe(due, Today)</MudText>
+        }
+        <MudText Typo="Typo.caption" Class="pspad-open-count flex-shrink-0" Style="white-space:nowrap">@($"{Open.Count} open")</MudText>
         <ThingMenu Class="pspad-goal-menu" OnRename="@OnRename" OnDelete="@OnDelete">
             <Extra>
-                @if (Goal.Achieved)
+                @foreach (var status in Enum.GetValues<GoalStatus>().Where(status => status != Goal.Status))
                 {
-                    <MudMenuItem OnClick="@OnReopen">Reopen</MudMenuItem>
-                }
-                else
-                {
-                    <MudMenuItem OnClick="@OnAchieve">Achieve</MudMenuItem>
+                    <MudMenuItem Class="pspad-goal-status-option" OnClick="@(() => OnStatus.InvokeAsync(status))">
+                        @($"Mark {GoalStatusText.Of(status).ToLowerInvariant()}")
+                    </MudMenuItem>
                 }
             </Extra>
         </ThingMenu>
@@ -65,15 +68,15 @@
 
     [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
 
-    [Parameter] public EventCallback OnAchieve { get; set; }
-
-    [Parameter] public EventCallback OnReopen { get; set; }
+    [Parameter] public EventCallback<GoalStatus> OnStatus { get; set; }
 
     [Parameter] public EventCallback OnEdit { get; set; }
 
     [Parameter] public EventCallback OnRename { get; set; }
 
     [Parameter] public EventCallback OnDelete { get; set; }
+
+    bool IsOverdue => Goal.Status == GoalStatus.InProgress && Goal.DueOn < Today;
 
     bool Collapsed => Collapse.IsCollapsed(Goal.Id);
 

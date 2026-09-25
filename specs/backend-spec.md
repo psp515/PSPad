@@ -136,7 +136,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `lists` | task lists, each inside one area | `areaId`, `name`, `position` |
 | `inboxes` | one per user | `items[]` |
 | `tasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `completedDays[]`, `createdAt` |
-| `goals` | global goals | `name`, `horizon` |
+| `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
 | `events` | action history and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
@@ -185,6 +185,14 @@ not stated there:
   days bucket in the **user's time zone**; recurring templates are
   excluded from the open line (they never close, so they'd sit on it as a
   permanent flat offset — same shape of argument as never-overdue).
+- A goal's status is `InProgress`, `Achieved` or `NotAchieved`, set by
+  `SetGoalStatus`. It is derived from two stored flags, `achieved` and
+  `notAchieved`, never stored as its own field. Documents written before
+  statuses existed carry only `achieved`, so they read correctly with no
+  backfill. `AchieveGoal` and `ReopenGoal` still work so that commands
+  already queued in an outbox are not rejected; `ReopenGoal` returns any
+  closed goal to `InProgress`. `SetGoalDueDate` sets or clears an
+  optional `dueOn`.
 
 ---
 

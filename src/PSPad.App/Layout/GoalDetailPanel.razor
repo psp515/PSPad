@@ -19,9 +19,19 @@
 
         @if (_goal is not null)
         {
-            <MudSwitch T="bool" Class="pspad-goal-achieved" Value="@_goal.Achieved" ValueChanged="@AchievedChangedAsync"
-                       Color="Color.Primary" Label="Achieved" Disabled="@Disabled" />
+            <MudSelect T="GoalStatus" Class="pspad-goal-status mt-2" Label="Status" Variant="Variant.Outlined"
+                       Value="@_goal.Status" ValueChanged="@StatusChangedAsync" Disabled="@Disabled"
+                       ToStringFunc="@GoalStatusText.Of" AnchorOrigin="Origin.BottomCenter">
+                @foreach (var status in Enum.GetValues<GoalStatus>())
+                {
+                    <MudSelectItem T="GoalStatus" Value="@status">@GoalStatusText.Of(status)</MudSelectItem>
+                }
+            </MudSelect>
         }
+    </div>
+
+    <div class="px-2">
+        <DueDateRow Value="@DueOn" ValueChanged="@DueDateChangedAsync" Today="@State.Today" Disabled="@Disabled" />
     </div>
 </DetailPanel>
 
@@ -36,6 +46,9 @@
 
     Goal? _goal;
     string _draftName = "";
+    DateOnly? _draftDueOn;
+
+    DateOnly? DueOn => _goal is null ? _draftDueOn : _goal.DueOn;
 
     EventCallback SaveCallback => IsNew ? EventCallback.Factory.Create(this, CreateAsync) : default;
 
@@ -46,6 +59,7 @@
         if (!IsNew)
         {
             _draftName = "";
+            _draftDueOn = null;
         }
 
         await ReloadAsync();
@@ -79,22 +93,31 @@
         await ReloadAsync();
     }
 
-    async Task AchievedChangedAsync(bool achieved)
+    async Task StatusChangedAsync(GoalStatus status)
     {
-        if (Disabled || _goal is null || achieved == _goal.Achieved)
+        if (Disabled || _goal is null || status == _goal.Status)
         {
             return;
         }
 
-        if (achieved)
+        await Sender.SendAsync(new SetGoalStatus(Guid.NewGuid(), State.UserId, _goal.Id, status));
+        await ReloadAsync();
+    }
+
+    async Task DueDateChangedAsync(DateOnly? dueOn)
+    {
+        if (Disabled)
         {
-            await Sender.SendAsync(new AchieveGoal(Guid.NewGuid(), State.UserId, _goal.Id));
-        }
-        else
-        {
-            await Sender.SendAsync(new ReopenGoal(Guid.NewGuid(), State.UserId, _goal.Id));
+            return;
         }
 
+        if (_goal is null)
+        {
+            _draftDueOn = dueOn;
+            return;
+        }
+
+        await Sender.SendAsync(new SetGoalDueDate(Guid.NewGuid(), State.UserId, _goal.Id, dueOn));
         await ReloadAsync();
     }
 
@@ -115,8 +138,16 @@
             return;
         }
 
-        await Sender.SendAsync(new CreateGoal(Guid.NewGuid(), State.UserId, Guid.NewGuid(), name));
+        var goalId = Guid.NewGuid();
+        await Sender.SendAsync(new CreateGoal(Guid.NewGuid(), State.UserId, goalId, name));
+
+        if (_draftDueOn is { } due)
+        {
+            await Sender.SendAsync(new SetGoalDueDate(Guid.NewGuid(), State.UserId, goalId, due));
+        }
+
         _draftName = "";
+        _draftDueOn = null;
         Navigation.NavigateTo(QueryString.Without(Navigation.Uri));
     }
 

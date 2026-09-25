@@ -37,7 +37,7 @@ public class GoalDetailPanelTests : Bunit.TestContext
         Assert.Contains("Add goal", panel.Find(".pspad-panel-save").TextContent);
         Assert.True(panel.Find(".pspad-panel-save").HasAttribute("disabled"));
         Assert.Empty(panel.FindAll(".pspad-panel-delete"));
-        Assert.Empty(panel.FindAll(".pspad-goal-achieved"));
+        Assert.Empty(panel.FindAll(".pspad-goal-status"));
     }
 
     [Fact]
@@ -87,17 +87,66 @@ public class GoalDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task TheAchievedSwitchAchievesAndReopensTheGoal()
+    public void TheStatusSelectorShowsTheCurrentStatus()
+    {
+        var goal = NewGoal("Eat healthier");
+        AppTestHost.Arrange(this, User, Today, goal);
+
+        var panel = Render<GoalDetailPanel>(parameters => parameters.Add(p => p.GoalId, (Guid?)goal.Id));
+
+        Assert.Equal("In progress", panel.Find(".pspad-goal-status input").GetAttribute("value"));
+    }
+
+    [Theory]
+    [InlineData(GoalStatus.Achieved)]
+    [InlineData(GoalStatus.NotAchieved)]
+    public async Task PickingAStatusSavesIt(GoalStatus status)
     {
         var goal = NewGoal("Eat healthier");
         var replica = AppTestHost.Arrange(this, User, Today, goal);
 
-        var panel = Render<GoalDetailPanel>(parameters => parameters.Add(p => p.GoalId, (Guid?)goal.Id));
-        panel.Find(".pspad-goal-achieved input").Change(true);
-        Assert.True((await replica.LoadAsync<Goal>(goal.Id))!.Achieved);
+        var panel = RenderWithOverlays(goal.Id);
+        panel.Find(".pspad-goal-status .mud-select-input").MouseDown();
+        panel.FindAll(".mud-list-item")[(int)status].Click();
 
-        panel.Find(".pspad-goal-achieved input").Change(false);
-        Assert.False((await replica.LoadAsync<Goal>(goal.Id))!.Achieved);
+        Assert.Equal(status, (await replica.LoadAsync<Goal>(goal.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task PickingADueDateSavesItAndClearingRemovesIt()
+    {
+        var goal = NewGoal("Eat healthier");
+        var replica = AppTestHost.Arrange(this, User, Today, goal);
+
+        var panel = RenderWithOverlays(goal.Id);
+        panel.Find(".pspad-task-due .pspad-property-activator").Click();
+        panel.FindAll(".pspad-due-quick")[1].Click();
+        Assert.Equal(Today.AddDays(1), (await replica.LoadAsync<Goal>(goal.Id))!.DueOn);
+
+        panel.WaitForAssertion(() => panel.Find(".pspad-property-clear").Click());
+        Assert.Null((await replica.LoadAsync<Goal>(goal.Id))!.DueOn);
+    }
+
+    [Fact]
+    public async Task ANewGoalKeepsTheDueDatePickedBeforeAdding()
+    {
+        var replica = AppTestHost.Arrange(this, User, Today);
+
+        var panel = Render(builder =>
+        {
+            builder.OpenComponent<MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<GoalDetailPanel>(1);
+            builder.AddAttribute(2, nameof(GoalDetailPanel.IsNew), true);
+            builder.CloseComponent();
+        });
+        panel.Find(".pspad-task-due .pspad-property-activator").Click();
+        panel.FindAll(".pspad-due-quick")[2].Click();
+        panel.Find(".pspad-goal-name-field input").Input("Learn to bake");
+        panel.Find(".pspad-panel-save").Click();
+
+        var created = Assert.Single(await replica.LoadAllAsync<Goal>(User));
+        Assert.Equal(Today.AddDays(2), created.DueOn);
     }
 
     [Fact]

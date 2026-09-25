@@ -185,7 +185,12 @@ is addressed as `?area=new` (sidebar **+ New area**) or `?area={areaId}`
 `Layout/GoalDetailPanel.razor` is addressed as `?goal=new` (the Goals FAB,
 or the empty state) or `?goal={goalId}` (a goal card's name, or its
 **Rename**), via `GoalQuery`. Both open with an outlined **Name** field
-under the header, and a goal adds an **Achieved** `MudSwitch`.
+under the header. A goal adds a **Status** `MudSelect` (In progress /
+Achieved / Not achieved, existing goals only) and a **Due** `DueDateRow`
+(in add mode too). The Goals page shows in-progress goals as cards ordered
+by due date, undated last, with the due date on the card in `Color.Error`
+once it has passed. Achieved and Not achieved goals go in their own
+collapsed sections. A card's `⋯` menu offers the other two statuses.
 - New: **Add area** / **Add goal** sits on the left of the footer, and
   Enter also adds. A new area then opens its screen; a new goal closes the
   panel.

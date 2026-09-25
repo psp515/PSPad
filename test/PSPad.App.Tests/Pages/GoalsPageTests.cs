@@ -170,7 +170,7 @@ public class GoalsPageTests : Bunit.TestContext
 
         var page = Render(BuildGoalsPageWithPopovers());
         page.Find(".pspad-goal-menu button").Click();
-        page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Achieve").Click();
+        page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Mark achieved").Click();
 
         var stored = await replica.LoadAsync<Goal>(goal.Id);
         Assert.True(stored!.Achieved);
@@ -185,10 +185,51 @@ public class GoalsPageTests : Bunit.TestContext
 
         var page = Render(BuildGoalsPageWithPopovers());
         page.Find(".pspad-goal-menu button").Click();
-        page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Reopen").Click();
+        page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Mark in progress").Click();
 
         var stored = await replica.LoadAsync<Goal>(goal.Id);
         Assert.False(stored!.Achieved);
+    }
+
+    [Fact]
+    public async Task MarkingAGoalNotAchievedMovesItToItsOwnSection()
+    {
+        var goal = NewGoal("Eat healthier");
+        var replica = Arrange(goal);
+
+        var page = Render(BuildGoalsPageWithPopovers());
+        page.Find(".pspad-goal-menu button").Click();
+        page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Mark not achieved").Click();
+
+        var stored = await replica.LoadAsync<Goal>(goal.Id);
+        Assert.Equal(GoalStatus.NotAchieved, stored!.Status);
+        page.WaitForAssertion(() => Assert.Contains("Not achieved (1)", page.Markup));
+    }
+
+    [Fact]
+    public void InProgressGoalsAreOrderedByDueDateWithUndatedLast()
+    {
+        var undated = NewGoal("Aaa undated");
+        var later = NewGoal("Bbb later", dueOn: new DateOnly(2026, 12, 1));
+        var sooner = NewGoal("Ccc sooner", dueOn: new DateOnly(2026, 10, 1));
+        Arrange(undated, later, sooner);
+
+        var page = Render<GoalsPage>();
+        var names = page.FindAll(".pspad-goal-name").Select(name => name.TextContent.Trim()).ToArray();
+
+        Assert.Equal(["Ccc sooner", "Bbb later", "Aaa undated"], names);
+    }
+
+    [Fact]
+    public void AnOverdueGoalShowsItsDueDateInTheErrorColour()
+    {
+        Arrange(NewGoal("Eat healthier", dueOn: new DateOnly(2026, 9, 1)));
+
+        var page = Render<GoalsPage>();
+        var due = page.Find(".pspad-goal-due");
+
+        Assert.Contains("Tue, 1 Sep", due.TextContent);
+        Assert.Contains("mud-error-text", due.ClassName);
     }
 
     [Fact]
@@ -278,7 +319,7 @@ public class GoalsPageTests : Bunit.TestContext
             new TaskCompletionSource<IReadOnlyList<Goal>>().Task;
     }
 
-    static Goal NewGoal(string name, bool achieved = false)
+    static Goal NewGoal(string name, bool achieved = false, DateOnly? dueOn = null)
     {
         var goal = new Goal();
         goal.ApplyAll(Goal.Decide(
@@ -287,6 +328,11 @@ public class GoalsPageTests : Bunit.TestContext
         if (achieved)
         {
             goal.ApplyAll(Goal.Decide(goal, new AchieveGoal(Guid.NewGuid(), User, goal.Id), DateTimeOffset.UnixEpoch));
+        }
+
+        if (dueOn is not null)
+        {
+            goal.ApplyAll(Goal.Decide(goal, new SetGoalDueDate(Guid.NewGuid(), User, goal.Id, dueOn), DateTimeOffset.UnixEpoch));
         }
 
         return goal;
