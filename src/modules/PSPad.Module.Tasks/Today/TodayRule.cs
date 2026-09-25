@@ -25,7 +25,15 @@ public static class TodayRule
     {
         var live = tasks.Where(task => !task.Deleted).ToArray();
         var due = Select(live, today);
+        var starred = live
+            .Where(task => IsStarredAhead(task, today))
+            .Select(task => Entry(task, overdue: false, dueOn: EarliestTrigger(task)))
+            .OrderBy(entry => entry.DueOn ?? DateOnly.MinValue)
+            .ThenByDescending(entry => entry.Priority)
+            .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         var ahead = live
+            .Where(task => !IsStarredAhead(task, today))
             .Select(task => Ahead(task, today))
             .OfType<TodayEntry>()
             .OrderBy(entry => entry.DueOn)
@@ -43,6 +51,7 @@ public static class TodayRule
         return new DayPlan(
             [.. due.Where(entry => entry.Overdue)],
             [.. due.Where(entry => !entry.Overdue)],
+            starred,
             [.. ahead.Where(entry => entry.DueOn == today.AddDays(1))],
             [.. ahead.Where(entry => entry.DueOn > today.AddDays(1))],
             completed);
@@ -52,6 +61,10 @@ public static class TodayRule
         task.IsRecurring
             ? task.CompletedDays.Contains(day)
             : task.CompletedAt is { } at && TodayIn(at, zone) == day;
+
+    static bool IsStarredAhead(TodoTask task, DateOnly today) =>
+        task is { Starred: true, IsRecurring: false, CompletedAt: null }
+        && (EarliestTrigger(task) ?? DateOnly.MaxValue) > today;
 
     static TodayEntry? Ahead(TodoTask task, DateOnly today)
     {
@@ -75,7 +88,7 @@ public static class TodayRule
 
     static DateOnly? Upcoming(TodoTask task, DateOnly today)
     {
-        if (task.CompletedAt is not null || task.Starred)
+        if (task.CompletedAt is not null)
         {
             return null;
         }
@@ -99,12 +112,12 @@ public static class TodayRule
         }
 
         var trigger = EarliestTrigger(task);
-        if (trigger <= today)
+        if (trigger is null || trigger > today)
         {
-            return Entry(task, overdue: trigger < today, dueOn: trigger);
+            return null;
         }
 
-        return task.Starred ? Entry(task, overdue: false, dueOn: trigger) : null;
+        return Entry(task, overdue: trigger < today, dueOn: trigger);
     }
 
     static DateOnly? EarliestTrigger(TodoTask task)

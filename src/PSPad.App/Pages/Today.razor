@@ -48,6 +48,14 @@ else
         </section>
     }
 
+    @if (_plan.Starred.Count > 0)
+    {
+        <section class="pspad-day-starred mb-4">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Starred</MudText>
+            @Rows(_plan.Starred)
+        </section>
+    }
+
     @if (_plan.Tomorrow.Count > 0)
     {
         <section class="pspad-day-tomorrow mb-4">
@@ -97,7 +105,7 @@ else
 
 @code {
     bool _loaded;
-    DayPlan _plan = new([], [], [], [], []);
+    DayPlan _plan = new([], [], [], [], [], []);
     IReadOnlyList<Goal> _goals = [];
     IReadOnlyList<TodoTask> _tasks = [];
     IReadOnlyDictionary<Guid, TodoTask> _byId = new Dictionary<Guid, TodoTask>();

@@ -67,16 +67,49 @@ public class DayPlanTests
     }
 
     [Fact]
-    public void AStarredTaskDueTomorrowIsInTodayNotTomorrow()
+    public void AStarredTaskNotDueYetIsStarredNotTomorrowOrUpcoming()
     {
-        var task = Due(Today.AddDays(1));
-        task.ApplyAll(TodoTask.Decide(task, new StarTask(Guid.NewGuid(), User, task.Id, true), Now));
+        var undated = Starred(TodoTaskTests.Existing());
+        var tomorrow = Starred(Due(Today.AddDays(1)));
+        var nextMonth = Starred(Due(Today.AddDays(30)));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([nextMonth, tomorrow, undated], Today, Utc);
 
-        Assert.Equal(task.Id, Assert.Single(plan.Today).TaskId);
+        Assert.Equal([undated.Id, tomorrow.Id, nextMonth.Id], plan.Starred.Select(entry => entry.TaskId));
+        Assert.Empty(plan.Today);
         Assert.Empty(plan.Tomorrow);
         Assert.Empty(plan.Upcoming);
+    }
+
+    [Fact]
+    public void AStarredTaskDueTodayOrEarlierStaysInItsDateSection()
+    {
+        var today = Starred(Due(Today));
+        var overdue = Starred(Due(Today.AddDays(-1)));
+
+        var plan = TodayRule.Plan([today, overdue], Today, Utc);
+
+        Assert.Empty(plan.Starred);
+        Assert.Single(plan.Today);
+        Assert.Single(plan.Overdue);
+    }
+
+    [Fact]
+    public void CompletedOrRecurringStarredTasksAreNotStarred()
+    {
+        var done = Starred(TodoTaskTests.Existing());
+        done.ApplyAll(TodoTask.Decide(done, new CompleteTask(Guid.NewGuid(), User, done.Id), Now));
+        var recurring = Starred(Recurring(RecurrenceRule.Weekly(Today.AddDays(-7), DayOfWeek.Monday)));
+
+        var plan = TodayRule.Plan([done, recurring], Today, Utc);
+
+        Assert.Empty(plan.Starred);
+    }
+
+    [Fact]
+    public void AStarNeverPutsATaskOnTheTodayRule()
+    {
+        Assert.Empty(TodayRule.Select([Starred(TodoTaskTests.Existing())], Today));
     }
 
     [Fact]
@@ -208,6 +241,12 @@ public class DayPlanTests
     {
         var task = TodoTaskTests.Existing();
         task.ApplyAll(TodoTask.Decide(task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, day), Now));
+        return task;
+    }
+
+    static TodoTask Starred(TodoTask task)
+    {
+        task.ApplyAll(TodoTask.Decide(task, new StarTask(Guid.NewGuid(), User, task.Id, true), Now));
         return task;
     }
 

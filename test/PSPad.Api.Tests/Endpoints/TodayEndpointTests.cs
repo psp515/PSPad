@@ -58,27 +58,6 @@ public class TodayEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
-    public async Task AStarredUndatedTaskIsOnToday()
-    {
-        var ct = global::Xunit.TestContext.Current.CancellationToken;
-        await using var factory = new ApiFactory(fixture);
-        var client = factory.ClientFor(Guid.NewGuid().ToString());
-        var me = await client.GetFromJsonAsync<MeResponse>("/api/me", ct);
-        var user = me!.UserId;
-        var taskId = await SeedTask(client, user);
-        await client.PostAsJsonAsync("/api/commands", new[]
-        {
-            Envelope(new StarTask(Guid.NewGuid(), user, taskId, true))
-        }, ct);
-
-        var today = await client.GetFromJsonAsync<TodayEntry[]>("/api/today", ct);
-
-        var entry = Assert.Single(today!);
-        Assert.Equal(taskId, entry.TaskId);
-        Assert.False(entry.Overdue);
-    }
-
-    [Fact]
     public async Task TodayIsReadInTheZoneTheUserHasSet()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;

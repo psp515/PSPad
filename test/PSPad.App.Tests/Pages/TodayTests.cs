@@ -73,7 +73,7 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
-    public void AStarredTaskShowsInTodayWhateverItsDate()
+    public void StarredTasksNotDueYetGetTheirOwnSectionAfterToday()
     {
         var list = NewList("Zakupy");
         var undated = New(list.Id, "Important");
@@ -82,14 +82,28 @@ public class TodayTests : Bunit.TestContext
         var later = Due(list.Id, "Important later", Today.AddDays(1));
         later.ApplyAll(TodoTask.Decide(
             later, new StarTask(Guid.NewGuid(), User, later.Id, true), DateTimeOffset.UnixEpoch));
-        Arrange(list, undated, later);
+        Arrange(list, undated, later, Due(list.Id, "Mleko", Today));
 
         var page = Render<Today>();
 
-        var today = page.Find(".pspad-day-today").TextContent;
-        Assert.Contains("Important", today);
-        Assert.Contains("Important later", today);
+        var starred = page.Find(".pspad-day-starred").TextContent;
+        Assert.Contains("Starred", starred);
+        Assert.Contains("Important", starred);
+        Assert.Contains("Important later", starred);
+        Assert.DoesNotContain("Important", page.Find(".pspad-day-today").TextContent);
         Assert.Empty(page.FindAll(".pspad-day-tomorrow"));
+        Assert.True(page.Markup.IndexOf("pspad-day-today") < page.Markup.IndexOf("pspad-day-starred"));
+    }
+
+    [Fact]
+    public void TheStarredSectionIsAbsentWhenNothingIsStarred()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Mleko", Today));
+
+        var page = Render<Today>();
+
+        Assert.Empty(page.FindAll(".pspad-day-starred"));
     }
 
     [Fact]

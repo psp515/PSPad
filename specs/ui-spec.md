@@ -72,7 +72,7 @@ column-flow — DOM order stays reading order for keyboard and screen-reader
 navigation.
 
 Applied on: `AreaBoard` (list cards), `GoalsPage` (goal cards, active and
-achieved separately), `Today` (overdue, today, tomorrow, goals in progress,
+achieved separately), `Today` (overdue, today, starred, tomorrow, goals in progress,
 completed and upcoming each as their own grid), `InboxPage`, `ListPage` (open and completed separately),
 `SettingsPage` (Account, Time zone, Theme, Sync, Danger zone each their own
 card), and both skeleton components (`RowSkeleton`, `CardSkeleton`).
@@ -118,7 +118,7 @@ A screen nested under another (a list under its area) puts a back
 linking to the parent screen.
 
 **My Day sections.** Top to bottom: **Overdue** (`Color.Error` heading),
-**Today**, **Tomorrow**, **Goals in progress**, then one `MudExpansionPanels`
+**Today**, **Starred**, **Tomorrow**, **Goals in progress**, then one `MudExpansionPanels`
 holding **Completed (N)** and **Upcoming (N)**, both collapsed by default.
 Every section hides when empty, except Today, which says "Nothing due
 today." when Overdue is empty too. Each task is its own outlined
