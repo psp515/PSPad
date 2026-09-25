@@ -1,0 +1,121 @@
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Ordering
+@inject IDocumentStore<Area> Areas
+@inject AppState State
+@inject CommandSender Sender
+@inject IDialogService Dialogs
+@inject NavigationManager Navigation
+
+<DetailPanel Open="@(IsNew || _area is not null)" Title="@(IsNew ? "New area" : "Area")" OnClose="@OnClose"
+             OnSave="@SaveCallback" SaveText="Add area" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
+             OnDelete="@DeleteCallback" DeleteText="Delete area" Disabled="@Disabled">
+    <div class="pa-4">
+        <MudTextField T="string" Class="pspad-area-name-field" Label="Name" Variant="Variant.Outlined"
+                      Value="@(_area?.Name ?? _draftName)" ValueChanged="@NameChangedAsync"
+                      Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
+    </div>
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? AreaId { get; set; }
+
+    [Parameter] public bool IsNew { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    Area? _area;
+    string _draftName = "";
+
+    EventCallback SaveCallback => IsNew ? EventCallback.Factory.Create(this, CreateAsync) : default;
+
+    EventCallback DeleteCallback => _area is not null ? EventCallback.Factory.Create(this, DeleteAsync) : default;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsNew)
+        {
+            _draftName = "";
+        }
+
+        var area = AreaId is null ? null : await Areas.LoadAsync(AreaId.Value, CancellationToken.None);
+        _area = area is null || area.Deleted ? null : area;
+    }
+
+    async Task NameChangedAsync(string name)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_area is null)
+        {
+            _draftName = name;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(name) || name.Trim() == _area.Name)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new RenameArea(Guid.NewGuid(), State.UserId, _area.Id, name.Trim()));
+        _area = await Areas.LoadAsync(_area.Id, CancellationToken.None);
+    }
+
+    async Task AddOnEnterAsync(KeyboardEventArgs args)
+    {
+        if (IsNew && args.Key == "Enter")
+        {
+            await CreateAsync();
+        }
+    }
+
+    async Task CreateAsync()
+    {
+        var name = _draftName.Trim();
+
+        if (Disabled || !IsNew || name.Length == 0)
+        {
+            return;
+        }
+
+        var existing = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
+        var areaId = Guid.NewGuid();
+        await Sender.SendAsync(new CreateArea(
+            Guid.NewGuid(), State.UserId, areaId, name,
+            Positions.Next(existing.Where(area => !area.Deleted).Select(area => area.Position))));
+
+        _draftName = "";
+        Navigation.NavigateTo($"/areas/{areaId}");
+    }
+
+    async Task DeleteAsync()
+    {
+        if (Disabled || _area is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, $"Delete “{_area.Name}”? Its lists stay, without an area." }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete area", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new DeleteArea(Guid.NewGuid(), State.UserId, _area.Id));
+        Navigation.NavigateTo("/");
+    }
+}

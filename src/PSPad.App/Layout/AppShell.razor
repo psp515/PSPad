@@ -10,7 +10,6 @@
 @using PSPad.App.Theme
 @using PSPad.Contracts
 @using PSPad.Module.Tasks.Areas
-@using PSPad.Module.Tasks.Ordering
 @using PSPad.Module.Tasks.Today
 @inject SyncCoordinator Coordinator
 @inject AppState State
@@ -48,14 +47,14 @@
                ClipMode="DrawerClipMode.Never" Class="d-none d-md-flex">
         <NavSidebar Areas="@_areas" AreasLoaded="@_ready" Email="@_email" DisplayName="@_displayName"
                     UserId="@State.UserId" Disabled="@(!_ready)"
-                    OnNewArea="@NewAreaAsync" />
+                    OnNewArea="@NewArea" />
     </MudDrawer>
 
     <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Temporary"
                Elevation="1" ClipMode="DrawerClipMode.Never" Class="d-md-none">
         <NavSidebar Areas="@_areas" AreasLoaded="@_ready" Email="@_email" DisplayName="@_displayName"
                     UserId="@State.UserId" Disabled="@(!_ready)"
-                    OnNewArea="@NewAreaAsync"
+                    OnNewArea="@NewArea"
                     Navigated="@CloseDrawer" />
     </MudDrawer>
 
@@ -74,7 +73,8 @@
         </MudContainer>
     </MudMainContent>
 
-    <TaskDetailPanel TaskId="@_openTask" NewInList="@_newTaskList" OnClose="@CloseTask" Disabled="@(!_ready)" />
+    <TaskDetailPanel TaskId="@_openTask" NewInList="@_newTaskList" OnClose="@ClosePanel" Disabled="@(!_ready)" />
+    <AreaDetailPanel AreaId="@_openArea" IsNew="@_newArea" OnClose="@ClosePanel" Disabled="@(!_ready)" />
 </MudLayout>
 
 @code {
@@ -88,6 +88,8 @@
     IReadOnlyList<Area> _areas = [];
     Guid? _openTask;
     Guid? _newTaskList;
+    Guid? _openArea;
+    bool _newArea;
 
     protected override async Task OnInitializedAsync()
     {
@@ -134,7 +136,7 @@
             await RefreshAccountAsync();
         }
 
-        ReadOpenTask();
+        ReadOpenPanels();
     }
 
     async Task<bool> TakeOwnershipAndReportEmptyAsync(Guid userId)
@@ -243,53 +245,27 @@
         InvokeAsync(StateHasChanged);
     }
 
-    [Inject] IDialogService Dialogs { get; set; } = null!;
-
-    void ReadOpenTask()
+    void ReadOpenPanels()
     {
         _openTask = TaskQuery.From(Navigation.Uri);
         _newTaskList = TaskQuery.NewTaskListFrom(Navigation.Uri);
+        _openArea = AreaQuery.From(Navigation.Uri);
+        _newArea = AreaQuery.IsNew(Navigation.Uri);
     }
 
-    void CloseTask() => Navigation.NavigateTo(TaskQuery.Without(Navigation.Uri));
+    void ClosePanel() => Navigation.NavigateTo(TaskQuery.Without(Navigation.Uri));
 
     void CloseDrawer() => _drawerOpen = false;
 
-    async Task NewAreaAsync()
+    void NewArea()
     {
         _drawerOpen = false;
-
-        var name = await AskForNameAsync("New area", "Area name", "");
-        if (name is null)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new CreateArea(
-            Guid.NewGuid(), State.UserId, Guid.NewGuid(), name,
-            Positions.Next(_areas.Select(area => area.Position))));
-
-        await ReloadAreasAndCountsAsync();
-    }
-
-    async Task<string?> AskForNameAsync(string title, string label, string value)
-    {
-        var parameters = new DialogParameters<NameDialog>
-        {
-            { dialog => dialog.Title, label },
-            { dialog => dialog.Value, value }
-        };
-        var dialog = await Dialogs.ShowAsync<NameDialog>(title, parameters);
-        var result = await dialog.Result;
-
-        return result is null || result.Canceled || result.Data is not string name || name.Length == 0
-            ? null
-            : name;
+        Navigation.NavigateTo(AreaQuery.ForNew(Navigation.Uri));
     }
 
     void OnLocationChanged(object? sender, LocationChangedEventArgs args)
     {
-        ReadOpenTask();
+        ReadOpenPanels();
         InvokeAsync(StateHasChanged);
     }
 

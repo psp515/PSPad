@@ -179,6 +179,15 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    right that asks via `ConfirmDialog` before deleting. In Add the footer
    holds only **Add task**.
 
+**Area detail uses the same shell.** `Layout/AreaDetailPanel.razor`,
+addressed as `?area=new` (sidebar **+ New area**) or `?area={areaId}`
+(the area's **Edit area** FAB item), both via `AreaQuery`. It holds only an
+outlined **Name** field under the header. New: **Add area** on the left of
+the footer (Enter also adds), then the app opens the new area's screen.
+Existing: the name saves when the field commits, no Save; **Delete area**
+on the right asks via `ConfirmDialog`, then goes home. Areas are never
+created or renamed through `NameDialog`.
+
 **Empty states share one component.** A page or board with no items yet
 shows `Components/EmptyState.razor` as the first cell of its grid, sized
 like one card (`MudItem xs="12" sm="6" md="4" xl="3"`): an outlined
@@ -209,7 +218,7 @@ icon reads unambiguously on its own.
 
 | Page | Page-level actions | Result |
 |---|---|---|
-| Area | New list, Rename area, Delete area | FAB Menu |
+| Area | New list, Edit area (→ area panel), Delete area | FAB Menu |
 | Goals | Add goal | plain `MudFab` → `NameDialog` |
 | List | Add task (→ new-task panel), Rename list, Delete list | FAB Menu |
 | Inbox | Capture | plain `MudFab` → `CaptureDialog` |
@@ -315,6 +324,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/welcome` | public, signed-out landing screen |
 | `/authentication/{action}` | OIDC login/logout flow, branded fragments |
 | `?task={taskId}` | task detail overlay, on any of the above |
+| `?area={areaId}`, `?area=new` | area detail overlay, on any of the above |
 
 **Signed-out visitors land on `/welcome`**, not a bare login redirect.
 Sign-out ends the Keycloak session directly rather than only clearing local
