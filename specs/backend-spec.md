@@ -171,6 +171,16 @@ not stated there:
   `TimeZoneInfo.Local` internally.
 - Recurrence stores a rule plus `completedDays`; Pending/Skipped are
   **derived**, never stored.
+- `TodayRule.Plan(tasks, today, zone)` splits the day into Overdue and
+  Today (exactly `Select`'s entries), Starred, Tomorrow, Upcoming (the day after
+  tomorrow through `today + 7`) and Completed (completed on `today` in the
+  user's zone, or today's ticked occurrence). A task's date is its
+  earliest trigger — due date or next unchecked step. A recurring task
+  shows at most once beyond today, as its next unticked occurrence within
+  the week; it is never overdue.
+- Starred holds open, starred, one-off tasks not overdue or due today
+  (undated first, then by date); they are left out of Tomorrow and
+  Upcoming. The star never enters `Select` (`adr/0035`).
 - The rule is tested in three places on purpose: the module (unit), the
   API's Today query (integration), and the client projection (bUnit). A
   change that breaks it should turn three suites red, not one.

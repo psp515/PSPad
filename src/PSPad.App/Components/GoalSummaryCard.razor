@@ -6,7 +6,16 @@
     <MudIcon Icon="@StatusIcon" Color="@StatusColor" Class="flex-shrink-0" />
     <div class="d-flex flex-column flex-grow-1" style="min-width:0">
         <MudText Typo="Typo.subtitle1" Class="pspad-goal-summary-name">@Goal.Name</MudText>
+        @if (InProgress && Goal.DueOn is { } due)
+        {
+            <MudText Typo="Typo.caption" Class="@($"pspad-goal-summary-due {(Overdue ? "" : "pspad-muted")}")"
+                     Color="@(Overdue ? Color.Error : Color.Inherit)">@($"Due {DueDateRow.Describe(due, Today)}")</MudText>
+        }
         <MudText Typo="Typo.body2" Class="pspad-goal-summary-tasks pspad-muted">@TasksText</MudText>
+        @if (InProgress && Total > 0)
+        {
+            <MudProgressLinear Value="@Done" Max="@Total" Color="Color.Primary" Rounded="true" Class="mt-2" />
+        }
     </div>
 </MudPaper>
 
@@ -15,15 +24,34 @@
 
     [Parameter] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
 
+    [Parameter] public DateOnly Today { get; set; }
+
     [Parameter] public EventCallback OnOpen { get; set; }
 
-    bool Achieved => Goal.Status == GoalStatus.Achieved;
+    bool InProgress => Goal.Status == GoalStatus.InProgress;
 
-    string Kind => Achieved ? "achieved" : "not-achieved";
+    bool Overdue => InProgress && Goal.DueOn < Today;
 
-    string StatusIcon => Achieved ? Icons.Material.Outlined.EmojiEvents : Icons.Material.Outlined.HighlightOff;
+    string Kind => Goal.Status switch
+    {
+        GoalStatus.Achieved => "achieved",
+        GoalStatus.NotAchieved => "not-achieved",
+        _ => "in-progress"
+    };
 
-    Color StatusColor => Achieved ? Color.Success : Color.Error;
+    string StatusIcon => Goal.Status switch
+    {
+        GoalStatus.Achieved => Icons.Material.Outlined.EmojiEvents,
+        GoalStatus.NotAchieved => Icons.Material.Outlined.HighlightOff,
+        _ => Icons.Material.Outlined.Flag
+    };
+
+    Color StatusColor => Goal.Status switch
+    {
+        GoalStatus.Achieved => Color.Success,
+        GoalStatus.NotAchieved => Color.Error,
+        _ => Color.Primary
+    };
 
     IReadOnlyList<TodoTask> Counted => [.. Tasks.Where(task => !task.Deleted)];
 

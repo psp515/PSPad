@@ -49,6 +49,7 @@ the old one's status line to point at the new number.
 | [0032](0032-command-triggered-sync-coalesces-overlapping-runs.md) | Every accepted command triggers a sync, and overlapping runs coalesce | Active (refines [0031](0031-every-start-hands-back-its-own-pull.md)'s concurrency contract) | 2026-09-23 | sync, offline, ui, architecture |
 | [0033](0033-one-fab-per-page-action-set.md) | One FAB per page's action set — zero, a plain FAB, or a FAB Menu | Active (amends [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md)) | 2026-09-24 | ui |
 | [0034](0034-account-deletion-bypasses-the-command-pipeline.md) | Account deletion bypasses the command pipeline for a generic cross-collection wipe | Active | 2026-09-24 | identity, persistence, architecture, security |
+| [0035](0035-starred-is-its-own-my-day-section.md) | Starred tasks get their own My Day section, not the Today rule | Active | 2026-09-25 | domain, today, ui |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

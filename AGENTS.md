@@ -352,7 +352,7 @@ client-side by typing the account's own email rather than a password) is
 
 - Goals **global**, not per area — "new eating habit" spans areas
 - Priority: fixed four — none, low, medium, high
-- Star means **important only**. Sorts up. Never puts task on Today. Dates alone drive Today
+- Star means **important only**. Sorts up. Never puts task on Today. Dates alone drive Today; My Day lists starred tasks not yet due in their own Starred section (`adr/0035`)
 - Recurrence in slice 1, forced by the never-overdue rule
 - Develop on the host, deploy in containers. No dev container: each deployable gets its own `Dockerfile` next to its `.csproj`, built with the repo root as context
 - Offline-first PWA, which killed Blazor Server

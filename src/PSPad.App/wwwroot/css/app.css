@@ -299,6 +299,10 @@ h1[tabindex="-1"]:focus {
     border-left-color: var(--mud-palette-success) !important;
 }
 
+.pspad-goal-summary-in-progress {
+    border-left-color: var(--mud-palette-primary) !important;
+}
+
 .pspad-goal-summary-not-achieved {
     border-left-color: var(--mud-palette-error) !important;
 }
