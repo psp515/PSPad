@@ -21,37 +21,36 @@ public class GoalSummaryCardTests : Bunit.TestContext
 
         var card = Render<GoalSummaryCard>(parameters => parameters
             .Add(p => p.Goal, goal)
-            .Add(p => p.Today, Today)
+            
             .Add(p => p.Tasks, [NewTask("Buy shoes", done: true), NewTask("Train", done: true), NewTask("Rest")]));
 
         Assert.Contains("Run a marathon", card.Find(".pspad-goal-summary-name").TextContent);
         Assert.Contains("2 of 3 tasks done", card.Find(".pspad-goal-summary-tasks").TextContent);
         Assert.Contains("pspad-goal-summary-achieved", card.Find(".pspad-goal-summary").ClassName);
-        card.Find(".mud-progress-linear");
-    }
-
-    [Fact]
-    public void ANotAchievedGoalWithNoTasksSaysSoAndShowsNoBar()
-    {
-        AppTestHost.Arrange(this, User, Today);
-        var goal = NewGoal("Learn Polish", GoalStatus.NotAchieved);
-
-        var card = Render<GoalSummaryCard>(parameters => parameters.Add(p => p.Goal, goal).Add(p => p.Today, Today));
-
-        Assert.Contains("No tasks linked", card.Markup);
-        Assert.Contains("pspad-goal-summary-not-achieved", card.Find(".pspad-goal-summary").ClassName);
         Assert.Empty(card.FindAll(".mud-progress-linear"));
     }
 
     [Fact]
-    public void ItShowsTheDueDate()
+    public void ANotAchievedGoalWithNoTasksSaysSo()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var goal = NewGoal("Learn Polish", GoalStatus.NotAchieved);
+
+        var card = Render<GoalSummaryCard>(parameters => parameters.Add(p => p.Goal, goal));
+
+        Assert.Contains("No tasks linked", card.Markup);
+        Assert.Contains("pspad-goal-summary-not-achieved", card.Find(".pspad-goal-summary").ClassName);
+    }
+
+    [Fact]
+    public void ASummaryLeavesTheDueDateOut()
     {
         AppTestHost.Arrange(this, User, Today);
         var goal = NewGoal("Learn Polish", GoalStatus.NotAchieved, Today.AddDays(1));
 
-        var card = Render<GoalSummaryCard>(parameters => parameters.Add(p => p.Goal, goal).Add(p => p.Today, Today));
+        var card = Render<GoalSummaryCard>(parameters => parameters.Add(p => p.Goal, goal));
 
-        Assert.Contains("Due Tomorrow", card.Find(".pspad-goal-summary-due").TextContent);
+        Assert.DoesNotContain("Due", card.Markup);
     }
 
     [Fact]

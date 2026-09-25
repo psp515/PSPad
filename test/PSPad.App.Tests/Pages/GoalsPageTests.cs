@@ -223,6 +223,18 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ACardsDueDateSitsOnItsOwnLineUnderTheName()
+    {
+        Arrange(NewGoal("Ship PSPad v1", dueOn: new DateOnly(2026, 9, 27)));
+
+        var page = Render<GoalsPage>();
+        var name = page.Find(".pspad-goal-name");
+
+        Assert.Same(name.ParentElement, page.Find(".pspad-goal-due").ParentElement);
+        Assert.Contains("flex-column", name.ParentElement!.ClassName);
+    }
+
+    [Fact]
     public void AnOverdueGoalShowsItsDueDateInTheErrorColour()
     {
         Arrange(NewGoal("Eat healthier", dueOn: new DateOnly(2026, 9, 1)));
@@ -230,7 +242,7 @@ public class GoalsPageTests : Bunit.TestContext
         var page = Render<GoalsPage>();
         var due = page.Find(".pspad-goal-due");
 
-        Assert.Contains("Tue, 1 Sep", due.TextContent);
+        Assert.Contains("Due Tue, 1 Sep", due.TextContent);
         Assert.Contains("mud-error-text", due.ClassName);
     }
 
