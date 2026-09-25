@@ -67,6 +67,19 @@ public class DayPlanTests
     }
 
     [Fact]
+    public void AStarredTaskDueTomorrowIsInTodayNotTomorrow()
+    {
+        var task = Due(Today.AddDays(1));
+        task.ApplyAll(TodoTask.Decide(task, new StarTask(Guid.NewGuid(), User, task.Id, true), Now));
+
+        var plan = TodayRule.Plan([task], Today, Utc);
+
+        Assert.Equal(task.Id, Assert.Single(plan.Today).TaskId);
+        Assert.Empty(plan.Tomorrow);
+        Assert.Empty(plan.Upcoming);
+    }
+
+    [Fact]
     public void AnUndatedTaskIsInNoSection()
     {
         var plan = TodayRule.Plan([TodoTaskTests.Existing()], Today, Utc);

@@ -178,6 +178,9 @@ not stated there:
   earliest trigger — due date or next unchecked step. A recurring task
   shows at most once beyond today, as its next unticked occurrence within
   the week; it is never overdue.
+- A starred, open, one-off task is on Today whatever its date — undated or
+  due later — and so never in Tomorrow or Upcoming (`adr/0035`). It is
+  overdue only when its own date has passed.
 - The rule is tested in three places on purpose: the module (unit), the
   API's Today query (integration), and the client projection (bUnit). A
   change that breaks it should turn three suites red, not one.

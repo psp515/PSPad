@@ -53,7 +53,7 @@ push reminders, thought of day, list types beyond plain.
 ### Today rule
 
 Task on Today when: due date today or earlier, OR next unchecked step due today
-or earlier. Earlier = overdue, pinned top. "Today" = today in **user's time
+or earlier, OR it is starred and not recurring (`adr/0035`). Earlier = overdue, pinned top. "Today" = today in **user's time
 zone**, stored on `User`. Never machine-local time.
 
 **Recurring tasks never overdue.** Only today's occurrence shows, only while
@@ -352,7 +352,7 @@ client-side by typing the account's own email rather than a password) is
 
 - Goals **global**, not per area — "new eating habit" spans areas
 - Priority: fixed four — none, low, medium, high
-- Star means **important only**. Sorts up. Never puts task on Today. Dates alone drive Today
+- Star means **important**. Sorts up, and puts an open one-off task on Today whatever its date (`adr/0035`). Recurring tasks follow their rule only
 - Recurrence in slice 1, forced by the never-overdue rule
 - Develop on the host, deploy in containers. No dev container: each deployable gets its own `Dockerfile` next to its `.csproj`, built with the repo root as context
 - Offline-first PWA, which killed Blazor Server

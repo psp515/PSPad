@@ -73,6 +73,26 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AStarredTaskShowsInTodayWhateverItsDate()
+    {
+        var list = NewList("Zakupy");
+        var undated = New(list.Id, "Important");
+        undated.ApplyAll(TodoTask.Decide(
+            undated, new StarTask(Guid.NewGuid(), User, undated.Id, true), DateTimeOffset.UnixEpoch));
+        var later = Due(list.Id, "Important later", Today.AddDays(1));
+        later.ApplyAll(TodoTask.Decide(
+            later, new StarTask(Guid.NewGuid(), User, later.Id, true), DateTimeOffset.UnixEpoch));
+        Arrange(list, undated, later);
+
+        var page = Render<Today>();
+
+        var today = page.Find(".pspad-day-today").TextContent;
+        Assert.Contains("Important", today);
+        Assert.Contains("Important later", today);
+        Assert.Empty(page.FindAll(".pspad-day-tomorrow"));
+    }
+
+    [Fact]
     public void TheTomorrowSectionIsAbsentWhenNothingIsDueTomorrow()
     {
         var list = NewList("Zakupy");

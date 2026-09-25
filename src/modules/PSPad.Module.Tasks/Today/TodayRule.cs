@@ -75,7 +75,7 @@ public static class TodayRule
 
     static DateOnly? Upcoming(TodoTask task, DateOnly today)
     {
-        if (task.CompletedAt is not null)
+        if (task.CompletedAt is not null || task.Starred)
         {
             return null;
         }
@@ -99,12 +99,12 @@ public static class TodayRule
         }
 
         var trigger = EarliestTrigger(task);
-        if (trigger is null || trigger > today)
+        if (trigger <= today)
         {
-            return null;
+            return Entry(task, overdue: trigger < today, dueOn: trigger);
         }
 
-        return Entry(task, overdue: trigger < today, dueOn: trigger);
+        return task.Starred ? Entry(task, overdue: false, dueOn: trigger) : null;
     }
 
     static DateOnly? EarliestTrigger(TodoTask task)
