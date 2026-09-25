@@ -27,7 +27,7 @@ else
     {
         <section class="pspad-day-overdue mb-4">
             <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">Overdue</MudText>
-            <MudPaper Outlined="true">@Rows(_plan.Overdue)</MudPaper>
+            @Rows(_plan.Overdue)
         </section>
     }
 
@@ -35,16 +35,16 @@ else
     {
         <section class="pspad-day-today mb-4">
             <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-2">Today</MudText>
-            <MudPaper Outlined="true">
-                @if (_plan.Today.Count > 0)
-                {
-                    @Rows(_plan.Today)
-                }
-                else
-                {
+            @if (_plan.Today.Count > 0)
+            {
+                @Rows(_plan.Today)
+            }
+            else
+            {
+                <MudPaper Outlined="true">
                     <MudText Typo="Typo.body2" Class="pa-4">Nothing due today.</MudText>
-                }
-            </MudPaper>
+                </MudPaper>
+            }
         </section>
     }
 
@@ -52,7 +52,7 @@ else
     {
         <section class="pspad-day-tomorrow mb-4">
             <MudText Typo="Typo.subtitle2" Class="mb-2">Tomorrow</MudText>
-            <MudPaper Outlined="true">@Rows(_plan.Tomorrow)</MudPaper>
+            @Rows(_plan.Tomorrow)
         </section>
     }
 
@@ -146,8 +146,10 @@ else
                 var task = _byId[entry.TaskId];
                 var day = DayOf(entry);
                 <MudItem xs="12" sm="6" md="4" xl="3">
-                    <TaskRow Task="@task" Today="@day" ListName="@NameOf(task.ListId)"
-                             OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />
+                    <MudPaper Outlined="true" Class="pspad-day-task">
+                        <TaskRow Task="@task" Today="@day" ListName="@NameOf(task.ListId)"
+                                 OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />
+                    </MudPaper>
                 </MudItem>
             }
         </MudGrid>;

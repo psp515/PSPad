@@ -278,6 +278,17 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
+    public void EachTaskIsItsOwnCard()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Mleko", Today), Due(list.Id, "Chleb", Today), Due(list.Id, "Jutro", Today.AddDays(1)));
+
+        var page = Render<Today>();
+
+        Assert.Equal(3, page.FindAll(".mud-grid-item > .pspad-day-task .pspad-task-name").Count);
+    }
+
+    [Fact]
     public void ItLaysTodaysTasksOutInTheGrid()
     {
         var list = NewList("Zakupy");

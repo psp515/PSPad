@@ -121,7 +121,9 @@ linking to the parent screen.
 **Today**, **Tomorrow**, **Goals in progress**, then one `MudExpansionPanels`
 holding **Completed (N)** and **Upcoming (N)**, both collapsed by default.
 Every section hides when empty, except Today, which says "Nothing due
-today." when Overdue is empty too. Upcoming groups its rows under a muted
+today." when Overdue is empty too. Each task is its own outlined
+`MudPaper` card in a `MudItem`, sized to its content like the goal cards,
+never rows inside one shared paper. Upcoming groups its rows under a muted
 caption per day (`DueDateRow.Describe`). Membership comes from
 `TodayRule.Plan`, never from the page. A recurring row ahead of today
 ticks the occurrence on its own day, not today's. Goals in progress are
