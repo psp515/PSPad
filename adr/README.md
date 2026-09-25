@@ -48,11 +48,18 @@ the old one's status line to point at the new number.
 | [0031](0031-every-start-hands-back-its-own-pull.md) | Every Start hands back its own pull, because the shell mounts once signed out and once signed in | Active (amends [0030](0030-the-shell-waits-for-the-first-pull-on-a-device-holding-nothing.md); concurrency contract refined by [0032](0032-command-triggered-sync-coalesces-overlapping-runs.md)) | 2026-09-23 | sync, identity, ui, offline |
 | [0032](0032-command-triggered-sync-coalesces-overlapping-runs.md) | Every accepted command triggers a sync, and overlapping runs coalesce | Active (refines [0031](0031-every-start-hands-back-its-own-pull.md)'s concurrency contract) | 2026-09-23 | sync, offline, ui, architecture |
 | [0033](0033-one-fab-per-page-action-set.md) | One FAB per page's action set — zero, a plain FAB, or a FAB Menu | Active (amends [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md)) | 2026-09-24 | ui |
+<<<<<<< HEAD
 | [0034](0034-account-deletion-bypasses-the-command-pipeline.md) | Account deletion bypasses the command pipeline for a generic cross-collection wipe | Active | 2026-09-24 | identity, persistence, architecture, security |
 | [0035](0035-starred-is-its-own-my-day-section.md) | Starred tasks get their own My Day section, not the Today rule | Active | 2026-09-25 | domain, today, ui |
 | [0036](0036-domain-events-dispatched-after-commit.md) | Domain events are dispatched asynchronously after commit and replayed from a marker on startup | Active | 2026-09-24 | architecture, events, persistence |
 | [0037](0037-statistics-owns-denormalised-records.md) | Statistics owns denormalized read-only records projected from the log, and domain events carry what consumers need | Active | 2026-09-24 | architecture, persistence, analytics |
 | [0038](0038-history-renamed-to-statistics.md) | History renamed to Statistics | Active (amends [0020](0020-history-sidebar-row-and-settings-screen.md)) | 2026-09-24 | ui, architecture, domain |
+=======
+| [0034](0034-domain-events-dispatched-after-commit.md) | Domain events are dispatched asynchronously after commit and replayed from a marker on startup | Active | 2026-09-24 | architecture, events, persistence |
+| [0035](0035-statistics-owns-denormalised-records.md) | Statistics owns denormalized read-only records projected from the log, and domain events carry what consumers need | Active | 2026-09-24 | architecture, persistence, analytics |
+| [0036](0036-history-renamed-to-statistics.md) | History renamed to Statistics | Active (amends [0020](0020-history-sidebar-row-and-settings-screen.md)) | 2026-09-24 | ui, architecture, domain |
+| [0037](0037-inbox-backlog-is-its-own-statistics-projection.md) | The Inbox backlog is its own projection, its own collection, and a running level seeded with an opening set | Active (extends [0035](0035-statistics-owns-denormalised-records.md) to a fourth collection) | 2026-09-25 | architecture, persistence, analytics, ui |
+>>>>>>> f4a5901 (docs: record the Inbox-backlog decision and the heatmap contract)
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

@@ -142,6 +142,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
 | `statistics_records` | the statistics feed and every chart | `_id` = the event's `seq`, `userId`, `at`, `kind`, `taskId`, `taskName`, `listId`, `goalId`, `dueOn`, `occurrenceDay`, `completionNumber` |
+| `statistics_inbox_records` | the Inbox-backlog heatmap | `_id` = the event's `seq`, `userId`, `at`, `kind`, `itemId` |
 | `statistics_labels` | area, list and goal names for the feed | `_id` = the aggregate's id, `userId`, `kind`, `name`, `deleted` |
 | `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq` |
 
@@ -166,6 +167,8 @@ transaction; the returned value stamps both the event and the aggregate's
 - `statistics_records`: `{userId: 1, _id: -1}` (the feed page),
   `{userId: 1, kind: 1, at: 1}` (the charts' window),
   `{userId: 1, taskId: 1, kind: 1}` (the completion counter)
+- `statistics_inbox_records`: `{userId: 1, at: 1}` (the backlog window, read
+  both before and inside it)
 - `statistics_labels`: `{userId: 1}`
 
 ---
@@ -414,8 +417,8 @@ keycloak behind a reverse proxy terminating TLS.
 ## 9. Statistics
 
 `PSPad.Module.Statistics` is a bounded context, not a view over `events`.
-It owns three collections (`statistics_records`, `statistics_labels`,
-`statistics_state`, all in §3) and writes them only from domain events —
+It owns four collections (`statistics_records`, `statistics_inbox_records`,
+`statistics_labels`, `statistics_state`, all in §3) and writes them only from domain events —
 there are no Statistics commands and no write endpoint. Current task state
 (`TodoTask`) is never read to decide what a chart shows; only
 `statistics_records` is.
@@ -433,7 +436,8 @@ the channel. Before draining anything, it resolves `IDomainEventReplay` in
 its own DI scope and calls `CatchUpAsync`, which reads
 `statistics_state.lastProcessedSeq`, replays `events` forward from there in
 batches of 500 through every registered `IDomainEventHandler`
-(`StatisticsRecordProjection`, `StatisticsLabelProjection`), and advances
+(`StatisticsRecordProjection`, `StatisticsLabelProjection`,
+`InboxRecordProjection`), and advances
 the marker after each batch. Only after replay finishes does the pump start
 draining live envelopes, resolving a fresh scope and every handler per
 batch. A handler that throws is caught and logged — one bad handler cannot
@@ -492,6 +496,31 @@ renamed task never rewrites what a past day's chart showed:
   ordering by `seq` alone would apply it to the wrong day's running total.
 - Work by goal, ranked, with an explicit "No goal" bar.
 - A consistency heatmap — one cell per day, shaded by completion count.
+- An Inbox-backlog heatmap — one cell per week, shaded by how many captured
+  items were **still in the Inbox when that week ended** (the current week is
+  measured at today, not at its Saturday). Weeks start Sunday, matching the
+  consistency grid's rows. This is a running level, not a per-week tally: an
+  item captured in January and still waiting in September weighs on every week
+  between, so `InboxBacklog` takes an `IReadOnlySet<Guid> heldAtStart` exactly
+  as `Outstanding` takes `openAtStart` — a count could not say *which* items
+  were already waiting. Per-item state, never a signed sum: `Captured` adds
+  the item id, `Organised` and `Discarded` remove it, and removing an id that
+  was never captured is a no-op rather than a negative. Records are ordered by
+  `(bucketed day, Id)` for the same offline-commit reason `Outstanding` is.
+
+**The Inbox backlog is its own projection and its own collection.**
+`InboxRecordProjection` maps `InboxItemCaptured`/`InboxItemOrganised`/
+`InboxItemDiscarded` to an `InboxRecord` (`_id` = the event's `seq`, so replay
+upserts) in `statistics_inbox_records`, read through `IInboxRecordStore`
+(`SinceAsync`, `HeldItemIdsBeforeAsync`). It is deliberately not a
+`StatisticsRecord`: that record is task-shaped (`TaskId`, `TaskName`,
+`ListId`, `GoalId`, `CompletionNumber`, `ITaskSnapshotSource` status
+resolution) and an inbox item is not a task, so folding captures into it would
+put rows with no task in the record feed and force every existing chart's kind
+filter to be re-audited (`adr/0037`). `StatisticsOverviewReader` reads both
+inbox halves with the **same instant** it passes to `SinceAsync` and
+`OpenTaskIdsBeforeAsync`, so no record is both charted and in the opening
+balance.
 
 **Cross-module read.** Current task status for the feed's `CurrentStatus`
 column comes through a port Statistics declares and `PSPad.Api` implements:

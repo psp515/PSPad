@@ -32,7 +32,8 @@ substitute for a component that already exists.
 | A loading placeholder | `MudSkeleton`, wrapped in `MudPaper` where the real content has a border | an empty `<div>` |
 | Vertical/horizontal flex spacing | `MudStack`, or `d-flex`/`gap-*` utility classes | inline `style` margins |
 | A chart | `MudChart` | a third-party charting library |
-| A calendar-style consistency heatmap | a custom `pspad-heatmap` CSS grid | `MudChart`'s `ChartType.HeatMap` |
+| A calendar-style heatmap (consistency, Inbox backlog) | a custom `pspad-heatmap` CSS grid | `MudChart`'s `ChartType.HeatMap` |
+| A section that opens on click (the record feed) | `MudExpansionPanels` + `MudExpansionPanel` | a hand-rolled show/hide flag |
 
 Before adding a new `pspad-*` class, check this table first. If nothing
 fits, the class is legitimate — but it means the styling is specific to
@@ -46,15 +47,30 @@ reliable hook (`pspad-sign-out`, `pspad-account-card`, `pspad-delete-account`,
 apparently-unstyled `pspad-*` class without checking whether a test depends
 on it first.
 
-**The one exception on record: the statistics screen's consistency
-heatmap** (`Statistics/ConsistencyHeatmap.razor`, `.pspad-heatmap` /
-`.pspad-heatmap-cell` in `wwwroot/css/app.css`). MudBlazor ships
+**The one exception on record: the statistics screen's two heatmaps**
+(`Statistics/ConsistencyHeatmap.razor` — one cell per day — and
+`Statistics/InboxBacklogHeatmap.razor` — one cell per week — over
+`.pspad-heatmap*` in `wwwroot/css/app.css`). MudBlazor ships
 `ChartType.HeatMap`, but it is a generic matrix chart — it gives neither
 day-of-week calendar alignment nor a per-cell `title`/`aria-label`, and
 without those the grid is a wall of coloured squares a screen reader cannot
 read. A hand-rolled CSS grid earns its place here for exactly the reason
 the table above says a custom class ever can: MudBlazor genuinely has no
 component that does this.
+
+Both grids scale to the panel they sit in rather than hugging its corner:
+the column track is `minmax(11px, 1fr)` with a per-cell cap in the grid's
+`max-width`, so 5 week columns at the 30-day range grow to roughly 34px
+cells while 53 columns at 365 days stay legible and hand the overflow to
+`.pspad-heatmap-scroll`. Each carries month labels along the top, the daily
+grid adds Mon/Wed/Fri down the side, and each ends in a `HeatmapKey` — the
+conventional five-step ramp plus one sentence saying what darker means.
+`HeatmapLevel.Of(count, maximum)` is the shared five-step scale; a key's
+swatches deliberately do not carry the `pspad-heatmap-cell` class, so they
+are never mistaken for data cells. Every data cell keeps its
+`title`/`aria-label` (`2026-09-24: 3 completed`, `week of 2026-09-21: 4
+still in the Inbox`), which is the accessibility reason the custom grid
+exists at all.
 
 ---
 
@@ -271,8 +287,15 @@ see above.
 data over plain REST, not the replica** — no IndexedDB, no outbox, no
 command pipeline. It is its own layout, not the §2 card grid: a `MudGrid`
 of tiles (`sm="3" xs="6"`), four charts (`md="6" xs="12"`), then the
-consistency heatmap and the record feed each full width. The last
-successful payload is cached in `localStorage` keyed by range, rendered
+the two heatmaps and the record feed each full width. The feed is a
+`MudExpansionPanel` ("Everything that happened") **collapsed by default** —
+it is the raw log, not the summary someone opens the screen for — and the
+page holds its loaded pages in its own state, so opening, paging with *load
+older* and collapsing again never loses a record or breaks pagination. The last
+successful payload is cached in `localStorage` keyed by payload shape and
+range (`pspad.statistics.2.{days}` — the shape version is what stops an
+overview cached before a new series existed from rendering as a null
+series), rendered
 immediately on load, then refreshed behind it — an *updated
 &lt;relative time&gt;* stamp and an offline banner cover the gap when a
 refresh fails. That cache is user data: it purges on the same
@@ -378,6 +401,7 @@ the wrong theme.
 **Charts.** `MudChart` (bundled with MudBlazor, no extra dependency) takes
 the sage palette for free — the statistics screen's four charts (daily
 completions, tasks opened, outstanding-open, work by goal) are the example.
+The two heatmaps are not `MudChart`s — see §1.
 
 ---
 
@@ -401,7 +425,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/areas/{areaId}` | area screen — list cards |
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |
-| `/statistics` | Statistics — tiles, four charts, consistency heatmap, record feed |
+| `/statistics` | Statistics — tiles, four charts, consistency and Inbox-backlog heatmaps, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
 | `/settings` | Settings (account + sign-out, time zone, theme, sync status, delete account) |
 | `/app-info` | version, license, docs/repo links |
