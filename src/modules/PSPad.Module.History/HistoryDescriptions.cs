@@ -35,8 +35,6 @@ public static partial class HistoryDescriptions
         ["GoalRenamed"] = "Renamed a goal",
         ["GoalAchieved"] = "Achieved a goal",
         ["GoalReopened"] = "Reopened a goal",
-        ["GoalStatusSet"] = "Changed a goal's status",
-        ["GoalDueDateSet"] = "Changed a goal's due date",
         ["GoalDeleted"] = "Deleted a goal",
         ["InboxCreated"] = "Created the inbox",
         ["InboxItemCaptured"] = "Captured a thought",

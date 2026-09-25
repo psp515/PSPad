@@ -125,14 +125,16 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ACardHasNoDefaultElevationShadowSoItDoesNotDoubleUpWithTheGridHairline()
+    public void ACardIsOutlinedWithNoShadowLikeAListCard()
     {
         Arrange(NewGoal("Eat healthier"));
 
         var page = Render<GoalsPage>();
         var card = page.FindComponents<GoalCard>().Single();
 
-        Assert.Contains("mud-elevation-0", card.Find(".mud-paper").ClassList);
+        var paper = card.Find(".mud-paper").ClassList;
+        Assert.Contains("mud-paper-outlined", paper);
+        Assert.DoesNotContain(paper, name => name.StartsWith("mud-elevation-") && name != "mud-elevation-0");
     }
 
     [Fact]
@@ -174,21 +176,20 @@ public class GoalsPageTests : Bunit.TestContext
 
         var stored = await replica.LoadAsync<Goal>(goal.Id);
         Assert.True(stored!.Achieved);
-        Assert.Contains("Achieved (1)", page.Markup);
+        page.WaitForAssertion(() => Assert.Contains("Eat healthier",
+            page.Find(".pspad-goals-achieved .pspad-goal-summary").TextContent));
     }
 
     [Fact]
-    public async Task ReopeningAnAchievedGoalMovesItBack()
+    public void AnInProgressCardsMenuOffersTheTwoClosingStatuses()
     {
-        var goal = NewGoal("Eat healthier", achieved: true);
-        var replica = Arrange(goal);
+        Arrange(NewGoal("Eat healthier"));
 
         var page = Render(BuildGoalsPageWithPopovers());
         page.Find(".pspad-goal-menu button").Click();
-        page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Mark in progress").Click();
 
-        var stored = await replica.LoadAsync<Goal>(goal.Id);
-        Assert.False(stored!.Achieved);
+        var options = page.FindAll(".pspad-goal-status-option").Select(item => item.TextContent.Trim());
+        Assert.Equal(["Mark achieved", "Mark not achieved"], options);
     }
 
     [Fact]
@@ -203,7 +204,8 @@ public class GoalsPageTests : Bunit.TestContext
 
         var stored = await replica.LoadAsync<Goal>(goal.Id);
         Assert.Equal(GoalStatus.NotAchieved, stored!.Status);
-        page.WaitForAssertion(() => Assert.Contains("Not achieved (1)", page.Markup));
+        page.WaitForAssertion(() => Assert.Contains("Eat healthier",
+            page.Find(".pspad-goals-not-achieved .pspad-goal-summary").TextContent));
     }
 
     [Fact]
@@ -230,6 +232,39 @@ public class GoalsPageTests : Bunit.TestContext
 
         Assert.Contains("Tue, 1 Sep", due.TextContent);
         Assert.Contains("mud-error-text", due.ClassName);
+    }
+
+    [Fact]
+    public void ClosedGoalsShowAsSummariesInTheirOwnSectionsNotAsCards()
+    {
+        var active = NewGoal("Eat healthier");
+        var achieved = NewGoal("Run a marathon", achieved: true);
+        var list = NewList("Health");
+        Arrange(active, achieved, list, NewTask(list.Id, "Buy shoes", achieved.Id));
+
+        var page = Render<GoalsPage>();
+
+        Assert.Single(page.FindComponents<GoalCard>());
+        var summary = page.Find(".pspad-goals-achieved .pspad-goal-summary");
+        Assert.Contains("Run a marathon", summary.TextContent);
+        Assert.Contains("0 of 1 task done", summary.TextContent);
+        Assert.Contains("1", page.Find(".pspad-goals-achieved .pspad-goals-section-count").TextContent);
+        Assert.Empty(page.FindAll(".pspad-goals-not-achieved"));
+        Assert.Empty(page.FindAll(".mud-expand-panel"));
+    }
+
+    [Fact]
+    public void ClickingASummaryOpensTheGoalPanel()
+    {
+        var achieved = NewGoal("Run a marathon", achieved: true);
+        Arrange(achieved);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/goals");
+
+        var page = Render<GoalsPage>();
+        page.Find(".pspad-goal-summary").Click();
+
+        Assert.EndsWith($"/goals?goal={achieved.Id}", navigation.Uri);
     }
 
     [Fact]

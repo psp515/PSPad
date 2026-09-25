@@ -189,8 +189,15 @@ under the header. A goal adds a **Status** `MudSelect` (In progress /
 Achieved / Not achieved, existing goals only) and a **Due** `DueDateRow`
 (in add mode too). The Goals page shows in-progress goals as cards ordered
 by due date, undated last, with the due date on the card in `Color.Error`
-once it has passed. Achieved and Not achieved goals go in their own
-collapsed sections. A card's `⋯` menu offers the other two statuses.
+once it has passed. A card's `⋯` menu offers the two closing statuses.
+- **Sections:** Achieved and Not achieved goals get their own always-visible
+  sections below. Each section has a heading (status icon, `Typo.h6` title,
+  count chip), and an "In progress" heading appears once any goal is closed.
+- **Summaries:** closed goals render as `GoalSummaryCard`, not `GoalCard`.
+  It is an outlined paper with a status-coloured left accent (success or
+  error) and the status icon. It shows the name, "N of M tasks done" with a
+  `MudProgressLinear`, and the due date. The whole summary opens the goal
+  panel.
 - New: **Add area** / **Add goal** sits on the left of the footer, and
   Enter also adds. A new area then opens its screen; a new goal closes the
   panel.

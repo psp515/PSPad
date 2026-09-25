@@ -286,3 +286,21 @@ h1[tabindex="-1"]:focus {
     height: 20px;
     font-size: var(--mud-typography-body2-size);
 }
+
+.pspad-goal-summary {
+    cursor: pointer;
+    border-left-width: 4px !important;
+}
+
+.pspad-goal-summary-achieved {
+    border-left-color: var(--mud-palette-success) !important;
+}
+
+.pspad-goal-summary-not-achieved {
+    border-left-color: var(--mud-palette-error) !important;
+}
+
+.pspad-goal-summary:hover,
+.pspad-goal-summary:focus-visible {
+    background-color: var(--mud-palette-action-default-hover);
+}
