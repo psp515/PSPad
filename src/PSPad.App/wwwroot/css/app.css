@@ -209,3 +209,80 @@ h1[tabindex="-1"]:focus {
 .pspad-welcome-button:hover {
     filter: brightness(1.08);
 }
+
+.pspad-empty-state {
+    border-style: dashed !important;
+    border-width: 2px !important;
+}
+
+.pspad-empty-state-clickable {
+    cursor: pointer;
+}
+
+.pspad-empty-state-clickable:hover,
+.pspad-empty-state-clickable:focus-visible {
+    border-color: var(--mud-palette-primary) !important;
+}
+
+.pspad-property-activator {
+    text-transform: none !important;
+    font-weight: 400 !important;
+    padding: 10px 12px !important;
+}
+
+.pspad-property-activator .mud-button-label {
+    justify-content: flex-start;
+}
+
+.pspad-property-label {
+    min-width: 72px;
+    text-align: left;
+}
+
+.pspad-property-value {
+    text-align: left;
+}
+
+.pspad-muted {
+    color: var(--mud-palette-text-secondary) !important;
+}
+
+.pspad-step {
+    min-height: 44px;
+    padding: 0 4px;
+    border-radius: 6px;
+}
+
+.pspad-step:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.pspad-step .mud-checkbox {
+    margin: 0;
+}
+
+.pspad-step-lead {
+    display: inline-flex;
+    justify-content: center;
+    width: 44px;
+    flex-shrink: 0;
+}
+
+.pspad-step-remove {
+    opacity: 0.55;
+}
+
+.pspad-step:hover .pspad-step-remove,
+.pspad-step-remove:focus-visible {
+    opacity: 1;
+}
+
+.pspad-step-add .mud-input {
+    margin-top: 0 !important;
+}
+
+.pspad-step-add input {
+    padding: 0 !important;
+    height: 20px;
+    font-size: var(--mud-typography-body2-size);
+}

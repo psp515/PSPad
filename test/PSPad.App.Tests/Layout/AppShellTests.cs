@@ -136,6 +136,21 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ANewTaskQueryOpensTheTaskPanelToAddIntoThatList()
+    {
+        Arrange();
+        var listId = Guid.NewGuid();
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"lists/{listId}?task=new&list={listId}");
+
+        var shell = Render<AppShell>();
+
+        var panel = shell.FindComponent<TaskDetailPanel>().Instance;
+        Assert.Null(panel.TaskId);
+        Assert.Equal(listId, panel.NewInList);
+    }
+
+    [Fact]
     public void ItTakesTheEmailFromApiMeRatherThanTheClaim()
     {
         Arrange(displayName: "Ada Lovelace", email: "ada@example.com", emailClaim: null);

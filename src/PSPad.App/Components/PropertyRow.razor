@@ -1,0 +1,51 @@
+<div class="@($"pspad-property-row d-flex align-center {Class}")">
+    <MudMenu Class="flex-grow-1" FullWidth="true" Dense="true" Disabled="@Disabled"
+             AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+        <ActivatorContent Context="menu">
+            <MudButton Class="pspad-property-activator" FullWidth="true" Disabled="@Disabled"
+                       Variant="Variant.Text" Color="Color.Default" OnClick="@(args => menu.ToggleAsync(args))">
+                <MudIcon Icon="@Icon" Size="Size.Small" Class="mr-3" />
+                <MudText Typo="Typo.body2" Class="pspad-property-label">@Label</MudText>
+                @if (ValueIcon is not null)
+                {
+                    <MudIcon Icon="@ValueIcon" Size="Size.Small" Color="@ValueColor" Class="mr-1" />
+                }
+                <MudText Typo="Typo.body2" Class="@($"pspad-property-value {(HasValue ? "" : "pspad-muted")}")"
+                         Color="@(HasValue ? ValueColor : Color.Inherit)">
+                    @Value
+                </MudText>
+            </MudButton>
+        </ActivatorContent>
+        <ChildContent>
+            @ChildContent
+        </ChildContent>
+    </MudMenu>
+
+    @if (OnClear.HasDelegate && HasValue && !Disabled)
+    {
+        <MudIconButton Class="pspad-property-clear" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                       aria-label="@($"Clear {Label.ToLowerInvariant()}")" OnClick="@OnClear" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Icon { get; set; } = "";
+
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    [Parameter] public string Value { get; set; } = "";
+
+    [Parameter] public bool HasValue { get; set; } = true;
+
+    [Parameter] public string? ValueIcon { get; set; }
+
+    [Parameter] public Color ValueColor { get; set; } = Color.Default;
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClear { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+}

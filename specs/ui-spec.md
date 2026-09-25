@@ -113,6 +113,9 @@ message — a screen must never show an empty state it has not verified.
 
 **Title pattern.** A page's title is `<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Title</MudText>`,
 rendered both in the loading and loaded branches so nothing jumps on load.
+A screen nested under another (a list under its area) puts a back
+`MudIconButton` (`ArrowBack`, `Color.Primary`) to the left of its title,
+linking to the parent screen.
 
 **Shared row/card components, never duplicated per screen.** One
 `TaskRow` renders in My Day, list cards, the list screen and search
@@ -124,7 +127,65 @@ cannot drift between the screens that display it.
 appends `?task={taskId}` to the current route; `TaskDetailPanel` renders as
 a slide-in overlay (full-screen below `md`) without reflowing the page. The
 query string, not component state, so back-navigation closes the panel
-without leaving the screen, and a task is linkable.
+without leaving the screen, and a task is linkable. Adding a task uses the
+same panel in its new-task mode, addressed as `?task=new&list={listId}`
+(`TaskQuery.ForNewTask`) — never an inline field or a dialog.
+
+**Detail panels share one shell.** `Components/DetailPanel.razor` is the
+only right-anchored detail drawer: 360px from `md` up, full width below it.
+Its header row holds an X close button top-left, a title (`Typo.h5` from
+`md` up, `Typo.h6` below) and a `HeaderActions` slot on the right for
+toggles such as the star; the labelled name field sits under it (`Header`
+slot), then scrolling content, then a footer pinned to the bottom of the
+drawer (`Footer` slot plus an optional bar with Save on the left, filled
+primary, and Delete on the right, text `Color.Error`). Dividers inside the
+panel carry `flex-grow-0` — `MudDivider` grows by default and would
+otherwise stretch into an empty band inside the flex column. Each
+button renders only when its callback is bound. An existing thing's fields
+save as they change — each edit is its own command, so there is no Save for
+it. Save exists only while creating, where nothing is written until the
+whole draft is committed.
+
+**One task form for add, edit and view.** `TaskDetailPanel` is a single
+component whose mode follows from its parameters — *Add* (`?task=new`),
+*Edit* (an existing task), *View* (an existing task while the shell is not
+ready: every control disabled). Modelled on Microsoft To Do's detail pane
+and Todoist's task view: the task itself on top, its properties as
+one-line rows under it, nothing boxed in a form. Top to bottom:
+
+1. Header — X, the task's place as `Area › List` (`New task · Area › List`
+   in Add) in `Typo.body2`, star on the right.
+2. Done checkbox (outside Add) beside the name, an unboxed `Typo.h6`
+   `MudTextField` with no underline or label.
+3. **Steps** (outside Add) — `StepList`: `MudCheckBox` rows with a remove
+   icon, then an unboxed "Add step"/"Next step" field (Enter adds).
+4. Property rows, each a `PropertyRow` — icon · label · value, the whole
+   row a `MudMenu` activator; an empty value reads in the muted text colour
+   ("No due date", "Never", "No goal"), a clearable one carries a trailing
+   ✕:
+   - **Due** (`DueDateRow`) — Today / Tomorrow / In 2 days / Next week (the
+     next Monday), each with its date, then "Pick a date…" opening a
+     `MudDatePicker` dialog; the value reads relatively (Today, Tomorrow,
+     Yesterday, `ddd, d MMM`), in `Color.Error` when overdue.
+   - **Repeat** (`RecurrenceEditor`, outside Add) — Daily, Weekdays, Weekly
+     on today's weekday, Monthly on today's day, Never; a repeating task
+     shows its last seven occurrences as chips under the row.
+   - **Priority** — the four fixed levels with coloured dots.
+   - **Goal** — the user's goals.
+   - **List** (outside Add) — lists grouped under area headings; picking
+     one moves the task at once. There is no Move button.
+   Room for later task fields (note, reminders) goes under the rows.
+5. Footer — "Created …" on the left, a red trash `MudIconButton` on the
+   right that asks via `ConfirmDialog` before deleting. In Add the footer
+   holds only **Add task**.
+
+**Empty states share one component.** A page or board with no items yet
+shows `Components/EmptyState.razor` as the first cell of its grid, sized
+like one card (`MudItem xs="12" sm="6" md="4" xl="3"`): an outlined
+`MudPaper` with a dashed border, an icon and a message. The whole card is
+the create action — `role="button"`, focusable, Enter/Space or a click
+starts creating the first item; no separate button. Only after `_loaded` —
+see above.
 
 **Every page has a page-level action set** — creating the thing the page
 is about, renaming or deleting that thing — distinct from the item-level
@@ -150,7 +211,7 @@ icon reads unambiguously on its own.
 |---|---|---|
 | Area | New list, Rename area, Delete area | FAB Menu |
 | Goals | Add goal | plain `MudFab` → `NameDialog` |
-| List | Add task, Rename list, Delete list | FAB Menu |
+| List | Add task (→ new-task panel), Rename list, Delete list | FAB Menu |
 | Inbox | Capture | plain `MudFab` → `CaptureDialog` |
 | My Day, Settings, History | none | no FAB |
 

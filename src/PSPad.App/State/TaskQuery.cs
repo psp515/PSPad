@@ -2,7 +2,19 @@ namespace PSPad.App.State;
 
 public static class TaskQuery
 {
-    public static Guid? From(string uri)
+    const string NewTask = "new";
+
+    public static Guid? From(string uri) =>
+        Guid.TryParse(Value(uri, "task"), out var id) ? id : null;
+
+    public static Guid? NewTaskListFrom(string uri) =>
+        Value(uri, "task") == NewTask && Guid.TryParse(Value(uri, "list"), out var listId) ? listId : null;
+
+    public static string ForNewTask(string uri, Guid listId) => $"{Without(uri)}?task={NewTask}&list={listId}";
+
+    public static string Without(string uri) => uri.Split('?')[0];
+
+    static string? Value(string uri, string key)
     {
         var mark = uri.IndexOf('?');
 
@@ -15,14 +27,12 @@ public static class TaskQuery
         {
             var parts = pair.Split('=', 2);
 
-            if (parts.Length == 2 && parts[0] == "task" && Guid.TryParse(parts[1], out var id))
+            if (parts.Length == 2 && parts[0] == key)
             {
-                return id;
+                return parts[1];
             }
         }
 
         return null;
     }
-
-    public static string Without(string uri) => uri.Split('?')[0];
 }

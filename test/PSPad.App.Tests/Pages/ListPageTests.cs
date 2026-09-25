@@ -6,6 +6,7 @@ using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
 using PSPad.App.Pages;
+using PSPad.App.State.Dispatch;
 using PSPad.App.State.Replica;
 using PSPad.App.Tests;
 using PSPad.Module.Tasks.Lists;
@@ -185,20 +186,76 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task AddTaskFromTheFabMenuOpensADialogThatCreatesTheTaskInTheReplica()
+    public void AddTaskFromTheFabMenuOpensTheNewTaskPanelForThisList()
     {
         var list = NewList("Zakupy");
-        var replica = Arrange(list);
+        Arrange(list);
 
         var page = Render(BuildListPageWithDialogs(list.Id));
+        var navigation = page.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/lists/{list.Id}");
         page.Find(".pspad-fab .mud-fab-menu-button").Click();
         page.FindAll(".mud-fab-menu-item")[0].Click();
-        var dialog = page.FindComponent<MudDialogProvider>();
-        dialog.Find("input[placeholder='Task name']").Input("Kup chleb");
-        dialog.FindAll("button").Last().Click();
 
-        var tasks = await replica.LoadAllAsync<TodoTask>(User);
-        Assert.Contains(tasks, task => task.ListId == list.Id && task.Name == "Kup chleb");
+        Assert.EndsWith($"/lists/{list.Id}?task=new&list={list.Id}", navigation.Uri);
+        Assert.Empty(page.FindComponent<MudDialogProvider>().FindAll("div.mud-dialog"));
+    }
+
+    [Fact]
+    public void TheEmptyStateOffersToAddTheFirstTask()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+        var navigation = page.Services.GetRequiredService<NavigationManager>();
+        page.Find(".pspad-empty-state").Click();
+
+        Assert.Single(page.FindComponents<EmptyState>());
+        page.Find(".mud-grid-item > .pspad-empty-state");
+        Assert.EndsWith($"?task=new&list={list.Id}", navigation.Uri);
+    }
+
+    [Fact]
+    public void TheBackButtonLeadsToTheListsArea()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        var back = page.Find(".pspad-back-to-area");
+        Assert.Equal($"/areas/{list.AreaId}", back.GetAttribute("href"));
+        Assert.Equal("Back to area", back.GetAttribute("aria-label"));
+        Assert.True(page.Markup.IndexOf("pspad-back-to-area", StringComparison.Ordinal)
+                    < page.Markup.IndexOf("Zakupy", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void EachTaskIsItsOwnCard()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, NewTask(list.Id, "Mleko"), NewTask(list.Id, "Chleb"));
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        var cards = page.FindAll(".mud-grid-item > .pspad-task-card");
+        Assert.Equal(2, cards.Count);
+    }
+
+    [Fact]
+    public async Task ATaskCreatedElsewhereAppearsWithoutReopeningTheList()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+        var sender = page.Services.GetRequiredService<CommandSender>();
+        await page.InvokeAsync(() => sender.SendAsync(
+            new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), list.Id, "Mleko")));
+
+        page.WaitForAssertion(() => Assert.Contains("Mleko", page.Markup));
+        Assert.Empty(page.FindComponents<EmptyState>());
     }
 
     [Fact]
