@@ -9,7 +9,6 @@ using PSPad.App.Pages;
 using PSPad.App.State.Replica;
 using PSPad.App.Tests;
 using PSPad.Module.Tasks.Areas;
-using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
@@ -144,46 +143,58 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task ClickingACardsAddTaskIconOpensADialogThatCreatesTheTaskInTheReplica()
+    public void ClickingACardsAddTaskIconOpensTheNewTaskPanelForThatList()
     {
         var area = NewArea("Dom");
         var shopping = NewList(area.Id, "Zakupy", 0);
-        var replica = Arrange(area, shopping);
+        Arrange(area, shopping);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/areas/{area.Id}");
 
-        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
         page.Find(".pspad-add-task").Click();
-        var dialog = page.FindComponent<MudDialogProvider>();
-        dialog.Find("input[placeholder='Task name']").Input("Kup farbę");
-        dialog.FindAll("button").Last().Click();
 
-        var tasks = await replica.LoadAllAsync<TodoTask>(User);
-        Assert.Contains(tasks, task => task.ListId == shopping.Id && task.Name == "Kup farbę");
+        Assert.EndsWith($"/areas/{area.Id}?task=new&list={shopping.Id}", navigation.Uri);
     }
 
     [Fact]
-    public async Task TheAddTaskDialogAlsoSetsDueDatePriorityGoalAndStar()
+    public void AnAreaWithNoListsShowsTheEmptyStateThatCreatesAList()
+    {
+        var area = NewArea("Dom");
+        Arrange(area);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        var empty = page.FindComponent<EmptyState>();
+        Assert.Contains("No lists yet.", empty.Markup);
+        empty.Find(".pspad-empty-state").Click();
+
+        page.Find("div.mud-dialog input");
+    }
+
+    [Fact]
+    public void AnAreaWithListsHasNoEmptyState()
+    {
+        var area = NewArea("Dom");
+        Arrange(area, NewList(area.Id, "Zakupy", 0));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Empty(page.FindComponents<EmptyState>());
+    }
+
+    [Fact]
+    public async Task ATaskSentFromElsewhereShowsUpWithoutAReload()
     {
         var area = NewArea("Dom");
         var shopping = NewList(area.Id, "Zakupy", 0);
-        var goal = NewGoal("Remont domu");
-        var replica = Arrange(area, shopping, goal);
+        Arrange(area, shopping);
 
-        var page = Render(BuildAreaBoardWithDialogs(area.Id));
-        page.Find(".pspad-add-task").Click();
-        var dialog = page.FindComponent<MudDialogProvider>();
-        dialog.Find("input[placeholder='Task name']").Input("Kup farbę");
-        dialog.Find(".pspad-add-task-priority").MouseDown();
-        page.FindAll(".mud-list-item")[(int)Priority.High].Click();
-        dialog.Find(".pspad-add-task-goal").MouseDown();
-        page.FindAll(".mud-list-item").Last().Click();
-        dialog.Find(".pspad-add-task-star").Click();
-        dialog.FindAll("button").Last().Click();
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        var sender = Services.GetRequiredService<PSPad.App.State.Dispatch.CommandSender>();
+        await page.InvokeAsync(() => sender.SendAsync(
+            new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), shopping.Id, "Kup farbę")));
 
-        var tasks = await replica.LoadAllAsync<TodoTask>(User);
-        var created = Assert.Single(tasks, task => task.ListId == shopping.Id && task.Name == "Kup farbę");
-        Assert.Equal(Priority.High, created.Priority);
-        Assert.Equal(goal.Id, created.GoalId);
-        Assert.True(created.Starred);
+        page.WaitForAssertion(() => Assert.Contains("Kup farbę", page.Markup));
     }
 
     [Fact]
@@ -242,7 +253,7 @@ public class AreaBoardTests : Bunit.TestContext
 
         var items = page.FindAll(".mud-fab-menu-item");
         Assert.Equal("New list", items[0].GetAttribute("aria-label"));
-        Assert.Equal("Rename area", items[1].GetAttribute("aria-label"));
+        Assert.Equal("Edit area", items[1].GetAttribute("aria-label"));
         Assert.Equal("Delete area", items[2].GetAttribute("aria-label"));
     }
 
@@ -265,21 +276,18 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task RenamingTheAreaFromItsFabMenuUpdatesTheReplica()
+    public void EditAreaFromTheFabMenuOpensTheAreaPanel()
     {
         var area = NewArea("Dom");
-        var replica = Arrange(area);
+        Arrange(area);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/areas/{area.Id}");
 
         var page = Render(BuildAreaBoardWithDialogs(area.Id));
         page.Find(".pspad-fab .mud-fab-menu-button").Click();
         page.FindAll(".mud-fab-menu-item")[1].Click();
 
-        var field = page.Find("div.mud-dialog input");
-        field.Input("Domownicy");
-        page.FindAll("div.mud-dialog button").Last().Click();
-
-        var stored = await replica.LoadAsync<Area>(area.Id);
-        Assert.Equal("Domownicy", stored!.Name);
+        Assert.EndsWith($"/areas/{area.Id}?area={area.Id}", navigation.Uri);
     }
 
     [Fact]
@@ -348,14 +356,6 @@ public class AreaBoardTests : Bunit.TestContext
             new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, position),
             DateTimeOffset.UnixEpoch));
         return list;
-    }
-
-    static Goal NewGoal(string name)
-    {
-        var goal = new Goal();
-        goal.ApplyAll(Goal.Decide(
-            null, new CreateGoal(Guid.NewGuid(), User, Guid.NewGuid(), name), DateTimeOffset.UnixEpoch));
-        return goal;
     }
 
     static TodoTask NewTask(Guid listId, string name)

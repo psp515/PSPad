@@ -5,18 +5,17 @@
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Tasks.Areas
-@using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Ordering
 @using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<Area> AreaStore
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<TodoTask> TaskStore
-@inject IDocumentStore<Goal> GoalStore
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
+@implements IDisposable
 
 @if (!_loaded)
 {
@@ -28,12 +27,19 @@ else if (_area is not null)
     <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">@_area.Name</MudText>
 
     <MudGrid Spacing="4">
+        @if (_lists.Count == 0)
+        {
+            <MudItem xs="12" sm="6" md="4" xl="3">
+                <EmptyState Icon="@Icons.Material.Outlined.ListAlt" Message="No lists yet." CreateText="New list"
+                            OnCreate="@NewListAsync" />
+            </MudItem>
+        }
         @foreach (var list in _lists)
         {
             <MudItem xs="12" sm="6" md="4" xl="3">
                 <ListCard List="@list" Tasks="@TasksOf(list.Id)" Today="@State.Today"
                           OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
-                          OnAddTaskClick="@(() => AddTaskAsync(list.Id))"
+                          OnAddTaskClick="@(() => AddTask(list.Id))"
                           OnRename="@(() => RenameListAsync(list))"
                           OnDelete="@(() => DeleteListAsync(list))"
                           OnMove="@(() => MoveListAsync(list))" />
@@ -46,9 +52,9 @@ else if (_area is not null)
             <MudFabMenuItem OnClick="@NewListAsync" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
                             Size="Size.Small" UserAttributes="@NewListAttributes" />
         </MudTooltip>
-        <MudTooltip Text="Rename area">
-            <MudFabMenuItem OnClick="@RenameAreaAsync" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
-                            Size="Size.Small" UserAttributes="@RenameAreaAttributes" />
+        <MudTooltip Text="Edit area">
+            <MudFabMenuItem OnClick="@EditArea" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
+                            Size="Size.Small" UserAttributes="@EditAreaAttributes" />
         </MudTooltip>
         <MudTooltip Text="Delete area">
             <MudFabMenuItem OnClick="@DeleteAreaAsync" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Primary"
@@ -70,14 +76,21 @@ else
     Area? _area;
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<TodoTask> _tasks = [];
-    IReadOnlyList<Goal> _goals = [];
 
     static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
     static readonly Dictionary<string, object> NewListAttributes = new() { ["aria-label"] = "New list" };
-    static readonly Dictionary<string, object> RenameAreaAttributes = new() { ["aria-label"] = "Rename area" };
+    static readonly Dictionary<string, object> EditAreaAttributes = new() { ["aria-label"] = "Edit area" };
     static readonly Dictionary<string, object> DeleteAreaAttributes = new() { ["aria-label"] = "Delete area" };
 
+    protected override void OnInitialized() => Sender.Sent += OnCommandSent;
+
     protected override async Task OnParametersSetAsync() => await ReloadAsync();
+
+    void OnCommandSent() => InvokeAsync(async () =>
+    {
+        await ReloadAsync();
+        StateHasChanged();
+    });
 
     async Task ReloadAsync()
     {
@@ -88,7 +101,6 @@ else
         _lists = [.. lists.Where(list => list.AreaId == AreaId && !list.Deleted).OrderBy(list => list.Position)];
 
         _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        _goals = await GoalStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _loaded = true;
     }
 
@@ -112,53 +124,14 @@ else
         {
             await Sender.SendAsync(new ReopenTask(Guid.NewGuid(), State.UserId, task.Id));
         }
-
-        await ReloadAsync();
     }
 
     async Task StarAsync(TodoTask task)
     {
         await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, task.Id, !task.Starred));
-        await ReloadAsync();
     }
 
-    async Task AddTaskAsync(Guid listId)
-    {
-        var parameters = new DialogParameters<AddTaskDialog> { { dialog => dialog.Goals, _goals } };
-        var dialog = await Dialogs.ShowAsync<AddTaskDialog>("New task", parameters);
-        var result = await dialog.Result;
-
-        if (result is null || result.Canceled || result.Data is not AddTaskResult task
-            || task.Name.Length == 0)
-        {
-            return;
-        }
-
-        var taskId = Guid.NewGuid();
-        await Sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, taskId, listId, task.Name));
-
-        if (task.DueOn is not null)
-        {
-            await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, taskId, task.DueOn));
-        }
-
-        if (task.Priority != Priority.None)
-        {
-            await Sender.SendAsync(new SetTaskPriority(Guid.NewGuid(), State.UserId, taskId, task.Priority));
-        }
-
-        if (task.GoalId is not null)
-        {
-            await Sender.SendAsync(new LinkTaskToGoal(Guid.NewGuid(), State.UserId, taskId, task.GoalId));
-        }
-
-        if (task.Starred)
-        {
-            await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, taskId, true));
-        }
-
-        await ReloadAsync();
-    }
+    void AddTask(Guid listId) => Navigation.NavigateTo(TaskQuery.ForNewTask(Navigation.Uri, listId));
 
     async Task NewListAsync()
     {
@@ -174,8 +147,6 @@ else
         await Sender.SendAsync(new CreateTaskList(
             Guid.NewGuid(), State.UserId, Guid.NewGuid(), AreaId, name,
             Positions.Next(_lists.Select(list => list.Position))));
-
-        await ReloadAsync();
     }
 
     async Task RenameListAsync(TaskList list)
@@ -194,7 +165,6 @@ else
         }
 
         await Sender.SendAsync(new RenameTaskList(Guid.NewGuid(), State.UserId, list.Id, name));
-        await ReloadAsync();
     }
 
     async Task DeleteListAsync(TaskList list)
@@ -212,28 +182,9 @@ else
         }
 
         await Sender.SendAsync(new DeleteTaskList(Guid.NewGuid(), State.UserId, list.Id));
-        await ReloadAsync();
     }
 
-    async Task RenameAreaAsync()
-    {
-        var area = _area!;
-        var parameters = new DialogParameters<NameDialog>
-        {
-            { dialog => dialog.Title, "Area name" },
-            { dialog => dialog.Value, area.Name }
-        };
-        var dialog = await Dialogs.ShowAsync<NameDialog>("Rename area", parameters);
-        var result = await dialog.Result;
-
-        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new RenameArea(Guid.NewGuid(), State.UserId, area.Id, name));
-        await ReloadAsync();
-    }
+    void EditArea() => Navigation.NavigateTo(AreaQuery.For(Navigation.Uri, AreaId));
 
     async Task DeleteAreaAsync()
     {
@@ -277,6 +228,7 @@ else
         }
 
         await Sender.SendAsync(new MoveTaskListToArea(Guid.NewGuid(), State.UserId, list.Id, target));
-        await ReloadAsync();
     }
+
+    public void Dispose() => Sender.Sent -= OnCommandSent;
 }
