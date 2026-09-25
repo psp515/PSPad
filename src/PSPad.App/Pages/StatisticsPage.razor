@@ -72,6 +72,9 @@
             var outstandingLabels = LabelsOf(overview.Outstanding, day => day.Day);
             var outstandingOptions = LineAxisOptions(overview.Outstanding);
             var maxGoalCount = Math.Max(overview.ByGoal.Count == 0 ? 0 : overview.ByGoal.Max(goal => goal.Count), 1);
+            var backlogSeries = BarSeries("Still in Inbox", overview.InboxBacklog);
+            var backlogLabels = LabelsOf(overview.InboxBacklog, week => week.WeekStart, DaySpanOf(overview.InboxBacklog));
+            var backlogOptions = BarAxisOptions(overview.InboxBacklog);
 
             <MudGrid Spacing="4" Class="mb-4">
                 <MudItem xs="12" md="6">
@@ -127,8 +130,32 @@
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">Inbox backlog left at each week's end</MudText>
-                        <InboxBacklogHeatmap Weeks="@overview.InboxBacklog" Today="@State.Today" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Inbox backlog left at each week's end</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
+                            Each bar is one week; its height is how many captures were still waiting in the Inbox
+                            when that week ended.
+                        </MudText>
+                        <MudChart ChartType="ChartType.Bar" ChartSeries="@backlogSeries"
+                                  ChartLabels="@backlogLabels" ChartOptions="@backlogOptions"
+                                  Width="100%" Height="260px" />
+                        <table class="mud-sr-only">
+                            <caption>Inbox backlog left at each week's end</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Week of</th>
+                                    <th scope="col">Still in the Inbox</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var week in overview.InboxBacklog)
+                                {
+                                    <tr>
+                                        <td>@week.WeekStart.ToString("yyyy-MM-dd")</td>
+                                        <td>@week.Count</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     </MudPaper>
                 </MudItem>
             </MudGrid>
@@ -257,11 +284,16 @@
         new ChartSeries<double> { Name = name, Data = points.Select(point => (double)point.Count).ToArray() }
     ];
 
+    static List<ChartSeries<double>> BarSeries(string name, IReadOnlyList<WeeklyCountView> weeks) =>
+    [
+        new ChartSeries<double> { Name = name, Data = weeks.Select(week => (double)week.Count).ToArray() }
+    ];
+
     const int TargetLabelCount = 7;
     const int TargetYAxisTicks = 5;
     const int MaxYAxisTicks = 6;
 
-    static string[] LabelsOf<T>(IReadOnlyList<T> points, Func<T, DateOnly> dayOf)
+    static string[] LabelsOf<T>(IReadOnlyList<T> points, Func<T, DateOnly> dayOf, int? formatOverRange = null)
     {
         var count = points.Count;
 
@@ -270,7 +302,7 @@
             return [];
         }
 
-        var format = count > 90 ? "MMM yyyy" : "MM-dd";
+        var format = (formatOverRange ?? count) > 90 ? "MMM yyyy" : "MM-dd";
         var step = Math.Max(1, (int)Math.Ceiling(count / (double)TargetLabelCount));
         var labels = new string[count];
 
@@ -294,6 +326,15 @@
         var max = points.Count == 0 ? 0 : points.Max(point => point.Count);
         return new LineChartOptions { YAxisTicks = NiceYAxisStep(max), MaxNumYAxisTicks = MaxYAxisTicks };
     }
+
+    static BarChartOptions BarAxisOptions(IReadOnlyList<WeeklyCountView> weeks)
+    {
+        var max = weeks.Count == 0 ? 0 : weeks.Max(week => week.Count);
+        return new BarChartOptions { YAxisTicks = NiceYAxisStep(max), MaxNumYAxisTicks = MaxYAxisTicks };
+    }
+
+    static int DaySpanOf(IReadOnlyList<WeeklyCountView> weeks) =>
+        weeks.Count == 0 ? 0 : weeks[^1].WeekStart.DayNumber - weeks[0].WeekStart.DayNumber;
 
     static int NiceYAxisStep(double max)
     {

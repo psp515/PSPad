@@ -32,7 +32,7 @@ substitute for a component that already exists.
 | A loading placeholder | `MudSkeleton`, wrapped in `MudPaper` where the real content has a border | an empty `<div>` |
 | Vertical/horizontal flex spacing | `MudStack`, or `d-flex`/`gap-*` utility classes | inline `style` margins |
 | A chart | `MudChart` | a third-party charting library |
-| A calendar-style heatmap (consistency, Inbox backlog) | a custom `pspad-heatmap` CSS grid | `MudChart`'s `ChartType.HeatMap` |
+| A calendar-style heatmap (consistency) | a custom `pspad-heatmap` CSS grid | `MudChart`'s `ChartType.HeatMap` |
 | A section that opens on click (the record feed) | `MudExpansionPanels` + `MudExpansionPanel` | a hand-rolled show/hide flag |
 
 Before adding a new `pspad-*` class, check this table first. If nothing
@@ -47,9 +47,8 @@ reliable hook (`pspad-sign-out`, `pspad-account-card`, `pspad-delete-account`,
 apparently-unstyled `pspad-*` class without checking whether a test depends
 on it first.
 
-**The one exception on record: the statistics screen's two heatmaps**
-(`Statistics/ConsistencyHeatmap.razor` — one cell per day — and
-`Statistics/InboxBacklogHeatmap.razor` — one cell per week — over
+**The one exception on record: the statistics screen's Consistency
+heatmap** (`Statistics/ConsistencyHeatmap.razor` — one cell per day — over
 `.pspad-heatmap*` in `wwwroot/css/app.css`). MudBlazor ships
 `ChartType.HeatMap`, but it is a generic matrix chart — it gives no
 per-cell `title`/`aria-label`, and without one the grid is a wall of
@@ -57,22 +56,23 @@ coloured squares a screen reader cannot read. A hand-rolled CSS grid earns
 its place here for exactly the reason the table above says a custom class
 ever can: MudBlazor genuinely has no component that does this.
 
-The two panels sit side by side at `md` and up (`MudItem xs="12" md="6"`
-each, matching the chart grid above them) and stack to full width below
-that breakpoint. Both grids are a single flowing `.pspad-heatmap-flow`
-(`display: grid; grid-template-columns: repeat(auto-fit, minmax(30px,
-1fr))`) — cells wrap to as many rows as the range needs and stretch to
-fill every row, deliberately giving up day-of-week/week-column alignment
-(the maintainer's call, 2026-09-25: "it doesn't have to reflect how the
-month has days, it can just be squares that auto-fit to space") in
-exchange for actually using the panel's width instead of leaving a
-GitHub-style calendar stranded in one corner. `--pspad-heatmap-cell-min`
-(30px) is the floor that keeps a 365-day range's ~23 rows legible instead
-of one row per day; `--pspad-heatmap-cell-cap` (44px, via `max-width` on
-the cell — `fr` cannot appear inside `min()`/`max()`, so the ceiling has to
-live on the item, not the track) stops a sparse row — the Inbox-backlog
-grid at a 30-day range is only 5 cells — from stretching into oversized
-tiles once `auto-fit` collapses its unused tracks.
+It sits beside the Inbox-backlog panel at `md` and up (`MudItem xs="12"
+md="6"` each, matching the chart grid above them) and both stack to full
+width below that breakpoint — the two still belong together conceptually,
+even though only one of them is a `pspad-heatmap` grid (below). The
+heatmap grid is a single flowing `.pspad-heatmap-flow` (`display: grid;
+grid-template-columns: repeat(auto-fit, minmax(30px, 1fr))`) — cells wrap
+to as many rows as the range needs and stretch to fill every row,
+deliberately giving up day-of-week alignment (the maintainer's call,
+2026-09-25: "it doesn't have to reflect how the month has days, it can
+just be squares that auto-fit to space") in exchange for actually using
+the panel's width instead of leaving a GitHub-style calendar stranded in
+one corner. `--pspad-heatmap-cell-min` (30px) is the floor that keeps a
+365-day range's ~23 rows legible instead of one row per day;
+`--pspad-heatmap-cell-cap` (44px, via `max-width` on the cell — `fr`
+cannot appear inside `min()`/`max()`, so the ceiling has to live on the
+item, not the track) stops a sparse trailing row from stretching into
+oversized tiles once `auto-fit` collapses its unused tracks.
 
 No month label. The old design's `Sep` header made sense over fixed
 week-columns; once cells flow and wrap freely there is no stable column for
@@ -80,25 +80,39 @@ a month to anchor to, and an early attempt at a per-month header row (one
 `grid-column: 1 / -1` label, restarting the row after it) backfired: the
 label forces every column track to register as "used", which defeats
 `auto-fit`'s collapse and leaves a short trailing group (the last few days
-of a month, a handful of weeks) stranded at the grid's minimum cell size
-with dead space beside it — the exact problem this redesign exists to fix,
-just relocated. The day-of-month number already on every cell is the month
-cue: it resets to `1` where a month rolls over, and the full date is always
-one hover or tap away. Each Sunday cell instead carries a 3px accent border
-on its top edge (`--mud-palette-secondary`) — the only left-to-right cue
-left for where a week starts, now that weekday rows are gone. Each cell
-also renders its day-of-month number (`aria-hidden`, the accessible label
-is unaffected); text colour switches from `--mud-palette-text-secondary` to
+of a month) stranded at the grid's minimum cell size with dead space
+beside it — the exact problem this redesign exists to fix, just relocated.
+The day-of-month number already on every cell is the month cue: it resets
+to `1` where a month rolls over, and the full date is always one hover or
+tap away. Each Sunday cell instead carries a 3px accent border on its top
+edge (`--mud-palette-secondary`) — the only left-to-right cue left for
+where a week starts, now that weekday rows are gone. Each cell also
+renders its day-of-month number (`aria-hidden`, the accessible label is
+unaffected); text colour switches from `--mud-palette-text-secondary` to
 the theme's computed `--mud-palette-primary-text` at `data-level="3"`/`"4"`
 so it stays legible against both the near-background and fully-saturated
-ends of the shade ramp. Each heatmap ends in a `HeatmapKey` — the
+ends of the shade ramp. The heatmap ends in a `HeatmapKey` — the
 conventional five-step ramp plus one sentence saying what darker means.
 `HeatmapLevel.Of(count, maximum)` is the shared five-step scale; a key's
 swatches deliberately do not carry the `pspad-heatmap-cell` class, so they
 are never mistaken for data cells. Every data cell keeps its
-`title`/`aria-label` (`2026-09-24: 3 completed`, `week of 2026-09-21: 4
-still in the Inbox`), which is the accessibility reason the custom grid
-exists at all.
+`title`/`aria-label` (`2026-09-24: 3 completed`), which is the
+accessibility reason the custom grid exists at all.
+
+**The Inbox-backlog panel is a `MudChart` bar chart, not a heatmap**
+(`StatisticsPage.razor`, inline alongside the page's other charts, not a
+separate component — five to fifty-three weekly values with a trend in
+them is what a bar chart is for, where a heatmap only earns its keep on
+dense data scanned for a pattern; changed 2026-09-25 after the maintainer
+saw the original heatmap in dark mode, where a handful of low counts all
+landed in the bottom shade buckets and were indistinguishable from the
+panel background). One bar per week, height = items still held at that
+week's end, built the same way as the page's other three charts — see
+"Charts" below. `MudChart` renders SVG with no per-bar accessible text, so
+the panel also carries a `class="mud-sr-only"` (MudBlazor's own
+visually-hidden utility) `<table>` of week/count pairs beside the chart,
+which is how a screen reader still gets every week's number now that
+there is no per-cell `title`/`aria-label` to read.
 
 ---
 
@@ -314,9 +328,9 @@ see above.
 **The statistics screen (`StatisticsPage`, `/statistics`) is server-rendered
 data over plain REST, not the replica** — no IndexedDB, no outbox, no
 command pipeline. It is its own layout, not the §2 card grid: a `MudGrid`
-of tiles (`sm="3" xs="6"`), four charts (`md="6" xs="12"`), then the two
-heatmaps side by side (`md="6" xs="12"`, see §1) and the record feed full
-width below them. The feed is a
+of tiles (`sm="3" xs="6"`), four charts (`md="6" xs="12"`), then the
+Consistency heatmap and Inbox-backlog chart side by side (`md="6" xs="12"`,
+see §1) and the record feed full width below them. The feed is a
 `MudExpansionPanel` ("Everything that happened") **collapsed by default** —
 it is the raw log, not the summary someone opens the screen for — and the
 page holds its loaded pages in its own state, so opening, paging with *load
@@ -428,9 +442,9 @@ stamped on `<html>` from `localStorage["pspad.theme"]` before first paint
 the wrong theme.
 
 **Charts.** `MudChart` (bundled with MudBlazor, no extra dependency) takes
-the sage palette for free — the statistics screen's four charts (daily
-completions, tasks opened, outstanding-open, work by goal) are the example.
-The two heatmaps are not `MudChart`s — see §1.
+the sage palette for free — the statistics screen's charts (daily
+completions, tasks opened, outstanding-open, Inbox backlog per week) are
+the example. The Consistency heatmap is not a `MudChart` — see §1.
 
 ---
 
@@ -454,9 +468,15 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/areas/{areaId}` | area screen — list cards |
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |
+<<<<<<< HEAD
 | `/statistics` | Statistics — tiles, four charts, consistency and Inbox-backlog heatmaps, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
 | `/settings` | Settings (account + sign-out, time zone, theme, sync status, delete account) |
+=======
+| `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-backlog bar chart, collapsed record feed |
+| `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0036`) |
+| `/settings` | Settings (account, time zone, theme, sync status) |
+>>>>>>> df34e2a (feat: chart the Inbox backlog as a bar chart instead of a heatmap)
 | `/app-info` | version, license, docs/repo links |
 | `/search` | search results (currently unreachable from the UI) |
 | `/welcome` | public, signed-out landing screen |

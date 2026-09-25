@@ -49,8 +49,7 @@ h1[tabindex="-1"]:focus {
     justify-content: center;
 }
 
-.pspad-heatmap-cell,
-.pspad-heatmap-week {
+.pspad-heatmap-cell {
     width: 100%;
     max-width: var(--pspad-heatmap-cell-cap, 44px);
     aspect-ratio: 1;

@@ -312,31 +312,104 @@ public class StatisticsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheInboxBacklogHeatmapRendersACellPerWeekWithItsOwnLabel()
+    public void TheConsistencyHeatmapCarriesItsOwnShadeKey()
     {
         var source = new FakeStatisticsSource { Overview = FullOverview() };
         Arrange(source, NewCache());
 
         var page = Render<StatisticsPage>();
 
-        var cells = page.FindAll(".pspad-heatmap-week");
+        Assert.Single(page.FindComponents<HeatmapKey>());
+        Assert.Equal(5, page.FindAll(".pspad-heatmap-key-cell").Count);
+    }
 
-        Assert.Equal(3, cells.Count);
-        Assert.Equal("week of 2026-03-01: 4 still in the Inbox", cells[1].GetAttribute("aria-label"));
+    [Fact]
+    public void InboxBacklogChartRendersOneBarPerWeekWithItsCount()
+    {
+        var source = new FakeStatisticsSource { Overview = FullOverview() };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var chart = page.FindComponents<MudChart<double>>()
+            .Single(c => c.Instance.ChartSeries.Any(series => series.Name == "Still in Inbox"));
+        var backlog = chart.Instance.ChartSeries.Single();
+
+        Assert.Equal([1d, 4d, 2d], backlog.Data.Values);
+        Assert.Equal(["02-22", "03-01", "03-08"], chart.Instance.ChartLabels);
         Assert.Contains("Inbox backlog", page.Markup);
     }
 
     [Fact]
-    public void BothHeatmapsCarryTheirOwnShadeKey()
+    public void InboxBacklogChartLabelsAreThinnedAcrossAYearOfWeeks()
+    {
+        var source = new FakeStatisticsSource { Overview = RangeOverview(365, maxValue: 3) };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var chart = BacklogChart(page);
+        var visible = chart.Instance.ChartLabels.Count(label => label.Length > 0);
+
+        Assert.True(chart.Instance.ChartLabels.Length > 8);
+        Assert.InRange(visible, 4, 8);
+        Assert.All(
+            chart.Instance.ChartLabels.Where(label => label.Length > 0),
+            label => Assert.Matches(@"^[A-Za-z]{3} \d{4}$", label));
+    }
+
+    [Fact]
+    public void InboxBacklogChartLabelsStayNumericAtTheThirtyDayRange()
+    {
+        var source = new FakeStatisticsSource { Overview = RangeOverview(30, maxValue: 3) };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var populated = BacklogChart(page).Instance.ChartLabels.Where(label => label.Length > 0);
+
+        Assert.All(populated, label => Assert.Matches(@"^\d{2}-\d{2}$", label));
+    }
+
+    [Fact]
+    public void AnAllZeroInboxBacklogRendersWithoutDividingByZero()
+    {
+        var source = new FakeStatisticsSource { Overview = RangeOverview(30, maxValue: 0) };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var options = Assert.IsType<BarChartOptions>(BacklogChart(page).Instance.ChartOptions);
+        Assert.Equal(1, options.YAxisTicks);
+    }
+
+    [Fact]
+    public void TheInboxBacklogTableCarriesEveryWeeksNumberForScreenReaders()
     {
         var source = new FakeStatisticsSource { Overview = FullOverview() };
         Arrange(source, NewCache());
 
         var page = Render<StatisticsPage>();
 
-        Assert.Equal(2, page.FindComponents<HeatmapKey>().Count);
-        Assert.Equal(10, page.FindAll(".pspad-heatmap-key-cell").Count);
+        var table = page.FindAll("table.mud-sr-only")
+            .Single(candidate => candidate.QuerySelectorAll("tr").Length > 1);
+        var rows = table.QuerySelectorAll("tbody tr")
+            .Select(row => row.QuerySelectorAll("td").Select(cell => cell.TextContent.Trim()).ToArray())
+            .ToList();
+
+        Assert.Equal(
+            new[]
+            {
+                new[] { "2026-02-22", "1" },
+                new[] { "2026-03-01", "4" },
+                new[] { "2026-03-08", "2" }
+            },
+            rows);
     }
+
+    static IRenderedComponent<MudChart<double>> BacklogChart(IRenderedComponent<StatisticsPage> page) =>
+        page.FindComponents<MudChart<double>>()
+            .Single(c => c.Instance.ChartSeries.Any(series => series.Name == "Still in Inbox"));
 
     [Fact]
     public void TheRecordFeedStartsCollapsed()
