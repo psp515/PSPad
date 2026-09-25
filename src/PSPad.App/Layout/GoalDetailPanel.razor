@@ -1,0 +1,176 @@
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Goals
+@inject IDocumentStore<Goal> Goals
+@inject AppState State
+@inject CommandSender Sender
+@inject IDialogService Dialogs
+@inject NavigationManager Navigation
+
+<DetailPanel Open="@(IsNew || _goal is not null)" Title="@(IsNew ? "New goal" : "Goal")" OnClose="@OnClose"
+             OnSave="@SaveCallback" SaveText="Add goal" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
+             OnDelete="@DeleteCallback" DeleteText="Delete goal" Disabled="@Disabled">
+    <div class="pa-4 d-flex flex-column gap-2">
+        <MudTextField T="string" Class="pspad-goal-name-field" Label="Name" Variant="Variant.Outlined"
+                      Value="@(_goal?.Name ?? _draftName)" ValueChanged="@NameChangedAsync"
+                      Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
+
+        @if (_goal is not null)
+        {
+            <MudSelect T="GoalStatus" Class="pspad-goal-status mt-2" Label="Status" Variant="Variant.Outlined"
+                       Value="@_goal.Status" ValueChanged="@StatusChangedAsync" Disabled="@Disabled"
+                       ToStringFunc="@GoalStatusText.Of" AnchorOrigin="Origin.BottomCenter">
+                @foreach (var status in Enum.GetValues<GoalStatus>())
+                {
+                    <MudSelectItem T="GoalStatus" Value="@status">@GoalStatusText.Of(status)</MudSelectItem>
+                }
+            </MudSelect>
+        }
+    </div>
+
+    <div class="px-2">
+        <DueDateRow Value="@DueOn" ValueChanged="@DueDateChangedAsync" Today="@State.Today" Disabled="@Disabled" />
+    </div>
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? GoalId { get; set; }
+
+    [Parameter] public bool IsNew { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    Goal? _goal;
+    string _draftName = "";
+    DateOnly? _draftDueOn;
+
+    DateOnly? DueOn => _goal is null ? _draftDueOn : _goal.DueOn;
+
+    EventCallback SaveCallback => IsNew ? EventCallback.Factory.Create(this, CreateAsync) : default;
+
+    EventCallback DeleteCallback => _goal is not null ? EventCallback.Factory.Create(this, DeleteAsync) : default;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsNew)
+        {
+            _draftName = "";
+            _draftDueOn = null;
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task ReloadAsync()
+    {
+        var goal = GoalId is null ? null : await Goals.LoadAsync(GoalId.Value, CancellationToken.None);
+        _goal = goal is null || goal.Deleted ? null : goal;
+    }
+
+    async Task NameChangedAsync(string name)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_goal is null)
+        {
+            _draftName = name;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(name) || name.Trim() == _goal.Name)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new RenameGoal(Guid.NewGuid(), State.UserId, _goal.Id, name.Trim()));
+        await ReloadAsync();
+    }
+
+    async Task StatusChangedAsync(GoalStatus status)
+    {
+        if (Disabled || _goal is null || status == _goal.Status)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new SetGoalStatus(Guid.NewGuid(), State.UserId, _goal.Id, status));
+        await ReloadAsync();
+    }
+
+    async Task DueDateChangedAsync(DateOnly? dueOn)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_goal is null)
+        {
+            _draftDueOn = dueOn;
+            return;
+        }
+
+        await Sender.SendAsync(new SetGoalDueDate(Guid.NewGuid(), State.UserId, _goal.Id, dueOn));
+        await ReloadAsync();
+    }
+
+    async Task AddOnEnterAsync(KeyboardEventArgs args)
+    {
+        if (IsNew && args.Key == "Enter")
+        {
+            await CreateAsync();
+        }
+    }
+
+    async Task CreateAsync()
+    {
+        var name = _draftName.Trim();
+
+        if (Disabled || !IsNew || name.Length == 0)
+        {
+            return;
+        }
+
+        var goalId = Guid.NewGuid();
+        await Sender.SendAsync(new CreateGoal(Guid.NewGuid(), State.UserId, goalId, name));
+
+        if (_draftDueOn is { } due)
+        {
+            await Sender.SendAsync(new SetGoalDueDate(Guid.NewGuid(), State.UserId, goalId, due));
+        }
+
+        _draftName = "";
+        _draftDueOn = null;
+        Navigation.NavigateTo(QueryString.Without(Navigation.Uri));
+    }
+
+    async Task DeleteAsync()
+    {
+        if (Disabled || _goal is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, $"Delete “{_goal.Name}”? Its tasks stay, without a goal." }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete goal", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new DeleteGoal(Guid.NewGuid(), State.UserId, _goal.Id));
+        Navigation.NavigateTo(QueryString.Without(Navigation.Uri));
+    }
+}

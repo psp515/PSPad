@@ -1,6 +1,8 @@
 using PSPad.Abstractions;
 using PSPad.Infrastructure.Mongo;
+using MongoDB.Bson;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Goals;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Api.Tests.Persistence;
@@ -53,6 +55,51 @@ public class MongoDocumentStoreTests(MongoFixture fixture)
         var loaded = await new MongoDocumentStore<Area>(context).LoadAllAsync(mine, ct);
 
         Assert.Equal(["Mine"], loaded.Select(area => area.Name));
+    }
+
+    [Fact]
+    public async Task AGoalsStatusAndDueDateRoundTripThroughMongo()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var user = Guid.NewGuid();
+        var context = TestContext.For(fixture);
+        var goal = new Goal();
+        goal.ApplyAll(Goal.Decide(null, new CreateGoal(Guid.NewGuid(), user, Guid.NewGuid(), "Run"), DateTimeOffset.UtcNow));
+        goal.ApplyAll(Goal.Decide(goal, new SetGoalStatus(Guid.NewGuid(), user, goal.Id, GoalStatus.NotAchieved),
+            DateTimeOffset.UtcNow));
+        goal.ApplyAll(Goal.Decide(goal, new SetGoalDueDate(Guid.NewGuid(), user, goal.Id, new DateOnly(2026, 12, 31)),
+            DateTimeOffset.UtcNow));
+
+        await context.Collection<Goal>().InsertOneAsync(goal, cancellationToken: ct);
+        var loaded = await new MongoDocumentStore<Goal>(context).LoadAsync(goal.Id, ct);
+
+        Assert.Equal(GoalStatus.NotAchieved, loaded!.Status);
+        Assert.Equal(new DateOnly(2026, 12, 31), loaded.DueOn);
+    }
+
+    [Fact]
+    public async Task AGoalStoredBeforeStatusesExistedReadsAsAchieved()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var user = Guid.NewGuid();
+        var id = Guid.NewGuid();
+        var context = TestContext.For(fixture);
+        await context.Collection<BsonDocument>(context.Collection<Goal>().CollectionNamespace.CollectionName)
+            .InsertOneAsync(new BsonDocument
+            {
+                ["_id"] = new BsonBinaryData(id, GuidRepresentation.Standard),
+                ["userId"] = new BsonBinaryData(user, GuidRepresentation.Standard),
+                ["name"] = "Run",
+                ["achieved"] = true,
+                ["version"] = 2,
+                ["seq"] = 1L,
+                ["deleted"] = false
+            }, cancellationToken: ct);
+
+        var loaded = await new MongoDocumentStore<Goal>(context).LoadAsync(id, ct);
+
+        Assert.Equal(GoalStatus.Achieved, loaded!.Status);
+        Assert.Null(loaded.DueOn);
     }
 
     static Area AreaFor(Guid user, string name)

@@ -39,6 +39,98 @@ public class GoalTests
         Assert.False(goal.Achieved);
     }
 
+    [Fact]
+    public void ANewGoalIsInProgressWithNoDueDate()
+    {
+        var goal = Existing();
+
+        Assert.Equal(GoalStatus.InProgress, goal.Status);
+        Assert.Null(goal.DueOn);
+    }
+
+    [Theory]
+    [InlineData(GoalStatus.Achieved)]
+    [InlineData(GoalStatus.NotAchieved)]
+    public void SettingAStatusRecordsIt(GoalStatus status)
+    {
+        var goal = Existing();
+        goal.ApplyAll(Goal.Decide(goal, new SetGoalStatus(Guid.NewGuid(), User, goal.Id, status), Now));
+
+        Assert.Equal(status, goal.Status);
+        Assert.Equal(status == GoalStatus.Achieved, goal.Achieved);
+    }
+
+    [Fact]
+    public void MovingFromNotAchievedToAchievedLeavesOnlyAchieved()
+    {
+        var goal = Existing();
+        goal.ApplyAll(Goal.Decide(goal, new SetGoalStatus(Guid.NewGuid(), User, goal.Id, GoalStatus.NotAchieved), Now));
+        goal.ApplyAll(Goal.Decide(goal, new SetGoalStatus(Guid.NewGuid(), User, goal.Id, GoalStatus.Achieved), Now));
+
+        Assert.Equal(GoalStatus.Achieved, goal.Status);
+        Assert.False(goal.NotAchieved);
+    }
+
+    [Fact]
+    public void SettingTheSameStatusProducesNoEvent()
+    {
+        var goal = Existing();
+
+        Assert.Empty(Goal.Decide(goal, new SetGoalStatus(Guid.NewGuid(), User, goal.Id, GoalStatus.InProgress), Now));
+    }
+
+    [Fact]
+    public void AnUnknownStatusIsRejected()
+    {
+        var goal = Existing();
+
+        Assert.Throws<DomainRejectedException>(() =>
+            Goal.Decide(goal, new SetGoalStatus(Guid.NewGuid(), User, goal.Id, (GoalStatus)42), Now));
+    }
+
+    [Fact]
+    public void ReopeningANotAchievedGoalPutsItBackInProgress()
+    {
+        var goal = Existing();
+        goal.ApplyAll(Goal.Decide(goal, new SetGoalStatus(Guid.NewGuid(), User, goal.Id, GoalStatus.NotAchieved), Now));
+        goal.ApplyAll(Goal.Decide(goal, new ReopenGoal(Guid.NewGuid(), User, goal.Id), Now));
+
+        Assert.Equal(GoalStatus.InProgress, goal.Status);
+    }
+
+    [Fact]
+    public void SettingADueDateRecordsItAndClearingItRemovesIt()
+    {
+        var goal = Existing();
+        var due = new DateOnly(2026, 12, 31);
+
+        goal.ApplyAll(Goal.Decide(goal, new SetGoalDueDate(Guid.NewGuid(), User, goal.Id, due), Now));
+        Assert.Equal(due, goal.DueOn);
+
+        goal.ApplyAll(Goal.Decide(goal, new SetGoalDueDate(Guid.NewGuid(), User, goal.Id, null), Now));
+        Assert.Null(goal.DueOn);
+    }
+
+    [Fact]
+    public void SettingTheSameDueDateProducesNoEvent()
+    {
+        var goal = Existing();
+
+        Assert.Empty(Goal.Decide(goal, new SetGoalDueDate(Guid.NewGuid(), User, goal.Id, null), Now));
+    }
+
+    [Fact]
+    public void AnotherUsersGoalCannotChangeStatusOrDueDate()
+    {
+        var goal = Existing();
+        var stranger = Guid.NewGuid();
+
+        Assert.Throws<DomainRejectedException>(() =>
+            Goal.Decide(goal, new SetGoalStatus(Guid.NewGuid(), stranger, goal.Id, GoalStatus.Achieved), Now));
+        Assert.Throws<DomainRejectedException>(() =>
+            Goal.Decide(goal, new SetGoalDueDate(Guid.NewGuid(), stranger, goal.Id, new DateOnly(2026, 12, 31)), Now));
+    }
+
     static Goal Existing()
     {
         var goal = new Goal();

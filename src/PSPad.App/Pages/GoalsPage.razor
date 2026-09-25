@@ -14,6 +14,7 @@
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Goals</MudText>
 
@@ -23,59 +24,90 @@
 }
 else
 {
-    @if (_active.Count == 0 && _achieved.Count == 0)
+    @if (_active.Count > 0 && (_achieved.Count > 0 || _notAchieved.Count > 0))
     {
-        <MudText Typo="Typo.body2">No goals yet.</MudText>
+        @SectionHeader("In progress", _active.Count)
     }
-
-    <MudGrid Spacing="4">
-        @foreach (var goal in _active)
+    <MudGrid Spacing="4" Class="pspad-goals-in-progress">
+        @if (_active.Count == 0 && _achieved.Count == 0 && _notAchieved.Count == 0)
         {
             <MudItem xs="12" sm="6" md="4" xl="3">
-                <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
-                          OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
-                          OnAchieve="@(() => AchieveAsync(goal))"
-                          OnReopen="@(() => ReopenAsync(goal))"
-                          OnRename="@(() => RenameAsync(goal))"
-                          OnDelete="@(() => DeleteAsync(goal))" />
+                <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="No goals yet." CreateText="Add goal"
+                            OnCreate="@AddGoal" />
             </MudItem>
         }
+        @foreach (var goal in _active)
+        {
+            @Card(goal)
+        }
     </MudGrid>
+
+    @Section("Achieved", _achieved, "pspad-goals-achieved")
+    @Section("Not achieved", _notAchieved, "pspad-goals-not-achieved")
 }
 
-@if (_achieved.Count > 0)
-{
-    <MudExpansionPanels Elevation="0" Class="mt-4">
-        <MudExpansionPanel Text="@($"Achieved ({_achieved.Count})")">
-            <MudGrid Spacing="4">
-                @foreach (var goal in _achieved)
-                {
-                    <MudItem xs="12" sm="6" md="4" xl="3">
-                        <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
-                                  OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
-                                  OnAchieve="@(() => AchieveAsync(goal))"
-                                  OnReopen="@(() => ReopenAsync(goal))"
-                                  OnRename="@(() => RenameAsync(goal))"
-                                  OnDelete="@(() => DeleteAsync(goal))" />
-                    </MudItem>
-                }
-            </MudGrid>
-        </MudExpansionPanel>
-    </MudExpansionPanels>
-}
-
-<MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@AddGoalAsync" />
+<MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@AddGoal" UserAttributes="@FabAttributes" />
 
 @code {
     bool _loaded;
     IReadOnlyList<Goal> _active = [];
     IReadOnlyList<Goal> _achieved = [];
+    IReadOnlyList<Goal> _notAchieved = [];
+
+    RenderFragment SectionHeader(string title, int count) =>
+        @<div class="mb-3">
+            <div class="d-flex align-baseline gap-2 pb-1">
+                <MudText Typo="Typo.h6" Class="pspad-goals-section-title">@title</MudText>
+                <MudText Typo="Typo.body2" Class="pspad-goals-section-count pspad-muted">@count</MudText>
+            </div>
+            <MudDivider />
+        </div>;
+
+    RenderFragment Section(string title, IReadOnlyList<Goal> goals, string css) => __builder =>
+    {
+        if (goals.Count == 0)
+        {
+            return;
+        }
+
+        <section class="@($"{css} mt-8")">
+            @SectionHeader(title, goals.Count)
+            <MudGrid Spacing="4">
+                @foreach (var goal in goals)
+                {
+                    <MudItem xs="12" sm="6" md="4" xl="3">
+                        <GoalSummaryCard Goal="@goal" Tasks="@TasksOf(goal.Id)" OnOpen="@(() => EditGoal(goal))" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </section>
+    };
+
+    RenderFragment Card(Goal goal) =>
+        @<MudItem xs="12" sm="6" md="4" xl="3">
+            <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
+                      OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
+                      OnStatus="@(status => SetStatusAsync(goal, status))"
+                      OnEdit="@(() => EditGoal(goal))"
+                      OnRename="@(() => EditGoal(goal))"
+                      OnDelete="@(() => DeleteAsync(goal))" />
+        </MudItem>;
     IReadOnlyList<TodoTask> _tasks = [];
     IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
 
     [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
 
     int _rendered = -1;
+
+    static readonly Dictionary<string, object> FabAttributes = new() { ["aria-label"] = "Add goal" };
+
+    protected override void OnInitialized() => Sender.Sent += OnCommandSent;
+
+    void OnCommandSent() => InvokeAsync(async () =>
+    {
+        await ReloadAsync();
+        StateHasChanged();
+    });
 
     protected override async Task OnParametersSetAsync()
     {
@@ -92,8 +124,10 @@ else
     {
         var goals = await GoalStore.LoadAllAsync(State.UserId, CancellationToken.None);
         var kept = goals.Where(goal => !goal.Deleted).OrderBy(goal => goal.Name).ToArray();
-        _active = [.. kept.Where(goal => !goal.Achieved)];
-        _achieved = [.. kept.Where(goal => goal.Achieved)];
+        _active = [.. kept.Where(goal => goal.Status == GoalStatus.InProgress)
+            .OrderBy(goal => goal.DueOn ?? DateOnly.MaxValue)];
+        _achieved = [.. kept.Where(goal => goal.Status == GoalStatus.Achieved)];
+        _notAchieved = [.. kept.Where(goal => goal.Status == GoalStatus.NotAchieved)];
 
         _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
 
@@ -123,60 +157,19 @@ else
             await Sender.SendAsync(new ReopenTask(Guid.NewGuid(), State.UserId, task.Id));
         }
 
-        await ReloadAsync();
     }
 
     async Task StarAsync(TodoTask task)
     {
         await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, task.Id, !task.Starred));
-        await ReloadAsync();
     }
 
-    async Task AddGoalAsync()
-    {
-        var parameters = new DialogParameters<NameDialog> { { dialog => dialog.Title, "Goal name" } };
-        var dialog = await Dialogs.ShowAsync<NameDialog>("New goal", parameters);
-        var result = await dialog.Result;
+    void AddGoal() => Navigation.NavigateTo(GoalQuery.ForNew(Navigation.Uri));
 
-        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
-        {
-            return;
-        }
+    void EditGoal(Goal goal) => Navigation.NavigateTo(GoalQuery.For(Navigation.Uri, goal.Id));
 
-        await Sender.SendAsync(new CreateGoal(Guid.NewGuid(), State.UserId, Guid.NewGuid(), name));
-        await ReloadAsync();
-    }
-
-    async Task RenameAsync(Goal goal)
-    {
-        var parameters = new DialogParameters<NameDialog>
-        {
-            { dialog => dialog.Title, "Goal name" },
-            { dialog => dialog.Value, goal.Name }
-        };
-        var dialog = await Dialogs.ShowAsync<NameDialog>("Rename goal", parameters);
-        var result = await dialog.Result;
-
-        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new RenameGoal(Guid.NewGuid(), State.UserId, goal.Id, name));
-        await ReloadAsync();
-    }
-
-    async Task AchieveAsync(Goal goal)
-    {
-        await Sender.SendAsync(new AchieveGoal(Guid.NewGuid(), State.UserId, goal.Id));
-        await ReloadAsync();
-    }
-
-    async Task ReopenAsync(Goal goal)
-    {
-        await Sender.SendAsync(new ReopenGoal(Guid.NewGuid(), State.UserId, goal.Id));
-        await ReloadAsync();
-    }
+    async Task SetStatusAsync(Goal goal, GoalStatus status) =>
+        await Sender.SendAsync(new SetGoalStatus(Guid.NewGuid(), State.UserId, goal.Id, status));
 
     async Task DeleteAsync(Goal goal)
     {
@@ -193,6 +186,7 @@ else
         }
 
         await Sender.SendAsync(new DeleteGoal(Guid.NewGuid(), State.UserId, goal.Id));
-        await ReloadAsync();
     }
+
+    public void Dispose() => Sender.Sent -= OnCommandSent;
 }

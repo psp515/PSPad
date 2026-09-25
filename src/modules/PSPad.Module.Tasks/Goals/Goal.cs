@@ -11,6 +11,17 @@ public sealed class Goal : Aggregate
     [JsonInclude]
     public bool Achieved { get; private set; }
 
+    [JsonInclude]
+    public bool NotAchieved { get; private set; }
+
+    [JsonInclude]
+    public DateOnly? DueOn { get; private set; }
+
+    [JsonIgnore]
+    public GoalStatus Status => Achieved
+        ? GoalStatus.Achieved
+        : NotAchieved ? GoalStatus.NotAchieved : GoalStatus.InProgress;
+
     public static IReadOnlyList<DomainEvent> Decide(Goal? goal, ICommand command, DateTimeOffset at)
     {
         switch (command)
@@ -34,9 +45,29 @@ public sealed class Goal : Aggregate
                 var achieving = Require(goal, achieve.UserId);
                 return achieving.Achieved ? [] : [new GoalAchieved(achieving.Id, achieve.UserId, at)];
 
+            case SetGoalStatus setStatus:
+                var setting = Require(goal, setStatus.UserId);
+
+                if (!Enum.IsDefined(setStatus.Status))
+                {
+                    throw new DomainRejectedException("That is not a goal status.");
+                }
+
+                return setting.Status == setStatus.Status
+                    ? []
+                    : [new GoalStatusSet(setting.Id, setStatus.UserId, at, setStatus.Status)];
+
+            case SetGoalDueDate setDue:
+                var dating = Require(goal, setDue.UserId);
+                return dating.DueOn == setDue.DueOn
+                    ? []
+                    : [new GoalDueDateSet(dating.Id, setDue.UserId, at, setDue.DueOn)];
+
             case ReopenGoal reopen:
                 var reopening = Require(goal, reopen.UserId);
-                return reopening.Achieved ? [new GoalReopened(reopening.Id, reopen.UserId, at)] : [];
+                return reopening.Status == GoalStatus.InProgress
+                    ? []
+                    : [new GoalReopened(reopening.Id, reopen.UserId, at)];
 
             case DeleteGoal delete:
                 var deleting = Require(goal, delete.UserId);
@@ -61,9 +92,18 @@ public sealed class Goal : Aggregate
                 break;
             case GoalAchieved:
                 Achieved = true;
+                NotAchieved = false;
                 break;
             case GoalReopened:
                 Achieved = false;
+                NotAchieved = false;
+                break;
+            case GoalStatusSet statusSet:
+                Achieved = statusSet.Status == GoalStatus.Achieved;
+                NotAchieved = statusSet.Status == GoalStatus.NotAchieved;
+                break;
+            case GoalDueDateSet dueDateSet:
+                DueOn = dueDateSet.DueOn;
                 break;
             case GoalDeleted:
                 Deleted = true;

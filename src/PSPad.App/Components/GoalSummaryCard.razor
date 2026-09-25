@@ -1,0 +1,45 @@
+@using PSPad.Module.Tasks.Goals
+@using PSPad.Module.Tasks.Tasks
+
+<MudPaper Elevation="0" Outlined="true" Class="@($"pspad-goal-summary pspad-goal-summary-{Kind} pa-4 d-flex gap-3")"
+          role="button" tabindex="0" aria-label="@Goal.Name" @onclick="@OnOpen" @onkeydown="@OpenOnKeyAsync">
+    <MudIcon Icon="@StatusIcon" Color="@StatusColor" Class="flex-shrink-0" />
+    <div class="d-flex flex-column flex-grow-1" style="min-width:0">
+        <MudText Typo="Typo.subtitle1" Class="pspad-goal-summary-name">@Goal.Name</MudText>
+        <MudText Typo="Typo.body2" Class="pspad-goal-summary-tasks pspad-muted">@TasksText</MudText>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public Goal Goal { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
+
+    [Parameter] public EventCallback OnOpen { get; set; }
+
+    bool Achieved => Goal.Status == GoalStatus.Achieved;
+
+    string Kind => Achieved ? "achieved" : "not-achieved";
+
+    string StatusIcon => Achieved ? Icons.Material.Outlined.EmojiEvents : Icons.Material.Outlined.HighlightOff;
+
+    Color StatusColor => Achieved ? Color.Success : Color.Error;
+
+    IReadOnlyList<TodoTask> Counted => [.. Tasks.Where(task => !task.Deleted)];
+
+    int Total => Counted.Count;
+
+    int Done => Counted.Count(task => task.CompletedAt is not null);
+
+    string TasksText => Total == 0
+        ? "No tasks linked"
+        : $"{Done} of {Total} {(Total == 1 ? "task" : "tasks")} done";
+
+    async Task OpenOnKeyAsync(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or " ")
+        {
+            await OnOpen.InvokeAsync();
+        }
+    }
+}
