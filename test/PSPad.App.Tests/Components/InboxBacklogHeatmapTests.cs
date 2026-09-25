@@ -69,7 +69,7 @@ public class InboxBacklogHeatmapTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheGridDeclaresOneColumnPerWeekSoItCanStretchToThePanel()
+    public void TheGridIsAFlowingAutoFitGridSoItFillsThePanelWidth()
     {
         var weeks = Enumerable.Range(0, 5)
             .Select(offset => new WeeklyCountView(new DateOnly(2026, 8, 23).AddDays(offset * 7), 1))
@@ -77,41 +77,21 @@ public class InboxBacklogHeatmapTests : Bunit.TestContext
 
         var heatmap = Render(weeks);
 
-        Assert.Contains(
-            "--pspad-heatmap-columns:5",
-            heatmap.Find(".pspad-heatmap-weeks").GetAttribute("style"));
+        var flow = heatmap.Find(".pspad-heatmap-flow");
+        Assert.Contains("--pspad-heatmap-cell-min", flow.GetAttribute("style"));
+        Assert.Contains("--pspad-heatmap-cell-cap", flow.GetAttribute("style"));
     }
 
     [Fact]
-    public void TheMonthsTheRangeCoversAreLabelledAlongTheTop()
+    public void AYearOfWeeksStillGetsOneCellPerWeek()
     {
-        var weeks = Enumerable.Range(0, 5)
-            .Select(offset => new WeeklyCountView(new DateOnly(2026, 8, 23).AddDays(offset * 7), 1))
+        var weeks = Enumerable.Range(0, 53)
+            .Select(offset => new WeeklyCountView(new DateOnly(2025, 9, 21).AddDays(offset * 7), 1))
             .ToList();
 
         var heatmap = Render(weeks);
 
-        var months = heatmap.FindAll(".pspad-heatmap-month")
-            .Select(label => label.TextContent.Trim())
-            .ToList();
-
-        Assert.Equal(["Aug", "Sep"], months);
-    }
-
-    [Fact]
-    public void AMonthWithASingleWeekInRangeIsLeftUnlabelled()
-    {
-        var weeks = Enumerable.Range(0, 5)
-            .Select(offset => new WeeklyCountView(new DateOnly(2026, 8, 30).AddDays(offset * 7), 1))
-            .ToList();
-
-        var heatmap = Render(weeks);
-
-        var months = heatmap.FindAll(".pspad-heatmap-month")
-            .Select(label => label.TextContent.Trim())
-            .ToList();
-
-        Assert.Equal(["Sep"], months);
+        Assert.Equal(53, heatmap.FindAll(".pspad-heatmap-week").Count);
     }
 
     [Fact]

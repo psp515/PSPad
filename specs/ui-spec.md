@@ -51,23 +51,47 @@ on it first.
 (`Statistics/ConsistencyHeatmap.razor` — one cell per day — and
 `Statistics/InboxBacklogHeatmap.razor` — one cell per week — over
 `.pspad-heatmap*` in `wwwroot/css/app.css`). MudBlazor ships
-`ChartType.HeatMap`, but it is a generic matrix chart — it gives neither
-day-of-week calendar alignment nor a per-cell `title`/`aria-label`, and
-without those the grid is a wall of coloured squares a screen reader cannot
-read. A hand-rolled CSS grid earns its place here for exactly the reason
-the table above says a custom class ever can: MudBlazor genuinely has no
-component that does this.
+`ChartType.HeatMap`, but it is a generic matrix chart — it gives no
+per-cell `title`/`aria-label`, and without one the grid is a wall of
+coloured squares a screen reader cannot read. A hand-rolled CSS grid earns
+its place here for exactly the reason the table above says a custom class
+ever can: MudBlazor genuinely has no component that does this.
 
 The two panels sit side by side at `md` and up (`MudItem xs="12" md="6"`
 each, matching the chart grid above them) and stack to full width below
-that breakpoint — half the panel width they had stacked, which is why
-their cells are capped smaller than a full-width heatmap would need. Both
-grids scale to the panel they sit in rather than hugging its corner: the
-column track is `minmax(11px, 1fr)` with a per-cell cap in the grid's
-`max-width`, so 5 week columns at the 30-day range grow to roughly 30px
-cells while 53 columns at 365 days stay legible and hand the overflow to
-`.pspad-heatmap-scroll`. Each carries month labels along the top, the daily
-grid adds Mon/Wed/Fri down the side, and each ends in a `HeatmapKey` — the
+that breakpoint. Both grids are a single flowing `.pspad-heatmap-flow`
+(`display: grid; grid-template-columns: repeat(auto-fit, minmax(30px,
+1fr))`) — cells wrap to as many rows as the range needs and stretch to
+fill every row, deliberately giving up day-of-week/week-column alignment
+(the maintainer's call, 2026-09-25: "it doesn't have to reflect how the
+month has days, it can just be squares that auto-fit to space") in
+exchange for actually using the panel's width instead of leaving a
+GitHub-style calendar stranded in one corner. `--pspad-heatmap-cell-min`
+(30px) is the floor that keeps a 365-day range's ~23 rows legible instead
+of one row per day; `--pspad-heatmap-cell-cap` (44px, via `max-width` on
+the cell — `fr` cannot appear inside `min()`/`max()`, so the ceiling has to
+live on the item, not the track) stops a sparse row — the Inbox-backlog
+grid at a 30-day range is only 5 cells — from stretching into oversized
+tiles once `auto-fit` collapses its unused tracks.
+
+No month label. The old design's `Sep` header made sense over fixed
+week-columns; once cells flow and wrap freely there is no stable column for
+a month to anchor to, and an early attempt at a per-month header row (one
+`grid-column: 1 / -1` label, restarting the row after it) backfired: the
+label forces every column track to register as "used", which defeats
+`auto-fit`'s collapse and leaves a short trailing group (the last few days
+of a month, a handful of weeks) stranded at the grid's minimum cell size
+with dead space beside it — the exact problem this redesign exists to fix,
+just relocated. The day-of-month number already on every cell is the month
+cue: it resets to `1` where a month rolls over, and the full date is always
+one hover or tap away. Each Sunday cell instead carries a 3px accent border
+on its top edge (`--mud-palette-secondary`) — the only left-to-right cue
+left for where a week starts, now that weekday rows are gone. Each cell
+also renders its day-of-month number (`aria-hidden`, the accessible label
+is unaffected); text colour switches from `--mud-palette-text-secondary` to
+the theme's computed `--mud-palette-primary-text` at `data-level="3"`/`"4"`
+so it stays legible against both the near-background and fully-saturated
+ends of the shade ramp. Each heatmap ends in a `HeatmapKey` — the
 conventional five-step ramp plus one sentence saying what darker means.
 `HeatmapLevel.Of(count, maximum)` is the shared five-step scale; a key's
 swatches deliberately do not carry the `pspad-heatmap-cell` class, so they
@@ -290,8 +314,9 @@ see above.
 **The statistics screen (`StatisticsPage`, `/statistics`) is server-rendered
 data over plain REST, not the replica** — no IndexedDB, no outbox, no
 command pipeline. It is its own layout, not the §2 card grid: a `MudGrid`
-of tiles (`sm="3" xs="6"`), four charts (`md="6" xs="12"`), then the
-the two heatmaps and the record feed each full width. The feed is a
+of tiles (`sm="3" xs="6"`), four charts (`md="6" xs="12"`), then the two
+heatmaps side by side (`md="6" xs="12"`, see §1) and the record feed full
+width below them. The feed is a
 `MudExpansionPanel` ("Everything that happened") **collapsed by default** —
 it is the raw log, not the summary someone opens the screen for — and the
 page holds its loaded pages in its own state, so opening, paging with *load

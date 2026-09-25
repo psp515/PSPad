@@ -1,40 +1,25 @@
 @using PSPad.Contracts
 
 <div class="pspad-heatmap">
-    <div class="pspad-heatmap-scroll">
-        <div class="pspad-heatmap-weeks" style="--pspad-heatmap-columns:@Columns;--pspad-heatmap-cell-max:@(CellMax)px;">
-            @foreach (var month in MonthLabels())
-            {
-                <span class="pspad-heatmap-month"
-                      style="grid-row:1;grid-column:@(month.Column + 1);">@month.Text</span>
-            }
-            @for (var index = 0; index < Weeks.Count; index++)
-            {
-                var week = Weeks[index];
-                <div class="pspad-heatmap-swatch pspad-heatmap-week"
-                     data-level="@HeatmapLevel.Of(week.Count, Maximum)"
-                     data-today="@(week.WeekStart == CurrentWeekStart ? "true" : "false")"
-                     style="grid-row:2;grid-column:@(index + 1);"
-                     title="@LabelOf(week)"
-                     aria-label="@LabelOf(week)">
-                </div>
-            }
-        </div>
+    <div class="pspad-heatmap-flow" style="--pspad-heatmap-cell-min:30px;--pspad-heatmap-cell-cap:44px;">
+        @foreach (var week in Weeks)
+        {
+            <div class="pspad-heatmap-swatch pspad-heatmap-week"
+                 data-level="@HeatmapLevel.Of(week.Count, Maximum)"
+                 data-today="@(week.WeekStart == CurrentWeekStart ? "true" : "false")"
+                 title="@LabelOf(week)"
+                 aria-label="@LabelOf(week)">
+            </div>
+        }
     </div>
     <HeatmapKey Caption="Each square is one week; darker means more captures were still waiting in the Inbox when that week ended."
                 Less="Empty" More="Piling up" />
 </div>
 
 @code {
-    const int NarrowestLabelledMonth = 2;
-
     [Parameter, EditorRequired] public IReadOnlyList<WeeklyCountView> Weeks { get; set; } = [];
 
     [Parameter] public DateOnly Today { get; set; }
-
-    int Columns => Math.Max(Weeks.Count, 1);
-
-    int CellMax => Columns switch { <= 8 => 30, <= 20 => 22, _ => 16 };
 
     int Maximum => Weeks.Count == 0 ? 0 : Weeks.Max(week => week.Count);
 
@@ -42,20 +27,4 @@
 
     static string LabelOf(WeeklyCountView week) =>
         $"week of {week.WeekStart:yyyy-MM-dd}: {week.Count} still in the Inbox";
-
-    IEnumerable<(int Column, string Text)> MonthLabels()
-    {
-        var months = Weeks
-            .Select((week, index) => (week.WeekStart, Index: index))
-            .GroupBy(week => (week.WeekStart.Year, week.WeekStart.Month))
-            .Select(month => (
-                Column: month.First().Index,
-                Columns: month.Count(),
-                Text: month.First().WeekStart.ToString("MMM")))
-            .ToList();
-
-        return months
-            .Where(month => months.Count == 1 || month.Columns >= NarrowestLabelledMonth)
-            .Select(month => (month.Column, month.Text));
-    }
 }
