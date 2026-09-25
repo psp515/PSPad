@@ -70,6 +70,19 @@ recorded shows its *current* name for that old record, not the name it had
 then, because that information was never captured. Only events recorded
 from this change forward are exempt from that limitation.
 
+**`Statistics` references `Tasks` directly — the one module-to-module edge in
+the repo.** The projections switch on Tasks' event *types*
+(`TaskCompleted`, `TaskMovedToList`, `OccurrenceCompleted`, the label
+projection's create/rename/delete events), so the module needs those types at
+compile time. `PSPad.Module.Statistics.csproj` therefore references
+`PSPad.Module.Tasks.csproj`, and `DomainEventCatalogue` builds its
+name-to-type map by reflecting over the Tasks assembly. The edge runs one way
+only: `ArchitectureTests.TasksNeverReachesStatistics` fails the build if
+`Tasks` ever references `Statistics` back. The cost is real and accepted:
+`Statistics` recompiles whenever a Tasks event changes, and a change to a Tasks
+event's shape can break the Statistics build — which is the point, but it does
+mean the two modules are no longer independently buildable.
+
 **Occurrences are a toggle, not two event types.** `OccurrenceCompleted`
 carries `bool Completed`, so ticking a recurring day and un-ticking it later
 emit the same event type with the flag flipped. Both become
@@ -119,6 +132,23 @@ tiebreaker within a day.
   from the chart the moment the task is deleted, not stay as history.
   `ITaskSnapshotSource` is still used, but only for the narrow pre-enrichment
   name fallback (§ above), never to decide a chart's shape.
+- **Move the event records into `PSPad.Contracts`** so both modules depend on
+  shared contracts and neither module depends on the other, instead of
+  `Statistics` referencing `Tasks`. Rejected, but it was close. It would keep
+  module references acyclic by construction and free Statistics from
+  recompiling when a Tasks event changes. Against it: domain events are
+  `Tasks`' own language, not a wire shape — ADR-0003 keeps commands, events
+  and aggregates together in the module so behaviour has one home, and
+  hoisting the events would split an aggregate's vocabulary across two
+  projects and widen the shared contract surface, with every new Tasks event
+  needing a `Contracts` edit before the module raising it can compile.
+  Referencing the module keeps the compile-time safety that matters here:
+  rename `TaskCompleted` and the projection fails to build, which is exactly
+  the failure History's string lookup could not produce. If a third consumer
+  ever needs the same events, that is the point to revisit hoisting them.
+- **Keep matching on `StoredEvent.Type` strings**, as History did, and
+  reference no module at all. Rejected: that is the bug this ADR exists to
+  fix — a rename changes what the screen says with nothing red anywhere.
 
 ## Consequences
 

@@ -31,12 +31,26 @@ it resolves `IDomainEventReplay` in its own DI scope and calls
 does the pump start draining the live channel, resolving a fresh scope and
 every `IDomainEventHandler` per batch.
 
-A handler that throws is caught and logged by the pump
+A handler that throws is caught and logged at Error by the pump
 (`src/shared/PSPad.Infrastructure/Events/DomainEventPump.cs`) — one bad
 handler does not take the service down. A dispatch failure at the point of
 publish (the channel write itself) is likewise caught and logged inside
 `MongoUnitOfWork.CommitAsync` — the transaction already committed, so a
 publish failure must never turn an accepted command into a failed one.
+
+**Replay catches too, but stops the pass instead of skipping the event.**
+A `BackgroundService` that lets an exception escape `ExecuteAsync` stops the
+host by default, and every live-dispatched event is replayed again on the
+next boot — so a handler failure swallowed live would throw again during
+replay, and an unhandled replay would turn one poison event into a boot
+loop that takes the API down while it is already serving requests.
+`StatisticsReplay` therefore catches per event (deserialization included),
+logs at Error with the event's `seq` and type, writes the marker up to the
+last event that *did* succeed, and returns so the pump proceeds to the live
+drain. The marker never moves past a failing event, so the next start
+retries exactly there. A failure in the log read or the marker write itself
+is caught one level up, leaving the marker untouched. The host stays up
+either way; statistics stay behind until a later start gets past the event.
 
 ## Considered alternatives
 

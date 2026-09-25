@@ -175,6 +175,13 @@ References run one way only: `Tasks` sees `Abstractions` and nothing else;
 `Infrastructure` never sees a module; `App` never sees `Infrastructure`; `Api`
 sees everything and is the only place a module meets MongoDB.
 
+One module-to-module edge exists, and only one: `Statistics` references
+`Tasks`, because its projections pattern-match on Tasks' own event types
+(`TaskCompleted`, `OccurrenceCompleted`, …) and a rename must break the build
+rather than a string lookup at render time. It runs one way — an
+`ArchitectureTests` guard fails the build if `Tasks` ever references
+`Statistics`. See `adr/0035`.
+
 ---
 
 ## 7. Testing

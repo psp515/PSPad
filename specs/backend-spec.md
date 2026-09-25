@@ -198,10 +198,13 @@ not stated there:
   Reordering rewrites the affected range rather than using fractional
   keys — ranges are short, and the rewrite touches one document.
 - `TodoTask.CreatedAt` is set in `When(TaskCreated)` from the event's `At`.
-  It backs delta sync and was originally added to feed the now-deleted
-  client-side burndown chart (`adr/0019`); the equivalent chart is now
-  `StatisticsCharts.Outstanding`, server-side, derived from
-  `statistics_records` — see §9.
+  It does not back delta sync — that runs off the aggregate's `seq` marker
+  alone. It was added to feed the client-side burndown chart (`adr/0019`),
+  which this slice deleted; its successor,
+  `StatisticsCharts.Outstanding`, is server-side and derives from
+  `statistics_records`, so the field has no consumer at all today. It stays
+  because it is the only creation timestamp current state carries, and
+  `adr/0019`'s backfill already put it on every existing document.
 - A goal's status is `InProgress`, `Achieved` or `NotAchieved`, set by
   `SetGoalStatus`. It is derived from two stored flags, `achieved` and
   `notAchieved`, never stored as its own field. Documents written before
@@ -462,8 +465,12 @@ day and un-ticking it produce two records, `OccurrenceTicked` and
 current tick state resolves each `(TaskId, OccurrenceDay)` pair to its
 highest-`Id` record. `statistics_labels` is a separate projection
 (`AreaCreated`/`Renamed`/`Deleted`, `TaskListCreated`/`Renamed`/`Deleted`,
-`GoalCreated`/`Renamed`/`Deleted`) resolving area/list/goal names for the
-feed without Statistics ever reading `Tasks`' own collections;
+`GoalCreated`/`Renamed`/`Deleted`) holding the current name of every area,
+list and goal without Statistics ever reading `Tasks`' own collections. Two
+readers consume it: the feed resolves a record's `ListId` and `GoalId`, and
+`ByGoal` resolves goal names. `Area` labels are projected but read by nothing
+today — they are kept because the projection is fed by the same event stream
+and a future area breakdown would otherwise start with no history.
 `TaskListMovedToArea` is not projected, since a label carries a name, not a
 parent. See `adr/0037` for why this is a read-side projection and not a
 second audit trail alongside `events`.
