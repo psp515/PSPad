@@ -74,14 +74,37 @@ public class StatisticsCacheTests
     public async Task CorruptedStoredJsonIsTreatedAsNoCache()
     {
         var js = new FakeJsRuntime();
-        js.Values["pspad.statistics.30"] = "not valid json";
+        js.Values["pspad.statistics.2.30"] = "not valid json";
         var cache = new StatisticsCache(js);
 
         Assert.Null(await cache.ReadAsync(30));
     }
 
+    [Fact]
+    public async Task APayloadCachedUnderThePreviousShapesKeyIsIgnored()
+    {
+        var js = new FakeJsRuntime();
+        js.Values["pspad.statistics.30"] =
+            """{"Tiles":{"DoneToday":3,"OpenedToday":0,"DoneThisWeek":0,"NetChange":0}}""";
+        var cache = new StatisticsCache(js);
+
+        Assert.Null(await cache.ReadAsync(30));
+    }
+
+    [Fact]
+    public async Task ClearAlsoRemovesWhatThePreviousShapeLeftBehind()
+    {
+        var js = new FakeJsRuntime();
+        js.Values["pspad.statistics.30"] = "{}";
+        var cache = new StatisticsCache(js);
+
+        await cache.ClearAsync();
+
+        Assert.Empty(js.Values);
+    }
+
     static StatisticsOverview Sample(int doneToday) =>
-        new(new StatisticsTilesView(doneToday, 0, 0, 0), [], [], [], [], []);
+        new(new StatisticsTilesView(doneToday, 0, 0, 0), [], [], [], [], [], []);
 
     sealed class FakeJsRuntime : IJSRuntime
     {

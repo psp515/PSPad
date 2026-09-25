@@ -2,7 +2,8 @@ using PSPad.Contracts;
 
 namespace PSPad.Module.Statistics;
 
-public sealed class StatisticsOverviewReader(IStatisticsStore store, ILabelStore labels)
+public sealed class StatisticsOverviewReader(
+    IStatisticsStore store, ILabelStore labels, IInboxRecordStore inbox)
 {
     const int DefaultRange = 30;
 
@@ -14,9 +15,11 @@ public sealed class StatisticsOverviewReader(IStatisticsStore store, ILabelStore
         var range = OfferedRanges.Contains(days) ? days : DefaultRange;
         var from = StartOfDay(today.AddDays(1 - range), zone);
 
-        // One instant for both reads, so every record is either charted or in the opening balance, never both.
+        // One instant for every read, so every record is either charted or in the opening balance, never both.
         var records = await store.SinceAsync(userId, from, ct);
         var openAtStart = await store.OpenTaskIdsBeforeAsync(userId, from, ct);
+        var captures = await inbox.SinceAsync(userId, from, ct);
+        var heldAtStart = await inbox.HeldItemIdsBeforeAsync(userId, from, ct);
         var known = await labels.AllAsync(userId, ct);
 
         var outstanding = StatisticsCharts.Outstanding(records, today, range, zone, openAtStart);
@@ -27,7 +30,9 @@ public sealed class StatisticsOverviewReader(IStatisticsStore store, ILabelStore
             StatisticsCharts.Opened(records, today, range, zone).Select(Count).ToArray(),
             outstanding.Select(Count).ToArray(),
             StatisticsCharts.ByGoal(records, known).Select(Goal).ToArray(),
-            StatisticsCharts.Heatmap(records, today, range, zone).Select(Count).ToArray());
+            StatisticsCharts.Heatmap(records, today, range, zone).Select(Count).ToArray(),
+            StatisticsCharts.InboxBacklog(captures, today, range, zone, heldAtStart)
+                .Select(Week).ToArray());
     }
 
     static StatisticsTilesView Tiles(StatisticsTiles tiles) =>
@@ -37,6 +42,8 @@ public sealed class StatisticsOverviewReader(IStatisticsStore store, ILabelStore
         new(point.Day, point.Planned, point.Unplanned);
 
     static DailyCountView Count(DailyCount point) => new(point.Day, point.Count);
+
+    static WeeklyCountView Week(WeeklyCount week) => new(week.WeekStart, week.Count);
 
     static GoalTotalView Goal(GoalTotal bar) => new(bar.GoalId, bar.Name, bar.Count);
 

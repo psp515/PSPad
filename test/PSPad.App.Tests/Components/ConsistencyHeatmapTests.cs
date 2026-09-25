@@ -77,6 +77,119 @@ public class ConsistencyHeatmapTests : Bunit.TestContext
             cell => Assert.Equal("0", cell.GetAttribute("data-level")));
     }
 
+    [Fact]
+    public void TheGridDeclaresOneColumnPerWeekSoItCanStretchToThePanel()
+    {
+        var days = Enumerable.Range(0, 30)
+            .Select(offset => new DailyCountView(new DateOnly(2026, 8, 26).AddDays(offset), 1))
+            .ToList();
+
+        var heatmap = Render(days, new DateOnly(2026, 9, 24));
+
+        Assert.Contains(
+            "--pspad-heatmap-columns:5",
+            heatmap.Find(".pspad-heatmap-grid").GetAttribute("style"));
+    }
+
+    [Fact]
+    public void AYearOfDaysDeclaresAColumnForEveryWeekOfIt()
+    {
+        var days = Enumerable.Range(0, 365)
+            .Select(offset => new DailyCountView(new DateOnly(2025, 9, 25).AddDays(offset), 1))
+            .ToList();
+
+        var heatmap = Render(days, new DateOnly(2026, 9, 24));
+
+        Assert.Contains(
+            "--pspad-heatmap-columns:53",
+            heatmap.Find(".pspad-heatmap-grid").GetAttribute("style"));
+    }
+
+    [Fact]
+    public void TheMonthsTheRangeCoversAreLabelledAlongTheTop()
+    {
+        var days = Enumerable.Range(0, 90)
+            .Select(offset => new DailyCountView(new DateOnly(2026, 6, 27).AddDays(offset), 1))
+            .ToList();
+
+        var heatmap = Render(days, new DateOnly(2026, 9, 24));
+
+        var months = heatmap.FindAll(".pspad-heatmap-month")
+            .Select(label => label.TextContent.Trim())
+            .ToList();
+
+        Assert.Equal(["Jul", "Aug", "Sep"], months);
+    }
+
+    [Fact]
+    public void AMonthTheRangeBarelyTouchesIsLeftUnlabelledSoTheLabelsDoNotCollide()
+    {
+        var days = Enumerable.Range(0, 30)
+            .Select(offset => new DailyCountView(new DateOnly(2026, 8, 26).AddDays(offset), 1))
+            .ToList();
+
+        var heatmap = Render(days, new DateOnly(2026, 9, 24));
+
+        var months = heatmap.FindAll(".pspad-heatmap-month")
+            .Select(label => label.TextContent.Trim())
+            .ToList();
+
+        Assert.Equal(["Sep"], months);
+    }
+
+    [Fact]
+    public void ARangeInsideOneMonthStillNamesIt()
+    {
+        var days = Enumerable.Range(0, 5)
+            .Select(offset => new DailyCountView(new DateOnly(2026, 9, 7).AddDays(offset), 1))
+            .ToList();
+
+        var heatmap = Render(days, new DateOnly(2026, 9, 11));
+
+        Assert.Equal("Sep", Assert.Single(heatmap.FindAll(".pspad-heatmap-month")).TextContent.Trim());
+    }
+
+    [Fact]
+    public void EveryOtherWeekdayIsLabelledDownTheSide()
+    {
+        var days = new List<DailyCountView> { new(new DateOnly(2026, 9, 24), 1) };
+
+        var heatmap = Render(days, new DateOnly(2026, 9, 24));
+
+        var weekdays = heatmap.FindAll(".pspad-heatmap-weekday")
+            .Select(label => label.TextContent.Trim())
+            .ToList();
+
+        Assert.Equal(["Mon", "Wed", "Fri"], weekdays);
+    }
+
+    [Fact]
+    public void AShadeKeyExplainsWhatTheColoursMean()
+    {
+        var days = new List<DailyCountView> { new(new DateOnly(2026, 9, 24), 1) };
+
+        var heatmap = Render(days, new DateOnly(2026, 9, 24));
+
+        var levels = heatmap.FindAll(".pspad-heatmap-key-cell")
+            .Select(cell => cell.GetAttribute("data-level"))
+            .ToList();
+
+        Assert.Equal(["0", "1", "2", "3", "4"], levels);
+        Assert.Contains("Less", heatmap.Markup);
+        Assert.Contains("More", heatmap.Markup);
+        Assert.Contains("darker means more tasks finished", heatmap.Markup);
+    }
+
+    [Fact]
+    public void TheKeysSwatchesAreNotCountedAsDays()
+    {
+        var days = new List<DailyCountView> { new(new DateOnly(2026, 9, 24), 1) };
+
+        var heatmap = Render(days, new DateOnly(2026, 9, 24));
+
+        Assert.Single(heatmap.FindAll(".pspad-heatmap-cell"));
+    }
+
     IRenderedComponent<ConsistencyHeatmap> Render(IReadOnlyList<DailyCountView> days, DateOnly today) =>
         Render<ConsistencyHeatmap>(parameters => parameters
             .Add(p => p.Days, days)

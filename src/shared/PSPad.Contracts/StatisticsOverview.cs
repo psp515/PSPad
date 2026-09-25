@@ -6,4 +6,5 @@ public sealed record StatisticsOverview(
     IReadOnlyList<DailyCountView> Opened,
     IReadOnlyList<DailyCountView> Outstanding,
     IReadOnlyList<GoalTotalView> ByGoal,
-    IReadOnlyList<DailyCountView> Heatmap);
+    IReadOnlyList<DailyCountView> Heatmap,
+    IReadOnlyList<WeeklyCountView> InboxBacklog);

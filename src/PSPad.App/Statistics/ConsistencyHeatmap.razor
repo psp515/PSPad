@@ -1,46 +1,67 @@
 @using PSPad.Contracts
 
 <div class="pspad-heatmap">
-    @foreach (var day in Days)
-    {
-        <div class="pspad-heatmap-cell"
-             data-level="@LevelOf(day.Count)"
-             data-today="@(day.Day == Today ? "true" : "false")"
-             style="@PositionOf(day.Day)"
-             title="@LabelOf(day)"
-             aria-label="@LabelOf(day)">
+    <div class="pspad-heatmap-scroll">
+        <div class="pspad-heatmap-grid" style="--pspad-heatmap-columns:@Columns;--pspad-heatmap-cell-max:@(CellMax)px;">
+            @foreach (var month in MonthLabels())
+            {
+                <span class="pspad-heatmap-month"
+                      style="grid-row:1;grid-column:@(month.Column + 2);">@month.Text</span>
+            }
+            @foreach (var weekday in WeekdayLabels)
+            {
+                <span class="pspad-heatmap-weekday"
+                      style="grid-row:@((int)weekday + 2);grid-column:1;">@weekday.ToString()[..3]</span>
+            }
+            @foreach (var day in Days)
+            {
+                <div class="pspad-heatmap-swatch pspad-heatmap-cell"
+                     data-level="@HeatmapLevel.Of(day.Count, Maximum)"
+                     data-today="@(day.Day == Today ? "true" : "false")"
+                     style="@PositionOf(day.Day)"
+                     title="@LabelOf(day)"
+                     aria-label="@LabelOf(day)">
+                </div>
+            }
         </div>
-    }
+    </div>
+    <HeatmapKey Caption="Each square is one day; darker means more tasks finished that day." />
 </div>
 
 @code {
+    const int NarrowestLabelledMonth = 3;
+
+    static readonly DayOfWeek[] WeekdayLabels = [DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday];
+
     [Parameter, EditorRequired] public IReadOnlyList<DailyCountView> Days { get; set; } = [];
 
     [Parameter] public DateOnly Today { get; set; }
 
     int Maximum => Days.Count == 0 ? 0 : Days.Max(day => day.Count);
 
-    int LevelOf(int count)
-    {
-        if (count <= 0 || Maximum <= 0)
-        {
-            return 0;
-        }
+    int Columns => Days.Count == 0 ? 1 : ColumnOf(Days[^1].Day) + 1;
 
-        var ratio = (double)count / Maximum;
-
-        return ratio switch
-        {
-            <= 0.25 => 1,
-            <= 0.5 => 2,
-            <= 0.75 => 3,
-            _ => 4
-        };
-    }
+    int CellMax => Columns switch { <= 6 => 64, <= 14 => 44, _ => 34 };
 
     static string LabelOf(DailyCountView day) => $"{day.Day:yyyy-MM-dd}: {day.Count} completed";
 
-    string PositionOf(DateOnly day) => $"grid-row:{(int)day.DayOfWeek + 1};grid-column:{ColumnOf(day) + 1};";
+    IEnumerable<(int Column, string Text)> MonthLabels()
+    {
+        var months = Days
+            .GroupBy(day => (day.Day.Year, day.Day.Month))
+            .Select(month => (
+                Column: ColumnOf(month.First().Day),
+                Columns: ColumnOf(month.Last().Day) - ColumnOf(month.First().Day) + 1,
+                Text: month.First().Day.ToString("MMM")))
+            .ToList();
+
+        return months
+            .Where(month => months.Count == 1 || month.Columns >= NarrowestLabelledMonth)
+            .Select(month => (month.Column, month.Text));
+    }
+
+    string PositionOf(DateOnly day) =>
+        $"grid-row:{(int)day.DayOfWeek + 2};grid-column:{ColumnOf(day) + 2};";
 
     int ColumnOf(DateOnly day)
     {

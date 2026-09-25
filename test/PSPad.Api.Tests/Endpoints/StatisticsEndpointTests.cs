@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
@@ -99,6 +100,40 @@ public class StatisticsEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task ACapturedInboxItemWeighsOnTheBacklogUntilItIsOrganised()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = await UserId(client, ct);
+        var inboxId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        var kept = Guid.NewGuid();
+        await Post(client, new CreateInbox(Guid.NewGuid(), user, inboxId), ct);
+        await Post(client, new CaptureToInbox(Guid.NewGuid(), user, inboxId, itemId, "Ring the plumber"), ct);
+        await Post(client, new CaptureToInbox(Guid.NewGuid(), user, inboxId, kept, "Read the manual"), ct);
+
+        var captured = await EventuallyAsync(
+            () => Overview(client, "?days=30", ct),
+            view => view.InboxBacklog[^1].Count == 2,
+            ct);
+
+        Assert.InRange(captured.InboxBacklog.Count, 5, 6);
+
+        await Post(
+            client,
+            new OrganiseInboxItem(Guid.NewGuid(), user, inboxId, itemId, Guid.NewGuid(), Guid.NewGuid()),
+            ct);
+
+        var organised = await EventuallyAsync(
+            () => Overview(client, "?days=30", ct),
+            view => view.InboxBacklog[^1].Count == 1,
+            ct);
+
+        Assert.Equal(1, organised.InboxBacklog[^1].Count);
+    }
+
+    [Fact]
     public async Task AnotherUsersWorkIsInvisibleInTheFeedAndTheOverview()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
@@ -126,6 +161,7 @@ public class StatisticsEndpointTests(MongoFixture fixture)
         Assert.All(myOverview.Opened, point => Assert.Equal(0, point.Count));
         Assert.All(myOverview.Outstanding, point => Assert.Equal(0, point.Count));
         Assert.All(myOverview.Completions, point => Assert.Equal(0, point.Planned + point.Unplanned));
+        Assert.All(myOverview.InboxBacklog, week => Assert.Equal(0, week.Count));
 
         Assert.Contains(theirRecords, record => record.TaskId == theirTaskId);
         Assert.Equal(1, theirOverview.Tiles.DoneToday);

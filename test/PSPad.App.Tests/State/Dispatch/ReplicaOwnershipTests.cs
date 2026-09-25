@@ -149,7 +149,7 @@ public class ReplicaOwnershipTests
     static StatisticsCache NewCache() => new(new FakeJsRuntime());
 
     static StatisticsOverview SampleOverview() =>
-        new(new StatisticsTilesView(0, 0, 0, 0), [], [], [], [], []);
+        new(new StatisticsTilesView(0, 0, 0, 0), [], [], [], [], [], []);
 
     static CommandEnvelope Envelope() =>
         new(nameof(CreateArea), JsonSerializer.SerializeToElement(new { Name = "Home" }));

@@ -122,36 +122,45 @@
                 <MudText Typo="Typo.subtitle2" Class="mb-2">Consistency</MudText>
                 <ConsistencyHeatmap Days="@overview.Heatmap" Today="@State.Today" />
             </MudPaper>
+
+            <MudPaper Outlined="true" Class="pa-3 mb-4">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Inbox backlog left at each week's end</MudText>
+                <InboxBacklogHeatmap Weeks="@overview.InboxBacklog" Today="@State.Today" />
+            </MudPaper>
         }
 
-        @foreach (var day in _records.GroupBy(DayOf))
-        {
-            <MudText Typo="Typo.subtitle1" Class="mt-4">@day.Key.ToString("d MMM yyyy")</MudText>
-            @foreach (var record in day)
-            {
-                @if (record.CurrentStatus == "Gone")
+        <MudExpansionPanels Elevation="0" Outlined="true" Class="mb-4">
+            <MudExpansionPanel Text="Everything that happened">
+                @foreach (var day in _records.GroupBy(DayOf))
                 {
-                    <MudPaper Outlined="true" Class="mb-2 pspad-record-gone">
-                        <div class="px-3 py-2">
-                            <RecordRow Record="@record" />
-                        </div>
-                    </MudPaper>
+                    <MudText Typo="Typo.subtitle1" Class="mt-4">@day.Key.ToString("d MMM yyyy")</MudText>
+                    @foreach (var record in day)
+                    {
+                        @if (record.CurrentStatus == "Gone")
+                        {
+                            <MudPaper Outlined="true" Class="mb-2 pspad-record-gone">
+                                <div class="px-3 py-2">
+                                    <RecordRow Record="@record" />
+                                </div>
+                            </MudPaper>
+                        }
+                        else
+                        {
+                            <MudPaper Outlined="true" Class="mb-2">
+                                <div class="px-3 py-2" style="cursor:pointer" @onclick="@(() => Open(record))">
+                                    <RecordRow Record="@record" />
+                                </div>
+                            </MudPaper>
+                        }
+                    }
                 }
-                else
-                {
-                    <MudPaper Outlined="true" Class="mb-2">
-                        <div class="px-3 py-2" style="cursor:pointer" @onclick="@(() => Open(record))">
-                            <RecordRow Record="@record" />
-                        </div>
-                    </MudPaper>
-                }
-            }
-        }
 
-        @if (_records.Count > 0)
-        {
-            <MudButton OnClick="@LoadOlderAsync">load older</MudButton>
-        }
+                @if (_records.Count > 0)
+                {
+                    <MudButton OnClick="@LoadOlderAsync">load older</MudButton>
+                }
+            </MudExpansionPanel>
+        </MudExpansionPanels>
     }
 }
 

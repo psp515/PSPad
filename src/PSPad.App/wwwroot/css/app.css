@@ -23,42 +23,108 @@ h1[tabindex="-1"]:focus {
 }
 
 .pspad-heatmap {
-    display: grid;
-    grid-template-rows: repeat(7, 12px);
-    grid-auto-columns: 12px;
-    gap: 4px;
-    overflow-x: auto;
-    padding: 4px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.pspad-heatmap-cell {
-    width: 12px;
-    height: 12px;
+.pspad-heatmap-scroll {
+    overflow-x: auto;
+    padding: 2px 0;
+}
+
+/* 1fr columns capped per cell: the grid fills a wide panel instead of hugging its corner, while
+   minmax' floor keeps 53 weeks legible on a phone and hands the overflow to the scroller. */
+.pspad-heatmap-grid {
+    display: grid;
+    grid-template-columns: auto repeat(var(--pspad-heatmap-columns), minmax(11px, 1fr));
+    gap: 4px;
+    align-items: center;
+    max-width: calc(var(--pspad-heatmap-columns) * var(--pspad-heatmap-cell-max) + 3rem);
+}
+
+.pspad-heatmap-weeks {
+    display: grid;
+    grid-template-columns: repeat(var(--pspad-heatmap-columns), minmax(14px, 1fr));
+    gap: 4px;
+    align-items: center;
+    max-width: calc(var(--pspad-heatmap-columns) * var(--pspad-heatmap-cell-max));
+}
+
+.pspad-heatmap-swatch {
     border-radius: 2px;
     box-sizing: border-box;
     border: 1px solid var(--mud-palette-divider);
     background-color: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
 }
 
-.pspad-heatmap-cell[data-level="1"] {
+.pspad-heatmap-cell,
+.pspad-heatmap-week {
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+.pspad-heatmap-week {
+    min-height: 24px;
+}
+
+.pspad-heatmap-swatch[data-level="1"] {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-surface));
 }
 
-.pspad-heatmap-cell[data-level="2"] {
+.pspad-heatmap-swatch[data-level="2"] {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 48%, var(--mud-palette-surface));
 }
 
-.pspad-heatmap-cell[data-level="3"] {
+.pspad-heatmap-swatch[data-level="3"] {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 72%, var(--mud-palette-surface));
 }
 
-.pspad-heatmap-cell[data-level="4"] {
+.pspad-heatmap-swatch[data-level="4"] {
     background-color: var(--mud-palette-primary);
 }
 
-.pspad-heatmap-cell[data-today="true"] {
+.pspad-heatmap-swatch[data-today="true"] {
     border-color: var(--mud-palette-primary);
     border-width: 2px;
+}
+
+.pspad-heatmap-month,
+.pspad-heatmap-weekday {
+    font-size: 0.7rem;
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-heatmap-weekday {
+    padding-right: 4px;
+    text-align: right;
+}
+
+.pspad-heatmap-key {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.pspad-heatmap-key-scale {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pspad-heatmap-key-cell {
+    width: 12px;
+    height: 12px;
+}
+
+.pspad-heatmap-key-label {
+    font-size: 0.7rem;
+    line-height: 1;
+    color: var(--mud-palette-text-secondary);
 }
 
 .pspad-account-identity .mud-typography {

@@ -52,6 +52,11 @@ public static class MongoIndexes
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("taskId").Ascending("kind"))
         ], ct);
 
+        await context.Collection<BsonDocument>("statistics_inbox_records").Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("at")),
+            cancellationToken: ct);
+
         await context.Collection<BsonDocument>("statistics_labels").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("userId")),
             cancellationToken: ct);

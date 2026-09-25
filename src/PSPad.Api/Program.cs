@@ -44,10 +44,12 @@ builder.Services.AddSingleton<IDomainEventDispatcher>(sp =>
 builder.Services.AddScoped<IEventLog, MongoEventLog>();
 builder.Services.AddScoped<IStatisticsStore, MongoStatisticsStore>();
 builder.Services.AddScoped<ILabelStore, MongoLabelStore>();
+builder.Services.AddScoped<IInboxRecordStore, MongoInboxRecordStore>();
 builder.Services.AddScoped<IProjectionMarker, MongoProjectionMarker>();
 builder.Services.AddScoped<ITaskSnapshotSource, MongoTaskSnapshotSource>();
 builder.Services.AddScoped<IDomainEventHandler, StatisticsRecordProjection>();
 builder.Services.AddScoped<IDomainEventHandler, StatisticsLabelProjection>();
+builder.Services.AddScoped<IDomainEventHandler, InboxRecordProjection>();
 builder.Services.AddScoped<IDomainEventReplay, StatisticsReplay>();
 builder.Services.AddScoped<StatisticsReader>();
 builder.Services.AddScoped<StatisticsOverviewReader>();

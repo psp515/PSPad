@@ -48,11 +48,11 @@ public sealed class StatisticsCache(IJSRuntime js)
 
     public async Task ClearAsync()
     {
-        foreach (var days in KnownWindows)
+        foreach (var key in KnownWindows.SelectMany(Keys))
         {
             try
             {
-                await js.InvokeVoidAsync("localStorage.removeItem", Key(days));
+                await js.InvokeVoidAsync("localStorage.removeItem", key);
             }
             catch (JSException)
             {
@@ -60,5 +60,9 @@ public sealed class StatisticsCache(IJSRuntime js)
         }
     }
 
-    static string Key(int days) => $"pspad.statistics.{days}";
+    // The key carries the payload shape: a cached overview from an older shape would deserialize
+    // with its newest lists missing, and the screen would render null where it expects a series.
+    static string Key(int days) => $"pspad.statistics.2.{days}";
+
+    static IEnumerable<string> Keys(int days) => [Key(days), $"pspad.statistics.{days}"];
 }

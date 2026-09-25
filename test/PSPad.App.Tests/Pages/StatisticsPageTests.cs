@@ -271,7 +271,22 @@ public class StatisticsPageTests : Bunit.TestContext
             counts,
             counts,
             [],
-            counts);
+            counts,
+            Backlog(days, maxValue));
+    }
+
+    static IReadOnlyList<WeeklyCountView> Backlog(int days, int maxValue)
+    {
+        var first = Today.AddDays(-(days - 1));
+        var weekStart = first.AddDays(-(int)first.DayOfWeek);
+        var weeks = new List<WeeklyCountView>();
+
+        for (var week = weekStart; week <= Today; week = week.AddDays(7))
+        {
+            weeks.Add(new WeeklyCountView(week, maxValue));
+        }
+
+        return weeks;
     }
 
     [Fact]
@@ -294,6 +309,110 @@ public class StatisticsPageTests : Bunit.TestContext
         Assert.Equal(["Health", "Home", "No goal"], names);
         Assert.Equal([7, 3, 5], values);
         Assert.All(maxes, max => Assert.Equal(7, max));
+    }
+
+    [Fact]
+    public void TheInboxBacklogHeatmapRendersACellPerWeekWithItsOwnLabel()
+    {
+        var source = new FakeStatisticsSource { Overview = FullOverview() };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        var cells = page.FindAll(".pspad-heatmap-week");
+
+        Assert.Equal(3, cells.Count);
+        Assert.Equal("week of 2026-03-01: 4 still in the Inbox", cells[1].GetAttribute("aria-label"));
+        Assert.Contains("Inbox backlog", page.Markup);
+    }
+
+    [Fact]
+    public void BothHeatmapsCarryTheirOwnShadeKey()
+    {
+        var source = new FakeStatisticsSource { Overview = FullOverview() };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        Assert.Equal(2, page.FindComponents<HeatmapKey>().Count);
+        Assert.Equal(10, page.FindAll(".pspad-heatmap-key-cell").Count);
+    }
+
+    [Fact]
+    public void TheRecordFeedStartsCollapsed()
+    {
+        var source = new FakeStatisticsSource
+        {
+            Overview = FullOverview(),
+            Records = [Record(taskName: "Buy milk", completionNumber: 1, status: "Open")]
+        };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+
+        Assert.DoesNotContain("mud-panel-expanded", page.Find(".mud-expand-panel").ClassName);
+        Assert.Contains("invisible", page.Find(".mud-collapse-container").ClassName);
+    }
+
+    [Fact]
+    public void ClickingTheFeedHeaderOpensIt()
+    {
+        var source = new FakeStatisticsSource
+        {
+            Overview = FullOverview(),
+            Records = [Record(taskName: "Buy milk", completionNumber: 1, status: "Open")]
+        };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+        page.Find(".mud-expand-panel-header").Click();
+
+        Assert.Contains("mud-panel-expanded", page.Find(".mud-expand-panel").ClassName);
+        Assert.DoesNotContain("invisible", page.Find(".mud-collapse-container").ClassName);
+        Assert.Contains("Buy milk", page.Markup);
+    }
+
+    [Fact]
+    public void LoadOlderStillPagesOnceTheFeedIsOpen()
+    {
+        var source = new FakeStatisticsSource
+        {
+            Overview = FullOverview(),
+            Records = [Record(taskName: "Buy milk", completionNumber: 1, status: "Open", seq: 9)],
+            OlderRecords = [Record(taskName: "Older errand", completionNumber: 1, status: "Open", seq: 4)]
+        };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+        page.Find(".mud-expand-panel-header").Click();
+        page.FindAll("button").Single(button => button.TextContent.Trim() == "load older").Click();
+
+        Assert.Equal([null, 9L], source.RequestedBefore);
+        Assert.Contains("Buy milk", page.Markup);
+        Assert.Contains("Older errand", page.Markup);
+    }
+
+    [Fact]
+    public void CollapsingTheFeedAgainKeepsTheRecordsItAlreadyLoaded()
+    {
+        var source = new FakeStatisticsSource
+        {
+            Overview = FullOverview(),
+            Records = [Record(taskName: "Buy milk", completionNumber: 1, status: "Open", seq: 9)],
+            OlderRecords = [Record(taskName: "Older errand", completionNumber: 1, status: "Open", seq: 4)]
+        };
+        Arrange(source, NewCache());
+
+        var page = Render<StatisticsPage>();
+        page.Find(".mud-expand-panel-header").Click();
+        page.FindAll("button").Single(button => button.TextContent.Trim() == "load older").Click();
+        page.Find(".mud-expand-panel-header").Click();
+        page.Find(".mud-expand-panel-header").Click();
+
+        Assert.Contains("mud-panel-expanded", page.Find(".mud-expand-panel").ClassName);
+        Assert.Contains("Buy milk", page.Markup);
+        Assert.Contains("Older errand", page.Markup);
+        Assert.Equal([null, 9L], source.RequestedBefore);
     }
 
     [Fact]
@@ -338,7 +457,7 @@ public class StatisticsPageTests : Bunit.TestContext
     static StatisticsCache NewCache() => new(new FakeJsRuntime());
 
     static StatisticsOverview Overview(int doneToday) =>
-        new(new StatisticsTilesView(doneToday, 0, 0, 0), [], [], [], [], []);
+        new(new StatisticsTilesView(doneToday, 0, 0, 0), [], [], [], [], [], []);
 
     static StatisticsOverview FullOverview() =>
         new(
@@ -367,12 +486,17 @@ public class StatisticsPageTests : Bunit.TestContext
                 new DailyCountView(new DateOnly(2026, 3, 8), 3),
                 new DailyCountView(new DateOnly(2026, 3, 9), 7),
                 new DailyCountView(new DateOnly(2026, 3, 10), 11)
+            ],
+            [
+                new WeeklyCountView(new DateOnly(2026, 2, 22), 1),
+                new WeeklyCountView(new DateOnly(2026, 3, 1), 4),
+                new WeeklyCountView(new DateOnly(2026, 3, 8), 2)
             ]);
 
     static StatisticsRecordView Record(
-        string taskName, int? completionNumber, string status, Guid? taskId = null) =>
+        string taskName, int? completionNumber, string status, Guid? taskId = null, long seq = 1) =>
         new(
-            Seq: 1,
+            Seq: seq,
             At: new DateTimeOffset(2026, 3, 9, 9, 0, 0, TimeSpan.Zero),
             Kind: "Completed",
             TaskId: taskId ?? Guid.NewGuid(),
@@ -392,6 +516,10 @@ public class StatisticsPageTests : Bunit.TestContext
 
         public IReadOnlyList<StatisticsRecordView> Records { get; set; } = [];
 
+        public IReadOnlyList<StatisticsRecordView> OlderRecords { get; set; } = [];
+
+        public List<long?> RequestedBefore { get; } = [];
+
         public bool Fails { get; set; }
 
         public bool Blocked { get; set; }
@@ -407,8 +535,9 @@ public class StatisticsPageTests : Bunit.TestContext
 
         public async Task<IReadOnlyList<StatisticsRecordView>> RecordsAsync(long? before, int limit)
         {
+            RequestedBefore.Add(before);
             await GateAsync();
-            return Records;
+            return before is null ? Records : OlderRecords;
         }
 
         async Task GateAsync()
