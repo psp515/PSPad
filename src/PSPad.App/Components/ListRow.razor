@@ -1,0 +1,48 @@
+@using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Lists
+
+<PropertyRow Class="pspad-task-list" Icon="@Icons.Material.Outlined.Folder" Label="List"
+             Value="@(PathOf(Value) ?? "No list")" HasValue="@(PathOf(Value) is not null)" Disabled="@Disabled">
+    @if (Lists.Count == 0)
+    {
+        <MudMenuItem Disabled="true">No lists yet</MudMenuItem>
+    }
+    @foreach (var area in Areas)
+    {
+        <MudText Typo="Typo.overline" Class="px-4 pt-2 d-block">@area.Name</MudText>
+        @foreach (var list in Lists.Where(list => list.AreaId == area.Id))
+        {
+            <MudMenuItem Class="pspad-list-option" OnClick="@(() => ValueChanged.InvokeAsync(list.Id))"
+                         Icon="@(list.Id == Value ? Icons.Material.Filled.Check : null)">
+                @list.Name
+            </MudMenuItem>
+        }
+    }
+</PropertyRow>
+
+@code {
+    [Parameter] public IReadOnlyList<Area> Areas { get; set; } = [];
+
+    [Parameter] public IReadOnlyList<TaskList> Lists { get; set; } = [];
+
+    [Parameter] public Guid? Value { get; set; }
+
+    [Parameter] public EventCallback<Guid> ValueChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    public static string? PathOf(Guid? listId, IReadOnlyList<Area> areas, IReadOnlyList<TaskList> lists)
+    {
+        var list = lists.FirstOrDefault(list => list.Id == listId);
+
+        if (list is null)
+        {
+            return null;
+        }
+
+        var area = areas.FirstOrDefault(area => area.Id == list.AreaId);
+        return area is null ? list.Name : $"{area.Name} › {list.Name}";
+    }
+
+    string? PathOf(Guid? listId) => PathOf(listId, Areas, Lists);
+}

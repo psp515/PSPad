@@ -11,4 +11,6 @@ public sealed class AppState
     public string TimeZone { get; set; } = "Etc/UTC";
 
     public DateOnly Today { get; set; }
+
+    public Guid? LastInboxListId { get; set; }
 }

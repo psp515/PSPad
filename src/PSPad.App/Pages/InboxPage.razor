@@ -8,7 +8,8 @@
 @inject IDocumentStore<Inbox> InboxStore
 @inject AppState State
 @inject CommandSender Sender
-@inject IDialogService Dialogs
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Inbox</MudText>
 
@@ -19,6 +20,13 @@
 else
 {
     <MudGrid Spacing="4">
+        @if (Items.Count == 0)
+        {
+            <MudItem xs="12" sm="6" md="4" xl="3">
+                <EmptyState Icon="@Icons.Material.Outlined.Inbox" Message="Nothing captured." CreateText="Capture"
+                            OnCreate="@Capture" />
+            </MudItem>
+        }
         @foreach (var item in Items)
         {
             <MudItem xs="12" sm="6" md="4" xl="3">
@@ -26,27 +34,30 @@ else
             </MudItem>
         }
     </MudGrid>
-
-    @if (Items.Count == 0)
-    {
-        <MudText Typo="Typo.body2" Class="pa-4">Nothing captured.</MudText>
-    }
 }
 
-<InboxItemPanel Item="@_openItem" InboxId="@(_inbox?.Id ?? Guid.Empty)" OnClose="@Close" OnChanged="@ReloadAsync" />
-
-<MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@CaptureAsync" />
+<MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@Capture"
+        UserAttributes="@FabAttributes" />
 
 @code {
     bool _loaded;
     Inbox? _inbox;
-    InboxItem? _openItem;
+
+    static readonly Dictionary<string, object> FabAttributes = new() { ["aria-label"] = "Capture" };
 
     IReadOnlyList<InboxItem> Items => _inbox?.Items ?? [];
 
     [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
 
     int _rendered = -1;
+
+    protected override void OnInitialized() => Sender.Sent += OnCommandSent;
+
+    void OnCommandSent() => InvokeAsync(async () =>
+    {
+        await ReloadAsync();
+        StateHasChanged();
+    });
 
     protected override async Task OnParametersSetAsync()
     {
@@ -67,28 +78,9 @@ else
         _loaded = true;
     }
 
-    void Open(InboxItem item) => _openItem = item;
+    void Open(InboxItem item) => Navigation.NavigateTo(InboxQuery.For(Navigation.Uri, item.Id));
 
-    void Close() => _openItem = null;
+    void Capture() => Navigation.NavigateTo(InboxQuery.ForNew(Navigation.Uri));
 
-    async Task CaptureAsync()
-    {
-        if (_inbox is null)
-        {
-            return;
-        }
-
-        var dialog = await Dialogs.ShowAsync<CaptureDialog>("Capture");
-        var result = await dialog.Result;
-
-        if (result is null || result.Canceled || result.Data is not string text || string.IsNullOrWhiteSpace(text))
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new CaptureToInbox(
-            Guid.NewGuid(), State.UserId, _inbox.Id, Guid.NewGuid(), text));
-
-        await ReloadAsync();
-    }
+    public void Dispose() => Sender.Sent -= OnCommandSent;
 }

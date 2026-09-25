@@ -55,52 +55,14 @@
                                   Disabled="@Disabled" Changed="@ReloadAsync" />
             }
 
-            <PropertyRow Class="pspad-task-priority" Icon="@Icons.Material.Outlined.Flag" Label="Priority"
-                         Value="@Priority.ToString()" HasValue="@(Priority != Priority.None)"
-                         ValueIcon="@(Priority == Priority.None ? null : Icons.Material.Filled.Circle)"
-                         ValueColor="@PriorityColor(Priority)" Disabled="@Disabled">
-                @foreach (var priority in Enum.GetValues<Priority>())
-                {
-                    <MudMenuItem Class="pspad-priority-option" OnClick="@(() => PriorityAsync(priority))">
-                        <div class="d-flex align-center gap-2">
-                            <MudIcon Icon="@(priority == Priority.None ? Icons.Material.Outlined.Circle : Icons.Material.Filled.Circle)"
-                                     Size="Size.Small" Color="@PriorityColor(priority)" />
-                            @priority
-                        </div>
-                    </MudMenuItem>
-                }
-            </PropertyRow>
+            <PriorityRow Value="@Priority" ValueChanged="@PriorityAsync" Disabled="@Disabled" />
 
-            <PropertyRow Class="pspad-task-goal" Icon="@Icons.Material.Outlined.TrackChanges" Label="Goal"
-                         Value="@(GoalName ?? "No goal")" HasValue="@(GoalName is not null)" Disabled="@Disabled"
-                         OnClear="@(() => LinkGoalAsync(null))">
-                @if (_goals.Count == 0)
-                {
-                    <MudMenuItem Disabled="true">No goals yet</MudMenuItem>
-                }
-                @foreach (var goal in _goals)
-                {
-                    <MudMenuItem Class="pspad-goal-option" OnClick="@(() => LinkGoalAsync(goal.Id))">@goal.Name</MudMenuItem>
-                }
-            </PropertyRow>
+            <GoalRow Goals="@_goals" Value="@GoalId" ValueChanged="@LinkGoalAsync" Disabled="@Disabled" />
 
             @if (_task is not null)
             {
-                <PropertyRow Class="pspad-task-list" Icon="@Icons.Material.Outlined.Folder" Label="List"
-                             Value="@(PathOf(_task.ListId) ?? "No list")" HasValue="@(PathOf(_task.ListId) is not null)"
-                             Disabled="@Disabled">
-                    @foreach (var area in _areas)
-                    {
-                        <MudText Typo="Typo.overline" Class="px-4 pt-2 d-block">@area.Name</MudText>
-                        @foreach (var list in _lists.Where(list => list.AreaId == area.Id))
-                        {
-                            <MudMenuItem Class="pspad-list-option" OnClick="@(() => MoveToListAsync(list.Id))"
-                                         Icon="@(list.Id == _task.ListId ? Icons.Material.Filled.Check : null)">
-                                @list.Name
-                            </MudMenuItem>
-                        }
-                    }
-                </PropertyRow>
+                <ListRow Areas="@_areas" Lists="@_lists" Value="@_task.ListId" ValueChanged="@MoveToListAsync"
+                         Disabled="@Disabled" />
             }
         </div>
     </ChildContent>
@@ -165,7 +127,6 @@
 
     Guid? GoalId => _task is null ? _draft.GoalId : _task.GoalId;
 
-    string? GoalName => _goals.FirstOrDefault(goal => goal.Id == GoalId)?.Name;
 
     DateOnly? DueOn => _task is null ? _draft.DueOn : _task.DueOn;
 
@@ -175,26 +136,7 @@
 
     string CreatedText => _task?.CreatedAt is { } created ? $"Created {created:ddd, d MMM yyyy}" : "";
 
-    static Color PriorityColor(Priority priority) => priority switch
-    {
-        Priority.High => Color.Error,
-        Priority.Medium => Color.Warning,
-        Priority.Low => Color.Info,
-        _ => Color.Default
-    };
-
-    string? PathOf(Guid listId)
-    {
-        var list = _lists.FirstOrDefault(list => list.Id == listId);
-
-        if (list is null)
-        {
-            return null;
-        }
-
-        var area = _areas.FirstOrDefault(area => area.Id == list.AreaId);
-        return area is null ? list.Name : $"{area.Name} › {list.Name}";
-    }
+    string? PathOf(Guid listId) => ListRow.PathOf(listId, _areas, _lists);
 
     protected override async Task OnParametersSetAsync()
     {

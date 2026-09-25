@@ -22,43 +22,6 @@ public class InboxPageTests : Bunit.TestContext
     static readonly DateOnly Today = new(2026, 9, 12);
 
     [Fact]
-    public async Task CapturingThroughTheFabDialogStoresTheItem()
-    {
-        var inbox = NewInbox();
-        var replica = Arrange(inbox);
-
-        var page = Render(BuildInboxPageWithDialogs());
-        page.Find(".pspad-fab").Click();
-        var dialog = page.FindComponent<MudDialogProvider>();
-        dialog.Find("input[placeholder='Capture']").Input("Zadzwonić do serwisu");
-        dialog.FindAll("button").Last().Click();
-
-        var stored = await replica.LoadAsync<Inbox>(inbox.Id);
-        Assert.Contains(stored!.Items, item => item.Text == "Zadzwonić do serwisu");
-    }
-
-    [Fact]
-    public async Task CapturingWhitespaceOnlyTextDoesNothing()
-    {
-        var inbox = NewInbox();
-        var replica = Arrange(inbox);
-
-        var page = Render(BuildInboxPageWithDialogs());
-        page.Find(".pspad-fab").Click();
-        var dialog = page.FindComponent<MudDialogProvider>();
-        dialog.Find("input[placeholder='Capture']").Input("   ");
-        dialog.FindAll("button").Last().Click();
-
-        Assert.NotEmpty(dialog.FindAll("input[placeholder='Capture']"));
-
-        var stored = await replica.LoadAsync<Inbox>(inbox.Id);
-        Assert.Empty(stored!.Items);
-
-        var outbox = page.Services.GetRequiredService<IOutbox>();
-        Assert.Equal(0, await outbox.CountAsync());
-    }
-
-    [Fact]
     public void ThereIsNoInlineCaptureFieldAnymoreOnlyTheFab()
     {
         Arrange(NewInbox());
@@ -92,54 +55,6 @@ public class InboxPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TappingAnItemOpensThePanelWithAreaAndListPickers()
-    {
-        var area = NewArea("Dom", 0);
-        var list = NewList(area.Id, "Zakupy");
-        Arrange(NewInbox("Kupić mleko"), area, list);
-
-        var page = Render<InboxPage>();
-        page.Find(".pspad-inbox-item").Click();
-
-        Assert.Contains("Move", page.Markup);
-        Assert.Contains("Dom", page.Markup);
-    }
-
-    [Fact]
-    public async Task MovingCreatesTheTaskInTheChosenListAndOrganisesTheItem()
-    {
-        var area = NewArea("Dom", 0);
-        var list = NewList(area.Id, "Zakupy");
-        var inbox = NewInbox("Kupić mleko");
-        var replica = Arrange(inbox, area, list);
-
-        var page = Render<InboxPage>();
-        page.Find(".pspad-inbox-item").Click();
-        page.Find("button.pspad-inbox-move").Click();
-
-        var tasks = await replica.LoadAllAsync<TodoTask>(User);
-        Assert.Contains(tasks, task => task.ListId == list.Id && task.Name == "Kupić mleko");
-
-        var stored = await replica.LoadAsync<Inbox>(inbox.Id);
-        Assert.Empty(stored!.Items);
-    }
-
-    [Fact]
-    public async Task DiscardingFromThePanelRemovesTheItemAndCreatesNoTask()
-    {
-        var inbox = NewInbox("Nieaktualne");
-        var replica = Arrange(inbox);
-
-        var page = Render<InboxPage>();
-        page.Find(".pspad-inbox-item").Click();
-        page.Find("button.pspad-inbox-discard").Click();
-
-        var stored = await replica.LoadAsync<Inbox>(inbox.Id);
-        Assert.Empty(stored!.Items);
-        Assert.Empty(await replica.LoadAllAsync<TodoTask>(User));
-    }
-
-    [Fact]
     public void ItLaysCapturedItemsOutInTheGrid()
     {
         Arrange(NewInbox("Pierwsze", "Drugie"));
@@ -161,29 +76,72 @@ public class InboxPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void WithNoListsTheMoveButtonIsDisabledRatherThanAbsent()
+    public void TheFabOpensTheCapturePanel()
     {
-        Arrange(NewInbox("Kupić mleko"), NewArea("Dom", 0));
+        Arrange(NewInbox());
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/inbox");
+
+        var page = Render<InboxPage>();
+        var fab = page.Find(".pspad-fab");
+        Assert.Equal("Capture", fab.GetAttribute("aria-label"));
+        fab.Click();
+
+        Assert.EndsWith("/inbox?inbox=new", navigation.Uri);
+    }
+
+    [Fact]
+    public void AnEmptyInboxShowsTheEmptyStateThatOpensTheCapturePanel()
+    {
+        Arrange(NewInbox());
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/inbox");
+
+        var page = Render<InboxPage>();
+        var empty = page.FindComponent<EmptyState>();
+        Assert.Contains("Nothing captured.", empty.Markup);
+        empty.Find(".pspad-empty-state").Click();
+
+        Assert.EndsWith("/inbox?inbox=new", navigation.Uri);
+    }
+
+    [Fact]
+    public void AnInboxWithItemsHasNoEmptyState()
+    {
+        Arrange(NewInbox("Kupić mleko"));
+
+        var page = Render<InboxPage>();
+
+        Assert.Empty(page.FindComponents<EmptyState>());
+    }
+
+    [Fact]
+    public void TappingAnItemOpensItsPanel()
+    {
+        var inbox = NewInbox("Kupić mleko");
+        Arrange(inbox);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/inbox");
 
         var page = Render<InboxPage>();
         page.Find(".pspad-inbox-item").Click();
 
-        Assert.True(page.Find("button.pspad-inbox-move").HasAttribute("disabled"));
-        Assert.Contains("No lists in this area", page.Markup);
+        Assert.EndsWith($"/inbox?inbox={inbox.Items[0].Id}", navigation.Uri);
     }
 
-    // CaptureDialog and InboxItemCard both portal/render inside the page's own tree,
-    // but MudDialogProvider must share a render tree with the page for the FAB's
-    // dialog to be reachable by bUnit.
-    RenderFragment BuildInboxPageWithDialogs() => builder =>
+    [Fact]
+    public async Task AnItemCapturedElsewhereShowsUpWithoutAReload()
     {
-        builder.OpenComponent<MudPopoverProvider>(0);
-        builder.CloseComponent();
-        builder.OpenComponent<MudDialogProvider>(1);
-        builder.CloseComponent();
-        builder.OpenComponent<InboxPage>(2);
-        builder.CloseComponent();
-    };
+        var inbox = NewInbox();
+        Arrange(inbox);
+
+        var page = Render<InboxPage>();
+        var sender = Services.GetRequiredService<PSPad.App.State.Dispatch.CommandSender>();
+        await page.InvokeAsync(() => sender.SendAsync(
+            new CaptureToInbox(Guid.NewGuid(), User, inbox.Id, Guid.NewGuid(), "Kupić farbę")));
+
+        page.WaitForAssertion(() => Assert.Contains("Kupić farbę", page.Markup));
+    }
 
     InMemoryReplica Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, Today, documents);
