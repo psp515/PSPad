@@ -1,10 +1,13 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using PSPad.Abstractions;
 
 namespace PSPad.Infrastructure.Mongo;
 
-public sealed class MongoUnitOfWork(MongoContext context) : IUnitOfWork
+public sealed class MongoUnitOfWork(
+    MongoContext context, IDomainEventDispatcher dispatcher, ILogger<MongoUnitOfWork> logger)
+    : IUnitOfWork
 {
     readonly List<(Aggregate Aggregate, IReadOnlyList<DomainEvent> Events)> _staged = [];
     readonly SequenceSource _sequence = new(context);
@@ -26,6 +29,7 @@ public sealed class MongoUnitOfWork(MongoContext context) : IUnitOfWork
 
         using var session = await context.Client.StartSessionAsync(cancellationToken: ct);
         session.StartTransaction();
+        List<DomainEventEnvelope> published = [];
 
         try
         {
@@ -48,6 +52,7 @@ public sealed class MongoUnitOfWork(MongoContext context) : IUnitOfWork
                 {
                     var seq = await _sequence.NextAsync(session, ct);
                     aggregate.Seq = seq;
+                    published.Add(new DomainEventEnvelope(seq, @event));
                     await events.InsertOneAsync(session, new StoredEvent
                     {
                         Seq = seq,
@@ -71,6 +76,20 @@ public sealed class MongoUnitOfWork(MongoContext context) : IUnitOfWork
             }, cancellationToken: ct);
 
             await session.CommitTransactionAsync(ct);
+
+            try
+            {
+                await dispatcher.PublishAsync(published, ct);
+            }
+            catch (Exception exception)
+            {
+                // The transaction already committed; a dispatch failure must never fail an accepted command.
+                logger.LogError(
+                    exception,
+                    "Publishing {Count} committed domain events failed for command {CommandId}; the next start replays them from the projection marker.",
+                    published.Count,
+                    commandId);
+            }
         }
         catch
         {
@@ -80,6 +99,7 @@ public sealed class MongoUnitOfWork(MongoContext context) : IUnitOfWork
         finally
         {
             _staged.Clear();
+            published.Clear();
         }
     }
 

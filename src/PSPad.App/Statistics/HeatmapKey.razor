@@ -1,0 +1,19 @@
+<div class="pspad-heatmap-key">
+    <MudText Typo="Typo.caption" Color="Color.Secondary">@Caption</MudText>
+    <div class="pspad-heatmap-key-scale" aria-hidden="true">
+        <span class="pspad-heatmap-key-label">@Less</span>
+        @for (var level = 0; level < HeatmapLevel.Levels; level++)
+        {
+            <span class="pspad-heatmap-swatch pspad-heatmap-key-cell" data-level="@level"></span>
+        }
+        <span class="pspad-heatmap-key-label">@More</span>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Caption { get; set; } = "";
+
+    [Parameter] public string Less { get; set; } = "Less";
+
+    [Parameter] public string More { get; set; } = "More";
+}

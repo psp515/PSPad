@@ -25,13 +25,13 @@ Platform, not one project. Each gets own spec, plan, implementation.
 | # | Subsystem | Slice |
 |---|-----------|-------|
 | 1 | GTD core — areas, Inbox, lists, tasks, steps, recurrence, goals, Today | **1 (now)** |
-| 2 | Action history — event log + browse screen | **1 (now)** |
+| 2 | Statistics — event-projected records, tiles, charts, a consistency heatmap, an Inbox-captures chart and a record feed | **1 (now)** |
 | 3 | Identity — built-in login + Keycloak (OIDC) | **1 (now)** |
 | 4 | Habits — streaks, daily progress | later |
 | 5 | Goals & annual plans — yearly horizon, year-end summary | later |
 | 6 | Integrations — GitHub issues, OneDrive, Google Drive, Thingiverse | later |
 | 7 | 3D-print domain — materials, parts, reference materials | later |
-| 8 | Analytics & reminders — push, thought of the day (a burndown chart already ships in slice 1's History screen) | later |
+| 8 | Reminders — push, thought of the day | later |
 
 4 and 5 cheap later because slice 1 models recurrence as occurrences and goals as
 entities. Do not regress that.
@@ -44,8 +44,10 @@ In: areas (user-defined), lists (inside one area), Inbox (one per user, outside
 areas, organizing = first-class command), tasks (one list, name + due date +
 goal + priority + star + steps), steps (own due date, ordered, dense positions),
 recurrence (template + per-day occurrences), goals (global, many tasks to one),
-Today screen (cross-area), action history, a burndown chart on the History
-screen, offline PWA, auth.
+Today screen (cross-area), a Statistics screen (tiles, four charts, a
+consistency heatmap, an Inbox-captures bar chart, a collapsed record feed) built
+from denormalized records projected off the domain event log, offline PWA,
+auth.
 
 Out: habits, annual plans, integrations, print lists, reference materials,
 push reminders, thought of day, list types beyond plain.
@@ -82,10 +84,11 @@ lives in domain layer, one place, shared client and server.
 ## 5. Architecture decisions
 
 **AD-1 — Modular monolith, three modules.** `PSPad.Module.Tasks` (areas, Inbox,
-lists, tasks, steps, goals, recurrence, Today), `PSPad.Module.History`,
-`PSPad.Module.Identity`. Inside a module, features are folders holding their
-commands, events, aggregate, handlers. No Services/Repositories layering. No
-microservices.
+lists, tasks, steps, goals, recurrence, Today), `PSPad.Module.Statistics`
+(denormalized records projected from domain events; tiles, charts, heatmap,
+feed), `PSPad.Module.Identity`. Inside a module, features are folders holding
+their commands, events, aggregate, handlers. No Services/Repositories
+layering. No microservices.
 
 **AD-2 — Aggregate documents are truth; events are the log beside them.**
 Commands decide, aggregates apply, one transaction writes the document, its
@@ -123,6 +126,17 @@ objects.
 MongoDB 8 replica set per test run. No compose service shared with dev. No
 in-memory fake — transaction and serialization behavior is the thing under test.
 
+**AD-10 — Domain events dispatch asynchronously after commit, replayed from a
+marker on startup.** `MongoUnitOfWork.CommitAsync` publishes committed events
+after the transaction, never inside it. A background pump drains them into
+`PSPad.Module.Statistics`'s handlers; on startup it first replays from
+`statistics_state.lastProcessedSeq` to the head, then drains live. The marker
+only ever moves on replay, never on the live loop, so a swallowed handler
+failure is retried on the next boot instead of being silently permanent.
+Statistics' own records are a read-side projection off `events` — AD-2's
+"never a parallel audit table" still holds, because the log stays the one
+thing written in the transaction; see `adr/0036` and `adr/0037`.
+
 ---
 
 ## 6. Repo layout (planned)
@@ -135,16 +149,16 @@ src/
                          + Dockerfile (nginx, static)
   shared/
     PSPad.Abstractions/  Aggregate, ICommand, DomainEvent, IDocumentStore<T>, IUnitOfWork, IClock
-    PSPad.Contracts/     wire shapes: command envelope, sync DTOs, history DTOs
+    PSPad.Contracts/     wire shapes: command envelope, sync DTOs, statistics DTOs
     PSPad.Infrastructure/Mongo client, connection string, generic repository, Keycloak/JWT
   modules/
-    PSPad.Module.Tasks/    areas, lists, Inbox, tasks, steps, goals, recurrence, Today — WASM-safe
-    PSPad.Module.History/  queries over the event log
-    PSPad.Module.Identity/ User, time zone, first-sign-in provisioning
+    PSPad.Module.Tasks/       areas, lists, Inbox, tasks, steps, goals, recurrence, Today — WASM-safe
+    PSPad.Module.Statistics/  event-projected records, labels, charts, feed
+    PSPad.Module.Identity/    User, time zone, first-sign-in provisioning
 test/
-  PSPad.Module.Tasks.Tests/     unit only, no I/O
-  PSPad.Module.History.Tests/   unit only
-  PSPad.Module.Identity.Tests/  unit only
+  PSPad.Module.Tasks.Tests/       unit only, no I/O
+  PSPad.Module.Statistics.Tests/  unit only
+  PSPad.Module.Identity.Tests/    unit only
   PSPad.Api.Tests/              integration, Testcontainers MongoDB
   PSPad.App.Tests/              unit + bUnit component tests
   PSPad.TestInfrastructure/     Mongo fixture, trait constants, architecture guards
@@ -161,6 +175,13 @@ docker/                  compose files, keycloak realm, nginx config
 References run one way only: `Tasks` sees `Abstractions` and nothing else;
 `Infrastructure` never sees a module; `App` never sees `Infrastructure`; `Api`
 sees everything and is the only place a module meets MongoDB.
+
+One module-to-module edge exists, and only one: `Statistics` references
+`Tasks`, because its projections pattern-match on Tasks' own event types
+(`TaskCompleted`, `OccurrenceCompleted`, …) and a rename must break the build
+rather than a string lookup at render time. It runs one way — an
+`ArchitectureTests` guard fails the build if `Tasks` ever references
+`Statistics`. See `adr/0037`.
 
 ---
 
@@ -296,13 +317,13 @@ that one exists for running the app.
 ## 8. Current step
 
 Slice 1 is built and merged: foundation, tasks core, recurrence and Today, API
-and persistence, identity, history, PWA client, offline sync, responsive UI
+and persistence, identity, statistics, PWA client, offline sync, responsive UI
 shell. The numbered plans that drove it are gone; two standing rulebooks
 replaced the narrative design specs that drove the work (`slice-design.md`,
 `offline-first-session-design.md`, `ui-ux-redesign-design.md`,
-`ui-redesign-2-design.md`, `ui-polish-design.md` — their content lives in
-`git log -- specs/`, not the working tree, and the ADRs they produced stay in
-`adr/`):
+`ui-redesign-2-design.md`, `ui-polish-design.md`, `statistics-design.md` —
+their content lives in `git log -- specs/`, not the working tree, and the
+ADRs they produced stay in `adr/`):
 
 - `specs/ui-spec.md` — component choice, layout and spacing, page structure,
   visual/theming and navigation/auth screen shapes. Authoritative for
@@ -333,13 +354,27 @@ cross-collection wipe, Mongo first then the Keycloak user, confirmed
 client-side by typing the account's own email rather than a password) is
 `Active` and built on this branch too.
 
+The History module was retired into `PSPad.Module.Statistics` on this
+branch: `adr/0036` (domain events dispatch asynchronously after commit,
+replayed from a marker on startup), `adr/0037` (Statistics owns
+denormalized, read-only records projected from the log — reconciled against
+`adr/0011`'s "never a parallel audit table"), and `adr/0038` (History
+renamed to Statistics, amending `adr/0020`) are all `Active` and built here,
+as is `adr/0039` (Inbox captures are their own projection and collection,
+counted per week — extending 0037 to a fourth collection; revised in place
+before merge, when the chart changed from backlog level to capture volume).
+The client-side `BurndownRule` (`adr/0019`) is deleted; its chart's
+successor is `StatisticsCharts.Outstanding`, server-side, derived from
+`statistics_records`.
+
 ---
 
 ## 9. Future order
 
 1. Habits — reuse occurrence model, add streaks
 2. Annual plans — give `Goal` a yearly horizon, year-end summary
-3. Analytics — charts over completions and habit progress
+3. Habit-progress charts — Statistics already covers completions, opened,
+   outstanding-open and by-goal (slice 1); extend it once habits exist
 4. Reminders — server scheduler + web push (VAPID); thought of the day
 5. GitHub — issue-backed lists; first external sync, sets pattern
 6. Cloud storage — OneDrive and Drive paths; reference-material lists
@@ -447,7 +482,7 @@ tradeoff.
 **Architecture decisions go in `adr/`.** One file per decision,
 using `adr/template.md`'s format (title, tags, date, status,
 context, decision, alternatives, consequences). AGENTS.md §5 stays the
-terse day-to-day summary (AD-1 … AD-9); the ADR is where the reasoning and
+terse day-to-day summary (AD-1 … AD-10); the ADR is where the reasoning and
 rejected alternatives live. Changing your mind about a past decision never
 edits an old ADR's Decision or Consequences — write a new one that
 supersedes it and update the old one's status line.

@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using PSPad.Api.Identity;
+using PSPad.Abstractions;
 using PSPad.Api.Tests.Persistence;
 using PSPad.Infrastructure;
 using PSPad.Infrastructure.Mongo;
@@ -16,6 +18,12 @@ namespace PSPad.Api.Tests.Identity;
 [Collection(MongoCollection.Name)]
 public class ProvisioningTests(MongoFixture fixture)
 {
+    sealed class NoDispatcher : IDomainEventDispatcher
+    {
+        public Task PublishAsync(IReadOnlyList<DomainEventEnvelope> events, CancellationToken ct) =>
+            Task.CompletedTask;
+    }
+
     [Fact]
     public async Task AFirstSignInCreatesTheUserAnInboxAndTheSeedAreas()
     {
@@ -62,6 +70,6 @@ public class ProvisioningTests(MongoFixture fixture)
             new MongoDocumentStore<User>(context),
             new MongoDocumentStore<Area>(context),
             new MongoDocumentStore<Inbox>(context),
-            new MongoUnitOfWork(context),
+            new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance),
             new SystemClock());
 }

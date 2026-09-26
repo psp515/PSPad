@@ -2,7 +2,7 @@
 title: Split the modular monolith into three separate module projects
 tags: [architecture, modularity]
 date: 2026-09-12
-status: Active
+status: Active (`PSPad.Module.History` renamed to `PSPad.Module.Statistics` by [0038](0038-history-renamed-to-statistics.md))
 ---
 
 # ADR-0010: Split the modular monolith into three separate module projects

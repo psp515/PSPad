@@ -1,0 +1,65 @@
+@using PSPad.Contracts
+
+<div class="pspad-heatmap">
+    @if (Days.Count > MonthSectionThreshold)
+    {
+        @foreach (var month in Days.GroupBy(day => new DateOnly(day.Day.Year, day.Day.Month, 1)))
+        {
+            <div class="pspad-heatmap-month">
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pspad-heatmap-month-label">
+                    @month.Key.ToString("MMM yyyy")
+                </MudText>
+                @Grid(month.ToList())
+            </div>
+        }
+    }
+    else
+    {
+        @Grid(Days)
+    }
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pspad-heatmap-readout"
+             data-selected="@Flag(_selected is not null)" aria-live="polite">
+        @Readout()
+    </MudText>
+    <HeatmapKey Caption="Each square is one day; darker means more tasks finished that day." />
+</div>
+
+@code {
+    const int MonthSectionThreshold = 30;
+    const string Hint = "Tap a square for the day and its count.";
+
+    [Parameter, EditorRequired] public IReadOnlyList<DailyCountView> Days { get; set; } = [];
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    DailyCountView? _selected;
+
+    int Maximum => Days.Count == 0 ? 0 : Days.Max(day => day.Count);
+
+    RenderFragment Grid(IReadOnlyList<DailyCountView> days) =>
+        @<div class="pspad-heatmap-flow" style="--pspad-heatmap-cell-min:30px;--pspad-heatmap-cell-cap:44px;">
+            @foreach (var day in days)
+            {
+                <button type="button" class="pspad-heatmap-swatch pspad-heatmap-cell"
+                        data-level="@HeatmapLevel.Of(day.Count, Maximum)"
+                        data-today="@Flag(day.Day == Today)"
+                        data-sunday="@Flag(day.Day.DayOfWeek == DayOfWeek.Sunday)"
+                        data-selected="@Flag(day.Day == _selected?.Day)"
+                        aria-pressed="@Flag(day.Day == _selected?.Day)"
+                        title="@LabelOf(day)"
+                        aria-label="@LabelOf(day)"
+                        @onclick="@(() => Toggle(day))">
+                    <span class="pspad-heatmap-day-number" aria-hidden="true">@day.Day.Day</span>
+                </button>
+            }
+        </div>;
+
+    void Toggle(DailyCountView day) => _selected = _selected?.Day == day.Day ? null : day;
+
+    string Readout() =>
+        _selected is { } day ? $"{day.Day:d MMM yyyy} — {day.Count} completed" : Hint;
+
+    static string Flag(bool set) => set ? "true" : "false";
+
+    static string LabelOf(DailyCountView day) => $"{day.Day:yyyy-MM-dd}: {day.Count} completed";
+}

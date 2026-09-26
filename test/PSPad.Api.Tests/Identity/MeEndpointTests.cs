@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using MongoDB.Driver;
 using PSPad.Contracts;
+using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Identity;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Api.Tests.Identity;
@@ -83,12 +86,14 @@ public class MeEndpointTests(MongoFixture fixture)
 
         Assert.Equal("Ada Lovelace", me!.DisplayName);
 
-        var historyRequest = new HttpRequestMessage(HttpMethod.Get, "/api/history");
-        historyRequest.Headers.Add("X-Test-Subject", subject);
-        var historyResponse = await client.SendAsync(historyRequest, ct);
-        var history = await historyResponse.Content.ReadFromJsonAsync<HistoryEntry[]>(ct);
-        Assert.DoesNotContain(
-            history!, entry => entry.Description == "Updated the display name from your account");
+        var renames = await Persistence.TestContext.For(fixture)
+            .Collection<StoredEvent>("events")
+            .CountDocumentsAsync(
+                Builders<StoredEvent>.Filter.Eq(stored => stored.UserId, me.UserId) &
+                Builders<StoredEvent>.Filter.Eq(stored => stored.Type, nameof(UserDisplayNameSet)),
+                cancellationToken: ct);
+
+        Assert.Equal(0, renames);
     }
 
     [Fact]

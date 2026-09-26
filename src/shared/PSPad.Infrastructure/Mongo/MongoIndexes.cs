@@ -36,8 +36,30 @@ public static class MongoIndexes
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("seq")),
             new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending("userId").Descending("at"))
+                Builders<BsonDocument>.IndexKeys.Ascending("userId").Descending("at")),
+            // Replay reads forward across every user by seq alone, which no userId-first index serves.
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("seq"))
         ], ct);
+
+        await context.Collection<BsonDocument>("statistics_records").Indexes.CreateManyAsync(
+        [
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("userId").Descending("_id")),
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("kind").Ascending("at")),
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("taskId").Ascending("kind"))
+        ], ct);
+
+        await context.Collection<BsonDocument>("statistics_inbox_records").Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("at")),
+            cancellationToken: ct);
+
+        await context.Collection<BsonDocument>("statistics_labels").Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("userId")),
+            cancellationToken: ct);
 
         await context.Collection<BsonDocument>("processed_commands").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(

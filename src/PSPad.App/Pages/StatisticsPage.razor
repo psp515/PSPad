@@ -1,0 +1,413 @@
+@page "/statistics"
+@page "/history"
+@attribute [Authorize]
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.Statistics
+@using PSPad.Contracts
+@inject IStatisticsSource Source
+@inject StatisticsCache Cache
+@inject AppState State
+@inject IClock Clock
+@inject NavigationManager Navigation
+
+@if (!_redirectedFromHistory)
+{
+    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Statistics</MudText>
+
+    @if (_offline)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            Offline — showing the last numbers we have.
+        </MudAlert>
+    }
+
+    @if (!_loaded)
+    {
+        <RowSkeleton Count="4" />
+    }
+    else
+    {
+        @if (_overview is { } overview)
+        {
+            <MudGrid Spacing="4" Class="mb-4">
+                <MudItem xs="6" sm="3">
+                    <StatTile Label="Done today" Value="@overview.Tiles.DoneToday" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <StatTile Label="Opened today" Value="@overview.Tiles.OpenedToday" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <StatTile Label="Last 7 days" Value="@overview.Tiles.DoneThisWeek" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <StatTile Label="Net change" Value="@overview.Tiles.NetChange" Signed="true" />
+                </MudItem>
+            </MudGrid>
+
+            <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-4">
+                <MudToggleGroup T="int" Value="_days" ValueChanged="SetDaysAsync"
+                                 SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary">
+                    <MudToggleItem Value="30" Text="30 days" />
+                    <MudToggleItem Value="90" Text="90 days" />
+                    <MudToggleItem Value="365" Text="365 days" />
+                </MudToggleGroup>
+
+                @if (_updatedAt is not null)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @UpdatedLabel()
+                    </MudText>
+                }
+            </div>
+
+            var completionsSeries = CompletionsSeries(overview);
+            var completionsLabels = LabelsOf(overview.Completions, day => day.Day);
+            var completionsOptions = StackedAxisOptions(overview.Completions);
+            var openedSeries = LineSeries("Opened", overview.Opened);
+            var openedLabels = LabelsOf(overview.Opened, day => day.Day);
+            var openedOptions = LineAxisOptions(overview.Opened);
+            var outstandingSeries = LineSeries("Outstanding", overview.Outstanding);
+            var outstandingLabels = LabelsOf(overview.Outstanding, day => day.Day);
+            var outstandingOptions = LineAxisOptions(overview.Outstanding);
+            var maxGoalCount = Math.Max(overview.ByGoal.Count == 0 ? 0 : overview.ByGoal.Max(goal => goal.Count), 1);
+            var capturesSeries = BarSeries("Captured", overview.InboxCaptures);
+            var capturesLabels = LabelsOf(overview.InboxCaptures, week => week.WeekStart, DaySpanOf(overview.InboxCaptures));
+            var capturesOptions = BarAxisOptions(overview.InboxCaptures);
+
+            <MudGrid Spacing="4" Class="mb-4">
+                <MudItem xs="12" md="6">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Completions per day</MudText>
+                        <MudChart ChartType="ChartType.StackedBar" ChartSeries="@completionsSeries"
+                                  ChartLabels="@completionsLabels" ChartOptions="@completionsOptions"
+                                  Width="100%" Height="260px" />
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Tasks opened per day</MudText>
+                        <MudChart ChartType="ChartType.Line" ChartSeries="@openedSeries"
+                                  ChartLabels="@openedLabels" ChartOptions="@openedOptions"
+                                  Width="100%" Height="260px" />
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Open tasks outstanding</MudText>
+                        <MudChart ChartType="ChartType.Line" ChartSeries="@outstandingSeries"
+                                  ChartLabels="@outstandingLabels" ChartOptions="@outstandingOptions"
+                                  Width="100%" Height="260px" />
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2" Class="mb-3">Where the work went</MudText>
+                        <MudStack Spacing="3">
+                            @foreach (var goal in overview.ByGoal)
+                            {
+                                <div>
+                                    <div class="d-flex justify-space-between mb-1">
+                                        <MudText Typo="Typo.body2">@goal.Name</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@goal.Count</MudText>
+                                    </div>
+                                    <MudProgressLinear Color="Color.Primary" Rounded="true" Min="0"
+                                                        Max="@maxGoalCount" Value="@goal.Count" />
+                                </div>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <MudGrid Spacing="4" Class="mb-4">
+                <MudItem xs="12" md="6">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Consistency</MudText>
+                        <ConsistencyHeatmap Days="@overview.Heatmap" Today="@State.Today" />
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Captured into the Inbox each week</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
+                            Each bar is one week; its height is how many items you captured into the Inbox
+                            that week, whatever became of them afterwards.
+                        </MudText>
+                        <MudChart ChartType="ChartType.Bar" ChartSeries="@capturesSeries"
+                                  ChartLabels="@capturesLabels" ChartOptions="@capturesOptions"
+                                  Width="100%" Height="260px" />
+                        <table class="mud-sr-only">
+                            <caption>Captured into the Inbox each week</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Week of</th>
+                                    <th scope="col">Captured</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var week in overview.InboxCaptures)
+                                {
+                                    <tr>
+                                        <td>@week.WeekStart.ToString("yyyy-MM-dd")</td>
+                                        <td>@week.Count</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        }
+
+        <MudExpansionPanels Elevation="0" Outlined="true" Class="mb-4">
+            <MudExpansionPanel Text="Everything that happened">
+                @foreach (var day in _records.GroupBy(DayOf))
+                {
+                    <MudText Typo="Typo.subtitle1" Class="mt-4">@day.Key.ToString("d MMM yyyy")</MudText>
+                    @foreach (var record in day)
+                    {
+                        @if (record.CurrentStatus == "Gone")
+                        {
+                            <MudPaper Outlined="true" Class="mb-2 pspad-record-gone">
+                                <div class="px-3 py-2">
+                                    <RecordRow Record="@record" />
+                                </div>
+                            </MudPaper>
+                        }
+                        else
+                        {
+                            <MudPaper Outlined="true" Class="mb-2">
+                                <div class="px-3 py-2" style="cursor:pointer" @onclick="@(() => Open(record))">
+                                    <RecordRow Record="@record" />
+                                </div>
+                            </MudPaper>
+                        }
+                    }
+                }
+
+                @if (_records.Count > 0)
+                {
+                    <MudButton OnClick="@LoadOlderAsync">load older</MudButton>
+                }
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    }
+}
+
+@code {
+    const int RecordsPageSize = 50;
+    const int DefaultDays = 30;
+
+    bool _redirectedFromHistory;
+    bool _loaded;
+    bool _offline;
+    int _days = DefaultDays;
+    StatisticsOverview? _overview;
+    IReadOnlyList<StatisticsRecordView> _records = [];
+    DateTimeOffset? _updatedAt;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OnHistoryRoute())
+        {
+            _redirectedFromHistory = true;
+            Navigation.NavigateTo("/statistics", replace: true);
+            return;
+        }
+
+        _overview = await Cache.ReadAsync(_days);
+        _loaded = _overview is not null;
+
+        await RefreshAsync();
+    }
+
+    bool OnHistoryRoute() =>
+        Navigation.ToBaseRelativePath(Navigation.Uri).Split('?')[0].TrimEnd('/')
+            .Equals("history", StringComparison.OrdinalIgnoreCase);
+
+    async Task RefreshAsync()
+    {
+        try
+        {
+            var overview = await Source.OverviewAsync(_days);
+            var records = await Source.RecordsAsync(null, RecordsPageSize);
+
+            if (overview is not null)
+            {
+                _overview = overview;
+                await Cache.WriteAsync(_days, overview);
+            }
+
+            _records = records;
+            _updatedAt = Clock.UtcNow;
+            _offline = false;
+        }
+        catch (HttpRequestException)
+        {
+            _offline = true;
+        }
+
+        _loaded = true;
+    }
+
+    async Task SetDaysAsync(int days)
+    {
+        if (_days == days)
+        {
+            return;
+        }
+
+        _days = days;
+        _overview = await Cache.ReadAsync(_days);
+
+        await RefreshAsync();
+    }
+
+    static List<ChartSeries<double>> CompletionsSeries(StatisticsOverview overview) =>
+    [
+        new ChartSeries<double>
+        {
+            Name = "Planned",
+            Data = overview.Completions.Select(day => (double)day.Planned).ToArray()
+        },
+        new ChartSeries<double>
+        {
+            Name = "Unplanned",
+            Data = overview.Completions.Select(day => (double)day.Unplanned).ToArray()
+        }
+    ];
+
+    static List<ChartSeries<double>> LineSeries(string name, IReadOnlyList<DailyCountView> points) =>
+    [
+        new ChartSeries<double> { Name = name, Data = points.Select(point => (double)point.Count).ToArray() }
+    ];
+
+    static List<ChartSeries<double>> BarSeries(string name, IReadOnlyList<WeeklyCountView> weeks) =>
+    [
+        new ChartSeries<double> { Name = name, Data = weeks.Select(week => (double)week.Count).ToArray() }
+    ];
+
+    const int TargetLabelCount = 7;
+    const int TargetYAxisTicks = 5;
+    const int MaxYAxisTicks = 6;
+
+    static string[] LabelsOf<T>(IReadOnlyList<T> points, Func<T, DateOnly> dayOf, int? formatOverRange = null)
+    {
+        var count = points.Count;
+
+        if (count == 0)
+        {
+            return [];
+        }
+
+        var format = (formatOverRange ?? count) > 90 ? "MMM yyyy" : "MM-dd";
+        var step = Math.Max(1, (int)Math.Ceiling(count / (double)TargetLabelCount));
+        var labels = new string[count];
+
+        for (var index = 0; index < count; index++)
+        {
+            var keep = index % step == 0 || index == count - 1;
+            labels[index] = keep ? dayOf(points[index]).ToString(format) : "";
+        }
+
+        return labels;
+    }
+
+    static StackedBarChartOptions StackedAxisOptions(IReadOnlyList<DailyCompletionsView> days)
+    {
+        var max = days.Count == 0 ? 0 : days.Max(day => day.Planned + day.Unplanned);
+        return new StackedBarChartOptions { YAxisTicks = NiceYAxisStep(max), MaxNumYAxisTicks = MaxYAxisTicks };
+    }
+
+    static LineChartOptions LineAxisOptions(IReadOnlyList<DailyCountView> points)
+    {
+        var max = points.Count == 0 ? 0 : points.Max(point => point.Count);
+        return new LineChartOptions { YAxisTicks = NiceYAxisStep(max), MaxNumYAxisTicks = MaxYAxisTicks };
+    }
+
+    static BarChartOptions BarAxisOptions(IReadOnlyList<WeeklyCountView> weeks)
+    {
+        var max = weeks.Count == 0 ? 0 : weeks.Max(week => week.Count);
+        return new BarChartOptions { YAxisTicks = NiceYAxisStep(max), MaxNumYAxisTicks = MaxYAxisTicks };
+    }
+
+    static int DaySpanOf(IReadOnlyList<WeeklyCountView> weeks) =>
+        weeks.Count == 0 ? 0 : weeks[^1].WeekStart.DayNumber - weeks[0].WeekStart.DayNumber;
+
+    static int NiceYAxisStep(double max)
+    {
+        if (max <= 0)
+        {
+            return 1;
+        }
+
+        var rawStep = max / TargetYAxisTicks;
+        var magnitude = Math.Pow(10, Math.Floor(Math.Log10(rawStep)));
+        var normalized = rawStep / magnitude;
+        var niceNormalized = normalized switch
+        {
+            <= 1 => 1,
+            <= 2 => 2,
+            <= 5 => 5,
+            _ => 10
+        };
+
+        return Math.Max(1, (int)Math.Round(niceNormalized * magnitude));
+    }
+
+    async Task LoadOlderAsync()
+    {
+        if (_records.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var older = await Source.RecordsAsync(_records[^1].Seq, RecordsPageSize);
+            _records = [.. _records, .. older];
+            _offline = false;
+        }
+        catch (HttpRequestException)
+        {
+            _offline = true;
+        }
+    }
+
+    void Open(StatisticsRecordView record) =>
+        Navigation.NavigateTo($"{Navigation.Uri.Split('?')[0]}?task={record.TaskId}");
+
+    DateOnly DayOf(StatisticsRecordView record) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(record.At, Zone).Date);
+
+    TimeZoneInfo Zone
+    {
+        get
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(State.TimeZone);
+            }
+            catch (Exception exception) when (exception is TimeZoneNotFoundException or InvalidTimeZoneException)
+            {
+                Console.Error.WriteLine($"Unknown time zone '{State.TimeZone}': {exception.Message}");
+                return TimeZoneInfo.Utc;
+            }
+        }
+    }
+
+    string UpdatedLabel()
+    {
+        var delta = Clock.UtcNow - _updatedAt!.Value;
+
+        return delta switch
+        {
+            _ when delta < TimeSpan.FromSeconds(45) => "updated just now",
+            _ when delta < TimeSpan.FromMinutes(60) => $"updated {(int)delta.TotalMinutes}m ago",
+            _ when delta < TimeSpan.FromHours(24) => $"updated {(int)delta.TotalHours}h ago",
+            _ => $"updated {(int)delta.TotalDays}d ago"
+        };
+    }
+}

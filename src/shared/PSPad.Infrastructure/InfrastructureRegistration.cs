@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PSPad.Abstractions;
+using PSPad.Infrastructure.Events;
 using PSPad.Infrastructure.Mongo;
 
 namespace PSPad.Infrastructure;

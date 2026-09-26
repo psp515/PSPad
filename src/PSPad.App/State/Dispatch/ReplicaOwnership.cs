@@ -1,9 +1,10 @@
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
+using PSPad.App.Statistics;
 
 namespace PSPad.App.State.Dispatch;
 
-public sealed class ReplicaOwnership(IReplica replica, IOutbox outbox)
+public sealed class ReplicaOwnership(IReplica replica, IOutbox outbox, StatisticsCache cache)
 {
     public async Task EnsureCurrentUserAsync(Guid userId)
     {
@@ -16,6 +17,7 @@ public sealed class ReplicaOwnership(IReplica replica, IOutbox outbox)
         {
             await replica.ClearAsync();
             await outbox.ClearAsync();
+            await cache.ClearAsync();
         }
 
         await replica.SetOwnerAsync(userId);

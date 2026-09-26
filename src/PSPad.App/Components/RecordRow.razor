@@ -1,0 +1,42 @@
+@using PSPad.Contracts
+
+<div class="d-flex align-center gap-3">
+    <MudText Typo="Typo.body2" Class="flex-grow-1">
+        @KindLabel(Record.Kind) — @Record.TaskName
+    </MudText>
+    @if (Record.CompletionNumber is { } number && number > 1)
+    {
+        <MudChip T="string" Size="Size.Small" Color="Color.Default">#@number</MudChip>
+    }
+</div>
+
+@if (Record.ListName is not null || Record.GoalName is not null)
+{
+    <div class="d-flex align-center gap-3">
+        @if (Record.ListName is not null)
+        {
+            <MudText Typo="Typo.caption">@Record.ListName</MudText>
+        }
+        @if (Record.GoalName is not null)
+        {
+            <MudText Typo="Typo.caption">@Record.GoalName</MudText>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public StatisticsRecordView Record { get; set; } = null!;
+
+    static string KindLabel(string kind) => kind switch
+    {
+        "Created" => "Created",
+        "Completed" => "Completed",
+        "Reopened" => "Reopened",
+        "Deleted" => "Deleted",
+        "Moved" => "Moved",
+        "LinkedToGoal" => "Linked to goal",
+        "OccurrenceTicked" => "Ticked",
+        "OccurrenceUnticked" => "Unticked",
+        _ => kind
+    };
+}

@@ -31,8 +31,8 @@ public class SyncRefreshTests : Bunit.TestContext
     [
         typeof(Authentication), typeof(Welcome), typeof(NotFound),
         typeof(SettingsPage), typeof(AppInfoPage),
-        // The history screen reads the server's event log, not the replica.
-        typeof(HistoryPage),
+        // The statistics screen reads the server's projected records over plain REST, not the replica.
+        typeof(StatisticsPage),
         // Search renders what the typed query last matched, not a standing view of the replica.
         typeof(SearchPage)
     ];
