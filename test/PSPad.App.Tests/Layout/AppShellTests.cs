@@ -19,6 +19,7 @@ using PSPad.App.State.Viewport;
 using PSPad.App.Sync;
 using PSPad.App.Tests.Auth;
 using PSPad.App.Theme;
+using PSPad.App.Updates;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
@@ -498,6 +499,42 @@ public class AppShellTests : Bunit.TestContext
         Assert.Single(shown);
         Assert.Contains("server", shown[0].Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(Severity.Warning, shown[0].Severity);
+    }
+
+    [Fact]
+    public async Task ANewVersionOffersAReloadThatActivatesIt()
+    {
+        Arrange();
+        var updates = (AppTestHost.FakeAppUpdates)Services.GetRequiredService<IAppUpdates>();
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+        var shell = Render<AppShell>();
+
+        await shell.InvokeAsync(updates.Announce);
+
+        var shown = Assert.Single(snackbar.ShownSnackbars);
+        Assert.Contains("new version", shown.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(Severity.Info, shown.Severity);
+
+        var reload = shell.WaitForElement(".mud-snackbar-content-action button");
+        Assert.Equal("Reload", reload.TextContent.Trim());
+        reload.Click();
+
+        Assert.Equal(1, updates.Applied);
+    }
+
+    [Fact]
+    public async Task AVersionAlreadyWaitingWhenTheShellMountsIsOfferedOnce()
+    {
+        Arrange();
+        var updates = (AppTestHost.FakeAppUpdates)Services.GetRequiredService<IAppUpdates>();
+        updates.Announce();
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+
+        Render<AppShell>();
+        await DisposeComponentsAsync();
+        Render<AppShell>();
+
+        Assert.Single(snackbar.ShownSnackbars);
     }
 
     sealed class SpyConnectivity : IConnectivity
