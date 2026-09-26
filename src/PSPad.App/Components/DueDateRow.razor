@@ -16,9 +16,9 @@
     </MudMenuItem>
 </PropertyRow>
 
-<MudDialog @bind-Visible="_picking" Class="pspad-due-dialog" Options="@PickerOptions">
+<MudDialog @bind-Visible="_picking" Class="pspad-due-dialog" ContentClass="pa-0" Options="@PickerOptions">
     <DialogContent>
-        <MudDatePicker PickerVariant="PickerVariant.Static" Date="@AsDateTime(Value)"
+        <MudDatePicker PickerVariant="PickerVariant.Static" Elevation="0" ShowToolbar="false" Date="@AsDateTime(Value)"
                        DateChanged="@PickedAsync" />
     </DialogContent>
 </MudDialog>
