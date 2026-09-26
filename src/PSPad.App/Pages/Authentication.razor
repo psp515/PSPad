@@ -17,6 +17,7 @@
 @inject TokenRefresher Refresher
 @inject LocalSignOut SignOut
 @inject IClock Clock
+@inject ILogger<Authentication> Logger
 
 <RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="@CaptureSessionAsync"
                          OnLogOutSucceeded="@SignOut.ClearAsync">
@@ -68,7 +69,7 @@
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"Session capture failed: {exception.Message}");
+            Logger.LogWarning("Session capture failed: {Reason}", exception.Message);
         }
     }
 }

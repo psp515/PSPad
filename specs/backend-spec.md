@@ -64,6 +64,12 @@ Enforced by architecture guard tests, not just this document: no
 `MongoDB.*`/`Microsoft.AspNetCore.*` inside `PSPad.Module.Statistics`; no
 module reference inside `PSPad.Infrastructure`.
 
+`PSPad.App` never writes to standard error. Blazor WebAssembly treats any
+stderr output as a crash and raises its "An unhandled error has occurred"
+banner, so a handled failure (server unreachable, IndexedDB unreadable) logs
+through `ILogger` at `Warning` instead. A guard test scans the assembly's IL
+for `Console.Error`.
+
 ---
 
 ## 2. Command pipeline

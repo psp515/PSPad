@@ -29,6 +29,7 @@
 @inject IConnectivity Connectivity
 @inject ISnackbar Snackbar
 @inject IAppUpdates Updates
+@inject ILogger<AppShell> Logger
 @implements IDisposable
 @implements IAsyncDisposable
 
@@ -162,7 +163,7 @@
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"Local replica ownership check failed: {exception.Message}");
+            Logger.LogWarning("Local replica ownership check failed: {Reason}", exception.Message);
             return false;
         }
     }
@@ -175,7 +176,7 @@
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"Local replica load failed: {exception.Message}");
+            Logger.LogWarning("Local replica load failed: {Reason}", exception.Message);
         }
     }
 
@@ -191,7 +192,7 @@
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"First pull after sign-in did not finish: {exception.Message}");
+            Logger.LogWarning("First pull after sign-in did not finish: {Reason}", exception.Message);
         }
     }
 
@@ -203,7 +204,7 @@
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"Session load failed: {exception.Message}");
+            Logger.LogWarning("Session load failed: {Reason}", exception.Message);
             return null;
         }
     }
@@ -218,7 +219,7 @@
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"Account refresh failed: {exception.Message}");
+            Logger.LogWarning("Account refresh failed: {Reason}", exception.Message);
             return;
         }
 
