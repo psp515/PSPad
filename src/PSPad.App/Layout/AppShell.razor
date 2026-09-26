@@ -8,6 +8,7 @@
 @using PSPad.App.State.Viewport
 @using PSPad.App.Sync
 @using PSPad.App.Theme
+@using PSPad.App.Updates
 @using PSPad.Contracts
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Today
@@ -27,6 +28,7 @@
 @inject ServerReachability Reachability
 @inject IConnectivity Connectivity
 @inject ISnackbar Snackbar
+@inject IAppUpdates Updates
 @implements IDisposable
 @implements IAsyncDisposable
 
@@ -104,6 +106,12 @@
         Preference.Changed += OnPreferenceChanged;
         Sender.Sent += OnCommandSent;
         Navigation.LocationChanged += OnLocationChanged;
+        Updates.Available += OnUpdateAvailable;
+
+        if (Updates.IsAvailable)
+        {
+            OfferUpdate();
+        }
 
         await Viewport.SubscribeAsync(OnDesktopChanged);
 
@@ -322,6 +330,22 @@
         StateHasChanged();
     });
 
+    void OnUpdateAvailable() => InvokeAsync(OfferUpdate);
+
+    void OfferUpdate() => Snackbar.Add(
+        "A new version of PSPad is available.",
+        Severity.Info,
+        options =>
+        {
+            options.Action = "Reload";
+            options.RequireInteraction = true;
+            options.ShowCloseIcon = true;
+            options.OnClick = _ => Updates.ApplyAsync();
+        },
+        UpdateSnackbarKey);
+
+    const string UpdateSnackbarKey = "pspad-update";
+
     void OnCommandSent() => InvokeAsync(ReloadAreasAndCountsAsync);
 
     public void Dispose()
@@ -331,6 +355,7 @@
         Preference.Changed -= OnPreferenceChanged;
         Sender.Sent -= OnCommandSent;
         Navigation.LocationChanged -= OnLocationChanged;
+        Updates.Available -= OnUpdateAvailable;
     }
 
     public async ValueTask DisposeAsync()

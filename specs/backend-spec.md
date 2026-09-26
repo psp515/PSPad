@@ -248,6 +248,18 @@ redraws when new data lands; the shell waits for the first pull to
 complete before rendering content on a device holding nothing yet for this
 user, rather than flashing an empty state.
 
+**App updates are offered, never forced** (`adr/0040`). The published
+service worker keeps the browser's waiting state — no `skipWaiting()` on
+install, no `clients.claim()` — and only skips waiting when a page posts it
+`{ type: 'SKIP_WAITING' }`. `js/updates.js` watches the registration
+(a worker already waiting at start, or `updatefound` → `installed` while a
+controller exists), calls `registration.update()` hourly and whenever the
+tab becomes visible, and reports through `IAppUpdates` (`BrowserAppUpdates`,
+announcing once). A `controllerchange` the tab did not ask for — another tab
+applied the update — is announced too. `ApplyAsync` posts the message and reloads on
+`controllerchange`. The outbox lives in IndexedDB, so the reload loses
+nothing that was accepted locally.
+
 ---
 
 ## 6. Identity & session

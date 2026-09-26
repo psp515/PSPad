@@ -206,6 +206,13 @@ resolved before first paint.
 hamburger and `ConnectionStatus`. No account avatar — identity lives in the
 sidebar's `AccountBadge`, one tap away behind the hamburger.
 
+**New version prompt.** When a deployed build's service worker has installed
+and is waiting, `AppShell` shows one `Severity.Info` snackbar — "A new version
+of PSPad is available." — with a `Reload` action and a close icon. It needs
+interaction and never times out. Reload activates the waiting worker and
+reloads the page; closing it leaves the old version running until every tab
+closes (`adr/0040`).
+
 ---
 
 ## 3. Page structure
