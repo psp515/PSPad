@@ -382,21 +382,7 @@
     DateOnly DayOf(StatisticsRecordView record) =>
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(record.At, Zone).Date);
 
-    TimeZoneInfo Zone
-    {
-        get
-        {
-            try
-            {
-                return TimeZoneInfo.FindSystemTimeZoneById(State.TimeZone);
-            }
-            catch (Exception exception) when (exception is TimeZoneNotFoundException or InvalidTimeZoneException)
-            {
-                Console.Error.WriteLine($"Unknown time zone '{State.TimeZone}': {exception.Message}");
-                return TimeZoneInfo.Utc;
-            }
-        }
-    }
+    TimeZoneInfo Zone => LocalToday.Zone(State.TimeZone);
 
     string UpdatedLabel()
     {
