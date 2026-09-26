@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using PSPad.Abstractions;
 using PSPad.App.Auth;
 using PSPad.App.State.Outbox;
@@ -23,7 +24,7 @@ public class LocalAccountDeletionTests
         var outbox = new InMemoryOutbox();
         await outbox.AppendAsync(Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
         var authProvider = new LocalAuthenticationStateProvider(sessions);
-        var deletion = new LocalAccountDeletion(sessions, replica, outbox, authProvider);
+        var deletion = new LocalAccountDeletion(sessions, replica, outbox, authProvider, NullLogger<LocalAccountDeletion>.Instance);
 
         await deletion.ClearAsync();
 
@@ -40,7 +41,7 @@ public class LocalAccountDeletionTests
         var replica = new InMemoryReplica();
         var outbox = new InMemoryOutbox();
         var authProvider = new LocalAuthenticationStateProvider(sessions);
-        var deletion = new LocalAccountDeletion(sessions, replica, outbox, authProvider);
+        var deletion = new LocalAccountDeletion(sessions, replica, outbox, authProvider, NullLogger<LocalAccountDeletion>.Instance);
         var announced = false;
         authProvider.AuthenticationStateChanged += _ => announced = true;
 
@@ -56,7 +57,7 @@ public class LocalAccountDeletionTests
             new LocalSession(User, "Ada", "ada@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow));
         var outbox = new InMemoryOutbox();
         var authProvider = new LocalAuthenticationStateProvider(sessions);
-        var deletion = new LocalAccountDeletion(sessions, new ThrowingReplica(), outbox, authProvider);
+        var deletion = new LocalAccountDeletion(sessions, new ThrowingReplica(), outbox, authProvider, NullLogger<LocalAccountDeletion>.Instance);
         var announced = false;
         authProvider.AuthenticationStateChanged += _ => announced = true;
 
@@ -74,7 +75,7 @@ public class LocalAccountDeletionTests
         var replica = new InMemoryReplica();
         await replica.SetOwnerAsync(User);
         var authProvider = new LocalAuthenticationStateProvider(sessions);
-        var deletion = new LocalAccountDeletion(sessions, replica, new ThrowingOutbox(), authProvider);
+        var deletion = new LocalAccountDeletion(sessions, replica, new ThrowingOutbox(), authProvider, NullLogger<LocalAccountDeletion>.Instance);
         var announced = false;
         authProvider.AuthenticationStateChanged += _ => announced = true;
 
@@ -94,7 +95,7 @@ public class LocalAccountDeletionTests
         await outbox.AppendAsync(Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
         var throwingSessions = new ThrowingLocalSessionStore();
         var authProvider = new LocalAuthenticationStateProvider(throwingSessions);
-        var deletion = new LocalAccountDeletion(throwingSessions, replica, outbox, authProvider);
+        var deletion = new LocalAccountDeletion(throwingSessions, replica, outbox, authProvider, NullLogger<LocalAccountDeletion>.Instance);
         var announced = false;
         authProvider.AuthenticationStateChanged += _ => announced = true;
 

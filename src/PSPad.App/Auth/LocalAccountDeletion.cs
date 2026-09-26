@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 
@@ -7,7 +8,8 @@ public sealed class LocalAccountDeletion(
     ILocalSessionStore sessions,
     IReplica replica,
     IOutbox outbox,
-    LocalAuthenticationStateProvider authenticationState)
+    LocalAuthenticationStateProvider authenticationState,
+    ILogger<LocalAccountDeletion> logger)
 {
     public async Task ClearAsync()
     {
@@ -25,7 +27,7 @@ public sealed class LocalAccountDeletion(
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"Replica clear on account deletion failed: {exception.Message}");
+            logger.LogWarning("Replica clear on account deletion failed: {Reason}", exception.Message);
         }
 
         try
@@ -34,7 +36,7 @@ public sealed class LocalAccountDeletion(
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"Outbox clear on account deletion failed: {exception.Message}");
+            logger.LogWarning("Outbox clear on account deletion failed: {Reason}", exception.Message);
         }
 
         try
@@ -43,7 +45,7 @@ public sealed class LocalAccountDeletion(
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"Session clear on account deletion failed: {exception.Message}");
+            logger.LogWarning("Session clear on account deletion failed: {Reason}", exception.Message);
         }
     }
 }
