@@ -11,13 +11,17 @@
         </MudMenuItem>
     }
     <MudDivider />
-    <MudMenuItem Class="pspad-due-pick" Icon="@Icons.Material.Outlined.CalendarMonth" OnClick="@OpenPickerAsync">
+    <MudMenuItem Class="pspad-due-pick" Icon="@Icons.Material.Outlined.CalendarMonth" OnClick="@OpenPicker">
         Pick a date…
     </MudMenuItem>
 </PropertyRow>
 
-<MudDatePicker @ref="_picker" Class="d-none" PickerVariant="PickerVariant.Dialog" Date="@AsDateTime(Value)"
-               DateChanged="@PickedAsync" Disabled="@Disabled" />
+<MudDialog @bind-Visible="_picking" Class="pspad-due-dialog" ContentClass="pa-0" Options="@PickerOptions">
+    <DialogContent>
+        <MudDatePicker PickerVariant="PickerVariant.Static" Elevation="0" ShowToolbar="false" Date="@AsDateTime(Value)"
+                       DateChanged="@PickedAsync" />
+    </DialogContent>
+</MudDialog>
 
 @code {
     [Parameter] public DateOnly? Value { get; set; }
@@ -28,7 +32,9 @@
 
     [Parameter] public bool Disabled { get; set; }
 
-    MudDatePicker? _picker;
+    bool _picking;
+
+    static readonly DialogOptions PickerOptions = new() { CloseOnEscapeKey = true, BackdropClick = true, NoHeader = true };
 
     public sealed record QuickPick(string Label, DateOnly Day);
 
@@ -58,15 +64,13 @@
 
     static DateTime? AsDateTime(DateOnly? day) => day?.ToDateTime(TimeOnly.MinValue);
 
-    async Task OpenPickerAsync()
-    {
-        if (_picker is not null && !Disabled)
-        {
-            await _picker.OpenAsync();
-        }
-    }
+    void OpenPicker() => _picking = !Disabled;
 
-    Task PickedAsync(DateTime? date) => ChooseAsync(date is null ? null : DateOnly.FromDateTime(date.Value));
+    async Task PickedAsync(DateTime? date)
+    {
+        _picking = false;
+        await ChooseAsync(date is null ? null : DateOnly.FromDateTime(date.Value));
+    }
 
     async Task ChooseAsync(DateOnly? day)
     {
