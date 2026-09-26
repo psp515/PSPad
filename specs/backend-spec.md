@@ -341,12 +341,16 @@ everything" against — and no aggregate owns "all of a user's data," so it
 does not fit the load/decide/apply/stage shape §2 describes. It is handled
 directly in `PSPad.Api`:
 
-1. In one MongoDB transaction, enumerate every collection in the database
+1. Wait for the domain event pump to handle every envelope published before
+   the request began (`ChannelDomainEventDispatcher.DrainAsync`, capped at
+   10 seconds, `adr/0041`). Otherwise a projection still in flight writes
+   `statistics_*` documents back after the wipe.
+2. In one MongoDB transaction, enumerate every collection in the database
    (`Database.ListCollectionNames()`) and run
    `DeleteMany({ userId: callerId })` against each — including `events` and
    `processed_commands`. No collection name is hardcoded, so a new aggregate
    added later (a habit, a yearly goal) is covered with no code change here.
-2. Only once that transaction commits, call Keycloak's Admin REST API
+3. Only once that transaction commits, call Keycloak's Admin REST API
    (`DELETE /admin/realms/{realm}/users/{sub}`), authenticating with the
    existing bootstrap master-realm admin credentials
    (`KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD`) — no new realm client
@@ -360,12 +364,12 @@ directly in `PSPad.Api`:
    report which parts finished, not to fail the request. A failure before
    the Mongo transaction commits is the only case that returns a non-2xx,
    and it means nothing was deleted.
-3. There is no local password to check (no local password store exists at
+4. There is no local password to check (no local password store exists at
    all — Keycloak is the only sign-in path, §6 above), so the client-side
    confirmation is a typed-email match, not a password prompt. That is a UX
    safeguard against misclicks, not the authorization boundary — the caller's
    own validated JWT `sub` is, and the handler only ever deletes that id.
-4. The caller is authenticated but the operation still requires
+5. The caller is authenticated but the operation still requires
    connectivity; it does not go through the offline session model in the
    table above.
 

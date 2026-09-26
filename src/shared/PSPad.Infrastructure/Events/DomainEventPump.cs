@@ -38,6 +38,8 @@ public sealed class DomainEventPump(
                         envelope.Seq);
                 }
             }
+
+            dispatcher.MarkHandled();
         }
     }
 }
