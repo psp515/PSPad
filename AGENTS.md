@@ -25,7 +25,7 @@ Platform, not one project. Each gets own spec, plan, implementation.
 | # | Subsystem | Slice |
 |---|-----------|-------|
 | 1 | GTD core — areas, Inbox, lists, tasks, steps, recurrence, goals, Today | **1 (now)** |
-| 2 | Statistics — event-projected records, tiles, charts, a consistency heatmap, an Inbox-backlog chart and a record feed | **1 (now)** |
+| 2 | Statistics — event-projected records, tiles, charts, a consistency heatmap, an Inbox-captures chart and a record feed | **1 (now)** |
 | 3 | Identity — built-in login + Keycloak (OIDC) | **1 (now)** |
 | 4 | Habits — streaks, daily progress | later |
 | 5 | Goals & annual plans — yearly horizon, year-end summary | later |
@@ -45,7 +45,7 @@ areas, organizing = first-class command), tasks (one list, name + due date +
 goal + priority + star + steps), steps (own due date, ordered, dense positions),
 recurrence (template + per-day occurrences), goals (global, many tasks to one),
 Today screen (cross-area), a Statistics screen (tiles, four charts, a
-consistency heatmap, an Inbox-backlog bar chart, a collapsed record feed) built
+consistency heatmap, an Inbox-captures bar chart, a collapsed record feed) built
 from denormalized records projected off the domain event log, offline PWA,
 auth.
 
@@ -360,9 +360,9 @@ replayed from a marker on startup), `adr/0037` (Statistics owns
 denormalized, read-only records projected from the log — reconciled against
 `adr/0011`'s "never a parallel audit table"), and `adr/0038` (History
 renamed to Statistics, amending `adr/0020`) are all `Active` and built here,
-as is `adr/0039` (the Inbox backlog is its own projection and collection, a
-running level seeded with an opening set — extending 0037 to a fourth
-collection).
+as is `adr/0039` (Inbox captures are their own projection and collection,
+counted per week — extending 0037 to a fourth collection; revised in place
+before merge, when the chart changed from backlog level to capture volume).
 The client-side `BurndownRule` (`adr/0019`) is deleted; its chart's
 successor is `StatisticsCharts.Outstanding`, server-side, derived from
 `statistics_records`.

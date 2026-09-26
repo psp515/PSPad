@@ -142,7 +142,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
 | `statistics_records` | the statistics feed and every chart | `_id` = the event's `seq`, `userId`, `at`, `kind`, `taskId`, `taskName`, `listId`, `goalId`, `dueOn`, `occurrenceDay`, `completionNumber` |
-| `statistics_inbox_records` | the Inbox-backlog heatmap | `_id` = the event's `seq`, `userId`, `at`, `kind`, `itemId` |
+| `statistics_inbox_records` | the Inbox-captures chart | `_id` = the event's `seq`, `userId`, `at`, `itemId` |
 | `statistics_labels` | area, list and goal names for the feed | `_id` = the aggregate's id, `userId`, `kind`, `name`, `deleted` |
 | `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq` |
 
@@ -167,8 +167,7 @@ transaction; the returned value stamps both the event and the aggregate's
 - `statistics_records`: `{userId: 1, _id: -1}` (the feed page),
   `{userId: 1, kind: 1, at: 1}` (the charts' window),
   `{userId: 1, taskId: 1, kind: 1}` (the completion counter)
-- `statistics_inbox_records`: `{userId: 1, at: 1}` (the backlog window, read
-  both before and inside it)
+- `statistics_inbox_records`: `{userId: 1, at: 1}` (the captures window)
 - `statistics_labels`: `{userId: 1}`
 
 ---
@@ -496,31 +495,34 @@ renamed task never rewrites what a past day's chart showed:
   ordering by `seq` alone would apply it to the wrong day's running total.
 - Work by goal, ranked, with an explicit "No goal" bar.
 - A consistency heatmap — one cell per day, shaded by completion count.
-- An Inbox-backlog heatmap — one cell per week, shaded by how many captured
-  items were **still in the Inbox when that week ended** (the current week is
-  measured at today, not at its Saturday). Weeks start Sunday, matching the
-  consistency grid's rows. This is a running level, not a per-week tally: an
-  item captured in January and still waiting in September weighs on every week
-  between, so `InboxBacklog` takes an `IReadOnlySet<Guid> heldAtStart` exactly
-  as `Outstanding` takes `openAtStart` — a count could not say *which* items
-  were already waiting. Per-item state, never a signed sum: `Captured` adds
-  the item id, `Organised` and `Discarded` remove it, and removing an id that
-  was never captured is a no-op rather than a negative. Records are ordered by
-  `(bucketed day, Id)` for the same offline-commit reason `Outstanding` is.
+- Inbox captures per week — `StatisticsCharts.Captures`, one `WeeklyCount` per
+  week the window touches, counting the items **created in the Inbox that
+  week**. A per-week tally, not a running level: it needs no opening balance,
+  because a capture older than the window belongs to a week the window does
+  not show. An item captured and then organised or discarded still counts in
+  the week it was captured — what became of it afterwards changes no bar.
+  Days are bucketed in the user's time zone, and weeks start Sunday, the same
+  convention the consistency grid's Sunday accent uses. The window's first
+  week is partial by construction: it counts only its days from the window's
+  first day on.
 
-**The Inbox backlog is its own projection and its own collection.**
-`InboxRecordProjection` maps `InboxItemCaptured`/`InboxItemOrganised`/
-`InboxItemDiscarded` to an `InboxRecord` (`_id` = the event's `seq`, so replay
-upserts) in `statistics_inbox_records`, read through `IInboxRecordStore`
-(`SinceAsync`, `HeldItemIdsBeforeAsync`). It is deliberately not a
-`StatisticsRecord`: that record is task-shaped (`TaskId`, `TaskName`,
-`ListId`, `GoalId`, `CompletionNumber`, `ITaskSnapshotSource` status
-resolution) and an inbox item is not a task, so folding captures into it would
-put rows with no task in the record feed and force every existing chart's kind
-filter to be re-audited (`adr/0037`). `StatisticsOverviewReader` reads both
-inbox halves with the **same instant** it passes to `SinceAsync` and
-`OpenTaskIdsBeforeAsync`, so no record is both charted and in the opening
-balance.
+**Inbox captures are their own projection and their own collection.**
+`InboxRecordProjection` maps `InboxItemCaptured` — and nothing else — to an
+`InboxRecord` (`_id` = the event's `seq`, so replay upserts) in
+`statistics_inbox_records`, read through `IInboxRecordStore` (`SaveAsync`,
+`SinceAsync`). It is deliberately not a `StatisticsRecord`: that record is
+task-shaped (`TaskId`, `TaskName`, `ListId`, `GoalId`, `CompletionNumber`,
+`ITaskSnapshotSource` status resolution) and an inbox item is not a task, so
+folding captures into it would put rows with no task in the record feed and
+force every existing chart's kind filter to be re-audited (`adr/0037`).
+`InboxItemOrganised` and `InboxItemDiscarded` are deliberately **not**
+projected: nothing reads them once the chart counts arrivals, and a row no
+reader consumes is a write that can only rot — emptying the Inbox stays in
+`events`, where a future metric would rebuild it from `seq` 0 like every other
+statistics row (`adr/0039`). `StatisticsOverviewReader` reads the captures
+window with the **same instant** it passes to `SinceAsync` and
+`OpenTaskIdsBeforeAsync`, so the inbox chart and the task charts never
+disagree about where the window starts.
 
 **Cross-module read.** Current task status for the feed's `CurrentStatus`
 column comes through a port Statistics declares and `PSPad.Api` implements:

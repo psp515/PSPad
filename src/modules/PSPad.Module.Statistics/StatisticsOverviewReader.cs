@@ -19,7 +19,6 @@ public sealed class StatisticsOverviewReader(
         var records = await store.SinceAsync(userId, from, ct);
         var openAtStart = await store.OpenTaskIdsBeforeAsync(userId, from, ct);
         var captures = await inbox.SinceAsync(userId, from, ct);
-        var heldAtStart = await inbox.HeldItemIdsBeforeAsync(userId, from, ct);
         var known = await labels.AllAsync(userId, ct);
 
         var outstanding = StatisticsCharts.Outstanding(records, today, range, zone, openAtStart);
@@ -31,8 +30,7 @@ public sealed class StatisticsOverviewReader(
             outstanding.Select(Count).ToArray(),
             StatisticsCharts.ByGoal(records, known).Select(Goal).ToArray(),
             StatisticsCharts.Heatmap(records, today, range, zone).Select(Count).ToArray(),
-            StatisticsCharts.InboxBacklog(captures, today, range, zone, heldAtStart)
-                .Select(Week).ToArray());
+            StatisticsCharts.Captures(captures, today, range, zone).Select(Week).ToArray());
     }
 
     static StatisticsTilesView Tiles(StatisticsTiles tiles) =>

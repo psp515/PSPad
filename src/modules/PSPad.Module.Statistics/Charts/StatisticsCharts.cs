@@ -78,43 +78,23 @@ public static class StatisticsCharts
         return points;
     }
 
-    // heldAtStart carries the inbox items still waiting before any record passed in, which nothing here could derive.
-    public static IReadOnlyList<WeeklyCount> InboxBacklog(
-        IReadOnlyList<InboxRecord> records, DateOnly today, int days, TimeZoneInfo zone,
-        IReadOnlySet<Guid> heldAtStart)
+    public static IReadOnlyList<WeeklyCount> Captures(
+        IReadOnlyList<InboxRecord> records, DateOnly today, int days, TimeZoneInfo zone)
     {
         var first = today.AddDays(1 - days);
-        var entries = records
-            .Select(record => (Record: record, Day: DayOf(record.At, zone)))
-            .OrderBy(entry => entry.Day)
-            .ThenBy(entry => entry.Record.Id)
+        var counts = new Dictionary<DateOnly, int>();
+
+        foreach (var day in records
+                     .Select(record => DayOf(record.At, zone))
+                     .Where(day => Within(day, first, today)))
+        {
+            var week = StartOfWeek(day);
+            counts[week] = counts.GetValueOrDefault(week) + 1;
+        }
+
+        return Weeks(today, days)
+            .Select(week => new WeeklyCount(week, counts.GetValueOrDefault(week)))
             .ToList();
-
-        var held = new HashSet<Guid>(heldAtStart);
-
-        foreach (var entry in entries.Where(entry => entry.Day < first))
-        {
-            Apply(held, entry.Record);
-        }
-
-        var inside = entries.Where(entry => Within(entry.Day, first, today)).ToList();
-        var weeks = new List<WeeklyCount>();
-        var cursor = 0;
-
-        foreach (var weekStart in Weeks(today, days))
-        {
-            var weekEnd = Earlier(weekStart.AddDays(WeekLength - 1), today);
-
-            while (cursor < inside.Count && inside[cursor].Day <= weekEnd)
-            {
-                Apply(held, inside[cursor].Record);
-                cursor++;
-            }
-
-            weeks.Add(new WeeklyCount(weekStart, held.Count));
-        }
-
-        return weeks;
     }
 
     public static IReadOnlyList<GoalTotal> ByGoal(
@@ -217,18 +197,6 @@ public static class StatisticsCharts
         }
     }
 
-    static void Apply(HashSet<Guid> held, InboxRecord record)
-    {
-        if (record.Kind == InboxRecordKind.Captured)
-        {
-            held.Add(record.ItemId);
-        }
-        else
-        {
-            held.Remove(record.ItemId);
-        }
-    }
-
     static string NameOf(Guid goalId, IReadOnlyDictionary<Guid, string> names) =>
         names.TryGetValue(goalId, out var name) ? name : UnknownGoal;
 
@@ -252,8 +220,6 @@ public static class StatisticsCharts
     }
 
     static DateOnly StartOfWeek(DateOnly day) => day.AddDays(-(int)day.DayOfWeek);
-
-    static DateOnly Earlier(DateOnly left, DateOnly right) => left <= right ? left : right;
 
     static IEnumerable<DateOnly> Range(DateOnly today, int days) =>
         Enumerable.Range(0, Math.Max(days, 0)).Select(offset => today.AddDays(offset + 1 - days));

@@ -66,8 +66,6 @@ public class StatisticsOverviewReaderTests
     {
         public List<DateTimeOffset> Since { get; } = [];
 
-        public List<DateTimeOffset> HeldBefore { get; } = [];
-
         public Task SaveAsync(InboxRecord record, CancellationToken ct) =>
             throw new NotSupportedException();
 
@@ -80,29 +78,6 @@ public class StatisticsOverviewReaderTests
                 .Where(record => record.UserId == userId && record.At >= from)
                 .OrderBy(record => record.Id)
                 .ToArray());
-        }
-
-        public Task<IReadOnlySet<Guid>> HeldItemIdsBeforeAsync(
-            Guid userId, DateTimeOffset from, CancellationToken ct)
-        {
-            HeldBefore.Add(from);
-            var held = new HashSet<Guid>();
-
-            foreach (var record in records
-                         .Where(record => record.UserId == userId && record.At < from)
-                         .OrderBy(record => record.Id))
-            {
-                if (record.Kind == InboxRecordKind.Captured)
-                {
-                    held.Add(record.ItemId);
-                }
-                else
-                {
-                    held.Remove(record.ItemId);
-                }
-            }
-
-            return Task.FromResult<IReadOnlySet<Guid>>(held);
         }
     }
 
@@ -118,14 +93,8 @@ public class StatisticsOverviewReaderTests
             Task.FromResult<IReadOnlyList<StatisticsLabel>>(labels);
     }
 
-    static InboxRecord Capture(long id, DateOnly day, Guid itemId) =>
-        Held(id, InboxRecordKind.Captured, day, itemId);
-
-    static InboxRecord Organise(long id, DateOnly day, Guid itemId) =>
-        Held(id, InboxRecordKind.Organised, day, itemId);
-
-    static InboxRecord Held(long id, InboxRecordKind kind, DateOnly day, Guid itemId) =>
-        new() { Id = id, UserId = User, At = Midday(day), Kind = kind, ItemId = itemId };
+    static InboxRecord Capture(long id, DateOnly day) =>
+        new() { Id = id, UserId = User, At = Midday(day), ItemId = Guid.NewGuid() };
 
     static StatisticsOverviewReader Reader(
         IStatisticsStore store, ILabelStore? labels = null, IInboxRecordStore? inbox = null) =>
@@ -159,7 +128,7 @@ public class StatisticsOverviewReaderTests
     }
 
     [Fact]
-    public async Task TheInboxBacklogSplitsOnTheSameInstantAsTheTaskCharts()
+    public async Task TheInboxCapturesSplitOnTheSameInstantAsTheTaskCharts()
     {
         var store = new FakeStore();
         var inbox = new FakeInboxStore();
@@ -168,36 +137,35 @@ public class StatisticsOverviewReaderTests
             .ReadAsync(User, Today, 30, Zone, TestContext.Current.CancellationToken);
 
         Assert.Equal(Assert.Single(store.Since), Assert.Single(inbox.Since));
-        Assert.Equal(Assert.Single(inbox.Since), Assert.Single(inbox.HeldBefore));
     }
 
     [Fact]
-    public async Task AnItemCapturedBeforeTheWindowWeighsOnEveryWeekOfTheBacklog()
+    public async Task CapturesOlderThanTheWindowAreNeverRead()
     {
         var inbox = new FakeInboxStore(
-            Capture(1, Today.AddDays(-90), Guid.NewGuid()),
-            Capture(2, Today.AddDays(-80), Guid.NewGuid()));
+            Capture(1, Today.AddDays(-90)),
+            Capture(2, Today.AddDays(-80)));
 
         var overview = await Reader(new FakeStore(), inbox: inbox)
             .ReadAsync(User, Today, 30, Zone, TestContext.Current.CancellationToken);
 
-        Assert.Equal(5, overview.InboxBacklog.Count);
-        Assert.All(overview.InboxBacklog, week => Assert.Equal(2, week.Count));
+        Assert.Equal(5, overview.InboxCaptures.Count);
+        Assert.All(overview.InboxCaptures, week => Assert.Equal(0, week.Count));
     }
 
     [Fact]
-    public async Task AnItemOrganisedInsideTheWindowLeavesTheBacklogFromThatWeekOn()
+    public async Task CapturesInsideTheWindowLandOnTheirOwnWeek()
     {
-        var itemId = Guid.NewGuid();
         var inbox = new FakeInboxStore(
-            Capture(1, Today.AddDays(-90), itemId),
-            Organise(2, Today, itemId));
+            Capture(1, Today.AddDays(-20)),
+            Capture(2, Today),
+            Capture(3, Today));
 
         var overview = await Reader(new FakeStore(), inbox: inbox)
             .ReadAsync(User, Today, 30, Zone, TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, overview.InboxBacklog[0].Count);
-        Assert.Equal(0, overview.InboxBacklog[^1].Count);
+        Assert.Equal(1, overview.InboxCaptures[1].Count);
+        Assert.Equal(2, overview.InboxCaptures[^1].Count);
     }
 
     [Fact]

@@ -72,9 +72,9 @@
             var outstandingLabels = LabelsOf(overview.Outstanding, day => day.Day);
             var outstandingOptions = LineAxisOptions(overview.Outstanding);
             var maxGoalCount = Math.Max(overview.ByGoal.Count == 0 ? 0 : overview.ByGoal.Max(goal => goal.Count), 1);
-            var backlogSeries = BarSeries("Still in Inbox", overview.InboxBacklog);
-            var backlogLabels = LabelsOf(overview.InboxBacklog, week => week.WeekStart, DaySpanOf(overview.InboxBacklog));
-            var backlogOptions = BarAxisOptions(overview.InboxBacklog);
+            var capturesSeries = BarSeries("Captured", overview.InboxCaptures);
+            var capturesLabels = LabelsOf(overview.InboxCaptures, week => week.WeekStart, DaySpanOf(overview.InboxCaptures));
+            var capturesOptions = BarAxisOptions(overview.InboxCaptures);
 
             <MudGrid Spacing="4" Class="mb-4">
                 <MudItem xs="12" md="6">
@@ -130,24 +130,24 @@
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">Inbox backlog left at each week's end</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Captured into the Inbox each week</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
-                            Each bar is one week; its height is how many captures were still waiting in the Inbox
-                            when that week ended.
+                            Each bar is one week; its height is how many items you captured into the Inbox
+                            that week, whatever became of them afterwards.
                         </MudText>
-                        <MudChart ChartType="ChartType.Bar" ChartSeries="@backlogSeries"
-                                  ChartLabels="@backlogLabels" ChartOptions="@backlogOptions"
+                        <MudChart ChartType="ChartType.Bar" ChartSeries="@capturesSeries"
+                                  ChartLabels="@capturesLabels" ChartOptions="@capturesOptions"
                                   Width="100%" Height="260px" />
                         <table class="mud-sr-only">
-                            <caption>Inbox backlog left at each week's end</caption>
+                            <caption>Captured into the Inbox each week</caption>
                             <thead>
                                 <tr>
                                     <th scope="col">Week of</th>
-                                    <th scope="col">Still in the Inbox</th>
+                                    <th scope="col">Captured</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var week in overview.InboxBacklog)
+                                @foreach (var week in overview.InboxCaptures)
                                 {
                                     <tr>
                                         <td>@week.WeekStart.ToString("yyyy-MM-dd")</td>

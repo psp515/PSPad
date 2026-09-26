@@ -100,7 +100,7 @@ public class StatisticsEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
-    public async Task ACapturedInboxItemWeighsOnTheBacklogUntilItIsOrganised()
+    public async Task AnItemCapturedThisWeekKeepsCountingAfterItIsOrganised()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         await using var factory = new ApiFactory(fixture);
@@ -115,22 +115,25 @@ public class StatisticsEndpointTests(MongoFixture fixture)
 
         var captured = await EventuallyAsync(
             () => Overview(client, "?days=30", ct),
-            view => view.InboxBacklog[^1].Count == 2,
+            view => view.InboxCaptures[^1].Count == 2,
             ct);
 
-        Assert.InRange(captured.InboxBacklog.Count, 5, 6);
+        Assert.InRange(captured.InboxCaptures.Count, 5, 6);
 
         await Post(
             client,
             new OrganiseInboxItem(Guid.NewGuid(), user, inboxId, itemId, Guid.NewGuid(), Guid.NewGuid()),
             ct);
+        await Post(client, new DiscardInboxItem(Guid.NewGuid(), user, inboxId, kept), ct);
+        // The pump drains in order, so a third capture showing up proves the two emptyings were handled too.
+        await Post(client, new CaptureToInbox(Guid.NewGuid(), user, inboxId, Guid.NewGuid(), "Order filament"), ct);
 
-        var organised = await EventuallyAsync(
+        var emptied = await EventuallyAsync(
             () => Overview(client, "?days=30", ct),
-            view => view.InboxBacklog[^1].Count == 1,
+            view => view.InboxCaptures[^1].Count == 3,
             ct);
 
-        Assert.Equal(1, organised.InboxBacklog[^1].Count);
+        Assert.Equal(3, emptied.InboxCaptures[^1].Count);
     }
 
     [Fact]
@@ -161,7 +164,7 @@ public class StatisticsEndpointTests(MongoFixture fixture)
         Assert.All(myOverview.Opened, point => Assert.Equal(0, point.Count));
         Assert.All(myOverview.Outstanding, point => Assert.Equal(0, point.Count));
         Assert.All(myOverview.Completions, point => Assert.Equal(0, point.Planned + point.Unplanned));
-        Assert.All(myOverview.InboxBacklog, week => Assert.Equal(0, week.Count));
+        Assert.All(myOverview.InboxCaptures, week => Assert.Equal(0, week.Count));
 
         Assert.Contains(theirRecords, record => record.TaskId == theirTaskId);
         Assert.Equal(1, theirOverview.Tiles.DoneToday);

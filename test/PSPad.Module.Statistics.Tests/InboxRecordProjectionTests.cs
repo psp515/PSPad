@@ -26,10 +26,6 @@ public class InboxRecordProjectionTests
         public Task<IReadOnlyList<InboxRecord>> SinceAsync(
             Guid userId, DateTimeOffset from, CancellationToken ct) =>
             throw new NotSupportedException();
-
-        public Task<IReadOnlySet<Guid>> HeldItemIdsBeforeAsync(
-            Guid userId, DateTimeOffset from, CancellationToken ct) =>
-            throw new NotSupportedException();
     }
 
     static Task Handle(FakeStore store, long seq, DomainEvent @event) =>
@@ -48,36 +44,41 @@ public class InboxRecordProjectionTests
         Assert.Equal(7, record.Id);
         Assert.Equal(User, record.UserId);
         Assert.Equal(At, record.At);
-        Assert.Equal(InboxRecordKind.Captured, record.Kind);
         Assert.Equal(itemId, record.ItemId);
     }
 
     [Fact]
-    public async Task OrganisingAnItemRecordsTheItemItEmptied()
+    public async Task OrganisingAnItemRecordsNothingBecauseOnlyCapturesAreCounted()
     {
         var store = new FakeStore();
-        var itemId = Guid.NewGuid();
 
         await Handle(
             store, 8,
-            new InboxItemOrganised(InboxId, User, At, itemId, Guid.NewGuid(), Guid.NewGuid()));
+            new InboxItemOrganised(InboxId, User, At, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
 
-        var record = Assert.Single(store.Saved);
-        Assert.Equal(InboxRecordKind.Organised, record.Kind);
-        Assert.Equal(itemId, record.ItemId);
+        Assert.Empty(store.Saved);
     }
 
     [Fact]
-    public async Task DiscardingAnItemRecordsTheItemItEmptied()
+    public async Task DiscardingAnItemRecordsNothingBecauseOnlyCapturesAreCounted()
+    {
+        var store = new FakeStore();
+
+        await Handle(store, 9, new InboxItemDiscarded(InboxId, User, At, Guid.NewGuid()));
+
+        Assert.Empty(store.Saved);
+    }
+
+    [Fact]
+    public async Task EmptyingAnItemLeavesItsCaptureStanding()
     {
         var store = new FakeStore();
         var itemId = Guid.NewGuid();
 
-        await Handle(store, 9, new InboxItemDiscarded(InboxId, User, At, itemId));
+        await Handle(store, 3, new InboxItemCaptured(InboxId, User, At, itemId, "Ring the plumber", 0));
+        await Handle(store, 4, new InboxItemDiscarded(InboxId, User, At, itemId));
 
-        var record = Assert.Single(store.Saved);
-        Assert.Equal(InboxRecordKind.Discarded, record.Kind);
-        Assert.Equal(itemId, record.ItemId);
+        Assert.Equal(itemId, Assert.Single(store.Saved).ItemId);
     }
 
     [Fact]

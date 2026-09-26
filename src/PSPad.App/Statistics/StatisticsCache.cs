@@ -62,7 +62,8 @@ public sealed class StatisticsCache(IJSRuntime js)
 
     // The key carries the payload shape: a cached overview from an older shape would deserialize
     // with its newest lists missing, and the screen would render null where it expects a series.
-    static string Key(int days) => $"pspad.statistics.2.{days}";
+    static string Key(int days) => $"pspad.statistics.3.{days}";
 
-    static IEnumerable<string> Keys(int days) => [Key(days), $"pspad.statistics.{days}"];
+    static IEnumerable<string> Keys(int days) =>
+        [Key(days), $"pspad.statistics.2.{days}", $"pspad.statistics.{days}"];
 }

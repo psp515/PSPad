@@ -272,10 +272,10 @@ public class StatisticsPageTests : Bunit.TestContext
             counts,
             [],
             counts,
-            Backlog(days, maxValue));
+            Captures(days, maxValue));
     }
 
-    static IReadOnlyList<WeeklyCountView> Backlog(int days, int maxValue)
+    static IReadOnlyList<WeeklyCountView> Captures(int days, int maxValue)
     {
         var first = Today.AddDays(-(days - 1));
         var weekStart = first.AddDays(-(int)first.DayOfWeek);
@@ -324,7 +324,7 @@ public class StatisticsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void InboxBacklogChartRendersOneBarPerWeekWithItsCount()
+    public void InboxCapturesChartRendersOneBarPerWeekWithItsCount()
     {
         var source = new FakeStatisticsSource { Overview = FullOverview() };
         Arrange(source, NewCache());
@@ -332,23 +332,23 @@ public class StatisticsPageTests : Bunit.TestContext
         var page = Render<StatisticsPage>();
 
         var chart = page.FindComponents<MudChart<double>>()
-            .Single(c => c.Instance.ChartSeries.Any(series => series.Name == "Still in Inbox"));
-        var backlog = chart.Instance.ChartSeries.Single();
+            .Single(c => c.Instance.ChartSeries.Any(series => series.Name == "Captured"));
+        var captures = chart.Instance.ChartSeries.Single();
 
-        Assert.Equal([1d, 4d, 2d], backlog.Data.Values);
+        Assert.Equal([1d, 4d, 2d], captures.Data.Values);
         Assert.Equal(["02-22", "03-01", "03-08"], chart.Instance.ChartLabels);
-        Assert.Contains("Inbox backlog", page.Markup);
+        Assert.Contains("Captured into the Inbox each week", page.Markup);
     }
 
     [Fact]
-    public void InboxBacklogChartLabelsAreThinnedAcrossAYearOfWeeks()
+    public void InboxCapturesChartLabelsAreThinnedAcrossAYearOfWeeks()
     {
         var source = new FakeStatisticsSource { Overview = RangeOverview(365, maxValue: 3) };
         Arrange(source, NewCache());
 
         var page = Render<StatisticsPage>();
 
-        var chart = BacklogChart(page);
+        var chart = CapturesChart(page);
         var visible = chart.Instance.ChartLabels.Count(label => label.Length > 0);
 
         Assert.True(chart.Instance.ChartLabels.Length > 8);
@@ -359,32 +359,32 @@ public class StatisticsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void InboxBacklogChartLabelsStayNumericAtTheThirtyDayRange()
+    public void InboxCapturesChartLabelsStayNumericAtTheThirtyDayRange()
     {
         var source = new FakeStatisticsSource { Overview = RangeOverview(30, maxValue: 3) };
         Arrange(source, NewCache());
 
         var page = Render<StatisticsPage>();
 
-        var populated = BacklogChart(page).Instance.ChartLabels.Where(label => label.Length > 0);
+        var populated = CapturesChart(page).Instance.ChartLabels.Where(label => label.Length > 0);
 
         Assert.All(populated, label => Assert.Matches(@"^\d{2}-\d{2}$", label));
     }
 
     [Fact]
-    public void AnAllZeroInboxBacklogRendersWithoutDividingByZero()
+    public void AnAllZeroInboxCapturesChartRendersWithoutDividingByZero()
     {
         var source = new FakeStatisticsSource { Overview = RangeOverview(30, maxValue: 0) };
         Arrange(source, NewCache());
 
         var page = Render<StatisticsPage>();
 
-        var options = Assert.IsType<BarChartOptions>(BacklogChart(page).Instance.ChartOptions);
+        var options = Assert.IsType<BarChartOptions>(CapturesChart(page).Instance.ChartOptions);
         Assert.Equal(1, options.YAxisTicks);
     }
 
     [Fact]
-    public void TheInboxBacklogTableCarriesEveryWeeksNumberForScreenReaders()
+    public void TheInboxCapturesTableCarriesEveryWeeksNumberForScreenReaders()
     {
         var source = new FakeStatisticsSource { Overview = FullOverview() };
         Arrange(source, NewCache());
@@ -407,9 +407,9 @@ public class StatisticsPageTests : Bunit.TestContext
             rows);
     }
 
-    static IRenderedComponent<MudChart<double>> BacklogChart(IRenderedComponent<StatisticsPage> page) =>
+    static IRenderedComponent<MudChart<double>> CapturesChart(IRenderedComponent<StatisticsPage> page) =>
         page.FindComponents<MudChart<double>>()
-            .Single(c => c.Instance.ChartSeries.Any(series => series.Name == "Still in Inbox"));
+            .Single(c => c.Instance.ChartSeries.Any(series => series.Name == "Captured"));
 
     [Fact]
     public void TheRecordFeedStartsCollapsed()

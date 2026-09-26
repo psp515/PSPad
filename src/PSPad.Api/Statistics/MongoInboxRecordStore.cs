@@ -24,32 +24,4 @@ public sealed class MongoInboxRecordStore(MongoContext context) : IInboxRecordSt
                 Builders<InboxRecord>.Filter.Gte(record => record.At, from))
             .SortBy(record => record.Id)
             .ToListAsync(ct);
-
-    public async Task<IReadOnlySet<Guid>> HeldItemIdsBeforeAsync(
-        Guid userId, DateTimeOffset from, CancellationToken ct)
-    {
-        var earlier = await Records
-            .Find(
-                Builders<InboxRecord>.Filter.Eq(record => record.UserId, userId) &
-                Builders<InboxRecord>.Filter.Lt(record => record.At, from))
-            .SortBy(record => record.Id)
-            .Project(record => new { record.ItemId, record.Kind })
-            .ToListAsync(ct);
-
-        var held = new HashSet<Guid>();
-
-        foreach (var record in earlier)
-        {
-            if (record.Kind == InboxRecordKind.Captured)
-            {
-                held.Add(record.ItemId);
-            }
-            else
-            {
-                held.Remove(record.ItemId);
-            }
-        }
-
-        return held;
-    }
 }

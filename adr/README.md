@@ -53,7 +53,7 @@ the old one's status line to point at the new number.
 | [0036](0036-domain-events-dispatched-after-commit.md) | Domain events are dispatched asynchronously after commit and replayed from a marker on startup | Active | 2026-09-24 | architecture, events, persistence |
 | [0037](0037-statistics-owns-denormalised-records.md) | Statistics owns denormalized read-only records projected from the log, and domain events carry what consumers need | Active | 2026-09-24 | architecture, persistence, analytics |
 | [0038](0038-history-renamed-to-statistics.md) | History renamed to Statistics | Active (amends [0020](0020-history-sidebar-row-and-settings-screen.md)) | 2026-09-24 | ui, architecture, domain |
-| [0039](0039-inbox-backlog-is-its-own-statistics-projection.md) | The Inbox backlog is its own projection, its own collection, and a running level seeded with an opening set | Active (extends [0037](0037-statistics-owns-denormalised-records.md) to a fourth collection) | 2026-09-25 | architecture, persistence, analytics, ui |
+| [0039](0039-inbox-captures-are-their-own-statistics-projection.md) | Inbox captures are their own projection, their own collection, and a per-week tally | Active (revised in place 2026-09-26 pre-merge — the running-backlog version never shipped; extends [0037](0037-statistics-owns-denormalised-records.md) to a fourth collection) | 2026-09-25 | architecture, persistence, analytics, ui |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
