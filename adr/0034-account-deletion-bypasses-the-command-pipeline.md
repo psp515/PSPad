@@ -2,7 +2,7 @@
 title: Account deletion bypasses the command pipeline for a generic cross-collection wipe
 tags: [identity, persistence, architecture, security]
 date: 2026-09-24
-status: Active
+status: Active (amended by ADR-0041)
 ---
 
 # ADR-0034: Account deletion bypasses the command pipeline for a generic cross-collection wipe

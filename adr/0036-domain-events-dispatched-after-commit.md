@@ -2,7 +2,7 @@
 title: Domain events are dispatched asynchronously after commit and replayed from a marker on startup
 tags: [architecture, events, persistence]
 date: 2026-09-24
-status: Active
+status: Active (amended by ADR-0041)
 ---
 
 # ADR-0036: Domain events are dispatched asynchronously after commit and replayed from a marker on startup
