@@ -176,6 +176,164 @@ public class ConsistencyHeatmapTests : Bunit.TestContext
         Assert.Single(heatmap.FindAll(".pspad-heatmap-cell"));
     }
 
+    [Fact]
+    public void MonthSectionsAppearBeyondThirtyDays()
+    {
+        var heatmap = Render(Range(new DateOnly(2026, 6, 27), 90), new DateOnly(2026, 9, 24));
+
+        var labels = heatmap.FindAll(".pspad-heatmap-month-label")
+            .Select(label => label.TextContent.Trim())
+            .ToList();
+
+        Assert.Equal(["Jun 2026", "Jul 2026", "Aug 2026", "Sep 2026"], labels);
+        Assert.Equal(4, heatmap.FindAll(".pspad-heatmap-flow").Count);
+    }
+
+    [Fact]
+    public void ThirtyDaysStayOneGridWithNoMonthHeading()
+    {
+        var heatmap = Render(Range(new DateOnly(2026, 8, 26), 30), new DateOnly(2026, 9, 24));
+
+        Assert.Single(heatmap.FindAll(".pspad-heatmap-flow"));
+        Assert.Empty(heatmap.FindAll(".pspad-heatmap-month-label"));
+    }
+
+    [Fact]
+    public void EachMonthSectionHoldsOnlyItsOwnDays()
+    {
+        var heatmap = Render(Range(new DateOnly(2026, 6, 27), 90), new DateOnly(2026, 9, 24));
+
+        var perMonth = heatmap.FindAll(".pspad-heatmap-flow")
+            .Select(grid => grid.QuerySelectorAll(".pspad-heatmap-cell").Length)
+            .ToList();
+
+        Assert.Equal([4, 31, 31, 24], perMonth);
+        Assert.Equal(90, heatmap.FindAll(".pspad-heatmap-cell").Count);
+    }
+
+    [Fact]
+    public void AYearSplitsIntoAMonthSectionPerMonthItTouches()
+    {
+        var heatmap = Render(Range(new DateOnly(2025, 9, 25), 365), new DateOnly(2026, 9, 24));
+
+        var labels = heatmap.FindAll(".pspad-heatmap-month-label")
+            .Select(label => label.TextContent.Trim())
+            .ToList();
+
+        Assert.Equal(13, labels.Count);
+        Assert.Equal("Sep 2025", labels[0]);
+        Assert.Equal("Sep 2026", labels[^1]);
+        Assert.Equal(365, heatmap.FindAll(".pspad-heatmap-cell").Count);
+    }
+
+    [Fact]
+    public void EveryDayCellIsAButtonSoATapReachesItOnTouch()
+    {
+        var heatmap = Render([new DailyCountView(new DateOnly(2026, 9, 24), 3)], new DateOnly(2026, 9, 24));
+
+        var cell = heatmap.Find(".pspad-heatmap-cell");
+
+        Assert.Equal("BUTTON", cell.TagName);
+        Assert.Equal("button", cell.GetAttribute("type"));
+    }
+
+    [Fact]
+    public void BeforeAnyTapTheReadoutSaysWhatATapDoes()
+    {
+        var heatmap = Render([new DailyCountView(new DateOnly(2026, 9, 24), 3)], new DateOnly(2026, 9, 24));
+
+        Assert.Contains("Tap a square", heatmap.Find(".pspad-heatmap-readout").TextContent);
+    }
+
+    [Fact]
+    public void TappingADaySurfacesItsDateAndCount()
+    {
+        var days = new List<DailyCountView>
+        {
+            new(new DateOnly(2026, 9, 23), 1),
+            new(new DateOnly(2026, 9, 24), 3)
+        };
+
+        var heatmap = Render(days, new DateOnly(2026, 9, 24));
+        heatmap.FindAll(".pspad-heatmap-cell")[1].Click();
+
+        var readout = heatmap.Find(".pspad-heatmap-readout").TextContent.Trim();
+
+        Assert.Contains("24 Sep 2026", readout);
+        Assert.Contains("3 completed", readout);
+    }
+
+    [Fact]
+    public void TheTappedCellIsMarkedAsTheSelectedOne()
+    {
+        var days = new List<DailyCountView>
+        {
+            new(new DateOnly(2026, 9, 23), 1),
+            new(new DateOnly(2026, 9, 24), 3)
+        };
+
+        var heatmap = Render(days, new DateOnly(2026, 9, 24));
+        heatmap.FindAll(".pspad-heatmap-cell")[1].Click();
+
+        var cells = heatmap.FindAll(".pspad-heatmap-cell");
+        Assert.Equal("false", cells[0].GetAttribute("data-selected"));
+        Assert.Equal("true", cells[1].GetAttribute("data-selected"));
+        Assert.Equal("true", cells[1].GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
+    public void TappingTheSelectedDayAgainClearsTheReadout()
+    {
+        var heatmap = Render([new DailyCountView(new DateOnly(2026, 9, 24), 3)], new DateOnly(2026, 9, 24));
+
+        heatmap.Find(".pspad-heatmap-cell").Click();
+        heatmap.Find(".pspad-heatmap-cell").Click();
+
+        Assert.Contains("Tap a square", heatmap.Find(".pspad-heatmap-readout").TextContent);
+    }
+
+    [Fact]
+    public void ATapLeavesEveryCellsHoverTitleAndAccessibleLabelInPlace()
+    {
+        var days = Range(new DateOnly(2026, 6, 27), 90);
+
+        var heatmap = Render(days, new DateOnly(2026, 9, 24));
+        heatmap.FindAll(".pspad-heatmap-cell")[5].Click();
+
+        Assert.All(
+            heatmap.FindAll(".pspad-heatmap-cell"),
+            cell =>
+            {
+                Assert.Matches(@"^\d{4}-\d{2}-\d{2}: \d+ completed$", cell.GetAttribute("aria-label")!);
+                Assert.Equal(cell.GetAttribute("aria-label"), cell.GetAttribute("title"));
+            });
+    }
+
+    [Fact]
+    public void TheReadoutIsAnnouncedToScreenReadersWhenItChanges()
+    {
+        var heatmap = Render([new DailyCountView(new DateOnly(2026, 9, 24), 3)], new DateOnly(2026, 9, 24));
+
+        Assert.Equal("polite", heatmap.Find(".pspad-heatmap-readout").GetAttribute("aria-live"));
+    }
+
+    [Fact]
+    public void OnlyAnAnsweredReadoutIsMarkedForSticking()
+    {
+        var heatmap = Render([new DailyCountView(new DateOnly(2026, 9, 24), 3)], new DateOnly(2026, 9, 24));
+
+        Assert.Equal("false", heatmap.Find(".pspad-heatmap-readout").GetAttribute("data-selected"));
+
+        heatmap.Find(".pspad-heatmap-cell").Click();
+
+        Assert.Equal("true", heatmap.Find(".pspad-heatmap-readout").GetAttribute("data-selected"));
+    }
+
+    static List<DailyCountView> Range(DateOnly first, int days) =>
+        Enumerable.Range(0, days)
+            .Select(offset => new DailyCountView(first.AddDays(offset), offset % 5))
+            .ToList();
+
     IRenderedComponent<ConsistencyHeatmap> Render(IReadOnlyList<DailyCountView> days, DateOnly today) =>
         Render<ConsistencyHeatmap>(parameters => parameters
             .Add(p => p.Days, days)

@@ -28,15 +28,48 @@ h1[tabindex="-1"]:focus {
     gap: 8px;
 }
 
-/* auto-fit stretches columns to fill the panel and collapses unused tracks when a
-   month has fewer cells than the row can hold. `fr` cannot nest inside min(), so
-   the upper bound is a max-width on the cell itself (below), not the track. */
+/* auto-fill, not auto-fit, and a fixed upper bound rather than 1fr: a month grid can
+   hold as few as one cell, and `1fr` would hand that cell a quarter of the panel and
+   strand it in the middle of its own row. A bounded track keeps every square the same
+   size whatever the month is worth, at the cost of a little unused width at the end. */
 .pspad-heatmap-flow {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(var(--pspad-heatmap-cell-min, 30px), 1fr));
+    grid-template-columns:
+        repeat(auto-fill, minmax(var(--pspad-heatmap-cell-min, 30px), var(--pspad-heatmap-cell-cap, 44px)));
     gap: 3px;
     align-items: center;
     justify-items: center;
+}
+
+.pspad-heatmap-month {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pspad-heatmap-month-label {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.68rem;
+    line-height: 1;
+}
+
+/* The readout keeps its line whether or not a day is selected, so tapping a square
+   never shifts the grid under the finger that tapped it. */
+.pspad-heatmap-readout {
+    min-height: 1.1rem;
+    padding: 4px 0;
+    background-color: var(--mud-palette-surface);
+}
+
+/* Only an answered readout sticks: a year of month sections is taller than a phone
+   screen, and a tap whose answer scrolled out of sight answers nothing. The idle hint
+   stays in the flow, so the strip it would otherwise cover is only ever spent on a
+   day the reader actually asked about. */
+.pspad-heatmap-readout[data-selected="true"] {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
 }
 
 .pspad-heatmap-swatch {
@@ -53,6 +86,23 @@ h1[tabindex="-1"]:focus {
     width: 100%;
     max-width: var(--pspad-heatmap-cell-cap, 44px);
     aspect-ratio: 1;
+}
+
+/* A cell is a button because `title` is a hover tooltip and never fires on touch. */
+button.pspad-heatmap-cell {
+    appearance: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+button.pspad-heatmap-cell:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 1px;
+}
+
+.pspad-heatmap-swatch[data-selected="true"] {
+    box-shadow: 0 0 0 2px var(--mud-palette-secondary);
 }
 
 .pspad-heatmap-day-number {

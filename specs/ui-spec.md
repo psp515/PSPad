@@ -56,63 +56,98 @@ coloured squares a screen reader cannot read. A hand-rolled CSS grid earns
 its place here for exactly the reason the table above says a custom class
 ever can: MudBlazor genuinely has no component that does this.
 
-It sits beside the Inbox-backlog panel at `md` and up (`MudItem xs="12"
+It sits beside the Inbox-captures panel at `md` and up (`MudItem xs="12"
 md="6"` each, matching the chart grid above them) and both stack to full
 width below that breakpoint — the two still belong together conceptually,
 even though only one of them is a `pspad-heatmap` grid (below). The
-heatmap grid is a single flowing `.pspad-heatmap-flow` (`display: grid;
-grid-template-columns: repeat(auto-fit, minmax(30px, 1fr))`) — cells wrap
-to as many rows as the range needs and stretch to fill every row,
-deliberately giving up day-of-week alignment (the maintainer's call,
-2026-09-25: "it doesn't have to reflect how the month has days, it can
-just be squares that auto-fit to space") in exchange for actually using
-the panel's width instead of leaving a GitHub-style calendar stranded in
-one corner. `--pspad-heatmap-cell-min` (30px) is the floor that keeps a
-365-day range's ~23 rows legible instead of one row per day;
-`--pspad-heatmap-cell-cap` (44px, via `max-width` on the cell — `fr`
-cannot appear inside `min()`/`max()`, so the ceiling has to live on the
-item, not the track) stops a sparse trailing row from stretching into
-oversized tiles once `auto-fit` collapses its unused tracks.
+heatmap grid is a flowing `.pspad-heatmap-flow` (`display: grid;
+grid-template-columns: repeat(auto-fill, minmax(30px, 44px))`) — cells wrap
+to as many rows as the range needs, deliberately giving up day-of-week
+alignment (the maintainer's call, 2026-09-25: "it doesn't have to reflect
+how the month has days, it can just be squares that auto-fit to space") in
+exchange for actually using the panel's width instead of leaving a
+GitHub-style calendar stranded in one corner. `--pspad-heatmap-cell-min`
+(30px) is the floor that keeps a long range legible instead of one row per
+day; `--pspad-heatmap-cell-cap` (44px) is the ceiling. Both bounds live on
+the track, and the track is deliberately **not** `1fr`: with month sections
+(below) a grid can hold as few as one cell, and an `fr` track would hand
+that one cell a quarter of the panel and strand it in the middle of its own
+row — the same "spread and dead space" failure this design exists to avoid.
+A bounded track keeps every square the same size whatever the month is
+worth, at the cost of a little unused width where the last column does not
+divide evenly into the panel.
 
-No month label. The old design's `Sep` header made sense over fixed
-week-columns; once cells flow and wrap freely there is no stable column for
-a month to anchor to, and an early attempt at a per-month header row (one
-`grid-column: 1 / -1` label, restarting the row after it) backfired: the
-label forces every column track to register as "used", which defeats
-`auto-fit`'s collapse and leaves a short trailing group (the last few days
-of a month) stranded at the grid's minimum cell size with dead space
-beside it — the exact problem this redesign exists to fix, just relocated.
-The day-of-month number already on every cell is the month cue: it resets
-to `1` where a month rolls over, and the full date is always one hover or
-tap away. Each Sunday cell instead carries a 3px accent border on its top
-edge (`--mud-palette-secondary`) — the only left-to-right cue left for
-where a week starts, now that weekday rows are gone. Each cell also
-renders its day-of-month number (`aria-hidden`, the accessible label is
-unaffected); text colour switches from `--mud-palette-text-secondary` to
-the theme's computed `--mud-palette-primary-text` at `data-level="3"`/`"4"`
-so it stays legible against both the near-background and fully-saturated
-ends of the shade ramp. The heatmap ends in a `HeatmapKey` — the
-conventional five-step ramp plus one sentence saying what darker means.
-`HeatmapLevel.Of(count, maximum)` is the shared five-step scale; a key's
-swatches deliberately do not carry the `pspad-heatmap-cell` class, so they
-are never mistaken for data cells. Every data cell keeps its
-`title`/`aria-label` (`2026-09-24: 3 completed`), which is the
-accessibility reason the custom grid exists at all.
+**Month sections beyond 30 days, one grid each.** Above 30 cells the
+component renders one `.pspad-heatmap-flow` **per month**, each inside a
+`.pspad-heatmap-month` wrapper headed by a `.pspad-heatmap-month-label`
+(`MMM yyyy`, uppercased by CSS). At 30 days or fewer it stays a single grid
+with no heading: one month label over one short grid is noise, not
+orientation. Separate grids are what makes this work at all — the earlier
+attempt put the label *inside* one grid as a `grid-column: 1 / -1` row, which
+forces every column track to register as "used", defeats `auto-fit`'s collapse
+and leaves a short trailing group stranded at the minimum cell size with dead
+space beside it. A grid per month has nothing to collapse around: each one
+`auto-fit`s to the panel on its own, and a 24-day month simply fills fewer
+rows than a 31-day one. Cost: at 365 days there are thirteen headings and
+thirteen grids, so the panel is taller than one continuous flow would be —
+accepted, because "which month am I looking at" was unanswerable before.
+Each Sunday cell still carries a 3px accent border on its top edge
+(`--mud-palette-secondary`) — the only left-to-right cue for where a week
+starts, now that weekday rows are gone. Each cell also renders its
+day-of-month number (`aria-hidden`, the accessible label is unaffected); text
+colour switches from `--mud-palette-text-secondary` to the theme's computed
+`--mud-palette-primary-text` at `data-level="3"`/`"4"` so it stays legible
+against both the near-background and fully-saturated ends of the shade ramp.
+The heatmap ends in a `HeatmapKey` — the conventional five-step ramp plus one
+sentence saying what darker means. `HeatmapLevel.Of(count, maximum)` is the
+shared five-step scale; a key's swatches deliberately do not carry the
+`pspad-heatmap-cell` class, so they are never mistaken for data cells. Every
+data cell keeps its `title`/`aria-label` (`2026-09-24: 3 completed`), which is
+the accessibility reason the custom grid exists at all.
 
-**The Inbox-backlog panel is a `MudChart` bar chart, not a heatmap**
+**A cell is a `<button>`, and a tap reads out its day and count.** `title` is
+a hover tooltip: it never fires on touch, so on a phone the count in it was
+unreachable — the maintainer reported exactly that. Each data cell is
+therefore a `<button type="button">` that sets the selected day on click
+(tapping it again clears it), and a `.pspad-heatmap-readout` line between the
+grids and the key shows `24 Sep 2026 — 3 completed`, or the hint *"Tap a
+square for the day and its count."* when nothing is selected. It is
+`aria-live="polite"`, so a screen reader hears the change; the selected cell
+also carries `data-selected="true"` (a 2px `--mud-palette-secondary` ring)
+and `aria-pressed`. The readout keeps its line height when empty, so a tap
+never shifts the grid under the finger that made it, and it is
+`position: sticky; bottom: 0` **only while a day is selected**
+(`[data-selected="true"]` on the readout itself): a year of month sections
+is taller than a phone screen, so an answer left at the bottom of the panel
+is an answer nobody sees — but a permanently pinned bar would cover a strip
+of squares forever, so the idle hint stays in the flow and only an answered
+readout floats. `title` stays on every
+cell — this is an addition for touch, not a replacement for hover — and so
+does `aria-label`. `MudTooltip` was the first thing considered and rejected:
+`ShowOnClick` does exist in MudBlazor 9.9.0 (verified against the shipped
+assembly's XML docs), but it wraps each child in its own `mud-tooltip-root`
+element, which would take the cell's place as the grid item and break the
+`auto-fit` sizing the grid depends on, and it would mean up to 365
+`MudPopover`s registered with the popover provider for one panel. A selection
+readout is one line of state and no popovers.
+
+**The Inbox panel is a `MudChart` bar chart, not a heatmap**
 (`StatisticsPage.razor`, inline alongside the page's other charts, not a
 separate component — five to fifty-three weekly values with a trend in
 them is what a bar chart is for, where a heatmap only earns its keep on
 dense data scanned for a pattern; changed 2026-09-25 after the maintainer
 saw the original heatmap in dark mode, where a handful of low counts all
 landed in the bottom shade buckets and were indistinguishable from the
-panel background). One bar per week, height = items still held at that
-week's end, built the same way as the page's other three charts — see
-"Charts" below. `MudChart` renders SVG with no per-bar accessible text, so
-the panel also carries a `class="mud-sr-only"` (MudBlazor's own
-visually-hidden utility) `<table>` of week/count pairs beside the chart,
-which is how a screen reader still gets every week's number now that
-there is no per-cell `title`/`aria-label` to read.
+panel background). It is headed *"Captured into the Inbox each week"*: one
+bar per week, height = **how many items were captured that week**, whatever
+became of them afterwards (changed 2026-09-26 at the maintainer's request
+from the backlog left at each week's end — see `adr/0039`). Built the same
+way as the page's other three charts — see "Charts" below. `MudChart`
+renders SVG with no per-bar accessible text, so the panel also carries a
+`class="mud-sr-only"` (MudBlazor's own visually-hidden utility) `<table>` of
+week/count pairs beside the chart, which is how a screen reader still gets
+every week's number now that there is no per-cell `title`/`aria-label` to
+read.
 
 ---
 
@@ -329,7 +364,7 @@ see above.
 data over plain REST, not the replica** — no IndexedDB, no outbox, no
 command pipeline. It is its own layout, not the §2 card grid: a `MudGrid`
 of tiles (`sm="3" xs="6"`), four charts (`md="6" xs="12"`), then the
-Consistency heatmap and Inbox-backlog chart side by side (`md="6" xs="12"`,
+Consistency heatmap and Inbox-captures chart side by side (`md="6" xs="12"`,
 see §1) and the record feed full width below them. The feed is a
 `MudExpansionPanel` ("Everything that happened") **collapsed by default** —
 it is the raw log, not the summary someone opens the screen for — and the
@@ -443,7 +478,7 @@ the wrong theme.
 
 **Charts.** `MudChart` (bundled with MudBlazor, no extra dependency) takes
 the sage palette for free — the statistics screen's charts (daily
-completions, tasks opened, outstanding-open, Inbox backlog per week) are
+completions, tasks opened, outstanding-open, Inbox captures per week) are
 the example. The Consistency heatmap is not a `MudChart` — see §1.
 
 ---
@@ -468,7 +503,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/areas/{areaId}` | area screen — list cards |
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |
-| `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-backlog bar chart, collapsed record feed |
+| `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-captures bar chart, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
 | `/settings` | Settings (account + sign-out, time zone, theme, sync status, delete account) |
 | `/app-info` | version, license, docs/repo links |
