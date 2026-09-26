@@ -93,6 +93,7 @@ builder.Services.AddScoped<SyncCoordinator>();
 builder.Services.AddScoped<ISyncTrigger>(sp => sp.GetRequiredService<SyncCoordinator>());
 
 var host = builder.Build();
+var bootLogger = host.Services.GetRequiredService<ILogger<Program>>();
 
 // Any bootstrap or teardown failure must still reveal the app: a held splash is an unrecoverable
 // blank screen, so nothing below is allowed to escape and skip host.RunAsync().
@@ -103,7 +104,7 @@ try
 }
 catch (Exception exception)
 {
-    Console.Error.WriteLine($"Session bootstrap failed: {exception.Message}");
+    bootLogger.LogWarning("Session bootstrap failed: {Reason}", exception.Message);
 }
 
 try
@@ -112,7 +113,7 @@ try
 }
 catch (Exception exception)
 {
-    Console.Error.WriteLine($"Boot splash teardown failed: {exception.Message}");
+    bootLogger.LogWarning("Boot splash teardown failed: {Reason}", exception.Message);
 }
 
 await host.RunAsync();

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
 using PSPad.App.Api;
 using PSPad.App.Sync;
@@ -412,7 +413,7 @@ public class SettingsPageTests : Bunit.TestContext
         _authProvider = new LocalAuthenticationStateProvider(_sessions);
         Services.AddSingleton<ILocalSessionStore>(_sessions);
         Services.AddSingleton(_authProvider);
-        Services.AddSingleton(new LocalSignOut(_sessions, _replica, _authProvider));
+        Services.AddSingleton(new LocalSignOut(_sessions, _replica, _authProvider, NullLogger<LocalSignOut>.Instance));
 
         var state = new AppState
         {
@@ -431,7 +432,8 @@ public class SettingsPageTests : Bunit.TestContext
         }));
 
         Services.AddSingleton<LocalAccountDeletion>(services => new LocalAccountDeletion(
-            _sessions, _replica, services.GetRequiredService<IOutbox>(), _authProvider));
+            _sessions, _replica, services.GetRequiredService<IOutbox>(), _authProvider,
+            NullLogger<LocalAccountDeletion>.Instance));
 
         return state;
     }

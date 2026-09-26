@@ -15,8 +15,6 @@ public static class LocalToday
         }
         catch (Exception exception) when (exception is TimeZoneNotFoundException or InvalidTimeZoneException)
         {
-            Console.Error.WriteLine($"Unknown time zone '{timeZone}': {exception.Message}");
-
             return TimeZoneInfo.Utc;
         }
     }

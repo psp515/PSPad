@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
 using PSPad.Abstractions;
 using PSPad.App.Api;
 using PSPad.App.Auth;
@@ -230,7 +231,7 @@ public class AuthenticationTests : Bunit.TestContext
         Services.AddSingleton(sessions);
         Services.AddSingleton(authProvider);
         Services.AddSingleton<AuthenticationStateProvider>(authProvider);
-        Services.AddSingleton(new LocalSignOut(sessions, _replica, authProvider));
+        Services.AddSingleton(new LocalSignOut(sessions, _replica, authProvider, NullLogger<LocalSignOut>.Instance));
 
         var refresher = new TokenRefresher(
             new HttpClient(tokenEndpoint ?? new RotatingTokenEndpoint()), clock,

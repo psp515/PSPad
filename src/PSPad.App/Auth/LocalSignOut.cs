@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using PSPad.App.State.Replica;
 
 namespace PSPad.App.Auth;
@@ -5,7 +6,8 @@ namespace PSPad.App.Auth;
 public sealed class LocalSignOut(
     ILocalSessionStore sessions,
     IReplica replica,
-    LocalAuthenticationStateProvider authenticationState)
+    LocalAuthenticationStateProvider authenticationState,
+    ILogger<LocalSignOut> logger)
 {
     public async Task ClearAsync()
     {
@@ -24,7 +26,7 @@ public sealed class LocalSignOut(
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"Replica clear on sign-out failed: {exception.Message}");
+            logger.LogWarning("Replica clear on sign-out failed: {Reason}", exception.Message);
         }
 
         try
@@ -33,7 +35,7 @@ public sealed class LocalSignOut(
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"Session clear on sign-out failed: {exception.Message}");
+            logger.LogWarning("Session clear on sign-out failed: {Reason}", exception.Message);
         }
     }
 }
