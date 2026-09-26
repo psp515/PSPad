@@ -178,7 +178,9 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    ✕:
    - **Due** (`DueDateRow`) — Today / Tomorrow / In 2 days / Next week (the
      next Monday), each with its date, then "Pick a date…" opening a
-     `MudDatePicker` dialog; the value reads relatively (Today, Tomorrow,
+     `MudDialog` holding a static `MudDatePicker` (never a hidden
+     dialog-variant picker, whose overlay renders inside its `d-none` host
+     and never shows); picking a day sets it and closes; the value reads relatively (Today, Tomorrow,
      Yesterday, `ddd, d MMM`), in `Color.Error` when overdue.
    - **Repeat** (`RecurrenceEditor`, outside Add) — Daily, Weekdays, Weekly
      on today's weekday, Monthly on today's day, Never; a repeating task

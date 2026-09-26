@@ -328,6 +328,27 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task PickADateOpensACalendarThatSetsTheDate()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-due");
+        panel.Find(".pspad-due-pick").Click();
+
+        var dialog = panel.WaitForElement(".pspad-due-dialog");
+        Assert.DoesNotContain("d-none", dialog.ClassName);
+        dialog.QuerySelectorAll("button.mud-day")
+            .First(day => day.TextContent.Trim() == "20" && !day.ClassList.Contains("mud-hidden"))
+            .Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(new DateOnly(Today.Year, Today.Month, 20), reloaded!.DueOn);
+        panel.WaitForAssertion(() => Assert.Empty(panel.FindAll(".pspad-due-dialog")));
+    }
+
+    [Fact]
     public async Task ClearingTheDueDateRemovesIt()
     {
         var task = NewTask("Buy milk");
