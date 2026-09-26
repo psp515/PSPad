@@ -37,4 +37,42 @@ public class ChannelDomainEventDispatcherTests
 
         Assert.Equal(7, (await dispatcher.Reader.ReadAsync(ct)).Seq);
     }
+
+    [Fact]
+    public async Task DrainingWithNothingPublishedReturnsAtOnce()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var dispatcher = new ChannelDomainEventDispatcher();
+
+        await dispatcher.DrainAsync(ct);
+    }
+
+    [Fact]
+    public async Task DrainingWaitsUntilEverythingPublishedBeforeItIsHandled()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var dispatcher = new ChannelDomainEventDispatcher();
+        await dispatcher.PublishAsync([Envelope(1), Envelope(2)], ct);
+
+        var drained = dispatcher.DrainAsync(ct);
+        dispatcher.MarkHandled();
+        Assert.False(drained.IsCompleted);
+
+        dispatcher.MarkHandled();
+        await drained;
+    }
+
+    [Fact]
+    public async Task EventsPublishedAfterTheDrainStartedDoNotHoldItUp()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var dispatcher = new ChannelDomainEventDispatcher();
+        await dispatcher.PublishAsync([Envelope(1)], ct);
+
+        var drained = dispatcher.DrainAsync(ct);
+        await dispatcher.PublishAsync([Envelope(2)], ct);
+        dispatcher.MarkHandled();
+
+        await drained;
+    }
 }
