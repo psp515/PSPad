@@ -468,15 +468,9 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/areas/{areaId}` | area screen — list cards |
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |
-<<<<<<< HEAD
-| `/statistics` | Statistics — tiles, four charts, consistency and Inbox-backlog heatmaps, collapsed record feed |
+| `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-backlog bar chart, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
 | `/settings` | Settings (account + sign-out, time zone, theme, sync status, delete account) |
-=======
-| `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-backlog bar chart, collapsed record feed |
-| `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0036`) |
-| `/settings` | Settings (account, time zone, theme, sync status) |
->>>>>>> df34e2a (feat: chart the Inbox backlog as a bar chart instead of a heatmap)
 | `/app-info` | version, license, docs/repo links |
 | `/search` | search results (currently unreachable from the UI) |
 | `/welcome` | public, signed-out landing screen |

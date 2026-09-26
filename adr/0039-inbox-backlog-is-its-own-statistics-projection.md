@@ -5,7 +5,7 @@ date: 2026-09-25
 status: Active
 ---
 
-# ADR-0037: The Inbox backlog is its own projection, its own collection, and a running level seeded with an opening set
+# ADR-0039: The Inbox backlog is its own projection, its own collection, and a running level seeded with an opening set
 
 ## Context
 
@@ -72,7 +72,7 @@ backlog as a running level seeded with an opening set.
   vanish — and the 365-day range would disagree with the 30-day range about
   the same week.
 - **Derive the backlog from the `Inbox` aggregate's current items.**
-  Rejected for the reason `adr/0035` gives: current state cannot say what was
+  Rejected for the reason `adr/0037` gives: current state cannot say what was
   true at the end of a past week, and an item organised last month would
   erase its own history.
 - **A weekly grain that follows the user's week start setting.** Rejected as
@@ -87,7 +87,7 @@ every other statistics row. Habits and any future "queue age" chart get the
 same per-item state for free.
 
 The costs are real. Statistics now owns four collections rather than three
-(`adr/0035` said three), and the module has two record shapes a reader must
+(`adr/0037` said three), and the module has two record shapes a reader must
 choose between. `HeldItemIdsBeforeAsync` folds every record older than the
 window on each overview request, exactly as `OpenTaskIdsBeforeAsync` does —
 linear in a user's lifetime inbox history, and the same future problem, to be
