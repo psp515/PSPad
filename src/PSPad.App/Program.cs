@@ -17,6 +17,7 @@ using PSPad.App.State.Viewport;
 using PSPad.App.Statistics;
 using PSPad.App.Sync;
 using PSPad.App.Theme;
+using PSPad.App.Updates;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -88,6 +89,7 @@ builder.Services.AddScoped<StatisticsCache>();
 builder.Services.AddScoped<IStatisticsSource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();
+builder.Services.AddScoped<IAppUpdates, BrowserAppUpdates>();
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<SyncCoordinator>();
 builder.Services.AddScoped<ISyncTrigger>(sp => sp.GetRequiredService<SyncCoordinator>());

@@ -10,6 +10,7 @@ using PSPad.App.State.Replica;
 using PSPad.App.State.Viewport;
 using PSPad.App.Statistics;
 using PSPad.App.Theme;
+using PSPad.App.Updates;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Inbox;
@@ -63,6 +64,7 @@ public static class AppTestHost
         context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop: true));
         context.Services.AddSingleton<ServerReachability>();
         context.Services.AddSingleton<IConnectivity>(new AlwaysOnline());
+        context.Services.AddSingleton<IAppUpdates>(new FakeAppUpdates());
 
         return replica;
     }
@@ -76,6 +78,27 @@ public static class AppTestHost
 
         public event Action? Changed;
 #pragma warning restore CS0067
+    }
+
+    public sealed class FakeAppUpdates : IAppUpdates
+    {
+        public bool IsAvailable { get; private set; }
+
+        public int Applied { get; private set; }
+
+        public event Action? Available;
+
+        public void Announce()
+        {
+            IsAvailable = true;
+            Available?.Invoke();
+        }
+
+        public Task ApplyAsync()
+        {
+            Applied++;
+            return Task.CompletedTask;
+        }
     }
 
     sealed class FixedClock(DateOnly today) : IClock
