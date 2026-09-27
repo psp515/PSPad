@@ -35,6 +35,13 @@ public class DomainEventPumpTests
             _waits.GetOrAdd(seq, _ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
     }
 
+    sealed class GatedHandler : IDomainEventHandler
+    {
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task HandleAsync(DomainEventEnvelope envelope, CancellationToken ct) => Release.Task;
+    }
+
     sealed class ThrowingHandler : IDomainEventHandler
     {
         public Task HandleAsync(DomainEventEnvelope envelope, CancellationToken ct) =>
@@ -117,5 +124,39 @@ public class DomainEventPumpTests
         await pump.StopAsync(ct);
 
         Assert.Equal([1, 2], handler.Seen);
+    }
+
+    [Fact(Timeout = 30000)]
+    public async Task ADrainReturnsOnlyOnceThePumpHasHandledWhatWasPublished()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var gate = new GatedHandler();
+        var dispatcher = new ChannelDomainEventDispatcher();
+        await using var provider = ProviderFor(new NoReplay(), gate);
+        var pump = PumpOver(dispatcher, provider);
+        await pump.StartAsync(ct);
+        await dispatcher.PublishAsync([Envelope(1)], ct);
+
+        var drained = dispatcher.DrainAsync(ct);
+        await Task.Delay(100, ct);
+        Assert.False(drained.IsCompleted);
+
+        gate.Release.SetResult();
+        await drained;
+        await pump.StopAsync(ct);
+    }
+
+    [Fact(Timeout = 30000)]
+    public async Task AThrowingHandlerStillCountsItsEventAsHandled()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var dispatcher = new ChannelDomainEventDispatcher();
+        await using var provider = ProviderFor(new NoReplay(), new ThrowingHandler());
+        var pump = PumpOver(dispatcher, provider);
+        await pump.StartAsync(ct);
+        await dispatcher.PublishAsync([Envelope(1)], ct);
+
+        await dispatcher.DrainAsync(ct);
+        await pump.StopAsync(ct);
     }
 }
