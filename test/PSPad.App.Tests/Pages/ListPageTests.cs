@@ -273,6 +273,25 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void CompletingOneOfTwoSameNamedTasksKeepsTheOtherOnItsOwnRow()
+    {
+        var list = NewList("Zakupy");
+        var first = NewTask(list.Id, "Mleko");
+        var second = NewTask(list.Id, "Mleko");
+        Arrange(list, first, second);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+        var secondRow = RowOf(page, second).Instance;
+        page.FindAll("input.mud-checkbox-input")[0].Change(true);
+
+        page.WaitForAssertion(() => Assert.NotNull(RowOf(page, first).Instance.Task.CompletedAt));
+        Assert.Same(secondRow, RowOf(page, second).Instance);
+    }
+
+    static IRenderedComponent<TaskRow> RowOf(IRenderedComponent<ListPage> page, TodoTask task) =>
+        page.FindComponents<TaskRow>().Single(row => row.Instance.Task.Id == task.Id);
+
+    [Fact]
     public async Task RenamingFromTheFabMenuRenamesTheList()
     {
         var list = NewList("Zakupy");

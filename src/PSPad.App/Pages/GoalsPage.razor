@@ -75,7 +75,7 @@ else
             <MudGrid Spacing="4">
                 @foreach (var goal in goals)
                 {
-                    <MudItem xs="12" sm="6" md="4" xl="3">
+                    <MudItem @key="goal.Id" xs="12" sm="6" md="4" xl="3">
                         <GoalSummaryCard Goal="@goal" Tasks="@TasksOf(goal.Id)" OnOpen="@(() => EditGoal(goal))" />
                     </MudItem>
                 }
@@ -84,7 +84,7 @@ else
     };
 
     RenderFragment Card(Goal goal) =>
-        @<MudItem xs="12" sm="6" md="4" xl="3">
+        @<MudItem @key="goal.Id" xs="12" sm="6" md="4" xl="3">
             <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
                       OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
                       OnStatus="@(status => SetStatusAsync(goal, status))"

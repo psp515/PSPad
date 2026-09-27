@@ -71,7 +71,7 @@ else
             <MudGrid Spacing="4">
                 @foreach (var goal in _goals)
                 {
-                    <MudItem xs="12" sm="6" md="4" xl="3">
+                    <MudItem @key="goal.Id" xs="12" sm="6" md="4" xl="3">
                         <GoalSummaryCard Goal="@goal" Tasks="@TasksOf(goal.Id)" Today="@State.Today"
                                          OnOpen="@(() => OpenGoal(goal))" />
                     </MudItem>
@@ -153,7 +153,7 @@ else
             {
                 var task = _byId[entry.TaskId];
                 var day = DayOf(entry);
-                <MudItem xs="12" sm="6" md="4" xl="3">
+                <MudItem @key="entry.TaskId" xs="12" sm="6" md="4" xl="3">
                     <MudPaper Outlined="true" Class="pspad-day-task">
                         <TaskRow Task="@task" Today="@day" ListName="@NameOf(task.ListId)"
                                  OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />

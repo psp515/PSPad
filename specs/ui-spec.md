@@ -247,6 +247,12 @@ results. One `ListCard`, one `GoalCard`, one `InboxItemCard`. A single
 component per concept means a rule like never-overdue-for-recurring-tasks
 cannot drift between the screens that display it.
 
+**Every repeated row or card carries `@key` on its entity id.** Ticking a
+task moves it between sections, and without a key Blazor hands the vacated
+row's component to the next task, whose `MudCheckBox` keeps its own ticked
+state because its `Value` parameter did not change — two same-named tasks
+then both look done (issue #44). Key on the id, never on the name.
+
 **Task detail is an overlay, addressed by query string.** Clicking a task
 appends `?task={taskId}` to the current route; `TaskDetailPanel` renders as
 a slide-in overlay (full-screen below `md`) without reflowing the page. The

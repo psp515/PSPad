@@ -16,7 +16,7 @@ else
     <MudList T="string">
         @foreach (var hit in _hits)
         {
-            <MudListItem T="string" Href="@HrefOf(hit)">
+            <MudListItem @key="hit.Id" T="string" Href="@HrefOf(hit)">
                 <MudText>@hit.Name</MudText>
                 <MudText Typo="Typo.caption">@hit.Path</MudText>
             </MudListItem>
