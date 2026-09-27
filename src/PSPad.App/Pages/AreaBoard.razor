@@ -31,7 +31,7 @@ else if (_area is not null)
         {
             <MudItem xs="12" sm="6" md="4" xl="3">
                 <EmptyState Icon="@Icons.Material.Outlined.ListAlt" Message="No lists yet." CreateText="New list"
-                            OnCreate="@NewListAsync" />
+                            OnCreate="@NewList" />
             </MudItem>
         }
         @foreach (var list in _lists)
@@ -49,7 +49,7 @@ else if (_area is not null)
 
     <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
         <MudTooltip Text="New list">
-            <MudFabMenuItem OnClick="@NewListAsync" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
+            <MudFabMenuItem OnClick="@NewList" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
                             Size="Size.Small" UserAttributes="@NewListAttributes" />
         </MudTooltip>
         <MudTooltip Text="Edit area">
@@ -133,21 +133,7 @@ else
 
     void AddTask(Guid listId) => Navigation.NavigateTo(TaskQuery.ForNewTask(Navigation.Uri, listId));
 
-    async Task NewListAsync()
-    {
-        var parameters = new DialogParameters<NameDialog> { { dialog => dialog.Title, "List name" } };
-        var dialog = await Dialogs.ShowAsync<NameDialog>("New list", parameters);
-        var result = await dialog.Result;
-
-        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new CreateTaskList(
-            Guid.NewGuid(), State.UserId, Guid.NewGuid(), AreaId, name,
-            Positions.Next(_lists.Select(list => list.Position))));
-    }
+    void NewList() => Navigation.NavigateTo(ListQuery.ForNewList(Navigation.Uri, AreaId));
 
     async Task RenameListAsync(TaskList list)
     {

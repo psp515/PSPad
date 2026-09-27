@@ -196,6 +196,39 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task EnterAddsTheNewTask()
+    {
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        var replica = AppTestHost.Arrange(this, User, Today, list);
+        var closed = false;
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters
+            .Add(p => p.NewInList, (Guid?)list.Id)
+            .Add(p => p.OnClose, () => closed = true));
+        panel.Find(".pspad-task-name-field input").Input("Kup chleb");
+        panel.Find(".pspad-task-name-field input").KeyDown(
+            new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal("Kup chleb", created.Name);
+        Assert.True(closed);
+    }
+
+    [Fact]
+    public async Task EnterOnAnExistingTaskNameCreatesNothing()
+    {
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        var task = NewTask("Buy milk", list.Id);
+        var replica = AppTestHost.Arrange(this, User, Today, list, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        panel.Find(".pspad-task-name-field input").KeyDown(
+            new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+
+        Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+    }
+
+    [Fact]
     public async Task ANewTaskIsNotCreatedWhileDisabled()
     {
         var replica = AppTestHost.Arrange(this, User, Today);

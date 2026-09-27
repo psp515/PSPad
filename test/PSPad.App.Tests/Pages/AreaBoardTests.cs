@@ -162,13 +162,15 @@ public class AreaBoardTests : Bunit.TestContext
     {
         var area = NewArea("Dom");
         Arrange(area);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/areas/{area.Id}");
 
         var page = Render(BuildAreaBoardWithDialogs(area.Id));
         var empty = page.FindComponent<EmptyState>();
         Assert.Contains("No lists yet.", empty.Markup);
         empty.Find(".pspad-empty-state").Click();
 
-        page.Find("div.mud-dialog input");
+        Assert.EndsWith($"/areas/{area.Id}?list=new&inarea={area.Id}", navigation.Uri);
     }
 
     [Fact]
@@ -258,21 +260,19 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task NewListFromTheFabMenuCreatesItInTheReplica()
+    public void NewListFromTheFabMenuOpensTheNewListPanel()
     {
         var area = NewArea("Dom");
-        var replica = Arrange(area);
+        Arrange(area);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/areas/{area.Id}");
 
         var page = Render(BuildAreaBoardWithDialogs(area.Id));
         page.Find(".pspad-fab .mud-fab-menu-button").Click();
         page.FindAll(".mud-fab-menu-item")[0].Click();
 
-        var field = page.Find("div.mud-dialog input");
-        field.Input("Ogród");
-        page.FindAll("div.mud-dialog button").Last().Click();
-
-        var lists = await replica.LoadAllAsync<TaskList>(User);
-        Assert.Contains(lists, list => list.AreaId == area.Id && list.Name == "Ogród");
+        Assert.EndsWith($"/areas/{area.Id}?list=new&inarea={area.Id}", navigation.Uri);
+        Assert.Empty(page.FindAll("div.mud-dialog"));
     }
 
     [Fact]

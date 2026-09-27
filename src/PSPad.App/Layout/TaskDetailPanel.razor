@@ -33,6 +33,7 @@
                           Value="@Name" ValueChanged="@NameChangedAsync" Placeholder="Task name"
                           Typo="Typo.h6" Underline="false" Immediate="@(Mode == PanelMode.Add)"
                           AutoFocus="@(Mode == PanelMode.Add)" Disabled="@Disabled"
+                          OnKeyDown="@AddOnEnterAsync"
                           Style="@(Done ? "text-decoration:line-through" : "")" />
         </div>
 
@@ -164,6 +165,14 @@
         _lists = [.. lists.Where(list => !list.Deleted).OrderBy(list => list.Position)];
         var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
         _goals = [.. goals.Where(goal => !goal.Deleted)];
+    }
+
+    async Task AddOnEnterAsync(KeyboardEventArgs args)
+    {
+        if (Mode == PanelMode.Add && args.Key == "Enter")
+        {
+            await CreateAsync();
+        }
     }
 
     async Task CreateAsync()

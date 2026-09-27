@@ -62,7 +62,7 @@
     </MudDrawer>
 
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.Large" Class="my-4 pspad-content">
+        <MudContainer MaxWidth="MaxWidth.False" Class="my-4 pspad-content">
             @if (_ready)
             {
                 <CascadingValue Value="@Coordinator.Revision" Name="SyncRevision">
@@ -77,6 +77,7 @@
     </MudMainContent>
 
     <TaskDetailPanel TaskId="@_openTask" NewInList="@_newTaskList" OnClose="@ClosePanel" Disabled="@(!_ready)" />
+    <ListDetailPanel NewInArea="@_newListArea" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <AreaDetailPanel AreaId="@_openArea" IsNew="@_newArea" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <GoalDetailPanel GoalId="@_openGoal" IsNew="@_newGoal" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <InboxItemPanel ItemId="@_openInboxItem" IsNew="@_newInboxItem" OnClose="@ClosePanel" Disabled="@(!_ready)" />
@@ -93,6 +94,7 @@
     IReadOnlyList<Area> _areas = [];
     Guid? _openTask;
     Guid? _newTaskList;
+    Guid? _newListArea;
     Guid? _openArea;
     bool _newArea;
     Guid? _openGoal;
@@ -264,6 +266,7 @@
     {
         _openTask = TaskQuery.From(Navigation.Uri);
         _newTaskList = TaskQuery.NewTaskListFrom(Navigation.Uri);
+        _newListArea = ListQuery.NewListAreaFrom(Navigation.Uri);
         _openArea = AreaQuery.From(Navigation.Uri);
         _newArea = AreaQuery.IsNew(Navigation.Uri);
         _openGoal = GoalQuery.From(Navigation.Uri);

@@ -152,6 +152,32 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ANewListQueryOpensTheListPanelToAddIntoThatArea()
+    {
+        Arrange();
+        var areaId = Guid.NewGuid();
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"areas/{areaId}?list=new&inarea={areaId}");
+
+        var shell = Render<AppShell>();
+
+        Assert.Equal(areaId, shell.FindComponent<ListDetailPanel>().Instance.NewInArea);
+        Assert.Null(shell.FindComponent<AreaDetailPanel>().Instance.AreaId);
+    }
+
+    [Fact]
+    public void PageContentUsesTheFullWidth()
+    {
+        Arrange();
+
+        var shell = Render<AppShell>();
+
+        var content = shell.Find(".pspad-content");
+        Assert.DoesNotContain("mud-container-maxwidth-lg", content.ClassName);
+        Assert.Contains("mud-container-maxwidth-false", content.ClassName);
+    }
+
+    [Fact]
     public void ItTakesTheEmailFromApiMeRatherThanTheClaim()
     {
         Arrange(displayName: "Ada Lovelace", email: "ada@example.com", emailClaim: null);
