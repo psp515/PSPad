@@ -351,6 +351,39 @@ public class AreaBoardTests : Bunit.TestContext
         return task;
     }
 
+    [Fact]
+    public async Task DeletingTheAreaWarnsAndDeletesItsListsAndTasksToo()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy", 0);
+        var task = NewTask(list.Id, "Kup chleb");
+        var replica = Arrange(area, list, task);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[2].Click();
+
+        Assert.Contains("all its lists and tasks", page.Find("div.mud-dialog").TextContent);
+        page.FindAll("div.mud-dialog button").Last().Click();
+
+        Assert.True((await replica.LoadAsync<TaskList>(list.Id))!.Deleted);
+        Assert.True((await replica.LoadAsync<TodoTask>(task.Id))!.Deleted);
+    }
+
+    [Fact]
+    public void DeletingAListWarnsThatItsTasksGoToo()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy", 0);
+        Arrange(area, list);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-list-menu button").Click();
+        page.FindAll(".mud-menu-item").Last().Click();
+
+        Assert.Contains("all its tasks", page.Find("div.mud-dialog").TextContent);
+    }
+
     // Both ThingMenu's MudMenu and IDialogService's MudDialogProvider portal their open
     // content through MudPopoverProvider, so all three must share one render tree.
     RenderFragment BuildAreaBoardWithDialogs(Guid areaId) => builder =>

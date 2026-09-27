@@ -165,7 +165,7 @@ else
 
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{_list.Name}”? Its tasks stay, without a list." }
+            { dialog => dialog.Message, $"Delete “{_list.Name}” and all its tasks? This can’t be undone." }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete list", parameters);
         var result = await dialog.Result;

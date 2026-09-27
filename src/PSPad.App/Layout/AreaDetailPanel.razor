@@ -105,7 +105,7 @@
 
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{_area.Name}”? Its lists stay, without an area." }
+            { dialog => dialog.Message, $"Delete “{_area.Name}” and all its lists and tasks? This can’t be undone." }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete area", parameters);
         var result = await dialog.Result;

@@ -162,7 +162,7 @@ else
     {
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{list.Name}”? Its tasks stay, without a list." }
+            { dialog => dialog.Message, $"Delete “{list.Name}” and all its tasks? This can’t be undone." }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete list", parameters);
         var result = await dialog.Result;
@@ -182,7 +182,7 @@ else
         var area = _area!;
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{area.Name}”? Its lists stay, without an area." }
+            { dialog => dialog.Message, $"Delete “{area.Name}” and all its lists and tasks? This can’t be undone." }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete area", parameters);
         var result = await dialog.Result;
