@@ -213,6 +213,28 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItOffersEveryAccent()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        var accents = page.FindComponents<MudSelectItem<Accent>>().Select(item => item.Instance.Value).ToList();
+        Assert.Equal(Enum.GetValues<Accent>(), accents);
+    }
+
+    [Fact]
+    public async Task SelectingAnAccentAppliesItThroughThePreference()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+        await page.InvokeAsync(() => page.Instance.SelectAccentAsync(Accent.Purple));
+
+        Assert.Equal(Accent.Purple, Services.GetRequiredService<ThemePreference>().Accent);
+    }
+
+    [Fact]
     public void TheThemeControlIsASelectNotAButtonGroup()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");

@@ -1,14 +1,20 @@
 using Microsoft.JSInterop;
+using MudBlazor;
 
 namespace PSPad.App.Theme;
 
 public sealed class ThemePreference(IJSRuntime js)
 {
     const string StorageKey = "pspad.theme";
+    const string AccentKey = "pspad.accent";
 
     bool _systemPrefersDark;
 
     public ThemeMode Mode { get; private set; } = ThemeMode.System;
+
+    public Accent Accent { get; private set; } = Accent.Green;
+
+    public MudTheme Theme => PSPadTheme.For(Accent);
 
     public bool IsDark => Mode switch
     {
@@ -23,8 +29,8 @@ public sealed class ThemePreference(IJSRuntime js)
     {
         _systemPrefersDark = systemPrefersDark;
 
-        var stored = await ReadAsync();
-        Mode = Enum.TryParse<ThemeMode>(stored, out var parsed) ? parsed : ThemeMode.System;
+        Mode = Enum.TryParse<ThemeMode>(await ReadAsync(StorageKey), out var mode) ? mode : ThemeMode.System;
+        Accent = Enum.TryParse<Accent>(await ReadAsync(AccentKey), out var accent) ? accent : Accent.Green;
 
         Changed?.Invoke();
     }
@@ -37,11 +43,19 @@ public sealed class ThemePreference(IJSRuntime js)
         Changed?.Invoke();
     }
 
-    async Task<string?> ReadAsync()
+    public async Task SetAccentAsync(Accent accent)
+    {
+        Accent = accent;
+
+        await js.InvokeAsync<string>("localStorage.setItem", AccentKey, Accent.ToString());
+        Changed?.Invoke();
+    }
+
+    async Task<string?> ReadAsync(string key)
     {
         try
         {
-            return await js.InvokeAsync<string?>("localStorage.getItem", StorageKey);
+            return await js.InvokeAsync<string?>("localStorage.getItem", key);
         }
         catch (JSException)
         {

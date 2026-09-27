@@ -68,6 +68,19 @@
                     <MudSelectItem T="ThemeMode" Value="@mode">@mode</MudSelectItem>
                 }
             </MudSelect>
+            <MudSelect T="Accent" Value="@Preference.Accent" ValueChanged="@SelectAccentAsync" Label="Accent"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-3">
+                @foreach (var accent in Enum.GetValues<Accent>())
+                {
+                    <MudSelectItem T="Accent" Value="@accent">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small"
+                                     Style="@($"color:{PSPadTheme.Swatch(accent)}")" />
+                            @accent
+                        </div>
+                    </MudSelectItem>
+                }
+            </MudSelect>
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" md="4" xl="3">
@@ -159,6 +172,8 @@
     }
 
     public Task SelectThemeAsync(ThemeMode mode) => Preference.SetAsync(mode);
+
+    public Task SelectAccentAsync(Accent accent) => Preference.SetAccentAsync(accent);
 
     public Task<IEnumerable<string>> SearchTimeZonesAsync(string value, CancellationToken ct) =>
         Task.FromResult(string.IsNullOrWhiteSpace(value)
