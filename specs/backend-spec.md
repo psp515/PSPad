@@ -427,6 +427,17 @@ repo root as context.
 The client is static, so its API base URL and Keycloak settings can't be
 baked in — the image ships `wwwroot/appsettings.json` as a template plus an
 entrypoint substituting environment variables at container start.
+Because that rewrite happens after the build, the published service worker
+never pins `appsettings.json` to its build-time integrity hash and fetches it
+network-first, falling back to its cache offline — a pinned hash fails the
+worker's install and strands every client on the old build.
+
+nginx caches only fingerprinted `_framework/` files as `immutable`; every
+other script, stylesheet and JSON file (`js/replica.js` included) is served
+`no-cache`, so a new build never runs against a stale module. `replica.js`
+still opens a database a newer build already upgraded at its existing
+version (stores are only ever added) and closes its connection on
+`versionchange`, so one tab never blocks another tab's upgrade.
 
 `docker/compose.yaml` runs MongoDB and Keycloak for development.
 Integration tests never touch it — they start their own MongoDB via

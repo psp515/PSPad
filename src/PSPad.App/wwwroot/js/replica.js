@@ -2,8 +2,14 @@ const DB_NAME = 'pspad';
 const VERSION = 2;
 
 export function open() {
+  return openAt(VERSION).catch(error =>
+    // A script cached from an older build meets a database a newer build already upgraded; stores only ever get added.
+    error?.name === 'VersionError' ? openAt() : Promise.reject(error));
+}
+
+function openAt(version) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, VERSION);
+    const request = version === undefined ? indexedDB.open(DB_NAME) : indexedDB.open(DB_NAME, version);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains('documents')) {
@@ -21,7 +27,11 @@ export function open() {
         db.createObjectStore('session', { keyPath: 'key' });
       }
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
     request.onerror = () => reject(request.error);
     // A version upgrade blocked by a connection in another tab settles neither onsuccess nor
     // onerror, so without this the promise never resolves and never rejects.
@@ -74,7 +84,11 @@ export function peek(limit) {
   return open().then(db => new Promise((resolve, reject) => {
     const transaction = db.transaction('outbox', 'readonly');
     const request = transaction.objectStore('outbox').getAll(null, limit);
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
     request.onerror = () => reject(request.error);
   }));
 }

@@ -15,6 +15,8 @@ const cacheNamePrefix = 'offline-cache-';
 const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
 const offlineAssetsInclude = [ /\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/ ];
 const offlineAssetsExclude = [ /^service-worker\.js$/ ];
+// The entrypoint rewrites it at container start, so the build-time hash never matches and it can change without a new build.
+const runtimeConfig = /appsettings\.json$/;
 
 // Replace with your base path if you are hosting on a subfolder. Ensure there is a trailing '/'.
 const base = "/";
@@ -28,7 +30,7 @@ async function onInstall(event) {
     const assetsRequests = self.assetsManifest.assets
         .filter(asset => offlineAssetsInclude.some(pattern => pattern.test(asset.url)))
         .filter(asset => !offlineAssetsExclude.some(pattern => pattern.test(asset.url)))
-        .map(asset => new Request(asset.url, { integrity: asset.hash, cache: 'no-cache' }));
+        .map(asset => new Request(asset.url, { integrity: runtimeConfig.test(asset.url) ? undefined : asset.hash, cache: 'no-cache' }));
     await caches.open(cacheName).then(cache => cache.addAll(assetsRequests));
 }
 
@@ -42,7 +44,24 @@ async function onActivate(event) {
         .map(key => caches.delete(key)));
 }
 
+async function networkFirst(request) {
+    const cache = await caches.open(cacheName);
+    try {
+        const response = await fetch(request, { cache: 'no-cache' });
+        if (response.ok) {
+            await cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        return await cache.match(request) ?? new Response('', { status: 503, statusText: 'Service Unavailable' });
+    }
+}
+
 async function onFetch(event) {
+    if (event.request.method === 'GET' && runtimeConfig.test(new URL(event.request.url).pathname)) {
+        return networkFirst(event.request);
+    }
+
     let cachedResponse = null;
     if (event.request.method === 'GET') {
         // For all navigation requests, try to serve index.html from cache,
