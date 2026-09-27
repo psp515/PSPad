@@ -1,23 +1,19 @@
 @using PSPad.App.State
 @using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Tasks
-@inject CardCollapseState Collapse
 
-<MudPaper Elevation="0" Outlined="true">
-    <div class="d-flex align-center gap-2 px-3 py-2">
-        <MudIconButton Size="Size.Small"
-                       Icon="@(Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)"
-                       OnClick="@(() => Collapse.ToggleAsync(Goal.Id))" />
-        <div class="d-flex flex-column flex-grow-1" style="min-width:0">
-            <MudLink Class="pspad-goal-name" Typo="Typo.subtitle2" Underline="Underline.None"
-                     OnClick="@OnEdit">@Goal.Name</MudLink>
-            @if (Goal.DueOn is { } due)
-            {
-                <MudText Typo="Typo.caption" Class="@($"pspad-goal-due {(IsOverdue ? "" : "pspad-muted")}")"
-                         Color="@(IsOverdue ? Color.Error : Color.Inherit)">@($"Due {DueDateRow.Describe(due, Today)}")</MudText>
-            }
-        </div>
-        <MudText Typo="Typo.caption" Class="pspad-open-count flex-shrink-0" Style="white-space:nowrap">@($"{Open.Count} open")</MudText>
+<ThingCard Id="@Goal.Id" Name="@Goal.Name" Href="@($"/goals/{Goal.Id}")" TitleClass="pspad-goal-name"
+           CountText="@(count => $"{count} open")" EmptyText="No open tasks."
+           Tasks="@Tasks" Today="@Today" ListNameOf="@NameOf" CreatedOnOf="@AddedOn"
+           OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen">
+    <Subtitle>
+        @if (Goal.DueOn is { } due)
+        {
+            <MudText Typo="Typo.caption" Class="@($"pspad-goal-due {(IsOverdue ? "" : "pspad-muted")}")"
+                     Color="@(IsOverdue ? Color.Error : Color.Inherit)">@($"Due {DueDateRow.Describe(due, Today)}")</MudText>
+        }
+    </Subtitle>
+    <Actions>
         <ThingMenu Class="pspad-goal-menu" OnRename="@OnRename" OnDelete="@OnDelete">
             <Extra>
                 @foreach (var status in Enum.GetValues<GoalStatus>().Where(status => status != Goal.Status))
@@ -28,34 +24,10 @@
                 }
             </Extra>
         </ThingMenu>
-    </div>
-
-    @if (!Collapsed)
-    {
-        <MudDivider />
-
-        @if (Open.Count == 0)
-        {
-            <MudText Typo="Typo.body2" Class="pa-3">No open tasks.</MudText>
-        }
-
-        @foreach (var task in Open.Take(Preview))
-        {
-            <TaskRow @key="task.Id" Task="@task" Today="@Today" ListName="@NameOf(task.ListId)"
-                     OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
-        }
-
-        @if (Open.Count > Preview)
-        {
-            <MudDivider />
-            <MudText Typo="Typo.caption" Class="pa-2">@($"+{Open.Count - Preview} more")</MudText>
-        }
-    }
-</MudPaper>
+    </Actions>
+</ThingCard>
 
 @code {
-    public const int Preview = 10;
-
     [Parameter, EditorRequired] public Goal Goal { get; set; } = null!;
 
     [Parameter] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
@@ -63,6 +35,8 @@
     [Parameter] public IReadOnlyDictionary<Guid, string> ListNames { get; set; } = new Dictionary<Guid, string>();
 
     [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public string TimeZone { get; set; } = "Etc/UTC";
 
     [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
 
@@ -72,18 +46,13 @@
 
     [Parameter] public EventCallback<GoalStatus> OnStatus { get; set; }
 
-    [Parameter] public EventCallback OnEdit { get; set; }
-
     [Parameter] public EventCallback OnRename { get; set; }
 
     [Parameter] public EventCallback OnDelete { get; set; }
 
     bool IsOverdue => Goal.Status == GoalStatus.InProgress && Goal.DueOn < Today;
 
-    bool Collapsed => Collapse.IsCollapsed(Goal.Id);
+    string? NameOf(TodoTask task) => ListNames.TryGetValue(task.ListId, out var name) ? name : null;
 
-    IReadOnlyList<TodoTask> Open =>
-        [.. Tasks.Where(task => !task.Deleted && task.CompletedAt is null && !task.EndedBy(Today))];
-
-    string? NameOf(Guid listId) => ListNames.TryGetValue(listId, out var name) ? name : null;
+    DateOnly? AddedOn(TodoTask task) => CreatedOn.Of(task, TimeZone);
 }

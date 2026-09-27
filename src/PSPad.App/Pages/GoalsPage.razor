@@ -86,10 +86,10 @@ else
 
     RenderFragment Card(Goal goal) =>
         @<MudItem @key="goal.Id" xs="12" sm="6" md="4" xl="3">
-            <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames" Today="@State.Today"
+            <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames"
+                      Today="@State.Today" TimeZone="@State.TimeZone"
                       OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
                       OnStatus="@(status => SetStatusAsync(goal, status))"
-                      OnEdit="@(() => EditGoal(goal))"
                       OnRename="@(() => EditGoal(goal))"
                       OnDelete="@(() => DeleteAsync(goal))" />
         </MudItem>;
