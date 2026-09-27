@@ -160,11 +160,34 @@ public class TaskRowTests : Bunit.TestContext
         Assert.Same(task, opened);
     }
 
-    IRenderedComponent<TaskRow> Render(TodoTask task, string? listName = null) =>
+    [Fact]
+    public void TheAddedDateShowsOnlyWhenGiven()
+    {
+        Arrange();
+
+        var withDate = Render(Task("Buy milk"), "Shopping", new DateOnly(2026, 9, 12));
+        var without = Render(Task("Buy milk"), "Shopping");
+
+        Assert.Equal("Added 12 Sep", withDate.Find(".pspad-created").TextContent.Trim());
+        Assert.Empty(without.FindAll(".pspad-created"));
+    }
+
+    [Fact]
+    public void AnAddedDateAloneStillShowsTheMetaLine()
+    {
+        Arrange();
+
+        var row = Render(Task("Buy milk"), createdOn: new DateOnly(2026, 9, 12));
+
+        Assert.Contains("Added 12 Sep", row.Markup);
+    }
+
+    IRenderedComponent<TaskRow> Render(TodoTask task, string? listName = null, DateOnly? createdOn = null) =>
         Render<TaskRow>(parameters => parameters
             .Add(p => p.Task, task)
             .Add(p => p.Today, Today)
-            .Add(p => p.ListName, listName));
+            .Add(p => p.ListName, listName)
+            .Add(p => p.CreatedOn, createdOn));
 
     void Arrange()
     {
