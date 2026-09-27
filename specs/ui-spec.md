@@ -244,9 +244,21 @@ ticks the occurrence on its own day, not today's. Goals in progress are
 `GoalSummaryCard`s ordered by due date, undated last, and open
 `?goal={id}`.
 
+**Goal screen.** `/goals/{goalId}` mirrors the list screen: back arrow to
+`/goals`, the goal's name as title with its due date as a caption under
+it, every open task as its own card (list name and added day on each row),
+then a collapsed **Completed (N)**. With no open tasks it shows an
+`EmptyState` "No open tasks." with no create action — a task is created in
+a list, not a goal. A goal card's name and its **Show all** link lead here.
+
 **Shared row/card components, never duplicated per screen.** One
 `TaskRow` renders in My Day, list cards, the list screen and search
-results. One `ListCard`, one `GoalCard`, one `InboxItemCard`. A single
+results. One `ListCard`, one `GoalCard`, one `InboxItemCard`. `ListCard` and
+`GoalCard` are thin wrappers over one `ThingCard` — collapse arrow, title
+link, open count, `⋯` menu, at most five open `TaskRow`s and a
+**Show all (N)** link to the thing's own screen — and differ only in their
+header extras and row caption: a goal card's rows name their list and the
+day the task was added (`Added 12 Sep`, in the user's time zone). A single
 component per concept means a rule like never-overdue-for-recurring-tasks
 cannot drift between the screens that display it.
 
@@ -346,8 +358,7 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
 is addressed as `?area=new` (sidebar **+ New area**) or `?area={areaId}`
 (the area's **Edit area** FAB item), via `AreaQuery`.
 `Layout/GoalDetailPanel.razor` is addressed as `?goal=new` (the Goals FAB,
-or the empty state) or `?goal={goalId}` (a goal card's name, or its
-**Rename**), via `GoalQuery`. Both open with an outlined **Name** field
+or the empty state) or `?goal={goalId}` (a goal card's **Rename**, or the goal screen's **Edit goal**), via `GoalQuery`. Both open with an outlined **Name** field
 under the header. A goal adds a **Status** `MudSelect` (In progress /
 Achieved / Not achieved, existing goals only) and a **Due** `DueDateRow`
 (in add mode too). The Goals page shows in-progress goals as cards ordered
@@ -458,6 +469,7 @@ icon reads unambiguously on its own.
 |---|---|---|
 | Area | New list, Edit area (→ area panel), Delete area | FAB Menu |
 | Goals | Add goal (→ new-goal panel) | plain `MudFab` |
+| Goal | Edit goal (→ goal panel), Delete goal | FAB Menu |
 | List | Add task (→ new-task panel), Rename list, Delete list | FAB Menu |
 | Inbox | Capture (→ capture panel) | plain `MudFab` |
 | My Day, Settings, Statistics | none | no FAB |
@@ -582,6 +594,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/areas/{areaId}` | area screen — list cards |
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |
+| `/goals/{goalId}` | goal screen — every task of one goal |
 | `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-captures bar chart, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
 | `/settings` | Settings (account + sign-out; application settings: time zone, theme, accent; sync status; delete account) |
