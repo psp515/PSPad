@@ -1,5 +1,6 @@
 using Microsoft.JSInterop;
 using MudBlazor;
+using MudBlazor.Utilities;
 
 namespace PSPad.App.Theme;
 
@@ -7,6 +8,7 @@ public sealed class ThemePreference(IJSRuntime js)
 {
     const string StorageKey = "pspad.theme";
     const string AccentKey = "pspad.accent";
+    const string CustomColorKey = "pspad.accent.custom";
 
     bool _systemPrefersDark;
 
@@ -14,7 +16,9 @@ public sealed class ThemePreference(IJSRuntime js)
 
     public Accent Accent { get; private set; } = Accent.Green;
 
-    public MudTheme Theme => PSPadTheme.For(Accent);
+    public string? CustomColor { get; private set; }
+
+    public MudTheme Theme { get; private set; } = PSPadTheme.For(Accent.Green);
 
     public bool IsDark => Mode switch
     {
@@ -30,7 +34,10 @@ public sealed class ThemePreference(IJSRuntime js)
         _systemPrefersDark = systemPrefersDark;
 
         Mode = Enum.TryParse<ThemeMode>(await ReadAsync(StorageKey), out var mode) ? mode : ThemeMode.System;
-        Accent = Enum.TryParse<Accent>(await ReadAsync(AccentKey), out var accent) ? accent : Accent.Green;
+        var storedColor = await ReadAsync(CustomColorKey);
+        CustomColor = MudColor.TryParse(storedColor, out _) ? storedColor : null;
+        var accent = Enum.TryParse<Accent>(await ReadAsync(AccentKey), out var stored) ? stored : Accent.Green;
+        Apply(accent == Accent.Custom && CustomColor is null ? Accent.Green : accent);
 
         Changed?.Invoke();
     }
@@ -45,10 +52,31 @@ public sealed class ThemePreference(IJSRuntime js)
 
     public async Task SetAccentAsync(Accent accent)
     {
-        Accent = accent;
+        if (accent == Accent.Custom && CustomColor is null)
+        {
+            return;
+        }
+
+        Apply(accent);
 
         await js.InvokeAsync<string>("localStorage.setItem", AccentKey, Accent.ToString());
         Changed?.Invoke();
+    }
+
+    public async Task SetCustomAccentAsync(string color)
+    {
+        CustomColor = color;
+        Apply(Accent.Custom);
+
+        await js.InvokeAsync<string>("localStorage.setItem", CustomColorKey, color);
+        await js.InvokeAsync<string>("localStorage.setItem", AccentKey, Accent.ToString());
+        Changed?.Invoke();
+    }
+
+    void Apply(Accent accent)
+    {
+        Accent = accent;
+        Theme = accent == Accent.Custom ? PSPadTheme.ForCustom(CustomColor!) : PSPadTheme.For(accent);
     }
 
     async Task<string?> ReadAsync(string key)

@@ -178,8 +178,8 @@ navigation.
 Applied on: `AreaBoard` (list cards), `GoalsPage` (goal cards, active and
 achieved separately), `Today` (overdue, today, starred, tomorrow, goals in progress,
 completed and upcoming each as their own grid), `InboxPage`, `ListPage` (open and completed separately),
-`SettingsPage` (Account, Time zone, Theme, Sync, Danger zone each their own
-card), and both skeleton components (`RowSkeleton`, `CardSkeleton`).
+`SettingsPage` (Account, Application settings, Sync, Danger zone each their
+own card), and both skeleton components (`RowSkeleton`, `CardSkeleton`).
 
 **Spacing scale.**
 
@@ -451,20 +451,35 @@ surface:
 | Lines | `Gray.Darken1` | `Gray.Darken1` |
 | TextPrimary / TextSecondary | `Gray.Darken4` / `Gray.Darken2` | `Gray.Lighten3` / `Gray.Lighten1` |
 
-**Accent** is one of Green (default), Teal, Blue, Indigo, Purple, Pink,
-Orange. `PSPadTheme.For(accent)` hands back one cached `MudTheme` per accent;
-the `MudThemeProvider` takes `ThemePreference.Theme`. `PSPadThemeTests` checks
-every accent in both modes: 4.5:1 for text (primary on every ground, text on
-a filled accent, drawer and appbar text), 3:1 for lines and drawer icons. A
-new accent that fails these does not ship.
+**Accent** is one of seven presets — Green (default), Teal, Blue, Indigo,
+Purple, Pink, Orange — or a **custom** colour. `PSPadTheme.For(accent)` hands
+back one cached `MudTheme` per preset; `PSPadTheme.ForCustom(hex)` derives the
+four accent shades from the picked colour by moving only its HSL lightness —
+deepened for light mode until it holds 4.5:1 on the background, lightened for
+dark mode until dark text holds 4.5:1 on it — so the hue the user picked
+survives and contrast still holds. `ThemePreference` builds the theme once per
+change and the `MudThemeProvider` takes `ThemePreference.Theme`.
+`PSPadThemeTests` checks every preset and a set of awkward custom colours
+(yellow, white, black, grey, pure primaries) in both modes: 4.5:1 for text
+(primary on every ground, text on a filled accent, drawer and appbar text),
+3:1 for lines and drawer icons. A new preset that fails these does not ship.
 
-Theme is **System / Light / Dark** plus the **accent**, per device, held in
-`localStorage` (`pspad.theme`, `pspad.accent`) via `ThemePreference` — never
-on the `User` aggregate. Both live in `SettingsPage`'s Theme card, not the
-account badge or any menu (a control nested in a menu item is not reliably
-keyboard-reachable), each picked from a `MudSelect` list — the same dropdown
-pattern as the time zone picker, not a button group. Accent items show a
-swatch dot beside the name.
+Theme mode (**System / Light / Dark**) and accent are per device, held in
+`localStorage` (`pspad.theme`, `pspad.accent`, `pspad.accent.custom`) via
+`ThemePreference` — never on the `User` aggregate. A custom colour is kept
+after switching back to a preset, so the edit swatch reopens on it.
+
+**Application settings card.** Time zone, theme mode and accent share one
+`SettingsPage` card titled "Application settings", not the account badge or
+any menu (a control nested in a menu item is not reliably
+keyboard-reachable). Time zone and theme mode are labelled outlined fields:
+theme mode a `MudSelect`, not a button group. Accent is `AccentPicker`: a row
+of round filled `MudIconButton` swatches, one per preset (a tick on the active
+one, `aria-pressed` on each), then a last swatch with an edit icon that opens
+`AccentColorDialog` — a static `MudColorPicker` (spectrum field, hue slider,
+RGB/HSL/hex inputs via the mode switch, no alpha) with Cancel/Apply. The
+dialog is `FullScreen` below the `md` breakpoint (`IViewport`), a small
+centred dialog above it.
 
 Time zone uses `MudAutocomplete` (type-to-filter over
 `TimeZoneInfo.GetSystemTimeZones()`), not a plain `MudSelect` — a flat,
@@ -529,7 +544,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/goals` | Goals |
 | `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-captures bar chart, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
-| `/settings` | Settings (account + sign-out, time zone, theme, sync status, delete account) |
+| `/settings` | Settings (account + sign-out; application settings: time zone, theme, accent; sync status; delete account) |
 | `/app-info` | version, license, docs/repo links |
 | `/search` | search results (currently unreachable from the UI) |
 | `/welcome` | public, signed-out landing screen |

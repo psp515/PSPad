@@ -1,4 +1,5 @@
 using MudBlazor;
+using MudBlazor.Utilities;
 
 namespace PSPad.App.Theme;
 
@@ -17,12 +18,33 @@ public static class PSPadTheme
         [Accent.Orange] = new(Colors.DeepOrange.Darken4, Colors.Brown.Darken2, Colors.Orange.Lighten2, Colors.Orange.Lighten4)
     };
 
+    static readonly string LightBackground = Colors.Gray.Lighten4;
+    static readonly string DarkText = Colors.Gray.Darken4;
+
     static readonly Dictionary<Accent, MudTheme> Themes =
-        Enum.GetValues<Accent>().ToDictionary(accent => accent, accent => Build(AccentShades[accent]));
+        AccentShades.ToDictionary(pair => pair.Key, pair => Build(pair.Value));
+
+    public static IReadOnlyList<Accent> Presets { get; } = [.. AccentShades.Keys];
 
     public static MudTheme For(Accent accent) => Themes[accent];
 
+    public static MudTheme ForCustom(string color) => Build(Derive(new MudColor(color)));
+
     public static string Swatch(Accent accent) => AccentShades[accent].Light;
+
+    static Shades Derive(MudColor picked)
+    {
+        var light = ColorContrast.DeepenUntil(picked, shade => ColorContrast.Ratio(shade, LightBackground) >= 4.5);
+        var dark = ColorContrast.LightenUntil(picked, shade => ColorContrast.Ratio(shade, DarkText) >= 4.5);
+
+        return new(
+            Hex(light),
+            Hex(light.SetL(Math.Max(0, light.L - 0.1))),
+            Hex(dark),
+            Hex(dark.SetL(Math.Min(1, dark.L + 0.15))));
+    }
+
+    static string Hex(MudColor color) => color.ToString(MudColorOutputFormats.Hex);
 
     static MudTheme Build(Shades accent) => new()
     {
@@ -36,7 +58,7 @@ public static class PSPadTheme
             Warning = Colors.Orange.Darken4,
             Success = Colors.Green.Darken3,
             Info = Colors.Blue.Darken2,
-            Background = Colors.Gray.Lighten4,
+            Background = LightBackground,
             Surface = Colors.Shades.White,
             AppbarBackground = Colors.Shades.White,
             AppbarText = Colors.Gray.Darken4,

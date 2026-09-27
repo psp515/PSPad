@@ -158,4 +158,53 @@ public class ThemePreferenceTests
 
         Assert.Same(PSPadTheme.For(Accent.Orange), preference.Theme);
     }
+
+    [Fact]
+    public async Task ACustomColourIsStoredRestoredAndDrivesTheTheme()
+    {
+        var js = new FakeJsRuntime();
+        var preference = new ThemePreference(js);
+        await preference.InitialiseAsync(systemPrefersDark: false);
+
+        await preference.SetCustomAccentAsync("#1565c0");
+
+        Assert.Equal(Accent.Custom, preference.Accent);
+        Assert.Equal("#1565c0", preference.CustomColor);
+        Assert.Equal(
+            PSPadTheme.ForCustom("#1565c0").PaletteLight.Primary.ToString(),
+            preference.Theme.PaletteLight.Primary.ToString());
+
+        var restored = new ThemePreference(js);
+        await restored.InitialiseAsync(systemPrefersDark: false);
+        Assert.Equal(Accent.Custom, restored.Accent);
+        Assert.Equal("#1565c0", restored.CustomColor);
+    }
+
+    [Fact]
+    public async Task PickingAPresetAfterACustomColourKeepsTheColourForLater()
+    {
+        var js = new FakeJsRuntime();
+        var preference = new ThemePreference(js);
+        await preference.InitialiseAsync(systemPrefersDark: false);
+        await preference.SetCustomAccentAsync("#1565c0");
+
+        await preference.SetAccentAsync(Accent.Teal);
+
+        Assert.Same(PSPadTheme.For(Accent.Teal), preference.Theme);
+        Assert.Equal("#1565c0", preference.CustomColor);
+    }
+
+    [Fact]
+    public async Task AStoredCustomAccentWithAGarbledColourFallsBackToGreen()
+    {
+        var js = new FakeJsRuntime();
+        js.Storage["pspad.accent"] = nameof(Accent.Custom);
+        js.Storage["pspad.accent.custom"] = "not a colour";
+        var preference = new ThemePreference(js);
+
+        await preference.InitialiseAsync(systemPrefersDark: false);
+
+        Assert.Equal(Accent.Green, preference.Accent);
+        Assert.Null(preference.CustomColor);
+    }
 }

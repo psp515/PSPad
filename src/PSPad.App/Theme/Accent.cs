@@ -8,5 +8,6 @@ public enum Accent
     Indigo,
     Purple,
     Pink,
-    Orange
+    Orange,
+    Custom
 }

@@ -17,6 +17,7 @@ using PSPad.App.Pages;
 using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
+using PSPad.App.State.Viewport;
 using PSPad.App.Tests;
 using PSPad.App.Tests.Auth;
 using PSPad.App.Theme;
@@ -213,25 +214,105 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ItOffersEveryAccent()
+    public void TimeZoneThemeAndAccentShareOneApplicationSettingsCard()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
 
         var page = Render<SettingsPage>();
 
-        var accents = page.FindComponents<MudSelectItem<Accent>>().Select(item => item.Instance.Value).ToList();
-        Assert.Equal(Enum.GetValues<Accent>(), accents);
+        var card = page.Find(".pspad-application-settings");
+        Assert.Contains("Application settings", card.TextContent);
+        Assert.NotNull(card.QuerySelector(".mud-autocomplete"));
+        Assert.NotNull(card.QuerySelector(".mud-select"));
+        Assert.NotNull(card.QuerySelector(".pspad-accent-picker"));
     }
 
     [Fact]
-    public async Task SelectingAnAccentAppliesItThroughThePreference()
+    public void ThemeAndTimeZoneAreLabelled()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
 
         var page = Render<SettingsPage>();
-        await page.InvokeAsync(() => page.Instance.SelectAccentAsync(Accent.Purple));
+
+        Assert.Equal("Theme", page.FindComponent<MudSelect<ThemeMode>>().Instance.Label);
+        Assert.Equal("Time zone", page.FindComponent<MudAutocomplete<string>>().Instance.Label);
+    }
+
+    [Fact]
+    public void ItOffersASwatchPerPresetAndOneForACustomColour()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.Equal(PSPadTheme.Presets.Count, page.FindAll(".pspad-accent-preset").Count);
+        Assert.Single(page.FindAll(".pspad-accent-custom"));
+    }
+
+    [Fact]
+    public void ClickingASwatchAppliesThatAccent()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+        page.Find("[aria-label='Purple accent']").Click();
 
         Assert.Equal(Accent.Purple, Services.GetRequiredService<ThemePreference>().Accent);
+        page.WaitForAssertion(() =>
+            Assert.Equal("true", page.Find("[aria-label='Purple accent']").GetAttribute("aria-pressed")));
+        Assert.Equal("false", page.Find("[aria-label='Green accent']").GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
+    public void TheEditSwatchOpensAColourPicker()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        page.Find(".pspad-accent-custom").Click();
+
+        Assert.NotEmpty(page.FindComponents<MudColorPicker>());
+        Assert.Empty(page.FindAll(".mud-dialog-fullscreen"));
+    }
+
+    [Fact]
+    public void OnAPhoneTheColourPickerFillsTheScreen()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        Services.AddSingleton<IViewport>(new AppTestHost.FakeViewport(isDesktop: false));
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        page.Find(".pspad-accent-custom").Click();
+
+        Assert.NotEmpty(page.FindAll(".mud-dialog-fullscreen"));
+    }
+
+    [Fact]
+    public async Task ApplyingAPickedColourMakesItTheAccent()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        page.Find(".pspad-accent-custom").Click();
+        var dialog = page.FindComponent<AccentColorDialog>();
+        await dialog.InvokeAsync(() => dialog.Instance.Pick("#ff00aa"));
+        page.Find(".pspad-accent-apply").Click();
+
+        var preference = Services.GetRequiredService<ThemePreference>();
+        page.WaitForAssertion(() => Assert.Equal(Accent.Custom, preference.Accent));
+        Assert.Equal("#ff00aa", preference.CustomColor);
+    }
+
+    [Fact]
+    public void CancellingThePickerKeepsTheAccent()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        page.Find(".pspad-accent-custom").Click();
+        page.Find(".pspad-accent-cancel").Click();
+
+        Assert.Equal(Accent.Green, Services.GetRequiredService<ThemePreference>().Accent);
     }
 
     [Fact]

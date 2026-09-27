@@ -12,10 +12,13 @@ public class PSPadThemeTests
     const double MinimumUiContrast = 3.0;
     const double MinimumTextContrast = 4.5;
 
-    public static TheoryData<Accent, bool> EveryPalette()
+    static readonly string[] AwkwardCustomColours =
+        ["#ffeb3b", "#0000ff", "#101010", "#f5f5f5", "#ff00ff", "#00ffff", "#808080", "#ffffff", "#000000"];
+
+    public static TheoryData<string, bool> EveryPalette()
     {
-        var data = new TheoryData<Accent, bool>();
-        foreach (var accent in Enum.GetValues<Accent>())
+        var data = new TheoryData<string, bool>();
+        foreach (var accent in PSPadTheme.Presets.Select(preset => preset.ToString()).Concat(AwkwardCustomColours))
         {
             data.Add(accent, false);
             data.Add(accent, true);
@@ -26,7 +29,7 @@ public class PSPadThemeTests
 
     [Theory]
     [MemberData(nameof(EveryPalette))]
-    public void LinesAreVisibleAgainstEveryGround(Accent accent, bool dark)
+    public void LinesAreVisibleAgainstEveryGround(string accent, bool dark)
     {
         var palette = PaletteOf(accent, dark);
 
@@ -37,7 +40,7 @@ public class PSPadThemeTests
 
     [Theory]
     [MemberData(nameof(EveryPalette))]
-    public void TheAccentReadsAsTextOnEveryGround(Accent accent, bool dark)
+    public void TheAccentReadsAsTextOnEveryGround(string accent, bool dark)
     {
         var palette = PaletteOf(accent, dark);
 
@@ -49,7 +52,7 @@ public class PSPadThemeTests
 
     [Theory]
     [MemberData(nameof(EveryPalette))]
-    public void TextOnAFilledAccentIsReadable(Accent accent, bool dark)
+    public void TextOnAFilledAccentIsReadable(string accent, bool dark)
     {
         var palette = PaletteOf(accent, dark);
 
@@ -59,7 +62,7 @@ public class PSPadThemeTests
 
     [Theory]
     [MemberData(nameof(EveryPalette))]
-    public void TheNavigationReadsClearly(Accent accent, bool dark)
+    public void TheNavigationReadsClearly(string accent, bool dark)
     {
         var palette = PaletteOf(accent, dark);
 
@@ -70,7 +73,7 @@ public class PSPadThemeTests
 
     [Theory]
     [MemberData(nameof(EveryPalette))]
-    public void BodyTextReadsOnEveryGround(Accent accent, bool dark)
+    public void BodyTextReadsOnEveryGround(string accent, bool dark)
     {
         var palette = PaletteOf(accent, dark);
 
@@ -82,10 +85,10 @@ public class PSPadThemeTests
 
     [Theory]
     [MemberData(nameof(EveryPalette))]
-    public void StatusColoursDoNotFollowTheAccent(Accent accent, bool dark)
+    public void StatusColoursDoNotFollowTheAccent(string accent, bool dark)
     {
         var palette = PaletteOf(accent, dark);
-        var reference = PaletteOf(Accent.Green, dark);
+        var reference = PaletteOf(nameof(Accent.Green), dark);
 
         Assert.Equal(reference.Success.ToString(), palette.Success.ToString());
         Assert.Equal(reference.Error.ToString(), palette.Error.ToString());
@@ -95,7 +98,7 @@ public class PSPadThemeTests
     [Fact]
     public void EachAccentGetsItsOwnPrimary()
     {
-        var primaries = Enum.GetValues<Accent>()
+        var primaries = PSPadTheme.Presets
             .Select(accent => PSPadTheme.For(accent).PaletteLight.Primary.ToString())
             .ToList();
 
@@ -106,8 +109,28 @@ public class PSPadThemeTests
     public void TheSameAccentHandsBackTheSameTheme() =>
         Assert.Same(PSPadTheme.For(Accent.Blue), PSPadTheme.For(Accent.Blue));
 
-    static Palette PaletteOf(Accent accent, bool dark) =>
-        dark ? PSPadTheme.For(accent).PaletteDark : PSPadTheme.For(accent).PaletteLight;
+    [Fact]
+    public void CustomIsNotAPreset() => Assert.DoesNotContain(Accent.Custom, PSPadTheme.Presets);
+
+    [Fact]
+    public void AReadableCustomColourIsUsedAsPicked() =>
+        Assert.Equal("#1565c0", PSPadTheme.ForCustom("#1565c0").PaletteLight.Primary.ToString(MudColorOutputFormats.Hex).ToLowerInvariant());
+
+    [Fact]
+    public void ACustomColourTooPaleForLightModeIsDeepenedNotReplaced()
+    {
+        var primary = PSPadTheme.ForCustom("#ffeb3b").PaletteLight.Primary;
+        var picked = new MudColor("#ffeb3b");
+
+        Assert.NotEqual(picked.Value, primary.Value);
+        Assert.InRange(Math.Abs(primary.H - picked.H), 0, 2);
+    }
+
+    static Palette PaletteOf(string accent, bool dark)
+    {
+        var theme = Enum.TryParse<Accent>(accent, out var preset) ? PSPadTheme.For(preset) : PSPadTheme.ForCustom(accent);
+        return dark ? theme.PaletteDark : theme.PaletteLight;
+    }
 
     static double Contrast(MudColor a, MudColor b)
     {
