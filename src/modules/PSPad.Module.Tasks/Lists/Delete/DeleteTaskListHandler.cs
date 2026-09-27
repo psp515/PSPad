@@ -1,9 +1,13 @@
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Tasks;
 
 namespace PSPad.Module.Tasks.Lists;
 
-public sealed class DeleteTaskListHandler(IDocumentStore<TaskList> store, IUnitOfWork work, IClock clock)
-    : ICommandHandler<DeleteTaskList>
+public sealed class DeleteTaskListHandler(
+    IDocumentStore<TaskList> store,
+    IDocumentStore<TodoTask> tasks,
+    IUnitOfWork work,
+    IClock clock) : ICommandHandler<DeleteTaskList>
 {
     public async Task<CommandResult> HandleAsync(DeleteTaskList command, CancellationToken ct)
     {
@@ -11,9 +15,14 @@ public sealed class DeleteTaskListHandler(IDocumentStore<TaskList> store, IUnitO
 
         try
         {
-            var events = TaskList.Decide(list, command, clock.UtcNow);
-            list!.ApplyAll(events);
-            work.Stage(list, events);
+            TaskList.Require(list, command.UserId);
+            var userTasks = await tasks.LoadAllAsync(command.UserId, ct);
+
+            foreach (var (aggregate, events) in TaskListCascade.Delete(list, command, userTasks, clock.UtcNow))
+            {
+                work.Stage(aggregate, events);
+            }
+
             await work.CommitAsync(command.CommandId, command.UserId, ct);
             return CommandResult.Ok();
         }

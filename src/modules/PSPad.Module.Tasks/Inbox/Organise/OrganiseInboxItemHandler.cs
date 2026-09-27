@@ -1,4 +1,5 @@
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
 
 namespace PSPad.Module.Tasks.Inbox;
@@ -6,6 +7,7 @@ namespace PSPad.Module.Tasks.Inbox;
 public sealed class OrganiseInboxItemHandler(
     IDocumentStore<Inbox> inboxes,
     IDocumentStore<TodoTask> tasks,
+    IDocumentStore<TaskList> lists,
     IUnitOfWork work,
     IClock clock) : ICommandHandler<OrganiseInboxItem>
 {
@@ -23,6 +25,7 @@ public sealed class OrganiseInboxItemHandler(
                 existingTask,
                 new CreateTask(command.CommandId, command.UserId, command.TaskId, command.ListId, item.Text),
                 clock.UtcNow);
+            TaskList.Require(await lists.LoadAsync(command.ListId, ct), command.UserId);
             var task = existingTask ?? new TodoTask();
             task.ApplyAll(taskEvents);
 

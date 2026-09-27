@@ -1,9 +1,13 @@
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Areas;
 
 namespace PSPad.Module.Tasks.Lists;
 
-public sealed class CreateTaskListHandler(IDocumentStore<TaskList> store, IUnitOfWork work, IClock clock)
-    : ICommandHandler<CreateTaskList>
+public sealed class CreateTaskListHandler(
+    IDocumentStore<TaskList> store,
+    IDocumentStore<Area> areas,
+    IUnitOfWork work,
+    IClock clock) : ICommandHandler<CreateTaskList>
 {
     public async Task<CommandResult> HandleAsync(CreateTaskList command, CancellationToken ct)
     {
@@ -12,6 +16,7 @@ public sealed class CreateTaskListHandler(IDocumentStore<TaskList> store, IUnitO
         try
         {
             var events = TaskList.Decide(existing, command, clock.UtcNow);
+            Area.Require(await areas.LoadAsync(command.AreaId, ct), command.UserId);
             var list = existing ?? new TaskList();
             list.ApplyAll(events);
             work.Stage(list, events);
