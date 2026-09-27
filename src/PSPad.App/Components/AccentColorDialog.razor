@@ -1,0 +1,37 @@
+@using MudBlazor.Utilities
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex flex-column align-center">
+            <MudColorPicker @bind-Value="_color" PickerVariant="PickerVariant.Static"
+                            ColorPickerView="ColorPickerView.Spectrum" ShowAlpha="false"
+                            ShowModeSwitch="true" ShowPreview="true" />
+            <MudText Typo="Typo.caption" Class="mt-3">
+                Light and dark mode deepen or lighten this colour only as far as text on it needs to stay readable.
+            </MudText>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Class="pspad-accent-cancel" OnClick="@(() => Dialog.Cancel())">Cancel</MudButton>
+        <MudButton Class="pspad-accent-apply" Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="@(() => Dialog.Close(DialogResult.Ok(_color.ToString(MudColorOutputFormats.Hex))))">
+            Apply
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance Dialog { get; set; } = null!;
+
+    [Parameter] public string Initial { get; set; } = "";
+
+    MudColor _color = new(0, 0, 0, 255);
+
+    protected override void OnInitialized() => _color = new MudColor(Initial);
+
+    public void Pick(string color)
+    {
+        _color = new MudColor(color);
+        StateHasChanged();
+    }
+}

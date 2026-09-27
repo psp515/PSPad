@@ -214,11 +214,11 @@ button.pspad-heatmap-cell:focus-visible {
 }
 
 .pspad-welcome {
-    --pspad-welcome-bg: #F7F8F5;
+    --pspad-welcome-bg: #F5F5F5;
     --pspad-welcome-surface: #FFFFFF;
-    --pspad-welcome-text: #1E2A22;
-    --pspad-welcome-muted: #66736B;
-    --pspad-welcome-lines: #D5DED7;
+    --pspad-welcome-text: #212121;
+    --pspad-welcome-muted: #616161;
+    --pspad-welcome-lines: #E0E0E0;
     --pspad-welcome-primary: #4E7A5E;
     --pspad-welcome-on-primary: #FFFFFF;
 
@@ -247,13 +247,13 @@ button.pspad-heatmap-cell:focus-visible {
 }
 
 [data-theme="dark"] .pspad-welcome {
-    --pspad-welcome-bg: #141815;
-    --pspad-welcome-surface: #1C211D;
-    --pspad-welcome-text: #E4E9E4;
-    --pspad-welcome-muted: #94A199;
-    --pspad-welcome-lines: #2C332E;
+    --pspad-welcome-bg: #121212;
+    --pspad-welcome-surface: #1E1E1E;
+    --pspad-welcome-text: #EEEEEE;
+    --pspad-welcome-muted: #BDBDBD;
+    --pspad-welcome-lines: #2C2C2C;
     --pspad-welcome-primary: #8FBF9F;
-    --pspad-welcome-on-primary: #141815;
+    --pspad-welcome-on-primary: #121212;
 }
 
 .pspad-welcome-content {

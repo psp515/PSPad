@@ -12,7 +12,7 @@
 @inject ThemePreference Preference
 
 <div class="pspad-welcome">
-    <MudThemeProvider @ref="_themeProvider" Theme="@PSPadTheme.Instance" IsDarkMode="@Preference.IsDark" />
+    <MudThemeProvider @ref="_themeProvider" Theme="@Preference.Theme" IsDarkMode="@Preference.IsDark" />
 
     <div class="pspad-welcome-content">
         <header class="pspad-welcome-text">

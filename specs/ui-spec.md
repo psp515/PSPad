@@ -178,8 +178,8 @@ navigation.
 Applied on: `AreaBoard` (list cards), `GoalsPage` (goal cards, active and
 achieved separately), `Today` (overdue, today, starred, tomorrow, goals in progress,
 completed and upcoming each as their own grid), `InboxPage`, `ListPage` (open and completed separately),
-`SettingsPage` (Account, Time zone, Theme, Sync, Danger zone each their own
-card), and both skeleton components (`RowSkeleton`, `CardSkeleton`).
+`SettingsPage` (Account, Application settings, Sync, Danger zone each their
+own card), and both skeleton components (`RowSkeleton`, `CardSkeleton`).
 
 **Spacing scale.**
 
@@ -432,28 +432,54 @@ a page, e.g. `ListCard`'s and `GoalCard`'s own menus on `AreaBoard` and
 
 ## 4. Visual & theming
 
-**Palette.** Defined once in `Theme/PSPadTheme.cs`, never hardcoded as a
-hex literal in a component. Sage green as an accent on near-neutral
-grounds, not a tint across the whole interface:
+**Palette.** Defined once in `Theme/PSPadTheme.cs`, built from MudBlazor's
+Material colour constants (`Colors.Green.Darken3`, `Colors.Gray.Lighten4`, …),
+never a hex literal in a component. Grounds are Material neutrals; only the
+accent is coloured, so a user-picked accent never clashes with a tinted
+surface:
 
 | Token | Light | Dark |
 |---|---|---|
-| Primary | `#4E7A5E` | `#8FBF9F` |
-| Secondary | `#6E8F7C` | `#7FAE94` |
-| Error | `#B3261E` | `#F2A9A2` |
-| Warning | `#B26A00` | `#E0B252` |
-| Background | `#F7F8F5` | `#141815` |
-| Surface | `#FFFFFF` | `#1C211D` |
-| Drawer/Appbar background | `#EDF1EA` | `#171C18` |
-| TextPrimary | `#1E2A22` | `#E4E9E4` |
-| TextSecondary | `#66736B` | `#94A199` |
+| Primary | accent, Material 700–900 | accent, Material 200–300 |
+| Secondary | accent, one step deeper | accent, Material 100 |
+| Error | `Red.Darken2` | `Red.Lighten2` |
+| Warning | `Orange.Darken4` | `Orange.Lighten2` |
+| Success | `Green.Darken3` (never follows the accent) | `Green.Lighten2` |
+| Background | `Gray.Lighten4` `#F5F5F5` | `#121212` |
+| Surface, drawer | `#FFFFFF` | `#1E1E1E` |
+| Appbar | `#FFFFFF` | `#272727` |
+| Lines | `Gray.Darken1` | `Gray.Darken1` |
+| TextPrimary / TextSecondary | `Gray.Darken4` / `Gray.Darken2` | `Gray.Lighten3` / `Gray.Lighten1` |
 
-Theme is **System / Light / Dark**, per device, held in `localStorage` via
-`ThemePreference` — never on the `User` aggregate. It lives in
-`SettingsPage`, not the account badge or any menu (a control nested in a
-menu item is not reliably keyboard-reachable), picked from a `MudSelect`
-list — the same dropdown pattern as the time zone picker below it, not a
-button group.
+**Accent** is one of seven presets — Green (default), Teal, Blue, Indigo,
+Purple, Pink, Orange — or a **custom** colour. `PSPadTheme.For(accent)` hands
+back one cached `MudTheme` per preset; `PSPadTheme.ForCustom(hex)` derives the
+four accent shades from the picked colour by moving only its HSL lightness —
+deepened for light mode until it holds 4.5:1 on the background, lightened for
+dark mode until dark text holds 4.5:1 on it — so the hue the user picked
+survives and contrast still holds. `ThemePreference` builds the theme once per
+change and the `MudThemeProvider` takes `ThemePreference.Theme`.
+`PSPadThemeTests` checks every preset and a set of awkward custom colours
+(yellow, white, black, grey, pure primaries) in both modes: 4.5:1 for text
+(primary on every ground, text on a filled accent, drawer and appbar text),
+3:1 for lines and drawer icons. A new preset that fails these does not ship.
+
+Theme mode (**System / Light / Dark**) and accent are per device, held in
+`localStorage` (`pspad.theme`, `pspad.accent`, `pspad.accent.custom`) via
+`ThemePreference` — never on the `User` aggregate. A custom colour is kept
+after switching back to a preset, so the edit swatch reopens on it.
+
+**Application settings card.** Time zone, theme mode and accent share one
+`SettingsPage` card titled "Application settings", not the account badge or
+any menu (a control nested in a menu item is not reliably
+keyboard-reachable). Time zone and theme mode are labelled outlined fields:
+theme mode a `MudSelect`, not a button group. Accent is `AccentPicker`: a row
+of round filled `MudIconButton` swatches, one per preset (a tick on the active
+one, `aria-pressed` on each), then a last swatch with an edit icon that opens
+`AccentColorDialog` — a static `MudColorPicker` (spectrum field, hue slider,
+RGB/HSL/hex inputs via the mode switch, no alpha) with Cancel/Apply. The
+dialog is `FullScreen` below the `md` breakpoint (`IViewport`), a small
+centred dialog above it.
 
 Time zone uses `MudAutocomplete` (type-to-filter over
 `TimeZoneInfo.GetSystemTimeZones()`), not a plain `MudSelect` — a flat,
@@ -490,7 +516,7 @@ stamped on `<html>` from `localStorage["pspad.theme"]` before first paint
 the wrong theme.
 
 **Charts.** `MudChart` (bundled with MudBlazor, no extra dependency) takes
-the sage palette for free — the statistics screen's charts (daily
+the active accent palette for free — the statistics screen's charts (daily
 completions, tasks opened, outstanding-open, Inbox captures per week) are
 the example. The Consistency heatmap is not a `MudChart` — see §1.
 
@@ -518,7 +544,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/goals` | Goals |
 | `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-captures bar chart, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
-| `/settings` | Settings (account + sign-out, time zone, theme, sync status, delete account) |
+| `/settings` | Settings (account + sign-out; application settings: time zone, theme, accent; sync status; delete account) |
 | `/app-info` | version, license, docs/repo links |
 | `/search` | search results (currently unreachable from the UI) |
 | `/welcome` | public, signed-out landing screen |

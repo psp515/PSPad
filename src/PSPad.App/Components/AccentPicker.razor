@@ -1,0 +1,71 @@
+@using MudBlazor.Utilities
+@using PSPad.App.State.Viewport
+@using PSPad.App.Theme
+@inject ThemePreference Preference
+@inject IDialogService Dialogs
+@inject IViewport Viewport
+@implements IAsyncDisposable
+
+<div class="pspad-accent-picker d-flex flex-wrap gap-2" role="group" aria-label="Accent colour">
+    @foreach (var accent in PSPadTheme.Presets)
+    {
+        var selected = Preference.Accent == accent;
+        <MudIconButton @key="accent" Class="@($"pspad-accent-swatch pspad-accent-preset{(selected ? " pspad-accent-selected" : "")}")"
+                       Variant="Variant.Filled" Size="Size.Small"
+                       Icon="@(selected ? Icons.Material.Filled.Check : Icons.Material.Filled.Circle)"
+                       Style="@SwatchStyle(PSPadTheme.Swatch(accent), selected)"
+                       aria-label="@($"{accent} accent")" aria-pressed="@(selected ? "true" : "false")"
+                       OnClick="@(() => Preference.SetAccentAsync(accent))" />
+    }
+    <MudIconButton Class="@($"pspad-accent-swatch pspad-accent-custom{(Preference.Accent == Accent.Custom ? " pspad-accent-selected" : "")}")"
+                   Variant="@(Preference.CustomColor is null ? Variant.Outlined : Variant.Filled)" Size="Size.Small"
+                   Icon="@Icons.Material.Filled.Edit"
+                   Style="@(Preference.CustomColor is null ? null : SwatchStyle(Preference.CustomColor, selected: true))"
+                   aria-label="Custom accent" aria-pressed="@(Preference.Accent == Accent.Custom ? "true" : "false")"
+                   OnClick="@OpenCustomAsync" />
+</div>
+
+@code {
+    bool _isDesktop = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Preference.Changed += OnPreferenceChanged;
+        await Viewport.SubscribeAsync(isDesktop => _isDesktop = isDesktop);
+    }
+
+    // The unselected tick stays drawn in the swatch's own colour so every swatch keeps one size.
+    static string SwatchStyle(string color, bool selected) =>
+        $"background-color:{color};color:{(selected ? ColorContrast.ReadableOn(new MudColor(color)) : color)}";
+
+    async Task OpenCustomAsync()
+    {
+        var parameters = new DialogParameters<AccentColorDialog>
+        {
+            { dialog => dialog.Initial, Preference.CustomColor ?? PSPadTheme.Swatch(Preference.Accent == Accent.Custom ? Accent.Green : Preference.Accent) }
+        };
+        var options = new DialogOptions
+        {
+            FullScreen = !_isDesktop,
+            MaxWidth = MaxWidth.ExtraSmall,
+            CloseButton = true,
+            CloseOnEscapeKey = true
+        };
+
+        var dialog = await Dialogs.ShowAsync<AccentColorDialog>("Custom accent", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: string color })
+        {
+            await Preference.SetCustomAccentAsync(color);
+        }
+    }
+
+    void OnPreferenceChanged() => InvokeAsync(StateHasChanged);
+
+    public async ValueTask DisposeAsync()
+    {
+        Preference.Changed -= OnPreferenceChanged;
+        await Viewport.DisposeAsync();
+    }
+}

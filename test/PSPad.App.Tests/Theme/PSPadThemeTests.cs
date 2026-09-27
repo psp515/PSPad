@@ -8,42 +8,128 @@ namespace PSPad.App.Tests.Theme;
 [UnitTest]
 public class PSPadThemeTests
 {
-    // WCAG 1.4.11 (non-text contrast): a border/divider that conveys structure
-    // needs at least 3:1 against every surface it can sit on, not the 4.5:1
-    // body-text threshold. LinesDefault previously measured ~1.2:1 against both
-    // Surface and Background in each palette -- functionally invisible.
+    // WCAG 1.4.11 asks 3:1 of borders, dividers and icons; WCAG 1.4.3 asks 4.5:1 of text.
     const double MinimumUiContrast = 3.0;
+    const double MinimumTextContrast = 4.5;
 
-    [Fact]
-    public void LinesDefaultIsVisibleAgainstSurfaceInLightMode()
+    static readonly string[] AwkwardCustomColours =
+        ["#ffeb3b", "#0000ff", "#101010", "#f5f5f5", "#ff00ff", "#00ffff", "#808080", "#ffffff", "#000000"];
+
+    public static TheoryData<string, bool> EveryPalette()
     {
-        var palette = PSPadTheme.Instance.PaletteLight;
+        var data = new TheoryData<string, bool>();
+        foreach (var accent in PSPadTheme.Presets.Select(preset => preset.ToString()).Concat(AwkwardCustomColours))
+        {
+            data.Add(accent, false);
+            data.Add(accent, true);
+        }
+
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void LinesAreVisibleAgainstEveryGround(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
 
         Assert.True(Contrast(palette.LinesDefault, palette.Surface) >= MinimumUiContrast);
-    }
-
-    [Fact]
-    public void LinesDefaultIsVisibleAgainstBackgroundInLightMode()
-    {
-        var palette = PSPadTheme.Instance.PaletteLight;
-
         Assert.True(Contrast(palette.LinesDefault, palette.Background) >= MinimumUiContrast);
+        Assert.True(Contrast(palette.LinesDefault, palette.DrawerBackground) >= MinimumUiContrast);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void TheAccentReadsAsTextOnEveryGround(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+
+        Assert.True(Contrast(palette.Primary, palette.Surface) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.Primary, palette.Background) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.Primary, palette.DrawerBackground) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.Secondary, palette.Surface) >= MinimumTextContrast);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void TextOnAFilledAccentIsReadable(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+
+        Assert.True(Contrast(palette.PrimaryContrastText, palette.Primary) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.SecondaryContrastText, palette.Secondary) >= MinimumTextContrast);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void TheNavigationReadsClearly(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+
+        Assert.True(Contrast(palette.DrawerText, palette.DrawerBackground) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.DrawerIcon, palette.DrawerBackground) >= MinimumUiContrast);
+        Assert.True(Contrast(palette.AppbarText, palette.AppbarBackground) >= MinimumTextContrast);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void BodyTextReadsOnEveryGround(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+
+        Assert.True(Contrast(palette.TextPrimary, palette.Surface) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.TextSecondary, palette.Surface) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.TextSecondary, palette.Background) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.Error, palette.Surface) >= MinimumTextContrast);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void StatusColoursDoNotFollowTheAccent(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+        var reference = PaletteOf(nameof(Accent.Green), dark);
+
+        Assert.Equal(reference.Success.ToString(), palette.Success.ToString());
+        Assert.Equal(reference.Error.ToString(), palette.Error.ToString());
+        Assert.Equal(reference.Warning.ToString(), palette.Warning.ToString());
     }
 
     [Fact]
-    public void LinesDefaultIsVisibleAgainstSurfaceInDarkMode()
+    public void EachAccentGetsItsOwnPrimary()
     {
-        var palette = PSPadTheme.Instance.PaletteDark;
+        var primaries = PSPadTheme.Presets
+            .Select(accent => PSPadTheme.For(accent).PaletteLight.Primary.ToString())
+            .ToList();
 
-        Assert.True(Contrast(palette.LinesDefault, palette.Surface) >= MinimumUiContrast);
+        Assert.Equal(primaries.Count, primaries.Distinct().Count());
     }
 
     [Fact]
-    public void LinesDefaultIsVisibleAgainstBackgroundInDarkMode()
-    {
-        var palette = PSPadTheme.Instance.PaletteDark;
+    public void TheSameAccentHandsBackTheSameTheme() =>
+        Assert.Same(PSPadTheme.For(Accent.Blue), PSPadTheme.For(Accent.Blue));
 
-        Assert.True(Contrast(palette.LinesDefault, palette.Background) >= MinimumUiContrast);
+    [Fact]
+    public void CustomIsNotAPreset() => Assert.DoesNotContain(Accent.Custom, PSPadTheme.Presets);
+
+    [Fact]
+    public void AReadableCustomColourIsUsedAsPicked() =>
+        Assert.Equal("#1565c0", PSPadTheme.ForCustom("#1565c0").PaletteLight.Primary.ToString(MudColorOutputFormats.Hex).ToLowerInvariant());
+
+    [Fact]
+    public void ACustomColourTooPaleForLightModeIsDeepenedNotReplaced()
+    {
+        var primary = PSPadTheme.ForCustom("#ffeb3b").PaletteLight.Primary;
+        var picked = new MudColor("#ffeb3b");
+
+        Assert.NotEqual(picked.Value, primary.Value);
+        Assert.InRange(Math.Abs(primary.H - picked.H), 0, 2);
+    }
+
+    static Palette PaletteOf(string accent, bool dark)
+    {
+        var theme = Enum.TryParse<Accent>(accent, out var preset) ? PSPadTheme.For(preset) : PSPadTheme.ForCustom(accent);
+        return dark ? theme.PaletteDark : theme.PaletteLight;
     }
 
     static double Contrast(MudColor a, MudColor b)

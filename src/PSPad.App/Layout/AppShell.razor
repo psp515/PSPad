@@ -33,7 +33,7 @@
 @implements IDisposable
 @implements IAsyncDisposable
 
-<MudThemeProvider @ref="_themeProvider" Theme="@PSPadTheme.Instance" IsDarkMode="@Preference.IsDark" />
+<MudThemeProvider @ref="_themeProvider" Theme="@Preference.Theme" IsDarkMode="@Preference.IsDark" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
