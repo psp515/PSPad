@@ -41,7 +41,7 @@ else if (_list is not null)
         <MudGrid Spacing="4">
             @foreach (var task in _open)
             {
-                <MudItem xs="12" sm="6" md="4" xl="3">
+                <MudItem @key="task.Id" xs="12" sm="6" md="4" xl="3">
                     <MudPaper Outlined="true" Class="pspad-task-card">
                         <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
                                  OnOpen="@Open" />
@@ -58,7 +58,7 @@ else if (_list is not null)
                 <MudGrid Spacing="4">
                     @foreach (var task in _done)
                     {
-                        <MudItem xs="12" sm="6" md="4" xl="3">
+                        <MudItem @key="task.Id" xs="12" sm="6" md="4" xl="3">
                             <MudPaper Outlined="true" Class="pspad-task-card">
                                 <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync"
                                          OnStar="@StarAsync" OnOpen="@Open" />

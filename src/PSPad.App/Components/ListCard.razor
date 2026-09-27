@@ -29,7 +29,7 @@
 
         @foreach (var task in Open.Take(Preview))
         {
-            <TaskRow Task="@task" Today="@Today" OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
+            <TaskRow @key="task.Id" Task="@task" Today="@Today" OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
         }
 
         @if (Open.Count > Preview)

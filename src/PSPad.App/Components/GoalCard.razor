@@ -41,7 +41,7 @@
 
         @foreach (var task in Open.Take(Preview))
         {
-            <TaskRow Task="@task" Today="@Today" ListName="@NameOf(task.ListId)"
+            <TaskRow @key="task.Id" Task="@task" Today="@Today" ListName="@NameOf(task.ListId)"
                      OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
         }
 

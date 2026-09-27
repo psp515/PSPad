@@ -5,7 +5,7 @@
 <div class="pspad-steps d-flex flex-column">
     @foreach (var step in Task.Steps)
     {
-        <div class="pspad-step d-flex align-center gap-1">
+        <div @key="step.Id" class="pspad-step d-flex align-center gap-1">
             <MudCheckBox T="bool" Class="pspad-step-check" Value="@step.Checked"
                          ValueChanged="@(value => CheckAsync(step, value))" Color="Color.Primary"
                          Size="Size.Small" Disabled="@Disabled" aria-label="@step.Name" />

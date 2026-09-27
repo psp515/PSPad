@@ -40,7 +40,7 @@
             {
                 @foreach (var area in Areas.OrderBy(area => area.Position))
                 {
-                    <MudNavLink Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
+                    <MudNavLink @key="area.Id" Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
                         @area.Name
                     </MudNavLink>
                 }
