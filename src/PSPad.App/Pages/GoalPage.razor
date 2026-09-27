@@ -1,0 +1,185 @@
+@page "/goals/{GoalId:guid}"
+@attribute [Authorize]
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Goals
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Tasks
+@inject IDocumentStore<Goal> GoalStore
+@inject IDocumentStore<TodoTask> TaskStore
+@inject IDocumentStore<TaskList> ListStore
+@inject AppState State
+@inject CommandSender Sender
+@inject IDialogService Dialogs
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@if (!_loaded)
+{
+    <MudSkeleton SkeletonType="SkeletonType.Text" Width="30%" Height="40px" Class="mb-4" />
+    <RowSkeleton Count="6" />
+}
+else if (_goal is not null)
+{
+    <div class="d-flex align-center gap-1 mb-4">
+        <MudIconButton Class="pspad-back-to-goals" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary"
+                       Href="/goals" aria-label="Back to goals" />
+        <div class="d-flex flex-column">
+            <MudText Typo="Typo.h5" Color="Color.Primary">@_goal.Name</MudText>
+            @if (_goal.DueOn is { } due)
+            {
+                <MudText Typo="Typo.caption" Class="@($"pspad-goal-due {(IsOverdue ? "" : "pspad-muted")}")"
+                         Color="@(IsOverdue ? Color.Error : Color.Inherit)">@($"Due {DueDateRow.Describe(due, State.Today)}")</MudText>
+            }
+        </div>
+    </div>
+
+    <MudGrid Spacing="4">
+        @if (_open.Count == 0)
+        {
+            <MudItem xs="12" sm="6" md="4" xl="3">
+                <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="No open tasks." />
+            </MudItem>
+        }
+        @foreach (var task in _open)
+        {
+            @Card(task)
+        }
+    </MudGrid>
+
+    @if (_done.Count > 0)
+    {
+        <MudExpansionPanels Elevation="0" Outlined="true" Class="mt-4">
+            <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
+                <MudGrid Spacing="4">
+                    @foreach (var task in _done)
+                    {
+                        @Card(task)
+                    }
+                </MudGrid>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    }
+
+    <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
+        <MudTooltip Text="Edit goal">
+            <MudFabMenuItem OnClick="@EditGoal" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
+                            Size="Size.Small" UserAttributes="@EditGoalAttributes" />
+        </MudTooltip>
+        <MudTooltip Text="Delete goal">
+            <MudFabMenuItem OnClick="@DeleteAsync" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Primary"
+                            Size="Size.Small" UserAttributes="@DeleteGoalAttributes" />
+        </MudTooltip>
+    </MudFabMenu>
+}
+else
+{
+    <MudText Typo="Typo.body1">This goal is not there anymore.</MudText>
+}
+
+@code {
+    [Parameter] public Guid GoalId { get; set; }
+
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
+    bool _loaded;
+    Goal? _goal;
+    IReadOnlyList<TodoTask> _open = [];
+    IReadOnlyList<TodoTask> _done = [];
+    IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
+
+    static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
+    static readonly Dictionary<string, object> EditGoalAttributes = new() { ["aria-label"] = "Edit goal" };
+    static readonly Dictionary<string, object> DeleteGoalAttributes = new() { ["aria-label"] = "Delete goal" };
+
+    bool IsOverdue => _goal is { Status: GoalStatus.InProgress } goal && goal.DueOn < State.Today;
+
+    RenderFragment Card(TodoTask task) =>
+        @<MudItem @key="task.Id" xs="12" sm="6" md="4" xl="3">
+            <MudPaper Outlined="true" Class="pspad-task-card">
+                <TaskRow Task="@task" Today="@State.Today"
+                         ListName="@ListNameOf(task)"
+                         CreatedOn="@CreatedOn.Of(task, State.TimeZone)"
+                         OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+            </MudPaper>
+        </MudItem>;
+
+    string? ListNameOf(TodoTask task) => _listNames.TryGetValue(task.ListId, out var name) ? name : null;
+
+    protected override void OnInitialized() => Sender.Sent += OnCommandSent;
+
+    protected override async Task OnParametersSetAsync() => await ReloadAsync();
+
+    void OnCommandSent() => InvokeAsync(async () =>
+    {
+        await ReloadAsync();
+        StateHasChanged();
+    });
+
+    async Task ReloadAsync()
+    {
+        var goal = await GoalStore.LoadAsync(GoalId, CancellationToken.None);
+        _goal = goal is null || goal.Deleted ? null : goal;
+
+        var all = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var mine = all.Where(task => task.GoalId == GoalId && !task.Deleted).ToArray();
+        _open = [.. mine.Where(task => task.CompletedAt is null)];
+        _done = [.. mine.Where(task => task.CompletedAt is not null)];
+
+        var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _listNames = lists.Where(list => !list.Deleted).ToDictionary(list => list.Id, list => list.Name);
+
+        _loaded = true;
+    }
+
+    void Open(TodoTask task) => Navigation.NavigateTo($"/goals/{GoalId}?task={task.Id}");
+
+    void EditGoal() => Navigation.NavigateTo(GoalQuery.For(Navigation.Uri, GoalId));
+
+    async Task DeleteAsync()
+    {
+        if (_goal is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, $"Delete “{_goal.Name}”? Its tasks stay, without a goal." }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete goal", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new DeleteGoal(Guid.NewGuid(), State.UserId, GoalId));
+        Navigation.NavigateTo("/goals");
+    }
+
+    async Task ToggleAsync(TodoTask task)
+    {
+        if (task.IsRecurring)
+        {
+            await Sender.SendAsync(new CompleteOccurrence(
+                Guid.NewGuid(), State.UserId, task.Id, State.Today, !task.CompletedDays.Contains(State.Today)));
+        }
+        else if (task.CompletedAt is null)
+        {
+            await Sender.SendAsync(new CompleteTask(Guid.NewGuid(), State.UserId, task.Id));
+        }
+        else
+        {
+            await Sender.SendAsync(new ReopenTask(Guid.NewGuid(), State.UserId, task.Id));
+        }
+    }
+
+    async Task StarAsync(TodoTask task) =>
+        await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, task.Id, !task.Starred));
+
+    public void Dispose() => Sender.Sent -= OnCommandSent;
+}
