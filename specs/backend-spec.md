@@ -243,6 +243,13 @@ not stated there:
   already queued in an outbox are not rejected; `ReopenGoal` returns any
   closed goal to `InProgress`. `SetGoalDueDate` sets or clears an
   optional `dueOn`.
+- Deleting a container deletes its live children in the same command and
+  transaction (`adr/0042`): `DeleteArea` → its lists → their tasks;
+  `DeleteTaskList` → its tasks. Each child emits its own `TaskListDeleted` /
+  `TaskDeleted`; the list-to-tasks step is `TaskListCascade`. `CreateTask`,
+  `MoveTaskToList` and `OrganiseInboxItem` reject a missing or deleted target
+  list; `CreateTaskList` and `MoveTaskListToArea` reject a missing or deleted
+  target area.
 
 ---
 

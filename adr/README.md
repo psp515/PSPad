@@ -56,6 +56,7 @@ the old one's status line to point at the new number.
 | [0039](0039-inbox-captures-are-their-own-statistics-projection.md) | Inbox captures are their own projection, their own collection, and a per-week tally | Active (revised in place 2026-09-26 pre-merge — the running-backlog version never shipped; extends [0037](0037-statistics-owns-denormalised-records.md) to a fourth collection) | 2026-09-25 | architecture, persistence, analytics, ui |
 | [0040](0040-app-updates-are-offered-not-forced.md) | A new app version is offered with a reload prompt, never activated unasked | Active | 2026-09-26 | offline, pwa, ui |
 | [0041](0041-account-deletion-drains-projections-first.md) | Account deletion drains the domain event pump before wiping | Active (amends [0034](0034-account-deletion-bypasses-the-command-pipeline.md) and [0036](0036-domain-events-dispatched-after-commit.md)) | 2026-09-26 | identity, persistence, events, security |
+| [0042](0042-deleting-a-container-cascades-to-its-children.md) | Deleting an area or list deletes what it contains; writes into a dead container are rejected | Active | 2026-09-27 | domain, persistence, offline |
 | [0043](0043-repeat-interval-and-until-date.md) | A repeat carries an interval, and a repeating task's due date is its inclusive end | Active (amends [0007](0007-recurrence-as-template-and-occurrences.md)) | 2026-09-28 | domain, recurrence, today, ui |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
