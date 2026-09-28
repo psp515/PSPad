@@ -162,6 +162,45 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnOpenTaskShowsAMarkdownFieldWithItsDescription()
+    {
+        var task = NewTask("Buy milk");
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDescription(Guid.NewGuid(), User, task.Id, "2% please"), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Contains("2% please", panel.Markup);
+    }
+
+    [Fact]
+    public async Task SavingTheDescriptionSendsSetTaskDescription()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        panel.Find(".pspad-markdown-placeholder").Click();
+        panel.Find("textarea").Change("Whole milk");
+        panel.Find(".pspad-markdown-save").Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal("Whole milk", reloaded!.Description);
+    }
+
+    [Fact]
+    public void ANewTaskDraftShowsNoDescriptionField()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)Guid.NewGuid()));
+
+        Assert.Empty(panel.FindAll(".pspad-markdown-placeholder"));
+        Assert.Empty(panel.FindAll(".pspad-markdown-view"));
+    }
+
+    [Fact]
     public void ANewTaskOffersAddButNoDeleteAndWaitsForAName()
     {
         AppTestHost.Arrange(this, User, Today);

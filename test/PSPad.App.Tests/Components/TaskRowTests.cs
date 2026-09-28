@@ -133,6 +133,26 @@ public class TaskRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ATaskWithADescriptionShowsTheNotesIcon()
+    {
+        Arrange();
+
+        var row = Render(Described(Task("Buy milk"), "2% please"));
+
+        Assert.Contains("pspad-has-description", row.Markup);
+    }
+
+    [Fact]
+    public void ATaskWithNoDescriptionShowsNoNotesIcon()
+    {
+        Arrange();
+
+        var row = Render(Task("Buy milk"));
+
+        Assert.DoesNotContain("pspad-has-description", row.Markup);
+    }
+
+    [Fact]
     public void TheListNameShowsOnlyWhenGiven()
     {
         Arrange();
@@ -217,6 +237,13 @@ public class TaskRowTests : Bunit.TestContext
             task,
             new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(from)),
             DateTimeOffset.UnixEpoch));
+        return task;
+    }
+
+    static TodoTask Described(TodoTask task, string description)
+    {
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDescription(Guid.NewGuid(), User, task.Id, description), DateTimeOffset.UnixEpoch));
         return task;
     }
 
