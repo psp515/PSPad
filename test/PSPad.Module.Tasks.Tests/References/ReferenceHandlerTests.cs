@@ -1,4 +1,5 @@
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
@@ -91,6 +92,84 @@ public class ReferenceHandlerTests
 
         Assert.False(result.Accepted);
         Assert.False(_work.Committed);
+    }
+
+    [Fact]
+    public async Task AnItemCannotBeCreatedInADeletedList()
+    {
+        var list = SeedReferenceList();
+        list.ApplyAll(TaskList.Decide(list, new DeleteTaskList(Guid.NewGuid(), User, list.Id), Now));
+
+        var result = await new CreateReferenceItemHandler(_items, _lists, _work, _clock).HandleAsync(
+            new CreateReferenceItem(Guid.NewGuid(), User, Guid.NewGuid(), list.Id, "PLA Black", 0), CancellationToken.None);
+
+        Assert.False(result.Accepted);
+        Assert.False(_work.Committed);
+    }
+
+    [Fact]
+    public async Task AnItemMovesOnlyBetweenReferenceLists()
+    {
+        var origin = SeedReferenceList();
+        var item = SeedItem(origin.Id);
+        var taskList = SeedTaskList();
+
+        var rejected = await new MoveReferenceItemToListHandler(_items, _lists, _work, _clock).HandleAsync(
+            new MoveReferenceItemToList(Guid.NewGuid(), User, item.Id, taskList.Id), CancellationToken.None);
+
+        Assert.False(rejected.Accepted);
+
+        var destination = SeedReferenceList();
+
+        var accepted = await new MoveReferenceItemToListHandler(_items, _lists, _work, _clock).HandleAsync(
+            new MoveReferenceItemToList(Guid.NewGuid(), User, item.Id, destination.Id), CancellationToken.None);
+
+        Assert.True(accepted.Accepted);
+        Assert.Equal(destination.Id, (await _items.LoadAsync(item.Id, CancellationToken.None))!.ListId);
+    }
+
+    [Fact]
+    public async Task DeletingAReferenceListDeletesItsItemsInOneCommit()
+    {
+        var list = SeedReferenceList();
+        var first = SeedItem(list.Id);
+        var second = SeedItem(list.Id);
+        var other = SeedReferenceList();
+        var elsewhere = SeedItem(other.Id);
+
+        var result = await new DeleteTaskListHandler(_lists, _tasks, _items, _work, _clock).HandleAsync(
+            new DeleteTaskList(Guid.NewGuid(), User, list.Id), CancellationToken.None);
+
+        Assert.True(result.Accepted);
+        Assert.True(_work.Committed);
+        Assert.True(first.Deleted);
+        Assert.True(second.Deleted);
+        Assert.False(elsewhere.Deleted);
+        Assert.Equal(
+            new[] { first.Id, second.Id }.Order(),
+            _work.Events.OfType<ReferenceItemDeleted>().Select(deleted => deleted.AggregateId).Order());
+    }
+
+    [Fact]
+    public async Task DeletingAnAreaDeletesItsListsItems()
+    {
+        var area = new Area();
+        area.Apply(new AreaCreated(Guid.NewGuid(), User, Now, "Workshop", 0));
+        var areas = new FakeDocumentStore<Area>();
+        areas.Seed(area);
+
+        var list = new TaskList();
+        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, area.Id, "Filaments", 0, ListKind.Reference));
+        _lists.Seed(list);
+        var item = SeedItem(list.Id);
+
+        var result = await new DeleteAreaHandler(areas, _lists, _tasks, _items, _work, _clock).HandleAsync(
+            new DeleteArea(Guid.NewGuid(), User, area.Id), CancellationToken.None);
+
+        Assert.True(result.Accepted);
+        Assert.True(_work.Committed);
+        Assert.True(item.Deleted);
+        Assert.Single(_work.Events.OfType<ReferenceItemDeleted>());
     }
 
     [Fact]

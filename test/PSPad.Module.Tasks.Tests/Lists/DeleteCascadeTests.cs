@@ -1,6 +1,7 @@
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.Module.Tasks.Tests.Fakes;
 using PSPad.TestInfrastructure;
@@ -16,6 +17,7 @@ public class DeleteCascadeTests
     readonly FakeDocumentStore<Area> _areas = new();
     readonly FakeDocumentStore<TaskList> _lists = new();
     readonly FakeDocumentStore<TodoTask> _tasks = new();
+    readonly FakeDocumentStore<ReferenceItem> _items = new();
     readonly FakeUnitOfWork _work = new();
 
     [Fact]
@@ -136,7 +138,7 @@ public class DeleteCascadeTests
         var area = SeedArea();
         var list = SeedList(area.Id);
 
-        var result = await new DeleteAreaHandler(_areas, _lists, _tasks, _work, new FixedClock(Now))
+        var result = await new DeleteAreaHandler(_areas, _lists, _tasks, _items, _work, new FixedClock(Now))
             .HandleAsync(new DeleteArea(Guid.NewGuid(), Guid.NewGuid(), area.Id), CancellationToken.None);
 
         Assert.False(result.Accepted);
@@ -145,11 +147,11 @@ public class DeleteCascadeTests
     }
 
     Task<CommandResult> DeleteList(Guid listId) =>
-        new DeleteTaskListHandler(_lists, _tasks, _work, new FixedClock(Now))
+        new DeleteTaskListHandler(_lists, _tasks, _items, _work, new FixedClock(Now))
             .HandleAsync(new DeleteTaskList(Guid.NewGuid(), User, listId), CancellationToken.None);
 
     Task<CommandResult> DeleteArea(Guid areaId) =>
-        new DeleteAreaHandler(_areas, _lists, _tasks, _work, new FixedClock(Now))
+        new DeleteAreaHandler(_areas, _lists, _tasks, _items, _work, new FixedClock(Now))
             .HandleAsync(new DeleteArea(Guid.NewGuid(), User, areaId), CancellationToken.None);
 
     Area SeedArea()

@@ -1,5 +1,6 @@
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 
 namespace PSPad.Module.Tasks.Areas;
@@ -8,6 +9,7 @@ public sealed class DeleteAreaHandler(
     IDocumentStore<Area> store,
     IDocumentStore<TaskList> lists,
     IDocumentStore<TodoTask> tasks,
+    IDocumentStore<ReferenceItem> items,
     IUnitOfWork work,
     IClock clock) : ICommandHandler<DeleteArea>
 {
@@ -29,12 +31,13 @@ public sealed class DeleteAreaHandler(
             if (doomedLists.Length > 0)
             {
                 var userTasks = await tasks.LoadAllAsync(command.UserId, ct);
+                var userItems = await items.LoadAllAsync(command.UserId, ct);
 
                 foreach (var list in doomedLists)
                 {
                     var deleteList = new DeleteTaskList(command.CommandId, command.UserId, list.Id);
 
-                    foreach (var (aggregate, listEvents) in TaskListCascade.Delete(list, deleteList, userTasks, at))
+                    foreach (var (aggregate, listEvents) in TaskListCascade.Delete(list, deleteList, userTasks, userItems, at))
                     {
                         work.Stage(aggregate, listEvents);
                     }
