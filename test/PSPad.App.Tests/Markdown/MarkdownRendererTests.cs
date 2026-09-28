@@ -88,4 +88,60 @@ public class MarkdownRendererTests
         Assert.DoesNotContain("src=\"javascript", html, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("src=\"data", html, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void UnsafeLinkTextIsNotDuplicated() =>
+        Assert.Contains("<p>click</p>", MarkdownRenderer.ToHtml("[click](javascript:alert(1))"));
+
+    [Fact]
+    public void UnsafeLinkKeepsItsFormattingWithoutDuplication()
+    {
+        var html = MarkdownRenderer.ToHtml("[**bold** `code`](javascript:alert(1))");
+
+        Assert.Contains("<p><strong>bold</strong> <code>code</code></p>", html);
+    }
+
+    [Fact]
+    public void UnsafeImageShowsItsAltTextOnce()
+    {
+        var html = MarkdownRenderer.ToHtml("![alt text](javascript:alert(1))");
+
+        Assert.Contains("<p>alt text</p>", html);
+    }
+
+    [Fact]
+    public void RelativeLinkTextIsNotDuplicated() =>
+        Assert.Contains("<p>x</p>", MarkdownRenderer.ToHtml("[x](/lists/1)"));
+
+    [Fact]
+    public void SafeAngleAutolinksOpenInANewTab()
+    {
+        var html = MarkdownRenderer.ToHtml("<https://example.com>");
+
+        Assert.Contains("href=\"https://example.com\"", html);
+        Assert.Contains("target=\"_blank\"", html);
+        Assert.Contains("noopener", html);
+    }
+
+    [Fact]
+    public void SafeEmailAutolinksOpenInANewTab()
+    {
+        var html = MarkdownRenderer.ToHtml("<a@b.c>");
+
+        Assert.Contains("href=\"mailto:a@b.c\"", html);
+        Assert.Contains("target=\"_blank\"", html);
+        Assert.Contains("noopener", html);
+    }
+
+    [Fact]
+    public void UnsafeAngleAutolinksBecomeText() =>
+        Assert.DoesNotContain("href=\"javascript", MarkdownRenderer.ToHtml("<javascript:alert(1)>"), StringComparison.OrdinalIgnoreCase);
+
+    [Fact]
+    public void ImagesRejectMailtoScheme()
+    {
+        var html = MarkdownRenderer.ToHtml("![i](mailto:a@b.c)");
+
+        Assert.DoesNotContain("src=\"mailto", html, StringComparison.OrdinalIgnoreCase);
+    }
 }

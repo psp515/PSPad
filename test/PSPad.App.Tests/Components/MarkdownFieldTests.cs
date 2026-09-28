@@ -84,8 +84,52 @@ public class MarkdownFieldTests : Bunit.TestContext
         Arrange();
 
         var field = Render("## Hi", readOnly: true);
-
         Assert.Empty(field.FindAll(".pspad-markdown-edit"));
+
+        var blank = Render("", readOnly: true);
+        blank.Find(".pspad-markdown-placeholder").Click();
+        Assert.Empty(blank.FindAll("textarea"));
+    }
+
+    [Fact]
+    public void DisabledOffersNoEdit()
+    {
+        Arrange();
+
+        var field = Render("## Hi", disabled: true);
+        Assert.Empty(field.FindAll(".pspad-markdown-edit"));
+
+        var blank = Render("", disabled: true);
+        blank.Find(".pspad-markdown-placeholder").Click();
+        Assert.Empty(blank.FindAll("textarea"));
+    }
+
+    [Fact]
+    public void AThrowingSaveStaysInEditKeepingTheDraft()
+    {
+        Arrange();
+        var field = Render("## Hi", onSave: _ => throw new InvalidOperationException("boom"));
+
+        field.Find(".pspad-markdown-edit").Click();
+        field.Find("textarea").Change("## Bye");
+        field.Find(".pspad-markdown-save").Click();
+
+        Assert.Equal("## Bye", field.Find("textarea").TextContent);
+    }
+
+    [Fact]
+    public void SavingDisablesTheSaveButtonWhileInFlight()
+    {
+        Arrange();
+        var gate = new TaskCompletionSource();
+        var field = Render("## Hi", onSave: async _ => await gate.Task);
+
+        field.Find(".pspad-markdown-edit").Click();
+        field.Find(".pspad-markdown-save").Click();
+
+        Assert.True(field.Find(".pspad-markdown-save").HasAttribute("disabled"));
+
+        gate.SetResult();
     }
 
     [Fact]

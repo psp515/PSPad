@@ -1,20 +1,22 @@
 @using PSPad.App.Markdown
+@inject ILogger<MarkdownField> Logger
 
 @if (_editing)
 {
     <MudTextField T="string" Lines="8" Sizing="InputSizing.Auto" Variant="Variant.Outlined" Class="pspad-markdown-input"
                   @bind-Value="_draft" Disabled="@Disabled" />
     <div class="d-flex gap-2 mt-1">
-        <MudButton Class="pspad-markdown-save" Color="Color.Primary" OnClick="@SaveAsync">Save</MudButton>
-        <MudButton Class="pspad-markdown-cancel" OnClick="@Cancel">Cancel</MudButton>
+        <MudButton Class="pspad-markdown-save" Color="Color.Primary" Disabled="@(_saving || Disabled)"
+                   OnClick="@SaveAsync">Save</MudButton>
+        <MudButton Class="pspad-markdown-cancel" Disabled="@_saving" OnClick="@Cancel">Cancel</MudButton>
     </div>
 }
 else if (string.IsNullOrWhiteSpace(Value))
 {
-    <MudText Color="Color.Secondary" Class="pspad-markdown-placeholder" @onclick="@BeginEdit"
-             Style="@(CanEdit ? "cursor:pointer" : null)">
+    <MudButton Variant="Variant.Text" Color="Color.Secondary" Class="pspad-markdown-placeholder"
+               Disabled="@(!CanEdit)" OnClick="@BeginEdit">
         @Placeholder
-    </MudText>
+    </MudButton>
 }
 else
 {
@@ -42,6 +44,7 @@ else
     [Parameter] public string Placeholder { get; set; } = "Add a description";
 
     bool _editing;
+    bool _saving;
     string _draft = "";
 
     bool CanEdit => !ReadOnly && !Disabled;
@@ -61,11 +64,28 @@ else
 
     async System.Threading.Tasks.Task SaveAsync()
     {
-        if (OnSave is not null)
+        if (_saving)
         {
-            await OnSave(_draft);
+            return;
         }
 
-        _editing = false;
+        _saving = true;
+        try
+        {
+            if (OnSave is not null)
+            {
+                await OnSave(_draft);
+            }
+
+            _editing = false;
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning("MarkdownField save failed: {Reason}", exception.Message);
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 }
