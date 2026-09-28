@@ -1,0 +1,71 @@
+@using PSPad.App.Markdown
+
+@if (_editing)
+{
+    <MudTextField T="string" Lines="8" Sizing="InputSizing.Auto" Variant="Variant.Outlined" Class="pspad-markdown-input"
+                  @bind-Value="_draft" Disabled="@Disabled" />
+    <div class="d-flex gap-2 mt-1">
+        <MudButton Class="pspad-markdown-save" Color="Color.Primary" OnClick="@SaveAsync">Save</MudButton>
+        <MudButton Class="pspad-markdown-cancel" OnClick="@Cancel">Cancel</MudButton>
+    </div>
+}
+else if (string.IsNullOrWhiteSpace(Value))
+{
+    <MudText Color="Color.Secondary" Class="pspad-markdown-placeholder" @onclick="@BeginEdit"
+             Style="@(CanEdit ? "cursor:pointer" : null)">
+        @Placeholder
+    </MudText>
+}
+else
+{
+    <MudPaper Outlined="true" Class="pa-3 pspad-markdown-view">
+        <div class="d-flex justify-space-between align-start">
+            <div class="flex-grow-1">@((MarkupString)MarkdownRenderer.ToHtml(Value))</div>
+            @if (CanEdit)
+            {
+                <MudIconButton Icon="@Icons.Material.Outlined.Edit" Class="pspad-markdown-edit" Size="Size.Small"
+                               OnClick="@BeginEdit" />
+            }
+        </div>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public string Value { get; set; } = "";
+
+    [Parameter] public Func<string, System.Threading.Tasks.Task>? OnSave { get; set; }
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string Placeholder { get; set; } = "Add a description";
+
+    bool _editing;
+    string _draft = "";
+
+    bool CanEdit => !ReadOnly && !Disabled;
+
+    void BeginEdit()
+    {
+        if (!CanEdit)
+        {
+            return;
+        }
+
+        _draft = Value;
+        _editing = true;
+    }
+
+    void Cancel() => _editing = false;
+
+    async System.Threading.Tasks.Task SaveAsync()
+    {
+        if (OnSave is not null)
+        {
+            await OnSave(_draft);
+        }
+
+        _editing = false;
+    }
+}
