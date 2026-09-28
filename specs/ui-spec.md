@@ -167,9 +167,8 @@ read.
 </MudGrid>
 ```
 
-One column on a phone, two on a tablet, three inside the app's
-`MaxWidth.Large` container, four once the viewport passes MudBlazor's `xl`
-breakpoint (1920px). `sm`/`md`/`xl` (600px/960px/1920px) match
+One column on a phone, two on a tablet, three from `md`, four once the
+viewport passes MudBlazor's `xl` breakpoint (1920px). `sm`/`md`/`xl` (600px/960px/1920px) match
 `BrowserViewport`'s own `Breakpoint.MdAndUp` split used for the sidebar, so
 the grid and the shell agree on where "wide enough" starts. Row-flow, not
 column-flow — DOM order stays reading order for keyboard and screen-reader
@@ -191,8 +190,12 @@ own card), and both skeleton components (`RowSkeleton`, `CardSkeleton`).
 | Space below a page title | `mb-4` |
 | Space between stacked sections | `mt-4` / `mb-4` |
 
-**Containers.** Page content sits in the app's `MaxWidth.Large` container
-(set once in `AppShell`) — individual pages never set their own max width.
+**Containers.** Page content sits in the app's full-width
+(`MaxWidth.False`) container, set once in `AppShell`, so it starts at the
+sidebar's edge and uses the whole window instead of a centred column —
+individual pages never set their own max width. The container
+(`pspad-content`) carries 96px of bottom padding, the FAB's height plus its
+inset, so the FAB never covers the last row.
 
 **Sidebar breakpoint.** The sidebar is permanent at `md`+ (≥960px) and a
 temporary drawer behind a hamburger below it, using MudBlazor's display
@@ -263,7 +266,11 @@ same panel in its new-task mode, addressed as `?task=new&list={listId}`
 
 **Detail panels share one shell.** `Components/DetailPanel.razor` is the
 only right-anchored detail drawer: 360px from `md` up, full width below it.
-Its header row holds an X close button top-left, a title (`Typo.h5` from
+Below `md` the drawer's height and top follow `window.visualViewport`
+(the `--pspad-visible-height`/`--pspad-visible-top` variables set in
+`index.html`, with `interactive-widget=resizes-content` on the viewport
+meta), so the on-screen keyboard shrinks the panel instead of covering its
+footer — Add/Save stays reachable while typing. Its header row holds an X close button top-left, a title (`Typo.h5` from
 `md` up, `Typo.h6` below) and a `HeaderActions` slot on the right for
 toggles such as the star; the labelled name field sits under it (`Header`
 slot), then scrolling content, then a footer pinned to the bottom of the
@@ -310,7 +317,7 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    Room for later task fields (note, reminders) goes under the rows.
 5. Footer — "Created …" on the left, a red trash `MudIconButton` on the
    right that asks via `ConfirmDialog` before deleting. In Add the footer
-   holds only **Add task**.
+   holds only **Add task**, and Enter in the name field adds too.
 
 **Area and goal detail use the same shell.** `Layout/AreaDetailPanel.razor`
 is addressed as `?area=new` (sidebar **+ New area**) or `?area={areaId}`
@@ -343,7 +350,17 @@ the two closing statuses.
   **Delete goal** sits on the right and asks via `ConfirmDialog` first.
   Deleting an area goes home; deleting a goal closes the panel.
 
-Areas and goals are never created or renamed through `NameDialog`.
+**New lists use the same shell.** `Layout/ListDetailPanel.razor` is
+addressed as `?list=new&inarea={areaId}` (`ListQuery.ForNewList`) from the
+area's **New list** FAB item or its empty state — full screen below `md`, a
+side panel from `md` up. It holds only an outlined **Name** field under a
+`New list · Area` title, with **Add list** at the bottom left; Enter also
+adds. The new list takes the next position in its area and the panel
+closes, leaving the area board. Renaming a list still goes through
+`NameDialog`.
+
+Areas and goals are never created or renamed through `NameDialog`, and
+lists are never created through it.
 
 **Inbox items use the same shell.** `Layout/InboxItemPanel.razor` is
 addressed as `?inbox=new` (the Inbox FAB or its empty state) or

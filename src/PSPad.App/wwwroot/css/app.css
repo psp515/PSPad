@@ -184,6 +184,22 @@ button.pspad-heatmap-cell:focus-visible {
     z-index: 1200;
 }
 
+/* The FAB floats over the page, so the last row of content needs the FAB's height
+   (56px) plus its 24px inset of room below it, or the FAB covers it. */
+.pspad-content {
+    padding-bottom: 96px;
+}
+
+/* A phone's on-screen keyboard covers the bottom of the screen without shrinking the
+   layout viewport, so a drawer sized to it hides its own Add/Save footer under the keys.
+   --pspad-visible-* track window.visualViewport (index.html). */
+@media (max-width: 959.98px) {
+    .pspad-detail-panel.mud-drawer {
+        top: var(--pspad-visible-top, 0px) !important;
+        height: var(--pspad-visible-height, 100dvh) !important;
+    }
+}
+
 .pspad-brand-loader {
     display: flex;
     align-items: center;

@@ -1,0 +1,76 @@
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Ordering
+@inject IDocumentStore<Area> Areas
+@inject IDocumentStore<TaskList> Lists
+@inject AppState State
+@inject CommandSender Sender
+
+<DetailPanel Open="@(NewInArea is not null)" Title="@Title" OnClose="@OnClose"
+             OnSave="@SaveCallback" SaveText="Add list" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
+             Disabled="@Disabled">
+    <div class="pa-4">
+        <MudTextField T="string" Class="pspad-list-name-field" Label="Name" Variant="Variant.Outlined"
+                      @bind-Value="_draftName" Immediate="true" AutoFocus="true" Disabled="@Disabled"
+                      OnKeyDown="@AddOnEnterAsync" />
+    </div>
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? NewInArea { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    string _draftName = "";
+    string _areaName = "";
+
+    string Title => _areaName.Length == 0 ? "New list" : $"New list · {_areaName}";
+
+    EventCallback SaveCallback => NewInArea is not null ? EventCallback.Factory.Create(this, CreateAsync) : default;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (NewInArea is null)
+        {
+            _draftName = "";
+            _areaName = "";
+            return;
+        }
+
+        var area = await Areas.LoadAsync(NewInArea.Value, CancellationToken.None);
+        _areaName = area?.Name ?? "";
+    }
+
+    async Task AddOnEnterAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await CreateAsync();
+        }
+    }
+
+    async Task CreateAsync()
+    {
+        var name = _draftName.Trim();
+
+        if (Disabled || NewInArea is not { } areaId || name.Length == 0)
+        {
+            return;
+        }
+
+        var siblings = (await Lists.LoadAllAsync(State.UserId, CancellationToken.None))
+            .Where(list => !list.Deleted && list.AreaId == areaId);
+        await Sender.SendAsync(new CreateTaskList(
+            Guid.NewGuid(), State.UserId, Guid.NewGuid(), areaId, name,
+            Positions.Next(siblings.Select(list => list.Position))));
+
+        _draftName = "";
+        await OnClose.InvokeAsync();
+    }
+}
