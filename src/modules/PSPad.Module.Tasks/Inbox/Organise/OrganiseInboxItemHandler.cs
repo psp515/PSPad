@@ -25,7 +25,7 @@ public sealed class OrganiseInboxItemHandler(
                 existingTask,
                 new CreateTask(command.CommandId, command.UserId, command.TaskId, command.ListId, item.Text),
                 clock.UtcNow);
-            TaskList.Require(await lists.LoadAsync(command.ListId, ct), command.UserId);
+            TaskList.RequireAcceptsTasks(await lists.LoadAsync(command.ListId, ct), command.UserId);
             var task = existingTask ?? new TodoTask();
             task.ApplyAll(taskEvents);
 

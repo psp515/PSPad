@@ -18,7 +18,7 @@ public sealed class MoveTaskToListHandler(
             var events = TodoTask.Decide(task, command, clock.UtcNow);
             if (events.Count > 0)
             {
-                TaskList.Require(await lists.LoadAsync(command.ListId, ct), command.UserId);
+                TaskList.RequireAcceptsTasks(await lists.LoadAsync(command.ListId, ct), command.UserId);
             }
 
             task!.ApplyAll(events);
