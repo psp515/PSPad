@@ -24,6 +24,7 @@
 @inject NavigationManager Navigation
 @inject IViewport Viewport
 @inject ILocalSessionStore Sessions
+@inject LocalAuthenticationStateProvider Authentication
 @inject IClock Clock
 @inject ServerReachability Reachability
 @inject IConnectivity Connectivity
@@ -68,6 +69,11 @@
                 <CascadingValue Value="@Coordinator.Revision" Name="SyncRevision">
                     @Body
                 </CascadingValue>
+
+                @if (_signedIn)
+                {
+                    <BootSplashRelease />
+                }
             }
             else
             {
@@ -87,6 +93,7 @@
     MudThemeProvider? _themeProvider;
     bool _themeReady;
     bool _ready;
+    bool _signedIn;
     bool _drawerOpen;
     bool _isDesktop = true;
     string _email = "";
@@ -118,11 +125,12 @@
 
         await Viewport.SubscribeAsync(OnDesktopChanged);
 
-        var session = await SessionOrNullAsync();
+        var session = await Authentication.SessionAsync();
         var nothingLocalYet = false;
 
         if (session is not null)
         {
+            _signedIn = true;
             _displayName = session.DisplayName;
             _email = session.Email;
             State.UserId = session.UserId;
@@ -147,13 +155,14 @@
         }
 
         _ready = true;
+        ReadOpenPanels();
+        // Only the first await in this method renders; a network that never answers must not own that one.
+        StateHasChanged();
 
         if (session is not null)
         {
             await RefreshAccountAsync();
         }
-
-        ReadOpenPanels();
     }
 
     async Task<bool> TakeOwnershipAndReportEmptyAsync(Guid userId)

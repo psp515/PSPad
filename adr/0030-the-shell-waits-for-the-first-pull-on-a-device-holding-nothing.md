@@ -2,7 +2,7 @@
 title: The shell waits for the first pull on a device holding nothing for this user
 tags: [ui, sync, offline, identity]
 date: 2026-09-23
-status: Active (amends ADR-0029; mechanism corrected by ADR-0031)
+status: Active (amends ADR-0029; mechanism corrected by ADR-0031; splash hand-off amended by ADR-0044)
 ---
 
 # ADR-0030: The shell waits for the first pull on a device holding nothing for this user

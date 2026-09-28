@@ -640,8 +640,11 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 **Signed-out visitors land on `/welcome`**, not a bare login redirect.
 Sign-out ends the Keycloak session directly rather than only clearing local
 state. The boot splash is held — no application chrome renders — until the
-client has decided whether it is opening with a local session or sending
-the user to sign in; see `specs/backend-spec.md` §6 for the decision
+first screen is ready to draw: the signed-in shell once its data is loaded,
+or the welcome and sign-in screens. Each of those renders
+`Components/BootSplashRelease`, which tears the splash down; a new layout
+must render it too, or the splash covers it until `index.html`'s 20-second
+fallback (ADR-0044). See `specs/backend-spec.md` §6 for the session decision
 itself.
 
 **Never build a second settings surface.** Account-level config (time zone,

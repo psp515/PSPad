@@ -44,6 +44,32 @@ public class LocalAuthenticationStateProviderTests
     }
 
     [Fact]
+    public async Task ItTrustsASessionItWasHandedWithoutReadingTheStoreAgain()
+    {
+        var sessions = new InMemoryLocalSessionStore();
+        var provider = new LocalAuthenticationStateProvider(sessions);
+
+        provider.Adopt(Stored);
+
+        Assert.True((await provider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated);
+        Assert.Same(Stored, await provider.SessionAsync());
+        Assert.Equal(0, sessions.Loads);
+    }
+
+    [Fact]
+    public async Task ItReadsTheStoreOnceForEveryoneWhoAsks()
+    {
+        var sessions = new InMemoryLocalSessionStore(Stored);
+        var provider = new LocalAuthenticationStateProvider(sessions);
+
+        await provider.GetAuthenticationStateAsync();
+        var session = await provider.SessionAsync();
+
+        Assert.Same(Stored, session);
+        Assert.Equal(1, sessions.Loads);
+    }
+
+    [Fact]
     public async Task ItPublishesSignIn()
     {
         var provider = new LocalAuthenticationStateProvider(new InMemoryLocalSessionStore());

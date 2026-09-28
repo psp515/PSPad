@@ -1,0 +1,22 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime Js
+@inject ILogger<BootSplashRelease> Logger
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            await Js.InvokeVoidAsync("pspadBoot.done");
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning("Boot splash teardown failed: {Reason}", exception.Message);
+        }
+    }
+}

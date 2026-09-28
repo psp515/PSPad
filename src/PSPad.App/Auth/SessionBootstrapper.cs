@@ -3,7 +3,8 @@ using PSPad.App.State.Replica;
 
 namespace PSPad.App.Auth;
 
-public sealed class SessionBootstrapper(ILocalSessionStore sessions, IReplica replica, IClock clock)
+public sealed class SessionBootstrapper(
+    ILocalSessionStore sessions, IReplica replica, IClock clock, LocalAuthenticationStateProvider authentication)
 {
     public static readonly TimeSpan TrustWindow = TimeSpan.FromDays(7);
 
@@ -16,7 +17,9 @@ public sealed class SessionBootstrapper(ILocalSessionStore sessions, IReplica re
         try
         {
             // A boot that fails is recoverable; a boot that hangs on stalled interop is not.
-            return await DecideAsync().WaitAsync(timeout);
+            var (startup, session) = await DecideAsync().WaitAsync(timeout);
+            authentication.Adopt(session);
+            return startup;
         }
         catch (TimeoutException)
         {
@@ -24,7 +27,7 @@ public sealed class SessionBootstrapper(ILocalSessionStore sessions, IReplica re
         }
     }
 
-    async Task<SessionStartup> DecideAsync()
+    async Task<(SessionStartup, LocalSession?)> DecideAsync()
     {
         LocalSession? session;
         try
@@ -33,12 +36,12 @@ public sealed class SessionBootstrapper(ILocalSessionStore sessions, IReplica re
         }
         catch (Exception)
         {
-            return SessionStartup.NoSession;
+            return (SessionStartup.NoSession, null);
         }
 
         if (session is null)
         {
-            return SessionStartup.NoSession;
+            return (SessionStartup.NoSession, null);
         }
 
         if (clock.UtcNow - session.LastServerContactUtc > TrustWindow)
@@ -53,9 +56,9 @@ public sealed class SessionBootstrapper(ILocalSessionStore sessions, IReplica re
             {
             }
 
-            return SessionStartup.NoSession;
+            return (SessionStartup.NoSession, null);
         }
 
-        return SessionStartup.Ready;
+        return (SessionStartup.Ready, session);
     }
 }

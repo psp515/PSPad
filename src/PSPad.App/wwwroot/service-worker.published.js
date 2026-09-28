@@ -44,22 +44,27 @@ async function onActivate(event) {
         .map(key => caches.delete(key)));
 }
 
-async function networkFirst(request) {
+async function staleWhileRevalidate(event) {
     const cache = await caches.open(cacheName);
-    try {
-        const response = await fetch(request, { cache: 'no-cache' });
+    const cached = await cache.match(event.request);
+    const refreshed = fetch(event.request, { cache: 'no-cache' }).then(async response => {
         if (response.ok) {
-            await cache.put(request, response.clone());
+            await cache.put(event.request, response.clone());
         }
         return response;
-    } catch {
-        return await cache.match(request) ?? new Response('', { status: 503, statusText: 'Service Unavailable' });
+    });
+
+    if (cached) {
+        event.waitUntil(refreshed.catch(() => { }));
+        return cached;
     }
+
+    return refreshed.catch(() => new Response('', { status: 503, statusText: 'Service Unavailable' }));
 }
 
 async function onFetch(event) {
     if (event.request.method === 'GET' && runtimeConfig.test(new URL(event.request.url).pathname)) {
-        return networkFirst(event.request);
+        return staleWhileRevalidate(event);
     }
 
     let cachedResponse = null;

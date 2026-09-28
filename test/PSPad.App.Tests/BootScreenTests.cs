@@ -51,10 +51,16 @@ public class BootScreenTests
     }
 
     [Fact]
-    public void TheClientCallsThatTeardownRatherThanImportingAModule()
+    public void TheClientLeavesTheTeardownToTheFirstScreenRatherThanTheBoot()
     {
-        Assert.Contains("\"pspadBoot.done\"", Program);
+        Assert.DoesNotContain("pspadBoot.done", Program);
         Assert.DoesNotContain("boot.js", Program);
+    }
+
+    [Fact]
+    public void TheSplashReleasesItselfWhenNoScreenEverClaimsIt()
+    {
+        Assert.Contains("setTimeout(window.pspadBoot.done", Markup);
     }
 
     static string PathToProgram() => Path.Combine(AppRoot(), "Program.cs");
