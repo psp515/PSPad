@@ -73,7 +73,9 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
 
         var results = await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct);
 
-        Assert.False(results![2].Accepted);
+        Assert.True(results![0].Accepted, results[0].Rejection);
+        Assert.True(results[1].Accepted, results[1].Rejection);
+        Assert.False(results[2].Accepted);
         Assert.NotNull(results[2].Rejection);
     }
 
@@ -101,7 +103,11 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
 
         var results = await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct);
 
-        Assert.False(results![4].Accepted);
+        Assert.True(results![0].Accepted, results[0].Rejection);
+        Assert.True(results[1].Accepted, results[1].Rejection);
+        Assert.True(results[2].Accepted, results[2].Rejection);
+        Assert.True(results[3].Accepted, results[3].Rejection);
+        Assert.False(results[4].Accepted);
         Assert.NotNull(results[4].Rejection);
     }
 
@@ -156,10 +162,16 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
             new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", 0, ListKind.Reference),
             new CreateReferenceItem(Guid.NewGuid(), user, Guid.NewGuid(), listId, "PLA Black", 0));
 
+        var context = Persistence.TestContext.For(fixture);
+        var beforeWipe = await context.Collection<BsonDocument>("referenceitems")
+            .Find(Builders<BsonDocument>.Filter.Eq(
+                "userId", new BsonBinaryData(user, GuidRepresentation.Standard)))
+            .CountDocumentsAsync(ct);
+        Assert.Equal(1, beforeWipe);
+
         var response = await client.DeleteAsync("/api/account", ct);
         response.EnsureSuccessStatusCode();
 
-        var context = Persistence.TestContext.For(fixture);
         var remaining = await context.Collection<BsonDocument>("referenceitems")
             .Find(Builders<BsonDocument>.Filter.Eq(
                 "userId", new BsonBinaryData(user, GuidRepresentation.Standard)))
@@ -201,6 +213,8 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
         var envelopes = commands.Select(Envelope).ToArray();
         var response = await client.PostAsJsonAsync("/api/commands", envelopes, ct);
         response.EnsureSuccessStatusCode();
+        var results = await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct);
+        Assert.All(results!, result => Assert.True(result.Accepted, result.Rejection));
     }
 
     static CommandEnvelope Envelope(object command) =>

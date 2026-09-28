@@ -56,6 +56,10 @@ public class ReferenceSyncTests(MongoFixture fixture)
             new CreateTaskList(Guid.NewGuid(), theirsUser, listId, areaId, "Filaments", 0, ListKind.Reference),
             new CreateReferenceItem(Guid.NewGuid(), theirsUser, Guid.NewGuid(), listId, "PLA Black", 0));
 
+        var theirsSync = await theirsClient.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
+        Assert.True(
+            theirsSync!.Documents.TryGetValue("referenceitems", out var theirsItems) && theirsItems.Length > 0);
+
         var mineClient = factory.ClientFor(Guid.NewGuid().ToString());
         var sync = await mineClient.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
 
@@ -71,5 +75,7 @@ public class ReferenceSyncTests(MongoFixture fixture)
             .ToArray();
         var response = await client.PostAsJsonAsync("/api/commands", envelopes, ct);
         response.EnsureSuccessStatusCode();
+        var results = await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct);
+        Assert.All(results!, result => Assert.True(result.Accepted, result.Rejection));
     }
 }
