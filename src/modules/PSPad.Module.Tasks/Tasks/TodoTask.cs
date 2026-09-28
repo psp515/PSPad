@@ -35,6 +35,9 @@ public sealed class TodoTask : Aggregate
     public RecurrenceRule? Recurrence { get; private set; }
 
     [JsonInclude]
+    public string Description { get; private set; } = "";
+
+    [JsonInclude]
     List<Step> _steps = [];
 
     [JsonInclude]
@@ -188,6 +191,13 @@ public sealed class TodoTask : Aggregate
                     ? []
                     : [new TaskRecurrenceSet(repeating.Id, recurrence.UserId, at, recurrence.Rule)];
 
+            case SetTaskDescription describe:
+                var describing = Require(task, describe.UserId);
+                var description = describe.Description.TrimEnd();
+                return describing.Description == description
+                    ? []
+                    : [new TaskDescriptionSet(describing.Id, describe.UserId, at, description)];
+
             case CompleteOccurrence occurrence:
                 var ticking = Require(task, occurrence.UserId);
                 if (ticking.Recurrence is null)
@@ -279,6 +289,9 @@ public sealed class TodoTask : Aggregate
                     _completedDays.Clear();
                 }
 
+                break;
+            case TaskDescriptionSet described:
+                Description = described.Description;
                 break;
             case OccurrenceCompleted occurrenceCompleted:
                 if (occurrenceCompleted.Completed)
