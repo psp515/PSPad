@@ -163,9 +163,10 @@ else
             return;
         }
 
+        var tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{_list.Name}”? Its tasks stay, without a list." }
+            { dialog => dialog.Message, DeleteWarning.ForList(_list.Name, ListId, tasks) }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete list", parameters);
         var result = await dialog.Result;

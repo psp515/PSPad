@@ -1,5 +1,6 @@
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Inbox;
+using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.Module.Tasks.Tests.Fakes;
 using PSPad.TestInfrastructure;
@@ -50,11 +51,15 @@ public class InboxTests
         var inboxStore = new FakeDocumentStore<InboxAggregate>();
         inboxStore.Seed(inbox);
         var taskStore = new FakeDocumentStore<TodoTask>();
+        var list = new TaskList();
+        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, Guid.NewGuid(), "Errands", 0));
+        var listStore = new FakeDocumentStore<TaskList>();
+        listStore.Seed(list);
         var work = new FakeUnitOfWork();
-        var handler = new OrganiseInboxItemHandler(inboxStore, taskStore, work, new FixedClock(Now));
+        var handler = new OrganiseInboxItemHandler(inboxStore, taskStore, listStore, work, new FixedClock(Now));
 
         var result = await handler.HandleAsync(
-            new OrganiseInboxItem(Guid.NewGuid(), User, inbox.Id, inbox.Items[0].Id, Guid.NewGuid(), Guid.NewGuid()),
+            new OrganiseInboxItem(Guid.NewGuid(), User, inbox.Id, inbox.Items[0].Id, list.Id, Guid.NewGuid()),
             CancellationToken.None);
 
         Assert.True(result.Accepted);

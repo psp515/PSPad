@@ -162,7 +162,7 @@ else
     {
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{list.Name}”? Its tasks stay, without a list." }
+            { dialog => dialog.Message, DeleteWarning.ForList(list.Name, list.Id, _tasks) }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete list", parameters);
         var result = await dialog.Result;
@@ -182,7 +182,7 @@ else
         var area = _area!;
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{area.Name}”? Its lists stay, without an area." }
+            { dialog => dialog.Message, DeleteWarning.ForArea(area.Name, area.Id, _lists, _tasks) }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete area", parameters);
         var result = await dialog.Result;

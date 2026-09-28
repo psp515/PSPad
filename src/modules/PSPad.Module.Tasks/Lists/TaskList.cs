@@ -80,7 +80,7 @@ public sealed class TaskList : Aggregate
         }
     }
 
-    static TaskList Require(TaskList? list, Guid userId)
+    internal static TaskList Require(TaskList? list, Guid userId)
     {
         if (list is null || list.Deleted)
         {

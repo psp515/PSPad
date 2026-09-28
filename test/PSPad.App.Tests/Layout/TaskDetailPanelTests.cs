@@ -176,8 +176,9 @@ public class TaskDetailPanelTests : Bunit.TestContext
     [Fact]
     public async Task AddingANewTaskCreatesItInTheListAndCloses()
     {
-        var listId = Guid.NewGuid();
-        var replica = AppTestHost.Arrange(this, User, Today);
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        var listId = list.Id;
+        var replica = AppTestHost.Arrange(this, User, Today, list);
         var closed = false;
 
         var panel = Render<TaskDetailPanel>(parameters => parameters
@@ -447,8 +448,9 @@ public class TaskDetailPanelTests : Bunit.TestContext
     [Fact]
     public async Task ANewTaskKeepsWhatItsMenusPicked()
     {
-        var listId = Guid.NewGuid();
-        var replica = AppTestHost.Arrange(this, User, Today);
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        var listId = list.Id;
+        var replica = AppTestHost.Arrange(this, User, Today, list);
 
         var panel = RenderWithOverlays(newInList: listId);
         panel.Find(".pspad-task-name-field input").Input("Kup chleb");
@@ -479,8 +481,9 @@ public class TaskDetailPanelTests : Bunit.TestContext
     [Fact]
     public async Task ANewTaskKeepsItsRepeatAndUntilDate()
     {
-        var listId = Guid.NewGuid();
-        var replica = AppTestHost.Arrange(this, User, Today);
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        var listId = list.Id;
+        var replica = AppTestHost.Arrange(this, User, Today, list);
 
         var panel = RenderWithOverlays(newInList: listId);
         panel.Find(".pspad-task-name-field input").Input("Read a book");
@@ -575,8 +578,9 @@ public class TaskDetailPanelTests : Bunit.TestContext
     [Fact]
     public async Task ACustomRepeatEveryFewDaysOnANewTaskIsSentAfterCreating()
     {
-        var listId = Guid.NewGuid();
-        var replica = AppTestHost.Arrange(this, User, Today);
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        var listId = list.Id;
+        var replica = AppTestHost.Arrange(this, User, Today, list);
 
         var panel = RenderWithOverlays(newInList: listId);
         panel.Find(".pspad-task-name-field input").Input("Water plants");
@@ -613,8 +617,9 @@ public class TaskDetailPanelTests : Bunit.TestContext
     [Fact]
     public async Task ANewTaskDropsADueDateBeforeItsRepeatStarts()
     {
-        var listId = Guid.NewGuid();
-        var replica = AppTestHost.Arrange(this, User, Today);
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        var listId = list.Id;
+        var replica = AppTestHost.Arrange(this, User, Today, list);
 
         var panel = RenderWithOverlays(newInList: listId);
         panel.Find(".pspad-task-name-field input").Input("Water plants");

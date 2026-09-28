@@ -5,6 +5,7 @@ using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
 using PSPad.App.Pages;
+using PSPad.App.State.Dispatch;
 using PSPad.App.State.Replica;
 using PSPad.App.Tests;
 using PSPad.Module.Tasks.Goals;
@@ -214,6 +215,24 @@ public class GoalsPageTests : Bunit.TestContext
 
         Assert.DoesNotContain("Read a book", card.Markup);
         Assert.Contains("1 open", card.Find(".pspad-open-count").TextContent);
+    }
+
+    [Fact]
+    public async Task DeletingAListTakesItsTasksOffTheGoalButKeepsTheGoal()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id), NewTask(list.Id, "Buy oats", goal.Id));
+        var sender = Services.GetRequiredService<CommandSender>();
+
+        var result = await sender.SendAsync(
+            new DeleteTaskList(Guid.NewGuid(), User, list.Id), Xunit.TestContext.Current.CancellationToken);
+
+        Assert.True(result.Accepted, result.Rejection);
+        var page = Render<GoalsPage>();
+        var card = page.FindComponents<GoalCard>().Single(c => c.Instance.Goal.Id == goal.Id);
+        Assert.DoesNotContain("Book a check-up", card.Markup);
+        Assert.DoesNotContain("Buy oats", card.Markup);
     }
 
     [Fact]

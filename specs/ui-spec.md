@@ -510,6 +510,13 @@ the item's own `⋯` (`ThingMenu`) wherever the item is a card or row inside
 a page, e.g. `ListCard`'s and `GoalCard`'s own menus on `AreaBoard` and
 `GoalsPage` — those are untouched by the page-level rule above.
 
+Deleting an area or a list takes its contents with it (`adr/0042`), so its
+`ConfirmDialog` counts what goes: "Delete “Dom” and its 2 lists and 5
+tasks? This can’t be undone." Every delete entry point (the area FAB Menu,
+the area panel, a `ListCard`'s menu, the list FAB Menu) builds the text with
+`State/DeleteWarning`, counting live children from the replica; an empty
+container drops the "and its …" clause.
+
 ---
 
 ## 4. Visual & theming

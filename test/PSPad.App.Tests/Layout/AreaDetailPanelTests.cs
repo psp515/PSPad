@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.App.Layout;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Layout;
@@ -111,6 +113,26 @@ public class AreaDetailPanelTests : Bunit.TestContext
         var stored = await replica.LoadAsync<Area>(area.Id);
         Assert.True(stored!.Deleted);
         Assert.Equal(navigation.BaseUri, navigation.Uri);
+    }
+
+    [Fact]
+    public void DeletingAnAreaWarnsHowManyListsAndTasksGoWithIt()
+    {
+        var area = NewArea("Dom", 0);
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Zakupy", 0), DateTimeOffset.UnixEpoch));
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(
+            null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), list.Id, "Kup chleb"), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, area, list, task);
+
+        var panel = RenderWithOverlays(area.Id);
+        panel.Find(".pspad-panel-delete").Click();
+
+        Assert.Equal(
+            "Delete “Dom” and its 1 list and 1 task? This can’t be undone.",
+            panel.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim());
     }
 
     [Fact]

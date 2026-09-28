@@ -384,6 +384,21 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void DeletingWarnsHowManyTasksGoWithTheList()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, NewTask(list.Id, "Kup chleb"), NewTask(list.Id, "Kup mleko"), NewTask(list.Id, "Kup jajka"));
+
+        var page = Render(BuildListPageWithDialogs(list.Id));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[2].Click();
+
+        Assert.Equal(
+            "Delete “Zakupy” and its 3 tasks? This can’t be undone.",
+            page.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim());
+    }
+
+    [Fact]
     public async Task DeletingFromTheFabMenuNavigatesToTheArea()
     {
         var list = NewList("Zakupy");
