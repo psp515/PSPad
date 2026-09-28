@@ -1,6 +1,7 @@
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.Module.Tasks.Tests.Fakes;
 using PSPad.TestInfrastructure;
@@ -17,6 +18,7 @@ public class ReferenceHandlerTests
     readonly FakeDocumentStore<TaskList> _lists = new();
     readonly FakeDocumentStore<TodoTask> _tasks = new();
     readonly FakeDocumentStore<InboxAggregate> _inboxes = new();
+    readonly FakeDocumentStore<ReferenceItem> _items = new();
     readonly FakeUnitOfWork _work = new();
     readonly FixedClock _clock = new(Now);
 
@@ -65,6 +67,82 @@ public class ReferenceHandlerTests
         Assert.Single(inbox.Items);
     }
 
+    [Fact]
+    public async Task AnItemIsCreatedInAReferenceList()
+    {
+        var list = SeedReferenceList();
+        var itemId = Guid.NewGuid();
+
+        var result = await new CreateReferenceItemHandler(_items, _lists, _work, _clock).HandleAsync(
+            new CreateReferenceItem(Guid.NewGuid(), User, itemId, list.Id, "PLA Black", 0), CancellationToken.None);
+
+        Assert.True(result.Accepted);
+        Assert.True(_work.Committed);
+        Assert.Equal("PLA Black", ((ReferenceItem)_work.Staged.Single().Aggregate).Name);
+    }
+
+    [Fact]
+    public async Task AnItemCannotBeCreatedInATaskList()
+    {
+        var list = SeedTaskList();
+
+        var result = await new CreateReferenceItemHandler(_items, _lists, _work, _clock).HandleAsync(
+            new CreateReferenceItem(Guid.NewGuid(), User, Guid.NewGuid(), list.Id, "PLA Black", 0), CancellationToken.None);
+
+        Assert.False(result.Accepted);
+        Assert.False(_work.Committed);
+    }
+
+    [Fact]
+    public async Task AnItemCannotBeMovedIntoATaskList()
+    {
+        var origin = SeedReferenceList();
+        var item = SeedItem(origin.Id);
+        var taskList = SeedTaskList();
+
+        var result = await new MoveReferenceItemToListHandler(_items, _lists, _work, _clock).HandleAsync(
+            new MoveReferenceItemToList(Guid.NewGuid(), User, item.Id, taskList.Id), CancellationToken.None);
+
+        Assert.False(result.Accepted);
+        Assert.False(_work.Committed);
+    }
+
+    [Fact]
+    public async Task AnItemMovesBetweenReferenceLists()
+    {
+        var origin = SeedReferenceList();
+        var item = SeedItem(origin.Id);
+        var destination = SeedReferenceList();
+
+        var result = await new MoveReferenceItemToListHandler(_items, _lists, _work, _clock).HandleAsync(
+            new MoveReferenceItemToList(Guid.NewGuid(), User, item.Id, destination.Id), CancellationToken.None);
+
+        Assert.True(result.Accepted);
+        Assert.Equal(destination.Id, (await _items.LoadAsync(item.Id, CancellationToken.None))!.ListId);
+    }
+
+    [Fact]
+    public async Task AnItemIsRenamedDescribedStarredAndDeleted()
+    {
+        var list = SeedReferenceList();
+        var item = SeedItem(list.Id);
+
+        Assert.True((await new RenameReferenceItemHandler(_items, _work, _clock).HandleAsync(
+            new RenameReferenceItem(Guid.NewGuid(), User, item.Id, "PETG Grey"), CancellationToken.None)).Accepted);
+        Assert.True((await new SetReferenceItemDescriptionHandler(_items, _work, _clock).HandleAsync(
+            new SetReferenceItemDescription(Guid.NewGuid(), User, item.Id, "Dry 4h"), CancellationToken.None)).Accepted);
+        Assert.True((await new StarReferenceItemHandler(_items, _work, _clock).HandleAsync(
+            new StarReferenceItem(Guid.NewGuid(), User, item.Id, true), CancellationToken.None)).Accepted);
+        Assert.True((await new DeleteReferenceItemHandler(_items, _work, _clock).HandleAsync(
+            new DeleteReferenceItem(Guid.NewGuid(), User, item.Id), CancellationToken.None)).Accepted);
+
+        var stored = await _items.LoadAsync(item.Id, CancellationToken.None);
+        Assert.Equal("PETG Grey", stored!.Name);
+        Assert.Equal("Dry 4h", stored.Description);
+        Assert.True(stored.Starred);
+        Assert.True(stored.Deleted);
+    }
+
     TaskList SeedTaskList()
     {
         var list = new TaskList();
@@ -87,5 +165,13 @@ public class ReferenceHandlerTests
         task.Apply(new TaskCreated(Guid.NewGuid(), User, Now, listId, "buy milk"));
         _tasks.Seed(task);
         return task;
+    }
+
+    ReferenceItem SeedItem(Guid listId)
+    {
+        var item = new ReferenceItem();
+        item.Apply(new ReferenceItemCreated(Guid.NewGuid(), User, Now, listId, "PLA Black", 0));
+        _items.Seed(item);
+        return item;
     }
 }
