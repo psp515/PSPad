@@ -73,6 +73,69 @@ public class DeleteCascadeEndpointTests(MongoFixture fixture)
         Assert.Contains("list", result.Rejection, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task MovingAListIntoADeletedAreaIsRejected()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var (_, listIds, _) = await SeedAreaAsync(client, user, ct);
+        var deadAreaId = Guid.NewGuid();
+        await PostAsync(client, ct,
+            Envelope(new CreateArea(Guid.NewGuid(), user, deadAreaId, "Gone", 100)),
+            Envelope(new DeleteArea(Guid.NewGuid(), user, deadAreaId)));
+
+        var results = await PostAsync(client, ct,
+            Envelope(new MoveTaskListToArea(Guid.NewGuid(), user, listIds[0], deadAreaId)));
+
+        var result = Assert.Single(results);
+        Assert.False(result.Accepted);
+        Assert.Contains("area", result.Rejection, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DeletingAnAreaTakesItsTasksOffTheOutstandingChartWithOneRecordEach()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var (areaId, _, taskIds) = await SeedAreaAsync(client, user, ct);
+        await EventuallyAsync(() => OutstandingTodayAsync(client, ct), count => count == 3, ct);
+
+        await PostAsync(client, ct, Envelope(new DeleteArea(Guid.NewGuid(), user, areaId)));
+
+        await EventuallyAsync(() => OutstandingTodayAsync(client, ct), count => count == 0, ct);
+        var records = await EventuallyAsync(
+            async () => await client.GetFromJsonAsync<StatisticsRecordView[]>("/api/statistics/records", ct) ?? [],
+            feed => feed.Count(record => record.Kind == "Deleted") == 3,
+            ct);
+        Assert.Equal(
+            taskIds.Order(),
+            records.Where(record => record.Kind == "Deleted").Select(record => record.TaskId).Order());
+    }
+
+    static async Task<int> OutstandingTodayAsync(HttpClient client, CancellationToken ct) =>
+        (await client.GetFromJsonAsync<StatisticsOverview>("/api/statistics/overview?days=7", ct))!.Outstanding[^1].Count;
+
+    static async Task<T> EventuallyAsync<T>(Func<Task<T>> read, Func<T, bool> until, CancellationToken ct)
+    {
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            var value = await read();
+
+            if (until(value))
+            {
+                return value;
+            }
+
+            await Task.Delay(100, ct);
+        }
+
+        throw new TimeoutException("the projection never caught up");
+    }
+
     static async Task<(Guid AreaId, Guid[] ListIds, Guid[] TaskIds)> SeedAreaAsync(
         HttpClient client, Guid user, CancellationToken ct)
     {
