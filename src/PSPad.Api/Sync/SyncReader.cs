@@ -8,6 +8,7 @@ using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 
 namespace PSPad.Api.Sync;
@@ -53,6 +54,7 @@ public sealed class SyncReader(MongoContext context)
         var goals = await ReadCollectionAsync<Goal>(session, userId, since, ct);
         var inboxes = await ReadCollectionAsync<Inbox>(session, userId, since, ct);
         var users = await ReadCollectionAsync<User>(session, userId, since, ct);
+        var referenceItems = await ReadCollectionAsync<ReferenceItem>(session, userId, since, ct);
 
         var documents = new Dictionary<string, JsonElement[]>
         {
@@ -61,13 +63,14 @@ public sealed class SyncReader(MongoContext context)
             ["todotasks"] = todoTasks.Rows,
             ["goals"] = goals.Rows,
             ["inboxes"] = inboxes.Rows,
-            ["users"] = users.Rows
+            ["users"] = users.Rows,
+            ["referenceitems"] = referenceItems.Rows
         };
 
         var highestDocumentSeq = new[]
         {
             areas.HighestSeq, taskLists.HighestSeq, todoTasks.HighestSeq,
-            goals.HighestSeq, inboxes.HighestSeq, users.HighestSeq
+            goals.HighestSeq, inboxes.HighestSeq, users.HighestSeq, referenceItems.HighestSeq
         }.Max();
 
         var highestEventSeq = events.Count > 0
