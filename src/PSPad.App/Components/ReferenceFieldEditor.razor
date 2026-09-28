@@ -1,0 +1,60 @@
+@using PSPad.App.State
+@using PSPad.Module.Tasks.References
+
+<MudTextField T="string" Label="Label" Class="pspad-field-label-input"
+              @bind-Value="_label" />
+<MudTextField T="string" Label="Value" Class="pspad-field-value-input" Lines="2" Sizing="InputSizing.Auto"
+              @bind-Value="_value" />
+<MudSelect T="FieldKind?" Label="Display" Class="pspad-field-kind-input" @bind-Value="_kind">
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)null)">Automatic</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Text)">Text</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Link)">Link</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Path)">Path</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Quantity)">Quantity</MudSelectItem>
+</MudSelect>
+<div class="d-flex gap-2 mt-1">
+    <MudButton Class="pspad-field-save" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(_label)"
+               OnClick="@SaveAsync">Save</MudButton>
+    <MudButton Class="pspad-field-cancel" OnClick="@CancelAsync">Cancel</MudButton>
+    @if (Field is not null)
+    {
+        <MudButton Class="pspad-field-remove" Color="Color.Error" OnClick="@RemoveAsync">Remove</MudButton>
+    }
+</div>
+
+@code {
+    [Parameter] public ReferenceField? Field { get; set; }
+
+    [Parameter] public Func<(string Label, string Value, string? Display), Task>? OnSave { get; set; }
+
+    [Parameter] public Func<Task>? OnCancel { get; set; }
+
+    [Parameter] public Func<Task>? OnRemove { get; set; }
+
+    string _label = "";
+    string _value = "";
+    FieldKind? _kind;
+
+    protected override void OnInitialized()
+    {
+        _label = Field?.Label ?? "";
+        _value = Field?.Value ?? "";
+        _kind = Field is { Display: { } hint } && Enum.TryParse<FieldKind>(hint, ignoreCase: true, out var kind)
+            ? kind
+            : null;
+    }
+
+    async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_label) || OnSave is null)
+        {
+            return;
+        }
+
+        await OnSave((_label.Trim(), _value, FieldDisplay.HintFor(_kind)));
+    }
+
+    Task CancelAsync() => OnCancel?.Invoke() ?? Task.CompletedTask;
+
+    Task RemoveAsync() => OnRemove?.Invoke() ?? Task.CompletedTask;
+}

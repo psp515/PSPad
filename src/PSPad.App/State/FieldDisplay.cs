@@ -30,6 +30,15 @@ public static partial class FieldDisplay
 
     public static string? HintFor(FieldKind? chosen) => chosen?.ToString().ToLowerInvariant();
 
+    public static string NormalizeQuantity(string value)
+    {
+        var match = QuantityParts().Match(value.Trim());
+        return match.Success ? $"{match.Groups["number"].Value} {match.Groups["unit"].Value}" : value;
+    }
+
+    [GeneratedRegex(@"^(?<number>-?\d+([.,]\d+)?)\s*(?<unit>[^\d\s]\S*)$")]
+    private static partial Regex QuantityParts();
+
     [GeneratedRegex(@"^https?://\S+$", RegexOptions.IgnoreCase)]
     private static partial Regex LinkPattern();
 

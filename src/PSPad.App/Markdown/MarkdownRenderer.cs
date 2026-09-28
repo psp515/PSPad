@@ -8,7 +8,6 @@ namespace PSPad.App.Markdown;
 
 public static class MarkdownRenderer
 {
-    static readonly string[] LinkSchemes = ["http", "https", "mailto"];
     static readonly string[] ImageSchemes = ["http", "https"];
 
     static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
@@ -29,7 +28,7 @@ public static class MarkdownRenderer
 
         foreach (var link in document.Descendants<LinkInline>().ToArray())
         {
-            if (IsSafe(link.Url, link.IsImage ? ImageSchemes : LinkSchemes))
+            if (LinkSafety.IsSafe(link.Url, link.IsImage ? ImageSchemes : LinkSafety.LinkSchemes))
             {
                 if (!link.IsImage)
                 {
@@ -47,7 +46,7 @@ public static class MarkdownRenderer
         foreach (var autolink in document.Descendants<AutolinkInline>().ToArray())
         {
             var url = autolink.IsEmail ? "mailto:" + autolink.Url : autolink.Url;
-            if (IsSafe(url, LinkSchemes))
+            if (LinkSafety.IsSafe(url, LinkSafety.LinkSchemes))
             {
                 autolink.GetAttributes().AddPropertyIfNotExist("target", "_blank");
                 autolink.GetAttributes().AddPropertyIfNotExist("rel", "noopener noreferrer");
@@ -64,9 +63,4 @@ public static class MarkdownRenderer
         renderer.Render(document);
         return writer.ToString();
     }
-
-    static bool IsSafe(string? url, string[] schemes) =>
-        url is not null &&
-        Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
-        schemes.Contains(uri.Scheme, StringComparer.OrdinalIgnoreCase);
 }
