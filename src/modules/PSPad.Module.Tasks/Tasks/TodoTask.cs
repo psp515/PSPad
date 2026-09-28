@@ -193,7 +193,7 @@ public sealed class TodoTask : Aggregate
 
             case SetTaskDescription describe:
                 var describing = Require(task, describe.UserId);
-                var description = describe.Description.TrimEnd();
+                var description = (describe.Description ?? "").TrimEnd();
                 return describing.Description == description
                     ? []
                     : [new TaskDescriptionSet(describing.Id, describe.UserId, at, description)];

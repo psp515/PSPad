@@ -41,6 +41,19 @@ public class ListKindTests
     }
 
     [Fact]
+    public void AStoredKindValueOfOneReadsAsReference()
+    {
+        const string stored = """
+            {"AggregateId":"22222222-2222-2222-2222-222222222222","UserId":"11111111-1111-1111-1111-111111111111",
+             "At":"2026-09-01T08:00:00+00:00","AreaId":"33333333-3333-3333-3333-333333333333","Name":"Spools","Position":0,"Kind":1}
+            """;
+
+        var created = JsonSerializer.Deserialize<TaskListCreated>(stored)!;
+
+        Assert.Equal(ListKind.Reference, created.Kind);
+    }
+
+    [Fact]
     public void RenamingKeepsTheKind()
     {
         var list = Create(ListKind.Reference);

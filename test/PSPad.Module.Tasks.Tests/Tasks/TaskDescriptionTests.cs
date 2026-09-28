@@ -58,4 +58,15 @@ public class TaskDescriptionTests
 
         Assert.Equal("", task.Description);
     }
+
+    [Fact]
+    public void ANullDescriptionFromTheWireClearsIt()
+    {
+        var task = Task();
+        task.ApplyAll(TodoTask.Decide(task, new SetTaskDescription(Guid.NewGuid(), User, task.Id, "x"), Now));
+
+        task.ApplyAll(TodoTask.Decide(task, new SetTaskDescription(Guid.NewGuid(), User, task.Id, null!), Now));
+
+        Assert.Equal("", task.Description);
+    }
 }

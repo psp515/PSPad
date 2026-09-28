@@ -3,6 +3,7 @@ using PSPad.App.State.Replica;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Recurrence;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -119,6 +120,32 @@ public class IndexedDbReplicaTests
 
         Assert.False(restored.OccursOn(start.AddDays(1)));
         Assert.True(restored.OccursOn(start.AddDays(3)));
+    }
+
+    [Fact]
+    public void AReferenceItemKeepsItsFieldsDescriptionAndStarThroughTheReplica()
+    {
+        var listId = Guid.NewGuid();
+        var item = new ReferenceItem();
+        item.ApplyAll(ReferenceItem.Decide(
+            null, new CreateReferenceItem(Guid.NewGuid(), User, Guid.NewGuid(), listId, "PLA Black", 0), At));
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new SetReferenceItemDescription(Guid.NewGuid(), User, item.Id, "Dry 4h at 50 °C"), At));
+        item.ApplyAll(ReferenceItem.Decide(item, new StarReferenceItem(Guid.NewGuid(), User, item.Id, true), At));
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new AddReferenceField(Guid.NewGuid(), User, item.Id, Guid.NewGuid(), "Filament path", "/spools/pla-black", "path"),
+            At));
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new AddReferenceField(Guid.NewGuid(), User, item.Id, Guid.NewGuid(), "Colour", "black", null), At));
+
+        var restored = ReplicaRow.From(item).To<ReferenceItem>();
+
+        Assert.Equal("Dry 4h at 50 °C", restored.Description);
+        Assert.True(restored.Starred);
+        Assert.Equal(["Filament path", "Colour"], restored.Fields.Select(field => field.Label));
+        Assert.Equal(["/spools/pla-black", "black"], restored.Fields.Select(field => field.Value));
+        Assert.Equal(["path", null], restored.Fields.Select(field => field.Display));
+        Assert.Equal([0, 1], restored.Fields.Select(field => field.Position));
     }
 
     static Area NewArea(string name)

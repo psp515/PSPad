@@ -72,6 +72,17 @@ public class ReferenceItemTests
     }
 
     [Fact]
+    public void ANullDescriptionFromTheWireClearsIt()
+    {
+        var item = Item();
+        item.ApplyAll(ReferenceItem.Decide(item, new SetReferenceItemDescription(Guid.NewGuid(), User, item.Id, "Dry 4h"), Now));
+
+        item.ApplyAll(ReferenceItem.Decide(item, new SetReferenceItemDescription(Guid.NewGuid(), User, item.Id, null!), Now));
+
+        Assert.Equal("", item.Description);
+    }
+
+    [Fact]
     public void StarringAndUnstarring()
     {
         var item = Item();

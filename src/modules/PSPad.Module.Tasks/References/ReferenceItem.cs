@@ -50,7 +50,7 @@ public sealed class ReferenceItem : Aggregate
 
             case SetReferenceItemDescription describe:
                 var describing = Require(item, describe.UserId);
-                var description = describe.Description.TrimEnd();
+                var description = (describe.Description ?? "").TrimEnd();
                 return describing.Description == description
                     ? []
                     : [new ReferenceItemDescriptionSet(describing.Id, describe.UserId, at, description)];
@@ -77,14 +77,14 @@ public sealed class ReferenceItem : Aggregate
                 return adding.Fields.Any(field => field.Id == add.FieldId)
                     ? []
                     : [new ReferenceFieldAdded(
-                        adding.Id, add.UserId, at, add.FieldId, RequireLabel(add.Label), add.Value.TrimEnd(), Hint(add.Display),
+                        adding.Id, add.UserId, at, add.FieldId, RequireLabel(add.Label), (add.Value ?? "").TrimEnd(), Hint(add.Display),
                         Positions.Next(adding.Fields.Select(field => field.Position)))];
 
             case EditReferenceField edit:
                 var editing = Require(item, edit.UserId);
                 var existing = RequireField(editing, edit.FieldId);
                 var label = RequireLabel(edit.Label);
-                var value = edit.Value.TrimEnd();
+                var value = (edit.Value ?? "").TrimEnd();
                 var hint = Hint(edit.Display);
                 return existing.Label == label && existing.Value == value && existing.Display == hint
                     ? []

@@ -47,6 +47,31 @@ public class ReferenceFieldTests
     }
 
     [Fact]
+    public void ANullValueFromTheWireIsStoredAsEmpty()
+    {
+        var item = ReferenceItemTests.Item();
+
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new AddReferenceField(Guid.NewGuid(), User, item.Id, Guid.NewGuid(), "Colour", null!, null), Now));
+
+        Assert.Equal("", item.Fields[0].Value);
+    }
+
+    [Fact]
+    public void ANullValueFromTheWireIsStoredAsEmptyWhenEditing()
+    {
+        var item = ReferenceItemTests.Item();
+        var fieldId = Guid.NewGuid();
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new AddReferenceField(Guid.NewGuid(), User, item.Id, fieldId, "Colour", "black", null), Now));
+
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new EditReferenceField(Guid.NewGuid(), User, item.Id, fieldId, "Colour", null!, null), Now));
+
+        Assert.Equal("", item.Fields[0].Value);
+    }
+
+    [Fact]
     public void ABlankDisplayHintIsStoredAsNone()
     {
         var item = ReferenceItemTests.Item();
