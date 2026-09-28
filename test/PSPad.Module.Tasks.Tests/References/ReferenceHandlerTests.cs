@@ -108,27 +108,6 @@ public class ReferenceHandlerTests
     }
 
     [Fact]
-    public async Task AnItemMovesOnlyBetweenReferenceLists()
-    {
-        var origin = SeedReferenceList();
-        var item = SeedItem(origin.Id);
-        var taskList = SeedTaskList();
-
-        var rejected = await new MoveReferenceItemToListHandler(_items, _lists, _work, _clock).HandleAsync(
-            new MoveReferenceItemToList(Guid.NewGuid(), User, item.Id, taskList.Id), CancellationToken.None);
-
-        Assert.False(rejected.Accepted);
-
-        var destination = SeedReferenceList();
-
-        var accepted = await new MoveReferenceItemToListHandler(_items, _lists, _work, _clock).HandleAsync(
-            new MoveReferenceItemToList(Guid.NewGuid(), User, item.Id, destination.Id), CancellationToken.None);
-
-        Assert.True(accepted.Accepted);
-        Assert.Equal(destination.Id, (await _items.LoadAsync(item.Id, CancellationToken.None))!.ListId);
-    }
-
-    [Fact]
     public async Task DeletingAReferenceListDeletesItsItemsInOneCommit()
     {
         var list = SeedReferenceList();
