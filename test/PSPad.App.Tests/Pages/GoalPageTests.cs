@@ -312,6 +312,58 @@ public class GoalPageTests : Bunit.TestContext
         return task;
     }
 
+    [Fact]
+    public void ADatedGoalShowsItsPaceWithTimeLeftAndWorkDone()
+    {
+        var goal = NewGoal("Eat healthier", dueOn: Today.AddDays(12));
+        var list = NewList("Health");
+        var done = NewTask(list.Id, "Buy oats", goal.Id);
+        done.ApplyAll(TodoTask.Decide(done, new CompleteTask(Guid.NewGuid(), User, done.Id), DateTimeOffset.UnixEpoch));
+        Arrange(goal, list, done, NewTask(list.Id, "Book a check-up", goal.Id));
+
+        var pace = RenderPage(goal.Id).Find(".pspad-goal-pace");
+
+        Assert.Contains("12 days left", pace.TextContent);
+        Assert.Contains("50%", pace.TextContent);
+        Assert.Equal(2, pace.QuerySelectorAll(".mud-progress-circular").Length);
+    }
+
+    [Fact]
+    public void AnOverdueGoalsPaceSaysHowLate()
+    {
+        var goal = NewGoal("Eat healthier", dueOn: Today.AddDays(-3));
+        var list = NewList("Health");
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id));
+
+        var pace = RenderPage(goal.Id).Find(".pspad-goal-pace");
+
+        Assert.Contains("3 days overdue", pace.TextContent);
+    }
+
+    [Fact]
+    public void AnUndatedGoalHasNoPace()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id));
+
+        var page = RenderPage(goal.Id);
+
+        Assert.Empty(page.FindAll(".pspad-goal-pace"));
+    }
+
+    [Fact]
+    public void OpenTaskCardsShareTheGridWithTheChart()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id));
+
+        var page = RenderPage(goal.Id);
+
+        Assert.Same(page.Find(".pspad-goal-progress").Closest(".mud-grid"), page.Find(".pspad-task-card").Closest(".mud-grid"));
+    }
+
     IRenderedComponent<GoalPage> RenderPage(Guid goalId) =>
         Render<GoalPage>(parameters => parameters.Add(p => p.GoalId, goalId));
 

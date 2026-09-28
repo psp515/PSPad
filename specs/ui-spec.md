@@ -247,9 +247,10 @@ screen `/goals/{id}`.
 **Goal screen.** `/goals/{goalId}` mirrors the list screen: back arrow to
 `/goals`, the goal's name as title with a small outlined status `MudChip`
 (In progress / Achieved — `Color.Success` — / Not achieved) and its due
-date as a caption under it, then a **Progress** card, every open task as
-its own card (list name and added day on each row), then a collapsed
-**Completed (N)**. With no open tasks it shows an `EmptyState` "No open
+date as a caption under it. One `MudGrid` then holds the **Progress**
+card, the **Pace** card (dated goals only) and every open task as its own
+card (list name and added day on each row), so task cards flow up beside
+the chart on wide screens; a collapsed **Completed (N)** follows. With no open tasks it shows an `EmptyState` "No open
 tasks." with no create action — a task is created in a list, not a goal.
 A goal card's name, its **Show all** link and every `GoalSummaryCard`
 (achieved, not achieved, My Day) lead here, so a closed goal's tasks stay
@@ -266,6 +267,17 @@ counted" says so when the goal has any. Deleted tasks are left out. A task
 counts from its creation, not from when it was linked to the goal (the
 link carries no time). With nothing to count the card is not rendered.
 Axis ticks and labels come from `ChartAxis`, shared with Statistics.
+
+**Goal pace card.** `GoalPaceCard`, in a `MudItem` (`xs="12" md="6"
+xl="3"`) beside the progress chart, shown only when the goal has a due date
+and something to count. Two large `MudProgressCircular` rings: **time** —
+share of the span from the first counted week's Monday to the due date
+already used, `Color.Primary`, captioned "N days left" / "Due today" /
+"N days overdue" (ring and text `Color.Error` once overdue); **work** —
+done ÷ counted tasks from the latest progress week, `Color.Success` when
+work ≥ time, `Color.Warning` when behind, captioned "Work done · on pace"
+/ "· behind" so the state never rides on colour alone. `GoalPace` computes
+it from the `GoalProgress` weeks.
 
 **Shared row/card components, never duplicated per screen.** One
 `TaskRow` renders in My Day, list cards, the list screen and search

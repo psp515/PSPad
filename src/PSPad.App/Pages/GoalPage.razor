@@ -41,9 +41,9 @@ else if (_goal is not null)
         </div>
     </div>
 
-    @if (_progress.Count > 0)
-    {
-        <MudGrid Spacing="4" Class="mb-4">
+    <MudGrid Spacing="4">
+        @if (_progress.Count > 0)
+        {
             <MudItem xs="12" md="6">
                 <MudPaper Outlined="true" Class="pspad-goal-progress pa-3">
                     <MudText Typo="Typo.subtitle2" Class="mb-1">Progress</MudText>
@@ -55,10 +55,13 @@ else if (_goal is not null)
                     }
                 </MudPaper>
             </MudItem>
-        </MudGrid>
-    }
-
-    <MudGrid Spacing="4">
+        }
+        @if (_pace is not null)
+        {
+            <MudItem xs="12" md="6" xl="3">
+                <GoalPaceCard Pace="@_pace" />
+            </MudItem>
+        }
         @if (_open.Count == 0)
         {
             <MudItem xs="12" sm="6" md="4" xl="3">
@@ -113,6 +116,7 @@ else
     IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
     IReadOnlyList<GoalProgressWeek> _progress = [];
     bool _hasRecurring;
+    GoalPaceView? _pace;
 
     static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
     static readonly Dictionary<string, object> EditGoalAttributes = new() { ["aria-label"] = "Edit goal" };
@@ -169,6 +173,7 @@ else
         _done = [.. mine.Where(IsDone)];
         _progress = GoalProgress.Of(mine, State.TimeZone, State.Today);
         _hasRecurring = mine.Any(task => task.IsRecurring);
+        _pace = _goal?.DueOn is { } dueOn ? GoalPace.Of(_progress, dueOn, State.Today) : null;
 
         var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _listNames = lists.Where(list => !list.Deleted).ToDictionary(list => list.Id, list => list.Name);
