@@ -3,8 +3,12 @@
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Ordering
+@using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<Area> Areas
+@inject IDocumentStore<TaskList> ListStore
+@inject IDocumentStore<TodoTask> TaskStore
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -103,9 +107,11 @@
             return;
         }
 
+        var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{_area.Name}” and all its lists and tasks? This can’t be undone." }
+            { dialog => dialog.Message, DeleteWarning.ForArea(_area.Name, _area.Id, lists, tasks) }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete area", parameters);
         var result = await dialog.Result;

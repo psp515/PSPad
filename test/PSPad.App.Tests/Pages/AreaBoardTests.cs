@@ -363,7 +363,7 @@ public class AreaBoardTests : Bunit.TestContext
         page.Find(".pspad-fab .mud-fab-menu-button").Click();
         page.FindAll(".mud-fab-menu-item")[2].Click();
 
-        Assert.Contains("all its lists and tasks", page.Find("div.mud-dialog").TextContent);
+        Assert.Equal("Delete “Dom” and its 1 list and 1 task? This can’t be undone.", page.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim());
         page.FindAll("div.mud-dialog button").Last().Click();
 
         Assert.True((await replica.LoadAsync<TaskList>(list.Id))!.Deleted);
@@ -371,17 +371,17 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
-    public void DeletingAListWarnsThatItsTasksGoToo()
+    public void DeletingAListWarnsHowManyTasksGoWithIt()
     {
         var area = NewArea("Dom");
         var list = NewList(area.Id, "Zakupy", 0);
-        Arrange(area, list);
+        Arrange(area, list, NewTask(list.Id, "Kup chleb"), NewTask(list.Id, "Kup mleko"));
 
         var page = Render(BuildAreaBoardWithDialogs(area.Id));
         page.Find(".pspad-list-menu button").Click();
         page.FindAll(".mud-menu-item").Last().Click();
 
-        Assert.Contains("all its tasks", page.Find("div.mud-dialog").TextContent);
+        Assert.Equal("Delete “Zakupy” and its 2 tasks? This can’t be undone.", page.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim());
     }
 
     // Both ThingMenu's MudMenu and IDialogService's MudDialogProvider portal their open
