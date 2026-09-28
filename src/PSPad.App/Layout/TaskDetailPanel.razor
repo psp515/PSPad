@@ -5,6 +5,7 @@
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Recurrence
 @using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<TodoTask> Store
 @inject IDocumentStore<Area> Areas
@@ -47,14 +48,12 @@
         <MudDivider />
 
         <div class="py-2 px-2 d-flex flex-column gap-1">
-            <DueDateRow Value="@DueOn" ValueChanged="@DueDateAsync" Today="@State.Today"
-                        Disabled="@(Disabled || _task?.IsRecurring == true)" />
+            <DueDateRow Value="@DueOn" ValueChanged="@DueDateAsync" Today="@State.Today" Disabled="@Disabled"
+                        Label="@(Repeats ? "Until" : "Due")" EmptyText="@(Repeats ? "No end date" : "No due date")"
+                        FlagsPast="@(!Repeats)" />
 
-            @if (_task is not null)
-            {
-                <RecurrenceEditor Task="@_task" UserId="@State.UserId" Today="@State.Today"
-                                  Disabled="@Disabled" Changed="@ReloadAsync" />
-            }
+            <RecurrenceEditor Value="@Recurrence" ValueChanged="@RecurrenceAsync" Task="@_task" Today="@State.Today"
+                              Disabled="@Disabled" />
 
             <PriorityRow Value="@Priority" ValueChanged="@PriorityAsync" Disabled="@Disabled" />
 
@@ -131,8 +130,12 @@
 
     DateOnly? DueOn => _task is null ? _draft.DueOn : _task.DueOn;
 
+    RecurrenceRule? Recurrence => _task is null ? _draft.Recurrence : _task.Recurrence;
+
+    bool Repeats => Recurrence is not null;
+
     bool Done => _task is not null && (_task.IsRecurring
-        ? _task.CompletedDays.Contains(State.Today)
+        ? _task.EndedBy(State.Today) || _task.CompletedDays.Contains(State.Today)
         : _task.CompletedAt is not null);
 
     string CreatedText => _task?.CreatedAt is { } created ? $"Created {created:ddd, d MMM yyyy}" : "";
@@ -186,6 +189,11 @@
 
         var taskId = Guid.NewGuid();
         await Sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, taskId, listId, name));
+
+        if (_draft.Recurrence is { } rule)
+        {
+            await Sender.SendAsync(new SetTaskRecurrence(Guid.NewGuid(), State.UserId, taskId, rule));
+        }
 
         if (_draft.DueOn is { } due)
         {
@@ -267,6 +275,23 @@
         await ReloadAsync();
     }
 
+    async Task RecurrenceAsync(RecurrenceRule? rule)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_task is null)
+        {
+            _draft.Recurrence = rule;
+            return;
+        }
+
+        await Sender.SendAsync(new SetTaskRecurrence(Guid.NewGuid(), State.UserId, _task.Id, rule));
+        await ReloadAsync();
+    }
+
     async Task PriorityAsync(Priority priority)
     {
         if (Disabled || priority == Priority)
@@ -303,7 +328,7 @@
 
     async Task CompleteAsync(bool completed)
     {
-        if (Disabled || _task is null)
+        if (Disabled || _task is null || _task.EndedBy(State.Today))
         {
             return;
         }
@@ -364,6 +389,8 @@
         public string Name { get; set; } = "";
 
         public DateOnly? DueOn { get; set; }
+
+        public RecurrenceRule? Recurrence { get; set; }
 
         public Priority Priority { get; set; } = Priority.None;
 

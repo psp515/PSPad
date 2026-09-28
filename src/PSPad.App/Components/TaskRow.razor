@@ -24,7 +24,7 @@
                 @if (Task.DueOn is { } due)
                 {
                     <MudText Typo="Typo.caption" Color="@(Overdue ? Color.Error : Color.Default)">
-                        @due.ToString("d MMM")
+                        @(Task.IsRecurring ? $"Until {due:d MMM}" : due.ToString("d MMM"))
                     </MudText>
                 }
                 @if (Task.IsRecurring)
@@ -58,7 +58,7 @@
 
     [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
 
-    bool Done => Task.CompletedAt is not null || Task.CompletedDays.Contains(Today);
+    bool Done => Task.CompletedAt is not null || Task.CompletedDays.Contains(Today) || Task.EndedBy(Today);
 
     bool Overdue => IsOverdue(Task, Today);
 

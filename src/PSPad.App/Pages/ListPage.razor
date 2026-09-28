@@ -123,11 +123,13 @@ else
         var all = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
         var mine = all.Where(task => task.ListId == ListId && !task.Deleted).ToArray();
 
-        _open = [.. mine.Where(task => task.CompletedAt is null)];
-        _done = [.. mine.Where(task => task.CompletedAt is not null)];
+        _open = [.. mine.Where(task => !IsDone(task))];
+        _done = [.. mine.Where(IsDone)];
 
         _loaded = true;
     }
+
+    bool IsDone(TodoTask task) => task.CompletedAt is not null || task.EndedBy(State.Today);
 
     void Open(TodoTask task) => Navigation.NavigateTo($"/lists/{ListId}?task={task.Id}");
 
@@ -180,6 +182,11 @@ else
 
     async Task ToggleAsync(TodoTask task)
     {
+        if (task.EndedBy(State.Today))
+        {
+            return;
+        }
+
         if (task.IsRecurring)
         {
             await Sender.SendAsync(new CompleteOccurrence(

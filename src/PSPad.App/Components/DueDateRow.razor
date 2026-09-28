@@ -1,5 +1,6 @@
-<PropertyRow Class="pspad-task-due" Icon="@Icons.Material.Outlined.Event" Label="Due" Value="@Describe(Value, Today)"
-             HasValue="@(Value is not null)" ValueColor="@(Value < Today ? Color.Error : Color.Default)"
+<PropertyRow Class="pspad-task-due" Icon="@Icons.Material.Outlined.Event" Label="@Label"
+             Value="@(Value is null ? EmptyText : Describe(Value, Today))"
+             HasValue="@(Value is not null)" ValueColor="@(FlagsPast && Value < Today ? Color.Error : Color.Default)"
              Disabled="@Disabled" OnClear="@(() => ChooseAsync(null))">
     @foreach (var pick in QuickPicks(Today))
     {
@@ -31,6 +32,12 @@
     [Parameter] public DateOnly Today { get; set; }
 
     [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string Label { get; set; } = "Due";
+
+    [Parameter] public string EmptyText { get; set; } = "No due date";
+
+    [Parameter] public bool FlagsPast { get; set; } = true;
 
     bool _picking;
 

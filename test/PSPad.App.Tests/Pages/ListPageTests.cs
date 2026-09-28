@@ -100,6 +100,44 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ARecurringTaskPastItsUntilDateSitsUnderCompleted()
+    {
+        var list = NewList("Regularne");
+        var ended = Ended(NewTask(list.Id, "Read a book"));
+        Arrange(list, NewTask(list.Id, "Mleko"), ended);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Contains("Completed (1)", page.Markup);
+        Assert.DoesNotContain(page.FindAll(".mud-grid").First().QuerySelectorAll(".pspad-task-name"),
+            name => name.TextContent.Contains("Read a book"));
+    }
+
+    [Fact]
+    public async Task TogglingAnEndedRecurringTaskDoesNothing()
+    {
+        var list = NewList("Regularne");
+        var ended = Ended(NewTask(list.Id, "Read a book"));
+        var replica = Arrange(list, ended);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+        page.Find("input.mud-checkbox-input").Change(false);
+
+        var stored = await replica.LoadAsync<TodoTask>(ended.Id);
+        Assert.Empty(stored!.CompletedDays);
+    }
+
+    static TodoTask Ended(TodoTask task)
+    {
+        task.ApplyAll(TodoTask.Decide(task,
+            new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(Today.AddDays(-7))),
+            DateTimeOffset.UnixEpoch));
+        task.ApplyAll(TodoTask.Decide(task,
+            new SetTaskDueDate(Guid.NewGuid(), User, task.Id, Today.AddDays(-1)), DateTimeOffset.UnixEpoch));
+        return task;
+    }
+
+    [Fact]
     public void ItLaysOpenTasksOutInTheGrid()
     {
         var list = NewList("Zakupy");

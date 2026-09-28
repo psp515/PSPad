@@ -89,6 +89,17 @@ public class TaskRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ARecurringTaskPastItsUntilDateRendersChecked()
+    {
+        Arrange();
+
+        var row = Render(Due(Recurring(Task("Read a book"), Today.AddDays(-7)), Today.AddDays(-1)));
+
+        Assert.True(row.Find("input.mud-checkbox-input").HasAttribute("checked"));
+        Assert.Contains("Until", row.Markup);
+    }
+
+    [Fact]
     public void ARecurringTaskCarriesTheRecurrenceGlyph()
     {
         Arrange();

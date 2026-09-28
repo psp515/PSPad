@@ -1,24 +1,23 @@
-@using PSPad.App.State.Dispatch
 @using PSPad.Module.Tasks.Recurrence
 @using PSPad.Module.Tasks.Tasks
-@inject IServiceProvider Services
 
 <PropertyRow Class="pspad-task-repeat" Icon="@Icons.Material.Outlined.Repeat" Label="Repeat"
-             Value="@Describe(Task.Recurrence)" HasValue="@(Task.Recurrence is not null)" Disabled="@Disabled"
-             OnClear="@(() => SetAsync(null))">
-    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => SetAsync(RecurrenceRule.Daily(Today)))">Daily</MudMenuItem>
-    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => SetAsync(Weekdays(Today)))">Weekdays</MudMenuItem>
-    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => SetAsync(RecurrenceRule.Weekly(Today, Today.DayOfWeek)))">
+             Value="@Describe(Value)" HasValue="@(Value is not null)" Disabled="@Disabled"
+             OnClear="@(() => ChooseAsync(null))">
+    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => ChooseAsync(RecurrenceRule.Daily(Today)))">Daily</MudMenuItem>
+    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => ChooseAsync(Weekdays(Today)))">Weekdays</MudMenuItem>
+    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => ChooseAsync(RecurrenceRule.Weekly(Today, Today.DayOfWeek)))">
         @($"Weekly on {Today:dddd}")
     </MudMenuItem>
-    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => SetAsync(RecurrenceRule.MonthlyOnDay(Today, Today.Day)))">
+    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => ChooseAsync(RecurrenceRule.MonthlyOnDay(Today, Today.Day)))">
         @($"Monthly on day {Today.Day}")
     </MudMenuItem>
+    <MudMenuItem Class="pspad-repeat-custom" Icon="@Icons.Material.Outlined.Tune" OnClick="@OpenCustom">Custom…</MudMenuItem>
     <MudDivider />
-    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => SetAsync(null))">Never</MudMenuItem>
+    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => ChooseAsync(null))">Never</MudMenuItem>
 </PropertyRow>
 
-@if (Task.Recurrence is not null)
+@if (Task?.Recurrence is not null)
 {
     <div class="d-flex flex-wrap gap-1 px-3 pb-2 pspad-repeat-history">
         @foreach (var occurrence in Occurrences.Between(Task, Today.AddDays(-6), Today, Today))
@@ -31,14 +30,89 @@
             </MudTooltip>
         }
     </div>
+    <MudText Typo="Typo.caption" Class="px-3 pb-2 pspad-muted pspad-repeat-tally">
+        @DescribeTally(RepeatTally.Of(Task, Today))
+    </MudText>
 }
 
+<MudDialog @bind-Visible="_customising" Class="pspad-repeat-dialog" Options="@CustomOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Custom repeat</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudText Typo="Typo.body2">Every</MudText>
+                <MudNumericField T="int" Class="pspad-repeat-every" @bind-Value="_every" Min="1" Max="99"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width:96px" />
+                <MudSelect T="RecurrenceKind" Class="pspad-repeat-unit" @bind-Value="_kind"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var kind in Units)
+                    {
+                        <MudSelectItem T="RecurrenceKind" Value="@kind">@UnitOf(kind)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudStack>
+
+            @if (_kind == RecurrenceKind.Weekly)
+            {
+                <MudChipSet T="DayOfWeek" Class="pspad-repeat-weekdays" @bind-SelectedValues="_days"
+                            SelectionMode="SelectionMode.MultiSelection" Size="Size.Small" Variant="Variant.Outlined"
+                            SelectedColor="Color.Primary">
+                    @foreach (var day in WeekOrder)
+                    {
+                        <MudChip T="DayOfWeek" Value="@day" Text="@day.ToString()[..3]" />
+                    }
+                </MudChipSet>
+            }
+            else if (_kind == RecurrenceKind.MonthlyOnDay)
+            {
+                <MudNumericField T="int" Class="pspad-repeat-day" @bind-Value="_dayOfMonth" Min="1" Max="31"
+                                 Label="On day" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            }
+
+            <MudDatePicker Class="pspad-repeat-start" Label="Starts" @bind-Date="_start"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Class="pspad-repeat-cancel" OnClick="@(() => _customising = false)">Cancel</MudButton>
+        <MudButton Class="pspad-repeat-save" Color="Color.Primary" Disabled="@(!CanSaveCustom)"
+                   OnClick="@SaveCustomAsync">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
-    [Parameter, EditorRequired] public TodoTask Task { get; set; } = null!;
-    [Parameter] public Guid UserId { get; set; }
+    [Parameter] public RecurrenceRule? Value { get; set; }
+
+    [Parameter] public EventCallback<RecurrenceRule?> ValueChanged { get; set; }
+
+    [Parameter] public TodoTask? Task { get; set; }
+
     [Parameter] public DateOnly Today { get; set; }
+
     [Parameter] public bool Disabled { get; set; }
-    [Parameter] public EventCallback Changed { get; set; }
+
+    bool _customising;
+    int _every = 1;
+    RecurrenceKind _kind = RecurrenceKind.Daily;
+    IReadOnlyCollection<DayOfWeek>? _days;
+    int _dayOfMonth = 1;
+    DateTime? _start;
+
+    static readonly DialogOptions CustomOptions = new() { CloseOnEscapeKey = true, BackdropClick = true };
+
+    static readonly RecurrenceKind[] Units = [RecurrenceKind.Daily, RecurrenceKind.Weekly, RecurrenceKind.MonthlyOnDay];
+
+    static readonly DayOfWeek[] WeekOrder =
+    [
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday,
+        DayOfWeek.Saturday, DayOfWeek.Sunday
+    ];
+
+    bool CanSaveCustom => _every is >= 1 and <= 99 && _start is not null
+        && (_kind != RecurrenceKind.Weekly || _days is { Count: > 0 })
+        && (_kind != RecurrenceKind.MonthlyOnDay || _dayOfMonth is >= 1 and <= 31);
 
     static RecurrenceRule Weekdays(DateOnly today) => RecurrenceRule.Weekly(
         today, DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday);
@@ -46,13 +120,40 @@
     public static string Describe(RecurrenceRule? rule) => rule switch
     {
         null => "Never",
+        { Every: > 1 } r => DescribeInterval(r),
         { Kind: RecurrenceKind.Daily } => "Daily",
         { Kind: RecurrenceKind.Weekly, Days.Count: 5 } r when !r.Days.Contains(DayOfWeek.Saturday)
             && !r.Days.Contains(DayOfWeek.Sunday) => "Weekdays",
-        { Kind: RecurrenceKind.Weekly } r =>
-            "Weekly on " + string.Join(", ", r.Days.OrderBy(day => ((int)day + 6) % 7).Select(day => day.ToString()[..3])),
+        { Kind: RecurrenceKind.Weekly } r => "Weekly on " + DayList(r),
         { Kind: RecurrenceKind.MonthlyOnDay } r => $"Monthly on day {r.DayOfMonth}",
         _ => "Custom"
+    };
+
+    public static string DescribeTally(RepeatTally tally) => tally switch
+    {
+        { Total: 0 } => "Not done yet",
+        { Streak: 0 } t => DoneTimes(t.Total),
+        var t => $"{DoneTimes(t.Total)} · {t.Streak} in a row"
+    };
+
+    static string DoneTimes(int total) => total == 1 ? "Done 1 time" : $"Done {total} times";
+
+    static string DescribeInterval(RecurrenceRule rule) => rule.Kind switch
+    {
+        RecurrenceKind.Daily => $"Every {rule.Every} days",
+        RecurrenceKind.Weekly => $"Every {rule.Every} weeks on {DayList(rule)}",
+        RecurrenceKind.MonthlyOnDay => $"Every {rule.Every} months on day {rule.DayOfMonth}",
+        _ => "Custom"
+    };
+
+    static string DayList(RecurrenceRule rule) =>
+        string.Join(", ", rule.Days.OrderBy(day => ((int)day + 6) % 7).Select(day => day.ToString()[..3]));
+
+    static string UnitOf(RecurrenceKind kind) => kind switch
+    {
+        RecurrenceKind.Daily => "days",
+        RecurrenceKind.Weekly => "weeks",
+        _ => "months"
     };
 
     static string Label(OccurrenceStatus status) => status switch
@@ -69,15 +170,48 @@
         _ => Color.Secondary
     };
 
-    async System.Threading.Tasks.Task SetAsync(RecurrenceRule? rule)
+    void OpenCustom()
     {
-        if (Disabled || (rule is null && Task.Recurrence is null))
+        if (Disabled)
         {
             return;
         }
 
-        var sender = Services.GetRequiredService<CommandSender>();
-        await sender.SendAsync(new SetTaskRecurrence(Guid.NewGuid(), UserId, Task.Id, rule));
-        await Changed.InvokeAsync();
+        var start = Value?.StartsOn ?? Today;
+        _every = Value?.Every ?? 1;
+        _kind = Value?.Kind ?? RecurrenceKind.Daily;
+        _days = Value is { Kind: RecurrenceKind.Weekly } weekly ? [.. weekly.Days] : [start.DayOfWeek];
+        _dayOfMonth = Value is { Kind: RecurrenceKind.MonthlyOnDay } monthly ? monthly.DayOfMonth : start.Day;
+        _start = start.ToDateTime(TimeOnly.MinValue);
+        _customising = true;
+    }
+
+    async System.Threading.Tasks.Task SaveCustomAsync()
+    {
+        if (!CanSaveCustom)
+        {
+            return;
+        }
+
+        var start = DateOnly.FromDateTime(_start!.Value);
+        var rule = _kind switch
+        {
+            RecurrenceKind.Weekly => RecurrenceRule.Weekly(start, [.. _days!]),
+            RecurrenceKind.MonthlyOnDay => RecurrenceRule.MonthlyOnDay(start, _dayOfMonth),
+            _ => RecurrenceRule.Daily(start)
+        };
+
+        _customising = false;
+        await ChooseAsync(rule.EveryNth(_every));
+    }
+
+    async System.Threading.Tasks.Task ChooseAsync(RecurrenceRule? rule)
+    {
+        if (Disabled || (rule is null && Value is null))
+        {
+            return;
+        }
+
+        await ValueChanged.InvokeAsync(rule);
     }
 }
