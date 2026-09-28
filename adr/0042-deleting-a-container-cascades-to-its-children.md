@@ -70,8 +70,12 @@ Documents orphaned before this change are left as they are.
 - The delete handlers now load all of the user's lists and tasks. Cheap on
   the replica, a scoped query on Mongo; worth an index-backed query if a
   user's task count grows large.
-- Deletion is irreversible and wider than before. The dialogs say so; there
-  is no undo.
+- Deletion is irreversible and wider than before. The dialogs say so and
+  count what goes ("and its 2 lists and 5 tasks"); there is no undo.
+- The Statistics record feed gets one `Deleted` record per cascaded task, so
+  retiring a large area adds that many rows at once. Accepted: it is what
+  happened, and the feed is collapsed by default. Grouping them by command
+  would need the projection to see the command id — a separate decision.
 - Because the server re-runs the handler against its own truth, the cascade
   also catches children a device had not pulled yet.
 - Commands aimed at a list or area that another device deleted are now
