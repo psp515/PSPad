@@ -165,8 +165,8 @@ else
 
         var all = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
         var mine = all.Where(task => task.GoalId == GoalId && !task.Deleted).ToArray();
-        _open = [.. mine.Where(task => task.CompletedAt is null)];
-        _done = [.. mine.Where(task => task.CompletedAt is not null)];
+        _open = [.. mine.Where(task => !IsDone(task))];
+        _done = [.. mine.Where(IsDone)];
         _progress = GoalProgress.Of(mine, State.TimeZone, State.Today);
         _hasRecurring = mine.Any(task => task.IsRecurring);
 
@@ -175,6 +175,8 @@ else
 
         _loaded = true;
     }
+
+    bool IsDone(TodoTask task) => task.CompletedAt is not null || task.EndedBy(State.Today);
 
     void Open(TodoTask task) => Navigation.NavigateTo($"/goals/{GoalId}?task={task.Id}");
 
@@ -207,6 +209,11 @@ else
     {
         if (task.IsRecurring)
         {
+            if (!task.OccursOn(State.Today) && !task.CompletedDays.Contains(State.Today))
+            {
+                return;
+            }
+
             await Sender.SendAsync(new CompleteOccurrence(
                 Guid.NewGuid(), State.UserId, task.Id, State.Today, !task.CompletedDays.Contains(State.Today)));
         }

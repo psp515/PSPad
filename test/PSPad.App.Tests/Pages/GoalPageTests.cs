@@ -272,6 +272,46 @@ public class GoalPageTests : Bunit.TestContext
         Assert.Contains("Recurring tasks not counted", page.Find(".pspad-goal-progress").TextContent);
     }
 
+    [Fact]
+    public void ARecurringTaskPastItsUntilDateSitsUnderCompleted()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        var ended = Ended(NewTask(list.Id, "Read a book", goal.Id));
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id), ended);
+
+        var page = RenderPage(goal.Id);
+
+        Assert.Contains("Completed (1)", page.Markup);
+        var openNames = page.FindAll(".pspad-task-name").Where(name => name.Closest(".mud-expand-panel") is null);
+        Assert.DoesNotContain(openNames, name => name.TextContent.Contains("Read a book"));
+    }
+
+    [Fact]
+    public async Task TogglingAnEndedRecurringTaskDoesNothing()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        var ended = Ended(NewTask(list.Id, "Read a book", goal.Id));
+        var replica = Arrange(goal, list, ended);
+
+        var page = RenderPage(goal.Id);
+        page.Find("input.mud-checkbox-input").Change(false);
+
+        var stored = await replica.LoadAsync<TodoTask>(ended.Id);
+        Assert.Empty(stored!.CompletedDays);
+    }
+
+    static TodoTask Ended(TodoTask task)
+    {
+        task.ApplyAll(TodoTask.Decide(task,
+            new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(Today.AddDays(-7))),
+            DateTimeOffset.UnixEpoch));
+        task.ApplyAll(TodoTask.Decide(task,
+            new SetTaskDueDate(Guid.NewGuid(), User, task.Id, Today.AddDays(-1)), DateTimeOffset.UnixEpoch));
+        return task;
+    }
+
     IRenderedComponent<GoalPage> RenderPage(Guid goalId) =>
         Render<GoalPage>(parameters => parameters.Add(p => p.GoalId, goalId));
 
