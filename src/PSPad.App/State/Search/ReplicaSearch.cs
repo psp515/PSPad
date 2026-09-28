@@ -1,4 +1,5 @@
 using PSPad.Abstractions;
+using PSPad.App.State;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
@@ -32,17 +33,21 @@ public sealed class ReplicaSearch(
         var taskHits = allTasks
             .Where(task => !task.Deleted && Matches(task.Name, needle)
                 && listsById.TryGetValue(task.ListId, out var list) && areaNames.ContainsKey(list.AreaId))
-            .Select(task => new SearchHit(task.Id, task.Name, PathOf(task.ListId, listsById, areaNames), false));
+            .Select(task => new SearchHit(
+                task.Id, task.Name, PathOf(task.ListId, listsById, areaNames), SearchHitKind.Task,
+                $"/search?task={task.Id}"));
 
         var itemHits = allItems
             .Where(item => !item.Deleted && Matches(item.Name, needle)
                 && listsById.TryGetValue(item.ListId, out var list) && areaNames.ContainsKey(list.AreaId))
             .Select(item => new SearchHit(
-                item.Id, item.Name, PathOf(item.ListId, listsById, areaNames), false, item.ListId));
+                item.Id, item.Name, PathOf(item.ListId, listsById, areaNames), SearchHitKind.ReferenceItem,
+                ReferenceQuery.ForItem($"/lists/{item.ListId}", item.Id)));
 
         var listHits = listsById.Values
             .Where(list => areaNames.ContainsKey(list.AreaId) && Matches(list.Name, needle))
-            .Select(list => new SearchHit(list.Id, list.Name, areaNames[list.AreaId], true));
+            .Select(list => new SearchHit(
+                list.Id, list.Name, areaNames[list.AreaId], SearchHitKind.List, $"/lists/{list.Id}", list.Kind));
 
         return [.. listHits, .. taskHits, .. itemHits];
     }

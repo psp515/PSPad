@@ -32,7 +32,8 @@ public class ReplicaSearchTests
         var hit = Assert.Single(await search.FindAsync(User, "farb"));
 
         Assert.Equal("Dom › Remont", hit.Path);
-        Assert.False(hit.IsList);
+        Assert.Equal(SearchHitKind.Task, hit.Kind);
+        Assert.Equal($"/search?task={hit.Id}", hit.Href);
     }
 
     [Fact]
@@ -43,8 +44,9 @@ public class ReplicaSearchTests
         var hit = Assert.Single(await search.FindAsync(User, "remo"));
 
         Assert.Equal("Remont", hit.Name);
-        Assert.True(hit.IsList);
+        Assert.Equal(SearchHitKind.List, hit.Kind);
         Assert.Equal("Dom", hit.Path);
+        Assert.Equal($"/lists/{hit.Id}", hit.Href);
     }
 
     [Fact]
@@ -140,8 +142,8 @@ public class ReplicaSearchTests
         Assert.Equal(item.Id, hit.Id);
         Assert.Equal("PLA Black", hit.Name);
         Assert.Equal("Workshop › Filaments", hit.Path);
-        Assert.False(hit.IsList);
-        Assert.Equal(list.Id, hit.ListId);
+        Assert.Equal(SearchHitKind.ReferenceItem, hit.Kind);
+        Assert.Equal($"/lists/{list.Id}?item={item.Id}", hit.Href);
     }
 
     [Fact]
