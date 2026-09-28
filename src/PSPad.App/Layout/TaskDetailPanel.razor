@@ -285,10 +285,20 @@
         if (_task is null)
         {
             _draft.Recurrence = rule;
+            if (rule is not null && _draft.DueOn < rule.StartsOn)
+            {
+                _draft.DueOn = null;
+            }
+
             return;
         }
 
         await Sender.SendAsync(new SetTaskRecurrence(Guid.NewGuid(), State.UserId, _task.Id, rule));
+
+        if (rule is not null && _task.DueOn < rule.StartsOn)
+        {
+            await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, _task.Id, null));
+        }
         await ReloadAsync();
     }
 
@@ -328,7 +338,12 @@
 
     async Task CompleteAsync(bool completed)
     {
-        if (Disabled || _task is null || _task.EndedBy(State.Today))
+        if (Disabled || _task is null)
+        {
+            return;
+        }
+
+        if (_task.IsRecurring && !_task.OccursOn(State.Today) && !_task.CompletedDays.Contains(State.Today))
         {
             return;
         }

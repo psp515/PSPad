@@ -588,6 +588,93 @@ public class TaskDetailPanelTests : Bunit.TestContext
         Assert.Equal(2, created.Recurrence.Interval);
     }
 
+    [Fact]
+    public async Task RepeatingAnOverdueTaskClearsItsDueDateRatherThanEndingIt()
+    {
+        var task = NewTask("Read a book");
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, Today.AddDays(-3)), DateTimeOffset.UnixEpoch));
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.FindAll(".pspad-repeat-option")[0].Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.True(reloaded!.IsRecurring);
+        Assert.Null(reloaded.DueOn);
+        Assert.False(reloaded.EndedBy(Today));
+    }
+
+    [Fact]
+    public async Task ANewTaskDropsADueDateBeforeItsRepeatStarts()
+    {
+        var listId = Guid.NewGuid();
+        var replica = AppTestHost.Arrange(this, User, Today);
+
+        var panel = RenderWithOverlays(newInList: listId);
+        panel.Find(".pspad-task-name-field input").Input("Water plants");
+        OpenRow(panel, ".pspad-task-due");
+        panel.FindAll(".pspad-due-quick")[1].Click();
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.Find(".pspad-repeat-custom").Click();
+        panel.WaitForElement(".pspad-repeat-dialog");
+        await PickStartAsync(panel, Today.AddDays(5));
+        panel.Find(".pspad-repeat-save").Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal(Today.AddDays(5), created.Recurrence!.StartsOn);
+        Assert.Null(created.DueOn);
+    }
+
+    [Fact]
+    public async Task MovingACustomRepeatsStartMovesItsUntouchedWeekday()
+    {
+        var task = NewTask("Water plants");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.Find(".pspad-repeat-custom").Click();
+        panel.WaitForElement(".pspad-repeat-dialog");
+        panel.Find(".pspad-repeat-unit .mud-select-input").MouseDown();
+        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "weeks").Click();
+        await PickStartAsync(panel, Today.AddDays(2));
+        panel.Find(".pspad-repeat-save").Click();
+
+        var rule = (await replica.LoadAsync<TodoTask>(task.Id))!.Recurrence!;
+        Assert.Equal(Today.AddDays(2), rule.StartsOn);
+        Assert.Equal([Today.AddDays(2).DayOfWeek], rule.Days);
+    }
+
+    [Fact]
+    public async Task MovingACustomRepeatsStartMovesItsUntouchedDayOfMonth()
+    {
+        var task = NewTask("Pay rent");
+        var replica = AppTestHost.Arrange(this, User, Today);
+        await replica.SaveAsync(task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.Find(".pspad-repeat-custom").Click();
+        panel.WaitForElement(".pspad-repeat-dialog");
+        panel.Find(".pspad-repeat-unit .mud-select-input").MouseDown();
+        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "months").Click();
+        await PickStartAsync(panel, Today.AddDays(3));
+        panel.Find(".pspad-repeat-save").Click();
+
+        var rule = (await replica.LoadAsync<TodoTask>(task.Id))!.Recurrence!;
+        Assert.Equal(Today.AddDays(3).Day, rule.DayOfMonth);
+    }
+
+    static Task PickStartAsync(IRenderedComponent<ContainerFragment> panel, DateOnly start)
+    {
+        var picker = panel.FindComponents<MudDatePicker>()
+            .Single(found => found.Instance.Class?.Contains("pspad-repeat-start") == true);
+        return panel.InvokeAsync(() => picker.Instance.DateChanged.InvokeAsync(start.ToDateTime(TimeOnly.MinValue)));
+    }
+
     static TodoTask Recurring(TodoTask task, RecurrenceRule rule)
     {
         task.ApplyAll(TodoTask.Decide(

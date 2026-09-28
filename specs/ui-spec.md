@@ -252,9 +252,12 @@ cannot drift between the screens that display it.
 
 **Repeating rows.** `TaskRow` shows a repeating task's due date as
 "Until 12 Oct", never red. A repeat past its Until (`TodoTask.EndedBy`)
-renders checked, and ticking it does nothing on the list screen or in the
-panel's Done checkbox; `ListPage` files it under Completed. My Day never shows it —
-it has no occurrence left.
+renders checked; `ListPage` files it under Completed, list and goal cards
+leave it out of their open tasks, and `GoalSummaryCard` counts it done. My
+Day never shows it — it has no occurrence left. Every tick handler (My Day,
+list screen, area board, goals, panel) toggles the occurrence and does
+nothing on a day the task does not occur on (an off-day of "every 2 days",
+or past its Until) unless that day is already ticked.
 
 **Every repeated row or card carries `@key` on its entity id.** Ticking a
 task moves it between sections, and without a key Blazor hands the vacated
@@ -320,8 +323,12 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      Custom…, Never. Presets start today. Custom… opens a `MudDialog`:
      Every [1–99] [days | weeks | months], weekday chips (weeks, Monday
      first), On day 1–31 (months), Starts (date picker, default the current
-     rule's start or today); Save stays disabled until the fields are
-     valid. The value reads "Daily", "Weekly on Mon, Thu", "Every 3 weeks
+     rule's start or today); moving Starts moves the weekday chip or
+     day-of-month default with it until the user has picked one; Save
+     stays disabled until the fields are valid. Setting a repeat on a task
+     whose due date falls before the rule's start clears that date (sent
+     after `SetTaskRecurrence`), so the repeat does not start already
+     ended. The value reads "Daily", "Weekly on Mon, Thu", "Every 3 weeks
      on Mon", "Every 2 days", "Every 6 months on day 15". A repeating task
      shows its last seven occurrences as chips under the row, then a muted
      tally caption: "Not done yet", "Done N times", or "Done N times · M in

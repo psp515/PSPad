@@ -179,6 +179,11 @@ public sealed class TodoTask : Aggregate
 
             case SetTaskRecurrence recurrence:
                 var repeating = Require(task, recurrence.UserId);
+                if (recurrence.Rule?.Interval is < 0 or > 99)
+                {
+                    throw new DomainRejectedException("A repeat interval must be between 1 and 99.");
+                }
+
                 return repeating.Recurrence == recurrence.Rule
                     ? []
                     : [new TaskRecurrenceSet(repeating.Id, recurrence.UserId, at, recurrence.Rule)];
@@ -190,7 +195,7 @@ public sealed class TodoTask : Aggregate
                     throw new DomainRejectedException("That task does not repeat.");
                 }
 
-                if (!ticking.OccursOn(occurrence.Day))
+                if (occurrence.Completed && !ticking.OccursOn(occurrence.Day))
                 {
                     throw new DomainRejectedException("That task does not repeat on that day.");
                 }

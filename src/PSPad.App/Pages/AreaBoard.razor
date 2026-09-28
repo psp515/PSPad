@@ -113,8 +113,13 @@ else
     {
         if (task.IsRecurring)
         {
+            if (!task.OccursOn(State.Today) && !task.CompletedDays.Contains(State.Today))
+            {
+                return;
+            }
+
             await Sender.SendAsync(new CompleteOccurrence(
-                Guid.NewGuid(), State.UserId, task.Id, State.Today, true));
+                Guid.NewGuid(), State.UserId, task.Id, State.Today, !task.CompletedDays.Contains(State.Today)));
         }
         else if (task.CompletedAt is null)
         {

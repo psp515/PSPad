@@ -151,6 +151,65 @@ public class TaskRecurrenceTests
         Assert.False(task.IsRecurring);
     }
 
+    [Fact]
+    public void UntickingADayStillWorksAfterTheEndMovesBeforeIt()
+    {
+        var task = Recurring();
+        task.ApplyAll(TodoTask.Decide(
+            task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, Today, true), Now));
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, Today.AddDays(-1)), Now));
+
+        task.ApplyAll(TodoTask.Decide(
+            task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, Today, false), Now));
+
+        Assert.DoesNotContain(Today, task.CompletedDays);
+    }
+
+    [Fact]
+    public void UntickingADayStillWorksAfterTheIntervalSkipsIt()
+    {
+        var start = new DateOnly(2026, 9, 1);
+        var task = Recurring(RecurrenceRule.Daily(start));
+        var ticked = start.AddDays(1);
+        task.ApplyAll(TodoTask.Decide(
+            task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, ticked, true), Now));
+        task.ApplyAll(TodoTask.Decide(
+            task,
+            new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(start).EveryNth(2)),
+            Now));
+
+        task.ApplyAll(TodoTask.Decide(
+            task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, ticked, false), Now));
+
+        Assert.Empty(task.CompletedDays);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(100)]
+    public void ARepeatIntervalOutsideOneToNinetyNineIsRejected(int interval)
+    {
+        var task = TodoTaskTests.Existing();
+        var rule = RecurrenceRule.Daily(Today) with { Interval = interval };
+
+        var rejected = Assert.Throws<DomainRejectedException>(() => TodoTask.Decide(
+            task, new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, rule), Now));
+        Assert.Equal("A repeat interval must be between 1 and 99.", rejected.Message);
+    }
+
+    [Fact]
+    public void ALegacyRuleWithoutAnIntervalIsStillAccepted()
+    {
+        var task = TodoTaskTests.Existing();
+        var rule = RecurrenceRule.Daily(Today) with { Interval = 0 };
+
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, rule), Now));
+
+        Assert.True(task.IsRecurring);
+    }
+
     internal static TodoTask Recurring(RecurrenceRule? rule = null)
     {
         var task = TodoTaskTests.Existing();

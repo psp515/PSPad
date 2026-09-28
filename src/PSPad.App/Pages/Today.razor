@@ -177,6 +177,11 @@ else
     {
         if (task.IsRecurring)
         {
+            if (!task.OccursOn(day) && !task.CompletedDays.Contains(day))
+            {
+                return;
+            }
+
             await Sender.SendAsync(new CompleteOccurrence(
                 Guid.NewGuid(), State.UserId, task.Id, day, !task.CompletedDays.Contains(day)));
         }

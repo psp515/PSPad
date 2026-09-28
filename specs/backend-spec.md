@@ -199,7 +199,10 @@ not stated there:
   date combine in either order. `TodoTask.OccursOn(day)` = rule occurs and
   `day <= DueOn`; Today, Upcoming, occurrence chips and `CompleteOccurrence`
   all use it, never `RecurrenceRule.OccursOn` alone. A tick after the end is
-  rejected as a day the task does not repeat on.
+  rejected as a day the task does not repeat on; an untick of a day already
+  in `completedDays` is always accepted, even after the end or interval
+  moved past it. `SetTaskRecurrence` rejects an `Interval` outside 1–99,
+  letting the legacy 0 through.
 - `TodoTask.EndedBy(today)` — repeating and `DueOn < today` — means the
   repeat has ended; the client treats it as completed. Derived, never
   stored: no command, no event, no `CompletedAt`. Moving `DueOn` forward

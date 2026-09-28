@@ -56,7 +56,7 @@
 
             @if (_kind == RecurrenceKind.Weekly)
             {
-                <MudChipSet T="DayOfWeek" Class="pspad-repeat-weekdays" @bind-SelectedValues="_days"
+                <MudChipSet T="DayOfWeek" Class="pspad-repeat-weekdays" @bind-SelectedValues="Days"
                             SelectionMode="SelectionMode.MultiSelection" Size="Size.Small" Variant="Variant.Outlined"
                             SelectedColor="Color.Primary">
                     @foreach (var day in WeekOrder)
@@ -67,11 +67,11 @@
             }
             else if (_kind == RecurrenceKind.MonthlyOnDay)
             {
-                <MudNumericField T="int" Class="pspad-repeat-day" @bind-Value="_dayOfMonth" Min="1" Max="31"
+                <MudNumericField T="int" Class="pspad-repeat-day" @bind-Value="DayOfMonth" Min="1" Max="31"
                                  Label="On day" Variant="Variant.Outlined" Margin="Margin.Dense" />
             }
 
-            <MudDatePicker Class="pspad-repeat-start" Label="Starts" @bind-Date="_start"
+            <MudDatePicker Class="pspad-repeat-start" Label="Starts" @bind-Date="Start"
                            Variant="Variant.Outlined" Margin="Margin.Dense" />
         </MudStack>
     </DialogContent>
@@ -99,6 +99,51 @@
     IReadOnlyCollection<DayOfWeek>? _days;
     int _dayOfMonth = 1;
     DateTime? _start;
+    bool _daysPicked;
+    bool _dayOfMonthPicked;
+
+    IReadOnlyCollection<DayOfWeek>? Days
+    {
+        get => _days;
+        set
+        {
+            _days = value;
+            _daysPicked = true;
+        }
+    }
+
+    int DayOfMonth
+    {
+        get => _dayOfMonth;
+        set
+        {
+            _dayOfMonth = value;
+            _dayOfMonthPicked = true;
+        }
+    }
+
+    DateTime? Start
+    {
+        get => _start;
+        set
+        {
+            _start = value;
+            if (value is not { } start)
+            {
+                return;
+            }
+
+            if (!_daysPicked)
+            {
+                _days = [start.DayOfWeek];
+            }
+
+            if (!_dayOfMonthPicked)
+            {
+                _dayOfMonth = start.Day;
+            }
+        }
+    }
 
     static readonly DialogOptions CustomOptions = new() { CloseOnEscapeKey = true, BackdropClick = true };
 
@@ -183,6 +228,8 @@
         _days = Value is { Kind: RecurrenceKind.Weekly } weekly ? [.. weekly.Days] : [start.DayOfWeek];
         _dayOfMonth = Value is { Kind: RecurrenceKind.MonthlyOnDay } monthly ? monthly.DayOfMonth : start.Day;
         _start = start.ToDateTime(TimeOnly.MinValue);
+        _daysPicked = Value is { Kind: RecurrenceKind.Weekly };
+        _dayOfMonthPicked = Value is { Kind: RecurrenceKind.MonthlyOnDay };
         _customising = true;
     }
 

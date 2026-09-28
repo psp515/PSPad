@@ -78,7 +78,9 @@ does not break it.
 - Old documents need no migration: `Interval = 0` behaves as 1.
 - "Ended" has no event, so Statistics records nothing when a repeat runs
   out; the log shows only the ticks and the due date being set. A chart that
-  wants "repeats finished" would have to derive it too.
+  wants "repeats finished" would have to derive it too. Statistics'
+  Outstanding chart likewise never records an end for a repeating task,
+  exactly as for recurring tasks before this record — a known gap.
 - Every reader of a repeat must go through `TodoTask.OccursOn`, not
   `RecurrenceRule.OccursOn`, or it will show occurrences past the end. The
   rule alone no longer answers "does this task occur today".

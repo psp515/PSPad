@@ -10,6 +10,7 @@ using PSPad.App.Tests;
 using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
+using PSPad.Module.Tasks.Recurrence;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Pages;
@@ -150,6 +151,27 @@ public class GoalsPageTests : Bunit.TestContext
 
         Assert.Contains("Book a check-up", card.Markup);
         Assert.DoesNotContain("Deploy", card.Markup);
+    }
+
+    [Fact]
+    public void ARepeatPastItsUntilDateIsNotOpenOnItsGoalCard()
+    {
+        var today = new DateOnly(2026, 9, 12);
+        var goal = NewGoal("Read more");
+        var list = NewList("Health");
+        var ended = NewTask(list.Id, "Read a book", goal.Id);
+        ended.ApplyAll(TodoTask.Decide(ended,
+            new SetTaskRecurrence(Guid.NewGuid(), User, ended.Id, RecurrenceRule.Daily(today.AddDays(-7))),
+            DateTimeOffset.UnixEpoch));
+        ended.ApplyAll(TodoTask.Decide(ended,
+            new SetTaskDueDate(Guid.NewGuid(), User, ended.Id, today.AddDays(-1)), DateTimeOffset.UnixEpoch));
+        Arrange(goal, list, ended, NewTask(list.Id, "Buy a lamp", goal.Id));
+
+        var page = Render<GoalsPage>();
+        var card = page.FindComponents<GoalCard>().Single();
+
+        Assert.DoesNotContain("Read a book", card.Markup);
+        Assert.Contains("1 open", card.Find(".pspad-open-count").TextContent);
     }
 
     [Fact]

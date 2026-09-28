@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using PSPad.App.Components;
 using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Tasks;
+using PSPad.Module.Tasks.Recurrence;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Components;
@@ -28,6 +29,26 @@ public class GoalSummaryCardTests : Bunit.TestContext
         Assert.Contains("2 of 3 tasks done", card.Find(".pspad-goal-summary-tasks").TextContent);
         Assert.Contains("pspad-goal-summary-achieved", card.Find(".pspad-goal-summary").ClassName);
         Assert.Empty(card.FindAll(".mud-progress-linear"));
+    }
+
+    [Fact]
+    public void ARepeatPastItsUntilDateCountsAsDone()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var goal = NewGoal("Read more", GoalStatus.InProgress);
+        var ended = NewTask("Read a book");
+        ended.ApplyAll(TodoTask.Decide(ended,
+            new SetTaskRecurrence(Guid.NewGuid(), User, ended.Id, RecurrenceRule.Daily(Today.AddDays(-7))),
+            DateTimeOffset.UnixEpoch));
+        ended.ApplyAll(TodoTask.Decide(ended,
+            new SetTaskDueDate(Guid.NewGuid(), User, ended.Id, Today.AddDays(-1)), DateTimeOffset.UnixEpoch));
+
+        var card = Render<GoalSummaryCard>(parameters => parameters
+            .Add(p => p.Goal, goal)
+            .Add(p => p.Today, Today)
+            .Add(p => p.Tasks, [ended, NewTask("Buy a lamp")]));
+
+        Assert.Contains("1 of 2 tasks done", card.Find(".pspad-goal-summary-tasks").TextContent);
     }
 
     [Fact]

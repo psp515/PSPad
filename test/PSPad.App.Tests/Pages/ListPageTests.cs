@@ -127,6 +127,42 @@ public class ListPageTests : Bunit.TestContext
         Assert.Empty(stored!.CompletedDays);
     }
 
+    [Fact]
+    public void TickingARepeatOnADayItSkipsSendsNothing()
+    {
+        var list = NewList("Regularne");
+        var task = NewTask(list.Id, "Water plants");
+        task.ApplyAll(TodoTask.Decide(task,
+            new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(Today.AddDays(-1)).EveryNth(2)),
+            DateTimeOffset.UnixEpoch));
+        Arrange(list, task);
+        var recorded = new RecordingHandler<CompleteOccurrence>();
+        Services.AddSingleton<ICommandHandler<CompleteOccurrence>>(recorded);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+        page.Find("input.mud-checkbox-input").Change(true);
+
+        Assert.Empty(recorded.Received);
+    }
+
+    [Fact]
+    public async Task TickingATickedRepeatUnticksToday()
+    {
+        var list = NewList("Regularne");
+        var task = NewTask(list.Id, "Read a book");
+        task.ApplyAll(TodoTask.Decide(task,
+            new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(Today)), DateTimeOffset.UnixEpoch));
+        task.ApplyAll(TodoTask.Decide(task,
+            new CompleteOccurrence(Guid.NewGuid(), User, task.Id, Today, true), DateTimeOffset.UnixEpoch));
+        var replica = Arrange(list, task);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+        page.Find("input.mud-checkbox-input").Change(false);
+
+        var stored = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Empty(stored!.CompletedDays);
+    }
+
     static TodoTask Ended(TodoTask task)
     {
         task.ApplyAll(TodoTask.Decide(task,
