@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.JSInterop;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App;
@@ -97,7 +96,7 @@ builder.Services.AddScoped<ISyncTrigger>(sp => sp.GetRequiredService<SyncCoordin
 var host = builder.Build();
 var bootLogger = host.Services.GetRequiredService<ILogger<Program>>();
 
-// Any bootstrap or teardown failure must still reveal the app: a held splash is an unrecoverable
+// Any bootstrap failure must still reveal the app: a held splash is an unrecoverable
 // blank screen, so nothing below is allowed to escape and skip host.RunAsync().
 try
 {
@@ -107,15 +106,6 @@ try
 catch (Exception exception)
 {
     bootLogger.LogWarning("Session bootstrap failed: {Reason}", exception.Message);
-}
-
-try
-{
-    await host.Services.GetRequiredService<IJSRuntime>().InvokeVoidAsync("pspadBoot.done");
-}
-catch (Exception exception)
-{
-    bootLogger.LogWarning("Boot splash teardown failed: {Reason}", exception.Message);
 }
 
 await host.RunAsync();

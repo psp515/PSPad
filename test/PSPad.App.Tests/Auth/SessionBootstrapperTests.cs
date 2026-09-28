@@ -46,10 +46,34 @@ public class SessionBootstrapperTests
     }
 
     [Fact]
+    public async Task ItHandsTheSessionItReadToTheAuthenticationStateSoTheFirstRenderNeedNotReadItAgain()
+    {
+        var sessions = new InMemoryLocalSessionStore(Session(Now.AddDays(-1)));
+        var authentication = new LocalAuthenticationStateProvider(sessions);
+
+        await Bootstrapper(sessions, authentication: authentication).StartAsync();
+
+        Assert.True((await authentication.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated);
+        Assert.Equal(1, sessions.Loads);
+    }
+
+    [Fact]
+    public async Task ItHandsAnExpiredSessionOverAsSignedOut()
+    {
+        var sessions = new InMemoryLocalSessionStore(Session(Now.AddDays(-8)));
+        var authentication = new LocalAuthenticationStateProvider(sessions);
+
+        await Bootstrapper(sessions, authentication: authentication).StartAsync();
+
+        Assert.False((await authentication.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated);
+    }
+
+    [Fact]
     public async Task ItReportsNoSessionWhenTheStoreThrows()
     {
         var sessions = new ThrowingLocalSessionStore();
-        var bootstrapper = new SessionBootstrapper(sessions, new InMemoryReplica(), new FixedClock(Now));
+        var bootstrapper = new SessionBootstrapper(
+            sessions, new InMemoryReplica(), new FixedClock(Now), new LocalAuthenticationStateProvider(sessions));
 
         Assert.Equal(SessionStartup.NoSession, await bootstrapper.StartAsync());
     }
@@ -57,8 +81,9 @@ public class SessionBootstrapperTests
     [Fact]
     public async Task ItGivesUpWhenTheSessionStoreNeverAnswers()
     {
+        var sessions = new StallingLocalSessionStore();
         var bootstrapper = new SessionBootstrapper(
-            new StallingLocalSessionStore(), new InMemoryReplica(), new FixedClock(Now));
+            sessions, new InMemoryReplica(), new FixedClock(Now), new LocalAuthenticationStateProvider(sessions));
 
         var start = bootstrapper.StartAsync(TimeSpan.FromMilliseconds(50));
         var finished = await Task.WhenAny(
@@ -69,8 +94,11 @@ public class SessionBootstrapperTests
     }
 
     static SessionBootstrapper Bootstrapper(
-        InMemoryLocalSessionStore sessions, InMemoryReplica? replica = null) =>
-        new(sessions, replica ?? new InMemoryReplica(), new FixedClock(Now));
+        InMemoryLocalSessionStore sessions,
+        InMemoryReplica? replica = null,
+        LocalAuthenticationStateProvider? authentication = null) =>
+        new(sessions, replica ?? new InMemoryReplica(), new FixedClock(Now),
+            authentication ?? new LocalAuthenticationStateProvider(sessions));
 
     static LocalSession Session(DateTimeOffset lastContact) =>
         new(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "refresh", lastContact);

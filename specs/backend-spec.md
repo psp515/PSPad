@@ -343,7 +343,7 @@ read LocalSession from IndexedDB
   ├── stale (now − LastServerContactUtc > 7 days)
   │     └── clear replica + LocalSession, keep outbox ──► login
   └── fresh
-        ├── tear down splash, render app from replica immediately
+        ├── render app from replica; the ready shell tears down the splash
         └── background, non-blocking: refresh token
               ├── success → store rotated token, update LastServerContactUtc, /api/me, start sync
               ├── transport failure/timeout/5xx → offline indicator, retry on reconnect
@@ -457,9 +457,12 @@ The client is static, so its API base URL and Keycloak settings can't be
 baked in — the image ships `wwwroot/appsettings.json` as a template plus an
 entrypoint substituting environment variables at container start.
 Because that rewrite happens after the build, the published service worker
-never pins `appsettings.json` to its build-time integrity hash and fetches it
-network-first, falling back to its cache offline — a pinned hash fails the
-worker's install and strands every client on the old build.
+never pins `appsettings.json` to its build-time integrity hash — a pinned hash
+fails the worker's install and strands every client on the old build. It
+answers the file from its cache and refreshes it in the background
+(stale-while-revalidate), so a network that accepts the request and never
+answers cannot hold the boot; a rewritten value takes effect from the second
+launch after a redeploy (ADR-0044).
 
 nginx caches only fingerprinted `_framework/` files as `immutable`; every
 other script, stylesheet and JSON file (`js/replica.js` included) is served

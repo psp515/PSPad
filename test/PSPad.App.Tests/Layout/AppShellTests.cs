@@ -357,6 +357,59 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ASignedInShellTearsTheBootSplashDownOnceItIsReady()
+    {
+        Arrange();
+
+        var shell = Render<AppShell>();
+
+        shell.WaitForAssertion(() => JSInterop.VerifyInvoke("pspadBoot.done"));
+    }
+
+    [Fact]
+    public void TheBootSplashStaysUpWhileTheFirstPullIsInFlight()
+    {
+        // Tearing it down early shows the bare shell chrome around a loader, then the app.
+        Arrange();
+        var pull = new TaskCompletionSource<SyncResponse?>();
+        Services.AddSingleton<ISyncApi>(new GatedSyncApi(pull.Task));
+        Services.AddSingleton<IConnectivity>(new AlwaysOnline());
+
+        var shell = Render<AppShell>();
+
+        Assert.Empty(JSInterop.Invocations["pspadBoot.done"]);
+
+        pull.SetResult(new SyncResponse(9, new Dictionary<string, System.Text.Json.JsonElement[]>(), []));
+
+        shell.WaitForAssertion(() => JSInterop.VerifyInvoke("pspadBoot.done"));
+    }
+
+    [Fact]
+    public async Task AServerThatNeverAnswersTheAccountFetchDoesNotHoldTheAppBack()
+    {
+        // A shop's captive network accepts the request and never replies.
+        Arrange(accountFetchHangs: true);
+        Services.AddSingleton<IViewport>(new YieldingViewport());
+        await Services.GetRequiredService<IReplica>().SetMarkerAsync(12);
+
+        var shell = Render<AppShell>();
+
+        shell.WaitForAssertion(() => Assert.Empty(shell.FindComponents<BrandLoader>()));
+        JSInterop.VerifyInvoke("pspadBoot.done");
+    }
+
+    [Fact]
+    public void ASignedOutShellLeavesTheBootSplashToTheSignInScreen()
+    {
+        // The shell only hosts the redirect to /welcome here; releasing would flash its chrome.
+        Arrange(hasSession: false);
+
+        Render<AppShell>();
+
+        Assert.Empty(JSInterop.Invocations["pspadBoot.done"]);
+    }
+
+    [Fact]
     public void ASignInWithNothingStoredLocallyWaitsForTheFirstPullBeforeShowingTheApp()
     {
         // Signing in wipes the replica. Rendering the app from it while the pull is still in
@@ -405,8 +458,10 @@ public class AppShellTests : Bunit.TestContext
         Render<AppShell>();
         await DisposeComponentsAsync();
 
-        await store.SaveAsync(new LocalSession(
-            User, "Zoe Session", "zoe@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow));
+        var session = new LocalSession(
+            User, "Zoe Session", "zoe@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow);
+        await store.SaveAsync(session);
+        Services.GetRequiredService<LocalAuthenticationStateProvider>().SignedIn(session);
         var shell = Render<AppShell>();
 
         Assert.NotEmpty(shell.FindComponents<BrandLoader>());
@@ -451,6 +506,7 @@ public class AppShellTests : Bunit.TestContext
         string email = "ada@example.com",
         string? emailClaim = "ada@example.com",
         bool accountFetchFails = false,
+        bool accountFetchHangs = false,
         bool hasSession = true,
         MeResponse? meResponseOverride = null,
         InMemoryLocalSessionStore? sessionStore = null,
@@ -470,11 +526,14 @@ public class AppShellTests : Bunit.TestContext
                 ? new LocalSession(
                     User, "Zoe Session", "zoe@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow)
                 : null));
+        Services.AddSingleton<LocalAuthenticationStateProvider>();
 
         var meResponse = meResponseOverride ?? new MeResponse(User, displayName, email, "UTC");
         HttpMessageHandler handler = accountFetchFails
             ? new ThrowingMeHandler()
-            : new FakeMeHandler(meResponse, onMeRequest);
+            : accountFetchHangs
+                ? new HangingMeHandler()
+                : new FakeMeHandler(meResponse, onMeRequest);
 
         Services.AddSingleton(new PSPadApiClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }));
         Services.AddSingleton<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
@@ -600,6 +659,23 @@ public class AppShellTests : Bunit.TestContext
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
             Task.FromException<HttpResponseMessage>(new HttpRequestException("offline"));
+    }
+
+    sealed class YieldingViewport : IViewport
+    {
+        public async Task SubscribeAsync(Action<bool> onDesktopChanged)
+        {
+            await Task.Yield();
+            onDesktopChanged(true);
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    sealed class HangingMeHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            new TaskCompletionSource<HttpResponseMessage>().Task;
     }
 
     sealed class ThrowingAreaStore : IDocumentStore<Area>

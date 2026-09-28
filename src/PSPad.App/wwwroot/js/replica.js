@@ -1,10 +1,27 @@
 const DB_NAME = 'pspad';
 const VERSION = 2;
 
+let connection;
+
 export function open() {
-  return openAt(VERSION).catch(error =>
-    // A script cached from an older build meets a database a newer build already upgraded; stores only ever get added.
-    error?.name === 'VersionError' ? openAt() : Promise.reject(error));
+  connection ??= openAt(VERSION)
+    .catch(error =>
+      // A script cached from an older build meets a database a newer build already upgraded; stores only ever get added.
+      error?.name === 'VersionError' ? openAt() : Promise.reject(error))
+    .then(db => {
+      db.onversionchange = () => forget(db);
+      db.onclose = () => forget(db);
+      return db;
+    }, error => {
+      connection = undefined;
+      return Promise.reject(error);
+    });
+  return connection;
+}
+
+function forget(db) {
+  db.close();
+  connection = undefined;
 }
 
 function openAt(version) {
@@ -27,11 +44,7 @@ function openAt(version) {
         db.createObjectStore('session', { keyPath: 'key' });
       }
     };
-    request.onsuccess = () => {
-      const db = request.result;
-      db.onversionchange = () => db.close();
-      resolve(db);
-    };
+    request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
     // A version upgrade blocked by a connection in another tab settles neither onsuccess nor
     // onerror, so without this the promise never resolves and never rejects.

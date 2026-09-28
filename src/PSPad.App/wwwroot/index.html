@@ -12,6 +12,8 @@
                 if (splash) { splash.remove(); }
             }
         };
+        // The first screen tears the splash down; a boot that never renders one must not hide the error banner forever.
+        setTimeout(window.pspadBoot.done, 20000);
     </script>
     <script>
         (function () {

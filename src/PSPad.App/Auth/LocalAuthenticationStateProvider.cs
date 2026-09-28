@@ -9,7 +9,10 @@ public sealed class LocalAuthenticationStateProvider(ILocalSessionStore sessions
     LocalSession? _session;
     bool _loaded;
 
-    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+    public override async Task<AuthenticationState> GetAuthenticationStateAsync() =>
+        new(Principal(await SessionAsync()));
+
+    public async Task<LocalSession?> SessionAsync()
     {
         if (!_loaded)
         {
@@ -25,7 +28,13 @@ public sealed class LocalAuthenticationStateProvider(ILocalSessionStore sessions
             _loaded = true;
         }
 
-        return new AuthenticationState(Principal(_session));
+        return _session;
+    }
+
+    public void Adopt(LocalSession? session)
+    {
+        _session = session;
+        _loaded = true;
     }
 
     public void SignedIn(LocalSession session)

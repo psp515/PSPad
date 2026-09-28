@@ -19,7 +19,13 @@ public class DeploymentCachingTests
     [Fact]
     public void AnOpenConnectionStepsAsideForAnUpgradeInAnotherTab()
     {
-        Assert.Contains("onversionchange = () => db.close()", Replica);
+        Assert.Contains("db.onversionchange = () => forget(db)", Replica);
+    }
+
+    [Fact]
+    public void EveryCallSharesOneOpenConnection()
+    {
+        Assert.Contains("connection ??= ", Replica);
     }
 
     [Fact]
@@ -30,9 +36,11 @@ public class DeploymentCachingTests
     }
 
     [Fact]
-    public void TheWorkerFetchesTheSettingsFromTheNetworkFirst()
+    public void TheWorkerAnswersTheSettingsFromItsCacheAndRefreshesThemBehindTheBoot()
     {
-        Assert.Contains("networkFirst(event.request)", Worker);
+        // A network that accepts the request and never answers would otherwise hold the boot forever.
+        Assert.Contains("staleWhileRevalidate(event)", Worker);
+        Assert.DoesNotContain("networkFirst", Worker);
     }
 
     [Fact]
