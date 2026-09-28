@@ -42,26 +42,6 @@ else if (_goal is not null)
     </div>
 
     <MudGrid Spacing="4">
-        @if (_progress.Count > 0)
-        {
-            <MudItem xs="12" md="6">
-                <MudPaper Outlined="true" Class="pspad-goal-progress pa-3">
-                    <MudText Typo="Typo.subtitle2" Class="mb-1">Progress</MudText>
-                    <MudChart ChartType="ChartType.Line" ChartSeries="@ProgressSeries" ChartLabels="@ProgressLabels"
-                              ChartOptions="@ProgressOptions" Width="100%" Height="260px" />
-                    @if (_hasRecurring)
-                    {
-                        <MudText Typo="Typo.caption" Class="pspad-muted">Recurring tasks not counted</MudText>
-                    }
-                </MudPaper>
-            </MudItem>
-        }
-        @if (_pace is not null)
-        {
-            <MudItem xs="12" md="6" xl="3">
-                <GoalPaceCard Pace="@_pace" />
-            </MudItem>
-        }
         @if (_open.Count == 0)
         {
             <MudItem xs="12" sm="6" md="4" xl="3">
@@ -86,6 +66,31 @@ else if (_goal is not null)
                 </MudGrid>
             </MudExpansionPanel>
         </MudExpansionPanels>
+    }
+
+    @if (_progress.Count > 0)
+    {
+        <section class="pspad-goal-charts mt-8">
+            <MudGrid Spacing="4">
+                <MudItem xs="12" md="6">
+                    <MudPaper Outlined="true" Class="pspad-goal-progress pa-3">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Progress</MudText>
+                        <MudChart ChartType="ChartType.Line" ChartSeries="@ProgressSeries" ChartLabels="@ProgressLabels"
+                                  ChartOptions="@ProgressOptions" Width="100%" Height="260px" />
+                        @if (_hasRecurring)
+                        {
+                            <MudText Typo="Typo.caption" Class="pspad-muted">Recurring tasks not counted</MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+                @if (_pace is not null)
+                {
+                    <MudItem xs="12" md="6">
+                        <GoalPaceCard Pace="@_pace" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </section>
     }
 
     <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">

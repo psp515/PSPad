@@ -247,11 +247,13 @@ screen `/goals/{id}`.
 **Goal screen.** `/goals/{goalId}` mirrors the list screen: back arrow to
 `/goals`, the goal's name as title with a small outlined status `MudChip`
 (In progress / Achieved — `Color.Success` — / Not achieved) and its due
-date as a caption under it. One `MudGrid` then holds the **Progress**
-card, the **Pace** card (dated goals only) and every open task as its own
-card (list name and added day on each row), so task cards flow up beside
-the chart on wide screens; a collapsed **Completed (N)** follows. With no open tasks it shows an `EmptyState` "No open
-tasks." with no create action — a task is created in a list, not a goal.
+date as a caption under it. Tasks come first: every open task as its own
+card (list name and added day on each row), then a collapsed **Completed
+(N)**. The charts are a separate section at the bottom (`mt-8`, their own
+`MudGrid`): the **Progress** card and, for dated goals, the **Pace** card,
+each half width from `md` up. Tasks and charts never share a grid. With
+no open tasks it shows an `EmptyState` "No open tasks." with no create
+action — a task is created in a list, not a goal.
 A goal card's name, its **Show all** link and every `GoalSummaryCard`
 (achieved, not achieved, My Day) lead here, so a closed goal's tasks stay
 reachable.
@@ -268,8 +270,8 @@ counts from its creation, not from when it was linked to the goal (the
 link carries no time). With nothing to count the card is not rendered.
 Axis ticks and labels come from `ChartAxis`, shared with Statistics.
 
-**Goal pace card.** `GoalPaceCard`, in a `MudItem` (`xs="12" md="6"
-xl="3"`) beside the progress chart, shown only when the goal has a due date
+**Goal pace card.** `GoalPaceCard`, in a `MudItem` (`xs="12" md="6"`)
+beside the progress chart, shown only when the goal has a due date
 and something to count. Two large `MudProgressCircular` rings: **time** —
 share of the span from the first counted week's Monday to the due date
 already used, `Color.Primary`, captioned "N days left" / "Due today" /

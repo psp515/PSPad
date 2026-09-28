@@ -353,15 +353,23 @@ public class GoalPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void OpenTaskCardsShareTheGridWithTheChart()
+    public void ChartsAreTheirOwnSectionBelowTheTasks()
     {
-        var goal = NewGoal("Eat healthier");
+        var goal = NewGoal("Eat healthier", dueOn: Today.AddDays(12));
         var list = NewList("Health");
-        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id));
+        var done = NewTask(list.Id, "Buy oats", goal.Id);
+        done.ApplyAll(TodoTask.Decide(done, new CompleteTask(Guid.NewGuid(), User, done.Id), DateTimeOffset.UnixEpoch));
+        Arrange(goal, list, done, NewTask(list.Id, "Book a check-up", goal.Id));
 
         var page = RenderPage(goal.Id);
+        var charts = page.Find(".pspad-goal-charts");
+        var markup = page.Markup;
 
-        Assert.Same(page.Find(".pspad-goal-progress").Closest(".mud-grid"), page.Find(".pspad-task-card").Closest(".mud-grid"));
+        Assert.NotNull(charts.QuerySelector(".pspad-goal-progress"));
+        Assert.NotNull(charts.QuerySelector(".pspad-goal-pace"));
+        Assert.Null(charts.QuerySelector(".pspad-task-card"));
+        Assert.True(markup.IndexOf("pspad-task-card", StringComparison.Ordinal) < markup.IndexOf("pspad-goal-charts", StringComparison.Ordinal));
+        Assert.True(markup.IndexOf("Completed (1)", StringComparison.Ordinal) < markup.IndexOf("pspad-goal-charts", StringComparison.Ordinal));
     }
 
     IRenderedComponent<GoalPage> RenderPage(Guid goalId) =>
