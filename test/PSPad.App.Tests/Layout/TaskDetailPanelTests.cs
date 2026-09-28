@@ -555,17 +555,21 @@ public class TaskDetailPanelTests : Bunit.TestContext
         Assert.DoesNotContain("d-none", dialog.ClassName);
         panel.Find(".pspad-repeat-every input").Change("3");
         panel.Find(".pspad-repeat-unit .mud-select-input").MouseDown();
+        panel.WaitForAssertion(() => Assert.Contains(panel.FindAll(".mud-list-item"),
+            item => item.TextContent.Trim() == "weeks"));
         panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "weeks").Click();
+        panel.WaitForAssertion(() => Assert.Contains(panel.FindAll(".pspad-repeat-weekdays .mud-chip"),
+            chip => chip.TextContent.Trim() == "Mon"));
         panel.FindAll(".pspad-repeat-weekdays .mud-chip").First(chip => chip.TextContent.Trim() == "Mon").Click();
         panel.Find(".pspad-repeat-save").Click();
+        panel.WaitForAssertion(() => Assert.Contains("Every 3 weeks on Mon, Sat",
+            panel.Find(".pspad-task-repeat").TextContent));
 
         var rule = (await replica.LoadAsync<TodoTask>(task.Id))!.Recurrence!;
         Assert.Equal(RecurrenceKind.Weekly, rule.Kind);
         Assert.Equal(3, rule.Interval);
         Assert.Equal(Today, rule.StartsOn);
         Assert.Equal([DayOfWeek.Monday, DayOfWeek.Saturday], rule.Days.Order());
-        panel.WaitForAssertion(() => Assert.Contains("Every 3 weeks on Mon, Sat",
-            panel.Find(".pspad-task-repeat").TextContent));
     }
 
     [Fact]
