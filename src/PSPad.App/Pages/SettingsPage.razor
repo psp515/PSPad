@@ -39,10 +39,16 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary">@State.Email</MudText>
                 </div>
             </div>
-            <MudButton Class="pspad-sign-out" OnClick="@SignOutAsync" StartIcon="@Icons.Material.Filled.Logout"
-                       Color="Color.Error" Variant="Variant.Outlined">
-                Sign out
-            </MudButton>
+            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
+                <MudButton Class="pspad-change-password" Href="@KeycloakAccountConsole.UrlFor(Configuration["Keycloak:Authority"]!)"
+                           Target="_blank" StartIcon="@Icons.Material.Filled.Password" Variant="Variant.Outlined">
+                    Change password
+                </MudButton>
+                <MudButton Class="pspad-sign-out" OnClick="@SignOutAsync" StartIcon="@Icons.Material.Filled.Logout"
+                           Color="Color.Error" Variant="Variant.Outlined">
+                    Sign out
+                </MudButton>
+            </MudStack>
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" md="4" xl="3">

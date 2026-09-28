@@ -369,6 +369,19 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheAccountCardLinksToKeycloaksAccountConsoleInANewTabForChangingThePassword()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+        var link = page.Find(".pspad-account-card a.pspad-change-password");
+
+        Assert.Equal("http://localhost:8080/realms/psplace/account/", link.GetAttribute("href"));
+        Assert.Equal("_blank", link.GetAttribute("target"));
+        Assert.Contains("Change password", link.TextContent);
+    }
+
+    [Fact]
     public void TheDangerZoneCardOffersAccountDeletion()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
