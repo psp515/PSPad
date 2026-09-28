@@ -42,7 +42,7 @@ problem MudBlazor already solves.
 
 Not every `pspad-*` class carries a CSS rule. Several exist purely as a
 stable selector for tests to find a MudBlazor element that has no other
-reliable hook (`pspad-sign-out`, `pspad-account-card`, `pspad-delete-account`,
+reliable hook (`pspad-sign-out`, `pspad-change-password`, `pspad-account-card`, `pspad-delete-account`,
 `pspad-confirm-email`, `pspad-confirm-delete`). Don't "clean up" an
 apparently-unstyled `pspad-*` class without checking whether a test depends
 on it first.
@@ -634,7 +634,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `/goals/{goalId}` | goal screen — every task of one goal |
 | `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-captures bar chart, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
-| `/settings` | Settings (account + sign-out; application settings: time zone, theme, accent; sync status; delete account) |
+| `/settings` | Settings (account + change password + sign-out; application settings: time zone, theme, accent; sync status; delete account) |
 | `/app-info` | version, license, docs/repo links |
 | `/search` | search results (currently unreachable from the UI) |
 | `/welcome` | public, signed-out landing screen |
@@ -661,6 +661,13 @@ third pattern.
 
 **Sign-out lives inside the Account card**, under the avatar/name/email
 block — not a standalone button elsewhere on the page.
+
+**Change password is a link out, beside sign-out.** PSPad keeps no
+passwords, so the Account card's "Change password" button opens Keycloak's
+own Account Console (`{authority}/account/`, the console root — its
+sub-page routes shift between Keycloak versions) in a new tab, riding the
+existing browser session. No in-app `kc_action=UPDATE_PASSWORD` round trip:
+it would re-enter the login-callback route ADR-0027 guards.
 
 **Account deletion is a "Danger zone" card**, last on the page, `Color.Error`
 styling. Its button opens a `MudDialog` that asks the person to type their
