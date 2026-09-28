@@ -190,6 +190,47 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void SwitchingTaskIdWhileEditingShowsTheOtherTasksDescriptionRatherThanTheDraft()
+    {
+        var taskA = NewTask("Task A");
+        taskA.ApplyAll(TodoTask.Decide(
+            taskA, new SetTaskDescription(Guid.NewGuid(), User, taskA.Id, "A description"),
+            DateTimeOffset.UnixEpoch));
+        var taskB = NewTask("Task B");
+        taskB.ApplyAll(TodoTask.Decide(
+            taskB, new SetTaskDescription(Guid.NewGuid(), User, taskB.Id, "B description"),
+            DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, taskA, taskB);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)taskA.Id));
+        panel.Find(".pspad-markdown-edit").Click();
+        panel.Find("textarea").Change("Draft for A");
+
+        panel.Render(parameters => parameters.Add(p => p.TaskId, (Guid?)taskB.Id));
+
+        Assert.Contains("B description", panel.Markup);
+        Assert.DoesNotContain("Draft for A", panel.Markup);
+    }
+
+    [Fact]
+    public void ARejectedDescriptionSaveStaysInEditAndSurfacesTheRejection()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+        Services.AddSingleton<ICommandHandler<SetTaskDescription>>(
+            new RejectingHandler<SetTaskDescription>("Task no longer exists."));
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        panel.Find(".pspad-markdown-placeholder").Click();
+        panel.Find("textarea").Change("Whole milk");
+        panel.Find(".pspad-markdown-save").Click();
+
+        Assert.NotEmpty(panel.FindAll("textarea"));
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("Task no longer exists.") == true);
+    }
+
+    [Fact]
     public void ANewTaskDraftShowsNoDescriptionField()
     {
         AppTestHost.Arrange(this, User, Today);

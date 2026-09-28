@@ -24,7 +24,7 @@ else if (_list is not null)
     <div class="d-flex align-center gap-1 mb-4">
         <MudIconButton Class="pspad-back-to-area" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary"
                        Href="@($"/areas/{_list.AreaId}")" aria-label="Back to area" />
-        <MudIcon Icon="@ListIcon.For(_list)" Color="Color.Primary" Class="pspad-list-icon" />
+        <MudIcon Icon="@ListIcon.For(_list)" Title="@ListIcon.LabelFor(_list)" Color="Color.Primary" Class="pspad-list-icon" />
         <MudText Typo="Typo.h5" Color="Color.Primary">@_list.Name</MudText>
     </div>
 
@@ -33,7 +33,7 @@ else if (_list is not null)
         <MudGrid Spacing="4">
             <MudItem xs="12" sm="6" md="4" xl="3">
                 <EmptyState Icon="@Icons.Material.Outlined.TaskAlt" Message="No tasks yet." CreateText="Add task"
-                            OnCreate="@AddTask" />
+                            OnCreate="@(_list.Kind == ListKind.Reference ? default : EventCallback.Factory.Create(this, AddTask))" />
             </MudItem>
         </MudGrid>
     }
@@ -72,10 +72,13 @@ else if (_list is not null)
     }
 
     <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
-        <MudTooltip Text="Add task">
-            <MudFabMenuItem OnClick="@AddTask" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
-                            Size="Size.Small" UserAttributes="@AddTaskAttributes" />
-        </MudTooltip>
+        @if (_list.Kind != ListKind.Reference)
+        {
+            <MudTooltip Text="Add task">
+                <MudFabMenuItem OnClick="@AddTask" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
+                                Size="Size.Small" UserAttributes="@AddTaskAttributes" />
+            </MudTooltip>
+        }
         <MudTooltip Text="Rename list">
             <MudFabMenuItem OnClick="@RenameAsync" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
                             Size="Size.Small" UserAttributes="@RenameListAttributes" />

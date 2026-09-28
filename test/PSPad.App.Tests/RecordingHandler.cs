@@ -12,3 +12,9 @@ public sealed class RecordingHandler<TCommand> : ICommandHandler<TCommand> where
         return Task.FromResult(CommandResult.Ok());
     }
 }
+
+public sealed class RejectingHandler<TCommand>(string reason) : ICommandHandler<TCommand> where TCommand : ICommand
+{
+    public Task<CommandResult> HandleAsync(TCommand command, CancellationToken ct) =>
+        Task.FromResult(CommandResult.Rejected(reason));
+}

@@ -39,6 +39,7 @@ public static class MarkdownRenderer
             }
             else
             {
+                // ReplaceBy keeps the link's children after the empty literal, so the label shows once
                 link.ReplaceBy(new LiteralInline(""));
             }
         }

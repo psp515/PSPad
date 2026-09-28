@@ -14,6 +14,7 @@
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
+@inject ISnackbar Snackbar
 
 <DetailPanel Open="@(Mode != PanelMode.Closed)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose"
              OnSave="@SaveCallback" SaveText="Add task" CanSave="@(!string.IsNullOrWhiteSpace(_draft.Name))"
@@ -41,7 +42,8 @@
         @if (_task is not null)
         {
             <div class="px-3 pb-3">
-                <MarkdownField Value="@_task.Description" OnSave="@SaveDescriptionAsync" Disabled="@Disabled" />
+                <MarkdownField @key="_task.Id" Value="@_task.Description" OnSave="@SaveDescriptionAsync"
+                               Disabled="@Disabled" />
             </div>
 
             <div class="pl-5 pr-3 pb-3">
@@ -245,15 +247,23 @@
         await ReloadAsync();
     }
 
-    async Task SaveDescriptionAsync(string text)
+    async Task<bool> SaveDescriptionAsync(string text)
     {
         if (Disabled || _task is null)
         {
-            return;
+            return false;
         }
 
-        await Sender.SendAsync(new SetTaskDescription(Guid.NewGuid(), State.UserId, _task.Id, text));
+        var result = await Sender.SendAsync(new SetTaskDescription(Guid.NewGuid(), State.UserId, _task.Id, text));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't save the description.", Severity.Warning);
+            return false;
+        }
+
         await ReloadAsync();
+        return true;
     }
 
     async Task ToggleStarAsync()

@@ -12,4 +12,12 @@ public static class ListIcon
         ListKind.Reference => Icons.Material.Outlined.LibraryBooks,
         _ => Icons.Material.Outlined.Checklist
     };
+
+    public static string LabelFor(TaskList list) => LabelFor(list.Kind);
+
+    public static string LabelFor(ListKind kind) => kind switch
+    {
+        ListKind.Reference => "Reference list",
+        _ => "Task list"
+    };
 }

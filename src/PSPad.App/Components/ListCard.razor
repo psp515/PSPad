@@ -2,11 +2,14 @@
 @using PSPad.Module.Tasks.Tasks
 
 <ThingCard Id="@List.Id" Name="@List.Name" Href="@($"/lists/{List.Id}")" Icon="@ListIcon.For(List)"
-           Tasks="@Tasks" Today="@Today"
+           IconTitle="@ListIcon.LabelFor(List)" Tasks="@Tasks" Today="@Today"
            OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen">
     <Actions>
-        <MudIconButton Class="pspad-add-task" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
-                       OnClick="@OnAddTaskClick" />
+        @if (List.Kind != ListKind.Reference)
+        {
+            <MudIconButton Class="pspad-add-task" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
+                           OnClick="@OnAddTaskClick" />
+        }
         <ThingMenu Class="pspad-list-menu"
                    OnRename="@OnRename" OnDelete="@OnDelete">
             <Extra>

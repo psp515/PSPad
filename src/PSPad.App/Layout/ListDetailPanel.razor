@@ -14,7 +14,8 @@
              OnSave="@SaveCallback" SaveText="Add list" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
              Disabled="@Disabled">
     <div class="pa-4">
-        <MudToggleGroup T="ListKind" @bind-Value="_kind" Class="pspad-list-kind mb-3" Color="Color.Primary" Outlined="true">
+        <MudToggleGroup T="ListKind" @bind-Value="_kind" Class="pspad-list-kind mb-3" Color="Color.Primary"
+                        Outlined="true" Disabled="@Disabled">
             <MudToggleItem Value="ListKind.Tasks" Text="Tasks" />
             <MudToggleItem Value="ListKind.Reference" Text="Reference" />
         </MudToggleGroup>

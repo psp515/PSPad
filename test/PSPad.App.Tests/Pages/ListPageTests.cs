@@ -42,7 +42,31 @@ public class ListPageTests : Bunit.TestContext
 
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
-        Assert.Contains("M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z", page.Find(".pspad-list-icon").InnerHtml);
+        Assert.Contains(
+            IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.LibraryBooks),
+            page.Find(".pspad-list-icon").InnerHtml);
+    }
+
+    [Fact]
+    public void AReferenceListHidesTheAddTaskFabItem()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Empty(page.FindAll("[aria-label='Add task']"));
+    }
+
+    [Fact]
+    public void AReferenceListsEmptyStateOffersNoAddTaskAction()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.DoesNotContain("Add task", page.Markup);
     }
 
     [Fact]

@@ -76,8 +76,10 @@ public class AreaBoardTests : Bunit.TestContext
 
         var icons = page.FindAll(".pspad-list-icon");
         Assert.Equal(2, icons.Count);
-        Assert.Contains(icons, icon => icon.InnerHtml.Contains("M22,7h-9v2h9V7z"));
-        Assert.Contains(icons, icon => icon.InnerHtml.Contains("M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"));
+        Assert.Contains(icons, icon => icon.InnerHtml.Contains(
+            IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.Checklist)));
+        Assert.Contains(icons, icon => icon.InnerHtml.Contains(
+            IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.LibraryBooks)));
     }
 
     [Fact]
@@ -173,6 +175,18 @@ public class AreaBoardTests : Bunit.TestContext
         page.Find(".pspad-add-task").Click();
 
         Assert.EndsWith($"/areas/{area.Id}?task=new&list={shopping.Id}", navigation.Uri);
+    }
+
+    [Fact]
+    public void AReferenceListsCardHidesTheAddTaskAction()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        Arrange(area, recipes);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Empty(page.FindAll(".pspad-add-task"));
     }
 
     [Fact]

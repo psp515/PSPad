@@ -25,7 +25,7 @@ public class SearchPageTests : Bunit.TestContext
 
         var page = RenderAt("Przepisy");
 
-        Assert.Contains("M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z", page.Markup);
+        Assert.Contains(IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.LibraryBooks), page.Markup);
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class SearchPageTests : Bunit.TestContext
 
         var page = RenderAt("Zakupy");
 
-        Assert.Contains("M22,7h-9v2h9V7z", page.Markup);
+        Assert.Contains(IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.Checklist), page.Markup);
     }
 
     IRenderedComponent<SearchPage> RenderAt(string q)

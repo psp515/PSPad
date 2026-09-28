@@ -48,7 +48,7 @@ public class MarkdownFieldTests : Bunit.TestContext
         var field = Render("## Hi", onSave: text =>
         {
             saved = text;
-            return System.Threading.Tasks.Task.CompletedTask;
+            return System.Threading.Tasks.Task.FromResult(true);
         });
 
         field.Find(".pspad-markdown-edit").Click();
@@ -67,7 +67,7 @@ public class MarkdownFieldTests : Bunit.TestContext
         var field = Render("## Hi", onSave: _ =>
         {
             saveCalled = true;
-            return System.Threading.Tasks.Task.CompletedTask;
+            return System.Threading.Tasks.Task.FromResult(true);
         });
 
         field.Find(".pspad-markdown-edit").Click();
@@ -87,8 +87,8 @@ public class MarkdownFieldTests : Bunit.TestContext
         Assert.Empty(field.FindAll(".pspad-markdown-edit"));
 
         var blank = Render("", readOnly: true);
-        blank.Find(".pspad-markdown-placeholder").Click();
-        Assert.Empty(blank.FindAll("textarea"));
+        Assert.Empty(blank.FindAll(".pspad-markdown-placeholder"));
+        Assert.Contains("No description", blank.Markup);
     }
 
     [Fact]
@@ -118,10 +118,36 @@ public class MarkdownFieldTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ARejectedSaveStaysInEditKeepingTheDraft()
+    {
+        Arrange();
+        var field = Render("## Hi", onSave: _ => System.Threading.Tasks.Task.FromResult(false));
+
+        field.Find(".pspad-markdown-edit").Click();
+        field.Find("textarea").Change("## Bye");
+        field.Find(".pspad-markdown-save").Click();
+
+        Assert.Equal("## Bye", field.Find("textarea").TextContent);
+    }
+
+    [Fact]
+    public void AnAcceptedSaveReturnsToView()
+    {
+        Arrange();
+        var field = Render("## Hi", onSave: _ => System.Threading.Tasks.Task.FromResult(true));
+
+        field.Find(".pspad-markdown-edit").Click();
+        field.Find("textarea").Change("## Bye");
+        field.Find(".pspad-markdown-save").Click();
+
+        Assert.Empty(field.FindAll("textarea"));
+    }
+
+    [Fact]
     public void SavingDisablesTheSaveButtonWhileInFlight()
     {
         Arrange();
-        var gate = new TaskCompletionSource();
+        var gate = new TaskCompletionSource<bool>();
         var field = Render("## Hi", onSave: async _ => await gate.Task);
 
         field.Find(".pspad-markdown-edit").Click();
@@ -129,7 +155,7 @@ public class MarkdownFieldTests : Bunit.TestContext
 
         Assert.True(field.Find(".pspad-markdown-save").HasAttribute("disabled"));
 
-        gate.SetResult();
+        gate.SetResult(true);
     }
 
     [Fact]
@@ -147,13 +173,13 @@ public class MarkdownFieldTests : Bunit.TestContext
 
     IRenderedComponent<MarkdownField> Render(
         string value,
-        Func<string, System.Threading.Tasks.Task>? onSave = null,
+        Func<string, System.Threading.Tasks.Task<bool>>? onSave = null,
         bool readOnly = false,
         bool disabled = false,
         string placeholder = "Add a description") =>
         Render<MarkdownField>(parameters => parameters
             .Add(p => p.Value, value)
-            .Add(p => p.OnSave, onSave ?? (_ => System.Threading.Tasks.Task.CompletedTask))
+            .Add(p => p.OnSave, onSave ?? (_ => System.Threading.Tasks.Task.FromResult(true)))
             .Add(p => p.ReadOnly, readOnly)
             .Add(p => p.Disabled, disabled)
             .Add(p => p.Placeholder, placeholder));
