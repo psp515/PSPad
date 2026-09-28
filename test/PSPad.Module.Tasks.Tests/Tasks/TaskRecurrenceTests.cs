@@ -22,12 +22,78 @@ public class TaskRecurrenceTests
     }
 
     [Fact]
-    public void ARecurringTaskCannotCarryADueDate()
+    public void ARecurringTaskTakesADueDateAsItsEnd()
     {
         var task = Recurring();
 
-        Assert.Throws<DomainRejectedException>(() => TodoTask.Decide(
+        task.ApplyAll(TodoTask.Decide(
             task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, Today), Now));
+
+        Assert.Equal(Today, task.DueOn);
+        Assert.True(task.OccursOn(Today));
+        Assert.False(task.OccursOn(Today.AddDays(1)));
+    }
+
+    [Fact]
+    public void ADatedTaskCanStartRepeating()
+    {
+        var task = TodoTaskTests.Existing();
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, Today), Now));
+
+        task.ApplyAll(TodoTask.Decide(
+            task,
+            new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(new DateOnly(2026, 9, 1))),
+            Now));
+
+        Assert.True(task.IsRecurring);
+        Assert.Equal(Today, task.DueOn);
+    }
+
+    [Fact]
+    public void TickingADayAfterTheEndIsRejected()
+    {
+        var task = EndingOn(Today);
+
+        Assert.Throws<DomainRejectedException>(() => TodoTask.Decide(
+            task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, Today.AddDays(1), true), Now));
+    }
+
+    [Fact]
+    public void TickingTheEndDayItselfIsAccepted()
+    {
+        var task = EndingOn(Today);
+
+        task.ApplyAll(TodoTask.Decide(
+            task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, Today, true), Now));
+
+        Assert.Contains(Today, task.CompletedDays);
+    }
+
+    [Fact]
+    public void ARecurringTaskEndsOnceItsEndDayHasPassed()
+    {
+        var task = EndingOn(Today);
+
+        Assert.False(task.EndedBy(Today));
+        Assert.True(task.EndedBy(Today.AddDays(1)));
+    }
+
+    [Fact]
+    public void ARecurringTaskWithoutAnEndNeverEnds()
+    {
+        Assert.False(Recurring().EndedBy(Today.AddYears(10)));
+    }
+
+    [Fact]
+    public void APlainTaskPastItsDueDateIsNotEnded()
+    {
+        var task = TodoTaskTests.Existing();
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, Today), Now));
+
+        Assert.False(task.EndedBy(Today.AddDays(1)));
+        Assert.False(task.OccursOn(Today));
     }
 
     [Fact]
@@ -93,6 +159,14 @@ public class TaskRecurrenceTests
             new SetTaskRecurrence(
                 Guid.NewGuid(), User, task.Id, rule ?? RecurrenceRule.Daily(new DateOnly(2026, 9, 1))),
             Now));
+        return task;
+    }
+
+    static TodoTask EndingOn(DateOnly day)
+    {
+        var task = Recurring();
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, day), Now));
         return task;
     }
 }

@@ -164,6 +164,66 @@ public class DayPlanTests
     }
 
     [Fact]
+    public void ARecurringTaskThatEndedIsInNoSection()
+    {
+        var task = Ending(Recurring(RecurrenceRule.Daily(Today.AddDays(-5))), Today.AddDays(-1));
+
+        var plan = TodayRule.Plan([task], Today, Utc);
+
+        Assert.Empty(plan.Overdue);
+        Assert.Empty(plan.Today);
+        Assert.Empty(plan.Tomorrow);
+        Assert.Empty(plan.Upcoming);
+    }
+
+    [Fact]
+    public void ARecurringTaskEndingTodayHasNoNextOccurrence()
+    {
+        var task = Ending(Recurring(RecurrenceRule.Daily(Today.AddDays(-5))), Today);
+
+        var plan = TodayRule.Plan([task], Today, Utc);
+
+        Assert.Single(plan.Today);
+        Assert.Empty(plan.Overdue);
+        Assert.Empty(plan.Tomorrow);
+        Assert.Empty(plan.Upcoming);
+    }
+
+    [Fact]
+    public void AnIntervalPushesTheNextOccurrenceOut()
+    {
+        var task = Recurring(RecurrenceRule.Daily(Today).EveryNth(3));
+
+        var plan = TodayRule.Plan([task], Today, Utc);
+
+        Assert.Single(plan.Today);
+        Assert.Empty(plan.Tomorrow);
+        Assert.Equal(Today.AddDays(3), Assert.Single(plan.Upcoming).DueOn);
+    }
+
+    [Fact]
+    public void AnEndBeforeTheNextIntervalLeavesNothingUpcoming()
+    {
+        var task = Ending(Recurring(RecurrenceRule.Daily(Today).EveryNth(3)), Today.AddDays(2));
+
+        var plan = TodayRule.Plan([task], Today, Utc);
+
+        Assert.Empty(plan.Upcoming);
+    }
+
+    [Fact]
+    public void AStarredRecurringTaskWithAnEndIsNotStarredAhead()
+    {
+        var task = Starred(Ending(
+            Recurring(RecurrenceRule.Weekly(Today.AddDays(-7), DayOfWeek.Monday)), Today.AddDays(30)));
+
+        var plan = TodayRule.Plan([task], Today, Utc);
+
+        Assert.Empty(plan.Starred);
+        Assert.Empty(plan.Overdue);
+    }
+
+    [Fact]
     public void ACompletedTaskIsNotUpcoming()
     {
         var task = Due(Today.AddDays(1));
@@ -254,6 +314,12 @@ public class DayPlanTests
     {
         var task = TodoTaskTests.Existing();
         task.ApplyAll(TodoTask.Decide(task, new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, rule), Now));
+        return task;
+    }
+
+    static TodoTask Ending(TodoTask task, DateOnly day)
+    {
+        task.ApplyAll(TodoTask.Decide(task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, day), Now));
         return task;
     }
 }

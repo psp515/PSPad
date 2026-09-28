@@ -14,7 +14,7 @@ public static class Occurrences
         var occurrences = new List<Occurrence>();
         for (var day = from; day <= to; day = day.AddDays(1))
         {
-            if (task.Recurrence.OccursOn(day))
+            if (task.OccursOn(day))
             {
                 occurrences.Add(new Occurrence(day, StatusOf(task, day, today)));
             }

@@ -138,6 +138,25 @@ public class TodayRuleTests
     }
 
     [Fact]
+    public void ARecurringTaskThatEndedYesterdayIsNotOnToday()
+    {
+        var task = Ending(DailyFrom(Today.AddDays(-5)), Today.AddDays(-1));
+
+        Assert.Empty(TodayRule.Select([task], Today));
+    }
+
+    [Fact]
+    public void ARecurringTaskEndingTodayShowsTodayWithoutBeingOverdue()
+    {
+        var task = Ending(DailyFrom(Today.AddDays(-5)), Today);
+
+        var entry = Assert.Single(TodayRule.Select([task], Today));
+
+        Assert.False(entry.Overdue);
+        Assert.Equal(Today, entry.DueOn);
+    }
+
+    [Fact]
     public void OverdueTasksSortAboveTheRest()
     {
         var overdue = Due(Today.AddDays(-1));
@@ -179,6 +198,12 @@ public class TodayRuleTests
         var task = TodoTaskTests.Existing();
         task.ApplyAll(TodoTask.Decide(
             task, new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(start)), Now));
+        return task;
+    }
+
+    static TodoTask Ending(TodoTask task, DateOnly day)
+    {
+        task.ApplyAll(TodoTask.Decide(task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, day), Now));
         return task;
     }
 }
