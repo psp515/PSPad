@@ -241,15 +241,31 @@ never rows inside one shared paper. Upcoming groups its rows under a muted
 caption per day (`DueDateRow.Describe`). Membership comes from
 `TodayRule.Plan`, never from the page. A recurring row ahead of today
 ticks the occurrence on its own day, not today's. Goals in progress are
-`GoalSummaryCard`s ordered by due date, undated last, and open
-`?goal={id}`.
+`GoalSummaryCard`s ordered by due date, undated last, and open the goal
+screen `/goals/{id}`.
 
 **Goal screen.** `/goals/{goalId}` mirrors the list screen: back arrow to
-`/goals`, the goal's name as title with its due date as a caption under
-it, every open task as its own card (list name and added day on each row),
-then a collapsed **Completed (N)**. With no open tasks it shows an
-`EmptyState` "No open tasks." with no create action — a task is created in
-a list, not a goal. A goal card's name and its **Show all** link lead here.
+`/goals`, the goal's name as title with a small outlined status `MudChip`
+(In progress / Achieved — `Color.Success` — / Not achieved) and its due
+date as a caption under it, then a **Progress** card, every open task as
+its own card (list name and added day on each row), then a collapsed
+**Completed (N)**. With no open tasks it shows an `EmptyState` "No open
+tasks." with no create action — a task is created in a list, not a goal.
+A goal card's name, its **Show all** link and every `GoalSummaryCard`
+(achieved, not achieved, My Day) lead here, so a closed goal's tasks stay
+reachable.
+
+**Goal progress chart.** An outlined `MudPaper` in a half-width `MudItem`
+(`xs="12" md="6"`) holding a `MudChart` line chart with two series: **On
+the goal** (tasks created by the end of each week) and **Done** (of those,
+completed by then), one point per Monday-start week in the user's time
+zone, from the first task's week to the current week. `GoalProgress`
+computes it; the page only draws. Recurring tasks are left out — they are
+never completed as a whole — and a muted caption "Recurring tasks not
+counted" says so when the goal has any. Deleted tasks are left out. A task
+counts from its creation, not from when it was linked to the goal (the
+link carries no time). With nothing to count the card is not rendered.
+Axis ticks and labels come from `ChartAxis`, shared with Statistics.
 
 **Shared row/card components, never duplicated per screen.** One
 `TaskRow` renders in My Day, list cards, the list screen and search
@@ -373,7 +389,7 @@ the two closing statuses.
   It is an outlined paper with a status-coloured left accent (success or
   error) and the status icon, showing only the name and "N of M tasks
   done". It has no progress bar and no due date. The whole summary opens
-  the goal panel. An in-progress goal (My Day only) gets a primary accent
+  the goal screen. An in-progress goal (My Day only) gets a primary accent
   and a flag icon, and adds a "Due …" caption (`Color.Error` once passed,
   omitted when undated) and a thin `MudProgressLinear` when tasks are
   linked.

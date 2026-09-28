@@ -8,6 +8,7 @@ using PSPad.App.Pages;
 using PSPad.App.State.Replica;
 using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.Recurrence;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -203,6 +204,72 @@ public class GoalPageTests : Bunit.TestContext
 
         var labels = page.FindAll(".mud-fab-menu-item").Select(item => item.GetAttribute("aria-label"));
         Assert.Equal(["Edit goal", "Delete goal"], labels);
+    }
+
+    [Fact]
+    public void ItShowsTheGoalsStatus()
+    {
+        var goal = NewGoal("Eat healthier");
+        goal.ApplyAll(Goal.Decide(goal, new AchieveGoal(Guid.NewGuid(), User, goal.Id), DateTimeOffset.UnixEpoch));
+        Arrange(goal);
+
+        var status = RenderPage(goal.Id).Find(".pspad-goal-status");
+
+        Assert.Equal("Achieved", status.TextContent.Trim());
+    }
+
+    [Fact]
+    public void AnAchievedGoalStillListsItsTasks()
+    {
+        var goal = NewGoal("Eat healthier");
+        goal.ApplyAll(Goal.Decide(goal, new AchieveGoal(Guid.NewGuid(), User, goal.Id), DateTimeOffset.UnixEpoch));
+        var list = NewList("Health");
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id));
+
+        var page = RenderPage(goal.Id);
+
+        Assert.Single(page.FindComponents<TaskRow>());
+    }
+
+    [Fact]
+    public void AProgressChartPlotsTasksOnTheGoalAndDonePerWeek()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id));
+
+        var chart = RenderPage(goal.Id).FindComponent<MudChart<double>>().Instance;
+
+        Assert.Equal(["On the goal", "Done"], chart.ChartSeries.Select(series => series.Name));
+        Assert.Equal(chart.ChartLabels.Length, chart.ChartSeries[0].Data.Values.Count);
+        Assert.Equal(1d, chart.ChartSeries[0].Data.Values[^1]);
+        Assert.Equal(0d, chart.ChartSeries[1].Data.Values[^1]);
+    }
+
+    [Fact]
+    public void AGoalWithNoCountableTasksHasNoChart()
+    {
+        var goal = NewGoal("Eat healthier");
+        Arrange(goal);
+
+        var page = RenderPage(goal.Id);
+
+        Assert.Empty(page.FindComponents<MudChart<double>>());
+    }
+
+    [Fact]
+    public void TheChartSaysWhenRecurringTasksAreLeftOut()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        var recurring = NewTask(list.Id, "Walk", goal.Id);
+        recurring.ApplyAll(TodoTask.Decide(recurring,
+            new SetTaskRecurrence(Guid.NewGuid(), User, recurring.Id, RecurrenceRule.Daily(Today)), DateTimeOffset.UnixEpoch));
+        Arrange(goal, list, recurring, NewTask(list.Id, "Book a check-up", goal.Id));
+
+        var page = RenderPage(goal.Id);
+
+        Assert.Contains("Recurring tasks not counted", page.Find(".pspad-goal-progress").TextContent);
     }
 
     IRenderedComponent<GoalPage> RenderPage(Guid goalId) =>

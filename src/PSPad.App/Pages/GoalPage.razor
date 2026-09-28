@@ -4,6 +4,7 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.App.Statistics
 @using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Tasks
@@ -28,13 +29,34 @@ else if (_goal is not null)
                        Href="/goals" aria-label="Back to goals" />
         <div class="d-flex flex-column">
             <MudText Typo="Typo.h5" Color="Color.Primary">@_goal.Name</MudText>
-            @if (_goal.DueOn is { } due)
-            {
-                <MudText Typo="Typo.caption" Class="@($"pspad-goal-due {(IsOverdue ? "" : "pspad-muted")}")"
-                         Color="@(IsOverdue ? Color.Error : Color.Inherit)">@($"Due {DueDateRow.Describe(due, State.Today)}")</MudText>
-            }
+            <div class="d-flex align-center gap-2">
+                <MudChip T="string" Class="pspad-goal-status ma-0" Size="Size.Small" Variant="Variant.Outlined"
+                         Color="@(_goal.Status == GoalStatus.Achieved ? Color.Success : Color.Default)">@GoalStatusText.Of(_goal.Status)</MudChip>
+                @if (_goal.DueOn is { } due)
+                {
+                    <MudText Typo="Typo.caption" Class="@($"pspad-goal-due {(IsOverdue ? "" : "pspad-muted")}")"
+                             Color="@(IsOverdue ? Color.Error : Color.Inherit)">@($"Due {DueDateRow.Describe(due, State.Today)}")</MudText>
+                }
+            </div>
         </div>
     </div>
+
+    @if (_progress.Count > 0)
+    {
+        <MudGrid Spacing="4" Class="mb-4">
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pspad-goal-progress pa-3">
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">Progress</MudText>
+                    <MudChart ChartType="ChartType.Line" ChartSeries="@ProgressSeries" ChartLabels="@ProgressLabels"
+                              ChartOptions="@ProgressOptions" Width="100%" Height="260px" />
+                    @if (_hasRecurring)
+                    {
+                        <MudText Typo="Typo.caption" Class="pspad-muted">Recurring tasks not counted</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
 
     <MudGrid Spacing="4">
         @if (_open.Count == 0)
@@ -89,6 +111,8 @@ else
     IReadOnlyList<TodoTask> _open = [];
     IReadOnlyList<TodoTask> _done = [];
     IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
+    IReadOnlyList<GoalProgressWeek> _progress = [];
+    bool _hasRecurring;
 
     static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
     static readonly Dictionary<string, object> EditGoalAttributes = new() { ["aria-label"] = "Edit goal" };
@@ -107,6 +131,22 @@ else
         </MudItem>;
 
     string? ListNameOf(TodoTask task) => _listNames.TryGetValue(task.ListId, out var name) ? name : null;
+
+    List<ChartSeries<double>> ProgressSeries =>
+    [
+        new ChartSeries<double> { Name = "On the goal", Data = _progress.Select(week => (double)week.Total).ToArray() },
+        new ChartSeries<double> { Name = "Done", Data = _progress.Select(week => (double)week.Done).ToArray() }
+    ];
+
+    string[] ProgressLabels => ChartAxis.Labels(_progress, week => week.WeekStart, DaySpan);
+
+    int DaySpan => _progress.Count == 0 ? 0 : _progress[^1].WeekStart.DayNumber - _progress[0].WeekStart.DayNumber;
+
+    LineChartOptions ProgressOptions => new()
+    {
+        YAxisTicks = ChartAxis.Step(_progress.Count == 0 ? 0 : _progress[^1].Total),
+        MaxNumYAxisTicks = ChartAxis.MaxTicks
+    };
 
     protected override void OnInitialized() => Sender.Sent += OnCommandSent;
 
@@ -127,6 +167,8 @@ else
         var mine = all.Where(task => task.GoalId == GoalId && !task.Deleted).ToArray();
         _open = [.. mine.Where(task => task.CompletedAt is null)];
         _done = [.. mine.Where(task => task.CompletedAt is not null)];
+        _progress = GoalProgress.Of(mine, State.TimeZone, State.Today);
+        _hasRecurring = mine.Any(task => task.IsRecurring);
 
         var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _listNames = lists.Where(list => !list.Deleted).ToDictionary(list => list.Id, list => list.Name);

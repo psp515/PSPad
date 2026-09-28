@@ -77,7 +77,7 @@ else
                 {
                     <MudItem @key="goal.Id" xs="12" sm="6" md="4" xl="3">
                         <GoalSummaryCard Goal="@goal" Tasks="@TasksOf(goal.Id)" Today="@State.Today"
-                                         OnOpen="@(() => EditGoal(goal))" />
+                                         OnOpen="@(() => OpenGoal(goal))" />
                     </MudItem>
                 }
             </MudGrid>
@@ -171,6 +171,8 @@ else
     }
 
     void AddGoal() => Navigation.NavigateTo(GoalQuery.ForNew(Navigation.Uri));
+
+    void OpenGoal(Goal goal) => Navigation.NavigateTo($"/goals/{goal.Id}");
 
     void EditGoal(Goal goal) => Navigation.NavigateTo(GoalQuery.For(Navigation.Uri, goal.Id));
 

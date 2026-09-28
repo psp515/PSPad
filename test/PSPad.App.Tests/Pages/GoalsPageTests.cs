@@ -330,7 +330,7 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ClickingASummaryOpensTheGoalPanel()
+    public void ClickingASummaryOpensTheGoalPage()
     {
         var achieved = NewGoal("Run a marathon", achieved: true);
         Arrange(achieved);
@@ -340,7 +340,7 @@ public class GoalsPageTests : Bunit.TestContext
         var page = Render<GoalsPage>();
         page.Find(".pspad-goal-summary").Click();
 
-        Assert.EndsWith($"/goals?goal={achieved.Id}", navigation.Uri);
+        Assert.EndsWith($"/goals/{achieved.Id}", navigation.Uri);
     }
 
     [Fact]
