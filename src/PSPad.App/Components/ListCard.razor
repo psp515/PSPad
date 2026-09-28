@@ -1,7 +1,7 @@
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Tasks
 
-<ThingCard Id="@List.Id" Name="@List.Name" Href="@($"/lists/{List.Id}")"
+<ThingCard Id="@List.Id" Name="@List.Name" Href="@($"/lists/{List.Id}")" Icon="@ListIcon.For(List)"
            Tasks="@Tasks" Today="@Today"
            OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen">
     <Actions>

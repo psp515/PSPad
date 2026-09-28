@@ -65,6 +65,22 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void EachCardShowsItsKindIcon()
+    {
+        var area = NewArea("Dom");
+        var tasksList = NewList(area.Id, "Zakupy", 0, ListKind.Tasks);
+        var referenceList = NewList(area.Id, "Przepisy", 1, ListKind.Reference);
+        Arrange(area, tasksList, referenceList);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        var icons = page.FindAll(".pspad-list-icon");
+        Assert.Equal(2, icons.Count);
+        Assert.Contains(icons, icon => icon.InnerHtml.Contains("M22,7h-9v2h9V7z"));
+        Assert.Contains(icons, icon => icon.InnerHtml.Contains("M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"));
+    }
+
+    [Fact]
     public void ADeletedAreasScreenDoesNotRenderItsName()
     {
         var area = NewArea("Dom");
@@ -423,12 +439,15 @@ public class AreaBoardTests : Bunit.TestContext
         return area;
     }
 
-    static TaskList NewList(Guid areaId, string name, int position)
+    static TaskList NewList(Guid areaId, string name, int position) =>
+        NewList(areaId, name, position, ListKind.Tasks);
+
+    static TaskList NewList(Guid areaId, string name, int position, ListKind kind)
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, position),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, position, kind),
             DateTimeOffset.UnixEpoch));
         return list;
     }

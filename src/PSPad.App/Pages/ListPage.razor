@@ -24,6 +24,7 @@ else if (_list is not null)
     <div class="d-flex align-center gap-1 mb-4">
         <MudIconButton Class="pspad-back-to-area" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary"
                        Href="@($"/areas/{_list.AreaId}")" aria-label="Back to area" />
+        <MudIcon Icon="@ListIcon.For(_list)" Color="Color.Primary" Class="pspad-list-icon" />
         <MudText Typo="Typo.h5" Color="Color.Primary">@_list.Name</MudText>
     </div>
 

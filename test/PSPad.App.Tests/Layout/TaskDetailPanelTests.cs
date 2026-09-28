@@ -485,6 +485,23 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheListPickerOffersOnlyTaskLists()
+    {
+        var area = NewArea("Dom");
+        var tasksList = NewList(area.Id, "Zakupy");
+        var referenceList = NewReferenceList(area.Id, "Przepisy");
+        var task = NewTask("Buy milk", tasksList.Id);
+        AppTestHost.Arrange(this, User, Today, area, tasksList, referenceList, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-list");
+
+        var options = panel.FindAll(".pspad-list-option").Select(item => item.TextContent).ToArray();
+        Assert.Contains("Zakupy", options);
+        Assert.DoesNotContain("Przepisy", options);
+    }
+
+    [Fact]
     public async Task ANewTaskKeepsWhatItsMenusPicked()
     {
         var list = NewList(Guid.NewGuid(), "Zakupy");
@@ -784,6 +801,15 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0),
+            DateTimeOffset.UnixEpoch));
+        return list;
+    }
+
+    static TaskList NewReferenceList(Guid areaId, string name)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0, ListKind.Reference),
             DateTimeOffset.UnixEpoch));
         return list;
     }

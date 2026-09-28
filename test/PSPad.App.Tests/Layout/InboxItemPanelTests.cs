@@ -102,6 +102,23 @@ public class InboxItemPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheListPickerOffersOnlyTaskLists()
+    {
+        var area = NewArea("Dom");
+        var tasksList = NewList(area.Id, "Zakupy");
+        var referenceList = NewReferenceList(area.Id, "Przepisy");
+        var inbox = NewInbox("Kupić mleko");
+        AppTestHost.Arrange(this, User, Today, inbox, area, tasksList, referenceList);
+
+        var panel = RenderWithOverlays(inbox.Items[0].Id);
+        OpenRow(panel, ".pspad-task-list");
+
+        var options = panel.FindAll(".pspad-list-option").Select(item => item.TextContent).ToArray();
+        Assert.Contains("Zakupy", options);
+        Assert.DoesNotContain("Przepisy", options);
+    }
+
+    [Fact]
     public async Task ConvertingCreatesTheFilledInTaskInOneStepAndEmptiesTheItem()
     {
         var area = NewArea("Dom");
@@ -267,6 +284,15 @@ public class InboxItemPanelTests : Bunit.TestContext
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, _position++),
+            DateTimeOffset.UnixEpoch));
+        return list;
+    }
+
+    TaskList NewReferenceList(Guid areaId, string name)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(null,
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, _position++, ListKind.Reference),
             DateTimeOffset.UnixEpoch));
         return list;
     }

@@ -8,6 +8,10 @@
         <MudIconButton Size="Size.Small"
                        Icon="@(Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)"
                        OnClick="@(() => Collapse.ToggleAsync(Id))" />
+        @if (Icon is not null)
+        {
+            <MudIcon Icon="@Icon" Size="Size.Small" Class="pspad-list-icon" />
+        }
         <div class="d-flex flex-column flex-grow-1" style="min-width:0">
             <MudLink Class="@TitleClass" Href="@Href" Typo="Typo.subtitle2" Underline="Underline.None">@Name</MudLink>
             @Subtitle
@@ -50,6 +54,8 @@
     [Parameter, EditorRequired] public string Name { get; set; } = "";
 
     [Parameter, EditorRequired] public string Href { get; set; } = "";
+
+    [Parameter] public string? Icon { get; set; }
 
     [Parameter] public string TitleClass { get; set; } = "";
 

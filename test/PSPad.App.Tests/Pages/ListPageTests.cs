@@ -35,6 +35,17 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheHeaderShowsTheListsKindIcon()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Contains("M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z", page.Find(".pspad-list-icon").InnerHtml);
+    }
+
+    [Fact]
     public void ItShowsAnEmptyStateWhenTheListHasNoTasks()
     {
         var list = NewList("Zakupy");
@@ -474,12 +485,14 @@ public class ListPageTests : Bunit.TestContext
             new TaskCompletionSource<IReadOnlyList<TaskList>>().Task;
     }
 
-    static TaskList NewList(string name)
+    static TaskList NewList(string name) => NewList(name, ListKind.Tasks);
+
+    static TaskList NewList(string name, ListKind kind)
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, 0),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, 0, kind),
             DateTimeOffset.UnixEpoch));
         return list;
     }

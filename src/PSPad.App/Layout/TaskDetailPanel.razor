@@ -40,12 +40,12 @@
 
         @if (_task is not null)
         {
-            <div class="pl-5 pr-3 pb-3">
-                <StepList Task="@_task" UserId="@State.UserId" Disabled="@Disabled" Changed="@ReloadAsync" />
-            </div>
-
             <div class="px-3 pb-3">
                 <MarkdownField Value="@_task.Description" OnSave="@SaveDescriptionAsync" Disabled="@Disabled" />
+            </div>
+
+            <div class="pl-5 pr-3 pb-3">
+                <StepList Task="@_task" UserId="@State.UserId" Disabled="@Disabled" Changed="@ReloadAsync" />
             </div>
         }
 
@@ -169,7 +169,7 @@
         var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
         _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
         var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
-        _lists = [.. lists.Where(list => !list.Deleted).OrderBy(list => list.Position)];
+        _lists = [.. lists.Where(list => !list.Deleted && list.Kind == ListKind.Tasks).OrderBy(list => list.Position)];
         var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
         _goals = [.. goals.Where(goal => !goal.Deleted)];
     }

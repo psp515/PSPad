@@ -73,6 +73,47 @@ public class ListDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheKindTogglesToTasksByDefault()
+    {
+        var area = NewArea("Dom");
+        AppTestHost.Arrange(this, User, Today, area);
+
+        var panel = Render<ListDetailPanel>(parameters => parameters.Add(p => p.NewInArea, area.Id));
+
+        var selected = panel.Find(".pspad-list-kind .mud-toggle-item-selected");
+        Assert.Contains("Tasks", selected.TextContent);
+    }
+
+    [Fact]
+    public async Task ChoosingReferenceAndSavingCreatesAReferenceList()
+    {
+        var area = NewArea("Dom");
+        var replica = AppTestHost.Arrange(this, User, Today, area);
+
+        var panel = Render<ListDetailPanel>(parameters => parameters.Add(p => p.NewInArea, area.Id));
+        panel.Find(".pspad-list-name-field input").Input("Przepisy");
+        panel.FindAll(".pspad-list-kind .mud-toggle-item")[1].Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        var created = Assert.Single(await replica.LoadAllAsync<TaskList>(User));
+        Assert.Equal(ListKind.Reference, created.Kind);
+    }
+
+    [Fact]
+    public async Task LeavingTheKindUntouchedCreatesATasksList()
+    {
+        var area = NewArea("Dom");
+        var replica = AppTestHost.Arrange(this, User, Today, area);
+
+        var panel = Render<ListDetailPanel>(parameters => parameters.Add(p => p.NewInArea, area.Id));
+        panel.Find(".pspad-list-name-field input").Input("Zakupy");
+        panel.Find(".pspad-panel-save").Click();
+
+        var created = Assert.Single(await replica.LoadAllAsync<TaskList>(User));
+        Assert.Equal(ListKind.Tasks, created.Kind);
+    }
+
+    [Fact]
     public async Task ABlankNameAddsNothing()
     {
         var area = NewArea("Dom");
