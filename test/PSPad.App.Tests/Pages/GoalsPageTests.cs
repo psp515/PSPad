@@ -57,17 +57,59 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ClickingAGoalsNameOpensItsPanel()
+    public void AGoalsNameLinksToItsPage()
+    {
+        var goal = NewGoal("Eat healthier");
+        Arrange(goal);
+
+        var page = Render<GoalsPage>();
+
+        Assert.Equal($"/goals/{goal.Id}", page.Find("a.pspad-goal-name").GetAttribute("href"));
+    }
+
+    [Fact]
+    public void RenameFromTheCardMenuStillOpensTheGoalPanel()
     {
         var goal = NewGoal("Eat healthier");
         Arrange(goal);
         var navigation = Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("/goals");
 
-        var page = Render<GoalsPage>();
-        page.Find(".pspad-goal-name").Click();
+        var page = Render(BuildGoalsPageWithPopovers());
+        page.Find(".pspad-goal-menu button").Click();
+        page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Rename").Click();
 
         Assert.EndsWith($"/goals?goal={goal.Id}", navigation.Uri);
+    }
+
+    [Fact]
+    public void ACardPreviewsFiveTasksAndLinksToTheGoalPageForTheRest()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        Arrange([goal, list, .. Enumerable.Range(0, 7).Select(index => NewTask(list.Id, $"Task {index}", goal.Id))]);
+
+        var page = Render<GoalsPage>();
+        var card = page.FindComponent<GoalCard>();
+
+        Assert.Equal(5, card.FindComponents<TaskRow>().Count);
+        var showAll = card.Find(".pspad-show-all");
+        Assert.Equal("Show all (7)", showAll.TextContent.Trim());
+        Assert.Equal($"/goals/{goal.Id}", showAll.GetAttribute("href"));
+    }
+
+    [Fact]
+    public void ATasksRowNamesItsListAndTheDayItWasAdded()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id));
+
+        var page = Render<GoalsPage>();
+        var row = page.FindComponent<TaskRow>();
+
+        Assert.Equal("Health", row.Instance.ListName);
+        Assert.Equal("Added 1 Jan", row.Find(".pspad-created").TextContent.Trim());
     }
 
     [Fact]
@@ -288,7 +330,7 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ClickingASummaryOpensTheGoalPanel()
+    public void ClickingASummaryOpensTheGoalPage()
     {
         var achieved = NewGoal("Run a marathon", achieved: true);
         Arrange(achieved);
@@ -298,7 +340,7 @@ public class GoalsPageTests : Bunit.TestContext
         var page = Render<GoalsPage>();
         page.Find(".pspad-goal-summary").Click();
 
-        Assert.EndsWith($"/goals?goal={achieved.Id}", navigation.Uri);
+        Assert.EndsWith($"/goals/{achieved.Id}", navigation.Uri);
     }
 
     [Fact]

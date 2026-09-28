@@ -228,7 +228,7 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ClickingAGoalOpensItsPanel()
+    public void ClickingAGoalOpensItsPage()
     {
         var goal = NewGoal("Run a marathon", GoalStatus.InProgress);
         Arrange(goal);
@@ -237,7 +237,7 @@ public class TodayTests : Bunit.TestContext
         page.Find(".pspad-goal-summary").Click();
 
         var navigation = Services.GetRequiredService<NavigationManager>();
-        Assert.Contains($"?goal={goal.Id}", navigation.Uri);
+        Assert.EndsWith($"/goals/{goal.Id}", navigation.Uri);
     }
 
     [Fact]

@@ -171,7 +171,7 @@ else
     void Open(TodoTask task) =>
         Navigation.NavigateTo($"{Navigation.Uri.Split('?')[0]}?task={task.Id}");
 
-    void OpenGoal(Goal goal) => Navigation.NavigateTo(GoalQuery.For(Navigation.Uri, goal.Id));
+    void OpenGoal(Goal goal) => Navigation.NavigateTo($"/goals/{goal.Id}");
 
     async Task ToggleAsync(TodoTask task, DateOnly day)
     {

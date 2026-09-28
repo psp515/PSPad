@@ -1,0 +1,82 @@
+@using System.Globalization
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Tasks
+@inject CardCollapseState Collapse
+
+<MudPaper Elevation="0" Outlined="true">
+    <div class="d-flex align-center gap-2 px-3 py-2">
+        <MudIconButton Size="Size.Small"
+                       Icon="@(Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)"
+                       OnClick="@(() => Collapse.ToggleAsync(Id))" />
+        <div class="d-flex flex-column flex-grow-1" style="min-width:0">
+            <MudLink Class="@TitleClass" Href="@Href" Typo="Typo.subtitle2" Underline="Underline.None">@Name</MudLink>
+            @Subtitle
+        </div>
+        <MudText Typo="Typo.caption" Class="pspad-open-count flex-shrink-0" Style="white-space:nowrap">@CountText(Open.Count)</MudText>
+        @Actions
+    </div>
+
+    @if (!Collapsed)
+    {
+        <MudDivider />
+
+        @if (Open.Count == 0 && EmptyText is not null)
+        {
+            <MudText Typo="Typo.body2" Class="pa-3">@EmptyText</MudText>
+        }
+
+        @foreach (var task in Open.Take(Preview))
+        {
+            <TaskRow @key="task.Id" Task="@task" Today="@Today"
+                     ListName="@ListNameOf?.Invoke(task)" CreatedOn="@CreatedOnOf?.Invoke(task)"
+                     OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
+        }
+
+        @if (Open.Count > Preview)
+        {
+            <MudDivider />
+            <MudButton Class="pspad-show-all ma-1" Href="@Href" Variant="Variant.Text" Color="Color.Primary">
+                @($"Show all ({Open.Count})")
+            </MudButton>
+        }
+    }
+</MudPaper>
+
+@code {
+    public const int Preview = 5;
+
+    [Parameter, EditorRequired] public Guid Id { get; set; }
+
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+
+    [Parameter, EditorRequired] public string Href { get; set; } = "";
+
+    [Parameter] public string TitleClass { get; set; } = "";
+
+    [Parameter] public RenderFragment? Subtitle { get; set; }
+
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    [Parameter] public Func<int, string> CountText { get; set; } = count => count.ToString(CultureInfo.InvariantCulture);
+
+    [Parameter] public string? EmptyText { get; set; }
+
+    [Parameter] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public Func<TodoTask, string?>? ListNameOf { get; set; }
+
+    [Parameter] public Func<TodoTask, DateOnly?>? CreatedOnOf { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnStar { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
+
+    bool Collapsed => Collapse.IsCollapsed(Id);
+
+    IReadOnlyList<TodoTask> Open =>
+        [.. Tasks.Where(task => !task.Deleted && task.CompletedAt is null && !task.EndedBy(Today))];
+}

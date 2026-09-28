@@ -1,0 +1,38 @@
+@using PSPad.App.State
+
+<MudPaper Outlined="true" Class="pspad-goal-pace pa-3 d-flex flex-column" Style="height:100%">
+    <MudText Typo="Typo.subtitle2" Class="mb-3">Pace</MudText>
+    <div class="d-flex justify-space-around align-center flex-grow-1 gap-4">
+        <div class="d-flex flex-column align-center gap-2">
+            <MudProgressCircular Value="@Pace.TimePercent" Color="@(Overdue ? Color.Error : Color.Primary)"
+                                 StrokeWidth="6" Rounded="true" Style="@RingSize">
+                <MudText Typo="Typo.h6" Color="@(Overdue ? Color.Error : Color.Default)">@TimeText</MudText>
+            </MudProgressCircular>
+            <MudText Typo="Typo.caption" Class="pspad-muted">@TimeCaption</MudText>
+        </div>
+        <div class="d-flex flex-column align-center gap-2">
+            <MudProgressCircular Value="@Pace.WorkPercent" Color="@(Pace.Behind ? Color.Warning : Color.Success)"
+                                 StrokeWidth="6" Rounded="true" Style="@RingSize">
+                <MudText Typo="Typo.h6">@($"{Pace.WorkPercent}%")</MudText>
+            </MudProgressCircular>
+            <MudText Typo="Typo.caption" Class="pspad-muted">@(Pace.Behind ? "Work done · behind" : "Work done · on pace")</MudText>
+        </div>
+    </div>
+</MudPaper>
+
+@code {
+    const string RingSize = "width:112px;height:112px";
+
+    [Parameter, EditorRequired] public GoalPaceView Pace { get; set; } = null!;
+
+    bool Overdue => Pace.DaysLeft < 0;
+
+    string TimeText => $"{Pace.TimePercent}%";
+
+    string TimeCaption =>
+        Overdue ? $"{-Pace.DaysLeft} {Days(-Pace.DaysLeft)} overdue"
+        : Pace.DaysLeft == 0 ? "Due today"
+        : $"{Pace.DaysLeft} {Days(Pace.DaysLeft)} left";
+
+    static string Days(int count) => count == 1 ? "day" : "days";
+}

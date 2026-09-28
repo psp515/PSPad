@@ -1,18 +1,10 @@
-@using PSPad.App.State
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Tasks
-@inject CardCollapseState Collapse
 
-<MudPaper Elevation="0" Outlined="true">
-    <div class="d-flex align-center gap-2 px-3 py-2">
-        <MudIconButton Size="Size.Small"
-                       Icon="@(Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)"
-                       OnClick="@(() => Collapse.ToggleAsync(List.Id))" />
-        <MudLink Href="@($"/lists/{List.Id}")" Typo="Typo.subtitle2" Underline="Underline.None">
-            @List.Name
-        </MudLink>
-        <MudSpacer />
-        <MudText Typo="Typo.caption" Class="pspad-open-count">@Open.Count</MudText>
+<ThingCard Id="@List.Id" Name="@List.Name" Href="@($"/lists/{List.Id}")"
+           Tasks="@Tasks" Today="@Today"
+           OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen">
+    <Actions>
         <MudIconButton Class="pspad-add-task" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
                        OnClick="@OnAddTaskClick" />
         <ThingMenu Class="pspad-list-menu"
@@ -21,31 +13,10 @@
                 <MudMenuItem OnClick="@OnMove">Move to area</MudMenuItem>
             </Extra>
         </ThingMenu>
-    </div>
-
-    @if (!Collapsed)
-    {
-        <MudDivider />
-
-        @foreach (var task in Open.Take(Preview))
-        {
-            <TaskRow @key="task.Id" Task="@task" Today="@Today" OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
-        }
-
-        @if (Open.Count > Preview)
-        {
-            <MudDivider />
-            <MudButton Href="@($"/lists/{List.Id}")" Variant="Variant.Text" Color="Color.Primary"
-                       Class="ma-1">
-                @($"Show all ({Open.Count})")
-            </MudButton>
-        }
-    }
-</MudPaper>
+    </Actions>
+</ThingCard>
 
 @code {
-    public const int Preview = 5;
-
     [Parameter, EditorRequired] public TaskList List { get; set; } = null!;
 
     [Parameter] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
@@ -65,9 +36,4 @@
     [Parameter] public EventCallback OnDelete { get; set; }
 
     [Parameter] public EventCallback OnMove { get; set; }
-
-    bool Collapsed => Collapse.IsCollapsed(List.Id);
-
-    IReadOnlyList<TodoTask> Open =>
-        [.. Tasks.Where(task => !task.Deleted && task.CompletedAt is null && !task.EndedBy(Today))];
 }

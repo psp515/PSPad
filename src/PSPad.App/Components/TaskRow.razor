@@ -17,6 +17,10 @@
                 {
                     <MudText Typo="Typo.caption">@ListName</MudText>
                 }
+                @if (CreatedOn is { } created)
+                {
+                    <MudText Typo="Typo.caption" Class="pspad-created pspad-muted">@($"Added {created:d MMM}")</MudText>
+                }
                 @if (Task.Steps.Count > 0)
                 {
                     <MudText Typo="Typo.caption">@($"{Task.Steps.Count(step => step.Checked)} / {Task.Steps.Count}")</MudText>
@@ -52,6 +56,8 @@
 
     [Parameter] public string? ListName { get; set; }
 
+    [Parameter] public DateOnly? CreatedOn { get; set; }
+
     [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnStar { get; set; }
@@ -62,7 +68,7 @@
 
     bool Overdue => IsOverdue(Task, Today);
 
-    bool HasMeta => ListName is not null || Task.Steps.Count > 0 || Task.DueOn is not null || Task.IsRecurring;
+    bool HasMeta => ListName is not null || CreatedOn is not null || Task.Steps.Count > 0 || Task.DueOn is not null || Task.IsRecurring;
 
     Color PriorityColour => Task.Priority switch
     {
