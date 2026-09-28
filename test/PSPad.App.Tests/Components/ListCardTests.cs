@@ -6,6 +6,7 @@ using PSPad.App.Components;
 using PSPad.App.State;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
+using PSPad.Module.Tasks.Recurrence;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Components;
@@ -53,6 +54,24 @@ public class ListCardTests : Bunit.TestContext
         var card = Render(list, [done, .. Tasks(list.Id, 2)]);
 
         Assert.Equal(2, card.FindComponents<TaskRow>().Count);
+    }
+
+    [Fact]
+    public void ARepeatPastItsUntilDateNeverAppearsInACard()
+    {
+        Arrange();
+        var list = List("Regularne");
+        var ended = Tasks(list.Id, 1)[0];
+        ended.ApplyAll(TodoTask.Decide(ended,
+            new SetTaskRecurrence(Guid.NewGuid(), User, ended.Id, RecurrenceRule.Daily(Today.AddDays(-7))),
+            DateTimeOffset.UnixEpoch));
+        ended.ApplyAll(TodoTask.Decide(ended,
+            new SetTaskDueDate(Guid.NewGuid(), User, ended.Id, Today.AddDays(-1)), DateTimeOffset.UnixEpoch));
+
+        var card = Render(list, [ended, .. Tasks(list.Id, 2)]);
+
+        Assert.Equal(2, card.FindComponents<TaskRow>().Count);
+        Assert.Equal("2", card.Find(".pspad-open-count").TextContent.Trim());
     }
 
     [Fact]

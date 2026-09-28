@@ -464,15 +464,226 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ANewTaskHasNoStepsRepeatOrListRow()
+    public void ANewTaskHasNoStepsOrListRowButCanRepeat()
     {
         AppTestHost.Arrange(this, User, Today);
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)Guid.NewGuid()));
 
         Assert.Empty(panel.FindAll(".pspad-steps"));
-        Assert.Empty(panel.FindAll(".pspad-task-repeat"));
         Assert.Empty(panel.FindAll(".pspad-task-list"));
+        panel.Find(".pspad-task-repeat");
+        Assert.Empty(panel.FindAll(".pspad-repeat-history"));
+    }
+
+    [Fact]
+    public async Task ANewTaskKeepsItsRepeatAndUntilDate()
+    {
+        var listId = Guid.NewGuid();
+        var replica = AppTestHost.Arrange(this, User, Today);
+
+        var panel = RenderWithOverlays(newInList: listId);
+        panel.Find(".pspad-task-name-field input").Input("Read a book");
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.FindAll(".pspad-repeat-option")[0].Click();
+        panel.WaitForAssertion(() => Assert.Contains("Until", panel.Find(".pspad-task-due").TextContent));
+        OpenRow(panel, ".pspad-task-due");
+        panel.FindAll(".pspad-due-quick")[2].Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal(RecurrenceKind.Daily, created.Recurrence!.Kind);
+        Assert.Equal(Today, created.Recurrence.StartsOn);
+        Assert.Equal(Today.AddDays(2), created.DueOn);
+    }
+
+    [Fact]
+    public void OnARecurringTaskTheDueRowReadsUntilAndStaysEnabled()
+    {
+        var task = Recurring(NewTask("Read a book"), RecurrenceRule.Daily(Today));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        var due = panel.Find(".pspad-task-due");
+        Assert.Contains("Until", due.TextContent);
+        Assert.Contains("No end date", due.TextContent);
+        Assert.False(due.QuerySelector(".pspad-property-activator")!.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task SettingUntilOnARecurringTaskSetsItsDueDate()
+    {
+        var task = Recurring(NewTask("Read a book"), RecurrenceRule.Daily(Today));
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-due");
+        panel.FindAll(".pspad-due-quick")[1].Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(Today.AddDays(1), reloaded!.DueOn);
+        Assert.True(reloaded.IsRecurring);
+    }
+
+    [Fact]
+    public void TheRepeatRowTalliesDoneOccurrences()
+    {
+        var task = Recurring(NewTask("Read a book"), RecurrenceRule.Daily(Today.AddDays(-3)));
+        foreach (var day in new[] { Today.AddDays(-2), Today.AddDays(-1) })
+        {
+            task.ApplyAll(TodoTask.Decide(
+                task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, day, true), DateTimeOffset.UnixEpoch));
+        }
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Equal("Done 2 times · 2 in a row", panel.Find(".pspad-repeat-tally").TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task ACustomRepeatSavesItsIntervalWeekdaysAndStart()
+    {
+        var task = NewTask("Water plants");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.Find(".pspad-repeat-custom").Click();
+        var dialog = panel.WaitForElement(".pspad-repeat-dialog");
+        Assert.DoesNotContain("d-none", dialog.ClassName);
+        panel.Find(".pspad-repeat-every input").Change("3");
+        panel.Find(".pspad-repeat-unit .mud-select-input").MouseDown();
+        panel.WaitForAssertion(() => Assert.Contains(panel.FindAll(".mud-list-item"),
+            item => item.TextContent.Trim() == "weeks"));
+        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "weeks").Click();
+        panel.WaitForAssertion(() => Assert.Contains(panel.FindAll(".pspad-repeat-weekdays .mud-chip"),
+            chip => chip.TextContent.Trim() == "Mon"));
+        panel.FindAll(".pspad-repeat-weekdays .mud-chip").First(chip => chip.TextContent.Trim() == "Mon").Click();
+        panel.Find(".pspad-repeat-save").Click();
+        panel.WaitForAssertion(() => Assert.Contains("Every 3 weeks on Mon, Sat",
+            panel.Find(".pspad-task-repeat").TextContent));
+
+        var rule = (await replica.LoadAsync<TodoTask>(task.Id))!.Recurrence!;
+        Assert.Equal(RecurrenceKind.Weekly, rule.Kind);
+        Assert.Equal(3, rule.Interval);
+        Assert.Equal(Today, rule.StartsOn);
+        Assert.Equal([DayOfWeek.Monday, DayOfWeek.Saturday], rule.Days.Order());
+    }
+
+    [Fact]
+    public async Task ACustomRepeatEveryFewDaysOnANewTaskIsSentAfterCreating()
+    {
+        var listId = Guid.NewGuid();
+        var replica = AppTestHost.Arrange(this, User, Today);
+
+        var panel = RenderWithOverlays(newInList: listId);
+        panel.Find(".pspad-task-name-field input").Input("Water plants");
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.Find(".pspad-repeat-custom").Click();
+        panel.WaitForElement(".pspad-repeat-dialog");
+        panel.Find(".pspad-repeat-every input").Change("2");
+        panel.Find(".pspad-repeat-save").Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal(RecurrenceKind.Daily, created.Recurrence!.Kind);
+        Assert.Equal(2, created.Recurrence.Interval);
+    }
+
+    [Fact]
+    public async Task RepeatingAnOverdueTaskClearsItsDueDateRatherThanEndingIt()
+    {
+        var task = NewTask("Read a book");
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, Today.AddDays(-3)), DateTimeOffset.UnixEpoch));
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.FindAll(".pspad-repeat-option")[0].Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.True(reloaded!.IsRecurring);
+        Assert.Null(reloaded.DueOn);
+        Assert.False(reloaded.EndedBy(Today));
+    }
+
+    [Fact]
+    public async Task ANewTaskDropsADueDateBeforeItsRepeatStarts()
+    {
+        var listId = Guid.NewGuid();
+        var replica = AppTestHost.Arrange(this, User, Today);
+
+        var panel = RenderWithOverlays(newInList: listId);
+        panel.Find(".pspad-task-name-field input").Input("Water plants");
+        OpenRow(panel, ".pspad-task-due");
+        panel.FindAll(".pspad-due-quick")[1].Click();
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.Find(".pspad-repeat-custom").Click();
+        panel.WaitForElement(".pspad-repeat-dialog");
+        await PickStartAsync(panel, Today.AddDays(5));
+        panel.Find(".pspad-repeat-save").Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal(Today.AddDays(5), created.Recurrence!.StartsOn);
+        Assert.Null(created.DueOn);
+    }
+
+    [Fact]
+    public async Task MovingACustomRepeatsStartMovesItsUntouchedWeekday()
+    {
+        var task = NewTask("Water plants");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.Find(".pspad-repeat-custom").Click();
+        panel.WaitForElement(".pspad-repeat-dialog");
+        panel.Find(".pspad-repeat-unit .mud-select-input").MouseDown();
+        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "weeks").Click();
+        await PickStartAsync(panel, Today.AddDays(2));
+        panel.Find(".pspad-repeat-save").Click();
+
+        var rule = (await replica.LoadAsync<TodoTask>(task.Id))!.Recurrence!;
+        Assert.Equal(Today.AddDays(2), rule.StartsOn);
+        Assert.Equal([Today.AddDays(2).DayOfWeek], rule.Days);
+    }
+
+    [Fact]
+    public async Task MovingACustomRepeatsStartMovesItsUntouchedDayOfMonth()
+    {
+        var task = NewTask("Pay rent");
+        var replica = AppTestHost.Arrange(this, User, Today);
+        await replica.SaveAsync(task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.Find(".pspad-repeat-custom").Click();
+        panel.WaitForElement(".pspad-repeat-dialog");
+        panel.Find(".pspad-repeat-unit .mud-select-input").MouseDown();
+        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "months").Click();
+        await PickStartAsync(panel, Today.AddDays(3));
+        panel.Find(".pspad-repeat-save").Click();
+
+        var rule = (await replica.LoadAsync<TodoTask>(task.Id))!.Recurrence!;
+        Assert.Equal(Today.AddDays(3).Day, rule.DayOfMonth);
+    }
+
+    static Task PickStartAsync(IRenderedComponent<ContainerFragment> panel, DateOnly start)
+    {
+        var picker = panel.FindComponents<MudDatePicker>()
+            .Single(found => found.Instance.Class?.Contains("pspad-repeat-start") == true);
+        return panel.InvokeAsync(() => picker.Instance.DateChanged.InvokeAsync(start.ToDateTime(TimeOnly.MinValue)));
+    }
+
+    static TodoTask Recurring(TodoTask task, RecurrenceRule rule)
+    {
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, rule), DateTimeOffset.UnixEpoch));
+        return task;
     }
 
     IRenderedComponent<ContainerFragment> RenderWithOverlays(Guid? taskId = null, Guid? newInList = null) => Render(builder =>

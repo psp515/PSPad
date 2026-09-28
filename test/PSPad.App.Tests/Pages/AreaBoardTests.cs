@@ -11,6 +11,7 @@ using PSPad.App.Tests;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
+using PSPad.Module.Tasks.Recurrence;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Pages;
@@ -19,6 +20,7 @@ namespace PSPad.App.Tests.Pages;
 public class AreaBoardTests : Bunit.TestContext
 {
     static readonly Guid User = Guid.NewGuid();
+    static readonly DateOnly Today = new(2026, 9, 12);
 
     [Fact]
     public void ItNamesTheArea()
@@ -307,6 +309,46 @@ public class AreaBoardTests : Bunit.TestContext
         var stored = await replica.LoadAsync<Area>(area.Id);
         Assert.True(stored!.Deleted);
         Assert.Equal(navigation.BaseUri, navigation.Uri);
+    }
+
+    [Fact]
+    public void TickingARepeatOnADayItSkipsSendsNothing()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Regularne", 0);
+        var task = Repeating(NewTask(list.Id, "Water plants"), RecurrenceRule.Daily(Today.AddDays(-1)).EveryNth(2));
+        Arrange(area, list, task);
+        var recorded = new RecordingHandler<CompleteOccurrence>();
+        Services.AddSingleton<ICommandHandler<CompleteOccurrence>>(recorded);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        page.Find("input.mud-checkbox-input").Change(true);
+
+        Assert.Empty(recorded.Received);
+    }
+
+    [Fact]
+    public async Task TickingATickedRepeatUnticksToday()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Regularne", 0);
+        var task = Repeating(NewTask(list.Id, "Read a book"), RecurrenceRule.Daily(Today));
+        task.ApplyAll(TodoTask.Decide(task,
+            new CompleteOccurrence(Guid.NewGuid(), User, task.Id, Today, true), DateTimeOffset.UnixEpoch));
+        var replica = Arrange(area, list, task);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        page.Find("input.mud-checkbox-input").Change(false);
+
+        var stored = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Empty(stored!.CompletedDays);
+    }
+
+    static TodoTask Repeating(TodoTask task, RecurrenceRule rule)
+    {
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, rule), DateTimeOffset.UnixEpoch));
+        return task;
     }
 
     // Both ThingMenu's MudMenu and IDialogService's MudDialogProvider portal their open

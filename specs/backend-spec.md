@@ -189,6 +189,28 @@ not stated there:
   `TimeZoneInfo.Local` internally.
 - Recurrence stores a rule plus `completedDays`; Pending/Skipped are
   **derived**, never stored.
+- `RecurrenceRule.Interval` (1–99, `EveryNth` rejects the rest) counts from
+  `StartsOn`: Daily every Nth day; Weekly on its weekdays in every Nth
+  Monday-based week counted from `StartsOn`'s week; MonthlyOnDay on its day,
+  clamped to the month's length, in every Nth month counted from
+  `StartsOn`'s month. Documents without the field read `Interval = 0`;
+  `Every` treats anything below 1 as 1 (`adr/0043`).
+- A repeating task's `DueOn` is its inclusive end ("Until"). Repeat and due
+  date combine in either order. `TodoTask.OccursOn(day)` = rule occurs and
+  `day <= DueOn`; Today, Upcoming, occurrence chips and `CompleteOccurrence`
+  all use it, never `RecurrenceRule.OccursOn` alone. A tick after the end is
+  rejected as a day the task does not repeat on; an untick of a day already
+  in `completedDays` is always accepted, even after the end or interval
+  moved past it. `SetTaskRecurrence` rejects an `Interval` outside 1–99,
+  letting the legacy 0 through.
+- `TodoTask.EndedBy(today)` — repeating and `DueOn < today` — means the
+  repeat has ended; the client treats it as completed. Derived, never
+  stored: no command, no event, no `CompletedAt`. Moving `DueOn` forward
+  reopens it. The end is a cut-off, never a trigger — a repeating task is
+  still never overdue.
+- `RepeatTally.Of(task, today)` derives the done count (`completedDays`)
+  and the streak: done occurrences walking back from today, today's pending
+  occurrence not breaking it.
 - `TodayRule.Plan(tasks, today, zone)` splits the day into Overdue and
   Today (exactly `Select`'s entries), Starred, Tomorrow, Upcoming (the day after
   tomorrow through `today + 7`) and Completed (completed on `today` in the

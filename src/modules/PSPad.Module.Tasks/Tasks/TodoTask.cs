@@ -48,6 +48,11 @@ public sealed class TodoTask : Aggregate
 
     public bool IsRecurring => Recurrence is not null;
 
+    public bool OccursOn(DateOnly day) =>
+        Recurrence is not null && Recurrence.OccursOn(day) && (DueOn is null || day <= DueOn);
+
+    public bool EndedBy(DateOnly today) => IsRecurring && DueOn < today;
+
     public static IReadOnlyList<DomainEvent> Decide(TodoTask? task, ICommand command, DateTimeOffset at)
     {
         switch (command)
@@ -72,11 +77,6 @@ public sealed class TodoTask : Aggregate
 
             case SetTaskDueDate due:
                 var dating = Require(task, due.UserId);
-                if (due.DueOn is not null && dating.IsRecurring)
-                {
-                    throw new DomainRejectedException("A repeating task cannot also have a due date.");
-                }
-
                 return dating.DueOn == due.DueOn
                     ? []
                     : [new TaskDueDateSet(dating.Id, due.UserId, at, due.DueOn)];
@@ -179,9 +179,9 @@ public sealed class TodoTask : Aggregate
 
             case SetTaskRecurrence recurrence:
                 var repeating = Require(task, recurrence.UserId);
-                if (recurrence.Rule is not null && repeating.DueOn is not null)
+                if (recurrence.Rule?.Interval is < 0 or > 99)
                 {
-                    throw new DomainRejectedException("A repeating task cannot also have a due date.");
+                    throw new DomainRejectedException("A repeat interval must be between 1 and 99.");
                 }
 
                 return repeating.Recurrence == recurrence.Rule
@@ -195,7 +195,7 @@ public sealed class TodoTask : Aggregate
                     throw new DomainRejectedException("That task does not repeat.");
                 }
 
-                if (!ticking.Recurrence.OccursOn(occurrence.Day))
+                if (occurrence.Completed && !ticking.OccursOn(occurrence.Day))
                 {
                     throw new DomainRejectedException("That task does not repeat on that day.");
                 }

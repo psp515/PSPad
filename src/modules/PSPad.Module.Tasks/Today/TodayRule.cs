@@ -77,7 +77,7 @@ public static class TodayRule
     {
         for (var day = today.AddDays(1); day <= today.AddDays(UpcomingDays); day = day.AddDays(1))
         {
-            if (task.Recurrence!.OccursOn(day) && !task.CompletedDays.Contains(day))
+            if (task.OccursOn(day) && !task.CompletedDays.Contains(day))
             {
                 return day;
             }
@@ -102,7 +102,7 @@ public static class TodayRule
     {
         if (task.IsRecurring)
         {
-            var due = task.Recurrence!.OccursOn(today) && !task.CompletedDays.Contains(today);
+            var due = task.OccursOn(today) && !task.CompletedDays.Contains(today);
             return due ? Entry(task, overdue: false, dueOn: today) : null;
         }
 

@@ -57,7 +57,7 @@
 
     int Total => Counted.Count;
 
-    int Done => Counted.Count(task => task.CompletedAt is not null);
+    int Done => Counted.Count(task => task.CompletedAt is not null || task.EndedBy(Today));
 
     string TasksText => Total == 0
         ? "No tasks linked"

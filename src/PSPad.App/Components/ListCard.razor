@@ -69,5 +69,5 @@
     bool Collapsed => Collapse.IsCollapsed(List.Id);
 
     IReadOnlyList<TodoTask> Open =>
-        [.. Tasks.Where(task => !task.Deleted && task.CompletedAt is null)];
+        [.. Tasks.Where(task => !task.Deleted && task.CompletedAt is null && !task.EndedBy(Today))];
 }
