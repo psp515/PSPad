@@ -4,6 +4,11 @@ Status: approved design, not yet built. Decisions of record:
 [ADR-0045](../adr/0045-each-integration-is-its-own-module.md),
 [ADR-0046](../adr/0046-github-app-read-only-tokens-outside-the-log.md).
 
+Build order: **after** reference lists and descriptions
+(`specs/reference-lists-design.md`, ADR-0047, ADR-0048). This design relies
+on `TodoTask.Description`, `MarkdownField`, `TaskList.Kind` and
+`TaskList.RequireAcceptsTasks` from there.
+
 First external sync (AGENTS.md §9, item 5). Each user connects their own
 GitHub account; chosen repositories become lists holding the repository's
 open issues and pull requests. GitHub owns what an issue *is*; PSPad owns how
@@ -68,7 +73,9 @@ worker, and Settings hides the GitHub section.
    an access token (8 h) and refresh token (6 months), stores the connection,
    and redirects to the client's `/settings/github`.
 
-Invalid, expired or reused `state` → `400`, nothing stored.
+Invalid, expired or reused `state` → nothing stored, redirect to the
+client's `/settings?github=failed` (the callback runs in the user's browser,
+so a redirect is the usable form of a `400`).
 
 ### 2.2 Storage
 
@@ -112,17 +119,19 @@ Generic, source-agnostic concepts; no GitHub type or string constant lives in
 Tasks. The next integration reuses them.
 
 - `ExternalRef` record on `TodoTask` (nullable): `Source` (`"github"`),
-  `Key` (`owner/repo#42`), `Kind` (`Issue` | `PullRequest`), `Number`, `Url`,
-  `Closed` (bool, for the row icon).
+  `Key` (`owner/repo#42`), `Kind` (`Issue` | `PullRequest`), `Number`, `Url`.
+  Open/closed for the row icon comes from `CompletedAt`.
 - `TaskList.ExternalSource` (nullable): `Source`, `Key` (repository id as
   string), `DisplayName` (`owner/repo`).
-- `Area.Managed` (nullable source name): set on the area an integration owns.
+- `Area.ManagedBy` (nullable source name): set on the area an integration owns.
+- A mirrored list is always `ListKind.Tasks`.
 
 ### 3.1 Field ownership on a mirrored task
 
 | Field | Owner | User command |
 |---|---|---|
 | Name | GitHub | `RenameTask` rejected |
+| Description (issue body) | GitHub | `SetTaskDescription` rejected |
 | Completion | GitHub | `CompleteTask`, `ReopenTask` rejected |
 | Existence | GitHub | `DeleteTask` rejected |
 | List, recurrence | — | `MoveTaskToList`, `SetRecurrence` rejected |
@@ -136,6 +145,8 @@ Tasks. The next integration reuses them.
   — rejected.
 - `DeleteArea` on a managed area — rejected. `RenameArea` — accepted.
 - Moving a normal task into a mirrored list — rejected.
+- All three go through `TaskList.RequireAcceptsTasks` (reference lists
+  design §2.1), which additionally rejects a mirrored list.
 
 ### 3.3 Server-only commands
 
@@ -145,9 +156,11 @@ over `/api/commands`; they still go through `Decide` in Tasks, one rule set.
 
 | Command | Effect | Event |
 |---|---|---|
-| `CreateMirroredArea` | managed area | `AreaCreated` (with `Managed`) |
-| `CreateMirroredList` | list with `ExternalSource` | `TaskListCreated` (with source) |
-| `MirrorTask` | create, update title/ref, or restore a dropped task with cleared planning fields | `TaskCreated` / `MirroredTaskUpdated` / `MirroredTaskRestored` |
+| `CreateMirroredArea` | managed area | `AreaCreated`, `AreaManaged` |
+| `CreateMirroredList` | Tasks-kind list with `ExternalSource` | `TaskListCreated`, `TaskListMirrored` |
+| `MirrorTask` (new) | task with ref and description | `TaskCreated`, `TaskMirrored`, `TaskDescriptionSet` (when the body is not empty) |
+| `MirrorTask` (existing) | follow title, body, ref | `TaskRenamed` / `TaskDescriptionSet` / `TaskMirrored`, each only when changed |
+| `MirrorTask` (dropped) | restore with cleared planning fields | `MirroredTaskRestored` (carries name, description, ref) |
 | `CloseMirroredTask` | complete | `TaskCompleted` |
 | `ReopenMirroredTask` | reopen | `TaskReopened` |
 | `DropMirroredTask` | delete | `TaskDeleted` |
@@ -155,7 +168,9 @@ over `/api/commands`; they still go through `Decide` in Tasks, one rule set.
 | `DropMirroredList` | delete list, cascades | `TaskListDeleted` |
 | `DropMirroredArea` | delete area, cascades | `AreaDeleted` |
 
-Reusing `TaskCompleted`, `TaskReopened` and `TaskDeleted` means Statistics
+Creation events are the ordinary ones plus one marker event; existing event
+shapes never widen, so stored logs replay unchanged. Reusing `TaskCompleted`,
+`TaskReopened` and `TaskDeleted` means Statistics
 counts merged PRs and completed issues with no change. Folders follow
 AGENTS.md §11 (`Tasks/Mirror/MirrorTask.cs`, …).
 
@@ -190,7 +205,9 @@ exception for one user is logged and never stops others.
 
 Per connected repository:
 
-- First sync: `GET /repos/{owner}/{repo}/issues?state=open&per_page=100`,
+- First sync: `GET /repositories/{repoId}/issues?state=open&per_page=100`
+  (id-addressed, survives renames; fall back to `/repos/{owner}/{repo}/…`
+  if the smoke test shows otherwise),
   all pages. No historical import.
 - Later: `…?state=all&since={lastSyncedAt}`, with `If-None-Match: {etag}` on
   the first page. `304` → nothing to do, costs no rate limit.
@@ -207,7 +224,7 @@ idempotency (`processed_commands`).
 | GitHub | Task | Command |
 |---|---|---|
 | open | none | `MirrorTask` (create) |
-| open | exists, title or ref changed | `MirrorTask` (update) |
+| open | exists, title, body or ref changed | `MirrorTask` (update) |
 | open | completed | `ReopenMirroredTask` |
 | open | dropped | `MirrorTask` (restore, planning fields cleared) |
 | closed, `state_reason = completed`, or PR merged | open | `CloseMirroredTask` |
@@ -246,14 +263,18 @@ src/modules/PSPad.Module.GitHub/
   Connection/      connect, callback, refresh, disconnect, token cipher
   Repositories/    installation listing, link / unlink
   Sync/            worker, issue fetch, state → command mapping
-  Endpoints/       /api/github/* route group
 ```
+
+HTTP endpoints (`PSPad.Api/Endpoints/GitHubEndpoints.cs`) and Mongo stores
+(`PSPad.Api/GitHub/`) live in the API, as Statistics' do, so the module stays
+free of ASP.NET and MongoDB.
 
 - References `PSPad.Abstractions`, `PSPad.Module.Tasks`,
   `PSPad.Contracts`. Not `PSPad.Infrastructure`, not MongoDB. Stores
   (`IGitHubConnectionStore`, `IGitHubRepositoryLinkStore`,
   `IGitHubOAuthStateStore`) are interfaces here, implemented over Mongo in
-  `PSPad.Api`, as Statistics does.
+  `PSPad.Api`, as Statistics does. Mirror commands reach the handlers
+  in-process through `MirrorCommandSender`, one DI scope per command.
 - One integration, one module. Only GitHub-specific code lives here; the
   generic mirror concepts stay in Tasks and Abstractions for the next
   integration.
@@ -261,7 +282,8 @@ src/modules/PSPad.Module.GitHub/
   references Statistics or Infrastructure; every mirror command implements
   `IServerOnlyCommand`.
 - `PSPad.Api` composes DI and registers endpoints and worker only when §2's
-  configuration is complete. Indexes: `github_connections.userId` unique,
+  configuration is complete; `GitHub:WorkerEnabled` (default `true`) turns
+  the worker off for tests. Indexes: `github_connections.userId` unique,
   `github_connections.nextSyncAt`, `github_repositories (userId, repoId)`
   unique, `github_oauth_states.createdAt` TTL.
 - Wire DTOs (connection status, repository rows) in `PSPad.Contracts`.
@@ -277,12 +299,16 @@ Follows `specs/ui-spec.md`; MudBlazor components only.
   "Needs a connection".
 - **GitHub area.** No delete action in its FAB. `NeedsReconnect` banner under
   the header.
-- **Repository list.** No add-task FAB; no rename, move or delete. "Refresh
-  now" action.
+- **Repository list.** GitHub icon (`Icons.Custom.Brands.GitHub`) as its
+  list-kind icon. No add-task FAB; no rename, move or delete. A plain
+  "Refresh from GitHub" FAB.
 - **Task row (lists, Today).** Issue or PR icon, open or closed, plus `#42`,
   in place of the checkbox. The icon opens the GitHub URL in a new tab.
-- **Task details.** Title read-only; "Open on GitHub" link; date, priority,
+- **Task details.** Title read-only; description (issue body) in a
+  `MarkdownField` with `ReadOnly`; "Open on GitHub" link; date, priority,
   star, goal, steps editable.
+- **Pickers.** Task list pickers (`TaskDetailPanel`, `InboxItemPanel`) omit
+  mirrored lists.
 
 ## 7. Testing
 
