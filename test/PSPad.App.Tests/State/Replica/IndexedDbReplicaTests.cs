@@ -90,6 +90,37 @@ public class IndexedDbReplicaTests
         Assert.Contains(day, restored.CompletedDays);
     }
 
+    [Fact]
+    public void ARepeatSyncedBeforeIntervalsExistedStillOccursDaily()
+    {
+        var start = new DateOnly(2026, 9, 12);
+        var task = NewTask("Read a book");
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(start)), At));
+        var legacy = JsonSerializer.SerializeToNode(task, JsonSerializerOptions.Web)!;
+        Assert.True(legacy["recurrence"]!.AsObject().Remove("interval"));
+
+        var restored = ReplicaRow.FromServer(
+            nameof(TodoTask), User, task.Id, JsonSerializer.SerializeToElement(legacy)).To<TodoTask>();
+
+        Assert.Equal(1, restored.Recurrence!.Every);
+        Assert.True(restored.OccursOn(start.AddDays(1)));
+    }
+
+    [Fact]
+    public void ARepeatIntervalSurvivesTheReplica()
+    {
+        var start = new DateOnly(2026, 9, 12);
+        var task = NewTask("Water plants");
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(start).EveryNth(3)), At));
+
+        var restored = ReplicaRow.From(task).To<TodoTask>();
+
+        Assert.False(restored.OccursOn(start.AddDays(1)));
+        Assert.True(restored.OccursOn(start.AddDays(3)));
+    }
+
     static Area NewArea(string name)
     {
         var area = new Area();
