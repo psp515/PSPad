@@ -61,6 +61,8 @@ the old one's status line to point at the new number.
 | [0044](0044-the-boot-never-waits-on-the-network.md) | The boot never waits on the network, and the splash stays up until the first screen is ready | Active (amends [0027](0027-local-session-gates-the-app-not-the-access-token.md) and [0030](0030-the-shell-waits-for-the-first-pull-on-a-device-holding-nothing.md)) | 2026-09-28 | offline, pwa, ui, identity |
 | [0045](0045-each-integration-is-its-own-module.md) | Each integration is its own module, driving Tasks through server-only commands | Proposed | 2026-09-28 | architecture, modularity, integrations, domain |
 | [0046](0046-github-app-read-only-tokens-outside-the-log.md) | Connect GitHub through a read-only GitHub App; tokens live outside the event log, encrypted | Proposed | 2026-09-28 | integrations, security, identity, persistence |
+| [0047](0047-reference-items-are-their-own-aggregate.md) | Reference lists hold ReferenceItems, a separate aggregate, not a kind of task | Proposed | 2026-09-28 | domain, aggregates, ui |
+| [0048](0048-descriptions-are-markdown.md) | Descriptions are Markdown, rendered client-side with raw HTML disabled | Proposed | 2026-09-28 | domain, ui, security |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
