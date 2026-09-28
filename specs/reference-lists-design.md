@@ -146,8 +146,9 @@ reads `ReferenceItem`. No Statistics projection is added.
 
 - `ListDetailPanel` (new list): a `MudToggleGroup` "Tasks" / "Reference",
   default Tasks, above the name field. Absent when renaming.
-- Icon per kind wherever a list appears — `NavSidebar`, `ListCard` /
-  `ThingCard` on the area board, `ListPage` header: `Checklist` for Tasks,
+- Icon per kind wherever a list appears — `ListCard` / `ThingCard` on the
+  area board, the `ListPage` header and search results (the sidebar lists
+  areas, not lists): `Checklist` for Tasks,
   `LibraryBooks` for Reference (GitHub lists later:
   `Icons.Custom.Brands.GitHub`). One helper, `ListIcon.For(TaskList)`.
 
@@ -193,7 +194,7 @@ null:
 |---|---|
 | `^https?://` | Link |
 | `^[A-Za-z]:[\\/]`, `^\\\\`, `^/`, `^~/` | Path |
-| `^-?\d+([.,]\d+)?\s*\S+$` | Quantity |
+| `^-?\d+([.,]\d+)?\s*[^\d\s]\S*$` | Quantity |
 | otherwise | Text |
 
 ### 4.5 `MarkdownField`
