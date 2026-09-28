@@ -59,6 +59,8 @@ the old one's status line to point at the new number.
 | [0042](0042-deleting-a-container-cascades-to-its-children.md) | Deleting an area or list deletes what it contains; writes into a dead container are rejected | Active | 2026-09-27 | domain, persistence, offline |
 | [0043](0043-repeat-interval-and-until-date.md) | A repeat carries an interval, and a repeating task's due date is its inclusive end | Active (amends [0007](0007-recurrence-as-template-and-occurrences.md)) | 2026-09-28 | domain, recurrence, today, ui |
 | [0044](0044-the-boot-never-waits-on-the-network.md) | The boot never waits on the network, and the splash stays up until the first screen is ready | Active (amends [0027](0027-local-session-gates-the-app-not-the-access-token.md) and [0030](0030-the-shell-waits-for-the-first-pull-on-a-device-holding-nothing.md)) | 2026-09-28 | offline, pwa, ui, identity |
+| [0047](0047-reference-items-are-their-own-aggregate.md) | Reference lists hold ReferenceItems, a separate aggregate, not a kind of task | Proposed | 2026-09-28 | domain, aggregates, ui |
+| [0048](0048-descriptions-are-markdown.md) | Descriptions are Markdown, rendered client-side with raw HTML disabled | Proposed | 2026-09-28 | domain, ui, security |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
