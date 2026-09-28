@@ -21,7 +21,7 @@ the old one's status line to point at the new number.
 | [0004](0004-tasks-module-compiles-to-wasm.md) | The Tasks module must compile to WebAssembly with zero infrastructure references | Active | 2026-09-11 | architecture, offline, purity |
 | [0005](0005-offline-conflicts-last-write-wins.md) | Resolve offline conflicts last-write-wins per aggregate | Active | 2026-09-11 | architecture, offline, sync |
 | [0006](0006-sync-is-delta-by-version.md) | Sync pulls deltas by a monotonic version marker, never a clock | Active | 2026-09-11 | architecture, offline, sync |
-| [0007](0007-recurrence-as-template-and-occurrences.md) | Model recurrence as a template plus derived occurrences, never a rolling date | Active | 2026-09-11 | architecture, domain, recurrence |
+| [0007](0007-recurrence-as-template-and-occurrences.md) | Model recurrence as a template plus derived occurrences, never a rolling date | Active (amended by [0043](0043-repeat-interval-and-until-date.md)) | 2026-09-11 | architecture, domain, recurrence |
 | [0008](0008-aggregate-boundaries.md) | Aggregate boundaries — Area, TaskList, TodoTask, Goal, Inbox, User | Active | 2026-09-11 | architecture, domain, aggregates |
 | [0009](0009-integration-tests-own-their-database.md) | Integration tests own a real, disposable MongoDB via Testcontainers | Active | 2026-09-12 | testing, persistence |
 | [0010](0010-modular-monolith-three-modules.md) | Split the modular monolith into three separate module projects | Active (supersedes [0001](0001-vertical-slice-folders-in-one-project.md); `PSPad.Module.History` renamed to `PSPad.Module.Statistics` by [0038](0038-history-renamed-to-statistics.md)) | 2026-09-12 | architecture, modularity |
@@ -56,6 +56,7 @@ the old one's status line to point at the new number.
 | [0039](0039-inbox-captures-are-their-own-statistics-projection.md) | Inbox captures are their own projection, their own collection, and a per-week tally | Active (revised in place 2026-09-26 pre-merge — the running-backlog version never shipped; extends [0037](0037-statistics-owns-denormalised-records.md) to a fourth collection) | 2026-09-25 | architecture, persistence, analytics, ui |
 | [0040](0040-app-updates-are-offered-not-forced.md) | A new app version is offered with a reload prompt, never activated unasked | Active | 2026-09-26 | offline, pwa, ui |
 | [0041](0041-account-deletion-drains-projections-first.md) | Account deletion drains the domain event pump before wiping | Active (amends [0034](0034-account-deletion-bypasses-the-command-pipeline.md) and [0036](0036-domain-events-dispatched-after-commit.md)) | 2026-09-26 | identity, persistence, events, security |
+| [0043](0043-repeat-interval-and-until-date.md) | A repeat carries an interval, and a repeating task's due date is its inclusive end | Active (amends [0007](0007-recurrence-as-template-and-occurrences.md)) | 2026-09-28 | domain, recurrence, today, ui |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

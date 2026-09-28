@@ -250,6 +250,12 @@ results. One `ListCard`, one `GoalCard`, one `InboxItemCard`. A single
 component per concept means a rule like never-overdue-for-recurring-tasks
 cannot drift between the screens that display it.
 
+**Repeating rows.** `TaskRow` shows a repeating task's due date as
+"Until 12 Oct", never red. A repeat past its Until (`TodoTask.EndedBy`)
+renders checked, and ticking it does nothing on the list screen or in the
+panel's Done checkbox; `ListPage` files it under Completed. My Day never shows it —
+it has no occurrence left.
+
 **Every repeated row or card carries `@key` on its entity id.** Ticking a
 task moves it between sections, and without a key Blazor hands the vacated
 row's component to the next task, whose `MudCheckBox` keeps its own ticked
@@ -300,16 +306,26 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    row a `MudMenu` activator; an empty value reads in the muted text colour
    ("No due date", "Never", "No goal"), a clearable one carries a trailing
    ✕:
-   - **Due** (`DueDateRow`) — Today / Tomorrow / In 2 days / Next week (the
+   - **Due** (`DueDateRow`) — on a repeating task labelled **Until**,
+     empty as "No end date" and never red when past (`FlagsPast`). Today / Tomorrow / In 2 days / Next week (the
      next Monday), each with its date, then "Pick a date…" opening a
      `MudDialog` (`pa-0`) holding a static, flat, toolbar-less
      `MudDatePicker` so only one frame shows (never a hidden
      dialog-variant picker, whose overlay renders inside its `d-none` host
      and never shows); picking a day sets it and closes; the value reads relatively (Today, Tomorrow,
      Yesterday, `ddd, d MMM`), in `Color.Error` when overdue.
-   - **Repeat** (`RecurrenceEditor`, outside Add) — Daily, Weekdays, Weekly
-     on today's weekday, Monthly on today's day, Never; a repeating task
-     shows its last seven occurrences as chips under the row.
+   - **Repeat** (`RecurrenceEditor`, Add included — the draft's rule is
+     sent as `SetTaskRecurrence` after `CreateTask`, before the due date) —
+     Daily, Weekdays, Weekly on today's weekday, Monthly on today's day,
+     Custom…, Never. Presets start today. Custom… opens a `MudDialog`:
+     Every [1–99] [days | weeks | months], weekday chips (weeks, Monday
+     first), On day 1–31 (months), Starts (date picker, default the current
+     rule's start or today); Save stays disabled until the fields are
+     valid. The value reads "Daily", "Weekly on Mon, Thu", "Every 3 weeks
+     on Mon", "Every 2 days", "Every 6 months on day 15". A repeating task
+     shows its last seven occurrences as chips under the row, then a muted
+     tally caption: "Not done yet", "Done N times", or "Done N times · M in
+     a row" (`RepeatTally`).
    - **Priority** — the four fixed levels with coloured dots.
    - **Goal** — the user's goals.
    - **List** (outside Add) — lists grouped under area headings; picking

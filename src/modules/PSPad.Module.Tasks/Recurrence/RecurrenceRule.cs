@@ -12,7 +12,6 @@ public sealed record RecurrenceRule(
     // Documents stored before the interval existed read it back as 0.
     public int Every => Interval < 1 ? 1 : Interval;
 
-
     public static RecurrenceRule Daily(DateOnly startsOn) =>
         new(RecurrenceKind.Daily, startsOn, [], 0);
 

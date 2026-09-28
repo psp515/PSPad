@@ -2,7 +2,7 @@
 title: Model recurrence as a template plus derived occurrences, never a rolling date
 tags: [architecture, domain, recurrence]
 date: 2026-09-11
-status: Active
+status: Active (amended by ADR-0043)
 ---
 
 # ADR-0007: Model recurrence as a template plus derived occurrences, never a rolling date
