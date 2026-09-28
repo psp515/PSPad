@@ -14,6 +14,10 @@ public interface IReplica
 
     Task SetMarkerAsync(long marker);
 
+    Task<string?> CollectionsFingerprintAsync();
+
+    Task SetCollectionsFingerprintAsync(string fingerprint);
+
     Task<Guid?> OwnerAsync();
 
     Task SetOwnerAsync(Guid userId);

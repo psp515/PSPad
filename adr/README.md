@@ -63,6 +63,7 @@ the old one's status line to point at the new number.
 | [0046](0046-github-app-read-only-tokens-outside-the-log.md) | Connect GitHub through a read-only GitHub App; tokens live outside the event log, encrypted | Proposed | 2026-09-28 | integrations, security, identity, persistence |
 | [0047](0047-reference-items-are-their-own-aggregate.md) | Reference lists hold ReferenceItems, a separate aggregate, not a kind of task | Proposed | 2026-09-28 | domain, aggregates, ui |
 | [0048](0048-descriptions-are-markdown.md) | Descriptions are Markdown, rendered client-side with raw HTML disabled | Proposed | 2026-09-28 | domain, ui, security |
+| [0049](0049-a-replica-that-learns-a-new-collection-pulls-from-zero.md) | A replica that learns a new collection pulls from zero, once | Active | 2026-09-28 | sync, offline |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

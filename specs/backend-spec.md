@@ -283,6 +283,15 @@ redraws when new data lands; the shell waits for the first pull to
 complete before rendering content on a device holding nothing yet for this
 user, rather than flashing an empty state.
 
+The client stores a fingerprint of the sync collection names it knows
+(`SyncService.Collections.Keys`, sorted, joined) in replica meta alongside
+the marker. If the stored fingerprint is missing or differs from the
+client's current one — an already-installed client that only just updated
+to a build with a new sync collection — the next pull asks `since = 0`
+once instead of the stored marker, so documents in that new collection are
+not silently skipped forever by a marker that had already advanced past
+them (`adr/0049`).
+
 **App updates are offered, never forced** (`adr/0040`). The published
 service worker keeps the browser's waiting state — no `skipWaiting()` on
 install, no `clients.claim()` — and only skips waiting when a page posts it
