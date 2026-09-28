@@ -9,6 +9,7 @@ using PSPad.App.Sync;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -50,7 +51,8 @@ public class OfflineCascadeTests
         var search = new ReplicaSearch(
             new ReplicaDocumentStore<TodoTask>(replica),
             new ReplicaDocumentStore<TaskList>(replica),
-            new ReplicaDocumentStore<Area>(replica));
+            new ReplicaDocumentStore<Area>(replica),
+            new ReplicaDocumentStore<ReferenceItem>(replica));
         Assert.Equal(0, counts.Today);
         Assert.Empty(await search.FindAsync(User, "Kup"));
         Assert.Empty(await search.FindAsync(User, "Zakupy"));

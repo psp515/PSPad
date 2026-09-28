@@ -3,6 +3,7 @@ using PSPad.App.State.Replica;
 using PSPad.App.State.Search;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -110,6 +111,68 @@ public class ReplicaSearchTests
         Assert.DoesNotContain(await search.FindAsync(User, "remo"), hit => hit.Name == "Remont");
     }
 
+    [Fact]
+    public async Task AReferenceItemIsFoundByName()
+    {
+        var area = new Area();
+        area.ApplyAll(Area.Decide(
+            null, new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), "Workshop", 0), DateTimeOffset.UnixEpoch));
+        Save(area);
+
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null,
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Filaments", 0, ListKind.Reference),
+            DateTimeOffset.UnixEpoch));
+        Save(list);
+
+        var item = CreateItem(list.Id, "PLA Black");
+        Save(item);
+
+        var search = new ReplicaSearch(
+            new ReplicaDocumentStore<TodoTask>(_replica),
+            new ReplicaDocumentStore<TaskList>(_replica),
+            new ReplicaDocumentStore<Area>(_replica),
+            new ReplicaDocumentStore<ReferenceItem>(_replica));
+
+        var hit = Assert.Single(await search.FindAsync(User, "pla"));
+
+        Assert.Equal(item.Id, hit.Id);
+        Assert.Equal("PLA Black", hit.Name);
+        Assert.Equal("Workshop › Filaments", hit.Path);
+        Assert.False(hit.IsList);
+        Assert.Equal(list.Id, hit.ListId);
+    }
+
+    [Fact]
+    public async Task ADeletedReferenceItemIsNotFound()
+    {
+        var area = new Area();
+        area.ApplyAll(Area.Decide(
+            null, new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), "Workshop", 0), DateTimeOffset.UnixEpoch));
+        Save(area);
+
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null,
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Filaments", 0, ListKind.Reference),
+            DateTimeOffset.UnixEpoch));
+        Save(list);
+
+        var item = CreateItem(list.Id, "PLA Black");
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new DeleteReferenceItem(Guid.NewGuid(), User, item.Id), DateTimeOffset.UnixEpoch));
+        Save(item);
+
+        var search = new ReplicaSearch(
+            new ReplicaDocumentStore<TodoTask>(_replica),
+            new ReplicaDocumentStore<TaskList>(_replica),
+            new ReplicaDocumentStore<Area>(_replica),
+            new ReplicaDocumentStore<ReferenceItem>(_replica));
+
+        Assert.Empty(await search.FindAsync(User, "pla"));
+    }
+
     InMemoryReplica _replica = new();
 
     void Save(Aggregate document) => _replica.SaveAsync(document).GetAwaiter().GetResult();
@@ -138,7 +201,8 @@ public class ReplicaSearchTests
         return new ReplicaSearch(
             new ReplicaDocumentStore<TodoTask>(_replica),
             new ReplicaDocumentStore<TaskList>(_replica),
-            new ReplicaDocumentStore<Area>(_replica));
+            new ReplicaDocumentStore<Area>(_replica),
+            new ReplicaDocumentStore<ReferenceItem>(_replica));
     }
 
     static TodoTask Task(Guid listId, string name)
@@ -149,5 +213,15 @@ public class ReplicaSearchTests
             new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), listId, name),
             DateTimeOffset.UnixEpoch));
         return task;
+    }
+
+    static ReferenceItem CreateItem(Guid listId, string name)
+    {
+        var item = new ReferenceItem();
+        item.ApplyAll(ReferenceItem.Decide(
+            null,
+            new CreateReferenceItem(Guid.NewGuid(), User, Guid.NewGuid(), listId, name, 0),
+            DateTimeOffset.UnixEpoch));
+        return item;
     }
 }

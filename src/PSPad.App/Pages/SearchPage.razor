@@ -16,7 +16,7 @@ else
     <MudList T="string">
         @foreach (var hit in _hits)
         {
-            <MudListItem @key="hit.Id" T="string" Href="@HrefOf(hit)">
+            <MudListItem @key="hit.Id" T="string" Href="@HrefOf(hit)" Icon="@IconOf(hit)">
                 <MudText>@hit.Name</MudText>
                 <MudText Typo="Typo.caption">@hit.Path</MudText>
             </MudListItem>
@@ -35,5 +35,12 @@ else
         _hits = await Search.FindAsync(State.UserId, Q ?? "");
     }
 
-    static string HrefOf(SearchHit hit) => hit.IsList ? $"/lists/{hit.Id}" : $"/search?task={hit.Id}";
+    static string HrefOf(SearchHit hit) => hit switch
+    {
+        { IsList: true } => $"/lists/{hit.Id}",
+        { ListId: { } listId } => ReferenceQuery.ForItem($"/lists/{listId}", hit.Id),
+        _ => $"/search?task={hit.Id}",
+    };
+
+    static string? IconOf(SearchHit hit) => hit.ListId is not null ? Icons.Material.Filled.LibraryBooks : null;
 }
