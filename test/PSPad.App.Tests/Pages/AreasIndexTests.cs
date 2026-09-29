@@ -22,9 +22,9 @@ public class AreasIndexTests : Bunit.TestContext
         JSInterop.Setup<string?>("localStorage.getItem", "pspad.last-area").SetResult(work.Id.ToString());
         var navigation = Services.GetRequiredService<BunitNavigationManager>();
 
-        Render<AreasIndex>();
+        var page = Render<AreasIndex>();
 
-        Assert.EndsWith($"/areas/{work.Id}", navigation.Uri);
+        page.WaitForAssertion(() => Assert.EndsWith($"/areas/{work.Id}", navigation.Uri));
     }
 
     [Fact]
@@ -37,9 +37,9 @@ public class AreasIndexTests : Bunit.TestContext
         JSInterop.Setup<string?>("localStorage.getItem", "pspad.last-area").SetResult(work.Id.ToString());
         var navigation = Services.GetRequiredService<BunitNavigationManager>();
 
-        Render<AreasIndex>();
+        var page = Render<AreasIndex>();
 
-        Assert.EndsWith($"/areas/{home.Id}", navigation.Uri);
+        page.WaitForAssertion(() => Assert.EndsWith($"/areas/{home.Id}", navigation.Uri));
     }
 
     [Fact]
