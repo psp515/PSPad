@@ -58,8 +58,7 @@
                Elevation="1" ClipMode="DrawerClipMode.Never" Class="d-md-none">
         <NavSidebar Areas="@_areas" AreasLoaded="@_ready" Email="@_email" DisplayName="@_displayName"
                     UserId="@State.UserId" Disabled="@(!_ready)"
-                    OnNewArea="@NewArea"
-                    Navigated="@CloseDrawer" />
+                    OnNewArea="@NewArea" />
     </MudDrawer>
 
     <MudMainContent>

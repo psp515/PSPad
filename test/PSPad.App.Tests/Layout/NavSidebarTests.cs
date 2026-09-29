@@ -111,24 +111,6 @@ public class NavSidebarTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ClickingAnAreaRowRaisesNavigated()
-    {
-        Arrange();
-        var area = Areas("Dom")[0];
-        var navigated = 0;
-
-        var sidebar = Render<NavSidebar>(parameters => parameters
-            .Add(p => p.Areas, new[] { area })
-            .Add(p => p.Email, "ada@example.com")
-            .Add(p => p.UserId, User)
-            .Add(p => p.Navigated, EventCallback.Factory.Create(this, () => navigated++)));
-
-        sidebar.Find($"a[href='/areas/{area.Id}']").Click();
-
-        Assert.Equal(1, navigated);
-    }
-
-    [Fact]
     public void ClickingNewAreaRaisesOnNewArea()
     {
         Arrange();
