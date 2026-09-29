@@ -310,6 +310,12 @@ button.pspad-heatmap-cell:focus-visible {
     }
 }
 
+/* MudBlazor parks a closed temporary drawer just off the right edge but keeps its elevation,
+   so its shadow bleeds back into view. */
+.mud-drawer.mud-drawer-temporary.mud-drawer--closed {
+    box-shadow: none;
+}
+
 .pspad-brand-loader {
     display: flex;
     align-items: center;
