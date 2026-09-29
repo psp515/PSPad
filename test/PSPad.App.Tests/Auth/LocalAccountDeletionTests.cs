@@ -119,6 +119,10 @@ public class LocalAccountDeletionTests
 
         public Task SetMarkerAsync(long marker) => throw new NotSupportedException();
 
+        public Task<string?> CollectionsFingerprintAsync() => Task.FromResult<string?>(null);
+
+        public Task SetCollectionsFingerprintAsync(string fingerprint) => Task.CompletedTask;
+
         public Task<Guid?> OwnerAsync() => Task.FromResult<Guid?>(null);
 
         public Task SetOwnerAsync(Guid userId) => Task.CompletedTask;

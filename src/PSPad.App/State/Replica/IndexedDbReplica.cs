@@ -40,6 +40,19 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
         await module.InvokeVoidAsync("setMeta", "marker", marker);
     }
 
+    public async Task<string?> CollectionsFingerprintAsync()
+    {
+        var module = await ModuleAsync();
+        var stored = await module.InvokeAsync<OwnerRow?>("getMeta", "collectionsFingerprint");
+        return stored?.Value;
+    }
+
+    public async Task SetCollectionsFingerprintAsync(string fingerprint)
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("setMeta", "collectionsFingerprint", fingerprint);
+    }
+
     public async Task<Guid?> OwnerAsync()
     {
         var module = await ModuleAsync();

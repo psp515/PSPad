@@ -8,6 +8,7 @@ using PSPad.Contracts;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -153,6 +154,48 @@ public class OfflineRoundTripTests(MongoFixture fixture)
         Assert.Equal(0, outcome.Pushed);
         Assert.Single(outcome.Rejections);
         Assert.Equal(2, await outbox.CountAsync());
+    }
+
+    [Fact]
+    public async Task ReferenceCommandsQueuedOfflineLandOnTheServer()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var me = await client.GetFromJsonAsync<MeResponse>("/api/me", ct);
+        var user = me!.UserId;
+
+        var replica = new InMemoryReplica();
+        var outbox = new InMemoryOutbox();
+        var areaId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        var colourField = Guid.NewGuid();
+        var weightField = Guid.NewGuid();
+
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope(
+            new CreateArea(Guid.NewGuid(), user, areaId, "Print shop", 0)));
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope(
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", 0, ListKind.Reference)));
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope(
+            new CreateReferenceItem(Guid.NewGuid(), user, itemId, listId, "PLA Black", 0)));
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope(
+            new AddReferenceField(Guid.NewGuid(), user, itemId, colourField, "Colour", "Black", null)));
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope(
+            new AddReferenceField(Guid.NewGuid(), user, itemId, weightField, "Left", "350 g", "quantity")));
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope(
+            new SetReferenceItemDescription(Guid.NewGuid(), user, itemId, "Dry 4h at 50 °C")));
+
+        var sync = new SyncService(new HttpSyncApi(client), replica, outbox);
+
+        var outcome = await sync.SyncAsync(ct);
+
+        Assert.Equal(6, outcome.Pushed);
+        Assert.Empty(outcome.Rejections);
+        var item = await replica.LoadAsync<ReferenceItem>(itemId);
+        Assert.Equal("PLA Black", item!.Name);
+        Assert.Equal("Dry 4h at 50 °C", item.Description);
+        Assert.Equal(["Colour", "Left"], item.Fields.Select(field => field.Label));
     }
 
     sealed class HttpSyncApi(HttpClient http) : ISyncApi

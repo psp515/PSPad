@@ -18,7 +18,8 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         ["tasklists"] = typeof(Module.Tasks.Lists.TaskList),
         ["todotasks"] = typeof(Module.Tasks.Tasks.TodoTask),
         ["goals"] = typeof(Module.Tasks.Goals.Goal),
-        ["inboxes"] = typeof(Module.Tasks.Inbox.Inbox)
+        ["inboxes"] = typeof(Module.Tasks.Inbox.Inbox),
+        ["referenceitems"] = typeof(Module.Tasks.References.ReferenceItem)
     };
 
     public async Task<SyncOutcome> SyncAsync(CancellationToken ct)
@@ -61,9 +62,16 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         return (accepted, rejections);
     }
 
+    public static string CollectionsFingerprint { get; } =
+        string.Join(",", Collections.Keys.OrderBy(key => key, StringComparer.Ordinal));
+
     async Task<int> PullAsync(CancellationToken ct)
     {
-        var since = await replica.MarkerAsync();
+        var storedFingerprint = await replica.CollectionsFingerprintAsync();
+
+        // A client built before a collection existed skipped its rows silently while still
+        // advancing its marker past them, so a stale fingerprint forces one full re-pull.
+        var since = storedFingerprint == CollectionsFingerprint ? await replica.MarkerAsync() : 0;
         var response = await api.SyncAsync(since);
 
         if (response is null)
@@ -90,6 +98,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         }
 
         await replica.SetMarkerAsync(response.Marker);
+        await replica.SetCollectionsFingerprintAsync(CollectionsFingerprint);
         return pulled;
     }
 }

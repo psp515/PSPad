@@ -198,6 +198,11 @@ public class SyncRefreshTests : Bunit.TestContext
 
         public Task SetMarkerAsync(long marker) => inner.SetMarkerAsync(marker);
 
+        public Task<string?> CollectionsFingerprintAsync() => inner.CollectionsFingerprintAsync();
+
+        public Task SetCollectionsFingerprintAsync(string fingerprint) =>
+            inner.SetCollectionsFingerprintAsync(fingerprint);
+
         public Task<Guid?> OwnerAsync() => inner.OwnerAsync();
 
         public Task SetOwnerAsync(Guid userId) => inner.SetOwnerAsync(userId);

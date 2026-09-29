@@ -24,13 +24,19 @@ public class SyncServiceTests
         public SyncResponse Pull { get; set; } =
             new(0, new Dictionary<string, JsonElement[]>(), []);
 
+        public long? RequestedSince { get; private set; }
+
         public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes)
         {
             Sent.Add(envelopes);
             return Task.FromResult(Respond(envelopes));
         }
 
-        public Task<SyncResponse?> SyncAsync(long since) => Task.FromResult<SyncResponse?>(Pull);
+        public Task<SyncResponse?> SyncAsync(long since)
+        {
+            RequestedSince = since;
+            return Task.FromResult<SyncResponse?>(Pull);
+        }
     }
 
     [Fact]
@@ -128,6 +134,43 @@ public class SyncServiceTests
         Assert.Equal(1, outcome.Pulled);
         Assert.Equal(17, await replica.MarkerAsync());
         Assert.Equal("Home", (await replica.LoadAsync<Area>(area.Id))!.Name);
+    }
+
+    [Fact]
+    public async Task AStoredFingerprintMissingANewCollectionPullsFromZeroOnce()
+    {
+        var replica = new InMemoryReplica();
+        await replica.SetMarkerAsync(42);
+        await replica.SetCollectionsFingerprintAsync("areas,goals,inboxes,tasklists,todotasks");
+        var api = new FakeApi();
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Equal(0, api.RequestedSince);
+    }
+
+    [Fact]
+    public async Task AMatchingStoredFingerprintPullsFromTheStoredMarker()
+    {
+        var replica = new InMemoryReplica();
+        await replica.SetMarkerAsync(42);
+        await replica.SetCollectionsFingerprintAsync(SyncService.CollectionsFingerprint);
+        var api = new FakeApi();
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Equal(42, api.RequestedSince);
+    }
+
+    [Fact]
+    public async Task APullStoresTheCurrentFingerprintAlongsideTheMarker()
+    {
+        var replica = new InMemoryReplica();
+        var api = new FakeApi();
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Equal(SyncService.CollectionsFingerprint, await replica.CollectionsFingerprintAsync());
     }
 
     static SyncService ServiceFor(ISyncApi api, IOutbox outbox) =>

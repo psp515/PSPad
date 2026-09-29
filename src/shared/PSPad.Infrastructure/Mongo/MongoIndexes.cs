@@ -6,7 +6,7 @@ namespace PSPad.Infrastructure.Mongo;
 public static class MongoIndexes
 {
     static readonly string[] AggregateCollections =
-        ["areas", "tasklists", "todotasks", "goals", "inboxes", "users"];
+        ["areas", "tasklists", "todotasks", "goals", "inboxes", "users", "referenceitems"];
 
     public static async Task EnsureAsync(MongoContext context, CancellationToken ct)
     {
@@ -29,6 +29,11 @@ public static class MongoIndexes
         await context.Collection<BsonDocument>("tasklists").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("areaId")),
+            cancellationToken: ct);
+
+        await context.Collection<BsonDocument>("referenceitems").Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("listId")),
             cancellationToken: ct);
 
         await context.Collection<BsonDocument>("events").Indexes.CreateManyAsync(

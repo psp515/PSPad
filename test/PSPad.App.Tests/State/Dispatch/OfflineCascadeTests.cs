@@ -9,6 +9,7 @@ using PSPad.App.Sync;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -35,6 +36,26 @@ public class OfflineCascadeTests
     }
 
     [Fact]
+    public async Task DeletingAReferenceListOfflineDeletesItsItemAndQueuesOneCommand()
+    {
+        var (replica, outbox, sender) = Arrange();
+        var areaId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        Accepted(await sender.SendAsync(new CreateArea(Guid.NewGuid(), User, areaId, "Workshop", 0), Ct));
+        Accepted(await sender.SendAsync(
+            new CreateTaskList(Guid.NewGuid(), User, listId, areaId, "Filaments", 0, ListKind.Reference), Ct));
+        Accepted(await sender.SendAsync(
+            new CreateReferenceItem(Guid.NewGuid(), User, itemId, listId, "PLA Black", 0), Ct));
+        await outbox.ClearAsync();
+
+        Accepted(await sender.SendAsync(new DeleteTaskList(Guid.NewGuid(), User, listId), Ct));
+
+        Assert.True((await replica.LoadAsync<ReferenceItem>(itemId))!.Deleted);
+        Assert.Equal(1, await outbox.CountAsync());
+    }
+
+    [Fact]
     public async Task AfterAnOfflineAreaDeleteItsTasksLeaveTodayAndSearch()
     {
         var (replica, _, sender) = Arrange();
@@ -50,7 +71,8 @@ public class OfflineCascadeTests
         var search = new ReplicaSearch(
             new ReplicaDocumentStore<TodoTask>(replica),
             new ReplicaDocumentStore<TaskList>(replica),
-            new ReplicaDocumentStore<Area>(replica));
+            new ReplicaDocumentStore<Area>(replica),
+            new ReplicaDocumentStore<ReferenceItem>(replica));
         Assert.Equal(0, counts.Today);
         Assert.Empty(await search.FindAsync(User, "Kup"));
         Assert.Empty(await search.FindAsync(User, "Zakupy"));
