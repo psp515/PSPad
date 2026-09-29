@@ -52,6 +52,7 @@ public static class AppTestHost
         context.Services.AddSingleton<IDocumentStore<ReferenceItem>>(new ReplicaDocumentStore<ReferenceItem>(replica));
         context.Services.AddPSPadCommands();
         context.Services.AddSingleton(new AppState { UserId = userId, Today = today });
+        context.Services.AddSingleton(new PageHeader());
         context.Services.AddSingleton(new ThemePreference(context.JSInterop.JSRuntime));
 
         var collapse = new CardCollapseState(context.JSInterop.JSRuntime);

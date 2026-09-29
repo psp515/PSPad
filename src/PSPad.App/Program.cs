@@ -89,6 +89,7 @@ builder.Services.AddScoped<ThemePreference>();
 builder.Services.AddScoped<CardCollapseState>();
 builder.Services.AddScoped<ReplicaSearch>();
 builder.Services.AddScoped<SidebarCounts>();
+builder.Services.AddScoped<PageHeader>();
 builder.Services.AddScoped<StatisticsCache>();
 builder.Services.AddScoped<IStatisticsSource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
