@@ -86,6 +86,7 @@ Folder `References/`, namespace `PSPad.Module.Tasks.References`.
 | `Description` | `string` |
 | `Starred` | `bool` |
 | `Position` | `int` |
+| `CreatedAt` | `DateTimeOffset?`, from `ReferenceItemCreated.At`; null on items stored before it existed |
 | `Fields` | ordered `ReferenceField(Guid Id, string Label, string Value, string? Display, int Position)` |
 
 Commands and events:
@@ -182,10 +183,18 @@ Same slot as `TaskDetailPanel`.
   (Automatic, Text, Link, Path, Quantity). Up/down icons reorder; a Close icon
   per row removes; the last row is an inline Label/Value add row (Enter adds,
   display kind automatic).
-- Description — a "Description" section below the fields, `MarkdownField`
+- List — below the fields, after a divider: the task panel's `ListRow`
+  (`Area › List`), Reference lists only; picking one moves the item.
+- Description — a "Description" section below the list row, `MarkdownField`
   (§4.5).
-- Actions: move to another Reference list (picker lists Reference lists
-  only), delete (`ConfirmDialog`).
+- Footer: "Created {ddd, d MMM yyyy}" (when `CreatedAt` is known) and delete
+  (`ConfirmDialog`).
+- Add mode shows the same sections over a local draft (fields, target list,
+  description). "Add item" sends `CreateReferenceItem`, then one
+  `AddReferenceField` per draft field in order, then
+  `SetReferenceItemDescription` when the draft description is not blank, and
+  opens the new item. A rejected create keeps the draft; a rejected
+  follow-up warns and still opens the item.
 
 ### 4.4 Kind detection
 
@@ -226,7 +235,7 @@ a description.
 
 - Task list pickers (`TaskDetailPanel`, `InboxItemPanel`) show `Tasks` lists
   only.
-- The reference item's move picker shows `Reference` lists only.
+- The reference item's list row shows `Reference` lists only.
 
 ## 5. Testing
 

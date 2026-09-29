@@ -476,8 +476,9 @@ addressed as `?inbox=new` (the Inbox FAB or its empty state) or
 (tapping a `ReferenceRow`), mirroring `TaskDetailPanel`/`TaskQuery`'s
 `?task=` pattern. Header: X, star toggle on the right (`HeaderActions`, only
 once the item exists — no star while still adding). An unboxed `Typo.h6`
-name field sits under the header, same as a task's name. Below it, in edit
-and view modes only:
+name field sits under the header, same as a task's name. Below it, in every
+mode (Add included), mirroring the task panel's content → divider →
+property rows → Description order:
 
 1. **Fields** — a `PanelSection` holding `ReferenceFieldList`, laid out like
    `StepList` (the same `pspad-step` rows, dense, no big buttons): each row
@@ -494,15 +495,31 @@ and view modes only:
    with the add row. A click on a link or the copy button inside a row does
    not open the editor. The
    kind select lives only in the editor of an existing field.
-2. **Description** — a `PanelSection` holding the item's `MarkdownField`
+2. A `MudDivider`, then the property rows: the same **`ListRow`** the task
+   panel uses (folder icon, "List", `Area › List`), offering only
+   non-deleted `Reference` lists — an item never crosses into a `Tasks`
+   list. Picking one sends `MoveReferenceItemToList`.
+3. **Description** — a `PanelSection` holding the item's `MarkdownField`
    (see below).
-3. Footer: a **Move to list** `MudSelect` (only `Reference` lists, an item
-   never crosses into a `Tasks` list) and a red trash `MudIconButton` on the
-   right, same delete-confirmation pattern as a task.
+4. Footer (existing items only): "Created {ddd, d MMM yyyy}" as a muted
+   `Typo.caption` on the left — absent for an item stored before
+   `CreatedAt` existed — and a red trash `MudIconButton` on the right, same
+   layout and delete-confirmation pattern as the task footer.
 
 As with a task, an existing item's fields save as they change — no Save
-button outside Add — and Add mode holds nothing until **Add item** commits
-the whole draft.
+button outside Add. **Add mode holds a local draft** and sends nothing until
+**Add item**: `ReferenceFieldList` is given a draft list instead of an item
+(same rows, same add row — Enter there adds a draft field and never creates
+the item), the list row starts on the target list and picking another one
+changes where the item will be created, and the `MarkdownField` saves into
+the draft. **Add item** (or Enter in the name) sends `CreateReferenceItem`;
+once accepted it sends `AddReferenceField` for each draft field in order
+(fresh ids, the draft's display hint), then `SetReferenceItemDescription`
+if the draft description is not blank, then navigates to the item with
+`replace: true`. A rejected create shows a Warning snackbar and keeps the
+whole draft; a rejected follow-up shows a Warning snackbar and still opens
+the item, since it exists. The draft resets when the target list changes or
+the panel closes.
 
 **Panel subsections share `PanelSection`.** `Components/PanelSection.razor`
 is a `MudDivider` followed by a muted `Typo.overline` title
