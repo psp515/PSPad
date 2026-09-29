@@ -40,7 +40,7 @@ else if (_goal is not null)
     <MudGrid Spacing="4">
         @if (_open.Count == 0)
         {
-            <MudItem xs="12" sm="6" md="4" xl="3">
+            <MudItem xs="12" sm="6" lg="4" xl="3">
                 <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="No open tasks." />
             </MudItem>
         }
@@ -127,7 +127,7 @@ else
     bool IsOverdue => _goal is { Status: GoalStatus.InProgress } goal && goal.DueOn < State.Today;
 
     RenderFragment Card(TodoTask task) =>
-        @<MudItem @key="task.Id" xs="12" sm="6" md="4" xl="3">
+        @<MudItem @key="task.Id" xs="12" sm="6" lg="4" xl="3">
             <MudPaper Outlined="true" Class="pspad-task-card">
                 <TaskRow Task="@task" Today="@State.Today"
                          ListName="@ListNameOf(task)"

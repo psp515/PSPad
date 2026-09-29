@@ -39,7 +39,7 @@ else if (_list is not null)
         @if (_items.Count == 0)
         {
             <MudGrid Spacing="4">
-                <MudItem xs="12" sm="6" md="4" xl="3">
+                <MudItem xs="12" sm="6" lg="4" xl="3">
                     <EmptyState Icon="@Icons.Material.Outlined.LibraryBooks" Message="No items yet." CreateText="Add item"
                                 OnCreate="@(EventCallback.Factory.Create(this, AddItem))" />
                 </MudItem>
@@ -50,7 +50,7 @@ else if (_list is not null)
             <MudGrid Spacing="4">
                 @foreach (var item in _items)
                 {
-                    <MudItem @key="item.Id" xs="12" sm="6" md="4" xl="3">
+                    <MudItem @key="item.Id" xs="12" sm="6" lg="4" xl="3">
                         <MudPaper Outlined="true" Class="pspad-task-card">
                             <ReferenceRow Item="@item" OnStar="@StarItemAsync" OnOpen="@OpenItem" />
                         </MudPaper>
@@ -62,7 +62,7 @@ else if (_list is not null)
     else if (_open.Count == 0 && _done.Count == 0)
     {
         <MudGrid Spacing="4">
-            <MudItem xs="12" sm="6" md="4" xl="3">
+            <MudItem xs="12" sm="6" lg="4" xl="3">
                 <EmptyState Icon="@Icons.Material.Outlined.TaskAlt" Message="No tasks yet." CreateText="Add task"
                             OnCreate="@(EventCallback.Factory.Create(this, AddTask))" />
             </MudItem>
@@ -73,7 +73,7 @@ else if (_list is not null)
         <MudGrid Spacing="4">
             @foreach (var task in _open)
             {
-                <MudItem @key="task.Id" xs="12" sm="6" md="4" xl="3">
+                <MudItem @key="task.Id" xs="12" sm="6" lg="4" xl="3">
                     <MudPaper Outlined="true" Class="pspad-task-card">
                         <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
                                  OnOpen="@Open" />
@@ -90,7 +90,7 @@ else if (_list is not null)
                 <MudGrid Spacing="4">
                     @foreach (var task in _done)
                     {
-                        <MudItem @key="task.Id" xs="12" sm="6" md="4" xl="3">
+                        <MudItem @key="task.Id" xs="12" sm="6" lg="4" xl="3">
                             <MudPaper Outlined="true" Class="pspad-task-card">
                                 <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync"
                                          OnStar="@StarAsync" OnOpen="@Open" />

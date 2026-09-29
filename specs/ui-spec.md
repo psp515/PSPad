@@ -160,23 +160,22 @@ read.
 ## 2. Layout & spacing
 
 **Card/row grids.** Every place a list of cards or rows is drawn uses
-`MudGrid Spacing="4"`, one `MudItem xs="12" sm="6" md="4" xl="3"` per item:
+`MudGrid Spacing="4"`, one `MudItem xs="12" sm="6" lg="4" xl="3"` per item:
 
 ```razor
 <MudGrid Spacing="4">
     @foreach (var item in items)
     {
-        <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudItem xs="12" sm="6" lg="4" xl="3">
             <Card ... />
         </MudItem>
     }
 </MudGrid>
 ```
 
-One column on a phone, two on a tablet, three from `md`, four once the
-viewport passes MudBlazor's `xl` breakpoint (1920px). `sm`/`md`/`xl` (600px/960px/1920px) match
-`BrowserViewport`'s own `Breakpoint.MdAndUp` split used for the sidebar, so
-the grid and the shell agree on where "wide enough" starts. Row-flow, not
+One column on a phone, two from `sm` (600px) — still two at `md` (960px),
+where the permanent sidebar leaves too little width for three — three from
+`lg` (1280px), four from `xl` (1920px). Row-flow, not
 column-flow — DOM order stays reading order for keyboard and screen-reader
 navigation.
 
@@ -627,7 +626,7 @@ unavailable).
 
 **Empty states share one component.** A page or board with no items yet
 shows `Components/EmptyState.razor` as the first cell of its grid, sized
-like one card (`MudItem xs="12" sm="6" md="4" xl="3"`): an outlined
+like one card (`MudItem xs="12" sm="6" lg="4" xl="3"`): an outlined
 `MudPaper` with a dashed border, an icon and a message. The whole card is
 the create action — `role="button"`, focusable, Enter/Space or a click
 starts creating the first item; no separate button. Only after `_loaded` —

@@ -22,14 +22,14 @@ else
     <MudGrid Spacing="4">
         @if (Items.Count == 0)
         {
-            <MudItem xs="12" sm="6" md="4" xl="3">
+            <MudItem xs="12" sm="6" lg="4" xl="3">
                 <EmptyState Icon="@Icons.Material.Outlined.Inbox" Message="Nothing captured." CreateText="Capture"
                             OnCreate="@Capture" />
             </MudItem>
         }
         @foreach (var item in Items)
         {
-            <MudItem @key="item.Id" xs="12" sm="6" md="4" xl="3">
+            <MudItem @key="item.Id" xs="12" sm="6" lg="4" xl="3">
                 <InboxItemCard Item="@item" OnOpen="@Open" />
             </MudItem>
         }
