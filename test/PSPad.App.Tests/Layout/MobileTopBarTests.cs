@@ -1,0 +1,73 @@
+using Bunit;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using PSPad.App.Layout;
+using PSPad.App.State;
+using PSPad.TestInfrastructure;
+
+namespace PSPad.App.Tests.Layout;
+
+[UnitTest]
+public class MobileTopBarTests : Bunit.TestContext
+{
+    [Fact]
+    public void ItIsPhoneOnly()
+    {
+        Arrange();
+
+        var bar = RenderBar();
+
+        Assert.Contains("d-md-none", bar.Find(".mud-appbar").ClassList);
+    }
+
+    [Fact]
+    public void ItShowsTheTitleAndFollowsChanges()
+    {
+        Arrange();
+        var header = Services.GetRequiredService<PageHeader>();
+        header.Set("Inbox", null, null);
+        var bar = RenderBar();
+
+        header.Set("Goals", null, null);
+
+        bar.WaitForAssertion(() => Assert.Contains("Goals", bar.Find(".pspad-top-title").TextContent));
+    }
+
+    [Fact]
+    public void TheBackArrowAppearsOnlyOnNestedScreens()
+    {
+        Arrange();
+        var header = Services.GetRequiredService<PageHeader>();
+        header.Set("Inbox", null, null);
+        var bar = RenderBar();
+        Assert.Empty(bar.FindAll(".pspad-top-back"));
+
+        header.Set("Shopping", "Home", "/areas/1");
+
+        bar.WaitForAssertion(() =>
+            Assert.Equal("/areas/1", bar.Find(".pspad-top-back").GetAttribute("href")));
+        Assert.Contains("Home", bar.Find(".pspad-top-title").TextContent);
+    }
+
+    [Fact]
+    public void TheAvatarRaisesOnAvatar()
+    {
+        Arrange();
+        var raised = 0;
+
+        var bar = Render<MobileTopBar>(parameters => parameters
+            .Add(p => p.DisplayName, "Ada Lovelace")
+            .Add(p => p.UserId, Guid.NewGuid())
+            .Add(p => p.OnAvatar, EventCallback.Factory.Create(this, () => raised++)));
+        bar.Find(".pspad-avatar-button").Click();
+
+        Assert.Equal(1, raised);
+    }
+
+    void Arrange() => AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+    IRenderedComponent<MobileTopBar> RenderBar() =>
+        Render<MobileTopBar>(parameters => parameters
+            .Add(p => p.DisplayName, "Ada Lovelace")
+            .Add(p => p.UserId, Guid.NewGuid()));
+}
