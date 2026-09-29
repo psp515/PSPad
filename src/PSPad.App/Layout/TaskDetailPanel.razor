@@ -161,7 +161,8 @@
 
     async Task ReloadAsync()
     {
-        _task = TaskId is null ? null : await Store.LoadAsync(TaskId.Value, CancellationToken.None);
+        var loaded = TaskId is null ? null : await Store.LoadAsync(TaskId.Value, CancellationToken.None);
+        _task = loaded is { Deleted: false } ? loaded : null;
 
         if (_task is null && NewInList is null)
         {

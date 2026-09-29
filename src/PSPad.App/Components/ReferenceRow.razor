@@ -14,6 +14,7 @@
 
     <MudIconButton Size="Size.Small" Color="Color.Primary"
                    Icon="@(Item.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                   aria-label="@(Item.Starred ? "Unstar" : "Star")"
                    OnClick="@(() => OnStar.InvokeAsync(Item))" />
 </div>
 

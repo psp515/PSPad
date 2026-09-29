@@ -32,6 +32,19 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ADeletedTaskShowsAsMissing()
+    {
+        var task = NewTask("First dance");
+        task.ApplyAll(TodoTask.Decide(
+            task, new DeleteTask(Guid.NewGuid(), User, task.Id), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Empty(panel.FindAll(".pspad-task-name-field"));
+    }
+
+    [Fact]
     public void WithATaskItNamesItAndListsItsSteps()
     {
         var task = NewTask("First dance");

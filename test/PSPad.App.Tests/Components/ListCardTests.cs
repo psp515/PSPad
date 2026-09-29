@@ -210,6 +210,19 @@ public class ListCardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheAddItemButtonHasAnAriaLabel()
+    {
+        Arrange();
+        var list = ReferenceList("Przepisy");
+
+        var card = Render<ListCard>(parameters => parameters
+            .Add(p => p.List, list)
+            .Add(p => p.Today, Today));
+
+        Assert.Equal("Add item", card.Find(".pspad-add-item").GetAttribute("aria-label"));
+    }
+
+    [Fact]
     public void AReferenceListsRowsRaiseOnStarItemAndOnOpenItem()
     {
         Arrange();

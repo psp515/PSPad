@@ -140,9 +140,9 @@ transactions require one. Dev, prod and tests all run the same shape.
 |---|---|---|
 | `users` | one per person | `timeZone` (IANA), `provisionedAt` |
 | `areas` | user-defined areas | `name`, `position` |
-| `lists` | task lists, each inside one area | `areaId`, `name`, `position`, `kind` (`Tasks` or `Reference`, fixed at creation) |
+| `tasklists` | task lists, each inside one area | `areaId`, `name`, `position`, `kind` (`Tasks` or `Reference`, fixed at creation) |
 | `inboxes` | one per user | `items[]` |
-| `tasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `completedDays[]`, `createdAt`, `description` (Markdown) |
+| `todotasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `completedDays[]`, `createdAt`, `description` (Markdown) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
 | `referenceitems` | items in a `Reference` list | `listId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`) |
 | `events` | the domain event log and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
@@ -168,8 +168,8 @@ transaction; the returned value stamps both the event and the aggregate's
   one serves startup replay, which reads forward across every user ordered by
   `seq` alone and so cannot use either compound index
 - every aggregate collection: `{userId: 1, seq: 1}` (delta sync)
-- `tasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`
-- `lists`: `{userId: 1, areaId: 1}`
+- `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`
+- `tasklists`: `{userId: 1, areaId: 1}`
 - `referenceitems`: `{userId: 1, listId: 1}`
 - `processed_commands`: TTL index on `at`, 30 days
 - `statistics_records`: `{userId: 1, _id: -1}` (the feed page),

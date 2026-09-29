@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Layout;
+using PSPad.App.Tests;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
 using PSPad.TestInfrastructure;
@@ -171,6 +172,85 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Equal("Servings", reloaded!.Fields[0].Label);
         Assert.Equal("Time", reloaded.Fields[1].Label);
+    }
+
+    [Fact]
+    public async Task MovingTheLastFieldUpSendsToIndexOneOfThree()
+    {
+        var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
+        var item = NewItem(list.Id, "Bigos");
+        AddField(item, "Time", "45 min");
+        AddField(item, "Servings", "4");
+        AddField(item, "Difficulty", "Easy");
+        var replica = AppTestHost.Arrange(this, User, Today, list, item);
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
+        panel.FindAll(".pspad-field-up")[2].Click();
+
+        var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
+        Assert.Equal(["Time", "Difficulty", "Servings"], reloaded!.Fields.Select(field => field.Label));
+    }
+
+    [Fact]
+    public async Task MovingTheFirstFieldDownSendsToIndexOneOfThree()
+    {
+        var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
+        var item = NewItem(list.Id, "Bigos");
+        AddField(item, "Time", "45 min");
+        AddField(item, "Servings", "4");
+        AddField(item, "Difficulty", "Easy");
+        var replica = AppTestHost.Arrange(this, User, Today, list, item);
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
+        panel.FindAll(".pspad-field-down")[0].Click();
+
+        var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
+        Assert.Equal(["Servings", "Time", "Difficulty"], reloaded!.Fields.Select(field => field.Label));
+    }
+
+    [Fact]
+    public void ANewItemNavigatesWithReplaceSoBackDoesNotReturnToAddMode()
+    {
+        var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
+        AppTestHost.Arrange(this, User, Today, list);
+        var navigation = (Bunit.TestDoubles.BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)list.Id));
+        panel.Find(".pspad-item-name-field input").Input("Bigos");
+        panel.Find(".pspad-panel-save").Click();
+
+        var entry = Assert.Single(navigation.History);
+        Assert.True(entry.Options.ReplaceHistoryEntry);
+    }
+
+    [Fact]
+    public void ARejectedStarStaysUnstarredAndSurfacesTheRejection()
+    {
+        var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
+        var item = NewItem(list.Id, "Bigos");
+        AppTestHost.Arrange(this, User, Today, list, item);
+        Services.AddSingleton<ICommandHandler<StarReferenceItem>>(
+            new RejectingHandler<StarReferenceItem>("Item no longer exists."));
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
+        panel.Find(".pspad-item-star").Click();
+
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("Item no longer exists.") == true);
+    }
+
+    [Fact]
+    public void ADeletedItemShowsAsMissingAndTheReloadedPanelIsClosed()
+    {
+        var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
+        var item = NewItem(list.Id, "Bigos");
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new DeleteReferenceItem(Guid.NewGuid(), User, item.Id), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, list, item);
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
+
+        Assert.Empty(panel.FindAll(".pspad-item-name-field"));
     }
 
     [Fact]

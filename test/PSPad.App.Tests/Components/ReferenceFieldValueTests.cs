@@ -37,6 +37,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
         var link = field.Find(".pspad-field-link");
         Assert.Equal("_blank", link.GetAttribute("target"));
         Assert.Equal("https://onedrive.live.com/x", link.GetAttribute("href"));
+        Assert.Equal("noopener noreferrer", link.GetAttribute("rel"));
     }
 
     [Fact]

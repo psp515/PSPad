@@ -103,6 +103,30 @@ public class ReferenceRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheStarButtonIsLabelledStarWhenNotStarred()
+    {
+        Arrange();
+        var item = NewItem("Bigos");
+
+        var row = Render(item);
+
+        Assert.Equal("Star", row.Find("button").GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public void TheStarButtonIsLabelledUnstarWhenStarred()
+    {
+        Arrange();
+        var item = NewItem("Bigos");
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new StarReferenceItem(Guid.NewGuid(), User, item.Id, true), DateTimeOffset.UnixEpoch));
+
+        var row = Render(item);
+
+        Assert.Equal("Unstar", row.Find("button").GetAttribute("aria-label"));
+    }
+
+    [Fact]
     public void ClickingTheRowRaisesOnOpen()
     {
         Arrange();

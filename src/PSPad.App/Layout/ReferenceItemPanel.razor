@@ -45,17 +45,18 @@
                 @for (var index = 0; index < fields.Count; index++)
                 {
                     var field = fields[index];
-                    var isFirst = index == 0;
-                    var isLast = index == fields.Count - 1;
+                    var position = index;
+                    var isFirst = position == 0;
+                    var isLast = position == fields.Count - 1;
 
                     @if (_editingFieldId == field.Id)
                     {
-                        <ReferenceFieldEditor Field="@field" OnSave="@(input => EditFieldAsync(field.Id, input))"
+                        <ReferenceFieldEditor @key="field.Id" Field="@field" OnSave="@(input => EditFieldAsync(field.Id, input))"
                                               OnCancel="@CancelFieldEditAsync" OnRemove="@(() => RemoveFieldAsync(field.Id))" />
                     }
                     else
                     {
-                        <MudListItem T="Guid" Class="pspad-field-row">
+                        <MudListItem @key="field.Id" T="Guid" Class="pspad-field-row">
                             <div class="d-flex align-center gap-2">
                                 <div class="flex-grow-1 pspad-field-row-body" style="cursor:pointer; min-width:0"
                                      @onclick="@(() => BeginEditField(field.Id))">
@@ -65,11 +66,11 @@
                                 <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
                                                Class="pspad-field-up" aria-label="Move up"
                                                Disabled="@(Disabled || isFirst)"
-                                               OnClick="@(() => MoveFieldAsync(field.Id, index - 1))" />
+                                               OnClick="@(() => MoveFieldAsync(field.Id, position - 1))" />
                                 <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
                                                Class="pspad-field-down" aria-label="Move down"
                                                Disabled="@(Disabled || isLast)"
-                                               OnClick="@(() => MoveFieldAsync(field.Id, index + 1))" />
+                                               OnClick="@(() => MoveFieldAsync(field.Id, position + 1))" />
                             </div>
                         </MudListItem>
                     }
@@ -167,7 +168,8 @@
 
     async Task ReloadAsync()
     {
-        _item = ItemId is null ? null : await Store.LoadAsync(ItemId.Value, CancellationToken.None);
+        var loaded = ItemId is null ? null : await Store.LoadAsync(ItemId.Value, CancellationToken.None);
+        _item = loaded is { Deleted: false } ? loaded : null;
 
         if (_editingFieldFor != _item?.Id)
         {
@@ -218,7 +220,7 @@
         }
 
         _draftName = "";
-        Navigation.NavigateTo(ReferenceQuery.ForItem(Navigation.Uri, itemId));
+        Navigation.NavigateTo(ReferenceQuery.ForItem(Navigation.Uri, itemId), replace: true);
     }
 
     async Task NameChangedAsync(string name)

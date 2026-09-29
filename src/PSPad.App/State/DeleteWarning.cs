@@ -6,9 +6,6 @@ namespace PSPad.App.State;
 
 public static class DeleteWarning
 {
-    public static string ForArea(string name, Guid areaId, IEnumerable<TaskList> lists, IEnumerable<TodoTask> tasks) =>
-        ForArea(name, areaId, lists, tasks, []);
-
     public static string ForArea(
         string name, Guid areaId, IEnumerable<TaskList> lists, IEnumerable<TodoTask> tasks, IEnumerable<ReferenceItem> items)
     {
