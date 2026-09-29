@@ -1,11 +1,19 @@
 @using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.References
 @using PSPad.Module.Tasks.Tasks
 
 <ThingCard Id="@List.Id" Name="@List.Name" Href="@($"/lists/{List.Id}")" Icon="@ListIcon.For(List)"
            IconTitle="@ListIcon.LabelFor(List)" Tasks="@Tasks" Today="@Today"
+           Rows="@(IsReference ? ItemRows : null)" RowCount="@(IsReference ? Items.Count : (int?)null)"
+           EmptyText="@(IsReference ? "No items yet." : null)"
            OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen">
     <Actions>
-        @if (List.Kind != ListKind.Reference)
+        @if (IsReference)
+        {
+            <MudIconButton Class="pspad-add-item" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
+                           aria-label="Add item" OnClick="@OnAddItemClick" />
+        }
+        else
         {
             <MudIconButton Class="pspad-add-task" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
                            OnClick="@OnAddTaskClick" />
@@ -24,6 +32,8 @@
 
     [Parameter] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
 
+    [Parameter] public IReadOnlyList<ReferenceItem> Items { get; set; } = [];
+
     [Parameter] public DateOnly Today { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
@@ -32,11 +42,26 @@
 
     [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
 
+    [Parameter] public EventCallback<ReferenceItem> OnOpenItem { get; set; }
+
+    [Parameter] public EventCallback<ReferenceItem> OnStarItem { get; set; }
+
     [Parameter] public EventCallback OnAddTaskClick { get; set; }
+
+    [Parameter] public EventCallback OnAddItemClick { get; set; }
 
     [Parameter] public EventCallback OnRename { get; set; }
 
     [Parameter] public EventCallback OnDelete { get; set; }
 
     [Parameter] public EventCallback OnMove { get; set; }
+
+    bool IsReference => List.Kind == ListKind.Reference;
+
+    RenderFragment ItemRows => @<text>
+        @foreach (var item in Items.Take(ThingCard.Preview))
+        {
+            <ReferenceRow @key="item.Id" Item="@item" OnStar="@OnStarItem" OnOpen="@OnOpenItem" />
+        }
+    </text>;
 }

@@ -1,0 +1,165 @@
+@using PSPad.App.State
+@using PSPad.Module.Tasks.References
+@using Microsoft.Extensions.Logging
+@implements IAsyncDisposable
+@inject IJSRuntime Js
+@inject ISnackbar Snackbar
+@inject ILogger<ReferenceFieldEditor> Logger
+
+<MudTextField T="string" Label="Label" Class="pspad-field-label-input" Margin="Margin.Dense" AutoFocus="true"
+              @bind-Value="_label" />
+<MudTextField @ref="_valueInput" T="string" Label="Value" Class="pspad-field-value-input" Margin="Margin.Dense" Lines="1"
+              Sizing="InputSizing.Auto" @bind-Value="_value" />
+<MudSelect T="FieldKind?" Label="Display" Class="pspad-field-kind-input" Margin="Margin.Dense" @bind-Value="_kind">
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)null)">Automatic</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Text)">Text</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Link)">Link</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Path)">Path</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Quantity)">Quantity</MudSelectItem>
+</MudSelect>
+<div class="d-flex align-center gap-1 mt-1">
+    <MudButton Class="pspad-field-save" Size="Size.Small" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(_label)"
+               OnClick="@SaveAsync">Save</MudButton>
+    <MudButton Class="pspad-field-cancel" Size="Size.Small" OnClick="@CancelAsync">Cancel</MudButton>
+    <MudSpacer />
+    @if (Field is not null)
+    {
+        <MudButton Class="pspad-field-editor-remove" Size="Size.Small" Color="Color.Error" OnClick="@RemoveAsync">Remove</MudButton>
+    }
+</div>
+
+@code {
+    [Parameter] public ReferenceField? Field { get; set; }
+
+    [Parameter] public Func<(string Label, string Value, string? Display), Task>? OnSave { get; set; }
+
+    [Parameter] public Func<Task>? OnCancel { get; set; }
+
+    [Parameter] public Func<Task>? OnRemove { get; set; }
+
+    string _label = "";
+    string _value = "";
+    FieldKind? _kind;
+    MudTextField<string>? _valueInput;
+    IJSObjectReference? _dropModule;
+    IJSObjectReference? _dropListener;
+    DotNetObjectReference<ReferenceFieldEditor>? _dropReference;
+
+    protected override void OnInitialized()
+    {
+        _label = Field?.Label ?? "";
+        _value = Field?.Value ?? "";
+        _kind = Field is { Display: { } hint } && Enum.TryParse<FieldKind>(hint, ignoreCase: true, out var kind)
+            ? kind
+            : null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _valueInput?.InputReference is not null)
+        {
+            try
+            {
+                _dropModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/drop.js");
+                _dropReference = DotNetObjectReference.Create(this);
+                _dropListener = await _dropModule.InvokeAsync<IJSObjectReference>(
+                    "attach", _valueInput.InputReference.ElementReference, _dropReference);
+            }
+            catch (JSException ex)
+            {
+                Logger.LogWarning(ex, "Drop target unavailable for the reference field editor");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnDropped(string? uriList, string? text, bool hadFiles)
+    {
+        var dropped = FirstUri(uriList) ?? NonBlank(text);
+
+        if (dropped is not null)
+        {
+            _value = dropped;
+            StateHasChanged();
+
+            if (_valueInput is not null)
+            {
+                await _valueInput.FocusAsync();
+            }
+
+            return;
+        }
+
+        if (hadFiles)
+        {
+            Snackbar.Add(
+                "Browsers can't read a file's full path. On Windows use Shift+right-click → Copy as path, then paste.",
+                Severity.Info);
+        }
+    }
+
+    static string? FirstUri(string? uriList)
+    {
+        if (string.IsNullOrWhiteSpace(uriList))
+        {
+            return null;
+        }
+
+        foreach (var rawLine in uriList.Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0 || line.StartsWith('#'))
+            {
+                continue;
+            }
+
+            return line;
+        }
+
+        return null;
+    }
+
+    static string? NonBlank(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_dropListener is not null)
+            {
+                await _dropListener.InvokeVoidAsync("dispose");
+                await _dropListener.DisposeAsync();
+            }
+        }
+        catch (JSException)
+        {
+        }
+
+        _dropReference?.Dispose();
+
+        if (_dropModule is not null)
+        {
+            try
+            {
+                await _dropModule.DisposeAsync();
+            }
+            catch (JSException)
+            {
+            }
+        }
+    }
+
+    async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_label) || OnSave is null)
+        {
+            return;
+        }
+
+        await OnSave((_label.Trim(), _value, FieldDisplay.HintFor(_kind)));
+    }
+
+    Task CancelAsync() => OnCancel?.Invoke() ?? Task.CompletedTask;
+
+    Task RemoveAsync() => OnRemove?.Invoke() ?? Task.CompletedTask;
+}

@@ -5,12 +5,15 @@
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.References
 @using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<TodoTask> TaskStore
+@inject IDocumentStore<ReferenceItem> ItemStore
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
+@inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -28,12 +31,37 @@ else if (_list is not null)
         <MudText Typo="Typo.h5" Color="Color.Primary">@_list.Name</MudText>
     </div>
 
-    @if (_open.Count == 0 && _done.Count == 0)
+    @if (_list.Kind == ListKind.Reference)
+    {
+        @if (_items.Count == 0)
+        {
+            <MudGrid Spacing="4">
+                <MudItem xs="12" sm="6" md="4" xl="3">
+                    <EmptyState Icon="@Icons.Material.Outlined.LibraryBooks" Message="No items yet." CreateText="Add item"
+                                OnCreate="@(EventCallback.Factory.Create(this, AddItem))" />
+                </MudItem>
+            </MudGrid>
+        }
+        else
+        {
+            <MudGrid Spacing="4">
+                @foreach (var item in _items)
+                {
+                    <MudItem @key="item.Id" xs="12" sm="6" md="4" xl="3">
+                        <MudPaper Outlined="true" Class="pspad-task-card">
+                            <ReferenceRow Item="@item" OnStar="@StarItemAsync" OnOpen="@OpenItem" />
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    }
+    else if (_open.Count == 0 && _done.Count == 0)
     {
         <MudGrid Spacing="4">
             <MudItem xs="12" sm="6" md="4" xl="3">
                 <EmptyState Icon="@Icons.Material.Outlined.TaskAlt" Message="No tasks yet." CreateText="Add task"
-                            OnCreate="@(_list.Kind == ListKind.Reference ? default : EventCallback.Factory.Create(this, AddTask))" />
+                            OnCreate="@(EventCallback.Factory.Create(this, AddTask))" />
             </MudItem>
         </MudGrid>
     }
@@ -52,7 +80,7 @@ else if (_list is not null)
         </MudGrid>
     }
 
-    @if (_done.Count > 0)
+    @if (_list.Kind != ListKind.Reference && _done.Count > 0)
     {
         <MudExpansionPanels Elevation="0" Outlined="true" Class="mt-4">
             <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
@@ -72,7 +100,14 @@ else if (_list is not null)
     }
 
     <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
-        @if (_list.Kind != ListKind.Reference)
+        @if (_list.Kind == ListKind.Reference)
+        {
+            <MudTooltip Text="Add item">
+                <MudFabMenuItem OnClick="@AddItem" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
+                                Size="Size.Small" UserAttributes="@AddItemAttributes" />
+            </MudTooltip>
+        }
+        else
         {
             <MudTooltip Text="Add task">
                 <MudFabMenuItem OnClick="@AddTask" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
@@ -103,9 +138,11 @@ else
     TaskList? _list;
     IReadOnlyList<TodoTask> _open = [];
     IReadOnlyList<TodoTask> _done = [];
+    IReadOnlyList<ReferenceItem> _items = [];
 
     static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
     static readonly Dictionary<string, object> AddTaskAttributes = new() { ["aria-label"] = "Add task" };
+    static readonly Dictionary<string, object> AddItemAttributes = new() { ["aria-label"] = "Add item" };
     static readonly Dictionary<string, object> RenameListAttributes = new() { ["aria-label"] = "Rename list" };
     static readonly Dictionary<string, object> DeleteListAttributes = new() { ["aria-label"] = "Delete list" };
 
@@ -124,11 +161,23 @@ else
         var list = await ListStore.LoadAsync(ListId, CancellationToken.None);
         _list = list is null || list.Deleted ? null : list;
 
-        var all = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        var mine = all.Where(task => task.ListId == ListId && !task.Deleted).ToArray();
+        if (_list is { Kind: ListKind.Reference })
+        {
+            _open = [];
+            _done = [];
+        }
+        else
+        {
+            var all = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+            var mine = all.Where(task => task.ListId == ListId && !task.Deleted).ToArray();
 
-        _open = [.. mine.Where(task => !IsDone(task))];
-        _done = [.. mine.Where(IsDone)];
+            _open = [.. mine.Where(task => !IsDone(task))];
+            _done = [.. mine.Where(IsDone)];
+        }
+
+        var items = await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _items = [.. items.Where(item => item.ListId == ListId && !item.Deleted)
+            .OrderByDescending(item => item.Starred).ThenBy(item => item.Position)];
 
         _loaded = true;
     }
@@ -167,10 +216,12 @@ else
             return;
         }
 
-        var tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var message = _list.Kind == ListKind.Reference
+            ? DeleteWarning.ForList(_list.Name, ListId, await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None))
+            : DeleteWarning.ForList(_list.Name, ListId, await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None));
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, DeleteWarning.ForList(_list.Name, ListId, tasks) }
+            { dialog => dialog.Message, message }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete list", parameters);
         var result = await dialog.Result;
@@ -213,6 +264,20 @@ else
     }
 
     void AddTask() => Navigation.NavigateTo(TaskQuery.ForNewTask(Navigation.Uri, ListId));
+
+    void AddItem() => Navigation.NavigateTo(ReferenceQuery.ForNewItem(Navigation.Uri, ListId));
+
+    void OpenItem(ReferenceItem item) => Navigation.NavigateTo(ReferenceQuery.ForItem(Navigation.Uri, item.Id));
+
+    async Task StarItemAsync(ReferenceItem item)
+    {
+        var result = await Sender.SendAsync(new StarReferenceItem(Guid.NewGuid(), State.UserId, item.Id, !item.Starred));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't star the item.", Severity.Warning);
+        }
+    }
 
     public void Dispose() => Sender.Sent -= OnCommandSent;
 }

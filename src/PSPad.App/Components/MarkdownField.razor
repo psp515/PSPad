@@ -1,40 +1,30 @@
 @using PSPad.App.Markdown
 @inject ILogger<MarkdownField> Logger
 
-@if (_editing)
+@if (ShowsEditor)
 {
-    <MudTextField T="string" Lines="8" Sizing="InputSizing.Auto" Variant="Variant.Outlined" Class="pspad-markdown-input"
-                  Label="Description" aria-label="Description"
-                  @bind-Value="_draft" Disabled="@Disabled" />
-    <div class="d-flex gap-2 mt-1">
-        <MudButton Class="pspad-markdown-save" Color="Color.Primary" Disabled="@(_saving || Disabled)"
-                   OnClick="@SaveAsync">Save</MudButton>
-        <MudButton Class="pspad-markdown-cancel" Disabled="@_saving" OnClick="@Cancel">Cancel</MudButton>
-    </div>
+    <MudTextField @ref="_input" T="string" Lines="3" Sizing="InputSizing.Auto" Variant="Variant.Outlined" Class="pspad-markdown-input mt-0"
+                  Placeholder="@Placeholder" aria-label="Description" Immediate="true" AutoFocus="@_editing"
+                  Value="@_draft" ValueChanged="@DraftChanged" OnBlur="@CommitAsync" OnKeyDown="@DiscardOnEscape" />
 }
 else if (string.IsNullOrWhiteSpace(Value))
 {
-    @if (ReadOnly)
-    {
-        <MudText Typo="Typo.body2" Class="pspad-markdown-empty mud-text-secondary">No description</MudText>
-    }
-    else
-    {
-        <MudButton Variant="Variant.Text" Color="Color.Default" Class="pspad-markdown-placeholder mud-text-secondary"
-                   Disabled="@(!CanEdit)" OnClick="@BeginEdit">
-            @Placeholder
-        </MudButton>
-    }
+    <MudText Typo="Typo.body2" Class="pspad-markdown-empty pspad-muted">No description</MudText>
 }
 else
 {
     <MudPaper Outlined="true" Class="pa-3 pspad-markdown-view">
-        <div class="d-flex justify-space-between align-start">
-            <div class="flex-grow-1" style="min-width:0">@((MarkupString)_renderedHtml)</div>
+        <div class="d-flex justify-space-between align-start gap-1">
             @if (CanEdit)
             {
+                <div class="flex-grow-1 pspad-markdown-content" style="min-width:0; cursor:text"
+                     @onmarkdownviewclick="@EditUnlessOnLink">@((MarkupString)_renderedHtml)</div>
                 <MudIconButton Icon="@Icons.Material.Outlined.Edit" Class="pspad-markdown-edit" Size="Size.Small"
                                aria-label="Edit description" OnClick="@BeginEdit" />
+            }
+            else
+            {
+                <div class="flex-grow-1" style="min-width:0">@((MarkupString)_renderedHtml)</div>
             }
         </div>
     </MudPaper>
@@ -49,8 +39,9 @@ else
 
     [Parameter] public bool Disabled { get; set; }
 
-    [Parameter] public string Placeholder { get; set; } = "Add a description";
+    [Parameter] public string Placeholder { get; set; } = "Add a description…";
 
+    MudTextField<string>? _input;
     bool _editing;
     bool _saving;
     string _draft = "";
@@ -59,12 +50,27 @@ else
 
     bool CanEdit => !ReadOnly && !Disabled;
 
+    bool ShowsEditor => CanEdit && (_editing || string.IsNullOrWhiteSpace(Value));
+
     protected override void OnParametersSet()
     {
         if (_renderedFor != Value)
         {
             _renderedFor = Value;
             _renderedHtml = MarkdownRenderer.ToHtml(Value);
+        }
+
+        if (!_editing)
+        {
+            _draft = Value ?? "";
+        }
+    }
+
+    void EditUnlessOnLink(MarkdownViewClickEventArgs args)
+    {
+        if (!args.OnLink && !args.HasSelection)
+        {
+            BeginEdit();
         }
     }
 
@@ -75,16 +81,37 @@ else
             return;
         }
 
-        _draft = Value;
+        _draft = Value ?? "";
         _editing = true;
     }
 
-    void Cancel() => _editing = false;
-
-    async System.Threading.Tasks.Task SaveAsync()
+    void DraftChanged(string? text)
     {
-        if (_saving)
+        _draft = text ?? "";
+        _editing = true;
+    }
+
+    void DiscardOnEscape(KeyboardEventArgs args)
+    {
+        if (args.Key != "Escape" || _saving)
         {
+            return;
+        }
+
+        _draft = Value ?? "";
+        _editing = false;
+    }
+
+    async System.Threading.Tasks.Task CommitAsync()
+    {
+        if (!_editing || _saving || !CanEdit)
+        {
+            return;
+        }
+
+        if (_draft == (Value ?? ""))
+        {
+            _editing = false;
             return;
         }
 
@@ -96,6 +123,7 @@ else
             if (accepted)
             {
                 _editing = false;
+                return;
             }
         }
         catch (Exception exception)
@@ -105,6 +133,11 @@ else
         finally
         {
             _saving = false;
+        }
+
+        if (_input is not null)
+        {
+            await _input.FocusAsync();
         }
     }
 }

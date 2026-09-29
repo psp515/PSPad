@@ -2,7 +2,7 @@
 title: Descriptions are Markdown, rendered client-side with raw HTML disabled
 tags: [domain, ui, security]
 date: 2026-09-28
-status: Proposed
+status: Active
 ---
 
 # ADR-0048: Descriptions are Markdown, rendered client-side with raw HTML disabled

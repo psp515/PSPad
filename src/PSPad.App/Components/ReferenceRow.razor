@@ -1,0 +1,35 @@
+@using PSPad.App.State
+@using PSPad.Module.Tasks.References
+
+<div class="d-flex align-center gap-3 py-2 px-3 pspad-reference-row">
+    <div class="flex-grow-1 pspad-reference-name" style="cursor:pointer; min-width:0"
+         @onclick="@(() => OnOpen.InvokeAsync(Item))">
+        <MudText Typo="Typo.body2">@Item.Name</MudText>
+
+        @if (Caption is not null)
+        {
+            <MudText Typo="Typo.caption" Class="pspad-muted">@Caption</MudText>
+        }
+    </div>
+
+    <MudIconButton Size="Size.Small" Color="Color.Primary"
+                   Icon="@(Item.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                   aria-label="@(Item.Starred ? "Unstar" : "Star")"
+                   OnClick="@(() => OnStar.InvokeAsync(Item))" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ReferenceItem Item { get; set; } = null!;
+
+    [Parameter] public EventCallback<ReferenceItem> OnStar { get; set; }
+
+    [Parameter] public EventCallback<ReferenceItem> OnOpen { get; set; }
+
+    string? Caption => Item.Fields.Count == 0
+        ? null
+        : string.Join(" · ", Item.Fields.Take(2).Select(entry => $"{entry.Label}: {RenderedValue(entry)}"));
+
+    static string RenderedValue(ReferenceField entry) => FieldDisplay.Of(entry) == FieldKind.Quantity
+        ? FieldDisplay.NormalizeQuantity(entry.Value)
+        : entry.Value;
+}

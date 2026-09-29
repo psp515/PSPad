@@ -1,0 +1,354 @@
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Ordering
+@using PSPad.Module.Tasks.References
+@inject IDocumentStore<ReferenceItem> Store
+@inject IDocumentStore<Area> Areas
+@inject IDocumentStore<TaskList> Lists
+@inject AppState State
+@inject CommandSender Sender
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<DetailPanel Open="@(Mode != PanelMode.Closed)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose"
+             OnSave="@SaveCallback" SaveText="Add item" CanSave="@(!_creating && !string.IsNullOrWhiteSpace(_draft.Name))"
+             Disabled="@Disabled">
+    <HeaderActions>
+        @if (_item is not null)
+        {
+            <MudIconButton Class="pspad-item-star" Color="Color.Primary" Disabled="@Disabled"
+                           Icon="@(_item.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                           aria-label="@(_item.Starred ? "Unstar" : "Star")" OnClick="@ToggleStarAsync" />
+        }
+    </HeaderActions>
+    <ChildContent>
+        <div class="px-2 pt-3 pb-1">
+            <MudTextField T="string" Class="pspad-item-name-field flex-grow-1" Value="@Name"
+                          ValueChanged="@NameChangedAsync" Placeholder="Item name" Typo="Typo.h6" Underline="false"
+                          Immediate="@(Mode == PanelMode.Add)" AutoFocus="@(Mode == PanelMode.Add)"
+                          Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
+        </div>
+
+        @if (Mode != PanelMode.Closed)
+        {
+            <PanelSection Title="Labels" Class="pspad-item-fields">
+                @if (_item is not null)
+                {
+                    <ReferenceFieldList @key="_item.Id" Item="@_item" UserId="@State.UserId" Disabled="@Disabled"
+                                        Changed="@ReloadAsync" />
+                }
+                else
+                {
+                    <ReferenceFieldList @key="_draft" Draft="@_draft.Fields" UserId="@State.UserId" Disabled="@Disabled" />
+                }
+            </PanelSection>
+
+            <MudDivider />
+
+            <div class="py-2 px-2 d-flex flex-column gap-1">
+                <ListRow Areas="@_areas" Lists="@_lists" Value="@ListId" ValueChanged="@MoveToListAsync"
+                         Disabled="@Disabled" />
+            </div>
+
+            <PanelSection Title="Description" Class="pspad-item-description">
+                <MarkdownField @key="@((object?)_item?.Id ?? _draft)" Value="@Description" OnSave="@SaveDescriptionAsync"
+                               Disabled="@Disabled" />
+            </PanelSection>
+        }
+    </ChildContent>
+    <Footer>
+        @if (_item is not null)
+        {
+            <div class="d-flex align-center pspad-item-footer">
+                <MudText Typo="Typo.caption" Class="pspad-muted">@CreatedText</MudText>
+                <MudSpacer />
+                <MudTooltip Text="Delete item">
+                    <MudIconButton Class="pspad-item-delete" Icon="@Icons.Material.Outlined.Delete"
+                                   Color="Color.Error" aria-label="Delete item" Disabled="@Disabled"
+                                   OnClick="@DeleteAsync" />
+                </MudTooltip>
+            </div>
+        }
+    </Footer>
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? ItemId { get; set; }
+
+    [Parameter] public Guid? NewInList { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    enum PanelMode { Closed, Add, Edit, View }
+
+    ReferenceItem? _item;
+    IReadOnlyList<Area> _areas = [];
+    IReadOnlyList<TaskList> _lists = [];
+    Guid? _draftFor;
+    bool _creating;
+    ReferenceItemDraft _draft = new();
+
+    PanelMode Mode => (_item, NewInList, Disabled) switch
+    {
+        ({ }, _, true) => PanelMode.View,
+        ({ }, _, false) => PanelMode.Edit,
+        (null, { }, _) => PanelMode.Add,
+        _ => PanelMode.Closed
+    };
+
+    string Title => Mode switch
+    {
+        PanelMode.Add => "New item",
+        PanelMode.Closed => "",
+        _ => "Reference item"
+    };
+
+    EventCallback SaveCallback => Mode == PanelMode.Add
+        ? EventCallback.Factory.Create(this, CreateAsync)
+        : default;
+
+    string Name => _item?.Name ?? _draft.Name;
+
+    string Description => _item?.Description ?? _draft.Description;
+
+    Guid? ListId => _item?.ListId ?? _draft.ListId;
+
+    string CreatedText => _item?.CreatedAt is { } created ? $"Created {created:ddd, d MMM yyyy}" : "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (NewInList != _draftFor)
+        {
+            _draftFor = NewInList;
+            _draft = new ReferenceItemDraft { ListId = NewInList };
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task ReloadAsync()
+    {
+        var loaded = ItemId is null ? null : await Store.LoadAsync(ItemId.Value, CancellationToken.None);
+        _item = loaded is { Deleted: false } ? loaded : null;
+
+        if (_item is null && NewInList is null)
+        {
+            return;
+        }
+
+        var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
+        _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
+        var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
+        _lists = [.. lists.Where(list => !list.Deleted && list.Kind == ListKind.Reference).OrderBy(list => list.Position)];
+    }
+
+    async Task AddOnEnterAsync(KeyboardEventArgs args)
+    {
+        if (Mode == PanelMode.Add && args.Key == "Enter")
+        {
+            await CreateAsync();
+        }
+    }
+
+    async Task CreateAsync()
+    {
+        if (_creating)
+        {
+            return;
+        }
+
+        _creating = true;
+        try
+        {
+            await CreateOnceAsync();
+        }
+        finally
+        {
+            _creating = false;
+        }
+    }
+
+    async Task CreateOnceAsync()
+    {
+        var name = _draft.Name.Trim();
+
+        if (Disabled || _item is not null || _draft.ListId is not { } listId || name.Length == 0)
+        {
+            return;
+        }
+
+        var siblings = await Store.LoadAllAsync(State.UserId, CancellationToken.None);
+        var position = Positions.Next(siblings
+            .Where(item => !item.Deleted && item.ListId == listId)
+            .Select(item => item.Position));
+
+        var itemId = Guid.NewGuid();
+        var result = await Sender.SendAsync(new CreateReferenceItem(
+            Guid.NewGuid(), State.UserId, itemId, listId, name, position));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't add the item.", Severity.Warning);
+            return;
+        }
+
+        var draft = _draft;
+        _draft = new ReferenceItemDraft { ListId = NewInList };
+
+        foreach (var field in draft.Fields)
+        {
+            var added = await Sender.SendAsync(new AddReferenceField(
+                Guid.NewGuid(), State.UserId, itemId, Guid.NewGuid(), field.Label, field.Value, field.Display));
+
+            if (!added.Accepted)
+            {
+                Snackbar.Add(added.Rejection ?? $"Couldn't add the field {field.Label}.", Severity.Warning);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(draft.Description))
+        {
+            var described = await Sender.SendAsync(new SetReferenceItemDescription(
+                Guid.NewGuid(), State.UserId, itemId, draft.Description));
+
+            if (!described.Accepted)
+            {
+                Snackbar.Add(described.Rejection ?? "Couldn't save the description.", Severity.Warning);
+            }
+        }
+
+        Navigation.NavigateTo(ReferenceQuery.ForItem(Navigation.Uri, itemId), replace: true);
+    }
+
+    async Task NameChangedAsync(string name)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_item is null)
+        {
+            _draft.Name = name;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(name) || name.Trim() == _item.Name)
+        {
+            return;
+        }
+
+        var result = await Sender.SendAsync(new RenameReferenceItem(Guid.NewGuid(), State.UserId, _item.Id, name.Trim()));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't rename the item.", Severity.Warning);
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task ToggleStarAsync()
+    {
+        if (Disabled || _item is null)
+        {
+            return;
+        }
+
+        var result = await Sender.SendAsync(new StarReferenceItem(Guid.NewGuid(), State.UserId, _item.Id, !_item.Starred));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't star the item.", Severity.Warning);
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task<bool> SaveDescriptionAsync(string text)
+    {
+        if (Disabled)
+        {
+            return false;
+        }
+
+        if (_item is null)
+        {
+            _draft.Description = text;
+            StateHasChanged();
+            return true;
+        }
+
+        var result = await Sender.SendAsync(new SetReferenceItemDescription(Guid.NewGuid(), State.UserId, _item.Id, text));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't save the description.", Severity.Warning);
+            return false;
+        }
+
+        await ReloadAsync();
+        StateHasChanged();
+        return true;
+    }
+
+    async Task MoveToListAsync(Guid listId)
+    {
+        if (Disabled || listId == ListId)
+        {
+            return;
+        }
+
+        if (_item is null)
+        {
+            _draft.ListId = listId;
+            return;
+        }
+
+        var result = await Sender.SendAsync(new MoveReferenceItemToList(Guid.NewGuid(), State.UserId, _item.Id, listId));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't move the item.", Severity.Warning);
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task DeleteAsync()
+    {
+        if (Disabled || _item is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, $"Delete “{_item.Name}”?" }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete item", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        var deletion = await Sender.SendAsync(new DeleteReferenceItem(Guid.NewGuid(), State.UserId, _item.Id));
+
+        if (!deletion.Accepted)
+        {
+            Snackbar.Add(deletion.Rejection ?? "Couldn't delete the item.", Severity.Warning);
+            return;
+        }
+
+        await OnClose.InvokeAsync();
+    }
+}

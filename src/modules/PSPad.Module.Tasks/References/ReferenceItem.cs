@@ -22,6 +22,9 @@ public sealed class ReferenceItem : Aggregate
     public int Position { get; private set; }
 
     [JsonInclude]
+    public DateTimeOffset? CreatedAt { get; private set; }
+
+    [JsonInclude]
     List<ReferenceField> _fields = [];
 
     public IReadOnlyList<ReferenceField> Fields => _fields.OrderBy(entry => entry.Position).ToArray();
@@ -117,6 +120,7 @@ public sealed class ReferenceItem : Aggregate
                 ListId = created.ListId;
                 Name = created.Name;
                 Position = created.Position;
+                CreatedAt = created.At;
                 break;
             case ReferenceItemRenamed renamed:
                 Name = renamed.Name;

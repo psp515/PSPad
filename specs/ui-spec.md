@@ -379,8 +379,10 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    - **Goal** — the user's goals.
    - **List** (outside Add) — lists grouped under area headings; picking
      one moves the task at once. There is no Move button.
-   Room for later task fields (note, reminders) goes under the rows.
-5. Footer — "Created …" on the left, a red trash `MudIconButton` on the
+   Room for later task fields (reminders) goes under the rows.
+5. **Description** (outside Add) — a `PanelSection` titled "Description"
+   holding the task's `MarkdownField` (see below).
+6. Footer — "Created …" on the left, a red trash `MudIconButton` on the
    right that asks via `ConfirmDialog` before deleting. In Add the footer
    holds only **Add task**, and Enter in the name field adds too.
 
@@ -417,11 +419,33 @@ the two closing statuses.
 **New lists use the same shell.** `Layout/ListDetailPanel.razor` is
 addressed as `?list=new&inarea={areaId}` (`ListQuery.ForNewList`) from the
 area's **New list** FAB item or its empty state — full screen below `md`, a
-side panel from `md` up. It holds only an outlined **Name** field under a
-`New list · Area` title, with **Add list** at the bottom left; Enter also
-adds. The new list takes the next position in its area and the panel
-closes, leaving the area board. Renaming a list still goes through
-`NameDialog`.
+side panel from `md` up. It opens with a `MudToggleGroup<ListKind>`
+(`pspad-list-kind`, outlined, **Tasks** / **Reference**, default Tasks) above
+an outlined **Name** field under a `New list · Area` title, with **Add
+list** at the bottom left; Enter also adds. `Kind` is fixed at creation —
+there is no later toggle, so a list's own screens never need to handle a
+mid-life kind change. The new list takes the next position in its area and
+the panel closes, leaving the area board. Renaming a list still goes
+through `NameDialog`.
+
+**List kind shows as an icon, not a label, everywhere a list is listed.**
+`Components/ListIcon.For(list)` picks `Icons.Material.Outlined.Checklist`
+for `Tasks` and `Icons.Material.Outlined.LibraryBooks` for `Reference`
+(`.LabelFor` gives the matching `aria-label`/tooltip text: "Task list" /
+"Reference list"). Used on area-board list cards, the list screen's header
+and search results — one place decides the mapping so a future third kind
+adds one icon, not N call sites.
+
+**A `Reference` list's page and card render `ReferenceRow`s, never
+`TaskRow`s.** `ListPage` and `ListCard` branch on `list.Kind`: a `Reference`
+list has no Done/open split (an item is never finished) and no add-task FAB
+action — its FAB item is "Add item," opening `ReferenceItemPanel` in Add
+mode instead of `TaskDetailPanel`. `ReferenceRow` shows the item's name, a
+star toggle and — when the item has fields — a caption joining its first
+two `Label: value` pairs with " · ", quantities normalized
+(`FieldDisplay.NormalizeQuantity`). The empty-list and delete-confirmation
+copy read "items" instead of "tasks" for a `Reference` list
+(`DeleteWarning`).
 
 Areas and goals are never created or renamed through `NameDialog`, and
 lists are never created through it.
@@ -445,6 +469,122 @@ addressed as `?inbox=new` (the Inbox FAB or its empty state) or
   `GoalRow` offers only In progress goals, but still names a linked goal
   that has since closed.
   The Inbox never uses a dialog to capture.
+
+**Reference items use the same shell, addressed like a task.**
+`Layout/ReferenceItemPanel.razor` is addressed as `?item=new&list={listId}`
+(the list or area board's "Add item" FAB action) or `?item={itemId}`
+(tapping a `ReferenceRow`), mirroring `TaskDetailPanel`/`TaskQuery`'s
+`?task=` pattern. Header: X, star toggle on the right (`HeaderActions`, only
+once the item exists — no star while still adding). An unboxed `Typo.h6`
+name field sits under the header, same as a task's name. Below it, in every
+mode (Add included), mirroring the task panel's content → divider →
+property rows → Description order:
+
+1. **Labels** — a `PanelSection` titled "Labels" holding `ReferenceFieldList`
+   (the type and its fields stay named `ReferenceField`/`Fields` — only the
+   UI wording changed), laid out like `StepList` (the same `pspad-step` rows,
+   dense, no big buttons): each row a caption `Label` over a
+   `ReferenceFieldValue` (rendering per its `FieldKind`, below), small
+   up/down `MudIconButton`s reordering it and a Close icon removing it
+   ("Remove {label}"); a tap on the row body opens `ReferenceFieldEditor`
+   (compact: label, value, display kind, Save/Cancel/Remove) in the row's
+   place. The last row is the add row — a `+` lead and two unboxed dense
+   fields, **Label** and **Value**. Enter in **Label** never adds — it moves
+   focus to **Value**; Enter in **Value** sends `AddReferenceField` with an
+   automatic display kind (blank label re-focuses Label instead of sending),
+   clears both and puts focus back on Label; a rejection restores the typed
+   text. Each field row carries the same 44px lead column, holding a muted
+   icon for its kind, so labels line up with the add row. A click on a link
+   or the copy button inside a row does not open the editor. The kind select
+   lives only in the editor of an existing field.
+
+   **Dropping onto the Value input** (add row, and the inline editor's Value
+   input) accepts a dragged link or text: a `text/uri-list` payload fills it
+   with the first non-comment (`#`) URI, `text/plain` otherwise, then focuses
+   Value. A dropped local file cannot be filled — browsers never expose a
+   file's full path — so the drop is prevented (no navigation, no upload) and
+   an Info snackbar says so, directing Windows users to Shift+right-click →
+   Copy as path. Implemented as a small JS module
+   (`wwwroot/js/drop.js`, `attach(element, dotnetRef)`) imported and attached
+   to the input's element reference on first render, calling back into
+   `[JSInvokable] OnDropped(string? uriList, string? text, bool hadFiles)`;
+   import or attach failure degrades silently (`ILogger` warning, never
+   thrown, never `stderr`). Disposed with the component.
+2. A `MudDivider`, then the property rows: the same **`ListRow`** the task
+   panel uses (folder icon, "List", `Area › List`), offering only
+   non-deleted `Reference` lists — an item never crosses into a `Tasks`
+   list. Picking one sends `MoveReferenceItemToList`.
+3. **Description** — a `PanelSection` holding the item's `MarkdownField`
+   (see below).
+4. Footer (existing items only): "Created {ddd, d MMM yyyy}" as a muted
+   `Typo.caption` on the left — absent for an item stored before
+   `CreatedAt` existed — and a red trash `MudIconButton` on the right, same
+   layout and delete-confirmation pattern as the task footer.
+
+As with a task, an existing item's fields save as they change — no Save
+button outside Add. **Add mode holds a local draft** and sends nothing until
+**Add item**: `ReferenceFieldList` is given a draft list instead of an item
+(same rows, same add row — Enter there adds a draft field and never creates
+the item), the list row starts on the target list and picking another one
+changes where the item will be created, and the `MarkdownField` saves into
+the draft. **Add item** (or Enter in the name) sends `CreateReferenceItem`;
+once accepted it sends `AddReferenceField` for each draft field in order
+(fresh ids, the draft's display hint), then `SetReferenceItemDescription`
+if the draft description is not blank, then navigates to the item with
+`replace: true`. A rejected create shows a Warning snackbar and keeps the
+whole draft; a rejected follow-up shows a Warning snackbar and still opens
+the item, since it exists. The draft resets when the target list changes or
+the panel closes.
+
+**Panel subsections share `PanelSection`.** `Components/PanelSection.razor`
+is a `MudDivider` followed by a muted `Typo.overline` title
+(`pspad-panel-section-title`) over its content, with `px-3` padding. It
+heads "Description" in both panels and "Labels" in the reference panel.
+
+**Descriptions are a shared `MarkdownField`, on tasks and reference items
+alike, always present and saved as focus leaves.** There is no
+Add-a-description button and no Save/Cancel. An empty, editable description
+shows an outlined multi-line `MudTextField` directly (3 lines, auto-sizing,
+placeholder "Add a description…"). A filled one renders `Value` through
+`MarkdownRenderer.ToHtml` (Markdig, `DisableHtml()`, pipe tables, task lists
+with checkboxes disabled, links restricted to `http`/`https`/`mailto`,
+`target="_blank" rel="noopener noreferrer"` added to safe links) inside an
+outlined `MudPaper` with a small edit `MudIconButton` top-right; a click on
+the rendered text, or the icon, opens the raw text, focused. A click on a
+link inside the text follows the link and does not open the editor — the
+click is read through a custom `markdownviewclick` event
+(`Markdown/EventHandlers.cs`, registered in `wwwroot/PSPad.App.lib.module.js`)
+whose `OnLink` says whether the target sits inside an `<a>` and
+`HasSelection` whether text is selected — a drag-selection does not open the
+editor either. If the registration throws, the initializer only warns, so
+the app still boots and the edit icon remains the way in. Leaving the
+field (blur) calls `OnSave` if the text changed and returns to the rendered
+view; unchanged text sends nothing. Escape discards the draft and returns to
+the view. If the caller rejects the save or it throws, the field stays in
+edit mode with the typed draft, so a rejected write never silently discards
+what was typed; the editor takes focus back and the panel shows the
+Warning snackbar. The draft survives an
+outside `Value` change while editing. Closing the `DetailPanel` by overlay
+click blurs the field first, so an open edit is saved rather than dropped.
+`ReadOnly` and `Disabled` never edit: a filled value shows rendered, an
+empty one reads "No description".
+
+**Field display kinds are detected, not chosen by default, and stay a
+client-side hint.** `State/FieldDisplay.Of(field)` reads the field's stored
+`Display` hint if present and valid, otherwise detects one from the value:
+an `http(s)://` value is `Link`, a path-shaped value (`C:\`, `\\`, `/`,
+`~/`) is `Path`, a `<number><unit>` value (`2.5kg`, `-10 C`) is `Quantity`,
+anything else is `Text`. `ReferenceFieldEditor` lets a field's display be
+overridden explicitly, stored back as the same lowercase-name hint
+(`FieldDisplay.HintFor`) — the domain never interprets it (`adr/0047`).
+`ReferenceFieldValue` renders per kind: `Link` as a `MudLink` opening in a
+new tab when the scheme is safe (plain text otherwise), `Path` as `<code>`
+with a copy `MudIconButton` next to it, `Quantity` normalized to `"<number>
+<unit>"` spacing, `Text` as pre-wrapped plain text. The copy button
+(`pspad-field-copy`) calls the `Clipboard` service and shows a snackbar —
+`Severity.Success` "Copied" on success, `Severity.Warning` "Could not copy —
+select the path instead." on failure (clipboard permission denied or
+unavailable).
 
 **Empty states share one component.** A page or board with no items yet
 shows `Components/EmptyState.razor` as the first cell of its grid, sized
@@ -500,7 +640,7 @@ icon reads unambiguously on its own.
 | Area | New list, Edit area (→ area panel), Delete area | FAB Menu |
 | Goals | Add goal (→ new-goal panel) | plain `MudFab` |
 | Goal | Edit goal (→ goal panel), Delete goal | FAB Menu |
-| List | Add task (→ new-task panel), Rename list, Delete list | FAB Menu |
+| List | Add task (→ new-task panel) or Add item (→ new-item panel) for a `Reference` list, Rename list, Delete list | FAB Menu |
 | Inbox | Capture (→ capture panel) | plain `MudFab` |
 | My Day, Settings, Statistics | none | no FAB |
 
@@ -643,6 +783,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `?area={areaId}`, `?area=new` | area detail overlay, on any of the above |
 | `?goal={goalId}`, `?goal=new` | goal detail overlay, on any of the above |
 | `?inbox={itemId}`, `?inbox=new` | inbox item overlay, on any of the above |
+| `?item={itemId}`, `?item=new&list={listId}` | reference item detail overlay, on any of the above |
 
 **Signed-out visitors land on `/welcome`**, not a bare login redirect.
 Sign-out ends the Keycloak session directly rather than only clearing local

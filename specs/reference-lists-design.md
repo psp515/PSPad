@@ -1,6 +1,6 @@
 # Reference lists and descriptions — design
 
-Status: approved design, not yet built. Decisions of record:
+Status: Built. Decisions of record:
 [ADR-0047](../adr/0047-reference-items-are-their-own-aggregate.md),
 [ADR-0048](../adr/0048-descriptions-are-markdown.md).
 
@@ -86,6 +86,7 @@ Folder `References/`, namespace `PSPad.Module.Tasks.References`.
 | `Description` | `string` |
 | `Starred` | `bool` |
 | `Position` | `int` |
+| `CreatedAt` | `DateTimeOffset?`, from `ReferenceItemCreated.At`; null on items stored before it existed |
 | `Fields` | ordered `ReferenceField(Guid Id, string Label, string Value, string? Display, int Position)` |
 
 Commands and events:
@@ -168,9 +169,10 @@ reads `ReferenceItem`. No Statistics projection is added.
 Same slot as `TaskDetailPanel`.
 
 - Name (editable) and star.
-- Description — `MarkdownField` (§4.5).
-- Fields — `MudList`; each row shows the label and the value rendered by
-  kind:
+- Labels — a "Labels" section (`ReferenceFieldList`, laid out like the task
+  panel's steps; the type and command names stay `ReferenceField`/
+  `AddReferenceField` — only the section heading and its UI copy changed);
+  each row shows the label and the value rendered by kind:
 
 | Kind | Rendering |
 |---|---|
@@ -180,10 +182,35 @@ Same slot as `TaskDetailPanel`.
 | Text | multi-line text |
 
   Clicking a row edits it in place: label, value, and a `MudSelect` kind
-  (Automatic, Text, Link, Path, Quantity). Drag to reorder; "Remove" per row;
-  "Add field" at the end.
-- Actions: move to another Reference list (picker lists Reference lists
-  only), delete (`ConfirmDialog`).
+  (Automatic, Text, Link, Path, Quantity). Up/down icons reorder; a Close icon
+  per row removes; the last row is an inline Label/Value add row. Enter in
+  Label moves focus to Value without adding; Enter in Value adds (a blank
+  label re-focuses Label instead), clears both and refocuses Label; display
+  kind automatic.
+
+  Dropping onto a Value input (the add row's, and the inline editor's) fills
+  it from the drag: the first non-comment URI of a `text/uri-list` payload,
+  else `text/plain`, then focuses Value. Dropping a local file cannot fill
+  it — browsers never expose a file's full path — so the drop is only
+  prevented and an Info snackbar explains the Windows Shift+right-click
+  "Copy as path" workaround; nothing is uploaded. `wwwroot/js/drop.js`
+  (`attach(element, dotnetRef)`) is imported per component instance on
+  first render and attached to the Value input's element reference,
+  reporting back through `[JSInvokable] OnDropped(string? uriList,
+  string? text, bool hadFiles)`; a failed import logs an `ILogger` warning
+  and never throws.
+- List — below the fields, after a divider: the task panel's `ListRow`
+  (`Area › List`), Reference lists only; picking one moves the item.
+- Description — a "Description" section below the list row, `MarkdownField`
+  (§4.5).
+- Footer: "Created {ddd, d MMM yyyy}" (when `CreatedAt` is known) and delete
+  (`ConfirmDialog`).
+- Add mode shows the same sections over a local draft (fields, target list,
+  description). "Add item" sends `CreateReferenceItem`, then one
+  `AddReferenceField` per draft field in order, then
+  `SetReferenceItemDescription` when the draft description is not blank, and
+  opens the new item. A rejected create keeps the draft; a rejected
+  follow-up warns and still opens the item.
 
 ### 4.4 Kind detection
 
@@ -201,11 +228,13 @@ null:
 
 Shared by tasks, reference items, and later mirrored GitHub tasks.
 
-- Default: **view mode** — rendered Markdown in a `MudPaper`, an edit icon in
-  the corner. Empty shows a muted "Add a description"; clicking it enters
-  edit mode.
-- **Edit mode** — `MudTextField` `Lines="8"` `AutoGrow`, "Save" / "Cancel".
-  Save sends the component's command.
+- Always present. Empty and editable: an outlined, auto-growing
+  `MudTextField` with placeholder "Add a description…", shown directly.
+- Filled: **view mode** — rendered Markdown in a `MudPaper`, an edit icon in
+  the corner; clicking the text (not a link in it) or the icon enters edit
+  mode with the raw text.
+- Leaving the field saves when the text changed (the component's command);
+  Escape discards. No Save/Cancel buttons.
 - `ReadOnly` parameter: view mode only, no edit icon (for mirrored tasks).
 - Rendering: **Markdig** (BSD-2-Clause, GPL-3 compatible) with
   `DisableHtml()` — raw HTML is escaped. Links whose scheme is not `http`,
@@ -214,15 +243,15 @@ Shared by tasks, reference items, and later mirrored GitHub tasks.
 
 ### 4.6 Tasks
 
-`TaskDetailPanel` shows a `MarkdownField` for the task's description under
-the name. `TaskRow` shows a small `Notes` icon in its meta row when a task has
+`TaskDetailPanel` shows a `MarkdownField` for the task's description in a
+"Description" section below the property rows. `TaskRow` shows a small `Notes` icon in its meta row when a task has
 a description.
 
 ### 4.7 Pickers
 
 - Task list pickers (`TaskDetailPanel`, `InboxItemPanel`) show `Tasks` lists
   only.
-- The reference item's move picker shows `Reference` lists only.
+- The reference item's list row shows `Reference` lists only.
 
 ## 5. Testing
 
@@ -251,7 +280,8 @@ bUnit — `PSPad.App.Tests`:
 
 - `FieldDisplay.Detect` table (`/etc` → Path, `3 pcs` → Quantity,
   `abc` → Text, `https://x` → Link, `C:\x` → Path, `\\nas\x` → Path).
-- `MarkdownField`: view by default, edit toggle, save sends the command, raw
+- `MarkdownField`: view by default, editor shown when blank, save on blur,
+  Escape discards, link clicks do not edit, raw
   HTML escaped, `javascript:` link rendered as text, `ReadOnly` hides edit.
 - `ReferenceRow`, `ReferenceItemPanel`: rendering per kind, copy path, add and
   edit a field.

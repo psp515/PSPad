@@ -6,6 +6,7 @@ using MudBlazor;
 using PSPad.App.Layout;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -132,6 +133,28 @@ public class AreaDetailPanelTests : Bunit.TestContext
 
         Assert.Equal(
             "Delete “Dom” and its 1 list and 1 task? This can’t be undone.",
+            panel.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim());
+    }
+
+    [Fact]
+    public void DeletingAnAreaWarnsAboutItsReferenceItemsToo()
+    {
+        var area = NewArea("Dom", 0);
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Przepisy", 0, ListKind.Reference),
+            DateTimeOffset.UnixEpoch));
+        var item = new ReferenceItem();
+        item.ApplyAll(ReferenceItem.Decide(
+            null, new CreateReferenceItem(Guid.NewGuid(), User, Guid.NewGuid(), list.Id, "Bigos", 0),
+            DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, area, list, item);
+
+        var panel = RenderWithOverlays(area.Id);
+        panel.Find(".pspad-panel-delete").Click();
+
+        Assert.Equal(
+            "Delete “Dom” and its 1 list and 1 item? This can’t be undone.",
             panel.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim());
     }
 

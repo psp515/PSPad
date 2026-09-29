@@ -1,0 +1,55 @@
+@using PSPad.App.Markdown
+@using PSPad.App.State
+@using PSPad.Module.Tasks.References
+@inject Clipboard Clipboard
+@inject ISnackbar Snackbar
+
+@if (Kind == FieldKind.Link)
+{
+    if (IsSafeLink)
+    {
+        <span @onclick:stopPropagation="true">
+            <MudLink Typo="Typo.body2" Href="@Field.Value" Target="_blank" rel="noopener noreferrer" Class="pspad-field-link">@Field.Value</MudLink>
+        </span>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="pspad-field-link">@Field.Value</MudText>
+    }
+}
+else if (Kind == FieldKind.Path)
+{
+    <div class="d-flex align-center gap-1">
+        <code class="pspad-field-path">@Field.Value</code>
+        <span @onclick:stopPropagation="true">
+            <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" Class="pspad-field-copy"
+                           aria-label="Copy" OnClick="@CopyAsync" />
+        </span>
+    </div>
+}
+else if (Kind == FieldKind.Quantity)
+{
+    <MudText Typo="Typo.body2" Class="pspad-field-quantity">@NormalizedQuantity</MudText>
+}
+else
+{
+    <MudText Typo="Typo.body2" Style="white-space:pre-wrap" Class="pspad-field-text">@Field.Value</MudText>
+}
+
+@code {
+    [Parameter] public ReferenceField Field { get; set; } = null!;
+
+    FieldKind Kind => FieldDisplay.Of(Field);
+
+    bool IsSafeLink => LinkSafety.IsSafe(Field.Value, LinkSafety.LinkSchemes);
+
+    string NormalizedQuantity => FieldDisplay.NormalizeQuantity(Field.Value);
+
+    async Task CopyAsync()
+    {
+        var copied = await Clipboard.CopyAsync(Field.Value);
+        Snackbar.Add(
+            copied ? "Copied" : "Could not copy — select the path instead.",
+            copied ? Severity.Success : Severity.Warning);
+    }
+}

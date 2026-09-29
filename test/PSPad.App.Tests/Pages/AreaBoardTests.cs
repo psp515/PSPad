@@ -10,6 +10,7 @@ using PSPad.App.State.Replica;
 using PSPad.App.Tests;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.Module.Tasks.Recurrence;
 using PSPad.TestInfrastructure;
@@ -188,6 +189,105 @@ public class AreaBoardTests : Bunit.TestContext
 
         Assert.Empty(page.FindAll(".pspad-add-task"));
     }
+
+    [Fact]
+    public void AReferenceListsCardShowsUpToPreviewItemsAsReferenceRowsWithTheItemCount()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        Arrange([area, recipes, .. Items(recipes.Id, 7)]);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        var card = page.FindComponent<PSPad.App.Components.ListCard>();
+
+        Assert.Equal(5, card.FindComponents<PSPad.App.Components.ReferenceRow>().Count);
+        Assert.Equal("7", card.Find(".pspad-open-count").TextContent);
+    }
+
+    [Fact]
+    public void AReferenceListsCardWithNoItemsShowsEmptyText()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        Arrange(area, recipes);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        var card = page.FindComponent<PSPad.App.Components.ListCard>();
+
+        Assert.Contains("No items yet.", card.Markup);
+        Assert.Empty(card.FindComponents<PSPad.App.Components.ReferenceRow>());
+    }
+
+    [Fact]
+    public void AReferenceListsCardAddButtonOpensANewItem()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        Arrange(area, recipes);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/areas/{area.Id}");
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        page.Find(".pspad-add-item").Click();
+
+        Assert.EndsWith($"/areas/{area.Id}?item=new&list={recipes.Id}", navigation.Uri);
+    }
+
+    [Fact]
+    public async Task StarringAReferenceRowFromItsCardSendsStarReferenceItem()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        var item = Items(recipes.Id, 1)[0];
+        var replica = Arrange(area, recipes, item);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        page.Find(".pspad-reference-row button").Click();
+
+        var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
+        Assert.True(stored!.Starred);
+    }
+
+    [Fact]
+    public void ARejectedStarFromACardSurfacesTheRejection()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        var item = Items(recipes.Id, 1)[0];
+        Arrange(area, recipes, item);
+        Services.AddSingleton<ICommandHandler<StarReferenceItem>>(
+            new RejectingHandler<StarReferenceItem>("That item no longer exists."));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        page.Find(".pspad-reference-row button").Click();
+
+        var snackbar = page.Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("That item no longer exists.") == true);
+    }
+
+    [Fact]
+    public void TaskListsCardStillShowsTaskRows()
+    {
+        var area = NewArea("Dom");
+        var shopping = NewList(area.Id, "Zakupy", 0);
+        Arrange(area, shopping, NewTask(shopping.Id, "Mleko"));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        var card = page.FindComponent<PSPad.App.Components.ListCard>();
+
+        Assert.Single(card.FindComponents<TaskRow>());
+        Assert.Empty(card.FindComponents<PSPad.App.Components.ReferenceRow>());
+    }
+
+    static ReferenceItem[] Items(Guid listId, int count) =>
+        [.. Enumerable.Range(0, count).Select(index =>
+        {
+            var item = new ReferenceItem();
+            item.ApplyAll(ReferenceItem.Decide(
+                null, new CreateReferenceItem(Guid.NewGuid(), User, Guid.NewGuid(), listId, $"Item {index}", index),
+                DateTimeOffset.UnixEpoch));
+            return item;
+        })];
 
     [Fact]
     public void AnAreaWithNoListsShowsTheEmptyStateThatCreatesAList()
@@ -398,6 +498,38 @@ public class AreaBoardTests : Bunit.TestContext
 
         Assert.True((await replica.LoadAsync<TaskList>(list.Id))!.Deleted);
         Assert.True((await replica.LoadAsync<TodoTask>(task.Id))!.Deleted);
+    }
+
+    [Fact]
+    public void DeletingAReferenceListWarnsHowManyItemsGoWithIt()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        Arrange([area, recipes, .. Items(recipes.Id, 3)]);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-list-menu button").Click();
+        page.FindAll(".mud-menu-item").Last().Click();
+
+        Assert.Equal("Delete “Przepisy” and its 3 items? This can’t be undone.", page.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim());
+    }
+
+    [Fact]
+    public void DeletingTheAreaWarnsAboutTasksAndItemsAcrossItsLists()
+    {
+        var area = NewArea("Dom");
+        var shopping = NewList(area.Id, "Zakupy", 0);
+        var recipes = NewList(area.Id, "Przepisy", 1, ListKind.Reference);
+        var items = Items(recipes.Id, 2);
+        Arrange(area, shopping, recipes, NewTask(shopping.Id, "Kup chleb"), items[0], items[1]);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[2].Click();
+
+        Assert.Equal(
+            "Delete “Dom” and its 2 lists, 1 task and 2 items? This can’t be undone.",
+            page.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim());
     }
 
     [Fact]

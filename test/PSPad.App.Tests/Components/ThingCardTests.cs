@@ -120,6 +120,35 @@ public class ThingCardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void RowsOverridesTaskRowsWhenSet()
+    {
+        Arrange();
+
+        var card = Render<ThingCard>(parameters => Base(parameters, Tasks(3))
+            .Add(p => p.Rows, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div class=\"pspad-custom-row\">Row</div>")))
+            .Add(p => p.RowCount, 9));
+
+        Assert.Empty(card.FindComponents<TaskRow>());
+        card.Find(".pspad-custom-row");
+        Assert.Equal("9", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("Show all (9)", card.Find(".pspad-show-all").TextContent.Trim());
+    }
+
+    [Fact]
+    public void EmptyTextShowsInsteadOfRowsWhenRowCountIsZero()
+    {
+        Arrange();
+
+        var card = Render<ThingCard>(parameters => Base(parameters, [])
+            .Add(p => p.Rows, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div class=\"pspad-custom-row\">Row</div>")))
+            .Add(p => p.RowCount, 0)
+            .Add(p => p.EmptyText, "No items yet."));
+
+        Assert.Contains("No items yet.", card.Markup);
+        Assert.Empty(card.FindAll(".pspad-custom-row"));
+    }
+
+    [Fact]
     public void CompletedAndDeletedTasksAreNotPreviewed()
     {
         Arrange();

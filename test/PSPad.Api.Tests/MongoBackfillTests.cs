@@ -1,6 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -74,6 +75,40 @@ public class MongoBackfillTests(MongoFixture fixture)
                   Builders<TodoTask>.Filter.Gt(document => document.Seq, since))
             .ToListAsync(ct);
         Assert.Contains(synced, document => document.Id == taskId);
+    }
+
+    [Fact]
+    public async Task ItFillsAReferenceItemsCreatedAtFromItsCreatedEvent()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var context = Persistence.TestContext.For(fixture);
+        var userId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        var at = new DateTimeOffset(2026, 3, 1, 8, 0, 0, TimeSpan.Zero);
+
+        var item = new ReferenceItem();
+        item.ApplyAll(ReferenceItem.Decide(
+            null, new CreateReferenceItem(Guid.NewGuid(), userId, itemId, Guid.NewGuid(), "Item", 0), DateTimeOffset.UtcNow));
+        var document = item.ToBsonDocument();
+        document.Remove("createdAt");
+        await context.Collection<BsonDocument>("referenceitems").InsertOneAsync(document, cancellationToken: ct);
+        await context.Collection<StoredEvent>("events").InsertOneAsync(new StoredEvent
+        {
+            Seq = 1,
+            UserId = userId,
+            AggregateType = nameof(ReferenceItem),
+            AggregateId = itemId,
+            Type = nameof(ReferenceItemCreated),
+            Payload = "{}",
+            At = at
+        }, cancellationToken: ct);
+
+        await MongoBackfill.EnsureCreatedAtAsync(context, ct);
+
+        var stored = await context.Collection<ReferenceItem>()
+            .Find(Builders<ReferenceItem>.Filter.Eq(entry => entry.Id, itemId))
+            .SingleAsync(ct);
+        Assert.Equal(at, stored.CreatedAt);
     }
 
     static async Task<long> RaiseCounterFloorAsync(MongoContext context, long floor, CancellationToken ct)
