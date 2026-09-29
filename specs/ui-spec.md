@@ -203,8 +203,8 @@ individual pages never set their own max width. The container
 (`pspad-content`) carries 96px of bottom padding, the FAB's height plus its
 inset, so the FAB never covers the last row. Below `md` that padding is
 `calc(96px + 72px)`, the extra 72px being `BottomNav`'s own height, so the
-bar never covers the last row either. Below `md`, scrolling containers
-(`html`, `body`, `.mud-main-content`) also hide their scrollbars
+bar never covers the last row either. Below `md`, every scrolling element
+(`*`) hides its scrollbar
 (`scrollbar-width: none`, `::-webkit-scrollbar { display: none }`) while
 still scrolling.
 

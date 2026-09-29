@@ -291,13 +291,11 @@ button.pspad-heatmap-cell:focus-visible {
         color: var(--mud-palette-primary);
     }
 
-    html, body, .mud-main-content {
+    * {
         scrollbar-width: none;
     }
 
-    html::-webkit-scrollbar,
-    body::-webkit-scrollbar,
-    .mud-main-content::-webkit-scrollbar {
+    *::-webkit-scrollbar {
         display: none;
     }
 }
