@@ -19,6 +19,17 @@ public class PageHeaderTests
         Assert.Equal("Shopping", header.Title);
         Assert.Equal("Home", header.Subtitle);
         Assert.Equal("/areas/1", header.BackHref);
+        Assert.Null(header.BackLabel);
+    }
+
+    [Fact]
+    public void SettingAHeaderCarriesTheBackLabel()
+    {
+        var header = new PageHeader();
+
+        header.Set("Shopping", "Home", "/areas/1", "Back to area");
+
+        Assert.Equal("Back to area", header.BackLabel);
     }
 
     [Fact]

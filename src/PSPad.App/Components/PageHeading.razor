@@ -27,5 +27,5 @@
 
     [Parameter] public RenderFragment? Adornment { get; set; }
 
-    protected override void OnParametersSet() => Header.Set(Title, Subtitle, BackHref);
+    protected override void OnParametersSet() => Header.Set(Title, Subtitle, BackHref, BackLabel);
 }

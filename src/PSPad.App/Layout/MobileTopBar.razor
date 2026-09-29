@@ -7,7 +7,7 @@
     @if (Header.BackHref is not null)
     {
         <MudIconButton Class="pspad-top-back" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary"
-                       Edge="Edge.Start" Href="@Header.BackHref" aria-label="Back" />
+                       Edge="Edge.Start" Href="@Header.BackHref" aria-label="@(Header.BackLabel ?? "Back")" />
     }
     <div class="pspad-top-title">
         <MudText Typo="Typo.h6" Color="Color.Primary" Class="pspad-ellipsis">@Header.Title</MudText>

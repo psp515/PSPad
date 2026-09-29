@@ -8,11 +8,13 @@ public sealed class PageHeader
 
     public string? BackHref { get; private set; }
 
+    public string? BackLabel { get; private set; }
+
     public event Action? Changed;
 
-    public void Set(string title, string? subtitle, string? backHref)
+    public void Set(string title, string? subtitle, string? backHref, string? backLabel = null)
     {
-        if (title == Title && subtitle == Subtitle && backHref == BackHref)
+        if (title == Title && subtitle == Subtitle && backHref == BackHref && backLabel == BackLabel)
         {
             return;
         }
@@ -20,6 +22,7 @@ public sealed class PageHeader
         Title = title;
         Subtitle = subtitle;
         BackHref = backHref;
+        BackLabel = backLabel;
         Changed?.Invoke();
     }
 }

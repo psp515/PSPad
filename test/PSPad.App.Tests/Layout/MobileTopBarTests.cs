@@ -50,6 +50,19 @@ public class MobileTopBarTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheBackButtonCarriesItsOwnLabel()
+    {
+        Arrange();
+        var header = Services.GetRequiredService<PageHeader>();
+        var bar = RenderBar();
+
+        header.Set("Shopping", "Home", "/areas/1", "Back to area");
+
+        bar.WaitForAssertion(() =>
+            Assert.Equal("Back to area", bar.Find(".pspad-top-back").GetAttribute("aria-label")));
+    }
+
+    [Fact]
     public void TheAvatarRaisesOnAvatar()
     {
         Arrange();
