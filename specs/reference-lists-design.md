@@ -168,9 +168,8 @@ reads `ReferenceItem`. No Statistics projection is added.
 Same slot as `TaskDetailPanel`.
 
 - Name (editable) and star.
-- Description — `MarkdownField` (§4.5).
-- Fields — `MudList`; each row shows the label and the value rendered by
-  kind:
+- Fields — a "Fields" section (`ReferenceFieldList`, laid out like the task
+  panel's steps); each row shows the label and the value rendered by kind:
 
 | Kind | Rendering |
 |---|---|
@@ -180,8 +179,11 @@ Same slot as `TaskDetailPanel`.
 | Text | multi-line text |
 
   Clicking a row edits it in place: label, value, and a `MudSelect` kind
-  (Automatic, Text, Link, Path, Quantity). Drag to reorder; "Remove" per row;
-  "Add field" at the end.
+  (Automatic, Text, Link, Path, Quantity). Up/down icons reorder; a Close icon
+  per row removes; the last row is an inline Label/Value add row (Enter adds,
+  display kind automatic).
+- Description — a "Description" section below the fields, `MarkdownField`
+  (§4.5).
 - Actions: move to another Reference list (picker lists Reference lists
   only), delete (`ConfirmDialog`).
 
@@ -201,11 +203,13 @@ null:
 
 Shared by tasks, reference items, and later mirrored GitHub tasks.
 
-- Default: **view mode** — rendered Markdown in a `MudPaper`, an edit icon in
-  the corner. Empty shows a muted "Add a description"; clicking it enters
-  edit mode.
-- **Edit mode** — `MudTextField` `Lines="8"` `AutoGrow`, "Save" / "Cancel".
-  Save sends the component's command.
+- Always present. Empty and editable: an outlined, auto-growing
+  `MudTextField` with placeholder "Add a description…", shown directly.
+- Filled: **view mode** — rendered Markdown in a `MudPaper`, an edit icon in
+  the corner; clicking the text (not a link in it) or the icon enters edit
+  mode with the raw text.
+- Leaving the field saves when the text changed (the component's command);
+  Escape discards. No Save/Cancel buttons.
 - `ReadOnly` parameter: view mode only, no edit icon (for mirrored tasks).
 - Rendering: **Markdig** (BSD-2-Clause, GPL-3 compatible) with
   `DisableHtml()` — raw HTML is escaped. Links whose scheme is not `http`,
@@ -214,8 +218,8 @@ Shared by tasks, reference items, and later mirrored GitHub tasks.
 
 ### 4.6 Tasks
 
-`TaskDetailPanel` shows a `MarkdownField` for the task's description under
-the name. `TaskRow` shows a small `Notes` icon in its meta row when a task has
+`TaskDetailPanel` shows a `MarkdownField` for the task's description in a
+"Description" section below the property rows. `TaskRow` shows a small `Notes` icon in its meta row when a task has
 a description.
 
 ### 4.7 Pickers
@@ -251,7 +255,8 @@ bUnit — `PSPad.App.Tests`:
 
 - `FieldDisplay.Detect` table (`/etc` → Path, `3 pcs` → Quantity,
   `abc` → Text, `https://x` → Link, `C:\x` → Path, `\\nas\x` → Path).
-- `MarkdownField`: view by default, edit toggle, save sends the command, raw
+- `MarkdownField`: view by default, editor shown when blank, save on blur,
+  Escape discards, link clicks do not edit, raw
   HTML escaped, `javascript:` link rendered as text, `ReadOnly` hides edit.
 - `ReferenceRow`, `ReferenceItemPanel`: rendering per kind, copy path, add and
   edit a field.

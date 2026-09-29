@@ -379,8 +379,10 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    - **Goal** — the user's goals.
    - **List** (outside Add) — lists grouped under area headings; picking
      one moves the task at once. There is no Move button.
-   Room for later task fields (note, reminders) goes under the rows.
-5. Footer — "Created …" on the left, a red trash `MudIconButton` on the
+   Room for later task fields (reminders) goes under the rows.
+5. **Description** (outside Add) — a `PanelSection` titled "Description"
+   holding the task's `MarkdownField` (see below).
+6. Footer — "Created …" on the left, a red trash `MudIconButton` on the
    right that asks via `ConfirmDialog` before deleting. In Add the footer
    holds only **Add task**, and Enter in the name field adds too.
 
@@ -477,12 +479,19 @@ once the item exists — no star while still adding). An unboxed `Typo.h6`
 name field sits under the header, same as a task's name. Below it, in edit
 and view modes only:
 
-1. `MarkdownField` over the item's `Description` (see below).
-2. `MudList` of fields — each a caption `Label` over a `ReferenceFieldValue`
-   (rendering per its `FieldKind`, below), with up/down `MudIconButton`s
-   reordering it and a tap opening `ReferenceFieldEditor` inline in the same
-   row's place; **Add field** at the bottom opens the same editor with
-   nothing to save into yet.
+1. **Fields** — a `PanelSection` holding `ReferenceFieldList`, laid out like
+   `StepList` (the same `pspad-step` rows, dense, no big buttons): each row
+   a caption `Label` over a `ReferenceFieldValue` (rendering per its
+   `FieldKind`, below), small up/down `MudIconButton`s reordering it and a
+   Close icon removing it ("Remove {label}"); a tap on the row body opens
+   `ReferenceFieldEditor` (compact: label, value, display kind, Save/Cancel/
+   Remove) in the row's place. The last row is the add row — a `+` lead and
+   two unboxed dense fields, **Label** and **Value**; Enter in either, or
+   leaving Value with both filled, sends `AddReferenceField` with an
+   automatic display kind, clears both and puts focus back on Label. The
+   kind select lives only in the editor of an existing field.
+2. **Description** — a `PanelSection` holding the item's `MarkdownField`
+   (see below).
 3. Footer: a **Move to list** `MudSelect` (only `Reference` lists, an item
    never crosses into a `Tasks` list) and a red trash `MudIconButton` on the
    right, same delete-confirmation pattern as a task.
@@ -491,22 +500,34 @@ As with a task, an existing item's fields save as they change — no Save
 button outside Add — and Add mode holds nothing until **Add item** commits
 the whole draft.
 
+**Panel subsections share `PanelSection`.** `Components/PanelSection.razor`
+is a `MudDivider` followed by a muted `Typo.overline` title
+(`pspad-panel-section-title`) over its content, with `px-3` padding. It
+heads "Description" in both panels and "Fields" in the reference panel.
+
 **Descriptions are a shared `MarkdownField`, on tasks and reference items
-alike.** `Components/MarkdownField.razor` renders `Value` through
+alike, always present and saved as focus leaves.** There is no
+Add-a-description button and no Save/Cancel. An empty, editable description
+shows an outlined multi-line `MudTextField` directly (3 lines, auto-sizing,
+placeholder "Add a description…"). A filled one renders `Value` through
 `MarkdownRenderer.ToHtml` (Markdig, `DisableHtml()`, pipe tables, task lists
 with checkboxes disabled, links restricted to `http`/`https`/`mailto`,
 `target="_blank" rel="noopener noreferrer"` added to safe links) inside an
-outlined `MudPaper`, with an edit `MudIconButton` overlaid top-right. An
-empty description reads "No description" (read-only contexts) or an
-Add-a-description text button that opens the editor (editable contexts).
-Editing swaps the rendered view for a `MudTextField` (8 lines) plus
-Save/Cancel; Save calls `OnSave`, and the field stays in edit mode with the
-typed draft if the caller rejects the save, so a rejected write never
-silently discards what was typed. **An open edit is discarded, not saved,
-when its `DetailPanel` closes by overlay click** — the draft lives in
-`MarkdownField`'s own `_editing`/`_draft` state, not in the aggregate, and
-closing the panel unmounts the component with nothing sent; only an
-explicit Save commits it (plan 3 final review #7).
+outlined `MudPaper` with a small edit `MudIconButton` top-right; a click on
+the rendered text, or the icon, opens the raw text, focused. A click on a
+link inside the text follows the link and does not open the editor — the
+click is read through a custom `markdownviewclick` event
+(`Markdown/EventHandlers.cs`, registered in `wwwroot/PSPad.App.lib.module.js`)
+whose `OnLink` says whether the target sits inside an `<a>`. Leaving the
+field (blur) calls `OnSave` if the text changed and returns to the rendered
+view; unchanged text sends nothing. Escape discards the draft and returns to
+the view. If the caller rejects the save or it throws, the field stays in
+edit mode with the typed draft, so a rejected write never silently discards
+what was typed; the panel shows the Warning snackbar. The draft survives an
+outside `Value` change while editing. Closing the `DetailPanel` by overlay
+click blurs the field first, so an open edit is saved rather than dropped.
+`ReadOnly` and `Disabled` never edit: a filled value shows rendered, an
+empty one reads "No description".
 
 **Field display kinds are detected, not chosen by default, and stay a
 client-side hint.** `State/FieldDisplay.Of(field)` reads the field's stored
