@@ -16,7 +16,7 @@
 @inject NavigationManager Navigation
 
 <DetailPanel Open="@(Mode != PanelMode.Closed)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose"
-             OnSave="@SaveCallback" SaveText="Add item" CanSave="@(!string.IsNullOrWhiteSpace(_draft.Name))"
+             OnSave="@SaveCallback" SaveText="Add item" CanSave="@(!_creating && !string.IsNullOrWhiteSpace(_draft.Name))"
              Disabled="@Disabled">
     <HeaderActions>
         @if (_item is not null)
@@ -92,6 +92,7 @@
     IReadOnlyList<Area> _areas = [];
     IReadOnlyList<TaskList> _lists = [];
     Guid? _draftFor;
+    bool _creating;
     ReferenceItemDraft _draft = new();
 
     PanelMode Mode => (_item, NewInList, Disabled) switch
@@ -157,6 +158,24 @@
     }
 
     async Task CreateAsync()
+    {
+        if (_creating)
+        {
+            return;
+        }
+
+        _creating = true;
+        try
+        {
+            await CreateOnceAsync();
+        }
+        finally
+        {
+            _creating = false;
+        }
+    }
+
+    async Task CreateOnceAsync()
     {
         var name = _draft.Name.Trim();
 

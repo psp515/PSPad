@@ -491,6 +491,26 @@ public class ReferenceItemPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ASecondAddWhileTheFirstIsInFlightSendsNothing()
+    {
+        var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
+        AppTestHost.Arrange(this, User, Today, list);
+        var gate = new GatedHandler<CreateReferenceItem>();
+        Services.AddSingleton<ICommandHandler<CreateReferenceItem>>(gate);
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)list.Id));
+        panel.Find(".pspad-item-name-field input").Input("Bigos");
+        panel.Find(".pspad-panel-save").Click();
+        panel.WaitForAssertion(() => Assert.Equal(1, gate.Calls));
+        Assert.True(panel.Find(".pspad-panel-save").HasAttribute("disabled"));
+        panel.Find(".pspad-item-name-field input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        gate.Open();
+
+        panel.WaitForAssertion(() => Assert.Contains("item=", Services.GetRequiredService<NavigationManager>().Uri));
+        Assert.Equal(1, gate.Calls);
+    }
+
+    [Fact]
     public void AnotherTargetListStartsAFreshDraft()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");

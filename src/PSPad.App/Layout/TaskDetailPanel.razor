@@ -17,7 +17,7 @@
 @inject ISnackbar Snackbar
 
 <DetailPanel Open="@(Mode != PanelMode.Closed)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose"
-             OnSave="@SaveCallback" SaveText="Add task" CanSave="@(!string.IsNullOrWhiteSpace(_draft.Name))"
+             OnSave="@SaveCallback" SaveText="Add task" CanSave="@(!_creating && !string.IsNullOrWhiteSpace(_draft.Name))"
              Disabled="@Disabled">
     <HeaderActions>
         <MudIconButton Class="pspad-task-star" Color="Color.Primary" Disabled="@Disabled"
@@ -107,6 +107,7 @@
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<Goal> _goals = [];
     Guid? _draftFor;
+    bool _creating;
     TaskDraft _draft = new();
 
     PanelMode Mode => (_task, NewInList, Disabled) switch
@@ -189,6 +190,24 @@
     }
 
     async Task CreateAsync()
+    {
+        if (_creating)
+        {
+            return;
+        }
+
+        _creating = true;
+        try
+        {
+            await CreateOnceAsync();
+        }
+        finally
+        {
+            _creating = false;
+        }
+    }
+
+    async Task CreateOnceAsync()
     {
         var name = _draft.Name.Trim();
 
