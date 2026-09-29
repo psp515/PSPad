@@ -32,6 +32,14 @@ public class ReferenceItemTests
     }
 
     [Fact]
+    public void AnItemRemembersWhenItWasCreated()
+    {
+        var item = Item();
+
+        Assert.Equal(Now, item.CreatedAt);
+    }
+
+    [Fact]
     public void AnItemNeedsAName() =>
         Assert.Throws<DomainRejectedException>(() =>
             ReferenceItem.Decide(null, new CreateReferenceItem(Guid.NewGuid(), User, Guid.NewGuid(), List, "  ", 0), Now));
