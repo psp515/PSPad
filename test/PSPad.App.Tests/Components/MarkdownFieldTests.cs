@@ -159,6 +159,31 @@ public class MarkdownFieldTests : Bunit.TestContext
     }
 
     [Fact]
+    public void RerenderingWithANewValueInViewModeShowsTheNewMarkup()
+    {
+        Arrange();
+        var field = Render("## Hi");
+
+        field.Render(parameters => parameters.Add(p => p.Value, "## Bye"));
+
+        Assert.Contains("Bye", field.Markup);
+        Assert.DoesNotContain(">Hi<", field.Markup);
+    }
+
+    [Fact]
+    public void TheEditButtonAndTextareaCarryAriaLabels()
+    {
+        Arrange();
+        var field = Render("## Hi");
+
+        Assert.Equal("Edit description", field.Find(".pspad-markdown-edit").GetAttribute("aria-label"));
+
+        field.Find(".pspad-markdown-edit").Click();
+
+        Assert.Equal("Description", field.Find("textarea").GetAttribute("aria-label"));
+    }
+
+    [Fact]
     public void AnOutsideChangeWhileEditingKeepsTheDraft()
     {
         Arrange();

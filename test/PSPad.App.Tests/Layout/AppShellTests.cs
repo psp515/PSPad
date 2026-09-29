@@ -22,6 +22,8 @@ using PSPad.App.Theme;
 using PSPad.App.Updates;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Layout;
@@ -149,6 +151,61 @@ public class AppShellTests : Bunit.TestContext
         var panel = shell.FindComponent<TaskDetailPanel>().Instance;
         Assert.Null(panel.TaskId);
         Assert.Equal(listId, panel.NewInList);
+    }
+
+    [Fact]
+    public void OpeningTheAppOnAUrlWithAnItemQueryRendersTheReferenceItemPanelForIt()
+    {
+        Arrange();
+        var listId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"lists/{listId}?item={itemId}");
+
+        var shell = Render<AppShell>();
+
+        Assert.Equal(itemId, shell.FindComponent<ReferenceItemPanel>().Instance.ItemId);
+    }
+
+    [Fact]
+    public void ANewItemQueryOpensTheReferenceItemPanelToAddIntoThatList()
+    {
+        Arrange();
+        var listId = Guid.NewGuid();
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"lists/{listId}?item=new&list={listId}");
+
+        var shell = Render<AppShell>();
+
+        var panel = shell.FindComponent<ReferenceItemPanel>().Instance;
+        Assert.Null(panel.ItemId);
+        Assert.Equal(listId, panel.NewInList);
+    }
+
+    [Fact]
+    public void ClosingTheReferenceItemPanelDropsTheQuery()
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Przepisy", 0, ListKind.Reference),
+            DateTimeOffset.UnixEpoch));
+        var item = new ReferenceItem();
+        item.ApplyAll(ReferenceItem.Decide(
+            null, new CreateReferenceItem(Guid.NewGuid(), User, Guid.NewGuid(), list.Id, "Bigos", 0),
+            DateTimeOffset.UnixEpoch));
+        Arrange(documents: [list, item]);
+        var screen = $"lists/{list.Id}";
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"{screen}?item={item.Id}");
+        var shell = Render<AppShell>();
+
+        shell.Find(".pspad-panel-close").Click();
+
+        shell.WaitForAssertion(() =>
+        {
+            Assert.Null(shell.FindComponent<ReferenceItemPanel>().Instance.ItemId);
+            Assert.DoesNotContain("item=", navigation.Uri);
+        });
     }
 
     [Fact]

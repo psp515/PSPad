@@ -63,6 +63,7 @@ public static class AppTestHost
 
         context.Services.AddSingleton(services => new CommandSender(services, work, new NoOpSyncTrigger()));
         context.Services.AddSingleton(new ReplicaOwnership(replica, outbox, statisticsCache));
+        context.Services.AddScoped<Clipboard>();
         context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop: true));
         context.Services.AddSingleton<ServerReachability>();
         context.Services.AddSingleton<IConnectivity>(new AlwaysOnline());
