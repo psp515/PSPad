@@ -228,8 +228,88 @@ public class ReferenceFieldListTests : Bunit.TestContext
         Assert.True(fields.Find(".pspad-field-add-label input").HasAttribute("disabled"));
     }
 
+    [Fact]
+    public async Task WithoutAnItemEnterAddsToTheDraftAndSendsNothing()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<ReferenceField>();
+        var outbox = Services.GetRequiredService<PSPad.App.State.Outbox.IOutbox>();
+
+        var fields = RenderDraft(draft);
+        fields.Find(".pspad-field-add-label input").Input("Time");
+        fields.Find(".pspad-field-add-value input").Input("45 min");
+        fields.Find(".pspad-field-add-value input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        var field = Assert.Single(draft);
+        Assert.Equal("Time", field.Label);
+        Assert.Equal("45 min", field.Value);
+        Assert.Null(field.Display);
+        Assert.Equal(0, await outbox.CountAsync());
+        Assert.Equal("Time", fields.Find(".pspad-field-row .pspad-field-label").TextContent.Trim());
+        Assert.Equal("", fields.Find(".pspad-field-add-label input").GetAttribute("value") ?? "");
+    }
+
+    [Fact]
+    public void WithoutAnItemMovingReordersTheDraft()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<ReferenceField>
+        {
+            new(Guid.NewGuid(), "Time", "45 min", null, 0),
+            new(Guid.NewGuid(), "Servings", "4", null, 1),
+            new(Guid.NewGuid(), "Difficulty", "Easy", null, 2)
+        };
+
+        var fields = RenderDraft(draft);
+        fields.FindAll(".pspad-field-up")[2].Click();
+
+        Assert.Equal(["Time", "Difficulty", "Servings"], draft.Select(field => field.Label));
+        Assert.Equal([0, 1, 2], draft.Select(field => field.Position));
+        Assert.Equal(["Time", "Difficulty", "Servings"],
+            fields.FindAll(".pspad-field-row .pspad-field-label").Select(label => label.TextContent.Trim()));
+    }
+
+    [Fact]
+    public void WithoutAnItemRemovingDropsItFromTheDraft()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<ReferenceField>
+        {
+            new(Guid.NewGuid(), "Time", "45 min", null, 0),
+            new(Guid.NewGuid(), "Servings", "4", null, 1)
+        };
+
+        var fields = RenderDraft(draft);
+        fields.FindAll(".pspad-field-remove")[0].Click();
+
+        Assert.Equal(["Servings"], draft.Select(field => field.Label));
+        Assert.Equal(0, draft[0].Position);
+        Assert.Single(fields.FindAll(".pspad-field-row"));
+    }
+
+    [Fact]
+    public void WithoutAnItemEditingRewritesTheDraftField()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<ReferenceField> { new(Guid.NewGuid(), "Time", "45 min", null, 0) };
+
+        var fields = RenderDraft(draft);
+        fields.Find(".pspad-field-row-body").Click();
+        fields.Find(".pspad-field-label-input input").Change("Cooking time");
+        fields.Find(".pspad-field-save").Click();
+
+        var field = Assert.Single(draft);
+        Assert.Equal("Cooking time", field.Label);
+        Assert.Equal("45 min", field.Value);
+        Assert.Equal("Cooking time", fields.Find(".pspad-field-row .pspad-field-label").TextContent.Trim());
+    }
+
     IRenderedComponent<ReferenceFieldList> RenderList(ReferenceItem item) =>
+
         Render<ReferenceFieldList>(parameters => parameters.Add(p => p.Item, item).Add(p => p.UserId, User));
+
+    IRenderedComponent<ReferenceFieldList> RenderDraft(List<ReferenceField> draft) =>
+        Render<ReferenceFieldList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
 
     static ReferenceItem NewItem()
     {

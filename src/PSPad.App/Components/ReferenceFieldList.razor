@@ -5,12 +5,12 @@
 @inject ISnackbar Snackbar
 
 <div class="pspad-fields d-flex flex-column">
-    @for (var index = 0; index < Item.Fields.Count; index++)
+    @for (var index = 0; index < Fields.Count; index++)
     {
-        var field = Item.Fields[index];
+        var field = Fields[index];
         var position = index;
         var isFirst = position == 0;
-        var isLast = position == Item.Fields.Count - 1;
+        var isLast = position == Fields.Count - 1;
 
         @if (_editingFieldId == field.Id)
         {
@@ -59,7 +59,8 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public ReferenceItem Item { get; set; } = null!;
+    [Parameter] public ReferenceItem? Item { get; set; }
+    [Parameter] public List<ReferenceField>? Draft { get; set; }
     [Parameter] public Guid UserId { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
@@ -69,6 +70,8 @@
     string _newValue = "";
     bool _adding;
     Guid? _editingFieldId;
+
+    IReadOnlyList<ReferenceField> Fields => Item?.Fields ?? Draft ?? [];
 
     async Task AddOnEnterAsync(KeyboardEventArgs args)
     {
@@ -102,15 +105,22 @@
         _adding = true;
         try
         {
-            var result = await Sender.SendAsync(new AddReferenceField(
-                Guid.NewGuid(), UserId, Item.Id, Guid.NewGuid(), label, value, null));
-
-            if (!result.Accepted)
+            if (Item is null)
             {
-                _newLabel = typedLabel;
-                _newValue = value;
-                Snackbar.Add(result.Rejection ?? "Couldn't add the field.", Severity.Warning);
-                return;
+                Draft?.Add(new ReferenceField(Guid.NewGuid(), label, value.TrimEnd(), null, Draft.Count));
+            }
+            else
+            {
+                var result = await Sender.SendAsync(new AddReferenceField(
+                    Guid.NewGuid(), UserId, Item.Id, Guid.NewGuid(), label, value, null));
+
+                if (!result.Accepted)
+                {
+                    _newLabel = typedLabel;
+                    _newValue = value;
+                    Snackbar.Add(result.Rejection ?? "Couldn't add the field.", Severity.Warning);
+                    return;
+                }
             }
 
             await Changed.InvokeAsync();
@@ -147,17 +157,28 @@
             return;
         }
 
-        var result = await Sender.SendAsync(new EditReferenceField(
-            Guid.NewGuid(), UserId, Item.Id, fieldId, input.Label, input.Value, input.Display));
-
-        if (!result.Accepted)
+        if (Item is null)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't save the field.", Severity.Warning);
-            return;
+            ReplaceInDraft(fieldId, field => field with
+            {
+                Label = input.Label.Trim(), Value = input.Value.TrimEnd(), Display = input.Display
+            });
+        }
+        else
+        {
+            var result = await Sender.SendAsync(new EditReferenceField(
+                Guid.NewGuid(), UserId, Item.Id, fieldId, input.Label, input.Value, input.Display));
+
+            if (!result.Accepted)
+            {
+                Snackbar.Add(result.Rejection ?? "Couldn't save the field.", Severity.Warning);
+                return;
+            }
         }
 
         _editingFieldId = null;
         await Changed.InvokeAsync();
+        StateHasChanged();
     }
 
     async Task RemoveAsync(ReferenceField field)
@@ -167,16 +188,25 @@
             return;
         }
 
-        var result = await Sender.SendAsync(new RemoveReferenceField(Guid.NewGuid(), UserId, Item.Id, field.Id));
-
-        if (!result.Accepted)
+        if (Item is null)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't remove the field.", Severity.Warning);
-            return;
+            Draft?.RemoveAll(entry => entry.Id == field.Id);
+            RenumberDraft();
+        }
+        else
+        {
+            var result = await Sender.SendAsync(new RemoveReferenceField(Guid.NewGuid(), UserId, Item.Id, field.Id));
+
+            if (!result.Accepted)
+            {
+                Snackbar.Add(result.Rejection ?? "Couldn't remove the field.", Severity.Warning);
+                return;
+            }
         }
 
         _editingFieldId = null;
         await Changed.InvokeAsync();
+        StateHasChanged();
     }
 
     async Task MoveAsync(Guid fieldId, int toIndex)
@@ -186,14 +216,47 @@
             return;
         }
 
-        var result = await Sender.SendAsync(new MoveReferenceField(Guid.NewGuid(), UserId, Item.Id, fieldId, toIndex));
-
-        if (!result.Accepted)
+        if (Item is null)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't reorder the field.", Severity.Warning);
-            return;
+            var from = Draft?.FindIndex(field => field.Id == fieldId) ?? -1;
+            if (from < 0)
+            {
+                return;
+            }
+
+            var moving = Draft![from];
+            Draft.RemoveAt(from);
+            Draft.Insert(Math.Clamp(toIndex, 0, Draft.Count), moving);
+            RenumberDraft();
+        }
+        else
+        {
+            var result = await Sender.SendAsync(new MoveReferenceField(Guid.NewGuid(), UserId, Item.Id, fieldId, toIndex));
+
+            if (!result.Accepted)
+            {
+                Snackbar.Add(result.Rejection ?? "Couldn't reorder the field.", Severity.Warning);
+                return;
+            }
         }
 
         await Changed.InvokeAsync();
+    }
+
+    void ReplaceInDraft(Guid fieldId, Func<ReferenceField, ReferenceField> change)
+    {
+        var index = Draft?.FindIndex(field => field.Id == fieldId) ?? -1;
+        if (index >= 0)
+        {
+            Draft![index] = change(Draft[index]);
+        }
+    }
+
+    void RenumberDraft()
+    {
+        for (var index = 0; index < (Draft?.Count ?? 0); index++)
+        {
+            Draft![index] = Draft[index] with { Position = index };
+        }
     }
 }
