@@ -350,6 +350,35 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void OnPhonesItOffersEveryAreaAsAChip()
+    {
+        var home = NewArea("Dom");
+        var work = NewArea("Praca");
+        Arrange(home, work);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, home.Id));
+
+        var chips = page.FindComponent<AreaChips>();
+        Assert.Equal(home.Id, chips.Instance.Current);
+        Assert.Equal(2, chips.Instance.Areas.Count);
+        Assert.NotNull(page.Find(".pspad-area-chips").Closest(".d-md-none"));
+    }
+
+    [Fact]
+    public void OpeningAnAreaRemembersIt()
+    {
+        var home = NewArea("Dom");
+        Arrange(home);
+
+        Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, home.Id));
+
+        Assert.Contains(JSInterop.Invocations,
+            call => call.Identifier == "localStorage.setItem"
+                && Equals(call.Arguments[0], "pspad.last-area")
+                && Equals(call.Arguments[1], home.Id.ToString()));
+    }
+
+    [Fact]
     public void TheAreaHasExactlyOneFabMenu()
     {
         var area = NewArea("Dom");

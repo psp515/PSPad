@@ -18,6 +18,7 @@
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject LastArea Remembered
 @implements IDisposable
 
 @if (!_loaded)
@@ -28,6 +29,10 @@
 }
 else if (_area is not null)
 {
+    <div class="d-md-none">
+        <AreaChips Areas="@_areas" Current="@AreaId" />
+    </div>
+
     <PageHeading Title="@_area.Name" />
 
     <MudGrid Spacing="4">
@@ -81,6 +86,7 @@ else
 
     bool _loaded;
     Area? _area;
+    IReadOnlyList<Area> _areas = [];
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<TodoTask> _tasks = [];
     IReadOnlyList<ReferenceItem> _items = [];
@@ -105,12 +111,19 @@ else
         var area = await AreaStore.LoadAsync(AreaId, CancellationToken.None);
         _area = area is null || area.Deleted ? null : area;
 
+        _areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
+
         var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _lists = [.. lists.Where(list => list.AreaId == AreaId && !list.Deleted).OrderBy(list => list.Position)];
 
         _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _items = await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _loaded = true;
+
+        if (_area is not null)
+        {
+            await Remembered.RememberAsync(AreaId);
+        }
     }
 
     IReadOnlyList<TodoTask> TasksOf(Guid listId) => [.. _tasks.Where(task => task.ListId == listId)];

@@ -1,0 +1,27 @@
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Areas
+@inject NavigationManager Navigation
+
+<nav class="d-flex flex-wrap gap-1 mb-3 pspad-area-chips" aria-label="Areas">
+    @foreach (var area in Areas.Where(area => !area.Deleted).OrderBy(area => area.Position))
+    {
+        var current = area.Id == Current;
+        <MudChip @key="area.Id" T="Guid" Value="@area.Id" Href="@($"/areas/{area.Id}")" Size="Size.Small" Class="ma-0"
+                 Color="@(current ? Color.Primary : Color.Default)"
+                 Variant="@(current ? Variant.Filled : Variant.Outlined)"
+                 UserAttributes="@(current ? CurrentPage : NoAttributes)">@area.Name</MudChip>
+    }
+    <MudChip T="string" Size="Size.Small" Class="ma-0 pspad-new-area-chip" Color="Color.Primary"
+             Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Add" OnClick="@NewArea">New area</MudChip>
+</nav>
+
+@code {
+    static readonly Dictionary<string, object> CurrentPage = new() { ["aria-current"] = "page" };
+    static readonly Dictionary<string, object> NoAttributes = [];
+
+    [Parameter, EditorRequired] public IReadOnlyList<Area> Areas { get; set; } = [];
+
+    [Parameter] public Guid Current { get; set; }
+
+    void NewArea() => Navigation.NavigateTo(AreaQuery.ForNew(Navigation.Uri));
+}
