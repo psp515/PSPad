@@ -500,6 +500,20 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task APanelInTheUrlOpensWhileTheAccountFetchHangs()
+    {
+        Arrange(accountFetchHangs: true);
+        await Services.GetRequiredService<IReplica>().SetMarkerAsync(12);
+        var taskId = Guid.NewGuid();
+        Services.GetRequiredService<BunitNavigationManager>().NavigateTo($"today?task={taskId}");
+
+        var shell = Render<AppShell>();
+
+        shell.WaitForAssertion(() =>
+            Assert.Equal(taskId, shell.FindComponent<TaskDetailPanel>().Instance.TaskId));
+    }
+
+    [Fact]
     public async Task ASignInAfterTheAnonymousRedirectStillWaitsForItsOwnFirstPull()
     {
         // AuthorizeRouteView renders the signed-out redirect inside this shell, so by the time

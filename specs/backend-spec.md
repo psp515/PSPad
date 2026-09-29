@@ -404,6 +404,14 @@ token attachment goes through a `DelegatingHandler`, not the library's
 `/api/me` refreshes identity opportunistically when online — it never
 gates readiness. Its failure sets an offline indicator and nothing else.
 
+Slow Wi-Fi answers nothing rather than failing, so every client request
+carries a stall limit of 10 seconds: the token endpoint through its
+`HttpClient.Timeout`, the API through `StalledRequestHandler`, which turns
+a request with no response headers by then into an `HttpRequestException` —
+the same transport failure the sync loop and `ServerReachability` already
+treat as offline. The limit covers the wait for headers, not the body, so a
+large first pull on a slow link is not cut off mid-download.
+
 **Sign-out** ends the Keycloak session directly (not just local state).
 Signed-out visitors land on the public `/welcome` screen, never a bare
 redirect. The Keycloak realm sets `ssoSessionIdleTimeout` (30 days) and

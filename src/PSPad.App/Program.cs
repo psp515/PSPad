@@ -35,8 +35,11 @@ var keycloakAuthority = builder.Configuration["Keycloak:Authority"]!;
 var keycloakClientId = builder.Configuration["Keycloak:ClientId"]!;
 
 builder.Services.AddSingleton<ILocalSessionStore, LocalSessionStore>();
+var stalledRequestLimit = TimeSpan.FromSeconds(10);
+
 builder.Services.AddSingleton(services => new TokenRefresher(
-    new HttpClient(), services.GetRequiredService<IClock>(), keycloakAuthority, keycloakClientId));
+    new HttpClient { Timeout = stalledRequestLimit },
+    services.GetRequiredService<IClock>(), keycloakAuthority, keycloakClientId));
 builder.Services.AddScoped<SessionBootstrapper>();
 
 builder.Services.AddScoped<IRemoteAuthenticationService<RemoteAuthenticationState>>(services =>
@@ -75,7 +78,8 @@ builder.Services.AddScoped<ServerReachabilityHandler>();
 
 builder.Services.AddHttpClient<PSPadApiClient>(client => client.BaseAddress = new Uri(apiBaseAddress))
     .AddHttpMessageHandler<ServerReachabilityHandler>()
-    .AddHttpMessageHandler<SessionAuthorizationHandler>();
+    .AddHttpMessageHandler<SessionAuthorizationHandler>()
+    .AddHttpMessageHandler(() => new StalledRequestHandler(stalledRequestLimit));
 
 // An unreachable server is a supported state here, not a fault worth a stack trace per request.
 builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
