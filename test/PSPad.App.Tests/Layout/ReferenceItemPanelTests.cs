@@ -93,9 +93,8 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, list, item);
 
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
-        panel.Find(".pspad-markdown-placeholder").Click();
-        panel.Find("textarea").Change("Slow cooked");
-        panel.Find(".pspad-markdown-save").Click();
+        panel.Find(".pspad-markdown-input textarea").Input("Slow cooked");
+        panel.Find(".pspad-markdown-input textarea").Blur();
 
         var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Equal("Slow cooked", reloaded!.Description);

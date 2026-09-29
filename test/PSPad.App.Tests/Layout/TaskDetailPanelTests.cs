@@ -194,12 +194,25 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, task);
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-        panel.Find(".pspad-markdown-placeholder").Click();
-        panel.Find("textarea").Change("Whole milk");
-        panel.Find(".pspad-markdown-save").Click();
+        panel.Find(".pspad-markdown-input textarea").Input("Whole milk");
+        panel.Find(".pspad-markdown-input textarea").Blur();
 
         var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
         Assert.Equal("Whole milk", reloaded!.Description);
+    }
+
+    [Fact]
+    public void ASavedDescriptionShowsRendered()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        panel.Find(".pspad-markdown-input textarea").Input("**Whole** milk");
+        panel.Find(".pspad-markdown-input textarea").Blur();
+
+        panel.WaitForAssertion(() => Assert.Contains("<strong>Whole</strong>", panel.Markup));
+        Assert.Empty(panel.FindAll(".pspad-markdown-input"));
     }
 
     [Fact]
@@ -217,7 +230,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)taskA.Id));
         panel.Find(".pspad-markdown-edit").Click();
-        panel.Find("textarea").Change("Draft for A");
+        panel.Find("textarea").Input("Draft for A");
 
         panel.Render(parameters => parameters.Add(p => p.TaskId, (Guid?)taskB.Id));
 
@@ -234,11 +247,10 @@ public class TaskDetailPanelTests : Bunit.TestContext
             new RejectingHandler<SetTaskDescription>("Task no longer exists."));
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-        panel.Find(".pspad-markdown-placeholder").Click();
-        panel.Find("textarea").Change("Whole milk");
-        panel.Find(".pspad-markdown-save").Click();
+        panel.Find(".pspad-markdown-input textarea").Input("Whole milk");
+        panel.Find(".pspad-markdown-input textarea").Blur();
 
-        Assert.NotEmpty(panel.FindAll("textarea"));
+        Assert.Equal("Whole milk", panel.Find(".pspad-markdown-input textarea").TextContent);
         var snackbar = Services.GetRequiredService<ISnackbar>();
         Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("Task no longer exists.") == true);
     }
@@ -250,7 +262,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)Guid.NewGuid()));
 
-        Assert.Empty(panel.FindAll(".pspad-markdown-placeholder"));
+        Assert.Empty(panel.FindAll(".pspad-markdown-input"));
         Assert.Empty(panel.FindAll(".pspad-markdown-view"));
     }
 

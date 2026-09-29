@@ -1,6 +1,8 @@
 using Bunit;
+using Microsoft.AspNetCore.Components.Web;
 using MudBlazor.Services;
 using PSPad.App.Components;
+using PSPad.App.Markdown;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Components;
@@ -20,17 +22,53 @@ public class MarkdownFieldTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ABlankValueShowsThePlaceholder()
+    public void ABlankEditableValueShowsTheEditorDirectly()
     {
         Arrange();
 
-        var field = Render("", placeholder: "Add a description");
+        var field = Render("");
 
-        Assert.Contains("Add a description", field.Markup);
+        var textarea = field.Find(".pspad-markdown-input textarea");
+        Assert.Equal("Add a description…", textarea.GetAttribute("placeholder"));
+        Assert.Empty(field.FindAll("button"));
     }
 
     [Fact]
-    public void EditSwitchesToTheRawText()
+    public void TypingIntoTheBlankEditorAndLeavingSaves()
+    {
+        Arrange();
+        string? saved = null;
+        var field = Render("", onSave: text =>
+        {
+            saved = text;
+            return System.Threading.Tasks.Task.FromResult(true);
+        });
+
+        field.Find("textarea").Input("Whole milk");
+        field.Find("textarea").Blur();
+
+        Assert.Equal("Whole milk", saved);
+    }
+
+    [Fact]
+    public void LeavingTheBlankEditorUntouchedDoesNotSave()
+    {
+        Arrange();
+        var saveCalled = false;
+        var field = Render("", onSave: _ =>
+        {
+            saveCalled = true;
+            return System.Threading.Tasks.Task.FromResult(true);
+        });
+
+        field.Find("textarea").Blur();
+
+        Assert.False(saveCalled);
+        Assert.NotEmpty(field.FindAll("textarea"));
+    }
+
+    [Fact]
+    public void TheEditIconSwitchesToTheRawText()
     {
         Arrange();
         var field = Render("## Hi");
@@ -41,7 +79,29 @@ public class MarkdownFieldTests : Bunit.TestContext
     }
 
     [Fact]
-    public void SavingHandsTheTextBackAndReturnsToView()
+    public async Task ClickingTheRenderedTextSwitchesToTheRawText()
+    {
+        Arrange();
+        var field = Render("## Hi");
+
+        await ClickRenderedText(field, onLink: false);
+
+        Assert.Equal("## Hi", field.Find("textarea").TextContent);
+    }
+
+    [Fact]
+    public async Task ClickingALinkInTheRenderedTextKeepsTheView()
+    {
+        Arrange();
+        var field = Render("[site](https://example.com)");
+
+        await ClickRenderedText(field, onLink: true);
+
+        Assert.Empty(field.FindAll("textarea"));
+    }
+
+    [Fact]
+    public void LeavingAfterAnEditSavesAndReturnsToView()
     {
         Arrange();
         string? saved = null;
@@ -52,15 +112,15 @@ public class MarkdownFieldTests : Bunit.TestContext
         });
 
         field.Find(".pspad-markdown-edit").Click();
-        field.Find("textarea").Change("## Bye");
-        field.Find(".pspad-markdown-save").Click();
+        field.Find("textarea").Input("## Bye");
+        field.Find("textarea").Blur();
 
         Assert.Equal("## Bye", saved);
         Assert.Empty(field.FindAll("textarea"));
     }
 
     [Fact]
-    public void CancelDiscardsTheDraft()
+    public void LeavingWithoutAChangeReturnsToViewWithoutSaving()
     {
         Arrange();
         var saveCalled = false;
@@ -71,11 +131,30 @@ public class MarkdownFieldTests : Bunit.TestContext
         });
 
         field.Find(".pspad-markdown-edit").Click();
-        field.Find("textarea").Change("## Bye");
-        field.Find(".pspad-markdown-cancel").Click();
+        field.Find("textarea").Blur();
 
         Assert.False(saveCalled);
         Assert.Empty(field.FindAll("textarea"));
+    }
+
+    [Fact]
+    public void EscapeDiscardsTheDraftAndReturnsToView()
+    {
+        Arrange();
+        var saveCalled = false;
+        var field = Render("## Hi", onSave: _ =>
+        {
+            saveCalled = true;
+            return System.Threading.Tasks.Task.FromResult(true);
+        });
+
+        field.Find(".pspad-markdown-edit").Click();
+        field.Find("textarea").Input("## Bye");
+        field.Find("textarea").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        Assert.False(saveCalled);
+        Assert.Empty(field.FindAll("textarea"));
+        Assert.Contains(">Hi<", field.Markup);
     }
 
     [Fact]
@@ -85,9 +164,10 @@ public class MarkdownFieldTests : Bunit.TestContext
 
         var field = Render("## Hi", readOnly: true);
         Assert.Empty(field.FindAll(".pspad-markdown-edit"));
+        Assert.Empty(field.FindAll(".pspad-markdown-content"));
 
         var blank = Render("", readOnly: true);
-        Assert.Empty(blank.FindAll(".pspad-markdown-placeholder"));
+        Assert.Empty(blank.FindAll("textarea"));
         Assert.Contains("No description", blank.Markup);
     }
 
@@ -98,10 +178,11 @@ public class MarkdownFieldTests : Bunit.TestContext
 
         var field = Render("## Hi", disabled: true);
         Assert.Empty(field.FindAll(".pspad-markdown-edit"));
+        Assert.Empty(field.FindAll(".pspad-markdown-content"));
 
         var blank = Render("", disabled: true);
-        blank.Find(".pspad-markdown-placeholder").Click();
         Assert.Empty(blank.FindAll("textarea"));
+        Assert.Contains("No description", blank.Markup);
     }
 
     [Fact]
@@ -111,8 +192,8 @@ public class MarkdownFieldTests : Bunit.TestContext
         var field = Render("## Hi", onSave: _ => throw new InvalidOperationException("boom"));
 
         field.Find(".pspad-markdown-edit").Click();
-        field.Find("textarea").Change("## Bye");
-        field.Find(".pspad-markdown-save").Click();
+        field.Find("textarea").Input("## Bye");
+        field.Find("textarea").Blur();
 
         Assert.Equal("## Bye", field.Find("textarea").TextContent);
     }
@@ -124,37 +205,30 @@ public class MarkdownFieldTests : Bunit.TestContext
         var field = Render("## Hi", onSave: _ => System.Threading.Tasks.Task.FromResult(false));
 
         field.Find(".pspad-markdown-edit").Click();
-        field.Find("textarea").Change("## Bye");
-        field.Find(".pspad-markdown-save").Click();
+        field.Find("textarea").Input("## Bye");
+        field.Find("textarea").Blur();
 
         Assert.Equal("## Bye", field.Find("textarea").TextContent);
     }
 
     [Fact]
-    public void AnAcceptedSaveReturnsToView()
-    {
-        Arrange();
-        var field = Render("## Hi", onSave: _ => System.Threading.Tasks.Task.FromResult(true));
-
-        field.Find(".pspad-markdown-edit").Click();
-        field.Find("textarea").Change("## Bye");
-        field.Find(".pspad-markdown-save").Click();
-
-        Assert.Empty(field.FindAll("textarea"));
-    }
-
-    [Fact]
-    public void SavingDisablesTheSaveButtonWhileInFlight()
+    public void ASaveInFlightIsNotSentTwice()
     {
         Arrange();
         var gate = new TaskCompletionSource<bool>();
-        var field = Render("## Hi", onSave: async _ => await gate.Task);
+        var calls = 0;
+        var field = Render("## Hi", onSave: async _ =>
+        {
+            calls++;
+            return await gate.Task;
+        });
 
         field.Find(".pspad-markdown-edit").Click();
-        field.Find(".pspad-markdown-save").Click();
+        field.Find("textarea").Input("## Bye");
+        field.Find("textarea").Blur();
+        field.Find("textarea").Blur();
 
-        Assert.True(field.Find(".pspad-markdown-save").HasAttribute("disabled"));
-
+        Assert.Equal(1, calls);
         gate.SetResult(true);
     }
 
@@ -190,24 +264,38 @@ public class MarkdownFieldTests : Bunit.TestContext
         var field = Render("## Hi");
 
         field.Find(".pspad-markdown-edit").Click();
-        field.Find("textarea").Change("## Typed");
+        field.Find("textarea").Input("## Typed");
         field.Render(parameters => parameters.Add(p => p.Value, "## Other"));
 
         Assert.Equal("## Typed", field.Find("textarea").TextContent);
     }
 
+    [Fact]
+    public void AnOutsideChangeWhileTypingIntoTheBlankEditorKeepsTheDraft()
+    {
+        Arrange();
+        var field = Render("");
+
+        field.Find("textarea").Input("Typed");
+        field.Render(parameters => parameters.Add(p => p.Value, "Other"));
+
+        Assert.Equal("Typed", field.Find("textarea").TextContent);
+    }
+
+    static System.Threading.Tasks.Task ClickRenderedText(IRenderedComponent<MarkdownField> field, bool onLink) =>
+        field.Find(".pspad-markdown-content")
+            .TriggerEventAsync("onmarkdownviewclick", new MarkdownViewClickEventArgs { OnLink = onLink });
+
     IRenderedComponent<MarkdownField> Render(
         string value,
         Func<string, System.Threading.Tasks.Task<bool>>? onSave = null,
         bool readOnly = false,
-        bool disabled = false,
-        string placeholder = "Add a description") =>
+        bool disabled = false) =>
         Render<MarkdownField>(parameters => parameters
             .Add(p => p.Value, value)
             .Add(p => p.OnSave, onSave ?? (_ => System.Threading.Tasks.Task.FromResult(true)))
             .Add(p => p.ReadOnly, readOnly)
-            .Add(p => p.Disabled, disabled)
-            .Add(p => p.Placeholder, placeholder));
+            .Add(p => p.Disabled, disabled));
 
     void Arrange()
     {
