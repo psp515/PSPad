@@ -14,6 +14,11 @@
              OnSave="@SaveCallback" SaveText="Add list" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
              Disabled="@Disabled">
     <div class="pa-4">
+        <MudToggleGroup T="ListKind" @bind-Value="_kind" Class="pspad-list-kind mb-3" Color="Color.Primary"
+                        Outlined="true" Disabled="@Disabled">
+            <MudToggleItem Value="ListKind.Tasks" Text="Tasks" />
+            <MudToggleItem Value="ListKind.Reference" Text="Reference" />
+        </MudToggleGroup>
         <MudTextField T="string" Class="pspad-list-name-field" Label="Name" Variant="Variant.Outlined"
                       @bind-Value="_draftName" Immediate="true" AutoFocus="true" Disabled="@Disabled"
                       OnKeyDown="@AddOnEnterAsync" />
@@ -29,6 +34,7 @@
 
     string _draftName = "";
     string _areaName = "";
+    ListKind _kind = ListKind.Tasks;
 
     string Title => _areaName.Length == 0 ? "New list" : $"New list · {_areaName}";
 
@@ -40,6 +46,7 @@
         {
             _draftName = "";
             _areaName = "";
+            _kind = ListKind.Tasks;
             return;
         }
 
@@ -68,9 +75,10 @@
             .Where(list => !list.Deleted && list.AreaId == areaId);
         await Sender.SendAsync(new CreateTaskList(
             Guid.NewGuid(), State.UserId, Guid.NewGuid(), areaId, name,
-            Positions.Next(siblings.Select(list => list.Position))));
+            Positions.Next(siblings.Select(list => list.Position)), _kind));
 
         _draftName = "";
+        _kind = ListKind.Tasks;
         await OnClose.InvokeAsync();
     }
 }

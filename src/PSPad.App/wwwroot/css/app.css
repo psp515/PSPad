@@ -479,3 +479,76 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-goal-summary:focus-visible {
     background-color: var(--mud-palette-action-default-hover);
 }
+
+.pspad-markdown-view {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.pspad-markdown-view p,
+.pspad-markdown-view ul,
+.pspad-markdown-view ol,
+.pspad-markdown-view pre,
+.pspad-markdown-view table,
+.pspad-markdown-view blockquote {
+    margin-block: .5em;
+}
+
+.pspad-markdown-view ul,
+.pspad-markdown-view ol {
+    padding-left: 1.5em;
+}
+
+.pspad-markdown-view a {
+    color: var(--mud-palette-primary);
+    text-decoration: underline;
+}
+
+.pspad-markdown-view a:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+}
+
+.pspad-markdown-view code,
+.pspad-markdown-view pre {
+    background-color: var(--mud-palette-background-gray);
+    padding: .15em .35em;
+    border-radius: 4px;
+}
+
+.pspad-markdown-view pre {
+    padding: .5em;
+    overflow-x: auto;
+}
+
+.pspad-markdown-view pre code {
+    background-color: transparent;
+    padding: 0;
+}
+
+.pspad-markdown-view table {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+}
+
+.pspad-markdown-view th,
+.pspad-markdown-view td {
+    border: 1px solid var(--mud-palette-lines-default);
+    padding: .35em .6em;
+}
+
+.pspad-markdown-view img {
+    max-width: 100%;
+}
+
+.pspad-markdown-view blockquote {
+    border-left: 4px solid var(--mud-palette-lines-default);
+    padding-left: .75em;
+}
+
+.pspad-markdown-view h1 { font-size: 1.25rem; }
+.pspad-markdown-view h2 { font-size: 1.2rem; }
+.pspad-markdown-view h3 { font-size: 1.15rem; }
+.pspad-markdown-view h4 { font-size: 1.1rem; }
+.pspad-markdown-view h5 { font-size: 1.05rem; }
+.pspad-markdown-view h6 { font-size: 1rem; }

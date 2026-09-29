@@ -162,6 +162,86 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnOpenTaskShowsAMarkdownFieldWithItsDescription()
+    {
+        var task = NewTask("Buy milk");
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDescription(Guid.NewGuid(), User, task.Id, "2% please"), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Contains("2% please", panel.Markup);
+    }
+
+    [Fact]
+    public async Task SavingTheDescriptionSendsSetTaskDescription()
+    {
+        var task = NewTask("Buy milk");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        panel.Find(".pspad-markdown-placeholder").Click();
+        panel.Find("textarea").Change("Whole milk");
+        panel.Find(".pspad-markdown-save").Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal("Whole milk", reloaded!.Description);
+    }
+
+    [Fact]
+    public void SwitchingTaskIdWhileEditingShowsTheOtherTasksDescriptionRatherThanTheDraft()
+    {
+        var taskA = NewTask("Task A");
+        taskA.ApplyAll(TodoTask.Decide(
+            taskA, new SetTaskDescription(Guid.NewGuid(), User, taskA.Id, "A description"),
+            DateTimeOffset.UnixEpoch));
+        var taskB = NewTask("Task B");
+        taskB.ApplyAll(TodoTask.Decide(
+            taskB, new SetTaskDescription(Guid.NewGuid(), User, taskB.Id, "B description"),
+            DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, taskA, taskB);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)taskA.Id));
+        panel.Find(".pspad-markdown-edit").Click();
+        panel.Find("textarea").Change("Draft for A");
+
+        panel.Render(parameters => parameters.Add(p => p.TaskId, (Guid?)taskB.Id));
+
+        Assert.Contains("B description", panel.Markup);
+        Assert.DoesNotContain("Draft for A", panel.Markup);
+    }
+
+    [Fact]
+    public void ARejectedDescriptionSaveStaysInEditAndSurfacesTheRejection()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+        Services.AddSingleton<ICommandHandler<SetTaskDescription>>(
+            new RejectingHandler<SetTaskDescription>("Task no longer exists."));
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        panel.Find(".pspad-markdown-placeholder").Click();
+        panel.Find("textarea").Change("Whole milk");
+        panel.Find(".pspad-markdown-save").Click();
+
+        Assert.NotEmpty(panel.FindAll("textarea"));
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("Task no longer exists.") == true);
+    }
+
+    [Fact]
+    public void ANewTaskDraftShowsNoDescriptionField()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)Guid.NewGuid()));
+
+        Assert.Empty(panel.FindAll(".pspad-markdown-placeholder"));
+        Assert.Empty(panel.FindAll(".pspad-markdown-view"));
+    }
+
+    [Fact]
     public void ANewTaskOffersAddButNoDeleteAndWaitsForAName()
     {
         AppTestHost.Arrange(this, User, Today);
@@ -443,6 +523,23 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
         Assert.Equal(office.Id, reloaded!.ListId);
         panel.WaitForAssertion(() => Assert.Contains("Praca › Biuro", panel.Find(".pspad-panel-title").TextContent));
+    }
+
+    [Fact]
+    public void TheListPickerOffersOnlyTaskLists()
+    {
+        var area = NewArea("Dom");
+        var tasksList = NewList(area.Id, "Zakupy");
+        var referenceList = NewReferenceList(area.Id, "Przepisy");
+        var task = NewTask("Buy milk", tasksList.Id);
+        AppTestHost.Arrange(this, User, Today, area, tasksList, referenceList, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-list");
+
+        var options = panel.FindAll(".pspad-list-option").Select(item => item.TextContent).ToArray();
+        Assert.Contains("Zakupy", options);
+        Assert.DoesNotContain("Przepisy", options);
     }
 
     [Fact]
@@ -745,6 +842,15 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0),
+            DateTimeOffset.UnixEpoch));
+        return list;
+    }
+
+    static TaskList NewReferenceList(Guid areaId, string name)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0, ListKind.Reference),
             DateTimeOffset.UnixEpoch));
         return list;
     }

@@ -1,5 +1,6 @@
 @page "/search"
 @attribute [Authorize]
+@using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Search
 @using PSPad.Module.Tasks.Lists
@@ -39,7 +40,7 @@ else
     static string? IconOf(SearchHit hit) => hit switch
     {
         { Kind: SearchHitKind.ReferenceItem } => Icons.Material.Outlined.LibraryBooks,
-        { Kind: SearchHitKind.List, ListKind: ListKind.Reference } => Icons.Material.Outlined.LibraryBooks,
+        { Kind: SearchHitKind.List, ListKind: { } kind } => ListIcon.For(kind),
         _ => null,
     };
 }

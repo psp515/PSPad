@@ -35,6 +35,10 @@
                 {
                     <MudIcon Class="pspad-recurring" Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" />
                 }
+                @if (HasDescription)
+                {
+                    <MudIcon Class="pspad-has-description" Icon="@Icons.Material.Outlined.Notes" Size="Size.Small" />
+                }
             </div>
         }
     </div>
@@ -68,7 +72,10 @@
 
     bool Overdue => IsOverdue(Task, Today);
 
-    bool HasMeta => ListName is not null || CreatedOn is not null || Task.Steps.Count > 0 || Task.DueOn is not null || Task.IsRecurring;
+    bool HasDescription => Task.Description.Length > 0;
+
+    bool HasMeta => ListName is not null || CreatedOn is not null || Task.Steps.Count > 0 || Task.DueOn is not null
+        || Task.IsRecurring || HasDescription;
 
     Color PriorityColour => Task.Priority switch
     {

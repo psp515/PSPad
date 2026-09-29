@@ -65,6 +65,24 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void EachCardShowsItsKindIcon()
+    {
+        var area = NewArea("Dom");
+        var tasksList = NewList(area.Id, "Zakupy", 0, ListKind.Tasks);
+        var referenceList = NewList(area.Id, "Przepisy", 1, ListKind.Reference);
+        Arrange(area, tasksList, referenceList);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        var icons = page.FindAll(".pspad-list-icon");
+        Assert.Equal(2, icons.Count);
+        Assert.Contains(icons, icon => icon.InnerHtml.Contains(
+            IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.Checklist)));
+        Assert.Contains(icons, icon => icon.InnerHtml.Contains(
+            IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.LibraryBooks)));
+    }
+
+    [Fact]
     public void ADeletedAreasScreenDoesNotRenderItsName()
     {
         var area = NewArea("Dom");
@@ -157,6 +175,18 @@ public class AreaBoardTests : Bunit.TestContext
         page.Find(".pspad-add-task").Click();
 
         Assert.EndsWith($"/areas/{area.Id}?task=new&list={shopping.Id}", navigation.Uri);
+    }
+
+    [Fact]
+    public void AReferenceListsCardHidesTheAddTaskAction()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        Arrange(area, recipes);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Empty(page.FindAll(".pspad-add-task"));
     }
 
     [Fact]
@@ -423,12 +453,15 @@ public class AreaBoardTests : Bunit.TestContext
         return area;
     }
 
-    static TaskList NewList(Guid areaId, string name, int position)
+    static TaskList NewList(Guid areaId, string name, int position) =>
+        NewList(areaId, name, position, ListKind.Tasks);
+
+    static TaskList NewList(Guid areaId, string name, int position, ListKind kind)
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, position),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, position, kind),
             DateTimeOffset.UnixEpoch));
         return list;
     }

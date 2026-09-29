@@ -35,6 +35,41 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheHeaderShowsTheListsKindIcon()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Contains(
+            IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.LibraryBooks),
+            page.Find(".pspad-list-icon").InnerHtml);
+    }
+
+    [Fact]
+    public void AReferenceListHidesTheAddTaskFabItem()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Empty(page.FindAll("[aria-label='Add task']"));
+    }
+
+    [Fact]
+    public void AReferenceListsEmptyStateOffersNoAddTaskAction()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.DoesNotContain("Add task", page.Markup);
+    }
+
+    [Fact]
     public void ItShowsAnEmptyStateWhenTheListHasNoTasks()
     {
         var list = NewList("Zakupy");
@@ -474,12 +509,14 @@ public class ListPageTests : Bunit.TestContext
             new TaskCompletionSource<IReadOnlyList<TaskList>>().Task;
     }
 
-    static TaskList NewList(string name)
+    static TaskList NewList(string name) => NewList(name, ListKind.Tasks);
+
+    static TaskList NewList(string name, ListKind kind)
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, 0),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, 0, kind),
             DateTimeOffset.UnixEpoch));
         return list;
     }

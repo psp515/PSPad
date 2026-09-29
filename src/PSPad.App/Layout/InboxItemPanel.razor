@@ -105,7 +105,8 @@
             var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
             _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
             var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
-            _lists = [.. lists.Where(list => !list.Deleted && _areas.Any(area => area.Id == list.AreaId))
+            _lists = [.. lists.Where(list => !list.Deleted && list.Kind == ListKind.Tasks
+                    && _areas.Any(area => area.Id == list.AreaId))
                 .OrderBy(list => _areas.ToList().FindIndex(area => area.Id == list.AreaId))
                 .ThenBy(list => list.Position)];
             var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
