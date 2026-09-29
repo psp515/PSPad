@@ -14,6 +14,9 @@ public sealed class TaskList : Aggregate
     [JsonInclude]
     public int Position { get; private set; }
 
+    [JsonInclude]
+    public ListKind Kind { get; private set; } = ListKind.Tasks;
+
     public static IReadOnlyList<DomainEvent> Decide(TaskList? list, ICommand command, DateTimeOffset at)
     {
         switch (command)
@@ -30,7 +33,13 @@ public sealed class TaskList : Aggregate
                 }
 
                 return [new TaskListCreated(
-                    create.ListId, create.UserId, at, create.AreaId, RequireName(create.Name), create.Position)];
+                    create.ListId,
+                    create.UserId,
+                    at,
+                    create.AreaId,
+                    RequireName(create.Name),
+                    create.Position,
+                    create.Kind)];
 
             case RenameTaskList rename:
                 var renaming = Require(list, rename.UserId);
@@ -67,6 +76,7 @@ public sealed class TaskList : Aggregate
                 AreaId = created.AreaId;
                 Name = created.Name;
                 Position = created.Position;
+                Kind = created.Kind;
                 break;
             case TaskListRenamed renamed:
                 Name = renamed.Name;
@@ -93,6 +103,22 @@ public sealed class TaskList : Aggregate
         }
 
         return list;
+    }
+
+    internal static TaskList RequireAcceptsTasks(TaskList? list, Guid userId)
+    {
+        var existing = Require(list, userId);
+        return existing.Kind == ListKind.Reference
+            ? throw new DomainRejectedException("That list holds references, not tasks.")
+            : existing;
+    }
+
+    internal static TaskList RequireAcceptsReferences(TaskList? list, Guid userId)
+    {
+        var existing = Require(list, userId);
+        return existing.Kind == ListKind.Tasks
+            ? throw new DomainRejectedException("That list holds tasks, not references.")
+            : existing;
     }
 
     static string RequireName(string name) =>

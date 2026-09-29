@@ -4,6 +4,10 @@
     <ProjectReference Include="..\..\shared\PSPad.Abstractions\PSPad.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="PSPad.Module.Tasks.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

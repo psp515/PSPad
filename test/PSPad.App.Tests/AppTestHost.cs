@@ -15,6 +15,7 @@ using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 
 namespace PSPad.App.Tests;
@@ -48,6 +49,7 @@ public static class AppTestHost
         context.Services.AddSingleton<IDocumentStore<TodoTask>>(new ReplicaDocumentStore<TodoTask>(replica));
         context.Services.AddSingleton<IDocumentStore<Goal>>(new ReplicaDocumentStore<Goal>(replica));
         context.Services.AddSingleton<IDocumentStore<Inbox>>(new ReplicaDocumentStore<Inbox>(replica));
+        context.Services.AddSingleton<IDocumentStore<ReferenceItem>>(new ReplicaDocumentStore<ReferenceItem>(replica));
         context.Services.AddPSPadCommands();
         context.Services.AddSingleton(new AppState { UserId = userId, Today = today });
         context.Services.AddSingleton(new ThemePreference(context.JSInterop.JSRuntime));
