@@ -30,7 +30,7 @@ Platform, not one project. Each gets own spec, plan, implementation.
 | 4 | Habits — streaks, daily progress | later |
 | 5 | Goals & annual plans — yearly horizon, year-end summary | later |
 | 6 | Integrations — GitHub issues, OneDrive, Google Drive, Thingiverse | later |
-| 7 | 3D-print domain — materials, parts, reference materials | later |
+| 7 | 3D-print domain — materials, parts, reference materials, building on `ReferenceItem` | later |
 | 8 | Reminders — push, thought of the day | later |
 
 4 and 5 cheap later because slice 1 models recurrence as occurrences and goals as
@@ -40,17 +40,21 @@ entities. Do not regress that.
 
 ## 3. Slice 1 scope
 
-In: areas (user-defined), lists (inside one area), Inbox (one per user, outside
-areas, organizing = first-class command), tasks (one list, name + due date +
-goal + priority + star + steps), steps (own due date, ordered, dense positions),
-recurrence (template + per-day occurrences), goals (global, many tasks to one),
-Today screen (cross-area), a Statistics screen (tiles, four charts, a
-consistency heatmap, an Inbox-captures bar chart, a collapsed record feed) built
-from denormalized records projected off the domain event log, offline PWA,
-auth.
+In: areas (user-defined), lists (inside one area, kind fixed at creation —
+`Tasks` or `Reference`), Inbox (one per user, outside areas, organizing =
+first-class command, only ever becomes a task), tasks (one `Tasks` list,
+name + due date + goal + priority + star + steps + Markdown description),
+steps (own due date, ordered, dense positions), recurrence (template +
+per-day occurrences), goals (global, many tasks to one), reference lists
+(items — name + Markdown description + star + ordered labelled fields — in
+a `Reference` list, never on Today), Today screen (cross-area), a Statistics
+screen (tiles, four charts, a consistency heatmap, an Inbox-captures bar
+chart, a collapsed record feed) built from denormalized records projected
+off the domain event log, offline PWA, auth.
 
-Out: habits, annual plans, integrations, print lists, reference materials,
-push reminders, thought of day, list types beyond plain.
+Out: habits, annual plans, integrations, print lists, push reminders,
+thought of day. Reference is the first list kind beyond plain `Tasks`; a
+per-list typed field schema (the print domain's need) stays out.
 
 ### Today rule
 
@@ -119,8 +123,8 @@ date. Only Done days stored; Pending and Skipped derived from rule + today. Give
 habits streaks free.
 
 **AD-8 — Aggregates:** `User`, `Area`, `TaskList`, `TodoTask` (steps inside),
-`Goal`, `Inbox` (one per user). Cross-aggregate links are ids, never nested
-objects.
+`Goal`, `Inbox` (one per user), `ReferenceItem` (fields inside, one `Reference`
+list per item). Cross-aggregate links are ids, never nested objects.
 
 **AD-9 — Integration tests own their database.** Testcontainers starts a real
 MongoDB 8 replica set per test run. No compose service shared with dev. No
@@ -366,6 +370,18 @@ before merge, when the chart changed from backlog level to capture volume).
 The client-side `BurndownRule` (`adr/0019`) is deleted; its chart's
 successor is `StatisticsCharts.Outstanding`, server-side, derived from
 `statistics_records`.
+
+Reference lists and task descriptions shipped on this branch: `adr/0047`
+(reference lists hold `ReferenceItem`, a separate aggregate, not a kind of
+task — `TaskList.Kind` fixed at creation, tasks and Inbox items only into
+`Tasks` lists, items only into `Reference` lists, and `adr/0042`'s
+container-delete cascade extended to reference items) and `adr/0048`
+(descriptions are Markdown, rendered client-side with `DisableHtml()`, via
+the shared `MarkdownField`) are `Active` and built here, as is `adr/0049`
+(a replica that learns a new sync collection — `referenceitems` — pulls
+from zero once) built on an earlier branch in this stack. `specs/ui-spec.md`
+and `specs/backend-spec.md` cover the shapes; `specs/reference-lists-design.md`
+is now marked Built.
 
 ---
 

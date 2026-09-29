@@ -2,7 +2,7 @@
 title: Reference lists hold ReferenceItems, a separate aggregate, not a kind of task
 tags: [domain, aggregates, ui]
 date: 2026-09-28
-status: Proposed
+status: Active
 ---
 
 # ADR-0047: Reference lists hold ReferenceItems, a separate aggregate, not a kind of task

@@ -417,11 +417,33 @@ the two closing statuses.
 **New lists use the same shell.** `Layout/ListDetailPanel.razor` is
 addressed as `?list=new&inarea={areaId}` (`ListQuery.ForNewList`) from the
 area's **New list** FAB item or its empty state — full screen below `md`, a
-side panel from `md` up. It holds only an outlined **Name** field under a
-`New list · Area` title, with **Add list** at the bottom left; Enter also
-adds. The new list takes the next position in its area and the panel
-closes, leaving the area board. Renaming a list still goes through
-`NameDialog`.
+side panel from `md` up. It opens with a `MudToggleGroup<ListKind>`
+(`pspad-list-kind`, outlined, **Tasks** / **Reference**, default Tasks) above
+an outlined **Name** field under a `New list · Area` title, with **Add
+list** at the bottom left; Enter also adds. `Kind` is fixed at creation —
+there is no later toggle, so a list's own screens never need to handle a
+mid-life kind change. The new list takes the next position in its area and
+the panel closes, leaving the area board. Renaming a list still goes
+through `NameDialog`.
+
+**List kind shows as an icon, not a label, everywhere a list is listed.**
+`Components/ListIcon.For(list)` picks `Icons.Material.Outlined.Checklist`
+for `Tasks` and `Icons.Material.Outlined.LibraryBooks` for `Reference`
+(`.LabelFor` gives the matching `aria-label`/tooltip text: "Task list" /
+"Reference list"). Used on area-board list cards, the list screen's header
+and search results — one place decides the mapping so a future third kind
+adds one icon, not N call sites.
+
+**A `Reference` list's page and card render `ReferenceRow`s, never
+`TaskRow`s.** `ListPage` and `ListCard` branch on `list.Kind`: a `Reference`
+list has no Done/open split (an item is never finished) and no add-task FAB
+action — its FAB item is "Add item," opening `ReferenceItemPanel` in Add
+mode instead of `TaskDetailPanel`. `ReferenceRow` shows the item's name, a
+star toggle and — when the item has fields — a caption joining its first
+two `Label: value` pairs with " · ", quantities normalized
+(`FieldDisplay.NormalizeQuantity`). The empty-list and delete-confirmation
+copy read "items" instead of "tasks" for a `Reference` list
+(`DeleteWarning`).
 
 Areas and goals are never created or renamed through `NameDialog`, and
 lists are never created through it.
@@ -445,6 +467,63 @@ addressed as `?inbox=new` (the Inbox FAB or its empty state) or
   `GoalRow` offers only In progress goals, but still names a linked goal
   that has since closed.
   The Inbox never uses a dialog to capture.
+
+**Reference items use the same shell, addressed like a task.**
+`Layout/ReferenceItemPanel.razor` is addressed as `?item=new&list={listId}`
+(the list or area board's "Add item" FAB action) or `?item={itemId}`
+(tapping a `ReferenceRow`), mirroring `TaskDetailPanel`/`TaskQuery`'s
+`?task=` pattern. Header: X, star toggle on the right (`HeaderActions`, only
+once the item exists — no star while still adding). An unboxed `Typo.h6`
+name field sits under the header, same as a task's name. Below it, in edit
+and view modes only:
+
+1. `MarkdownField` over the item's `Description` (see below).
+2. `MudList` of fields — each a caption `Label` over a `ReferenceFieldValue`
+   (rendering per its `FieldKind`, below), with up/down `MudIconButton`s
+   reordering it and a tap opening `ReferenceFieldEditor` inline in the same
+   row's place; **Add field** at the bottom opens the same editor with
+   nothing to save into yet.
+3. Footer: a **Move to list** `MudSelect` (only `Reference` lists, an item
+   never crosses into a `Tasks` list) and a red trash `MudIconButton` on the
+   right, same delete-confirmation pattern as a task.
+
+As with a task, an existing item's fields save as they change — no Save
+button outside Add — and Add mode holds nothing until **Add item** commits
+the whole draft.
+
+**Descriptions are a shared `MarkdownField`, on tasks and reference items
+alike.** `Components/MarkdownField.razor` renders `Value` through
+`MarkdownRenderer.ToHtml` (Markdig, `DisableHtml()`, pipe tables, task lists
+with checkboxes disabled, links restricted to `http`/`https`/`mailto`,
+`target="_blank" rel="noopener noreferrer"` added to safe links) inside an
+outlined `MudPaper`, with an edit `MudIconButton` overlaid top-right. An
+empty description reads "No description" (read-only contexts) or an
+Add-a-description text button that opens the editor (editable contexts).
+Editing swaps the rendered view for a `MudTextField` (8 lines) plus
+Save/Cancel; Save calls `OnSave`, and the field stays in edit mode with the
+typed draft if the caller rejects the save, so a rejected write never
+silently discards what was typed. **An open edit is discarded, not saved,
+when its `DetailPanel` closes by overlay click** — the draft lives in
+`MarkdownField`'s own `_editing`/`_draft` state, not in the aggregate, and
+closing the panel unmounts the component with nothing sent; only an
+explicit Save commits it (plan 3 final review #7).
+
+**Field display kinds are detected, not chosen by default, and stay a
+client-side hint.** `State/FieldDisplay.Of(field)` reads the field's stored
+`Display` hint if present and valid, otherwise detects one from the value:
+an `http(s)://` value is `Link`, a path-shaped value (`C:\`, `\\`, `/`,
+`~/`) is `Path`, a `<number><unit>` value (`2.5kg`, `-10 C`) is `Quantity`,
+anything else is `Text`. `ReferenceFieldEditor` lets a field's display be
+overridden explicitly, stored back as the same lowercase-name hint
+(`FieldDisplay.HintFor`) — the domain never interprets it (`adr/0047`).
+`ReferenceFieldValue` renders per kind: `Link` as a `MudLink` opening in a
+new tab when the scheme is safe (plain text otherwise), `Path` as `<code>`
+with a copy `MudIconButton` next to it, `Quantity` normalized to `"<number>
+<unit>"` spacing, `Text` as pre-wrapped plain text. The copy button
+(`pspad-field-copy`) calls the `Clipboard` service and shows a snackbar —
+`Severity.Success` "Copied" on success, `Severity.Warning` "Could not copy —
+select the path instead." on failure (clipboard permission denied or
+unavailable).
 
 **Empty states share one component.** A page or board with no items yet
 shows `Components/EmptyState.razor` as the first cell of its grid, sized
@@ -500,7 +579,7 @@ icon reads unambiguously on its own.
 | Area | New list, Edit area (→ area panel), Delete area | FAB Menu |
 | Goals | Add goal (→ new-goal panel) | plain `MudFab` |
 | Goal | Edit goal (→ goal panel), Delete goal | FAB Menu |
-| List | Add task (→ new-task panel), Rename list, Delete list | FAB Menu |
+| List | Add task (→ new-task panel) or Add item (→ new-item panel) for a `Reference` list, Rename list, Delete list | FAB Menu |
 | Inbox | Capture (→ capture panel) | plain `MudFab` |
 | My Day, Settings, Statistics | none | no FAB |
 
@@ -643,6 +722,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 | `?area={areaId}`, `?area=new` | area detail overlay, on any of the above |
 | `?goal={goalId}`, `?goal=new` | goal detail overlay, on any of the above |
 | `?inbox={itemId}`, `?inbox=new` | inbox item overlay, on any of the above |
+| `?item={itemId}`, `?item=new&list={listId}` | reference item detail overlay, on any of the above |
 
 **Signed-out visitors land on `/welcome`**, not a bare login redirect.
 Sign-out ends the Keycloak session directly rather than only clearing local

@@ -1,6 +1,6 @@
 # Reference lists and descriptions — design
 
-Status: approved design, not yet built. Decisions of record:
+Status: Built. Decisions of record:
 [ADR-0047](../adr/0047-reference-items-are-their-own-aggregate.md),
 [ADR-0048](../adr/0048-descriptions-are-markdown.md).
 

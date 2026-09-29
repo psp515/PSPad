@@ -26,7 +26,7 @@ src/
     PSPad.Contracts/            wire shapes: command envelope, sync DTOs, statistics DTOs
     PSPad.Infrastructure/       Mongo client, connection string, generic repository, Keycloak/JWT, DI registration
   modules/
-    PSPad.Module.Tasks/         areas, lists, Inbox, tasks, steps, goals, recurrence, Today — pure, WASM-safe
+    PSPad.Module.Tasks/         areas, lists, Inbox, tasks, steps, goals, recurrence, Today, reference items — pure, WASM-safe
     PSPad.Module.Statistics/    queries over the event log
     PSPad.Module.Identity/      User, time zone, first-sign-in provisioning
 test/
@@ -140,10 +140,11 @@ transactions require one. Dev, prod and tests all run the same shape.
 |---|---|---|
 | `users` | one per person | `timeZone` (IANA), `provisionedAt` |
 | `areas` | user-defined areas | `name`, `position` |
-| `lists` | task lists, each inside one area | `areaId`, `name`, `position` |
+| `lists` | task lists, each inside one area | `areaId`, `name`, `position`, `kind` (`Tasks` or `Reference`, fixed at creation) |
 | `inboxes` | one per user | `items[]` |
-| `tasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `completedDays[]`, `createdAt` |
+| `tasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `completedDays[]`, `createdAt`, `description` (Markdown) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
+| `referenceitems` | items in a `Reference` list | `listId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`) |
 | `events` | the domain event log and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
@@ -169,6 +170,7 @@ transaction; the returned value stamps both the event and the aggregate's
 - every aggregate collection: `{userId: 1, seq: 1}` (delta sync)
 - `tasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`
 - `lists`: `{userId: 1, areaId: 1}`
+- `referenceitems`: `{userId: 1, listId: 1}`
 - `processed_commands`: TTL index on `at`, 30 days
 - `statistics_records`: `{userId: 1, _id: -1}` (the feed page),
   `{userId: 1, kind: 1, at: 1}` (the charts' window),
@@ -244,12 +246,31 @@ not stated there:
   closed goal to `InProgress`. `SetGoalDueDate` sets or clears an
   optional `dueOn`.
 - Deleting a container deletes its live children in the same command and
-  transaction (`adr/0042`): `DeleteArea` → its lists → their tasks;
-  `DeleteTaskList` → its tasks. Each child emits its own `TaskListDeleted` /
-  `TaskDeleted`; the list-to-tasks step is `TaskListCascade`. `CreateTask`,
-  `MoveTaskToList` and `OrganiseInboxItem` reject a missing or deleted target
-  list; `CreateTaskList` and `MoveTaskListToArea` reject a missing or deleted
-  target area.
+  transaction (`adr/0042`, extended to reference items by `adr/0047`):
+  `DeleteArea` → its lists → their tasks and reference items;
+  `DeleteTaskList` → its tasks and reference items. Each child emits its own
+  `TaskListDeleted` / `TaskDeleted` / `ReferenceItemDeleted`; the
+  list-to-children step is `TaskListCascade`. `CreateTask`, `MoveTaskToList`
+  and `OrganiseInboxItem` reject a missing or deleted target list, or a
+  target list whose `Kind` is not `Tasks`; `CreateReferenceItem` and
+  `MoveReferenceItemToList` reject a missing or deleted target list, or one
+  whose `Kind` is not `Reference` (`TaskList.RequireAcceptsTasks` /
+  `RequireAcceptsReferences`). `CreateTaskList` and `MoveTaskListToArea`
+  reject a missing or deleted target area. An Inbox item only ever becomes a
+  task — it never organises into a `Reference` list.
+- `ReferenceItem` (`adr/0047`) is its own aggregate, not a kind of task: a
+  `Name`, Markdown `Description`, `Starred`, dense `Position` and ordered
+  `ReferenceField(Id, Label, Value, Display?, Position)`. `Display` is an
+  opaque hint string the domain never interprets — `Text`/`Link`/`Path`/
+  `Quantity` is a client rendering concern (§4 of `specs/ui-spec.md`).
+  Commands: `CreateReferenceItem`, `RenameReferenceItem`,
+  `SetReferenceItemDescription`, `StarReferenceItem`, `MoveReferenceItemToList`,
+  `DeleteReferenceItem`, `AddReferenceField`, `EditReferenceField`,
+  `MoveReferenceField`, `RemoveReferenceField`. Field ordering reuses
+  `Positions` (dense, rewritten range), the same mechanism as steps.
+- `TodoTask.Description` (Markdown, `SetTaskDescription`) is rendered
+  client-side only (`adr/0048`) — the domain stores and moves a plain string,
+  never parses it.
 
 ---
 
@@ -606,9 +627,11 @@ touches `IDocumentStore<TodoTask>` directly.
 
 ## 10. Out of scope
 
-Habits, annual plans, integrations, the print domain, reference materials,
-push reminders, thought of the day, list types beyond plain — unchanged
-from AGENTS.md §3. Retention or archival of `statistics_records` —
+Habits, annual plans, integrations, the print domain, push reminders, the
+thought of the day — unchanged from AGENTS.md §3. Reference lists and task
+descriptions have shipped (`adr/0047`, `adr/0048`); a per-list typed field
+schema and other list kinds beyond `Tasks`/`Reference` remain out. Retention
+or archival of `statistics_records` —
 unbounded, same as `events` (§3, §11). Mid-session token renewal beyond the
 on-demand refresh described in §6. Offline sign-in for a device that has
 never signed in — impossible, the first token exchange requires Keycloak.
