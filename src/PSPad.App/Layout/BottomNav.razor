@@ -7,12 +7,13 @@
     <nav class="pspad-bottom-nav-slots" aria-label="Main">
         @Tab(NavTab.Inbox, "/inbox", Icons.Material.Filled.Inbox, "Inbox", Counts.Inbox)
         @Tab(NavTab.Areas, "/areas", Icons.Material.Filled.Folder, "Areas", 0)
-        <div class="@($"pspad-tab-myday {(Active == NavTab.MyDay ? "pspad-tab-active" : "")}")">
-            <MudFab Href="/" Color="Color.Primary" StartIcon="@Icons.Material.Filled.WbSunny"
-                    Class="pspad-myday-fab"
-                    UserAttributes="@(Active == NavTab.MyDay ? MyDayCurrentPage : MyDayAttributes)" />
-            <span class="pspad-tab-label">My Day</span>
-        </div>
+        <a href="/" class="@($"pspad-tab-myday {(Active == NavTab.MyDay ? "pspad-tab-active" : "")}")"
+           aria-label="My Day"
+           aria-current="@(Active == NavTab.MyDay ? "page" : null)">
+            <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.WbSunny"
+                    Class="pspad-myday-fab" UserAttributes="@MyDayFabAttributes" />
+            <span class="pspad-tab-label" aria-hidden="true">My Day</span>
+        </a>
         @Tab(NavTab.Goals, "/goals", Icons.Material.Filled.Flag, "Goals", 0)
         @Tab(NavTab.Statistics, "/statistics", Icons.Material.Filled.History, "Statistics", 0)
     </nav>
@@ -21,9 +22,8 @@
 @code {
     static readonly Dictionary<string, object> CurrentPage = new() { ["aria-current"] = "page" };
     static readonly Dictionary<string, object> NoAttributes = [];
-    static readonly Dictionary<string, object> MyDayAttributes = new() { ["aria-label"] = "My Day" };
-    static readonly Dictionary<string, object> MyDayCurrentPage =
-        new() { ["aria-label"] = "My Day", ["aria-current"] = "page" };
+    static readonly Dictionary<string, object> MyDayFabAttributes =
+        new() { ["aria-hidden"] = "true", ["tabindex"] = "-1" };
 
     NavTab Active => ActiveTab.For(Navigation.ToBaseRelativePath(Navigation.Uri));
 

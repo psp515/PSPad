@@ -52,9 +52,21 @@ public class BottomNavTests : Bunit.TestContext
 
         var nav = Render<BottomNav>();
 
-        var fab = nav.Find("a.pspad-myday-fab");
-        Assert.Equal("/", fab.GetAttribute("href"));
-        Assert.Contains("pspad-tab-active", nav.Find(".pspad-tab-myday").ClassList);
+        var link = nav.Find("a.pspad-tab-myday");
+        Assert.Equal("/", link.GetAttribute("href"));
+        Assert.Contains("pspad-tab-active", link.ClassList);
+    }
+
+    [Fact]
+    public void TheMyDayLabelIsInsideTheLinkAndNotAnnouncedTwice()
+    {
+        Arrange();
+
+        var nav = Render<BottomNav>();
+
+        var link = nav.Find("a.pspad-tab-myday");
+        Assert.NotNull(link.QuerySelector(".pspad-tab-label"));
+        Assert.Equal("true", nav.Find(".pspad-myday-fab").GetAttribute("aria-hidden"));
     }
 
     [Fact]
