@@ -13,6 +13,7 @@
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
+@inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -160,11 +161,19 @@ else
         var list = await ListStore.LoadAsync(ListId, CancellationToken.None);
         _list = list is null || list.Deleted ? null : list;
 
-        var all = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        var mine = all.Where(task => task.ListId == ListId && !task.Deleted).ToArray();
+        if (_list is { Kind: ListKind.Reference })
+        {
+            _open = [];
+            _done = [];
+        }
+        else
+        {
+            var all = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+            var mine = all.Where(task => task.ListId == ListId && !task.Deleted).ToArray();
 
-        _open = [.. mine.Where(task => !IsDone(task))];
-        _done = [.. mine.Where(IsDone)];
+            _open = [.. mine.Where(task => !IsDone(task))];
+            _done = [.. mine.Where(IsDone)];
+        }
 
         var items = await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _items = [.. items.Where(item => item.ListId == ListId && !item.Deleted)
@@ -260,8 +269,15 @@ else
 
     void OpenItem(ReferenceItem item) => Navigation.NavigateTo(ReferenceQuery.ForItem(Navigation.Uri, item.Id));
 
-    async Task StarItemAsync(ReferenceItem item) =>
-        await Sender.SendAsync(new StarReferenceItem(Guid.NewGuid(), State.UserId, item.Id, !item.Starred));
+    async Task StarItemAsync(ReferenceItem item)
+    {
+        var result = await Sender.SendAsync(new StarReferenceItem(Guid.NewGuid(), State.UserId, item.Id, !item.Starred));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't star the item.", Severity.Warning);
+        }
+    }
 
     public void Dispose() => Sender.Sent -= OnCommandSent;
 }

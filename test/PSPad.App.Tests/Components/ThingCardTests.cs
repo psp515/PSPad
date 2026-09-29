@@ -135,6 +135,20 @@ public class ThingCardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void EmptyTextShowsInsteadOfRowsWhenRowCountIsZero()
+    {
+        Arrange();
+
+        var card = Render<ThingCard>(parameters => Base(parameters, [])
+            .Add(p => p.Rows, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div class=\"pspad-custom-row\">Row</div>")))
+            .Add(p => p.RowCount, 0)
+            .Add(p => p.EmptyText, "No items yet."));
+
+        Assert.Contains("No items yet.", card.Markup);
+        Assert.Empty(card.FindAll(".pspad-custom-row"));
+    }
+
+    [Fact]
     public void CompletedAndDeletedTasksAreNotPreviewed()
     {
         Arrange();

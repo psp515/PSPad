@@ -16,6 +16,7 @@
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
+@inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -121,8 +122,15 @@ else
 
     void OpenItem(ReferenceItem item) => Navigation.NavigateTo(ReferenceQuery.ForItem(Navigation.Uri, item.Id));
 
-    async Task StarItemAsync(ReferenceItem item) =>
-        await Sender.SendAsync(new StarReferenceItem(Guid.NewGuid(), State.UserId, item.Id, !item.Starred));
+    async Task StarItemAsync(ReferenceItem item)
+    {
+        var result = await Sender.SendAsync(new StarReferenceItem(Guid.NewGuid(), State.UserId, item.Id, !item.Starred));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't star the item.", Severity.Warning);
+        }
+    }
 
     async Task ToggleAsync(TodoTask task)
     {

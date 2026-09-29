@@ -24,13 +24,13 @@
     {
         <MudDivider />
 
-        @if (Rows is not null)
-        {
-            @Rows
-        }
-        else if (Open.Count == 0 && EmptyText is not null)
+        @if (Count == 0 && EmptyText is not null)
         {
             <MudText Typo="Typo.body2" Class="pa-3">@EmptyText</MudText>
+        }
+        else if (Rows is not null)
+        {
+            @Rows
         }
         else
         {

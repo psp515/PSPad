@@ -5,6 +5,7 @@
 <ThingCard Id="@List.Id" Name="@List.Name" Href="@($"/lists/{List.Id}")" Icon="@ListIcon.For(List)"
            IconTitle="@ListIcon.LabelFor(List)" Tasks="@Tasks" Today="@Today"
            Rows="@(IsReference ? ItemRows : null)" RowCount="@(IsReference ? Items.Count : (int?)null)"
+           EmptyText="@(IsReference ? "No items yet." : null)"
            OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen">
     <Actions>
         @if (IsReference)

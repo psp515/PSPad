@@ -205,6 +205,20 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AReferenceListsCardWithNoItemsShowsEmptyText()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        Arrange(area, recipes);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        var card = page.FindComponent<PSPad.App.Components.ListCard>();
+
+        Assert.Contains("No items yet.", card.Markup);
+        Assert.Empty(card.FindComponents<PSPad.App.Components.ReferenceRow>());
+    }
+
+    [Fact]
     public void AReferenceListsCardAddButtonOpensANewItem()
     {
         var area = NewArea("Dom");
@@ -232,6 +246,23 @@ public class AreaBoardTests : Bunit.TestContext
 
         var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.True(stored!.Starred);
+    }
+
+    [Fact]
+    public void ARejectedStarFromACardSurfacesTheRejection()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        var item = Items(recipes.Id, 1)[0];
+        Arrange(area, recipes, item);
+        Services.AddSingleton<ICommandHandler<StarReferenceItem>>(
+            new RejectingHandler<StarReferenceItem>("That item no longer exists."));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+        page.Find(".pspad-reference-row button").Click();
+
+        var snackbar = page.Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("That item no longer exists.") == true);
     }
 
     [Fact]

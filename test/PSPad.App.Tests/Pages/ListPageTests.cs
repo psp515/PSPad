@@ -147,6 +147,22 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ARejectedStarSurfacesTheRejection()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        var item = NewItem(list.Id, "Bigos", 0);
+        Arrange(list, item);
+        Services.AddSingleton<ICommandHandler<StarReferenceItem>>(
+            new RejectingHandler<StarReferenceItem>("That item no longer exists."));
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+        page.Find(".pspad-reference-row button").Click();
+
+        var snackbar = page.Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("That item no longer exists.") == true);
+    }
+
+    [Fact]
     public void OpeningAReferenceRowNavigatesToTheItem()
     {
         var list = NewList("Przepisy", ListKind.Reference);
