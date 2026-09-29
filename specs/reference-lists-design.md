@@ -169,8 +169,10 @@ reads `ReferenceItem`. No Statistics projection is added.
 Same slot as `TaskDetailPanel`.
 
 - Name (editable) and star.
-- Fields — a "Fields" section (`ReferenceFieldList`, laid out like the task
-  panel's steps); each row shows the label and the value rendered by kind:
+- Labels — a "Labels" section (`ReferenceFieldList`, laid out like the task
+  panel's steps; the type and command names stay `ReferenceField`/
+  `AddReferenceField` — only the section heading and its UI copy changed);
+  each row shows the label and the value rendered by kind:
 
 | Kind | Rendering |
 |---|---|
@@ -181,8 +183,22 @@ Same slot as `TaskDetailPanel`.
 
   Clicking a row edits it in place: label, value, and a `MudSelect` kind
   (Automatic, Text, Link, Path, Quantity). Up/down icons reorder; a Close icon
-  per row removes; the last row is an inline Label/Value add row (Enter adds,
-  display kind automatic).
+  per row removes; the last row is an inline Label/Value add row. Enter in
+  Label moves focus to Value without adding; Enter in Value adds (a blank
+  label re-focuses Label instead), clears both and refocuses Label; display
+  kind automatic.
+
+  Dropping onto a Value input (the add row's, and the inline editor's) fills
+  it from the drag: the first non-comment URI of a `text/uri-list` payload,
+  else `text/plain`, then focuses Value. Dropping a local file cannot fill
+  it — browsers never expose a file's full path — so the drop is only
+  prevented and an Info snackbar explains the Windows Shift+right-click
+  "Copy as path" workaround; nothing is uploaded. `wwwroot/js/drop.js`
+  (`attach(element, dotnetRef)`) is imported per component instance on
+  first render and attached to the Value input's element reference,
+  reporting back through `[JSInvokable] OnDropped(string? uriList,
+  string? text, bool hadFiles)`; a failed import logs an `ILogger` warning
+  and never throws.
 - List — below the fields, after a divider: the task panel's `ListRow`
   (`Area › List`), Reference lists only; picking one moves the item.
 - Description — a "Description" section below the list row, `MarkdownField`

@@ -14,6 +14,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
 {
     static readonly Guid User = Guid.NewGuid();
     static readonly DateOnly Today = new(2026, 9, 29);
+    const string FocusIdentifier = "Blazor._internal.domWrapper.focus";
 
     [Fact]
     public async Task EnterInTheValueFieldAddsAFieldAndClearsTheAddRow()
@@ -33,10 +34,11 @@ public class ReferenceFieldListTests : Bunit.TestContext
         Assert.Null(field.Display);
         Assert.Equal("", fields.Find(".pspad-field-add-label input").GetAttribute("value") ?? "");
         Assert.Equal("", fields.Find(".pspad-field-add-value input").GetAttribute("value") ?? "");
+        Assert.Contains(JSInterop.Invocations, invocation => invocation.Identifier == FocusIdentifier);
     }
 
     [Fact]
-    public async Task EnterInTheLabelFieldAddsAField()
+    public async Task EnterInTheLabelFieldMovesFocusToValueWithoutAdding()
     {
         var item = NewItem();
         var replica = AppTestHost.Arrange(this, User, Today, item);
@@ -46,7 +48,9 @@ public class ReferenceFieldListTests : Bunit.TestContext
         fields.Find(".pspad-field-add-label input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
-        Assert.Equal("Servings", Assert.Single(stored!.Fields).Label);
+        Assert.Empty(stored!.Fields);
+        Assert.Equal("Servings", fields.Find(".pspad-field-add-label input").GetAttribute("value"));
+        Assert.Contains(JSInterop.Invocations, invocation => invocation.Identifier == FocusIdentifier);
     }
 
     [Fact]
@@ -76,6 +80,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
 
         var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Empty(stored!.Fields);
+        Assert.Contains(JSInterop.Invocations, invocation => invocation.Identifier == FocusIdentifier);
     }
 
     [Fact]
@@ -88,7 +93,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
 
         var fields = RenderList(item);
         fields.Find(".pspad-field-add-label input").Input("Time");
-        fields.Find(".pspad-field-add-label input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        fields.Find(".pspad-field-add-value input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         var snackbar = Services.GetRequiredService<ISnackbar>();
         Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("Item no longer exists.") == true);
@@ -302,6 +307,64 @@ public class ReferenceFieldListTests : Bunit.TestContext
         Assert.Equal("Cooking time", field.Label);
         Assert.Equal("45 min", field.Value);
         Assert.Equal("Cooking time", fields.Find(".pspad-field-row .pspad-field-label").TextContent.Trim());
+    }
+
+    [Fact]
+    public void DroppingAUriListFillsTheValueInput()
+    {
+        var item = NewItem();
+        AppTestHost.Arrange(this, User, Today, item);
+        var fields = RenderList(item);
+
+        fields.InvokeAsync(() => fields.Instance.OnDropped("https://example.com/x", null, false));
+        fields.Render();
+
+        Assert.Equal("https://example.com/x", fields.Find(".pspad-field-add-value input").GetAttribute("value"));
+        Assert.Contains(JSInterop.Invocations, invocation => invocation.Identifier == FocusIdentifier);
+    }
+
+    [Fact]
+    public void DroppingAUriListIgnoresCommentLinesAndTakesTheFirstUri()
+    {
+        var item = NewItem();
+        AppTestHost.Arrange(this, User, Today, item);
+        var fields = RenderList(item);
+
+        fields.InvokeAsync(() => fields.Instance.OnDropped(
+            "# a comment\nhttps://example.com/first\nhttps://example.com/second", null, false));
+        fields.Render();
+
+        Assert.Equal("https://example.com/first", fields.Find(".pspad-field-add-value input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void DroppingPlainTextFillsTheValueInput()
+    {
+        var item = NewItem();
+        AppTestHost.Arrange(this, User, Today, item);
+        var fields = RenderList(item);
+
+        fields.InvokeAsync(() => fields.Instance.OnDropped(null, "OneDrive/recipes.txt", false));
+        fields.Render();
+
+        Assert.Equal("OneDrive/recipes.txt", fields.Find(".pspad-field-add-value input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void DroppingAFileWithNoUsableTextShowsAnInfoSnackbarAndLeavesTheValueEmpty()
+    {
+        var item = NewItem();
+        AppTestHost.Arrange(this, User, Today, item);
+        var fields = RenderList(item);
+
+        fields.InvokeAsync(() => fields.Instance.OnDropped(null, null, true));
+        fields.Render();
+
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(snackbar.ShownSnackbars,
+            snack => snack.Message?.Contains("Browsers can't read a file's full path") == true
+                     && snack.Severity == Severity.Info);
+        Assert.Equal("", fields.Find(".pspad-field-add-value input").GetAttribute("value") ?? "");
     }
 
     IRenderedComponent<ReferenceFieldList> RenderList(ReferenceItem item) =>

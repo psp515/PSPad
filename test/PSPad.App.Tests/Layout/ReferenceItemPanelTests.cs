@@ -54,7 +54,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
 
         var sections = panel.FindAll(".pspad-panel-section");
-        Assert.Equal(["Fields", "Description"],
+        Assert.Equal(["Labels", "Description"],
             sections.Select(section => section.QuerySelector(".pspad-panel-section-title")!.TextContent.Trim()));
         Assert.Equal(["Servings", "Time"],
             sections[0].QuerySelectorAll(".pspad-field-label").Select(label => label.TextContent.Trim()));
@@ -370,7 +370,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
 
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)list.Id));
 
-        Assert.Equal(["Fields", "Description"],
+        Assert.Equal(["Labels", "Description"],
             panel.FindAll(".pspad-panel-section").Select(section =>
                 section.QuerySelector(".pspad-panel-section-title")!.TextContent.Trim()));
         Assert.Contains("Dom › Przepisy", panel.Find(".pspad-task-list").TextContent);

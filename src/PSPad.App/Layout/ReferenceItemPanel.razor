@@ -36,7 +36,7 @@
 
         @if (Mode != PanelMode.Closed)
         {
-            <PanelSection Title="Fields" Class="pspad-item-fields">
+            <PanelSection Title="Labels" Class="pspad-item-fields">
                 @if (_item is not null)
                 {
                     <ReferenceFieldList @key="_item.Id" Item="@_item" UserId="@State.UserId" Disabled="@Disabled"

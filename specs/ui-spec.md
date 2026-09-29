@@ -480,21 +480,36 @@ name field sits under the header, same as a task's name. Below it, in every
 mode (Add included), mirroring the task panel's content → divider →
 property rows → Description order:
 
-1. **Fields** — a `PanelSection` holding `ReferenceFieldList`, laid out like
-   `StepList` (the same `pspad-step` rows, dense, no big buttons): each row
-   a caption `Label` over a `ReferenceFieldValue` (rendering per its
-   `FieldKind`, below), small up/down `MudIconButton`s reordering it and a
-   Close icon removing it ("Remove {label}"); a tap on the row body opens
-   `ReferenceFieldEditor` (compact: label, value, display kind, Save/Cancel/
-   Remove) in the row's place. The last row is the add row — a `+` lead and
-   two unboxed dense fields, **Label** and **Value**; Enter in either (only
-   Enter, like steps — leaving a field never adds) sends `AddReferenceField`
-   with an automatic display kind, clears both and puts focus back on Label;
-   a rejection restores the typed text. Each field row carries the same
-   44px lead column, holding a muted icon for its kind, so labels line up
-   with the add row. A click on a link or the copy button inside a row does
-   not open the editor. The
-   kind select lives only in the editor of an existing field.
+1. **Labels** — a `PanelSection` titled "Labels" holding `ReferenceFieldList`
+   (the type and its fields stay named `ReferenceField`/`Fields` — only the
+   UI wording changed), laid out like `StepList` (the same `pspad-step` rows,
+   dense, no big buttons): each row a caption `Label` over a
+   `ReferenceFieldValue` (rendering per its `FieldKind`, below), small
+   up/down `MudIconButton`s reordering it and a Close icon removing it
+   ("Remove {label}"); a tap on the row body opens `ReferenceFieldEditor`
+   (compact: label, value, display kind, Save/Cancel/Remove) in the row's
+   place. The last row is the add row — a `+` lead and two unboxed dense
+   fields, **Label** and **Value**. Enter in **Label** never adds — it moves
+   focus to **Value**; Enter in **Value** sends `AddReferenceField` with an
+   automatic display kind (blank label re-focuses Label instead of sending),
+   clears both and puts focus back on Label; a rejection restores the typed
+   text. Each field row carries the same 44px lead column, holding a muted
+   icon for its kind, so labels line up with the add row. A click on a link
+   or the copy button inside a row does not open the editor. The kind select
+   lives only in the editor of an existing field.
+
+   **Dropping onto the Value input** (add row, and the inline editor's Value
+   input) accepts a dragged link or text: a `text/uri-list` payload fills it
+   with the first non-comment (`#`) URI, `text/plain` otherwise, then focuses
+   Value. A dropped local file cannot be filled — browsers never expose a
+   file's full path — so the drop is prevented (no navigation, no upload) and
+   an Info snackbar says so, directing Windows users to Shift+right-click →
+   Copy as path. Implemented as a small JS module
+   (`wwwroot/js/drop.js`, `attach(element, dotnetRef)`) imported and attached
+   to the input's element reference on first render, calling back into
+   `[JSInvokable] OnDropped(string? uriList, string? text, bool hadFiles)`;
+   import or attach failure degrades silently (`ILogger` warning, never
+   thrown, never `stderr`). Disposed with the component.
 2. A `MudDivider`, then the property rows: the same **`ListRow`** the task
    panel uses (folder icon, "List", `Area › List`), offering only
    non-deleted `Reference` lists — an item never crosses into a `Tasks`
@@ -524,7 +539,7 @@ the panel closes.
 **Panel subsections share `PanelSection`.** `Components/PanelSection.razor`
 is a `MudDivider` followed by a muted `Typo.overline` title
 (`pspad-panel-section-title`) over its content, with `px-3` padding. It
-heads "Description" in both panels and "Fields" in the reference panel.
+heads "Description" in both panels and "Labels" in the reference panel.
 
 **Descriptions are a shared `MarkdownField`, on tasks and reference items
 alike, always present and saved as focus leaves.** There is no

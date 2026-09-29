@@ -1,8 +1,12 @@
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Tasks.References
+@using Microsoft.Extensions.Logging
+@implements IAsyncDisposable
 @inject CommandSender Sender
 @inject ISnackbar Snackbar
+@inject IJSRuntime Js
+@inject ILogger<ReferenceFieldList> Logger
 
 <div class="pspad-fields d-flex flex-column">
     @for (var index = 0; index < Fields.Count; index++)
@@ -50,11 +54,11 @@
             <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary" />
         </span>
         <MudTextField @ref="_labelInput" T="string" Class="pspad-step-add pspad-field-add-label flex-grow-1 mt-0"
-                      @bind-Value="_newLabel" Placeholder="Label" aria-label="New field label" Underline="false"
-                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
-        <MudTextField T="string" Class="pspad-step-add pspad-field-add-value flex-grow-1 mt-0"
-                      @bind-Value="_newValue" Placeholder="Value" aria-label="New field value" Underline="false"
-                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
+                      @bind-Value="_newLabel" Placeholder="Label" aria-label="New label" Underline="false"
+                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@LabelKeyDownAsync" />
+        <MudTextField @ref="_valueInput" T="string" Class="pspad-step-add pspad-field-add-value flex-grow-1 mt-0"
+                      @bind-Value="_newValue" Placeholder="Value" aria-label="New label value" Underline="false"
+                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@ValueKeyDownAsync" />
     </div>
 </div>
 
@@ -66,14 +70,121 @@
     [Parameter] public EventCallback Changed { get; set; }
 
     MudTextField<string>? _labelInput;
+    MudTextField<string>? _valueInput;
     string _newLabel = "";
     string _newValue = "";
     bool _adding;
     Guid? _editingFieldId;
+    IJSObjectReference? _dropModule;
+    IJSObjectReference? _dropListener;
+    DotNetObjectReference<ReferenceFieldList>? _dropReference;
 
     IReadOnlyList<ReferenceField> Fields => Item?.Fields ?? Draft ?? [];
 
-    async Task AddOnEnterAsync(KeyboardEventArgs args)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _valueInput?.InputReference is not null)
+        {
+            try
+            {
+                _dropModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/drop.js");
+                _dropReference = DotNetObjectReference.Create(this);
+                _dropListener = await _dropModule.InvokeAsync<IJSObjectReference>(
+                    "attach", _valueInput.InputReference.ElementReference, _dropReference);
+            }
+            catch (JSException ex)
+            {
+                Logger.LogWarning(ex, "Drop target unavailable for the reference field add row");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnDropped(string? uriList, string? text, bool hadFiles)
+    {
+        var dropped = FirstUri(uriList) ?? NonBlank(text);
+
+        if (dropped is not null)
+        {
+            _newValue = dropped;
+            StateHasChanged();
+
+            if (_valueInput is not null)
+            {
+                await _valueInput.FocusAsync();
+            }
+
+            return;
+        }
+
+        if (hadFiles)
+        {
+            Snackbar.Add(
+                "Browsers can't read a file's full path. On Windows use Shift+right-click → Copy as path, then paste.",
+                Severity.Info);
+        }
+    }
+
+    static string? FirstUri(string? uriList)
+    {
+        if (string.IsNullOrWhiteSpace(uriList))
+        {
+            return null;
+        }
+
+        foreach (var rawLine in uriList.Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0 || line.StartsWith('#'))
+            {
+                continue;
+            }
+
+            return line;
+        }
+
+        return null;
+    }
+
+    static string? NonBlank(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_dropListener is not null)
+            {
+                await _dropListener.InvokeVoidAsync("dispose");
+                await _dropListener.DisposeAsync();
+            }
+        }
+        catch (JSException)
+        {
+        }
+
+        _dropReference?.Dispose();
+
+        if (_dropModule is not null)
+        {
+            try
+            {
+                await _dropModule.DisposeAsync();
+            }
+            catch (JSException)
+            {
+            }
+        }
+    }
+
+    async Task LabelKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && _valueInput is not null)
+        {
+            await _valueInput.FocusAsync();
+        }
+    }
+
+    async Task ValueKeyDownAsync(KeyboardEventArgs args)
     {
         if (args.Key == "Enter")
         {
@@ -93,8 +204,18 @@
     {
         var label = (_newLabel ?? "").Trim();
 
-        if (Disabled || _adding || label.Length == 0)
+        if (Disabled || _adding)
         {
+            return;
+        }
+
+        if (label.Length == 0)
+        {
+            if (_labelInput is not null)
+            {
+                await _labelInput.FocusAsync();
+            }
+
             return;
         }
 

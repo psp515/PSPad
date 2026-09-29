@@ -173,6 +173,35 @@ public class ReferenceFieldValueTests : Bunit.TestContext
         Assert.NotEmpty(editor.FindAll(".pspad-field-editor-remove"));
     }
 
+    [Fact]
+    public void DroppingAUriListFillsTheEditorsValueInput()
+    {
+        Arrange();
+        var editor = RenderEditor(null);
+        var component = editor.FindComponent<ReferenceFieldEditor>();
+
+        editor.InvokeAsync(() => component.Instance.OnDropped("https://example.com/x", null, false));
+        editor.Render();
+
+        Assert.Equal("https://example.com/x", editor.Find(".pspad-field-value-input textarea").TextContent);
+    }
+
+    [Fact]
+    public void DroppingAFileWithNoUsableTextShowsAnInfoSnackbarInTheEditor()
+    {
+        Arrange();
+        var editor = RenderEditor(null);
+        var component = editor.FindComponent<ReferenceFieldEditor>();
+
+        editor.InvokeAsync(() => component.Instance.OnDropped(null, null, true));
+        editor.Render();
+
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(snackbar.ShownSnackbars,
+            snack => snack.Message?.Contains("Browsers can't read a file's full path") == true
+                     && snack.Severity == Severity.Info);
+    }
+
     IRenderedComponent<ReferenceFieldValue> Render(ReferenceField field) =>
         Render<ReferenceFieldValue>(parameters => parameters.Add(p => p.Field, field));
 
