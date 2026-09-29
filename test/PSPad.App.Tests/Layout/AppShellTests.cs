@@ -34,13 +34,13 @@ public class AppShellTests : Bunit.TestContext
     static readonly Guid User = Guid.NewGuid();
 
     [Fact]
-    public void ItRendersOneSidebarPerBreakpointBranch()
+    public void OnlyTheDesktopCarriesTheSidebar()
     {
         Arrange();
 
         var shell = Render<AppShell>();
 
-        Assert.Equal(2, shell.FindComponents<NavSidebar>().Count);
+        Assert.Single(shell.FindComponents<NavSidebar>());
     }
 
     [Fact]
@@ -74,26 +74,78 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheTemporaryDrawerIsMobileOnly()
+    public void ThereIsNoHamburgerAnymore()
     {
         Arrange();
 
         var shell = Render<AppShell>();
 
-        var temporary = shell.FindComponents<MudDrawer>()
-            .Single(drawer => drawer.Instance.Variant == DrawerVariant.Temporary
-                && drawer.FindComponents<NavSidebar>().Count > 0);
-        Assert.Contains("d-md-none", temporary.Find(".mud-drawer").ClassList);
+        Assert.Empty(shell.FindAll("#pspad-drawer-toggle"));
     }
 
     [Fact]
-    public void TheHamburgerCarriesTheMobileOnlyClass()
+    public void PhonesGetTheTopBarBottomBarAndAccountDrawer()
     {
         Arrange();
 
         var shell = Render<AppShell>();
 
-        Assert.Contains("d-md-none", shell.Find("#pspad-drawer-toggle").ClassList);
+        Assert.Single(shell.FindComponents<MobileTopBar>());
+        Assert.Single(shell.FindComponents<BottomNav>());
+        Assert.Single(shell.FindComponents<AccountDrawer>());
+    }
+
+    [Fact]
+    public void TheAvatarOpensTheAccountDrawer()
+    {
+        Arrange();
+        var shell = Render<AppShell>();
+
+        shell.Find(".pspad-avatar-button").Click();
+
+        Assert.True(shell.FindComponent<AccountDrawer>().Instance.Open);
+    }
+
+    [Fact]
+    public async Task CrossingToDesktopClosesTheAccountDrawer()
+    {
+        Arrange();
+        var viewport = new AppTestHost.FakeViewport(isDesktop: false);
+        Services.AddSingleton<IViewport>(viewport);
+        var shell = Render<AppShell>();
+        shell.Find(".pspad-avatar-button").Click();
+        Assert.True(shell.FindComponent<AccountDrawer>().Instance.Open);
+
+        await shell.InvokeAsync(() => viewport.ChangeTo(true));
+
+        shell.WaitForAssertion(() => Assert.False(shell.FindComponent<AccountDrawer>().Instance.Open));
+    }
+
+    [Fact]
+    public void NavigatingClosesTheAccountDrawer()
+    {
+        Arrange();
+        var shell = Render<AppShell>();
+        shell.Find(".pspad-avatar-button").Click();
+
+        Services.GetRequiredService<BunitNavigationManager>().NavigateTo("settings");
+
+        shell.WaitForAssertion(() => Assert.False(shell.FindComponent<AccountDrawer>().Instance.Open));
+    }
+
+    [Fact]
+    public void TheAccountDrawerCarriesTheSignedInIdentity()
+    {
+        Arrange(displayName: "Ada Lovelace", email: "ada@example.com");
+
+        var shell = Render<AppShell>();
+
+        shell.WaitForAssertion(() =>
+        {
+            var drawer = shell.FindComponent<AccountDrawer>().Instance;
+            Assert.Equal("ada@example.com", drawer.Email);
+            Assert.Equal("Ada Lovelace", drawer.DisplayName);
+        });
     }
 
     [Fact]

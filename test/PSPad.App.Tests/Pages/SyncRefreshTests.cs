@@ -24,7 +24,7 @@ public class SyncRefreshTests : Bunit.TestContext
     static readonly Type[] ReplicaBacked =
     [
         typeof(PSPad.App.Pages.Today), typeof(InboxPage), typeof(GoalsPage),
-        typeof(AreaBoard), typeof(ListPage), typeof(GoalPage)
+        typeof(AreaBoard), typeof(ListPage), typeof(GoalPage), typeof(AreasIndex)
     ];
 
     static readonly Type[] NotReplicaBacked =

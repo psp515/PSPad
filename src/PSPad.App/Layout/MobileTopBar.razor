@@ -1,0 +1,42 @@
+@using PSPad.App.Components
+@using PSPad.App.State
+@inject PageHeader Header
+@implements IDisposable
+
+<MudAppBar Elevation="0" Dense="true" Class="d-md-none pspad-top-bar">
+    @if (Header.BackHref is not null)
+    {
+        <MudIconButton Class="pspad-top-back" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary"
+                       Edge="Edge.Start" Href="@Header.BackHref" aria-label="@(Header.BackLabel ?? "Back")" />
+    }
+    <div class="pspad-top-title">
+        <MudText Typo="Typo.h6" Color="Color.Primary" Class="pspad-ellipsis">@Header.Title</MudText>
+        @if (Header.Subtitle is { Length: > 0 } subtitle)
+        {
+            <MudText Typo="Typo.caption" Class="pspad-ellipsis pspad-muted">@subtitle</MudText>
+        }
+    </div>
+    <MudSpacer />
+    <ConnectionStatus />
+    <MudIconButton Class="pspad-avatar-button" Edge="Edge.End" OnClick="@OnAvatar" aria-label="Account">
+        <MudAvatar Size="Size.Small" Style="@($"background:{AvatarColor.For(UserId)};color:#FFFFFF")">
+            @AvatarColor.InitialOf(DisplayName.Length > 0 ? DisplayName : Email)
+        </MudAvatar>
+    </MudIconButton>
+</MudAppBar>
+
+@code {
+    [Parameter] public string Email { get; set; } = "";
+
+    [Parameter] public string DisplayName { get; set; } = "";
+
+    [Parameter] public Guid UserId { get; set; }
+
+    [Parameter] public EventCallback OnAvatar { get; set; }
+
+    protected override void OnInitialized() => Header.Changed += OnHeaderChanged;
+
+    void OnHeaderChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Header.Changed -= OnHeaderChanged;
+}

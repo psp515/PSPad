@@ -1,0 +1,31 @@
+@using PSPad.App.State
+@inject PageHeader Header
+
+@if (Title.Length > 0)
+{
+    <div class="d-none d-md-flex align-center gap-1 mb-4 pspad-page-heading">
+        @if (BackHref is not null)
+        {
+            <MudIconButton Class="@BackClass" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary"
+                           Href="@BackHref" aria-label="@BackLabel" />
+        }
+        @Adornment
+        <MudText Typo="Typo.h5" Color="Color.Primary">@Title</MudText>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter] public string? Subtitle { get; set; }
+
+    [Parameter] public string? BackHref { get; set; }
+
+    [Parameter] public string BackLabel { get; set; } = "Back";
+
+    [Parameter] public string? BackClass { get; set; }
+
+    [Parameter] public RenderFragment? Adornment { get; set; }
+
+    protected override void OnParametersSet() => Header.Set(Title, Subtitle, BackHref, BackLabel);
+}

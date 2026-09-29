@@ -16,7 +16,7 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Goals</MudText>
+<PageHeading Title="Goals" />
 
 @if (!_loaded)
 {
@@ -31,7 +31,7 @@ else
     <MudGrid Spacing="4" Class="pspad-goals-in-progress">
         @if (_active.Count == 0 && _achieved.Count == 0 && _notAchieved.Count == 0)
         {
-            <MudItem xs="12" sm="6" md="4" xl="3">
+            <MudItem xs="12" sm="6" lg="4" xl="3">
                 <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="No goals yet." CreateText="Add goal"
                             OnCreate="@AddGoal" />
             </MudItem>
@@ -75,7 +75,7 @@ else
             <MudGrid Spacing="4">
                 @foreach (var goal in goals)
                 {
-                    <MudItem @key="goal.Id" xs="12" sm="6" md="4" xl="3">
+                    <MudItem @key="goal.Id" xs="12" sm="6" lg="4" xl="3">
                         <GoalSummaryCard Goal="@goal" Tasks="@TasksOf(goal.Id)" Today="@State.Today"
                                          OnOpen="@(() => OpenGoal(goal))" />
                     </MudItem>
@@ -85,7 +85,7 @@ else
     };
 
     RenderFragment Card(Goal goal) =>
-        @<MudItem @key="goal.Id" xs="12" sm="6" md="4" xl="3">
+        @<MudItem @key="goal.Id" xs="12" sm="6" lg="4" xl="3">
             <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames"
                       Today="@State.Today" TimeZone="@State.TimeZone"
                       OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"

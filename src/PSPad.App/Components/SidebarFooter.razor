@@ -1,0 +1,30 @@
+@implements IDisposable
+
+<div class="px-3 py-2 pspad-sidebar-footer">
+    <ConnectionStatus />
+    <div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@_now.ToString("yyyy-MM-dd HH:mm")</MudText>
+    </div>
+    <div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">PSPad &middot; GPL v3</MudText>
+    </div>
+</div>
+
+@code {
+    DateTime _now = DateTime.Now;
+    PeriodicTimer? _clock;
+
+    protected override void OnInitialized() => _ = RunClockAsync();
+
+    async Task RunClockAsync()
+    {
+        _clock = new PeriodicTimer(TimeSpan.FromMinutes(1));
+        while (await _clock.WaitForNextTickAsync())
+        {
+            _now = DateTime.Now;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose() => _clock?.Dispose();
+}

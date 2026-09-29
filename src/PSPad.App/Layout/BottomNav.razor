@@ -1,0 +1,58 @@
+@using PSPad.App.State
+@inject NavigationManager Navigation
+@inject SidebarCounts Counts
+@implements IDisposable
+
+<MudAppBar Bottom="true" Elevation="1" Class="d-md-none pspad-bottom-nav">
+    <nav class="pspad-bottom-nav-slots" aria-label="Main">
+        @Tab(NavTab.Inbox, "/inbox", Icons.Material.Filled.Inbox, "Inbox", Counts.Inbox)
+        @Tab(NavTab.Areas, "/areas", Icons.Material.Filled.Folder, "Areas", 0)
+        <a href="/" class="@($"pspad-tab-myday {(Active == NavTab.MyDay ? "pspad-tab-active" : "")}")"
+           aria-label="My Day"
+           aria-current="@(Active == NavTab.MyDay ? "page" : null)">
+            <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.WbSunny"
+                    Class="pspad-myday-fab" UserAttributes="@MyDayFabAttributes" />
+            <span class="pspad-tab-label" aria-hidden="true">My Day</span>
+        </a>
+        @Tab(NavTab.Goals, "/goals", Icons.Material.Filled.Flag, "Goals", 0)
+        @Tab(NavTab.Statistics, "/statistics", Icons.Material.Filled.History, "Statistics", 0)
+    </nav>
+</MudAppBar>
+
+@code {
+    static readonly Dictionary<string, object> CurrentPage = new() { ["aria-current"] = "page" };
+    static readonly Dictionary<string, object> NoAttributes = [];
+    static readonly Dictionary<string, object> MyDayFabAttributes =
+        new() { ["aria-hidden"] = "true", ["tabindex"] = "-1" };
+
+    NavTab Active => ActiveTab.For(Navigation.ToBaseRelativePath(Navigation.Uri));
+
+    RenderFragment Tab(NavTab tab, string href, string icon, string label, int badge) =>
+        @<MudButton Href="@href" Variant="Variant.Text"
+                    Color="@(Active == tab ? Color.Primary : Color.Default)"
+                    Class="@($"pspad-tab {(Active == tab ? "pspad-tab-active" : "")}")"
+                    UserAttributes="@(Active == tab ? CurrentPage : NoAttributes)">
+            <span class="pspad-tab-icon">
+                <MudBadge Content="@badge" Visible="@(badge > 0)" Color="Color.Error" Overlap="true">
+                    <MudIcon Icon="@icon" />
+                </MudBadge>
+            </span>
+            <span class="pspad-tab-label">@label</span>
+        </MudButton>;
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        Counts.Changed += OnCountsChanged;
+    }
+
+    void OnLocationChanged(object? sender, LocationChangedEventArgs args) => InvokeAsync(StateHasChanged);
+
+    void OnCountsChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+        Counts.Changed -= OnCountsChanged;
+    }
+}

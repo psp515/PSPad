@@ -190,6 +190,116 @@ button.pspad-heatmap-cell:focus-visible {
     padding-bottom: 96px;
 }
 
+.pspad-bottom-nav {
+    height: 72px;
+}
+
+.pspad-bottom-nav .mud-toolbar {
+    height: 100%;
+    padding: 0;
+}
+
+.pspad-bottom-nav-slots {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    height: 100%;
+    align-items: center;
+}
+
+.pspad-tab.mud-button-root {
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+    border-radius: 0;
+    text-transform: none;
+}
+
+.pspad-tab .mud-button-label {
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pspad-tab-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 32px;
+    border-radius: 16px;
+}
+
+.pspad-tab-active .pspad-tab-icon {
+    background: var(--mud-palette-primary-hover);
+}
+
+.pspad-tab-label {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.pspad-tab-active .pspad-tab-label {
+    font-weight: 700;
+}
+
+.pspad-tab-myday {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    height: 100%;
+    padding-bottom: 10px;
+    box-sizing: border-box;
+}
+
+/* Raised half out of the bar so My Day reads as the app's centre, not one tab of five. */
+.pspad-tab-myday .pspad-myday-fab {
+    margin-top: -28px;
+    box-shadow: 0 0 0 4px var(--mud-palette-surface), var(--mud-elevation-6);
+}
+
+.pspad-tab-myday.pspad-tab-active .pspad-myday-fab {
+    box-shadow: 0 0 0 4px var(--mud-palette-primary-hover), var(--mud-elevation-6);
+}
+
+.pspad-top-title {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.pspad-ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 959.98px) {
+    .pspad-content {
+        padding-bottom: calc(96px + 72px);
+    }
+
+    .pspad-fab {
+        bottom: calc(72px + 16px);
+        right: 16px;
+    }
+
+    .pspad-fab.mud-fab-primary,
+    .pspad-fab .mud-fab-menu-button.mud-fab-primary {
+        background-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-surface));
+        color: var(--mud-palette-primary);
+    }
+
+    * {
+        scrollbar-width: none;
+    }
+
+    *::-webkit-scrollbar {
+        display: none;
+    }
+}
+
 /* A phone's on-screen keyboard covers the bottom of the screen without shrinking the
    layout viewport, so a drawer sized to it hides its own Add/Save footer under the keys.
    --pspad-visible-* track window.visualViewport (index.html). */
@@ -198,6 +308,12 @@ button.pspad-heatmap-cell:focus-visible {
         top: var(--pspad-visible-top, 0px) !important;
         height: var(--pspad-visible-height, 100dvh) !important;
     }
+}
+
+/* MudBlazor parks a closed temporary drawer just off the right edge but keeps its elevation,
+   so its shadow bleeds back into view. */
+.mud-drawer.mud-drawer-temporary.mud-drawer--closed {
+    box-shadow: none;
 }
 
 .pspad-brand-loader {

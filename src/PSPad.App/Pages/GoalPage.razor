@@ -19,32 +19,28 @@
 
 @if (!_loaded)
 {
+    <PageHeading Title="" />
     <MudSkeleton SkeletonType="SkeletonType.Text" Width="30%" Height="40px" Class="mb-4" />
     <RowSkeleton Count="6" />
 }
 else if (_goal is not null)
 {
-    <div class="d-flex align-center gap-1 mb-4">
-        <MudIconButton Class="pspad-back-to-goals" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary"
-                       Href="/goals" aria-label="Back to goals" />
-        <div class="d-flex flex-column">
-            <MudText Typo="Typo.h5" Color="Color.Primary">@_goal.Name</MudText>
-            <div class="d-flex align-center gap-2">
-                <MudChip T="string" Class="pspad-goal-status ma-0" Size="Size.Small" Variant="Variant.Outlined"
-                         Color="@(_goal.Status == GoalStatus.Achieved ? Color.Success : Color.Default)">@GoalStatusText.Of(_goal.Status)</MudChip>
-                @if (_goal.DueOn is { } due)
-                {
-                    <MudText Typo="Typo.caption" Class="@($"pspad-goal-due {(IsOverdue ? "" : "pspad-muted")}")"
-                             Color="@(IsOverdue ? Color.Error : Color.Inherit)">@($"Due {DueDateRow.Describe(due, State.Today)}")</MudText>
-                }
-            </div>
-        </div>
+    <PageHeading Title="@_goal.Name" Subtitle="@GoalStatusText.Of(_goal.Status)" BackHref="/goals"
+                 BackLabel="Back to goals" BackClass="pspad-back-to-goals" />
+    <div class="d-flex align-center gap-2 mb-4">
+        <MudChip T="string" Class="pspad-goal-status ma-0" Size="Size.Small" Variant="Variant.Outlined"
+                 Color="@(_goal.Status == GoalStatus.Achieved ? Color.Success : Color.Default)">@GoalStatusText.Of(_goal.Status)</MudChip>
+        @if (_goal.DueOn is { } due)
+        {
+            <MudText Typo="Typo.caption" Class="@($"pspad-goal-due {(IsOverdue ? "" : "pspad-muted")}")"
+                     Color="@(IsOverdue ? Color.Error : Color.Inherit)">@($"Due {DueDateRow.Describe(due, State.Today)}")</MudText>
+        }
     </div>
 
     <MudGrid Spacing="4">
         @if (_open.Count == 0)
         {
-            <MudItem xs="12" sm="6" md="4" xl="3">
+            <MudItem xs="12" sm="6" lg="4" xl="3">
                 <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="No open tasks." />
             </MudItem>
         }
@@ -106,6 +102,7 @@ else if (_goal is not null)
 }
 else
 {
+    <PageHeading Title="" />
     <MudText Typo="Typo.body1">This goal is not there anymore.</MudText>
 }
 
@@ -130,7 +127,7 @@ else
     bool IsOverdue => _goal is { Status: GoalStatus.InProgress } goal && goal.DueOn < State.Today;
 
     RenderFragment Card(TodoTask task) =>
-        @<MudItem @key="task.Id" xs="12" sm="6" md="4" xl="3">
+        @<MudItem @key="task.Id" xs="12" sm="6" lg="4" xl="3">
             <MudPaper Outlined="true" Class="pspad-task-card">
                 <TaskRow Task="@task" Today="@State.Today"
                          ListName="@ListNameOf(task)"

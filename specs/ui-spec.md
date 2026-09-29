@@ -40,6 +40,12 @@ fits, the class is legitimate — but it means the styling is specific to
 PSPad's brand or a one-off page need, not a generic layout or component
 problem MudBlazor already solves.
 
+A Mud component's `UserAttributes` dictionary cannot be combined with
+another unmatched attribute (`aria-label`, say) on the same element in
+MudBlazor 9 — the loose attribute wins and `UserAttributes` is dropped, so
+an accessible label goes into the dictionary alongside everything else
+rather than as a bare attribute beside it.
+
 Not every `pspad-*` class carries a CSS rule. Several exist purely as a
 stable selector for tests to find a MudBlazor element that has no other
 reliable hook (`pspad-sign-out`, `pspad-change-password`, `pspad-account-card`, `pspad-delete-account`,
@@ -154,23 +160,22 @@ read.
 ## 2. Layout & spacing
 
 **Card/row grids.** Every place a list of cards or rows is drawn uses
-`MudGrid Spacing="4"`, one `MudItem xs="12" sm="6" md="4" xl="3"` per item:
+`MudGrid Spacing="4"`, one `MudItem xs="12" sm="6" lg="4" xl="3"` per item:
 
 ```razor
 <MudGrid Spacing="4">
     @foreach (var item in items)
     {
-        <MudItem xs="12" sm="6" md="4" xl="3">
+        <MudItem xs="12" sm="6" lg="4" xl="3">
             <Card ... />
         </MudItem>
     }
 </MudGrid>
 ```
 
-One column on a phone, two on a tablet, three from `md`, four once the
-viewport passes MudBlazor's `xl` breakpoint (1920px). `sm`/`md`/`xl` (600px/960px/1920px) match
-`BrowserViewport`'s own `Breakpoint.MdAndUp` split used for the sidebar, so
-the grid and the shell agree on where "wide enough" starts. Row-flow, not
+One column on a phone, two from `sm` (600px) — still two at `md` (960px),
+where the permanent sidebar leaves too little width for three — three from
+`lg` (1280px), four from `xl` (1920px). Row-flow, not
 column-flow — DOM order stays reading order for keyboard and screen-reader
 navigation.
 
@@ -195,19 +200,46 @@ own card), and both skeleton components (`RowSkeleton`, `CardSkeleton`).
 sidebar's edge and uses the whole window instead of a centred column —
 individual pages never set their own max width. The container
 (`pspad-content`) carries 96px of bottom padding, the FAB's height plus its
-inset, so the FAB never covers the last row.
+inset, so the FAB never covers the last row. Below `md` that padding is
+`calc(96px + 72px)`, the extra 72px being `BottomNav`'s own height, so the
+bar never covers the last row either. Below `md`, every scrolling element
+(`*`) hides its scrollbar
+(`scrollbar-width: none`, `::-webkit-scrollbar { display: none }`) while
+still scrolling.
 
-**Sidebar breakpoint.** The sidebar is permanent at `md`+ (≥960px) and a
-temporary drawer behind a hamburger below it, using MudBlazor's display
-utilities (`d-none d-md-flex` / `d-md-none`), never `MudHidden` — `MudHidden`
-resolves through `IBreakpointService`'s JS round trip and renders its
-default branch before the first callback, flashing the wrong navigation on
-load. Both branches live in the DOM at all times, separated only by CSS
-resolved before first paint.
+**Sidebar breakpoint.** The sidebar is permanent at `md`+ (≥960px). Below
+`md` there is no navigation drawer at all: navigation is `MobileTopBar`
+plus `BottomNav` plus `AccountDrawer` (`adr/0050`,
+`specs/mobile-navigation-design.md`), using MudBlazor's display utilities
+(`d-none d-md-flex` / `d-md-none`), never `MudHidden` — `MudHidden` resolves
+through `IBreakpointService`'s JS round trip and renders its default branch
+before the first callback, flashing the wrong navigation on load. Both
+branches live in the DOM at all times, separated only by CSS resolved
+before first paint.
 
-**Mobile app bar.** Below `md`, a dense `MudAppBar` carries only the
-hamburger and `ConnectionStatus`. No account avatar — identity lives in the
-sidebar's `AccountBadge`, one tap away behind the hamburger.
+**Mobile app bar.** Below `md`, `Layout/MobileTopBar.razor` is a dense
+`MudAppBar`, left to right: a back `MudIconButton` (`ArrowBack`) when the
+current `PageHeading` set a `BackHref`; the page title (`Typo.h6`,
+`Color.Primary`, truncated with an ellipsis, optionally with a caption
+subtitle — a list screen shows its area's name); `ConnectionStatus`; a
+`MudAvatar` button that opens `AccountDrawer`. Title and subtitle come from
+`State/PageHeader.cs`, a scoped service `PageHeading` writes to on every
+parameter set, so the phone and desktop titles cannot drift.
+
+Below `md`, `Layout/BottomNav.razor` is a `MudAppBar Bottom="true"` with
+five equal slots — Inbox, Areas, My Day, Goals, Statistics — My Day raised
+as the centre `MudFab`, always filled `Color.Primary`; the other four are
+`MudButton`s (icon over label, the sidebar's own icons) whose active slot
+gets a primary icon, a bold label and a tonal pill. The active slot is a
+pure function of the path (`State/NavTab.cs`); query strings never change
+it.
+
+Below `md`, the avatar in `MobileTopBar` opens `Layout/AccountDrawer.razor`
+— a `MudDrawer`, `Anchor.End`, `DrawerVariant.Temporary`, 300px — holding
+`AccountBadge`, Settings and App info as `MudNavLink`s, then
+`Components/SidebarFooter.razor` (connection status, clock, "PSPad · GPL
+v3"), the same footer component the permanent sidebar uses. Navigating
+closes the drawer.
 
 **New version prompt.** When a deployed build's service worker has installed
 and is waiting, `AppShell` shows one `Severity.Info` snackbar — "A new version
@@ -225,11 +257,17 @@ only at the end of its data reload. Until then it renders a skeleton
 (`RowSkeleton` or `CardSkeleton`), never an empty state or a "Nothing here"
 message — a screen must never show an empty state it has not verified.
 
-**Title pattern.** A page's title is `<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Title</MudText>`,
-rendered both in the loading and loaded branches so nothing jumps on load.
-A screen nested under another (a list under its area) puts a back
-`MudIconButton` (`ArrowBack`, `Color.Primary`) to the left of its title,
-linking to the parent screen.
+**Title pattern.** A page's title is `<PageHeading Title="…" />`
+(`Components/PageHeading.razor`), with `BackHref`, `BackLabel`, `BackClass`,
+`Subtitle` and `Adornment` as needed, rendered both in the loading and
+loaded branches so nothing jumps on load. It draws the old `h5` markup
+(`MudText Typo.h5 Color.Primary mb-4`, with the back `MudIconButton` when
+`BackHref` is set — a screen nested under another, such as a list under
+its area, links back to the parent screen) inside `d-none d-md-flex` on
+desktop, and feeds the phone top bar (`MobileTopBar`, via `PageHeader`) the
+same title, subtitle and back link below `md`. One component means the two
+cannot drift. A page's loading branch renders `<PageHeading Title="" />`
+so the top bar never keeps the previous screen's title.
 
 **My Day sections.** Top to bottom: **Overdue** (`Color.Error` heading),
 **Today**, **Starred**, **Tomorrow**, **Goals in progress**, then one `MudExpansionPanels`
@@ -588,7 +626,7 @@ unavailable).
 
 **Empty states share one component.** A page or board with no items yet
 shows `Components/EmptyState.razor` as the first cell of its grid, sized
-like one card (`MudItem xs="12" sm="6" md="4" xl="3"`): an outlined
+like one card (`MudItem xs="12" sm="6" lg="4" xl="3"`): an outlined
 `MudPaper` with a dashed border, an icon and a message. The whole card is
 the create action — `role="button"`, focusable, Enter/Space or a click
 starts creating the first item; no separate button. Only after `_loaded` —
@@ -643,6 +681,11 @@ icon reads unambiguously on its own.
 | List | Add task (→ new-task panel) or Add item (→ new-item panel) for a `Reference` list, Rename list, Delete list | FAB Menu |
 | Inbox | Capture (→ capture panel) | plain `MudFab` |
 | My Day, Settings, Statistics | none | no FAB |
+
+Below `md`, the page FAB is a Material-3 tonal container — a 24%
+primary/surface mix with a primary-coloured icon — rather than a solid
+accent circle; the raised My Day button (`BottomNav`) is the only solid
+accent circle on a phone.
 
 `+ New area` stays pinned in the sidebar — it is not a page's own action,
 it belongs to the sidebar's area list. Item-level rename/delete stays on
@@ -753,7 +796,7 @@ the example. The Consistency heatmap is not a `MudChart` — see §1.
 
 ## 5. Navigation & auth screen shapes
 
-**Sidebar**, top to bottom, one navigation tree at every width: a
+**Sidebar**, top to bottom, one navigation tree at `md`+: a
 non-interactive `AccountBadge` (avatar, display name, email — a label, not
 a control), then a nav group of **My Day / Inbox / Goals / Statistics**,
 divider, the user's areas in `Position` order plus **+ New area**, divider,
@@ -761,6 +804,9 @@ divider, the user's areas in `Position` order plus **+ New area**, divider,
 status, current date/time, "PSPad · GPL v3"). There is no search field in
 the sidebar (temporarily unreachable from the UI, tracked as a known gap,
 not a page to recreate speculatively) and no dropdown on the account badge.
+Below `md` there is no sidebar: phones navigate through `MobileTopBar` and
+`BottomNav` instead, with the sidebar's account badge, Settings, App info
+and footer moved into `AccountDrawer` (`adr/0050`).
 
 **Routes:**
 
@@ -768,6 +814,7 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 |---|---|
 | `/` | My Day |
 | `/inbox` | Inbox |
+| `/areas` | opens the last-used area on this device, else the first; empty state when there are none |
 | `/areas/{areaId}` | area screen — list cards |
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |

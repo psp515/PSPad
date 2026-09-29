@@ -52,11 +52,14 @@ public static class AppTestHost
         context.Services.AddSingleton<IDocumentStore<ReferenceItem>>(new ReplicaDocumentStore<ReferenceItem>(replica));
         context.Services.AddPSPadCommands();
         context.Services.AddSingleton(new AppState { UserId = userId, Today = today });
+        context.Services.AddSingleton(new PageHeader());
         context.Services.AddSingleton(new ThemePreference(context.JSInterop.JSRuntime));
 
         var collapse = new CardCollapseState(context.JSInterop.JSRuntime);
         collapse.LoadAsync().GetAwaiter().GetResult();
         context.Services.AddSingleton(collapse);
+
+        context.Services.AddSingleton(new LastArea(context.JSInterop.JSRuntime));
 
         var statisticsCache = new StatisticsCache(context.JSInterop.JSRuntime);
         context.Services.AddSingleton(statisticsCache);
@@ -111,10 +114,21 @@ public static class AppTestHost
 
     public sealed class FakeViewport(bool isDesktop) : IViewport
     {
+        readonly List<Action<bool>> _subscribers = [];
+
         public Task SubscribeAsync(Action<bool> onDesktopChanged)
         {
+            _subscribers.Add(onDesktopChanged);
             onDesktopChanged(isDesktop);
             return Task.CompletedTask;
+        }
+
+        public void ChangeTo(bool desktop)
+        {
+            foreach (var subscriber in _subscribers)
+            {
+                subscriber(desktop);
+            }
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;

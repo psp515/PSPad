@@ -64,6 +64,7 @@ the old one's status line to point at the new number.
 | [0047](0047-reference-items-are-their-own-aggregate.md) | Reference lists hold ReferenceItems, a separate aggregate, not a kind of task | Active (extends [0042](0042-deleting-a-container-cascades-to-its-children.md)'s cascade to reference items) | 2026-09-28 | domain, aggregates, ui |
 | [0048](0048-descriptions-are-markdown.md) | Descriptions are Markdown, rendered client-side with raw HTML disabled | Active | 2026-09-28 | domain, ui, security |
 | [0049](0049-a-replica-that-learns-a-new-collection-pulls-from-zero.md) | A replica that learns a new collection pulls from zero, once | Active | 2026-09-28 | sync, offline |
+| [0050](0050-phones-navigate-from-a-bottom-bar.md) | Phones navigate from a bottom bar, not a drawer | Active (amends [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md) and [0023](0023-sidebar-search-removed-footer-added.md) below `md`) | 2026-09-29 | ui, navigation, mobile |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
