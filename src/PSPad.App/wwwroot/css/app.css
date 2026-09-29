@@ -439,13 +439,20 @@ button.pspad-heatmap-cell:focus-visible {
     flex-shrink: 0;
 }
 
-.pspad-step-remove {
+.pspad-step-remove,
+.pspad-step-action {
     opacity: 0.55;
 }
 
 .pspad-step:hover .pspad-step-remove,
-.pspad-step-remove:focus-visible {
+.pspad-step-remove:focus-visible,
+.pspad-step:hover .pspad-step-action,
+.pspad-step-action:focus-visible {
     opacity: 1;
+}
+
+.pspad-field-row-body {
+    overflow-wrap: anywhere;
 }
 
 .pspad-step-add .mud-input {

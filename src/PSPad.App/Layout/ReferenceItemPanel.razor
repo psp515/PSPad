@@ -34,54 +34,10 @@
 
         @if (_item is not null)
         {
-            var fields = _item.Fields;
-
-            <MudList T="Guid" Class="pspad-field-list px-1">
-                @for (var index = 0; index < fields.Count; index++)
-                {
-                    var field = fields[index];
-                    var position = index;
-                    var isFirst = position == 0;
-                    var isLast = position == fields.Count - 1;
-
-                    @if (_editingFieldId == field.Id)
-                    {
-                        <ReferenceFieldEditor @key="field.Id" Field="@field" OnSave="@(input => EditFieldAsync(field.Id, input))"
-                                              OnCancel="@CancelFieldEditAsync" OnRemove="@(() => RemoveFieldAsync(field.Id))" />
-                    }
-                    else
-                    {
-                        <MudListItem @key="field.Id" T="Guid" Class="pspad-field-row">
-                            <div class="d-flex align-center gap-2">
-                                <div class="flex-grow-1 pspad-field-row-body" style="cursor:pointer; min-width:0"
-                                     @onclick="@(() => BeginEditField(field.Id))">
-                                    <MudText Typo="Typo.caption" Class="pspad-field-label mud-text-secondary">@field.Label</MudText>
-                                    <ReferenceFieldValue Field="@field" />
-                                </div>
-                                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
-                                               Class="pspad-field-up" aria-label="Move up"
-                                               Disabled="@(Disabled || isFirst)"
-                                               OnClick="@(() => MoveFieldAsync(field.Id, position - 1))" />
-                                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
-                                               Class="pspad-field-down" aria-label="Move down"
-                                               Disabled="@(Disabled || isLast)"
-                                               OnClick="@(() => MoveFieldAsync(field.Id, position + 1))" />
-                            </div>
-                        </MudListItem>
-                    }
-                }
-
-                @if (_addingField)
-                {
-                    <ReferenceFieldEditor OnSave="@AddFieldAsync" OnCancel="@CancelAddFieldAsync" />
-                }
-                else
-                {
-                    <MudButton Class="pspad-field-add" Disabled="@Disabled" OnClick="@(() => _addingField = true)">
-                        Add field
-                    </MudButton>
-                }
-            </MudList>
+            <PanelSection Title="Fields" Class="pspad-item-fields">
+                <ReferenceFieldList @key="_item.Id" Item="@_item" UserId="@State.UserId" Disabled="@Disabled"
+                                    Changed="@ReloadAsync" />
+            </PanelSection>
 
             <PanelSection Title="Description" Class="pspad-item-description">
                 <MarkdownField @key="_item.Id" Value="@_item.Description" OnSave="@SaveDescriptionAsync"
@@ -130,9 +86,6 @@
     IReadOnlyList<TaskList> _lists = [];
     Guid? _draftFor;
     string _draftName = "";
-    Guid? _editingFieldId;
-    Guid? _editingFieldFor;
-    bool _addingField;
 
     PanelMode Mode => (_item, NewInList, Disabled) switch
     {
@@ -170,13 +123,6 @@
     {
         var loaded = ItemId is null ? null : await Store.LoadAsync(ItemId.Value, CancellationToken.None);
         _item = loaded is { Deleted: false } ? loaded : null;
-
-        if (_editingFieldFor != _item?.Id)
-        {
-            _editingFieldFor = _item?.Id;
-            _editingFieldId = null;
-            _addingField = false;
-        }
 
         if (_item is null && NewInList is null)
         {
@@ -286,96 +232,6 @@
         await ReloadAsync();
         StateHasChanged();
         return true;
-    }
-
-    void BeginEditField(Guid fieldId) => _editingFieldId = fieldId;
-
-    Task CancelFieldEditAsync()
-    {
-        _editingFieldId = null;
-        return Task.CompletedTask;
-    }
-
-    Task CancelAddFieldAsync()
-    {
-        _addingField = false;
-        return Task.CompletedTask;
-    }
-
-    async Task AddFieldAsync((string Label, string Value, string? Display) input)
-    {
-        if (Disabled || _item is null)
-        {
-            return;
-        }
-
-        var result = await Sender.SendAsync(new AddReferenceField(
-            Guid.NewGuid(), State.UserId, _item.Id, Guid.NewGuid(), input.Label, input.Value, input.Display));
-
-        if (!result.Accepted)
-        {
-            Snackbar.Add(result.Rejection ?? "Couldn't add the field.", Severity.Warning);
-            return;
-        }
-
-        _addingField = false;
-        await ReloadAsync();
-    }
-
-    async Task EditFieldAsync(Guid fieldId, (string Label, string Value, string? Display) input)
-    {
-        if (Disabled || _item is null)
-        {
-            return;
-        }
-
-        var result = await Sender.SendAsync(new EditReferenceField(
-            Guid.NewGuid(), State.UserId, _item.Id, fieldId, input.Label, input.Value, input.Display));
-
-        if (!result.Accepted)
-        {
-            Snackbar.Add(result.Rejection ?? "Couldn't save the field.", Severity.Warning);
-            return;
-        }
-
-        _editingFieldId = null;
-        await ReloadAsync();
-    }
-
-    async Task RemoveFieldAsync(Guid fieldId)
-    {
-        if (Disabled || _item is null)
-        {
-            return;
-        }
-
-        var result = await Sender.SendAsync(new RemoveReferenceField(Guid.NewGuid(), State.UserId, _item.Id, fieldId));
-
-        if (!result.Accepted)
-        {
-            Snackbar.Add(result.Rejection ?? "Couldn't remove the field.", Severity.Warning);
-            return;
-        }
-
-        _editingFieldId = null;
-        await ReloadAsync();
-    }
-
-    async Task MoveFieldAsync(Guid fieldId, int toIndex)
-    {
-        if (Disabled || _item is null)
-        {
-            return;
-        }
-
-        var result = await Sender.SendAsync(new MoveReferenceField(Guid.NewGuid(), State.UserId, _item.Id, fieldId, toIndex));
-
-        if (!result.Accepted)
-        {
-            Snackbar.Add(result.Rejection ?? "Couldn't reorder the field.", Severity.Warning);
-        }
-
-        await ReloadAsync();
     }
 
     async Task MoveToListAsync(Guid listId)

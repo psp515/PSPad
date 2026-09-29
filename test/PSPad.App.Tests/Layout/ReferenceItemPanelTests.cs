@@ -1,6 +1,7 @@
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.Abstractions;
@@ -37,7 +38,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ItShowsNameDescriptionAndFieldsInOrder()
+    public void ItShowsTheNameThenTheFieldsSectionThenTheDescriptionSection()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
         var item = NewItem(list.Id, "Bigos");
@@ -50,11 +51,15 @@ public class ReferenceItemPanelTests : Bunit.TestContext
 
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
 
-        Assert.Contains("Bigos", panel.Markup);
-        Assert.Contains("Polish stew", panel.Markup);
-        var servingsIndex = panel.Markup.IndexOf("Servings", StringComparison.Ordinal);
-        var timeIndex = panel.Markup.IndexOf("Time", StringComparison.Ordinal);
-        Assert.True(servingsIndex >= 0 && timeIndex >= 0 && servingsIndex < timeIndex);
+        var sections = panel.FindAll(".pspad-panel-section");
+        Assert.Equal(["Fields", "Description"],
+            sections.Select(section => section.QuerySelector(".pspad-panel-section-title")!.TextContent.Trim()));
+        Assert.Equal(["Servings", "Time"],
+            sections[0].QuerySelectorAll(".pspad-field-label").Select(label => label.TextContent.Trim()));
+        Assert.Contains("Polish stew", sections[1].TextContent);
+        var markup = panel.Markup;
+        Assert.True(markup.IndexOf("pspad-item-name-field", StringComparison.Ordinal)
+            < markup.IndexOf("pspad-panel-section", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -101,22 +106,35 @@ public class ReferenceItemPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task AddingAFieldSendsAddReferenceField()
+    public async Task AddingAFieldFromTheAddRowSendsAddReferenceFieldAndShowsIt()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
         var item = NewItem(list.Id, "Bigos");
         var replica = AppTestHost.Arrange(this, User, Today, list, item);
 
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
-        panel.Find(".pspad-field-add").Click();
-        panel.Find(".pspad-field-label-input input").Change("Time");
-        panel.Find(".pspad-field-value-input textarea").Change("45 min");
-        panel.Find(".pspad-field-save").Click();
+        panel.Find(".pspad-field-add-label input").Input("Time");
+        panel.Find(".pspad-field-add-value input").Input("45 min");
+        panel.Find(".pspad-field-add-value input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
         var field = Assert.Single(reloaded!.Fields);
         Assert.Equal("Time", field.Label);
         Assert.Equal("45 min", field.Value);
+        panel.WaitForAssertion(() => Assert.Single(panel.FindAll(".pspad-field-row")));
+    }
+
+    [Fact]
+    public void TheOldAddFieldButtonIsGone()
+    {
+        var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
+        var item = NewItem(list.Id, "Bigos");
+        AppTestHost.Arrange(this, User, Today, list, item);
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
+
+        Assert.Empty(panel.FindAll(".pspad-field-add"));
+        Assert.DoesNotContain("Add field", panel.Markup);
     }
 
     [Fact]
@@ -150,7 +168,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
 
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
         panel.Find(".pspad-field-row-body").Click();
-        panel.Find(".pspad-field-remove").Click();
+        panel.Find(".pspad-field-editor-remove").Click();
 
         var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Empty(reloaded!.Fields);

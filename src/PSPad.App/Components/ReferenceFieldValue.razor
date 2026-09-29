@@ -8,11 +8,11 @@
 {
     if (IsSafeLink)
     {
-        <MudLink Href="@Field.Value" Target="_blank" rel="noopener noreferrer" Class="pspad-field-link">@Field.Value</MudLink>
+        <MudLink Typo="Typo.body2" Href="@Field.Value" Target="_blank" rel="noopener noreferrer" Class="pspad-field-link">@Field.Value</MudLink>
     }
     else
     {
-        <MudText Class="pspad-field-link">@Field.Value</MudText>
+        <MudText Typo="Typo.body2" Class="pspad-field-link">@Field.Value</MudText>
     }
 }
 else if (Kind == FieldKind.Path)
@@ -25,11 +25,11 @@ else if (Kind == FieldKind.Path)
 }
 else if (Kind == FieldKind.Quantity)
 {
-    <MudText Class="pspad-field-quantity">@NormalizedQuantity</MudText>
+    <MudText Typo="Typo.body2" Class="pspad-field-quantity">@NormalizedQuantity</MudText>
 }
 else
 {
-    <MudText Style="white-space:pre-wrap" Class="pspad-field-text">@Field.Value</MudText>
+    <MudText Typo="Typo.body2" Style="white-space:pre-wrap" Class="pspad-field-text">@Field.Value</MudText>
 }
 
 @code {

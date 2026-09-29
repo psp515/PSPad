@@ -1,24 +1,25 @@
 @using PSPad.App.State
 @using PSPad.Module.Tasks.References
 
-<MudTextField T="string" Label="Label" Class="pspad-field-label-input"
+<MudTextField T="string" Label="Label" Class="pspad-field-label-input" Margin="Margin.Dense" AutoFocus="true"
               @bind-Value="_label" />
-<MudTextField T="string" Label="Value" Class="pspad-field-value-input" Lines="2" Sizing="InputSizing.Auto"
-              @bind-Value="_value" />
-<MudSelect T="FieldKind?" Label="Display" Class="pspad-field-kind-input" @bind-Value="_kind">
+<MudTextField T="string" Label="Value" Class="pspad-field-value-input" Margin="Margin.Dense" Lines="1"
+              Sizing="InputSizing.Auto" @bind-Value="_value" />
+<MudSelect T="FieldKind?" Label="Display" Class="pspad-field-kind-input" Margin="Margin.Dense" @bind-Value="_kind">
     <MudSelectItem T="FieldKind?" Value="@((FieldKind?)null)">Automatic</MudSelectItem>
     <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Text)">Text</MudSelectItem>
     <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Link)">Link</MudSelectItem>
     <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Path)">Path</MudSelectItem>
     <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Quantity)">Quantity</MudSelectItem>
 </MudSelect>
-<div class="d-flex gap-2 mt-1">
-    <MudButton Class="pspad-field-save" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(_label)"
+<div class="d-flex align-center gap-1 mt-1">
+    <MudButton Class="pspad-field-save" Size="Size.Small" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(_label)"
                OnClick="@SaveAsync">Save</MudButton>
-    <MudButton Class="pspad-field-cancel" OnClick="@CancelAsync">Cancel</MudButton>
+    <MudButton Class="pspad-field-cancel" Size="Size.Small" OnClick="@CancelAsync">Cancel</MudButton>
+    <MudSpacer />
     @if (Field is not null)
     {
-        <MudButton Class="pspad-field-remove" Color="Color.Error" OnClick="@RemoveAsync">Remove</MudButton>
+        <MudButton Class="pspad-field-editor-remove" Size="Size.Small" Color="Color.Error" OnClick="@RemoveAsync">Remove</MudButton>
     }
 </div>
 

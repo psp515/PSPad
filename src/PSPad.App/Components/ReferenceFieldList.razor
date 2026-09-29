@@ -1,0 +1,191 @@
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.References
+@inject CommandSender Sender
+@inject ISnackbar Snackbar
+
+<div class="pspad-fields d-flex flex-column">
+    @for (var index = 0; index < Item.Fields.Count; index++)
+    {
+        var field = Item.Fields[index];
+        var position = index;
+        var isFirst = position == 0;
+        var isLast = position == Item.Fields.Count - 1;
+
+        @if (_editingFieldId == field.Id)
+        {
+            <div @key="field.Id" class="pspad-field-editor d-flex flex-column gap-1 py-2 pl-2 pr-1">
+                <ReferenceFieldEditor Field="@field" OnSave="@(input => EditAsync(field.Id, input))"
+                                      OnCancel="@CancelEditAsync" OnRemove="@(() => RemoveAsync(field))" />
+            </div>
+        }
+        else
+        {
+            <div @key="field.Id" class="pspad-step pspad-field-row d-flex align-center gap-1">
+                <div class="flex-grow-1 pspad-field-row-body py-1 pl-2" style="cursor:pointer; min-width:0"
+                     @onclick="@(() => BeginEdit(field.Id))">
+                    <MudText Typo="Typo.caption" Class="pspad-field-label pspad-muted d-block">@field.Label</MudText>
+                    <ReferenceFieldValue Field="@field" />
+                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
+                               Class="pspad-field-up pspad-step-action" aria-label="@($"Move {field.Label} up")"
+                               Disabled="@(Disabled || isFirst)"
+                               OnClick="@(() => MoveAsync(field.Id, position - 1))" />
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
+                               Class="pspad-field-down pspad-step-action" aria-label="@($"Move {field.Label} down")"
+                               Disabled="@(Disabled || isLast)"
+                               OnClick="@(() => MoveAsync(field.Id, position + 1))" />
+                <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
+                               Class="pspad-field-remove pspad-step-remove" aria-label="@($"Remove {field.Label}")"
+                               Disabled="@Disabled" OnClick="@(() => RemoveAsync(field))" />
+            </div>
+        }
+    }
+
+    <div class="pspad-step pspad-step-add-row pspad-field-add-row d-flex align-center gap-1">
+        <span class="pspad-step-lead">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary" />
+        </span>
+        <MudTextField @ref="_labelInput" T="string" Class="pspad-step-add pspad-field-add-label flex-grow-1 mt-0"
+                      @bind-Value="_newLabel" Placeholder="Label" aria-label="New field label" Underline="false"
+                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
+        <MudTextField T="string" Class="pspad-step-add pspad-field-add-value flex-grow-1 mt-0"
+                      @bind-Value="_newValue" Placeholder="Value" aria-label="New field value" Underline="false"
+                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync"
+                      OnBlur="@AddWhenCompleteAsync" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ReferenceItem Item { get; set; } = null!;
+    [Parameter] public Guid UserId { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+
+    MudTextField<string>? _labelInput;
+    string _newLabel = "";
+    string _newValue = "";
+    bool _adding;
+    Guid? _editingFieldId;
+
+    async Task AddOnEnterAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await AddAsync();
+        }
+    }
+
+    async Task AddWhenCompleteAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(_newValue))
+        {
+            await AddAsync();
+        }
+    }
+
+    async Task AddAsync()
+    {
+        var label = (_newLabel ?? "").Trim();
+
+        if (Disabled || _adding || label.Length == 0)
+        {
+            return;
+        }
+
+        _adding = true;
+        try
+        {
+            var result = await Sender.SendAsync(new AddReferenceField(
+                Guid.NewGuid(), UserId, Item.Id, Guid.NewGuid(), label, _newValue ?? "", null));
+
+            if (!result.Accepted)
+            {
+                Snackbar.Add(result.Rejection ?? "Couldn't add the field.", Severity.Warning);
+                return;
+            }
+
+            _newLabel = "";
+            _newValue = "";
+            await Changed.InvokeAsync();
+
+            if (_labelInput is not null)
+            {
+                await _labelInput.FocusAsync();
+            }
+        }
+        finally
+        {
+            _adding = false;
+        }
+    }
+
+    void BeginEdit(Guid fieldId)
+    {
+        if (!Disabled)
+        {
+            _editingFieldId = fieldId;
+        }
+    }
+
+    Task CancelEditAsync()
+    {
+        _editingFieldId = null;
+        return Task.CompletedTask;
+    }
+
+    async Task EditAsync(Guid fieldId, (string Label, string Value, string? Display) input)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        var result = await Sender.SendAsync(new EditReferenceField(
+            Guid.NewGuid(), UserId, Item.Id, fieldId, input.Label, input.Value, input.Display));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't save the field.", Severity.Warning);
+            return;
+        }
+
+        _editingFieldId = null;
+        await Changed.InvokeAsync();
+    }
+
+    async Task RemoveAsync(ReferenceField field)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        var result = await Sender.SendAsync(new RemoveReferenceField(Guid.NewGuid(), UserId, Item.Id, field.Id));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't remove the field.", Severity.Warning);
+            return;
+        }
+
+        _editingFieldId = null;
+        await Changed.InvokeAsync();
+    }
+
+    async Task MoveAsync(Guid fieldId, int toIndex)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        var result = await Sender.SendAsync(new MoveReferenceField(Guid.NewGuid(), UserId, Item.Id, fieldId, toIndex));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't reorder the field.", Severity.Warning);
+        }
+
+        await Changed.InvokeAsync();
+    }
+}

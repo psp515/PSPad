@@ -160,7 +160,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
 
         var editor = RenderEditor(null);
 
-        Assert.Empty(editor.FindAll(".pspad-field-remove"));
+        Assert.Empty(editor.FindAll(".pspad-field-editor-remove"));
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
 
         var editor = RenderEditor(new ReferenceField(Guid.NewGuid(), "Dir", "/etc", null, 0));
 
-        Assert.NotEmpty(editor.FindAll(".pspad-field-remove"));
+        Assert.NotEmpty(editor.FindAll(".pspad-field-editor-remove"));
     }
 
     IRenderedComponent<ReferenceFieldValue> Render(ReferenceField field) =>
