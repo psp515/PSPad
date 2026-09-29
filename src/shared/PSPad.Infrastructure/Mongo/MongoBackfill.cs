@@ -7,11 +7,18 @@ public static class MongoBackfill
 {
     public static async Task EnsureCreatedAtAsync(MongoContext context, CancellationToken ct)
     {
-        var tasks = context.Collection<BsonDocument>("todotasks");
+        await EnsureCreatedAtAsync(context, "todotasks", "TaskCreated", ct);
+        await EnsureCreatedAtAsync(context, "referenceitems", "ReferenceItemCreated", ct);
+    }
+
+    static async Task EnsureCreatedAtAsync(
+        MongoContext context, string collection, string createdEvent, CancellationToken ct)
+    {
+        var documents = context.Collection<BsonDocument>(collection);
         var events = context.Collection<BsonDocument>("events");
         var sequence = new SequenceSource(context);
 
-        var missing = await tasks
+        var missing = await documents
             .Find(Builders<BsonDocument>.Filter.Exists("createdAt", false))
             .ToListAsync(ct);
 
@@ -19,7 +26,7 @@ public static class MongoBackfill
         {
             var created = await events
                 .Find(Builders<BsonDocument>.Filter.Eq("aggregateId", document["_id"]) &
-                      Builders<BsonDocument>.Filter.Eq("type", "TaskCreated"))
+                      Builders<BsonDocument>.Filter.Eq("type", createdEvent))
                 .SortBy(entry => entry["seq"])
                 .FirstOrDefaultAsync(ct);
 
@@ -31,7 +38,7 @@ public static class MongoBackfill
             using var session = await context.Client.StartSessionAsync(cancellationToken: ct);
             var seq = await sequence.NextAsync(session, ct);
 
-            await tasks.UpdateOneAsync(
+            await documents.UpdateOneAsync(
                 session,
                 Builders<BsonDocument>.Filter.Eq("_id", document["_id"]),
                 Builders<BsonDocument>.Update.Set("createdAt", created["at"]).Set("seq", seq),

@@ -305,7 +305,6 @@ public class ReferenceFieldListTests : Bunit.TestContext
     }
 
     IRenderedComponent<ReferenceFieldList> RenderList(ReferenceItem item) =>
-
         Render<ReferenceFieldList>(parameters => parameters.Add(p => p.Item, item).Add(p => p.UserId, User));
 
     IRenderedComponent<ReferenceFieldList> RenderDraft(List<ReferenceField> draft) =>
