@@ -285,8 +285,8 @@ button.pspad-heatmap-cell:focus-visible {
         right: 16px;
     }
 
-    .pspad-fab .mud-fab-primary,
-    .pspad-fab > .mud-fab-primary {
+    .pspad-fab.mud-fab-primary,
+    .pspad-fab .mud-fab-menu-button.mud-fab-primary {
         background-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-surface));
         color: var(--mud-palette-primary);
     }

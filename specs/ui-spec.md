@@ -683,6 +683,11 @@ icon reads unambiguously on its own.
 | Inbox | Capture (→ capture panel) | plain `MudFab` |
 | My Day, Settings, Statistics | none | no FAB |
 
+Below `md`, the page FAB is a Material-3 tonal container — a 24%
+primary/surface mix with a primary-coloured icon — rather than a solid
+accent circle; the raised My Day button (`BottomNav`) is the only solid
+accent circle on a phone.
+
 `+ New area` stays pinned in the sidebar — it is not a page's own action,
 it belongs to the sidebar's area list. Item-level rename/delete stays on
 the item's own `⋯` (`ThingMenu`) wherever the item is a card or row inside

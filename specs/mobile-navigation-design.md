@@ -157,8 +157,9 @@ navigation, and a chip set would also make **New area** selectable.
 Below `md`:
 
 - **FAB.** Each page's FAB behaves as before (`adr/0033`). It sits above the
-  bottom bar and is tonal: the accent's light shade behind a dark icon. The
-  raised My Day button is the only solid accent circle.
+  bottom bar and is a Material-3 tonal container: a 24% primary/surface mix
+  behind a primary-coloured icon. The raised My Day button is the only
+  solid accent circle.
 - **Padding.** `pspad-content`'s bottom padding is the FAB inset plus the
   bottom bar's height, so neither covers the last row.
 - **Scrollbars.** Scrolling containers hide their scrollbars
