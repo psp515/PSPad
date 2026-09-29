@@ -87,6 +87,7 @@ builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
 builder.Services.AddScoped<AppState>();
 builder.Services.AddScoped<ThemePreference>();
 builder.Services.AddScoped<CardCollapseState>();
+builder.Services.AddScoped<LastArea>();
 builder.Services.AddScoped<ReplicaSearch>();
 builder.Services.AddScoped<SidebarCounts>();
 builder.Services.AddScoped<PageHeader>();

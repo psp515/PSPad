@@ -1,0 +1,52 @@
+@page "/areas"
+@attribute [Authorize]
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Areas
+@inject IDocumentStore<Area> AreaStore
+@inject AppState State
+@inject LastArea Remembered
+@inject NavigationManager Navigation
+
+<PageHeading Title="Areas" />
+
+@if (_empty)
+{
+    <MudGrid Spacing="4">
+        <MudItem xs="12" sm="6" md="4" xl="3">
+            <EmptyState Icon="@Icons.Material.Outlined.Folder" Message="No areas yet." CreateText="New area"
+                        OnCreate="@NewArea" />
+        </MudItem>
+    </MudGrid>
+}
+else
+{
+    <CardSkeleton Count="3" />
+}
+
+@code {
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
+    bool _empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var areas = (await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None))
+            .Where(area => !area.Deleted)
+            .OrderBy(area => area.Position)
+            .ToList();
+        var remembered = await Remembered.ReadAsync();
+        var target = areas.FirstOrDefault(area => area.Id == remembered) ?? areas.FirstOrDefault();
+
+        if (target is null)
+        {
+            _empty = true;
+            return;
+        }
+
+        Navigation.NavigateTo($"/areas/{target.Id}", replace: true);
+    }
+
+    void NewArea() => Navigation.NavigateTo(AreaQuery.ForNew(Navigation.Uri));
+}

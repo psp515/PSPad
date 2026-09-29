@@ -59,6 +59,8 @@ public static class AppTestHost
         collapse.LoadAsync().GetAwaiter().GetResult();
         context.Services.AddSingleton(collapse);
 
+        context.Services.AddSingleton(new LastArea(context.JSInterop.JSRuntime));
+
         var statisticsCache = new StatisticsCache(context.JSInterop.JSRuntime);
         context.Services.AddSingleton(statisticsCache);
 
