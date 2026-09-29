@@ -51,6 +51,22 @@ public class PageHeadingAdoptionTests : Bunit.TestContext
         });
     }
 
+    [Fact]
+    public void AMissingListClearsAStaleHeader()
+    {
+        AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
+        var header = Services.GetRequiredService<PageHeader>();
+        header.Set("Stale title", "Stale subtitle", "/somewhere");
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, Guid.NewGuid()));
+
+        page.WaitForAssertion(() =>
+        {
+            Assert.Equal("", header.Title);
+            Assert.Null(header.BackHref);
+        });
+    }
+
     void AssertTitle<TPage>(string title) where TPage : Microsoft.AspNetCore.Components.IComponent
     {
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
