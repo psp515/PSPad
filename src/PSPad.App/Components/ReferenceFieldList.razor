@@ -1,3 +1,4 @@
+@using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Tasks.References
 @inject CommandSender Sender
@@ -21,7 +22,10 @@
         else
         {
             <div @key="field.Id" class="pspad-step pspad-field-row d-flex align-center gap-1">
-                <div class="flex-grow-1 pspad-field-row-body py-1 pl-2" style="cursor:pointer; min-width:0"
+                <span class="pspad-step-lead">
+                    <MudIcon Icon="@KindIcon(field)" Size="Size.Small" Class="pspad-muted" />
+                </span>
+                <div class="flex-grow-1 pspad-field-row-body py-1" style="cursor:pointer; min-width:0"
                      @onclick="@(() => BeginEdit(field.Id))">
                     <MudText Typo="Typo.caption" Class="pspad-field-label pspad-muted d-block">@field.Label</MudText>
                     <ReferenceFieldValue Field="@field" />
@@ -50,8 +54,7 @@
                       Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
         <MudTextField T="string" Class="pspad-step-add pspad-field-add-value flex-grow-1 mt-0"
                       @bind-Value="_newValue" Placeholder="Value" aria-label="New field value" Underline="false"
-                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync"
-                      OnBlur="@AddWhenCompleteAsync" />
+                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
     </div>
 </div>
 
@@ -75,13 +78,13 @@
         }
     }
 
-    async Task AddWhenCompleteAsync()
+    static string KindIcon(ReferenceField field) => FieldDisplay.Of(field) switch
     {
-        if (!string.IsNullOrWhiteSpace(_newValue))
-        {
-            await AddAsync();
-        }
-    }
+        FieldKind.Link => Icons.Material.Outlined.Link,
+        FieldKind.Path => Icons.Material.Outlined.Folder,
+        FieldKind.Quantity => Icons.Material.Outlined.Straighten,
+        _ => Icons.Material.Outlined.Notes
+    };
 
     async Task AddAsync()
     {
@@ -92,20 +95,24 @@
             return;
         }
 
+        var typedLabel = _newLabel ?? "";
+        var value = _newValue ?? "";
+        _newLabel = "";
+        _newValue = "";
         _adding = true;
         try
         {
             var result = await Sender.SendAsync(new AddReferenceField(
-                Guid.NewGuid(), UserId, Item.Id, Guid.NewGuid(), label, _newValue ?? "", null));
+                Guid.NewGuid(), UserId, Item.Id, Guid.NewGuid(), label, value, null));
 
             if (!result.Accepted)
             {
+                _newLabel = typedLabel;
+                _newValue = value;
                 Snackbar.Add(result.Rejection ?? "Couldn't add the field.", Severity.Warning);
                 return;
             }
 
-            _newLabel = "";
-            _newValue = "";
             await Changed.InvokeAsync();
 
             if (_labelInput is not null)
@@ -184,6 +191,7 @@
         if (!result.Accepted)
         {
             Snackbar.Add(result.Rejection ?? "Couldn't reorder the field.", Severity.Warning);
+            return;
         }
 
         await Changed.InvokeAsync();

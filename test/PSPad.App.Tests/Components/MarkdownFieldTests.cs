@@ -158,6 +158,44 @@ public class MarkdownFieldTests : Bunit.TestContext
     }
 
     [Fact]
+    public void EscapeInTheBlankEditorClearsIt()
+    {
+        Arrange();
+        var field = Render("");
+
+        field.Find("textarea").Input("Typed");
+        field.Find("textarea").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        Assert.Equal("", field.Find("textarea").TextContent);
+    }
+
+    [Fact]
+    public async Task DragSelectingTheRenderedTextKeepsTheView()
+    {
+        Arrange();
+        var field = Render("## Hi");
+
+        await field.Find(".pspad-markdown-content")
+            .TriggerEventAsync("onmarkdownviewclick", new MarkdownViewClickEventArgs { HasSelection = true });
+
+        Assert.Empty(field.FindAll("textarea"));
+    }
+
+    [Fact]
+    public void ARejectedSaveRefocusesTheEditor()
+    {
+        Arrange();
+        var field = Render("## Hi", onSave: _ => System.Threading.Tasks.Task.FromResult(false));
+
+        field.Find(".pspad-markdown-edit").Click();
+        field.Find("textarea").Input("## Bye");
+        var before = FocusCalls();
+        field.Find("textarea").Blur();
+
+        Assert.True(FocusCalls() > before);
+    }
+
+    [Fact]
     public void ReadOnlyOffersNoEdit()
     {
         Arrange();
@@ -281,6 +319,8 @@ public class MarkdownFieldTests : Bunit.TestContext
 
         Assert.Equal("Typed", field.Find("textarea").TextContent);
     }
+
+    int FocusCalls() => JSInterop.Invocations.Count(invocation => invocation.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase));
 
     static System.Threading.Tasks.Task ClickRenderedText(IRenderedComponent<MarkdownField> field, bool onLink) =>
         field.Find(".pspad-markdown-content")

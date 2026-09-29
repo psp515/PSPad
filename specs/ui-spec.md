@@ -486,9 +486,13 @@ and view modes only:
    Close icon removing it ("Remove {label}"); a tap on the row body opens
    `ReferenceFieldEditor` (compact: label, value, display kind, Save/Cancel/
    Remove) in the row's place. The last row is the add row — a `+` lead and
-   two unboxed dense fields, **Label** and **Value**; Enter in either, or
-   leaving Value with both filled, sends `AddReferenceField` with an
-   automatic display kind, clears both and puts focus back on Label. The
+   two unboxed dense fields, **Label** and **Value**; Enter in either (only
+   Enter, like steps — leaving a field never adds) sends `AddReferenceField`
+   with an automatic display kind, clears both and puts focus back on Label;
+   a rejection restores the typed text. Each field row carries the same
+   44px lead column, holding a muted icon for its kind, so labels line up
+   with the add row. A click on a link or the copy button inside a row does
+   not open the editor. The
    kind select lives only in the editor of an existing field.
 2. **Description** — a `PanelSection` holding the item's `MarkdownField`
    (see below).
@@ -518,12 +522,16 @@ the rendered text, or the icon, opens the raw text, focused. A click on a
 link inside the text follows the link and does not open the editor — the
 click is read through a custom `markdownviewclick` event
 (`Markdown/EventHandlers.cs`, registered in `wwwroot/PSPad.App.lib.module.js`)
-whose `OnLink` says whether the target sits inside an `<a>`. Leaving the
+whose `OnLink` says whether the target sits inside an `<a>` and
+`HasSelection` whether text is selected — a drag-selection does not open the
+editor either. If the registration throws, the initializer only warns, so
+the app still boots and the edit icon remains the way in. Leaving the
 field (blur) calls `OnSave` if the text changed and returns to the rendered
 view; unchanged text sends nothing. Escape discards the draft and returns to
 the view. If the caller rejects the save or it throws, the field stays in
 edit mode with the typed draft, so a rejected write never silently discards
-what was typed; the panel shows the Warning snackbar. The draft survives an
+what was typed; the editor takes focus back and the panel shows the
+Warning snackbar. The draft survives an
 outside `Value` change while editing. Closing the `DetailPanel` by overlay
 click blurs the field first, so an open edit is saved rather than dropped.
 `ReadOnly` and `Disabled` never edit: a filled value shows rendered, an

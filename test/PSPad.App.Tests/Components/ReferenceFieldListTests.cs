@@ -50,7 +50,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task LeavingTheValueWithBothFilledAddsAField()
+    public async Task LeavingTheValueWithBothFilledAddsNothing()
     {
         var item = NewItem();
         var replica = AppTestHost.Arrange(this, User, Today, item);
@@ -61,18 +61,17 @@ public class ReferenceFieldListTests : Bunit.TestContext
         fields.Find(".pspad-field-add-value input").Blur();
 
         var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
-        Assert.Equal("Time", Assert.Single(stored!.Fields).Label);
+        Assert.Empty(stored!.Fields);
     }
 
     [Fact]
-    public async Task LeavingTheValueWithNoLabelAddsNothing()
+    public async Task EnterWithNoLabelAddsNothing()
     {
         var item = NewItem();
         var replica = AppTestHost.Arrange(this, User, Today, item);
 
         var fields = RenderList(item);
         fields.Find(".pspad-field-add-value input").Input("45 min");
-        fields.Find(".pspad-field-add-value input").Blur();
         fields.Find(".pspad-field-add-value input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
@@ -94,6 +93,65 @@ public class ReferenceFieldListTests : Bunit.TestContext
         var snackbar = Services.GetRequiredService<ISnackbar>();
         Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("Item no longer exists.") == true);
         Assert.Equal("Time", fields.Find(".pspad-field-add-label input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void ARejectedMoveDoesNotReportAChange()
+    {
+        var item = NewItem();
+        AddField(item, "Time", "45 min");
+        AddField(item, "Servings", "4");
+        AppTestHost.Arrange(this, User, Today, item);
+        Services.AddSingleton<ICommandHandler<MoveReferenceField>>(
+            new RejectingHandler<MoveReferenceField>("Field no longer exists."));
+        var changes = 0;
+
+        var fields = Render<ReferenceFieldList>(parameters => parameters
+            .Add(p => p.Item, item).Add(p => p.UserId, User).Add(p => p.Changed, () => changes++));
+        fields.FindAll(".pspad-field-down")[0].Click();
+
+        Assert.Equal(0, changes);
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("Field no longer exists.") == true);
+    }
+
+    [Fact]
+    public void CopyingAPathDoesNotOpenTheEditor()
+    {
+        var item = NewItem();
+        AddField(item, "Folder", "/srv/prints");
+        AppTestHost.Arrange(this, User, Today, item);
+
+        var fields = RenderList(item);
+        fields.Find(".pspad-field-copy").Click();
+
+        Assert.Empty(fields.FindAll(".pspad-field-editor"));
+        Assert.NotEmpty(fields.FindAll(".pspad-field-row"));
+    }
+
+    [Fact]
+    public void FollowingALinkDoesNotOpenTheEditor()
+    {
+        var item = NewItem();
+        AddField(item, "Site", "https://example.com");
+        AppTestHost.Arrange(this, User, Today, item);
+
+        var fields = RenderList(item);
+        fields.Find("a.pspad-field-link").Click();
+
+        Assert.Empty(fields.FindAll(".pspad-field-editor"));
+    }
+
+    [Fact]
+    public void FieldRowsShareTheAddRowsLeadColumn()
+    {
+        var item = NewItem();
+        AddField(item, "Time", "45 min");
+        AppTestHost.Arrange(this, User, Today, item);
+
+        var fields = RenderList(item);
+
+        Assert.NotNull(fields.Find(".pspad-field-row").QuerySelector(".pspad-step-lead"));
     }
 
     [Fact]

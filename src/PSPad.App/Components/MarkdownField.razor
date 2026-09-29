@@ -3,7 +3,7 @@
 
 @if (ShowsEditor)
 {
-    <MudTextField T="string" Lines="3" Sizing="InputSizing.Auto" Variant="Variant.Outlined" Class="pspad-markdown-input mt-0"
+    <MudTextField @ref="_input" T="string" Lines="3" Sizing="InputSizing.Auto" Variant="Variant.Outlined" Class="pspad-markdown-input mt-0"
                   Placeholder="@Placeholder" aria-label="Description" Immediate="true" AutoFocus="@_editing"
                   Value="@_draft" ValueChanged="@DraftChanged" OnBlur="@CommitAsync" OnKeyDown="@DiscardOnEscape" />
 }
@@ -41,6 +41,7 @@ else
 
     [Parameter] public string Placeholder { get; set; } = "Add a description…";
 
+    MudTextField<string>? _input;
     bool _editing;
     bool _saving;
     string _draft = "";
@@ -67,7 +68,7 @@ else
 
     void EditUnlessOnLink(MarkdownViewClickEventArgs args)
     {
-        if (!args.OnLink)
+        if (!args.OnLink && !args.HasSelection)
         {
             BeginEdit();
         }
@@ -122,6 +123,7 @@ else
             if (accepted)
             {
                 _editing = false;
+                return;
             }
         }
         catch (Exception exception)
@@ -131,6 +133,11 @@ else
         finally
         {
             _saving = false;
+        }
+
+        if (_input is not null)
+        {
+            await _input.FocusAsync();
         }
     }
 }
