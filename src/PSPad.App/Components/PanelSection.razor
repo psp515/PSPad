@@ -1,0 +1,13 @@
+<MudDivider />
+<section class="@($"pspad-panel-section px-3 pt-2 pb-3 {Class}")">
+    <MudText Typo="Typo.overline" Class="pspad-panel-section-title pspad-muted d-block mb-1">@Title</MudText>
+    @ChildContent
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+}

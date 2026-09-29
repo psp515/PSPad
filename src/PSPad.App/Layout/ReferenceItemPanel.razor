@@ -36,11 +36,6 @@
         {
             var fields = _item.Fields;
 
-            <div class="px-3 pb-3">
-                <MarkdownField @key="_item.Id" Value="@_item.Description" OnSave="@SaveDescriptionAsync"
-                               Disabled="@Disabled" />
-            </div>
-
             <MudList T="Guid" Class="pspad-field-list px-1">
                 @for (var index = 0; index < fields.Count; index++)
                 {
@@ -87,6 +82,11 @@
                     </MudButton>
                 }
             </MudList>
+
+            <PanelSection Title="Description" Class="pspad-item-description">
+                <MarkdownField @key="_item.Id" Value="@_item.Description" OnSave="@SaveDescriptionAsync"
+                               Disabled="@Disabled" />
+            </PanelSection>
         }
     </ChildContent>
     <Footer>

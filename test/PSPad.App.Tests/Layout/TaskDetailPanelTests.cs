@@ -202,6 +202,27 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void StepsComeFirstThenThePropertyRowsThenTheDescriptionSection()
+    {
+        var task = NewTask("Buy milk");
+        Step(task, "Check the fridge");
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDescription(Guid.NewGuid(), User, task.Id, "2% please"), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        var markup = panel.Markup;
+        var steps = markup.IndexOf("pspad-steps", StringComparison.Ordinal);
+        var rows = markup.IndexOf("pspad-property-row", StringComparison.Ordinal);
+        var description = markup.IndexOf("pspad-markdown-view", StringComparison.Ordinal);
+        Assert.True(steps >= 0 && steps < rows && rows < description);
+        var section = panel.Find(".pspad-panel-section");
+        Assert.Equal("Description", section.QuerySelector(".pspad-panel-section-title")!.TextContent.Trim());
+        Assert.NotNull(section.QuerySelector(".pspad-markdown-view"));
+    }
+
+    [Fact]
     public void ASavedDescriptionShowsRendered()
     {
         var task = NewTask("Buy milk");
