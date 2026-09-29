@@ -114,10 +114,21 @@ public static class AppTestHost
 
     public sealed class FakeViewport(bool isDesktop) : IViewport
     {
+        readonly List<Action<bool>> _subscribers = [];
+
         public Task SubscribeAsync(Action<bool> onDesktopChanged)
         {
+            _subscribers.Add(onDesktopChanged);
             onDesktopChanged(isDesktop);
             return Task.CompletedTask;
+        }
+
+        public void ChangeTo(bool desktop)
+        {
+            foreach (var subscriber in _subscribers)
+            {
+                subscriber(desktop);
+            }
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;

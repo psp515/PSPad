@@ -263,6 +263,12 @@
     void OnDesktopChanged(bool isDesktop)
     {
         _isDesktop = isDesktop;
+
+        if (isDesktop)
+        {
+            _accountOpen = false;
+        }
+
         InvokeAsync(StateHasChanged);
     }
 

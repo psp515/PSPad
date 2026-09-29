@@ -107,6 +107,21 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task CrossingToDesktopClosesTheAccountDrawer()
+    {
+        Arrange();
+        var viewport = new AppTestHost.FakeViewport(isDesktop: false);
+        Services.AddSingleton<IViewport>(viewport);
+        var shell = Render<AppShell>();
+        shell.Find(".pspad-avatar-button").Click();
+        Assert.True(shell.FindComponent<AccountDrawer>().Instance.Open);
+
+        await shell.InvokeAsync(() => viewport.ChangeTo(true));
+
+        shell.WaitForAssertion(() => Assert.False(shell.FindComponent<AccountDrawer>().Instance.Open));
+    }
+
+    [Fact]
     public void NavigatingClosesTheAccountDrawer()
     {
         Arrange();
