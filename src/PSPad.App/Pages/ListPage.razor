@@ -4,9 +4,11 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.References
 @using PSPad.Module.Tasks.Tasks
+@inject IDocumentStore<Area> AreaStore
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<TodoTask> TaskStore
 @inject IDocumentStore<ReferenceItem> ItemStore
@@ -19,17 +21,18 @@
 
 @if (!_loaded)
 {
+    <PageHeading Title="" />
     <MudSkeleton SkeletonType="SkeletonType.Text" Width="30%" Height="40px" Class="mb-4" />
     <RowSkeleton Count="6" />
 }
 else if (_list is not null)
 {
-    <div class="d-flex align-center gap-1 mb-4">
-        <MudIconButton Class="pspad-back-to-area" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary"
-                       Href="@($"/areas/{_list.AreaId}")" aria-label="Back to area" />
-        <MudIcon Icon="@ListIcon.For(_list)" Title="@ListIcon.LabelFor(_list)" Color="Color.Primary" Class="pspad-list-icon" />
-        <MudText Typo="Typo.h5" Color="Color.Primary">@_list.Name</MudText>
-    </div>
+    <PageHeading Title="@_list.Name" Subtitle="@_areaName" BackHref="@($"/areas/{_list.AreaId}")"
+                 BackLabel="Back to area" BackClass="pspad-back-to-area">
+        <Adornment>
+            <MudIcon Icon="@ListIcon.For(_list)" Title="@ListIcon.LabelFor(_list)" Color="Color.Primary" Class="pspad-list-icon" />
+        </Adornment>
+    </PageHeading>
 
     @if (_list.Kind == ListKind.Reference)
     {
@@ -136,6 +139,7 @@ else
 
     bool _loaded;
     TaskList? _list;
+    string? _areaName;
     IReadOnlyList<TodoTask> _open = [];
     IReadOnlyList<TodoTask> _done = [];
     IReadOnlyList<ReferenceItem> _items = [];
@@ -160,6 +164,7 @@ else
     {
         var list = await ListStore.LoadAsync(ListId, CancellationToken.None);
         _list = list is null || list.Deleted ? null : list;
+        _areaName = _list is null ? null : (await AreaStore.LoadAsync(_list.AreaId, CancellationToken.None))?.Name;
 
         if (_list is { Kind: ListKind.Reference })
         {

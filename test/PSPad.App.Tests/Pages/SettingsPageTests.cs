@@ -49,6 +49,17 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItNamesItself()
+    {
+        Arrange(displayName: "Ada Lovelace", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        page.WaitForAssertion(() =>
+            Assert.Equal("Settings", Services.GetRequiredService<PageHeader>().Title));
+    }
+
+    [Fact]
     public async Task ChoosingATimeZoneSendsItAndRefreshesToday()
     {
         var state = Arrange(displayName: "Ada", email: "ada@example.com");

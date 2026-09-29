@@ -7,7 +7,7 @@
 @inject ReplicaSearch Search
 @inject AppState State
 
-<MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">@($"Search: {Q ?? ""}")</MudText>
+<PageHeading Title="@($"Search: {Q ?? ""}")" />
 
 @if (_hits.Count == 0)
 {

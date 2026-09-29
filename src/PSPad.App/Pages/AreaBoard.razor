@@ -22,12 +22,13 @@
 
 @if (!_loaded)
 {
+    <PageHeading Title="" />
     <MudSkeleton SkeletonType="SkeletonType.Text" Width="30%" Height="40px" Class="mb-4" />
     <CardSkeleton Count="3" />
 }
 else if (_area is not null)
 {
-    <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">@_area.Name</MudText>
+    <PageHeading Title="@_area.Name" />
 
     <MudGrid Spacing="4">
         @if (_lists.Count == 0)
@@ -69,6 +70,7 @@ else if (_area is not null)
 }
 else
 {
+    <PageHeading Title="" />
     <MudText Typo="Typo.body1">This area is not there anymore.</MudText>
 }
 
