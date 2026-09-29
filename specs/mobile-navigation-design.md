@@ -67,10 +67,16 @@ The existing dense `MudAppBar`, left to right:
 - It sets `PageHeader` from its parameters on every parameter set.
 - It renders today's desktop title markup inside `d-none d-md-flex`.
 
-One component per page means the phone and desktop titles cannot drift. A
-page without `PageHeading` (Settings, App info included — they get one)
-leaves no stale title: `AppShell` clears `PageHeader` on location change,
-before the new page sets it.
+One component per page means the phone and desktop titles cannot drift.
+Every routed page inside `AppShell` renders a `PageHeading`, NotFound
+included, and a page's loading branch renders one with an empty title (no
+desktop markup), so the bar never keeps the previous screen's title.
+Clearing from `AppShell` on location change is ruled out: a panel's query
+change fires it without re-rendering the page, which would blank the title.
+
+Extras under a title (the goal screen's status chip and due date) stay in
+the page, on their own row below `PageHeading`, at every width. The goal
+screen also passes its status text as the subtitle.
 
 ### 2.3 Bottom bar — `Layout/BottomNav.razor`
 
@@ -135,15 +141,17 @@ Cases 1 and 2 redirect with `replace: true`, so Back never lands on `/areas`.
 ### 2.6 Area chips — `Components/AreaChips.razor`
 
 This sits at the top of `AreaBoard` inside `d-md-none`, so desktop is
-unchanged. It is a single-selection `MudChipSet`:
+unchanged. It is a wrapping row of small `MudChip`s inside a
+`navigation` landmark:
 
-- small chips that wrap;
-- one chip per area in `Position` order, the current one selected
-  (`Color.Primary`, filled), the rest outlined;
-- a trailing **New area** chip (`Icons.Material.Filled.Add`, outlined).
+- one chip per non-deleted area in `Position` order, each a link
+  (`Href="/areas/{id}"`); the current one is filled `Color.Primary` with
+  `aria-current="page"`, the rest outlined;
+- a trailing **New area** chip (`Icons.Material.Filled.Add`, outlined,
+  `Color.Primary`) that opens `?area=new`.
 
-Tapping an area chip navigates to `/areas/{id}`. **New area** opens
-`?area=new`.
+Chips are links rather than a `MudChipSet` selection: choosing an area is
+navigation, and a chip set would also make **New area** selectable.
 
 ### 2.7 FAB, padding, scrollbars
 
@@ -186,7 +194,7 @@ All `[UnitTest]`, written first.
   - Shows the empty state when there are no areas.
 - **`AppShell`:**
   - No temporary drawer and no `pspad-drawer-toggle`.
-  - Location change clears `PageHeader`.
+  - Navigating closes the account drawer.
   - Existing tests that use the toggle are updated.
 
 ## 4. Documentation shipped with the change
