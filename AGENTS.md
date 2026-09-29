@@ -381,7 +381,9 @@ the shared `MarkdownField`) are `Active` and built here, as is `adr/0049`
 (a replica that learns a new sync collection — `referenceitems` — pulls
 from zero once) built on an earlier branch in this stack. `specs/ui-spec.md`
 and `specs/backend-spec.md` cover the shapes; `specs/reference-lists-design.md`
-is now marked Built.
+is now marked Built. `adr/0050` (phones navigate from a bottom bar with My
+Day raised in the centre, a right-hand account drawer and area chips;
+desktop keeps the sidebar) is `Active` and built on this branch too.
 
 ---
 

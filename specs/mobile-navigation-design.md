@@ -1,7 +1,6 @@
 # Mobile navigation — design
 
-Status: Approved, not built. Decision of record: ADR-0050 (written with the
-implementation).
+Status: Built. Decision of record: [ADR-0050](../adr/0050-phones-navigate-from-a-bottom-bar.md).
 
 Mockups: https://claude.ai/artifact/RMCE7jAdQwnz1mQfoNMN9y (My Day, Areas tab,
 nested list, account drawer, bottom bar).
