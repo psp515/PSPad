@@ -11,6 +11,7 @@ using PSPad.App.State.Replica;
 using PSPad.App.Tests;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Recurrence;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -67,6 +68,96 @@ public class ListPageTests : Bunit.TestContext
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
         Assert.DoesNotContain("Add task", page.Markup);
+    }
+
+    [Fact]
+    public void AReferenceListRendersReferenceRowsStarredFirstThenByPosition()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        var first = NewItem(list.Id, "Bigos", 0);
+        var second = NewItem(list.Id, "Rosół", 1);
+        var third = StarItem(NewItem(list.Id, "Pierogi", 2));
+        Arrange(list, first, second, third);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        var rows = page.FindComponents<ReferenceRow>();
+        Assert.Equal(3, rows.Count);
+        Assert.Equal(["Pierogi", "Bigos", "Rosół"], rows.Select(row => row.Instance.Item.Name));
+        Assert.Empty(page.FindComponents<TaskRow>());
+    }
+
+    [Fact]
+    public void AReferenceListsFabMenuOffersAddItemInsteadOfAddTask()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        Arrange(list);
+
+        var page = Render(BuildListPageWithDialogs(list.Id));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+
+        var items = page.FindAll(".mud-fab-menu-item");
+        Assert.Equal("Add item", items[0].GetAttribute("aria-label"));
+        Assert.Equal("Rename list", items[1].GetAttribute("aria-label"));
+        Assert.Equal("Delete list", items[2].GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public void AddItemFromTheFabMenuOpensTheNewItemPanelForThisList()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        Arrange(list);
+
+        var page = Render(BuildListPageWithDialogs(list.Id));
+        var navigation = page.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/lists/{list.Id}");
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[0].Click();
+
+        Assert.EndsWith($"/lists/{list.Id}?item=new&list={list.Id}", navigation.Uri);
+    }
+
+    [Fact]
+    public void DeletingAReferenceListWarnsHowManyItemsGoWithIt()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        Arrange(list, NewItem(list.Id, "Bigos", 0), NewItem(list.Id, "Rosół", 1), NewItem(list.Id, "Pierogi", 2));
+
+        var page = Render(BuildListPageWithDialogs(list.Id));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.FindAll(".mud-fab-menu-item")[2].Click();
+
+        Assert.Equal(
+            "Delete “Przepisy” and its 3 items? This can’t be undone.",
+            page.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task StarringAReferenceRowSendsStarReferenceItem()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        var item = NewItem(list.Id, "Bigos", 0);
+        var replica = Arrange(list, item);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+        page.Find(".pspad-reference-row button").Click();
+
+        var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
+        Assert.True(stored!.Starred);
+    }
+
+    [Fact]
+    public void OpeningAReferenceRowNavigatesToTheItem()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        var item = NewItem(list.Id, "Bigos", 0);
+        Arrange(list, item);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+        var navigation = page.Services.GetRequiredService<NavigationManager>();
+        page.Find(".pspad-reference-name").Click();
+
+        Assert.EndsWith($"?item={item.Id}", navigation.Uri);
     }
 
     [Fact]
@@ -528,5 +619,21 @@ public class ListPageTests : Bunit.TestContext
             null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), listId, name),
             DateTimeOffset.UnixEpoch));
         return task;
+    }
+
+    static ReferenceItem NewItem(Guid listId, string name, int position)
+    {
+        var item = new ReferenceItem();
+        item.ApplyAll(ReferenceItem.Decide(
+            null, new CreateReferenceItem(Guid.NewGuid(), User, Guid.NewGuid(), listId, name, position),
+            DateTimeOffset.UnixEpoch));
+        return item;
+    }
+
+    static ReferenceItem StarItem(ReferenceItem item)
+    {
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new StarReferenceItem(Guid.NewGuid(), User, item.Id, true), DateTimeOffset.UnixEpoch));
+        return item;
     }
 }

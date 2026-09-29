@@ -7,10 +7,12 @@
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Ordering
+@using PSPad.Module.Tasks.References
 @using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<Area> AreaStore
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<TodoTask> TaskStore
+@inject IDocumentStore<ReferenceItem> ItemStore
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -37,9 +39,11 @@ else if (_area is not null)
         @foreach (var list in _lists)
         {
             <MudItem @key="list.Id" xs="12" sm="6" md="4" xl="3">
-                <ListCard List="@list" Tasks="@TasksOf(list.Id)" Today="@State.Today"
+                <ListCard List="@list" Tasks="@TasksOf(list.Id)" Items="@ItemsOf(list.Id)" Today="@State.Today"
                           OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
+                          OnOpenItem="@OpenItem" OnStarItem="@StarItemAsync"
                           OnAddTaskClick="@(() => AddTask(list.Id))"
+                          OnAddItemClick="@(() => AddItem(list.Id))"
                           OnRename="@(() => RenameListAsync(list))"
                           OnDelete="@(() => DeleteListAsync(list))"
                           OnMove="@(() => MoveListAsync(list))" />
@@ -76,6 +80,7 @@ else
     Area? _area;
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<TodoTask> _tasks = [];
+    IReadOnlyList<ReferenceItem> _items = [];
 
     static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
     static readonly Dictionary<string, object> NewListAttributes = new() { ["aria-label"] = "New list" };
@@ -101,13 +106,23 @@ else
         _lists = [.. lists.Where(list => list.AreaId == AreaId && !list.Deleted).OrderBy(list => list.Position)];
 
         _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _items = await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _loaded = true;
     }
 
     IReadOnlyList<TodoTask> TasksOf(Guid listId) => [.. _tasks.Where(task => task.ListId == listId)];
 
+    IReadOnlyList<ReferenceItem> ItemsOf(Guid listId) =>
+        [.. _items.Where(item => item.ListId == listId && !item.Deleted)
+            .OrderByDescending(item => item.Starred).ThenBy(item => item.Position)];
+
     void Open(TodoTask task) =>
         Navigation.NavigateTo($"{Navigation.Uri.Split('?')[0]}?task={task.Id}");
+
+    void OpenItem(ReferenceItem item) => Navigation.NavigateTo(ReferenceQuery.ForItem(Navigation.Uri, item.Id));
+
+    async Task StarItemAsync(ReferenceItem item) =>
+        await Sender.SendAsync(new StarReferenceItem(Guid.NewGuid(), State.UserId, item.Id, !item.Starred));
 
     async Task ToggleAsync(TodoTask task)
     {
@@ -138,6 +153,8 @@ else
 
     void AddTask(Guid listId) => Navigation.NavigateTo(TaskQuery.ForNewTask(Navigation.Uri, listId));
 
+    void AddItem(Guid listId) => Navigation.NavigateTo(ReferenceQuery.ForNewItem(Navigation.Uri, listId));
+
     void NewList() => Navigation.NavigateTo(ListQuery.ForNewList(Navigation.Uri, AreaId));
 
     async Task RenameListAsync(TaskList list)
@@ -160,9 +177,12 @@ else
 
     async Task DeleteListAsync(TaskList list)
     {
+        var message = list.Kind == ListKind.Reference
+            ? DeleteWarning.ForList(list.Name, list.Id, _items)
+            : DeleteWarning.ForList(list.Name, list.Id, _tasks);
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, DeleteWarning.ForList(list.Name, list.Id, _tasks) }
+            { dialog => dialog.Message, message }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete list", parameters);
         var result = await dialog.Result;
@@ -182,7 +202,7 @@ else
         var area = _area!;
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, DeleteWarning.ForArea(area.Name, area.Id, _lists, _tasks) }
+            { dialog => dialog.Message, DeleteWarning.ForArea(area.Name, area.Id, _lists, _tasks, _items) }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete area", parameters);
         var result = await dialog.Result;

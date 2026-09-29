@@ -16,7 +16,7 @@
             <MudLink Class="@TitleClass" Href="@Href" Typo="Typo.subtitle2" Underline="Underline.None">@Name</MudLink>
             @Subtitle
         </div>
-        <MudText Typo="Typo.caption" Class="pspad-open-count flex-shrink-0" Style="white-space:nowrap">@CountText(Open.Count)</MudText>
+        <MudText Typo="Typo.caption" Class="pspad-open-count flex-shrink-0" Style="white-space:nowrap">@CountText(Count)</MudText>
         @Actions
     </div>
 
@@ -24,23 +24,29 @@
     {
         <MudDivider />
 
-        @if (Open.Count == 0 && EmptyText is not null)
+        @if (Rows is not null)
+        {
+            @Rows
+        }
+        else if (Open.Count == 0 && EmptyText is not null)
         {
             <MudText Typo="Typo.body2" Class="pa-3">@EmptyText</MudText>
         }
-
-        @foreach (var task in Open.Take(Preview))
+        else
         {
-            <TaskRow @key="task.Id" Task="@task" Today="@Today"
-                     ListName="@ListNameOf?.Invoke(task)" CreatedOn="@CreatedOnOf?.Invoke(task)"
-                     OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
+            @foreach (var task in Open.Take(Preview))
+            {
+                <TaskRow @key="task.Id" Task="@task" Today="@Today"
+                         ListName="@ListNameOf?.Invoke(task)" CreatedOn="@CreatedOnOf?.Invoke(task)"
+                         OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
+            }
         }
 
-        @if (Open.Count > Preview)
+        @if (Count > Preview)
         {
             <MudDivider />
             <MudButton Class="pspad-show-all ma-1" Href="@Href" Variant="Variant.Text" Color="Color.Primary">
-                @($"Show all ({Open.Count})")
+                @($"Show all ({Count})")
             </MudButton>
         }
     }
@@ -65,6 +71,10 @@
 
     [Parameter] public RenderFragment? Actions { get; set; }
 
+    [Parameter] public RenderFragment? Rows { get; set; }
+
+    [Parameter] public int? RowCount { get; set; }
+
     [Parameter] public Func<int, string> CountText { get; set; } = count => count.ToString(CultureInfo.InvariantCulture);
 
     [Parameter] public string? EmptyText { get; set; }
@@ -84,6 +94,8 @@
     [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
 
     bool Collapsed => Collapse.IsCollapsed(Id);
+
+    int Count => RowCount ?? Open.Count;
 
     IReadOnlyList<TodoTask> Open =>
         [.. Tasks.Where(task => !task.Deleted && task.CompletedAt is null && !task.EndedBy(Today))];

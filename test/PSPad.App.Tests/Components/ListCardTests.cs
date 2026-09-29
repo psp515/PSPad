@@ -5,6 +5,7 @@ using MudBlazor;
 using PSPad.App.Components;
 using PSPad.App.State;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.Module.Tasks.Recurrence;
 using PSPad.TestInfrastructure;
@@ -176,6 +177,80 @@ public class ListCardTests : Bunit.TestContext
         card.FindAll(".mud-menu-item").Last().Click();
         Assert.True(deleted);
     }
+
+    [Fact]
+    public void AReferenceListsCardShowsItsItemsAsReferenceRows()
+    {
+        Arrange();
+        var list = ReferenceList("Przepisy");
+
+        var card = Render<ListCard>(parameters => parameters
+            .Add(p => p.List, list)
+            .Add(p => p.Items, Items(list.Id, 7))
+            .Add(p => p.Today, Today));
+
+        Assert.Equal(5, card.FindComponents<ReferenceRow>().Count);
+        Assert.Equal("7", card.Find(".pspad-open-count").TextContent);
+    }
+
+    [Fact]
+    public void AReferenceListsAddButtonRaisesOnAddItemClick()
+    {
+        Arrange();
+        var list = ReferenceList("Przepisy");
+        var clicked = false;
+
+        var card = Render<ListCard>(parameters => parameters
+            .Add(p => p.List, list)
+            .Add(p => p.Today, Today)
+            .Add(p => p.OnAddItemClick, EventCallback.Factory.Create(this, () => clicked = true)));
+        card.Find(".pspad-add-item").Click();
+
+        Assert.True(clicked);
+    }
+
+    [Fact]
+    public void AReferenceListsRowsRaiseOnStarItemAndOnOpenItem()
+    {
+        Arrange();
+        var list = ReferenceList("Przepisy");
+        var item = Items(list.Id, 1)[0];
+        ReferenceItem? starred = null;
+        ReferenceItem? opened = null;
+
+        var card = Render<ListCard>(parameters => parameters
+            .Add(p => p.List, list)
+            .Add(p => p.Items, [item])
+            .Add(p => p.Today, Today)
+            .Add(p => p.OnStarItem, (ReferenceItem starredItem) => starred = starredItem)
+            .Add(p => p.OnOpenItem, (ReferenceItem openedItem) => opened = openedItem));
+
+        card.Find(".pspad-reference-name").Click();
+        card.Find(".pspad-reference-row button").Click();
+
+        Assert.Same(item, opened);
+        Assert.Same(item, starred);
+    }
+
+    static TaskList ReferenceList(string name)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null,
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, 0, ListKind.Reference),
+            DateTimeOffset.UnixEpoch));
+        return list;
+    }
+
+    static ReferenceItem[] Items(Guid listId, int count) =>
+        [.. Enumerable.Range(0, count).Select(index =>
+        {
+            var item = new ReferenceItem();
+            item.ApplyAll(ReferenceItem.Decide(
+                null, new CreateReferenceItem(Guid.NewGuid(), User, Guid.NewGuid(), listId, $"Item {index}", index),
+                DateTimeOffset.UnixEpoch));
+            return item;
+        })];
 
     IRenderedComponent<ListCard> Render(TaskList list, IReadOnlyList<TodoTask> tasks) =>
         Render<ListCard>(parameters => parameters
