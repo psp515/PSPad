@@ -1,0 +1,28 @@
+@using PSPad.App.Components
+
+<MudDrawer Open="@Open" OpenChanged="@OpenChanged" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
+           Width="300px" Elevation="1" ClipMode="DrawerClipMode.Never" Class="d-md-none pspad-account-drawer">
+    <div class="d-flex flex-column" style="height:100%">
+        <AccountBadge Email="@Email" DisplayName="@DisplayName" UserId="@UserId" />
+        <MudDivider Style="flex-grow:0" />
+        <MudNavMenu>
+            <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
+            <MudNavLink Href="/app-info" Icon="@Icons.Material.Filled.Info">App info</MudNavLink>
+        </MudNavMenu>
+        <div class="flex-grow-1"></div>
+        <MudDivider Style="flex-grow:0" />
+        <SidebarFooter />
+    </div>
+</MudDrawer>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+
+    [Parameter] public string Email { get; set; } = "";
+
+    [Parameter] public string DisplayName { get; set; } = "";
+
+    [Parameter] public Guid UserId { get; set; }
+}
