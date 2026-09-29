@@ -2,10 +2,12 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Ordering
 @using PSPad.Module.Tasks.References
 @inject IDocumentStore<ReferenceItem> Store
+@inject IDocumentStore<Area> Areas
 @inject IDocumentStore<TaskList> Lists
 @inject AppState State
 @inject CommandSender Sender
@@ -14,7 +16,7 @@
 @inject NavigationManager Navigation
 
 <DetailPanel Open="@(Mode != PanelMode.Closed)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose"
-             OnSave="@SaveCallback" SaveText="Add item" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
+             OnSave="@SaveCallback" SaveText="Add item" CanSave="@(!string.IsNullOrWhiteSpace(_draft.Name))"
              Disabled="@Disabled">
     <HeaderActions>
         @if (_item is not null)
@@ -32,15 +34,29 @@
                           Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
         </div>
 
-        @if (_item is not null)
+        @if (Mode != PanelMode.Closed)
         {
             <PanelSection Title="Fields" Class="pspad-item-fields">
-                <ReferenceFieldList @key="_item.Id" Item="@_item" UserId="@State.UserId" Disabled="@Disabled"
-                                    Changed="@ReloadAsync" />
+                @if (_item is not null)
+                {
+                    <ReferenceFieldList @key="_item.Id" Item="@_item" UserId="@State.UserId" Disabled="@Disabled"
+                                        Changed="@ReloadAsync" />
+                }
+                else
+                {
+                    <ReferenceFieldList @key="_draft" Draft="@_draft.Fields" UserId="@State.UserId" Disabled="@Disabled" />
+                }
             </PanelSection>
 
+            <MudDivider />
+
+            <div class="py-2 px-2 d-flex flex-column gap-1">
+                <ListRow Areas="@_areas" Lists="@_lists" Value="@ListId" ValueChanged="@MoveToListAsync"
+                         Disabled="@Disabled" />
+            </div>
+
             <PanelSection Title="Description" Class="pspad-item-description">
-                <MarkdownField @key="_item.Id" Value="@_item.Description" OnSave="@SaveDescriptionAsync"
+                <MarkdownField @key="@((object?)_item?.Id ?? _draft)" Value="@Description" OnSave="@SaveDescriptionAsync"
                                Disabled="@Disabled" />
             </PanelSection>
         }
@@ -48,24 +64,14 @@
     <Footer>
         @if (_item is not null)
         {
-            <div class="d-flex flex-column gap-2 pspad-item-footer">
-                <MudSelect T="Guid" Class="pspad-item-move" Label="Move to list" Variant="Variant.Outlined"
-                           Value="@_item.ListId" ValueChanged="@MoveToListAsync" Disabled="@Disabled"
-                           AnchorOrigin="Origin.BottomCenter">
-                    @foreach (var list in _lists)
-                    {
-                        <MudSelectItem T="Guid" Value="@list.Id">@list.Name</MudSelectItem>
-                    }
-                </MudSelect>
-
-                <div class="d-flex align-center">
-                    <MudSpacer />
-                    <MudTooltip Text="Delete item">
-                        <MudIconButton Class="pspad-item-delete" Icon="@Icons.Material.Outlined.Delete"
-                                       Color="Color.Error" aria-label="Delete item" Disabled="@Disabled"
-                                       OnClick="@DeleteAsync" />
-                    </MudTooltip>
-                </div>
+            <div class="d-flex align-center pspad-item-footer">
+                <MudText Typo="Typo.caption" Class="pspad-muted">@CreatedText</MudText>
+                <MudSpacer />
+                <MudTooltip Text="Delete item">
+                    <MudIconButton Class="pspad-item-delete" Icon="@Icons.Material.Outlined.Delete"
+                                   Color="Color.Error" aria-label="Delete item" Disabled="@Disabled"
+                                   OnClick="@DeleteAsync" />
+                </MudTooltip>
             </div>
         }
     </Footer>
@@ -83,9 +89,10 @@
     enum PanelMode { Closed, Add, Edit, View }
 
     ReferenceItem? _item;
+    IReadOnlyList<Area> _areas = [];
     IReadOnlyList<TaskList> _lists = [];
     Guid? _draftFor;
-    string _draftName = "";
+    ReferenceItemDraft _draft = new();
 
     PanelMode Mode => (_item, NewInList, Disabled) switch
     {
@@ -106,14 +113,20 @@
         ? EventCallback.Factory.Create(this, CreateAsync)
         : default;
 
-    string Name => _item?.Name ?? _draftName;
+    string Name => _item?.Name ?? _draft.Name;
+
+    string Description => _item?.Description ?? _draft.Description;
+
+    Guid? ListId => _item?.ListId ?? _draft.ListId;
+
+    string CreatedText => _item?.CreatedAt is { } created ? $"Created {created:ddd, d MMM yyyy}" : "";
 
     protected override async Task OnParametersSetAsync()
     {
         if (NewInList != _draftFor)
         {
             _draftFor = NewInList;
-            _draftName = "";
+            _draft = new ReferenceItemDraft { ListId = NewInList };
         }
 
         await ReloadAsync();
@@ -129,6 +142,8 @@
             return;
         }
 
+        var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
+        _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
         var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
         _lists = [.. lists.Where(list => !list.Deleted && list.Kind == ListKind.Reference).OrderBy(list => list.Position)];
     }
@@ -143,9 +158,9 @@
 
     async Task CreateAsync()
     {
-        var name = _draftName.Trim();
+        var name = _draft.Name.Trim();
 
-        if (Disabled || NewInList is not { } listId || name.Length == 0)
+        if (Disabled || _item is not null || _draft.ListId is not { } listId || name.Length == 0)
         {
             return;
         }
@@ -165,7 +180,31 @@
             return;
         }
 
-        _draftName = "";
+        var draft = _draft;
+        _draft = new ReferenceItemDraft { ListId = NewInList };
+
+        foreach (var field in draft.Fields)
+        {
+            var added = await Sender.SendAsync(new AddReferenceField(
+                Guid.NewGuid(), State.UserId, itemId, Guid.NewGuid(), field.Label, field.Value, field.Display));
+
+            if (!added.Accepted)
+            {
+                Snackbar.Add(added.Rejection ?? $"Couldn't add the field {field.Label}.", Severity.Warning);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(draft.Description))
+        {
+            var described = await Sender.SendAsync(new SetReferenceItemDescription(
+                Guid.NewGuid(), State.UserId, itemId, draft.Description));
+
+            if (!described.Accepted)
+            {
+                Snackbar.Add(described.Rejection ?? "Couldn't save the description.", Severity.Warning);
+            }
+        }
+
         Navigation.NavigateTo(ReferenceQuery.ForItem(Navigation.Uri, itemId), replace: true);
     }
 
@@ -178,7 +217,7 @@
 
         if (_item is null)
         {
-            _draftName = name;
+            _draft.Name = name;
             return;
         }
 
@@ -216,9 +255,16 @@
 
     async Task<bool> SaveDescriptionAsync(string text)
     {
-        if (Disabled || _item is null)
+        if (Disabled)
         {
             return false;
+        }
+
+        if (_item is null)
+        {
+            _draft.Description = text;
+            StateHasChanged();
+            return true;
         }
 
         var result = await Sender.SendAsync(new SetReferenceItemDescription(Guid.NewGuid(), State.UserId, _item.Id, text));
@@ -236,8 +282,14 @@
 
     async Task MoveToListAsync(Guid listId)
     {
-        if (Disabled || _item is null || listId == _item.ListId)
+        if (Disabled || listId == ListId)
         {
+            return;
+        }
+
+        if (_item is null)
+        {
+            _draft.ListId = listId;
             return;
         }
 
