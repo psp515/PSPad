@@ -119,7 +119,7 @@ public class TaskRowTests : Bunit.TestContext
 
         var row = Render(task);
 
-        Assert.Contains("0 / 2", row.Markup);
+        Assert.Equal("0/2", row.Find(".pspad-steps-progress").TextContent.Trim());
     }
 
     [Fact]
@@ -181,33 +181,74 @@ public class TaskRowTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheAddedDateShowsOnlyWhenGiven()
+    public void TheNameIsOneLineWithTheFullNameOnHover()
     {
         Arrange();
 
-        var withDate = Render(Task("Buy milk"), "Shopping", new DateOnly(2026, 9, 12));
-        var without = Render(Task("Buy milk"), "Shopping");
+        var row = Render(Task("Logi na USW1 do wyłączenia przy okazji"));
 
-        Assert.Equal("Added 12 Sep", withDate.Find(".pspad-created").TextContent.Trim());
-        Assert.Empty(without.FindAll(".pspad-created"));
+        var name = row.Find(".pspad-row-name");
+        Assert.Equal("Logi na USW1 do wyłączenia przy okazji", name.GetAttribute("title"));
+        Assert.Contains("pspad-row", row.Find("div").ClassList);
     }
 
     [Fact]
-    public void AnAddedDateAloneStillShowsTheMetaLine()
+    public void ATaskWithNothingToShowHasNoMetaLine()
     {
         Arrange();
 
-        var row = Render(Task("Buy milk"), createdOn: new DateOnly(2026, 9, 12));
+        var row = Render(Task("Skrypty upgradowe"));
 
-        Assert.Contains("Added 12 Sep", row.Markup);
+        Assert.Empty(row.FindAll(".pspad-row-meta"));
     }
 
-    IRenderedComponent<TaskRow> Render(TodoTask task, string? listName = null, DateOnly? createdOn = null) =>
+    [Fact]
+    public void TheMetaLineRunsDueStepsRepeatDescriptionPriorityThenList()
+    {
+        Arrange();
+        var task = Recurring(Task("Sprawdzaj Inwestycje"), Today);
+        Add(task, "Check the fund");
+        Described(task, "Quarterly");
+        Prioritised(task, Priority.High);
+        Due(task, Today.AddDays(5));
+
+        var row = Render(task, "Regularne Zadania");
+
+        var order = row.Find(".pspad-row-meta").Children
+            .Select(child => child.ClassList.First(name => name != "mud-typography" && name.StartsWith("pspad-")))
+            .ToArray();
+        Assert.Equal(
+            ["pspad-due", "pspad-steps-progress", "pspad-recurring", "pspad-has-description", "pspad-priority", "pspad-row-list"],
+            order);
+    }
+
+    [Fact]
+    public void ThePriorityDotSitsInTheMetaLineLeavingOnlyTheStarOnTheRight()
+    {
+        Arrange();
+
+        var row = Render(Prioritised(Task("Scroodge"), Priority.Medium));
+
+        row.Find(".pspad-row-meta .pspad-priority");
+        Assert.Empty(row.FindAll(".pspad-row > .mud-icon-root"));
+        row.Find(".pspad-row > .pspad-row-star");
+    }
+
+    [Fact]
+    public void ATaskWithoutPriorityShowsNoDot()
+    {
+        Arrange();
+
+        var row = Render(Task("Plain"));
+
+        Assert.Empty(row.FindAll(".pspad-priority"));
+    }
+
+    IRenderedComponent<TaskRow> Render(TodoTask task, string? listName = null) =>
         Render<TaskRow>(parameters => parameters
             .Add(p => p.Task, task)
             .Add(p => p.Today, Today)
-            .Add(p => p.ListName, listName)
-            .Add(p => p.CreatedOn, createdOn));
+            .Add(p => p.ListName, listName));
 
     void Arrange()
     {
@@ -244,6 +285,13 @@ public class TaskRowTests : Bunit.TestContext
     {
         task.ApplyAll(TodoTask.Decide(
             task, new SetTaskDescription(Guid.NewGuid(), User, task.Id, description), DateTimeOffset.UnixEpoch));
+        return task;
+    }
+
+    static TodoTask Prioritised(TodoTask task, Priority priority)
+    {
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskPriority(Guid.NewGuid(), User, task.Id, priority), DateTimeOffset.UnixEpoch));
         return task;
     }
 

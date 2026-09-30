@@ -51,6 +51,19 @@ public class InboxItemCardTests : Bunit.TestContext
         Assert.Equal(item.Id, opened?.Id);
     }
 
+    [Fact]
+    public void ItSharesTheRowShapeWithAOneLineName()
+    {
+        AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
+        var item = NewItem("Zadzwonić do mechanika w sprawie opon");
+
+        var card = Render<InboxItemCard>(parameters => parameters.Add(p => p.Item, item));
+
+        card.Find(".pspad-inbox-item.pspad-row");
+        Assert.Equal("Zadzwonić do mechanika w sprawie opon", card.Find(".pspad-row-name").GetAttribute("title"));
+        card.Find(".pspad-row-meta .pspad-inbox-item-captured");
+    }
+
     static InboxItem NewItem(string text)
     {
         var inbox = new Inbox();

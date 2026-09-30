@@ -4,7 +4,7 @@
 
 <ThingCard Id="@Goal.Id" Name="@Goal.Name" Href="@($"/goals/{Goal.Id}")" TitleClass="pspad-goal-name"
            CountText="@(count => $"{count} open")" EmptyText="No open tasks."
-           Tasks="@Tasks" Today="@Today" ListNameOf="@NameOf" CreatedOnOf="@AddedOn"
+           Tasks="@Tasks" Today="@Today" ListNameOf="@NameOf"
            OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen">
     <Subtitle>
         @if (Goal.DueOn is { } due)
@@ -36,8 +36,6 @@
 
     [Parameter] public DateOnly Today { get; set; }
 
-    [Parameter] public string TimeZone { get; set; } = "Etc/UTC";
-
     [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnStar { get; set; }
@@ -54,5 +52,4 @@
 
     string? NameOf(TodoTask task) => ListNames.TryGetValue(task.ListId, out var name) ? name : null;
 
-    DateOnly? AddedOn(TodoTask task) => CreatedOn.Of(task, TimeZone);
 }

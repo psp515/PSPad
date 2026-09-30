@@ -1,35 +1,29 @@
 @using PSPad.Module.Tasks.Tasks
 @using PSPad.Module.Tasks.Today
 
-<div class="d-flex align-center gap-3 py-2 px-3 @(Overdue ? "pspad-overdue overdue" : "")">
+<div class="pspad-row d-flex align-center gap-2 px-1 @(Overdue ? "pspad-overdue overdue" : "")">
     <MudCheckBox T="bool" Value="@Done" ValueChanged="@(_ => OnToggle.InvokeAsync(Task))"
                  Color="Color.Primary" Dense="true" />
 
-    <div class="flex-grow-1 pspad-task-name" style="cursor:pointer"
-         @onclick="@(() => OnOpen.InvokeAsync(Task))">
-        <MudText Typo="Typo.body2"
+    <div class="pspad-row-body pspad-task-name" @onclick="@(() => OnOpen.InvokeAsync(Task))">
+        <MudText Typo="Typo.body2" Class="pspad-row-name" title="@Task.Name"
                  Style="@(Done ? "text-decoration:line-through" : "")">@Task.Name</MudText>
 
         @if (HasMeta)
         {
-            <div class="d-flex align-center gap-3">
-                @if (ListName is not null)
+            <div class="pspad-row-meta">
+                @if (Task.DueOn is { } due)
                 {
-                    <MudText Typo="Typo.caption">@ListName</MudText>
-                }
-                @if (CreatedOn is { } created)
-                {
-                    <MudText Typo="Typo.caption" Class="pspad-created pspad-muted">@($"Added {created:d MMM}")</MudText>
+                    <MudText Typo="Typo.caption" Class="pspad-due" Color="@(Overdue ? Color.Error : Color.Default)">
+                        @(Task.IsRecurring ? $"Until {due:d MMM}" : due.ToString("d MMM"))
+                    </MudText>
                 }
                 @if (Task.Steps.Count > 0)
                 {
-                    <MudText Typo="Typo.caption">@($"{Task.Steps.Count(step => step.Checked)} / {Task.Steps.Count}")</MudText>
-                }
-                @if (Task.DueOn is { } due)
-                {
-                    <MudText Typo="Typo.caption" Color="@(Overdue ? Color.Error : Color.Default)">
-                        @(Task.IsRecurring ? $"Until {due:d MMM}" : due.ToString("d MMM"))
-                    </MudText>
+                    <span class="pspad-steps-progress d-inline-flex align-center gap-1">
+                        <MudIcon Icon="@Icons.Material.Outlined.Checklist" Size="Size.Small" />
+                        <MudText Typo="Typo.caption">@($"{Task.Steps.Count(step => step.Checked)}/{Task.Steps.Count}")</MudText>
+                    </span>
                 }
                 @if (Task.IsRecurring)
                 {
@@ -39,17 +33,22 @@
                 {
                     <MudIcon Class="pspad-has-description" Icon="@Icons.Material.Outlined.Notes" Size="Size.Small" />
                 }
+                @if (Task.Priority != Priority.None)
+                {
+                    <MudIcon Class="pspad-priority" Icon="@Icons.Material.Filled.Circle" Color="@PriorityColour"
+                             Title="@($"{Task.Priority} priority")" />
+                }
+                @if (ListName is not null)
+                {
+                    <MudText Typo="Typo.caption" Class="pspad-row-list">@ListName</MudText>
+                }
             </div>
         }
     </div>
 
-    @if (Task.Priority != Priority.None)
-    {
-        <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@PriorityColour" />
-    }
-
-    <MudIconButton Size="Size.Small" Color="Color.Primary"
+    <MudIconButton Class="pspad-row-star" Size="Size.Small" Color="Color.Primary"
                    Icon="@(Task.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                   aria-label="@(Task.Starred ? "Unstar" : "Star")"
                    OnClick="@(() => OnStar.InvokeAsync(Task))" />
 </div>
 
@@ -59,8 +58,6 @@
     [Parameter] public DateOnly Today { get; set; }
 
     [Parameter] public string? ListName { get; set; }
-
-    [Parameter] public DateOnly? CreatedOn { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
 
@@ -74,8 +71,8 @@
 
     bool HasDescription => Task.Description.Length > 0;
 
-    bool HasMeta => ListName is not null || CreatedOn is not null || Task.Steps.Count > 0 || Task.DueOn is not null
-        || Task.IsRecurring || HasDescription;
+    bool HasMeta => ListName is not null || Task.Steps.Count > 0 || Task.DueOn is not null
+        || Task.IsRecurring || HasDescription || Task.Priority != Priority.None;
 
     Color PriorityColour => Task.Priority switch
     {

@@ -1,11 +1,18 @@
 @using PSPad.Module.Tasks.Inbox
 
 <MudPaper Outlined="true">
-    <div class="pspad-inbox-item pa-3" style="cursor:pointer" @onclick="@(() => OnOpen.InvokeAsync(Item))">
-        <MudText Typo="Typo.body2">@Item.Text</MudText>
-        <MudText Typo="Typo.caption" Class="pspad-inbox-item-captured pspad-muted">
-            @Item.CapturedAt.ToLocalTime().ToString("d MMM, HH:mm")
-        </MudText>
+    <div class="pspad-inbox-item pspad-row d-flex align-center gap-2 px-1" @onclick="@(() => OnOpen.InvokeAsync(Item))">
+        <span class="pspad-row-lead">
+            <MudIcon Icon="@Icons.Material.Outlined.Inbox" Size="Size.Small" Class="pspad-muted" />
+        </span>
+        <div class="pspad-row-body">
+            <MudText Typo="Typo.body2" Class="pspad-row-name" title="@Item.Text">@Item.Text</MudText>
+            <div class="pspad-row-meta">
+                <MudText Typo="Typo.caption" Class="pspad-inbox-item-captured pspad-muted">
+                    @Item.CapturedAt.ToLocalTime().ToString("d MMM, HH:mm")
+                </MudText>
+            </div>
+        </div>
     </div>
 </MudPaper>
 

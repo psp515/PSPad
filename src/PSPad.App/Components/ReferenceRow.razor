@@ -1,18 +1,49 @@
+@using PSPad.App.Markdown
 @using PSPad.App.State
 @using PSPad.Module.Tasks.References
+@inject Clipboard Clipboard
+@inject ISnackbar Snackbar
 
-<div class="d-flex align-center gap-3 py-2 px-3 pspad-reference-row">
-    <div class="flex-grow-1 pspad-reference-name" style="cursor:pointer; min-width:0"
-         @onclick="@(() => OnOpen.InvokeAsync(Item))">
-        <MudText Typo="Typo.body2">@Item.Name</MudText>
+<div class="pspad-row pspad-reference-row d-flex align-center gap-2 px-1">
+    <span class="pspad-row-lead">
+        <MudIcon Icon="@Icons.Material.Outlined.BookmarkBorder" Size="Size.Small" Class="pspad-muted" />
+    </span>
 
-        @if (Caption is not null)
+    <div class="pspad-row-body pspad-reference-name" @onclick="@(() => OnOpen.InvokeAsync(Item))">
+        <MudText Typo="Typo.body2" Class="pspad-row-name" title="@Item.Name">@Item.Name</MudText>
+
+        @if (Item.Fields.Count > 0)
         {
-            <MudText Typo="Typo.caption" Class="pspad-muted">@Caption</MudText>
+            <div class="pspad-row-meta pspad-row-chips">
+                @foreach (var field in Item.Fields)
+                {
+                    <span @key="field.Id" class="pspad-row-chip-slot" @onclick:stopPropagation="true">
+                        @switch (KindOf(field))
+                        {
+                            case FieldKind.Link:
+                                <MudChip T="string" Class="pspad-row-chip pspad-row-chip-link" Size="Size.Small"
+                                         Variant="Variant.Text" Color="Color.Primary" Icon="@Icons.Material.Filled.Link"
+                                         Href="@field.Value" Target="_blank" Rel="noopener noreferrer"
+                                         title="@field.Value">@field.Label</MudChip>
+                                break;
+                            case FieldKind.Path:
+                                <MudChip T="string" Class="pspad-row-chip pspad-row-chip-path" Size="Size.Small"
+                                         Variant="Variant.Text" Icon="@Icons.Material.Outlined.Folder"
+                                         title="@($"Copy {field.Value}")"
+                                         OnClick="@(() => CopyAsync(field.Value))">@field.Label</MudChip>
+                                break;
+                            default:
+                                <MudChip T="string" Class="pspad-row-chip" Size="Size.Small" Variant="Variant.Text"
+                                         title="@($"{field.Label}: {field.Value}")">@($"{field.Label}: {DisplayValue(field)}")</MudChip>
+                                break;
+                        }
+                    </span>
+                }
+            </div>
         }
     </div>
 
-    <MudIconButton Size="Size.Small" Color="Color.Primary"
+    <MudIconButton Class="pspad-row-star" Size="Size.Small" Color="Color.Primary"
                    Icon="@(Item.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
                    aria-label="@(Item.Starred ? "Unstar" : "Star")"
                    OnClick="@(() => OnStar.InvokeAsync(Item))" />
@@ -25,11 +56,21 @@
 
     [Parameter] public EventCallback<ReferenceItem> OnOpen { get; set; }
 
-    string? Caption => Item.Fields.Count == 0
-        ? null
-        : string.Join(" · ", Item.Fields.Take(2).Select(entry => $"{entry.Label}: {RenderedValue(entry)}"));
+    static FieldKind KindOf(ReferenceField field) => FieldDisplay.Of(field) switch
+    {
+        FieldKind.Link when !LinkSafety.IsSafe(field.Value, LinkSafety.LinkSchemes) => FieldKind.Text,
+        var kind => kind
+    };
 
-    static string RenderedValue(ReferenceField entry) => FieldDisplay.Of(entry) == FieldKind.Quantity
-        ? FieldDisplay.NormalizeQuantity(entry.Value)
-        : entry.Value;
+    static string DisplayValue(ReferenceField field) => FieldDisplay.Of(field) == FieldKind.Quantity
+        ? FieldDisplay.NormalizeQuantity(field.Value)
+        : field.Value;
+
+    async Task CopyAsync(string path)
+    {
+        var copied = await Clipboard.CopyAsync(path);
+        Snackbar.Add(
+            copied ? "Copied" : "Could not copy — open the item to select the path.",
+            copied ? Severity.Success : Severity.Warning);
+    }
 }

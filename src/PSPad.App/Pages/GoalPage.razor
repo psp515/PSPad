@@ -131,7 +131,6 @@ else
             <MudPaper Outlined="true" Class="pspad-task-card">
                 <TaskRow Task="@task" Today="@State.Today"
                          ListName="@ListNameOf(task)"
-                         CreatedOn="@CreatedOn.Of(task, State.TimeZone)"
                          OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
             </MudPaper>
         </MudItem>;
