@@ -106,10 +106,10 @@ A task's **look-ahead** is its `LeadTime`, or 7 days when it has none
 
 ### 3.1 Kind toggle
 
-`TaskDetailPanel` gets a `MudToggleGroup<TaskKind>` (`One-time` /
-`Repeating`, `pspad-task-kind`) between the name and the property rows, in
-Add and Edit. `TaskKind` is a client-only enum; on an existing task it is
-derived from `IsRecurring`.
+`TaskDetailPanel` gets a `MudToggleGroup<bool>` (`One-time` = false /
+`Repeating` = true, `pspad-task-kind`) above the property rows, in Add and
+Edit. Its value is whether the task (or the draft) has a rule — no stored
+kind, no client enum.
 
 - One-time shows **Due** (`DueDateRow`, label "Due").
 - Repeating shows **Repeat** (`RecurrenceEditor`) then **Until**
