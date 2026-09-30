@@ -1,4 +1,8 @@
 using Bunit;
+using Bunit.Rendering;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using Microsoft.AspNetCore.Components.Web;
 using PSPad.App.Layout;
 using PSPad.Module.Tasks.Areas;
@@ -70,6 +74,121 @@ public class ListDetailPanelTests : Bunit.TestContext
         panel.Find(".pspad-list-name-field input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         Assert.Contains(await replica.LoadAllAsync<TaskList>(User), list => list.Name == "Ogród");
+    }
+
+    [Fact]
+    public void TheNameComesFirstAndTheKindBelowIt()
+    {
+        var area = NewArea("Dom");
+        AppTestHost.Arrange(this, User, Today, area);
+
+        var panel = Render<ListDetailPanel>(parameters => parameters.Add(p => p.NewInArea, area.Id));
+
+        var name = panel.Find(".pspad-list-name-field input");
+        Assert.Equal("List name", name.GetAttribute("placeholder"));
+        Assert.Empty(panel.FindAll(".pspad-list-name-field .mud-input-outlined"));
+        var markup = panel.Markup;
+        Assert.True(markup.IndexOf("pspad-list-name-field", StringComparison.Ordinal)
+            < markup.IndexOf("pspad-list-kind", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AnExistingListShowsItsNameKindAndArea()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Przepisy", ListKind.Reference);
+        AppTestHost.Arrange(this, User, Today, area, list);
+
+        var panel = RenderWithOverlays(list.Id);
+
+        Assert.Equal("Przepisy", panel.Find(".pspad-list-name-field input").GetAttribute("value"));
+        Assert.Contains("Reference list", panel.Find(".pspad-list-kind-readonly").TextContent);
+        Assert.Equal("Dom", panel.Find(".pspad-list-area input").GetAttribute("value"));
+        Assert.Empty(panel.FindAll(".pspad-list-kind .mud-toggle-item"));
+        Assert.Empty(panel.FindAll(".pspad-panel-save"));
+    }
+
+    [Fact]
+    public async Task RenamingAnExistingListSavesAsItChanges()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy", ListKind.Tasks);
+        var replica = AppTestHost.Arrange(this, User, Today, area, list);
+
+        var panel = RenderWithOverlays(list.Id);
+        panel.Find(".pspad-list-name-field input").Change("Zakupy tygodniowe");
+
+        Assert.Equal("Zakupy tygodniowe", (await replica.LoadAsync<TaskList>(list.Id))!.Name);
+    }
+
+    [Fact]
+    public async Task PickingAnotherAreaMovesTheList()
+    {
+        var home = NewArea("Dom");
+        var work = NewArea("Praca");
+        var list = NewList(home.Id, "Zakupy", ListKind.Tasks);
+        var replica = AppTestHost.Arrange(this, User, Today, home, work, list);
+
+        var panel = RenderWithOverlays(list.Id);
+        panel.Find(".pspad-list-area .mud-select-input").MouseDown();
+        panel.WaitForAssertion(() => Assert.Contains(panel.FindAll(".mud-list-item"),
+            option => option.TextContent.Trim() == "Praca"));
+        panel.FindAll(".mud-list-item").First(option => option.TextContent.Trim() == "Praca").Click();
+
+        Assert.Equal(work.Id, (await replica.LoadAsync<TaskList>(list.Id))!.AreaId);
+    }
+
+    [Fact]
+    public async Task DeletingFromThePanelAsksFirstThenClosesOnAnotherScreen()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy", ListKind.Tasks);
+        var replica = AppTestHost.Arrange(this, User, Today, area, list);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/areas/{area.Id}?list={list.Id}");
+
+        var panel = RenderWithOverlays(list.Id);
+        Assert.Contains("Delete list", panel.Find(".pspad-panel-delete").TextContent);
+        panel.Find(".pspad-panel-delete").Click();
+        panel.FindAll("div.mud-dialog button").Last().Click();
+
+        Assert.True((await replica.LoadAsync<TaskList>(list.Id))!.Deleted);
+        Assert.EndsWith($"/areas/{area.Id}", navigation.Uri);
+    }
+
+    [Fact]
+    public void DeletingFromTheListsOwnScreenGoesToItsArea()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy", ListKind.Tasks);
+        AppTestHost.Arrange(this, User, Today, area, list);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/lists/{list.Id}?list={list.Id}");
+
+        var panel = RenderWithOverlays(list.Id);
+        panel.Find(".pspad-panel-delete").Click();
+        panel.FindAll("div.mud-dialog button").Last().Click();
+
+        Assert.EndsWith($"/areas/{area.Id}", navigation.Uri);
+    }
+
+    IRenderedComponent<ContainerFragment> RenderWithOverlays(Guid listId) => Render(builder =>
+    {
+        builder.OpenComponent<MudPopoverProvider>(0);
+        builder.CloseComponent();
+        builder.OpenComponent<MudDialogProvider>(1);
+        builder.CloseComponent();
+        builder.OpenComponent<ListDetailPanel>(2);
+        builder.AddAttribute(3, nameof(ListDetailPanel.ListId), (Guid?)listId);
+        builder.CloseComponent();
+    });
+
+    static TaskList NewList(Guid areaId, string name, ListKind kind)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, kind), DateTimeOffset.UnixEpoch));
+        return list;
     }
 
     [Fact]

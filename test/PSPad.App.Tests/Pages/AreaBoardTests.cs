@@ -354,6 +354,23 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void EditingAListFromItsCardOpensTheListPanel()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy", 0);
+        Arrange(area, list);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        var navigation = page.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/areas/{area.Id}");
+        page.Find(".pspad-list-menu button").Click();
+        page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Edit").Click();
+
+        Assert.EndsWith($"/areas/{area.Id}?list={list.Id}", navigation.Uri);
+        Assert.Empty(page.FindAll("div.mud-dialog"));
+    }
+
+    [Fact]
     public async Task DeletingAListFromItsCardRemovesItFromTheScreen()
     {
         var area = NewArea("Dom");

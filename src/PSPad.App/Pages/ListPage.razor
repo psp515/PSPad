@@ -117,9 +117,9 @@ else if (_list is not null)
                                 Size="Size.Small" UserAttributes="@AddTaskAttributes" />
             </MudTooltip>
         }
-        <MudTooltip Text="Rename list">
-            <MudFabMenuItem OnClick="@RenameAsync" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
-                            Size="Size.Small" UserAttributes="@RenameListAttributes" />
+        <MudTooltip Text="Edit list">
+            <MudFabMenuItem OnClick="@EditList" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
+                            Size="Size.Small" UserAttributes="@EditListAttributes" />
         </MudTooltip>
         <MudTooltip Text="Delete list">
             <MudFabMenuItem OnClick="@DeleteAsync" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Primary"
@@ -148,7 +148,7 @@ else
     static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
     static readonly Dictionary<string, object> AddTaskAttributes = new() { ["aria-label"] = "Add task" };
     static readonly Dictionary<string, object> AddItemAttributes = new() { ["aria-label"] = "Add item" };
-    static readonly Dictionary<string, object> RenameListAttributes = new() { ["aria-label"] = "Rename list" };
+    static readonly Dictionary<string, object> EditListAttributes = new() { ["aria-label"] = "Edit list" };
     static readonly Dictionary<string, object> DeleteListAttributes = new() { ["aria-label"] = "Delete list" };
 
     protected override void OnInitialized() => Sender.Sent += OnCommandSent;
@@ -192,28 +192,7 @@ else
 
     void Open(TodoTask task) => Navigation.NavigateTo($"/lists/{ListId}?task={task.Id}");
 
-    async Task RenameAsync()
-    {
-        if (_list is null)
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters<NameDialog>
-        {
-            { dialog => dialog.Title, "List name" },
-            { dialog => dialog.Value, _list.Name }
-        };
-        var dialog = await Dialogs.ShowAsync<NameDialog>("Rename list", parameters);
-        var result = await dialog.Result;
-
-        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new RenameTaskList(Guid.NewGuid(), State.UserId, ListId, name));
-    }
+    void EditList() => Navigation.NavigateTo(ListQuery.For(Navigation.Uri, ListId));
 
     async Task DeleteAsync()
     {

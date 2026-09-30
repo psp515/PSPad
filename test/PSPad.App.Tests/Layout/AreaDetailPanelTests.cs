@@ -174,6 +174,17 @@ public class AreaDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheNameIsTheUnboxedHeadingFieldTasksUse()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var panel = Render<AreaDetailPanel>(parameters => parameters.Add(p => p.IsNew, true));
+
+        Assert.Equal("Area name", panel.Find(".pspad-area-name-field input").GetAttribute("placeholder"));
+        Assert.Empty(panel.FindAll(".pspad-area-name-field .mud-input-outlined"));
+    }
+
+    [Fact]
     public void AnExistingAreaListsItsListsInBoardOrder()
     {
         var area = NewArea("Dom", 0);

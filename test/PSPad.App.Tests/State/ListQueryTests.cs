@@ -7,6 +7,35 @@ namespace PSPad.App.Tests.State;
 public class ListQueryTests
 {
     [Fact]
+    public void AnExistingListUrlKeepsTheScreenAndOpensOnlyThatList()
+    {
+        var listId = Guid.NewGuid();
+
+        var uri = ListQuery.For($"https://pspad.local/lists/{listId}?task={Guid.NewGuid()}", listId);
+
+        Assert.Equal($"https://pspad.local/lists/{listId}?list={listId}", uri);
+        Assert.Equal(listId, ListQuery.From(uri));
+        Assert.Null(ListQuery.NewListAreaFrom(uri));
+    }
+
+    [Fact]
+    public void ANewTaskOrItemUrlNeverOpensTheListPanel()
+    {
+        var listId = Guid.NewGuid();
+
+        Assert.Null(ListQuery.From(TaskQuery.ForNewTask("https://pspad.local/", listId)));
+        Assert.Null(ListQuery.From(ReferenceQuery.ForNewItem("https://pspad.local/", listId)));
+    }
+
+    [Fact]
+    public void ANewListUrlIsNotAnExistingList()
+    {
+        var areaId = Guid.NewGuid();
+
+        Assert.Null(ListQuery.From(ListQuery.ForNewList($"https://pspad.local/areas/{areaId}", areaId)));
+    }
+
+    [Fact]
     public void AUrlWithNoQueryAddsNoList()
     {
         Assert.Null(ListQuery.NewListAreaFrom("https://pspad.local/areas/" + Guid.NewGuid()));

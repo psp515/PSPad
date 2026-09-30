@@ -227,7 +227,7 @@
             }
         }
 
-        Navigation.NavigateTo(ReferenceQuery.ForItem(Navigation.Uri, itemId), replace: true);
+        await OnClose.InvokeAsync();
     }
 
     async Task NameChangedAsync(string name)

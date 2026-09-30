@@ -9,14 +9,18 @@
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
 
-<DetailPanel Open="@(IsNew || _goal is not null)" Title="@(IsNew ? "New goal" : "Goal")" OnClose="@OnClose"
+<DetailPanel Open="@(IsNew || _goal is not null)" Title="@(IsNew ? "New goal" : "Goal")" TitleTypo="Typo.body2" OnClose="@OnClose"
              OnSave="@SaveCallback" SaveText="Add goal" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
              OnDelete="@DeleteCallback" DeleteText="Delete goal" Disabled="@Disabled">
-    <div class="pa-4 d-flex flex-column gap-2">
-        <MudTextField T="string" Class="pspad-goal-name-field" Label="Name" Variant="Variant.Outlined"
-                      Value="@(_goal?.Name ?? _draftName)" ValueChanged="@NameChangedAsync"
+    <div class="px-2 pt-3 pb-1">
+        <MudTextField T="string" Class="pspad-goal-name-field flex-grow-1 px-2" Placeholder="Goal name" Typo="Typo.h6"
+                      Underline="false" Value="@(_goal?.Name ?? _draftName)" ValueChanged="@NameChangedAsync"
                       Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
+    </div>
 
+    <MudDivider />
+
+    <div class="pa-4 d-flex flex-column gap-2">
         @if (_goal is not null)
         {
             <MudSelect T="GoalStatus" Class="pspad-goal-status mt-2" Label="Status" Variant="Variant.Outlined"

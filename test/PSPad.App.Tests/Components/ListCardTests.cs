@@ -160,18 +160,19 @@ public class ListCardTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheHeaderCarriesAMenuThatRaisesRenameAndDelete()
+    public void TheHeaderCarriesAMenuOfEditAndDeleteOnly()
     {
         Arrange();
         var list = List("Zakupy");
-        var renamed = false;
+        var edited = false;
         var deleted = false;
 
-        var card = Render(BuildCardWithPopover(list, () => renamed = true, () => deleted = true));
+        var card = Render(BuildCardWithPopover(list, () => edited = true, () => deleted = true));
 
         card.Find(".pspad-list-menu button").Click();
+        Assert.Equal(["Edit", "Delete"], card.FindAll(".mud-menu-item").Select(item => item.TextContent.Trim()));
         card.FindAll(".mud-menu-item")[0].Click();
-        Assert.True(renamed);
+        Assert.True(edited);
 
         card.Find(".pspad-list-menu button").Click();
         card.FindAll(".mud-menu-item").Last().Click();
@@ -273,14 +274,14 @@ public class ListCardTests : Bunit.TestContext
 
     // MudMenu portals its open content through MudPopoverProvider, so this render
     // tree needs one alongside ListCard for the menu item clicks to be reachable.
-    RenderFragment BuildCardWithPopover(TaskList list, Action onRename, Action onDelete) => builder =>
+    RenderFragment BuildCardWithPopover(TaskList list, Action onEdit, Action onDelete) => builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
         builder.CloseComponent();
         builder.OpenComponent<ListCard>(1);
         builder.AddAttribute(2, nameof(ListCard.List), list);
         builder.AddAttribute(3, nameof(ListCard.Today), Today);
-        builder.AddAttribute(4, nameof(ListCard.OnRename), new EventCallback(null, onRename));
+        builder.AddAttribute(4, nameof(ListCard.OnEdit), new EventCallback(null, onEdit));
         builder.AddAttribute(5, nameof(ListCard.OnDelete), new EventCallback(null, onDelete));
         builder.CloseComponent();
     };

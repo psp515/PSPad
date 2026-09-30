@@ -18,12 +18,12 @@
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
 
-<DetailPanel Open="@(IsNew || _area is not null)" Title="@(IsNew ? "New area" : "Area")" OnClose="@OnClose"
+<DetailPanel Open="@(IsNew || _area is not null)" Title="@(IsNew ? "New area" : "Area")" TitleTypo="Typo.body2" OnClose="@OnClose"
              OnSave="@SaveCallback" SaveText="Add area" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
              OnDelete="@DeleteCallback" DeleteText="Delete area" Disabled="@Disabled">
-    <div class="pa-4">
-        <MudTextField T="string" Class="pspad-area-name-field" Label="Name" Variant="Variant.Outlined"
-                      Value="@(_area?.Name ?? _draftName)" ValueChanged="@NameChangedAsync"
+    <div class="px-2 pt-3 pb-1">
+        <MudTextField T="string" Class="pspad-area-name-field flex-grow-1 px-2" Placeholder="Area name" Typo="Typo.h6"
+                      Underline="false" Value="@(_area?.Name ?? _draftName)" ValueChanged="@NameChangedAsync"
                       Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
     </div>
     @if (_area is not null)

@@ -66,6 +66,7 @@ the old one's status line to point at the new number.
 | [0049](0049-a-replica-that-learns-a-new-collection-pulls-from-zero.md) | A replica that learns a new collection pulls from zero, once | Active | 2026-09-28 | sync, offline |
 | [0050](0050-phones-navigate-from-a-bottom-bar.md) | Phones navigate from a bottom bar, not a drawer | Active (amends [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md) and [0023](0023-sidebar-search-removed-footer-added.md) below `md`) | 2026-09-29 | ui, navigation, mobile |
 | [0051](0051-presentation-module-per-user-views.md) | A Presentation module holds per-user views of shared data | Active | 2026-09-30 | architecture, modularity, domain, ui, sync |
+| [0052](0052-create-and-edit-in-side-panels.md) | Create and edit every thing in its side panel, never a popup | Active | 2026-09-30 | ui, consistency |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

@@ -55,9 +55,8 @@ else if (_area is not null)
                           OnOpenItem="@OpenItem" OnStarItem="@StarItemAsync"
                           OnAddTaskClick="@(() => AddTask(list.Id))"
                           OnAddItemClick="@(() => AddItem(list.Id))"
-                          OnRename="@(() => RenameListAsync(list))"
-                          OnDelete="@(() => DeleteListAsync(list))"
-                          OnMove="@(() => MoveListAsync(list))" />
+                          OnEdit="@(() => EditList(list))"
+                          OnDelete="@(() => DeleteListAsync(list))" />
             </ItemTemplate>
         </MasonryGrid>
     }
@@ -185,23 +184,7 @@ else
 
     void NewList() => Navigation.NavigateTo(ListQuery.ForNewList(Navigation.Uri, AreaId));
 
-    async Task RenameListAsync(TaskList list)
-    {
-        var parameters = new DialogParameters<NameDialog>
-        {
-            { dialog => dialog.Title, "List name" },
-            { dialog => dialog.Value, list.Name }
-        };
-        var dialog = await Dialogs.ShowAsync<NameDialog>("Rename list", parameters);
-        var result = await dialog.Result;
-
-        if (result is null || result.Canceled || result.Data is not string name || name.Length == 0)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new RenameTaskList(Guid.NewGuid(), State.UserId, list.Id, name));
-    }
+    void EditList(TaskList list) => Navigation.NavigateTo(ListQuery.For(Navigation.Uri, list.Id));
 
     async Task DeleteListAsync(TaskList list)
     {
@@ -242,31 +225,6 @@ else
 
         await Sender.SendAsync(new DeleteArea(Guid.NewGuid(), State.UserId, area.Id));
         Navigation.NavigateTo("/");
-    }
-
-    async Task MoveListAsync(TaskList list)
-    {
-        var areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        var targets = areas.Where(area => !area.Deleted && area.Id != AreaId).ToArray();
-
-        if (targets.Length == 0)
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters<AreaPickerDialog>
-        {
-            { dialog => dialog.Areas, targets }
-        };
-        var dialog = await Dialogs.ShowAsync<AreaPickerDialog>("Move to area", parameters);
-        var result = await dialog.Result;
-
-        if (result is null || result.Canceled || result.Data is not Guid target)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new MoveTaskListToArea(Guid.NewGuid(), State.UserId, list.Id, target));
     }
 
     public void Dispose() => Sender.Sent -= OnCommandSent;

@@ -406,6 +406,9 @@ fallback order, and the area board packs its cards through `MasonryGrid`) is
 `Active` and built here, superseding `adr/0012`. `specs/list-ordering-design.md`
 is marked Built; `specs/modules-spec.md` is the standing rulebook for module
 boundaries and names `ListView` as Presentation's next extension point.
+`adr/0052` (every thing is created and edited in its side panel — name
+first, other fields below, adding closes; popups only for delete
+confirmations and in-panel pickers) is `Active` and built here too.
 
 ---
 
