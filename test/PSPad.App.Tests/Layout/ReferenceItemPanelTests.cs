@@ -177,7 +177,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task MovingAFieldDownSendsMoveReferenceField()
+    public async Task DroppingAFieldSendsMoveReferenceField()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
         var item = NewItem(list.Id, "Bigos");
@@ -186,7 +186,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, list, item);
 
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
-        panel.FindAll(".pspad-field-down")[0].Click();
+        Drag.Drop(panel, item.Fields[0], 1);
 
         var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Equal("Servings", reloaded!.Fields[0].Label);
@@ -194,7 +194,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task MovingTheLastFieldUpSendsToIndexOneOfThree()
+    public async Task DroppingTheLastFieldAtOneSendsToIndexOneOfThree()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
         var item = NewItem(list.Id, "Bigos");
@@ -204,14 +204,14 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, list, item);
 
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
-        panel.FindAll(".pspad-field-up")[2].Click();
+        Drag.Drop(panel, item.Fields[2], 1);
 
         var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Equal(["Time", "Difficulty", "Servings"], reloaded!.Fields.Select(field => field.Label));
     }
 
     [Fact]
-    public async Task MovingTheFirstFieldDownSendsToIndexOneOfThree()
+    public async Task DroppingTheFirstFieldAtOneSendsToIndexOneOfThree()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
         var item = NewItem(list.Id, "Bigos");
@@ -221,7 +221,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, list, item);
 
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
-        panel.FindAll(".pspad-field-down")[0].Click();
+        Drag.Drop(panel, item.Fields[0], 1);
 
         var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Equal(["Servings", "Time", "Difficulty"], reloaded!.Fields.Select(field => field.Label));
@@ -396,7 +396,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
             option => option.TextContent.Trim() == "Path"));
         panel.FindAll(".mud-list-item").First(option => option.TextContent.Trim() == "Path").Click();
         panel.Find(".pspad-field-save").Click();
-        panel.FindAll(".pspad-field-up")[1].Click();
+        Drag.Drop<ReferenceField>(panel, field => field.Label == "Site", 0);
         panel.Find(".pspad-markdown-input textarea").Input("Slow cooked");
         panel.Find(".pspad-markdown-input textarea").Blur();
         panel.Find(".pspad-panel-save").Click();

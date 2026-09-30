@@ -191,24 +191,22 @@ public class AreaDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheFirstCannotMoveUpAndTheLastCannotMoveDown()
+    public void EveryListEndsInADragHandle()
     {
         var area = NewArea("Dom", 0);
-        AppTestHost.Arrange(this, User, Today, area,
-            NewList(area.Id, "Zakupy", 0), NewList(area.Id, "Remont", 1), NewList(area.Id, "Ogród", 2));
+        AppTestHost.Arrange(this, User, Today, area, NewList(area.Id, "Zakupy", 0), NewList(area.Id, "Remont", 1));
 
         var panel = RenderWithOverlays(area.Id);
 
-        var ups = panel.FindAll(".pspad-area-list-up");
-        var downs = panel.FindAll(".pspad-area-list-down");
-        Assert.True(ups[0].HasAttribute("disabled"));
-        Assert.False(ups[1].HasAttribute("disabled"));
-        Assert.False(downs[1].HasAttribute("disabled"));
-        Assert.True(downs[2].HasAttribute("disabled"));
+        var rows = panel.FindAll(".pspad-area-list-row");
+        Assert.Equal(2, rows.Count);
+        Assert.All(rows, row => Assert.Contains("pspad-drag-handle", row.LastElementChild!.ClassName));
+        Assert.Empty(panel.FindAll(".pspad-area-list-up"));
+        Assert.Empty(panel.FindAll(".pspad-area-list-down"));
     }
 
     [Fact]
-    public async Task MovingAListDownStoresTheNewOrder()
+    public async Task DroppingAListStoresTheNewOrder()
     {
         var area = NewArea("Dom", 0);
         var zakupy = NewList(area.Id, "Zakupy", 0);
@@ -217,11 +215,11 @@ public class AreaDetailPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, area, zakupy, remont, ogrod);
 
         var panel = RenderWithOverlays(area.Id);
-        panel.FindAll(".pspad-area-list-down")[0].Click();
+        Drag.Drop<TaskList>(panel, list => list.Name == "Zakupy", 2);
 
         var view = await replica.LoadAsync<AreaView>(AreaView.IdFor(User, area.Id));
-        Assert.Equal([remont.Id, zakupy.Id, ogrod.Id], view!.Order);
-        panel.WaitForAssertion(() => Assert.Equal(["Remont", "Zakupy", "Ogród"], ListNames(panel)));
+        Assert.Equal([remont.Id, ogrod.Id, zakupy.Id], view!.Order);
+        panel.WaitForAssertion(() => Assert.Equal(["Remont", "Ogród", "Zakupy"], ListNames(panel)));
     }
 
     [Fact]

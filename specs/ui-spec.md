@@ -461,11 +461,14 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
 **An existing area's panel orders its lists.** Under the Name field,
 `AreaDetailPanel` shows a `PanelSection` **Lists · N** (`pspad-area-lists`)
 with one row per list in board order (`ListOrder.InArea`): `ListIcon`, the
-name, then up/down `MudIconButton`s (`pspad-area-list-up`/`-down`,
-`aria-label` "Move {name} up/down"), up disabled on the first row, down on
-the last — the `ReferenceFieldList` row pattern. A tap sends `ReorderLists`
-with the displayed order and saves at once, like every edit of an existing
-thing; a second tap while one is in flight is ignored. No lists → a muted
+name, then a `DragIndicator` handle (`pspad-drag-handle`) as the last
+element — the `ReferenceFieldList` row pattern. Rows reorder by drag only,
+through `MudDropContainer`/`MudDropZone AllowReorder`: a drop sends
+`ReorderLists` with the displayed order and the zone index, and saves at
+once, like every edit of an existing thing; drops while one is in flight
+are ignored. `MudDropZone` keeps its own per-item index, so the container
+is re-keyed after each reload to render the new order. Drag relies on the
+browser's HTML5 drag events — there is no button fallback. No lists → a muted
 "No lists yet.". A new area has no Lists section. Every other list picker
 (task, Inbox and reference-item panels) groups lists by area in the same
 order through `ListOrder.Arrange`.
@@ -579,9 +582,10 @@ property rows → Description order:
    (the type and its fields stay named `ReferenceField`/`Fields` — only the
    UI wording changed), laid out like `StepList` (the same `pspad-step` rows,
    dense, no big buttons): each row a caption `Label` over a
-   `ReferenceFieldValue` (rendering per its `FieldKind`, below), small
-   up/down `MudIconButton`s reordering it and a Close icon removing it
-   ("Remove {label}"); a tap on the row body opens `ReferenceFieldEditor`
+   `ReferenceFieldValue` (rendering per its `FieldKind`, below), a Close
+   icon removing it ("Remove {label}") and a `DragIndicator` handle as the
+   last element — rows reorder by drag only (`MudDropContainer`, keyed on
+   the field order), disabled while a field is being edited; a tap on the row body opens `ReferenceFieldEditor`
    (compact: label, value, display kind, Save/Cancel/Remove) in the row's
    place. The last row is the add row — a `+` lead and two unboxed dense
    fields, **Label** and **Value**. Enter in **Label** never adds — it moves

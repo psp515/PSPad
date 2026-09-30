@@ -113,7 +113,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
 
         var fields = Render<ReferenceFieldList>(parameters => parameters
             .Add(p => p.Item, item).Add(p => p.UserId, User).Add(p => p.Changed, () => changes++));
-        fields.FindAll(".pspad-field-down")[0].Click();
+        Drag.Drop(fields, item.Fields[0], 1);
 
         Assert.Equal(0, changes);
         var snackbar = Services.GetRequiredService<ISnackbar>();
@@ -266,12 +266,28 @@ public class ReferenceFieldListTests : Bunit.TestContext
         };
 
         var fields = RenderDraft(draft);
-        fields.FindAll(".pspad-field-up")[2].Click();
+        Drag.Drop(fields, draft[2], 1);
 
         Assert.Equal(["Time", "Difficulty", "Servings"], draft.Select(field => field.Label));
         Assert.Equal([0, 1, 2], draft.Select(field => field.Position));
         Assert.Equal(["Time", "Difficulty", "Servings"],
             fields.FindAll(".pspad-field-row .pspad-field-label").Select(label => label.TextContent.Trim()));
+    }
+
+    [Fact]
+    public void EveryFieldEndsInADragHandle()
+    {
+        var item = NewItem();
+        AddField(item, "Time", "45 min");
+        AddField(item, "Servings", "4");
+        AppTestHost.Arrange(this, User, Today, item);
+
+        var fields = Render<ReferenceFieldList>(parameters => parameters.Add(p => p.Item, item).Add(p => p.UserId, User));
+
+        var rows = fields.FindAll(".pspad-field-row");
+        Assert.All(rows, row => Assert.Contains("pspad-drag-handle", row.LastElementChild!.ClassName));
+        Assert.Empty(fields.FindAll(".pspad-field-up"));
+        Assert.Empty(fields.FindAll(".pspad-field-down"));
     }
 
     [Fact]

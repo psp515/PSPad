@@ -9,45 +9,41 @@
 @inject ILogger<ReferenceFieldList> Logger
 
 <div class="pspad-fields d-flex flex-column">
-    @for (var index = 0; index < Fields.Count; index++)
-    {
-        var field = Fields[index];
-        var position = index;
-        var isFirst = position == 0;
-        var isLast = position == Fields.Count - 1;
-
-        @if (_editingFieldId == field.Id)
-        {
-            <div @key="field.Id" class="pspad-field-editor d-flex flex-column gap-1 py-2 pl-2 pr-1">
-                <ReferenceFieldEditor Field="@field" OnSave="@(input => EditAsync(field.Id, input))"
-                                      OnCancel="@CancelEditAsync" OnRemove="@(() => RemoveAsync(field))" />
-            </div>
-        }
-        else
-        {
-            <div @key="field.Id" class="pspad-step pspad-field-row d-flex align-center gap-1">
-                <span class="pspad-step-lead">
-                    <MudIcon Icon="@KindIcon(field)" Size="Size.Small" Class="pspad-muted" />
-                </span>
-                <div class="flex-grow-1 pspad-field-row-body py-1" style="cursor:pointer; min-width:0"
-                     @onclick="@(() => BeginEdit(field.Id))">
-                    <MudText Typo="Typo.caption" Class="pspad-field-label pspad-muted d-block">@field.Label</MudText>
-                    <ReferenceFieldValue Field="@field" />
+    @* MudDropZone keeps its own index per item; keying on the order hands it a fresh container after every change. *@
+    <MudDropContainer T="ReferenceField" @key="@DropKey" Items="@Fields" ItemsSelector="@((_, _) => true)"
+                      ItemDropped="@FieldDroppedAsync" ItemDisabled="@(_ => Disabled || _editingFieldId is not null)"
+                      Class="pspad-fields-drop">
+        <ChildContent>
+            <MudDropZone T="ReferenceField" Identifier="fields" AllowReorder="true" Class="d-flex flex-column" />
+        </ChildContent>
+        <ItemRenderer>
+            @if (_editingFieldId == context.Id)
+            {
+                <div class="pspad-field-editor d-flex flex-column gap-1 py-2 pl-2 pr-1">
+                    <ReferenceFieldEditor Field="@context" OnSave="@(input => EditAsync(context.Id, input))"
+                                          OnCancel="@CancelEditAsync" OnRemove="@(() => RemoveAsync(context))" />
                 </div>
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
-                               Class="pspad-field-up pspad-step-action" aria-label="@($"Move {field.Label} up")"
-                               Disabled="@(Disabled || isFirst)"
-                               OnClick="@(() => MoveAsync(field.Id, position - 1))" />
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
-                               Class="pspad-field-down pspad-step-action" aria-label="@($"Move {field.Label} down")"
-                               Disabled="@(Disabled || isLast)"
-                               OnClick="@(() => MoveAsync(field.Id, position + 1))" />
-                <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
-                               Class="pspad-field-remove pspad-step-remove" aria-label="@($"Remove {field.Label}")"
-                               Disabled="@Disabled" OnClick="@(() => RemoveAsync(field))" />
-            </div>
-        }
-    }
+            }
+            else
+            {
+                <div class="pspad-step pspad-field-row d-flex align-center gap-1">
+                    <span class="pspad-step-lead">
+                        <MudIcon Icon="@KindIcon(context)" Size="Size.Small" Class="pspad-muted" />
+                    </span>
+                    <div class="flex-grow-1 pspad-field-row-body py-1" style="cursor:pointer; min-width:0"
+                         @onclick="@(() => BeginEdit(context.Id))">
+                        <MudText Typo="Typo.caption" Class="pspad-field-label pspad-muted d-block">@context.Label</MudText>
+                        <ReferenceFieldValue Field="@context" />
+                    </div>
+                    <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
+                                   Class="pspad-field-remove pspad-step-remove" aria-label="@($"Remove {context.Label}")"
+                                   Disabled="@Disabled" OnClick="@(() => RemoveAsync(context))" />
+                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small"
+                             Class="pspad-drag-handle pspad-muted" aria-label="@($"Drag {context.Label}")" />
+                </div>
+            }
+        </ItemRenderer>
+    </MudDropContainer>
 
     <div class="pspad-step pspad-step-add-row pspad-field-add-row d-flex align-center gap-1">
         <span class="pspad-step-lead">
@@ -80,6 +76,8 @@
     DotNetObjectReference<ReferenceFieldList>? _dropReference;
 
     IReadOnlyList<ReferenceField> Fields => Item?.Fields ?? Draft ?? [];
+
+    string DropKey => string.Join(",", Fields.Select(entry => entry.Id)) + (_editingFieldId is null ? "" : "|editing");
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -329,6 +327,9 @@
         await Changed.InvokeAsync();
         StateHasChanged();
     }
+
+    Task FieldDroppedAsync(MudItemDropInfo<ReferenceField> dropped) =>
+        dropped.Item is { } field ? MoveAsync(field.Id, dropped.IndexInZone) : Task.CompletedTask;
 
     async Task MoveAsync(Guid fieldId, int toIndex)
     {

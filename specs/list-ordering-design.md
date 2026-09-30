@@ -127,13 +127,13 @@ A list moved to another area appears last there, by creation date.
 Existing areas only, under the Name field:
 
 - `PanelSection` **Lists** with a muted count, one row per list in
-  `Arranged.Sort` order: `ListIcon.For(list)`, the name, then up/down
-  `MudIconButton`s (`ArrowUpward`/`ArrowDownward`, `Size.Small`,
-  `aria-label` "Move {name} up/down"). Up disabled on the first row, down on
-  the last. The `ReferenceFieldList` row pattern.
+  `Arranged.Sort` order: `ListIcon.For(list)`, the name, then a
+  `DragIndicator` handle at the end. Rows reorder by drag only
+  (`MudDropContainer` + `MudDropZone AllowReorder`); reference-item fields
+  got the same drag reordering in place of their up/down buttons.
 - No lists → muted "No lists yet.".
-- A tap sends `ReorderLists` with the displayed order; saves as it changes,
-  no Save. A second tap while one is in flight is ignored.
+- A drop sends `ReorderLists` with the displayed order and the zone index;
+  saves as it changes, no Save. Drops while one is in flight are ignored.
 - The **Edit area** FAB item's tooltip becomes "Edit area & order lists".
 
 ## 6. Testing
