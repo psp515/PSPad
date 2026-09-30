@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\modules\PSPad.Module.Tasks\PSPad.Module.Tasks.csproj" />
+    <ProjectReference Include="..\modules\PSPad.Module.Presentation\PSPad.Module.Presentation.csproj" />
     <ProjectReference Include="..\shared\PSPad.Abstractions\PSPad.Abstractions.csproj" />
     <ProjectReference Include="..\shared\PSPad.Contracts\PSPad.Contracts.csproj" />
   </ItemGroup>

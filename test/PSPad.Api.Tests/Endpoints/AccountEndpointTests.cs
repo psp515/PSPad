@@ -6,6 +6,7 @@ using PSPad.Api.Tests.Identity;
 using PSPad.Api.Tests.Persistence;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
 
@@ -52,6 +53,30 @@ public class AccountEndpointTests(MongoFixture fixture)
 
             Assert.True(remaining == 0, $"Collection '{name}' still has {remaining} document(s) for the deleted user.");
         }
+    }
+
+    [Fact]
+    public async Task DeletingTheAccountRemovesItsAreaViews()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture, new FakeKeycloakAdminClient(succeeds: true));
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var userId = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var list = Guid.NewGuid();
+        var reorder = new ReorderLists(Guid.NewGuid(), userId, Guid.NewGuid(), [list], list, 0);
+
+        await client.PostAsJsonAsync("/api/commands", new[]
+        {
+            new CommandEnvelope(nameof(ReorderLists), JsonSerializer.SerializeToElement(reorder))
+        }, ct);
+
+        var context = Persistence.TestContext.For(fixture);
+        var views = context.Collection<BsonDocument>("areaviews");
+        Assert.Equal(1, await views.Find(Builders<BsonDocument>.Filter.Eq("userId", userId)).CountDocumentsAsync(ct));
+
+        (await client.DeleteAsync("/api/account", ct)).EnsureSuccessStatusCode();
+
+        Assert.Equal(0, await views.Find(Builders<BsonDocument>.Filter.Eq("userId", userId)).CountDocumentsAsync(ct));
     }
 
     [Fact]
