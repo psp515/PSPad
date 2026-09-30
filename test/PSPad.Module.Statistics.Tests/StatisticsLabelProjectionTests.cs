@@ -66,7 +66,7 @@ public class StatisticsLabelProjectionTests
         var projection = new StatisticsLabelProjection(store);
 
         await projection.HandleAsync(
-            new DomainEventEnvelope(3, new TaskListCreated(listId, User, At, Guid.NewGuid(), "Errands", 0)),
+            new DomainEventEnvelope(3, new TaskListCreated(listId, User, At, Guid.NewGuid(), "Errands")),
             CancellationToken.None);
         await projection.HandleAsync(
             new DomainEventEnvelope(8, new TaskListDeleted(listId, User, At)), CancellationToken.None);

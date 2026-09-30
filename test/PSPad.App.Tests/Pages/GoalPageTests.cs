@@ -417,7 +417,7 @@ public class GoalPageTests : Bunit.TestContext
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, 0),
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name),
             DateTimeOffset.UnixEpoch));
         return list;
     }

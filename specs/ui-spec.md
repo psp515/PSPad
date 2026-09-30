@@ -179,7 +179,20 @@ where the permanent sidebar leaves too little width for three — three from
 column-flow — DOM order stays reading order for keyboard and screen-reader
 navigation.
 
-Applied on: `AreaBoard` (list cards), `GoalsPage` (goal cards, active and
+**The area board is masonry, not a row grid.** List cards differ wildly in
+height, so a row grid leaves an empty band under every short card.
+`AreaBoard` renders its cards through `Components/MasonryGrid<TItem>`: the
+same breakpoints decide a column count (`MasonryGrid.ColumnsFor`: 1 below
+`sm`, 2 at `sm`/`md`, 3 at `lg`, 4 from `xl`, read from `IBreakpoints`), and
+item *i* goes to column *i mod n* (`MasonryGrid.Columns`). Markup stays
+MudBlazor: `MudGrid Spacing="4"` → one `MudItem xs="12" sm="6" lg="4"
+xl="3"` per column → `MudStack Spacing="4"` of cards, no custom CSS. The
+first row always holds the top *n* lists of the user's order, and a phone
+shows the order top to bottom. This is the one exception to row-flow: DOM
+order is column by column (`adr/0051`). The empty state stays a single
+card in a plain `MudGrid`.
+
+Applied on: `GoalsPage` (goal cards, active and
 achieved separately), `Today` (overdue, today, starred, tomorrow, goals in progress,
 completed and upcoming each as their own grid), `InboxPage`, `ListPage` (open and completed separately),
 `SettingsPage` (Account, Application settings, Sync, Danger zone each their
@@ -445,12 +458,41 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    right that asks via `ConfirmDialog` before deleting. In Add the footer
    holds only **Add task**, and Enter in the name field adds too.
 
+**An existing area's panel orders its lists.** Under the Name field,
+`AreaDetailPanel` shows a `PanelSection` **Lists · N** (`pspad-area-lists`)
+with one row per list in board order (`ListOrder.InArea`): `ListIcon`, the
+name, then a `DragIndicator` handle (`pspad-drag-handle`) as the last
+element — the `ReferenceFieldList` row pattern. Rows reorder by drag only,
+through `MudDropContainer`/`MudDropZone AllowReorder`: a drop sends
+`ReorderLists` with the displayed order and the zone index, and saves at
+once, like every edit of an existing thing; drops while one is in flight
+are ignored. `MudDropZone` keeps its own per-item index, so the container
+is re-keyed after each reload to render the new order. Drag relies on the
+browser's HTML5 drag events — there is no button fallback. No lists → a muted
+"No lists yet.". A new area has no Lists section. Every other list picker
+(task, Inbox and reference-item panels) groups lists by area in the same
+order through `ListOrder.Arrange`.
+
+**Creating and editing always happen in a side panel, never a popup.**
+Every thing — area, list, task, reference item, goal, Inbox item — is
+created and edited in its `DetailPanel`, addressed by query string. Every
+panel opens the same way: the small `Typo.body2` title, then the unboxed
+name field (`Typo.h6`, no underline, `Placeholder="{Thing} name"`, autofocus
+and Enter-adds in add mode) directly under the header, then everything else
+— kind, area, status, due date, labels, lists — below it. Editing an
+existing thing saves each change; adding closes the panel and never opens
+the new thing (a new area is the one exception: it lands on its own board,
+where its first list gets added). A card's `⋯` menu offers **Edit** (opens
+the panel) and **Delete**, via `ThingMenu`. Popups are only for confirming
+a delete (`ConfirmDialog`, `DeleteAccountDialog`) and for pickers opened
+from inside a panel (due date, custom repeat, custom accent).
+
 **Area and goal detail use the same shell.** `Layout/AreaDetailPanel.razor`
 is addressed as `?area=new` (sidebar **+ New area**) or `?area={areaId}`
 (the area's **Edit area** FAB item), via `AreaQuery`.
 `Layout/GoalDetailPanel.razor` is addressed as `?goal=new` (the Goals FAB,
-or the empty state) or `?goal={goalId}` (a goal card's **Rename**, or the goal screen's **Edit goal**), via `GoalQuery`. Both open with an outlined **Name** field
-under the header. A goal adds a **Status** `MudSelect` (In progress /
+or the empty state) or `?goal={goalId}` (a goal card's **Edit**, or the goal screen's **Edit goal**), via `GoalQuery`. Both open with the unboxed name
+field ("Area name" / "Goal name") under the header. A goal adds a **Status** `MudSelect` (In progress /
 Achieved / Not achieved, existing goals only) and a **Due** `DueDateRow`
 (in add mode too). The Goals page shows in-progress goals as cards ordered
 by due date, undated last. A card shows "Due …" on its own line under the
@@ -475,17 +517,24 @@ the two closing statuses.
   **Delete goal** sits on the right and asks via `ConfirmDialog` first.
   Deleting an area goes home; deleting a goal closes the panel.
 
-**New lists use the same shell.** `Layout/ListDetailPanel.razor` is
-addressed as `?list=new&inarea={areaId}` (`ListQuery.ForNewList`) from the
-area's **New list** FAB item or its empty state — full screen below `md`, a
-side panel from `md` up. It opens with a `MudToggleGroup<ListKind>`
-(`pspad-list-kind`, outlined, **Tasks** / **Reference**, default Tasks) above
-an outlined **Name** field under a `New list · Area` title, with **Add
-list** at the bottom left; Enter also adds. `Kind` is fixed at creation —
-there is no later toggle, so a list's own screens never need to handle a
-mid-life kind change. The new list takes the next position in its area and
-the panel closes, leaving the area board. Renaming a list still goes
-through `NameDialog`.
+**Lists use the same shell.** `Layout/ListDetailPanel.razor` is addressed
+as `?list=new&inarea={areaId}` (`ListQuery.ForNewList`) from the area's
+**New list** FAB item or its empty state, and as `?list={listId}`
+(`ListQuery.For`) from a list card's **Edit** or the list screen's **Edit
+list** FAB item — full screen below `md`, a side panel from `md` up.
+`ListQuery.From` ignores URLs carrying `task=` or `item=`, whose `list=`
+names a target list rather than opening one. Under a `New list · Area` /
+`List · Area` title sits the unboxed "List name" field, then:
+- New: a `MudToggleGroup<ListKind>` (`pspad-list-kind`, outlined,
+  **Tasks** / **Reference**, default Tasks), with **Add list** at the bottom
+  left; Enter also adds. The panel closes, leaving the area board, and the
+  new list sorts last there by creation date.
+- Existing: the kind read-only (`pspad-list-kind-readonly`, `ListIcon` and
+  its label — `Kind` is fixed at creation, so a list's screens never handle
+  a mid-life change), an **Area** `MudSelect` (`pspad-list-area`) that sends
+  `MoveTaskListToArea`, and **Delete list** at the bottom right, confirmed by
+  `ConfirmDialog` and then going to the list's area. The name saves as it
+  changes (`RenameTaskList`).
 
 **List kind shows as an icon, not a label, everywhere a list is listed.**
 `Components/ListIcon.For(list)` picks `Icons.Material.Outlined.Checklist`
@@ -512,8 +561,6 @@ never opens the item. The empty-list and delete-confirmation
 copy read "items" instead of "tasks" for a `Reference` list
 (`DeleteWarning`).
 
-Areas and goals are never created or renamed through `NameDialog`, and
-lists are never created through it.
 
 **Inbox items use the same shell.** `Layout/InboxItemPanel.razor` is
 addressed as `?inbox=new` (the Inbox FAB or its empty state) or
@@ -554,9 +601,10 @@ property rows → Description order:
    (the type and its fields stay named `ReferenceField`/`Fields` — only the
    UI wording changed), laid out like `StepList` (the same `pspad-step` rows,
    dense, no big buttons): each row a caption `Label` over a
-   `ReferenceFieldValue` (rendering per its `FieldKind`, below), small
-   up/down `MudIconButton`s reordering it and a Close icon removing it
-   ("Remove {label}"); a tap on the row body opens `ReferenceFieldEditor`
+   `ReferenceFieldValue` (rendering per its `FieldKind`, below), a Close
+   icon removing it ("Remove {label}") and a `DragIndicator` handle as the
+   last element — rows reorder by drag only (`MudDropContainer`, keyed on
+   the field order), disabled while a field is being edited; a tap on the row body opens `ReferenceFieldEditor`
    (compact: label, value, display kind, Save/Cancel/Remove) in the row's
    place. The last row is the add row — a `+` lead and two unboxed dense
    fields, **Label** and **Value**. Enter in **Label** never adds — it moves
@@ -600,10 +648,10 @@ changes where the item will be created, and the `MarkdownField` saves into
 the draft. **Add item** (or Enter in the name) sends `CreateReferenceItem`;
 once accepted it sends `AddReferenceField` for each draft field in order
 (fresh ids, the draft's display hint), then `SetReferenceItemDescription`
-if the draft description is not blank, then navigates to the item with
-`replace: true`. A rejected create shows a Warning snackbar and keeps the
-whole draft; a rejected follow-up shows a Warning snackbar and still opens
-the item, since it exists. The draft resets when the target list changes or
+if the draft description is not blank, then closes the panel — adding
+never opens the new item. A rejected create shows a Warning snackbar and
+keeps the whole draft; a rejected follow-up shows a Warning snackbar and
+still closes, since the item exists. The draft resets when the target list changes or
 the panel closes.
 
 **Panel subsections share `PanelSection`.** `Components/PanelSection.razor`
@@ -707,10 +755,10 @@ icon reads unambiguously on its own.
 
 | Page | Page-level actions | Result |
 |---|---|---|
-| Area | New list, Edit area (→ area panel), Delete area | FAB Menu |
+| Area | New list, Edit area & order lists (→ area panel), Delete area | FAB Menu |
 | Goals | Add goal (→ new-goal panel) | plain `MudFab` |
 | Goal | Edit goal (→ goal panel), Delete goal | FAB Menu |
-| List | Add task (→ new-task panel) or Add item (→ new-item panel) for a `Reference` list, Rename list, Delete list | FAB Menu |
+| List | Add task (→ new-task panel) or Add item (→ new-item panel) for a `Reference` list, Edit list (→ list panel), Delete list | FAB Menu |
 | Inbox | Capture (→ capture panel) | plain `MudFab` |
 | My Day, Settings, Statistics | none | no FAB |
 

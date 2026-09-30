@@ -14,8 +14,8 @@ public class ListKindTests
     static TaskList Create(ListKind? kind = null)
     {
         var command = kind is { } chosen
-            ? new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Filaments", 0, chosen)
-            : new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Chores", 0);
+            ? new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Filaments", chosen)
+            : new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Chores");
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(null, command, Now));
         return list;

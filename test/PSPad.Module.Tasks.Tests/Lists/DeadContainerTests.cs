@@ -89,7 +89,7 @@ public class DeadContainerTests
         var area = DeletedArea();
 
         var result = await new CreateTaskListHandler(_lists, _areas, _work, _clock).HandleAsync(
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Errands", 0), CancellationToken.None);
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Errands"), CancellationToken.None);
 
         AssertRejectedUntouched(result, "area");
     }
@@ -100,7 +100,7 @@ public class DeadContainerTests
         var area = SeedArea();
 
         var result = await new CreateTaskListHandler(_lists, _areas, _work, _clock).HandleAsync(
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Errands", 0), CancellationToken.None);
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Errands"), CancellationToken.None);
 
         Assert.True(result.Accepted);
     }
@@ -142,7 +142,7 @@ public class DeadContainerTests
     TaskList SeedList(Guid areaId)
     {
         var list = new TaskList();
-        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, areaId, "Errands", 0));
+        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, areaId, "Errands"));
         _lists.Seed(list);
         return list;
     }

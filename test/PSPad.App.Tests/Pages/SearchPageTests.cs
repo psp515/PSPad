@@ -65,7 +65,7 @@ public class SearchPageTests : Bunit.TestContext
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0, kind),
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, kind),
             DateTimeOffset.UnixEpoch));
         return list;
     }

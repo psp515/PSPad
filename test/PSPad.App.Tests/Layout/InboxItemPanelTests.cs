@@ -318,13 +318,13 @@ public class InboxItemPanelTests : Bunit.TestContext
         return area;
     }
 
-    int _position;
+    int _created;
 
     TaskList NewList(Guid areaId, string name)
     {
         var list = new TaskList();
-        list.ApplyAll(TaskList.Decide(null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, _position++),
-            DateTimeOffset.UnixEpoch));
+        list.ApplyAll(TaskList.Decide(null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name),
+            DateTimeOffset.UnixEpoch.AddMinutes(_created++)));
         return list;
     }
 
@@ -332,8 +332,8 @@ public class InboxItemPanelTests : Bunit.TestContext
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, _position++, ListKind.Reference),
-            DateTimeOffset.UnixEpoch));
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, ListKind.Reference),
+            DateTimeOffset.UnixEpoch.AddMinutes(_created++)));
         return list;
     }
 

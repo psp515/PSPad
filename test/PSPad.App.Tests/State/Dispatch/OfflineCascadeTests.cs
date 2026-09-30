@@ -44,7 +44,7 @@ public class OfflineCascadeTests
         var itemId = Guid.NewGuid();
         Accepted(await sender.SendAsync(new CreateArea(Guid.NewGuid(), User, areaId, "Workshop", 0), Ct));
         Accepted(await sender.SendAsync(
-            new CreateTaskList(Guid.NewGuid(), User, listId, areaId, "Filaments", 0, ListKind.Reference), Ct));
+            new CreateTaskList(Guid.NewGuid(), User, listId, areaId, "Filaments", ListKind.Reference), Ct));
         Accepted(await sender.SendAsync(
             new CreateReferenceItem(Guid.NewGuid(), User, itemId, listId, "PLA Black", 0), Ct));
         await outbox.ClearAsync();
@@ -100,7 +100,7 @@ public class OfflineCascadeTests
         var listId = Guid.NewGuid();
         var taskId = Guid.NewGuid();
         Accepted(await sender.SendAsync(new CreateArea(Guid.NewGuid(), User, areaId, "Dom", 0), Ct));
-        Accepted(await sender.SendAsync(new CreateTaskList(Guid.NewGuid(), User, listId, areaId, "Zakupy", 0), Ct));
+        Accepted(await sender.SendAsync(new CreateTaskList(Guid.NewGuid(), User, listId, areaId, "Zakupy"), Ct));
         Accepted(await sender.SendAsync(new CreateTask(Guid.NewGuid(), User, taskId, listId, "Kup chleb"), Ct));
         Accepted(await sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), User, taskId, Today), Ct));
         return (areaId, listId, taskId);

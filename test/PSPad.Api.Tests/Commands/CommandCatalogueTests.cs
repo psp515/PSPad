@@ -1,4 +1,5 @@
 using PSPad.Contracts;
+using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
 
@@ -11,6 +12,12 @@ public class CommandCatalogueTests
     public void ACommandResolvesByItsTypeName()
     {
         Assert.Equal(typeof(CreateArea), CommandCatalogue.Resolve("CreateArea"));
+    }
+
+    [Fact]
+    public void APresentationCommandResolves()
+    {
+        Assert.Equal(typeof(ReorderLists), CommandCatalogue.Resolve("ReorderLists"));
     }
 
     [Fact]

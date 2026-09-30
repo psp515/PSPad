@@ -658,6 +658,16 @@ button.pspad-heatmap-cell:focus-visible {
     opacity: 1;
 }
 
+.pspad-drag-handle {
+    cursor: grab;
+    margin: 0 8px;
+    opacity: 0.55;
+}
+
+.pspad-step:hover .pspad-drag-handle {
+    opacity: 1;
+}
+
 .pspad-field-row-body {
     overflow-wrap: anywhere;
 }

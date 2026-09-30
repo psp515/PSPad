@@ -13,8 +13,8 @@ public static class CommandCatalogue
 
     static Dictionary<string, Type> Build()
     {
-        var module = Assembly.Load("PSPad.Module.Tasks");
-        return module.GetTypes()
+        return CommandModules.Names
+            .SelectMany(name => Assembly.Load(name).GetTypes())
             .Where(type => type is { IsAbstract: false, IsClass: true } &&
                 typeof(ICommand).IsAssignableFrom(type))
             .ToDictionary(type => type.Name, type => type);

@@ -8,5 +8,4 @@ public sealed record CreateTaskList(
     Guid ListId,
     Guid AreaId,
     string Name,
-    int Position,
     ListKind Kind = ListKind.Tasks) : ICommand;

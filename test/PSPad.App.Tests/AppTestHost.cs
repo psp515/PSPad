@@ -11,6 +11,7 @@ using PSPad.App.State.Viewport;
 using PSPad.App.Statistics;
 using PSPad.App.Theme;
 using PSPad.App.Updates;
+using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Inbox;
@@ -50,6 +51,7 @@ public static class AppTestHost
         context.Services.AddSingleton<IDocumentStore<Goal>>(new ReplicaDocumentStore<Goal>(replica));
         context.Services.AddSingleton<IDocumentStore<Inbox>>(new ReplicaDocumentStore<Inbox>(replica));
         context.Services.AddSingleton<IDocumentStore<ReferenceItem>>(new ReplicaDocumentStore<ReferenceItem>(replica));
+        context.Services.AddSingleton<IDocumentStore<AreaView>>(new ReplicaDocumentStore<AreaView>(replica));
         context.Services.AddPSPadCommands();
         context.Services.AddSingleton(new AppState { UserId = userId, Today = today });
         context.Services.AddSingleton(new PageHeader());
@@ -68,6 +70,7 @@ public static class AppTestHost
         context.Services.AddSingleton(new ReplicaOwnership(replica, outbox, statisticsCache));
         context.Services.AddScoped<Clipboard>();
         context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop: true));
+        context.Services.AddSingleton<IBreakpoints>(new FakeBreakpoints(MudBlazor.Breakpoint.Xs));
         context.Services.AddSingleton<ServerReachability>();
         context.Services.AddSingleton<IConnectivity>(new AlwaysOnline());
         context.Services.AddSingleton<IAppUpdates>(new FakeAppUpdates());
@@ -128,6 +131,28 @@ public static class AppTestHost
             foreach (var subscriber in _subscribers)
             {
                 subscriber(desktop);
+            }
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    public sealed class FakeBreakpoints(MudBlazor.Breakpoint breakpoint) : IBreakpoints
+    {
+        readonly List<Action<MudBlazor.Breakpoint>> _subscribers = [];
+
+        public Task SubscribeAsync(Action<MudBlazor.Breakpoint> onChanged)
+        {
+            _subscribers.Add(onChanged);
+            onChanged(breakpoint);
+            return Task.CompletedTask;
+        }
+
+        public void ChangeTo(MudBlazor.Breakpoint changed)
+        {
+            foreach (var subscriber in _subscribers)
+            {
+                subscriber(changed);
             }
         }
 

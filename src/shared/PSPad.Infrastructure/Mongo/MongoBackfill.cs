@@ -9,6 +9,7 @@ public static class MongoBackfill
     {
         await EnsureCreatedAtAsync(context, "todotasks", "TaskCreated", ct);
         await EnsureCreatedAtAsync(context, "referenceitems", "ReferenceItemCreated", ct);
+        await EnsureCreatedAtAsync(context, "tasklists", "TaskListCreated", ct);
     }
 
     static async Task EnsureCreatedAtAsync(

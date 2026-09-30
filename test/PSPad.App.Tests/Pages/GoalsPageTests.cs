@@ -69,7 +69,7 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void RenameFromTheCardMenuStillOpensTheGoalPanel()
+    public void EditFromTheCardMenuOpensTheGoalPanel()
     {
         var goal = NewGoal("Eat healthier");
         Arrange(goal);
@@ -78,7 +78,7 @@ public class GoalsPageTests : Bunit.TestContext
 
         var page = Render(BuildGoalsPageWithPopovers());
         page.Find(".pspad-goal-menu button").Click();
-        page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Rename").Click();
+        page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Edit").Click();
 
         Assert.EndsWith($"/goals?goal={goal.Id}", navigation.Uri);
     }
@@ -472,7 +472,7 @@ public class GoalsPageTests : Bunit.TestContext
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, 0),
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name),
             DateTimeOffset.UnixEpoch));
         return list;
     }

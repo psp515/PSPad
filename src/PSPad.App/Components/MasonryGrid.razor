@@ -1,0 +1,59 @@
+@typeparam TItem
+@using PSPad.App.State.Viewport
+@inject IBreakpoints Breakpoints
+@implements IAsyncDisposable
+
+<MudGrid Spacing="4" Class="pspad-masonry">
+    @foreach (var column in Columns(Items, _count))
+    {
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudStack Spacing="4" Class="pspad-masonry-column">
+                @foreach (var item in column)
+                {
+                    <div @key="Key(item)">@ItemTemplate(item)</div>
+                }
+            </MudStack>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<TItem> Items { get; set; } = [];
+
+    [Parameter, EditorRequired] public RenderFragment<TItem> ItemTemplate { get; set; } = default!;
+
+    [Parameter, EditorRequired] public Func<TItem, object> Key { get; set; } = default!;
+
+    int _count = 1;
+
+    public static int ColumnsFor(Breakpoint breakpoint) => breakpoint switch
+    {
+        Breakpoint.Xs => 1,
+        Breakpoint.Sm or Breakpoint.Md => 2,
+        Breakpoint.Lg => 3,
+        _ => 4
+    };
+
+    public static IReadOnlyList<IReadOnlyList<TItem>> Columns(IReadOnlyList<TItem> items, int count) =>
+        Enumerable.Range(0, count)
+            .Select(column => (IReadOnlyList<TItem>)items.Where((_, index) => index % count == column).ToArray())
+            .ToArray();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Breakpoints.SubscribeAsync(breakpoint =>
+            {
+                var count = ColumnsFor(breakpoint);
+                if (count != _count)
+                {
+                    _count = count;
+                    InvokeAsync(StateHasChanged);
+                }
+            });
+        }
+    }
+
+    public ValueTask DisposeAsync() => Breakpoints.DisposeAsync();
+}

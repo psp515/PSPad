@@ -31,6 +31,13 @@ public class ArchitectureTests
     }
 
     [Fact]
+    public void TasksNeverReachesPresentation()
+    {
+        AssemblyReferenceGuard.AssertReferencesNone(
+            typeof(TasksModuleMarker).Assembly, "PSPad.Module.Presentation");
+    }
+
+    [Fact]
     public void InfrastructureKnowsNoModule()
     {
         AssemblyReferenceGuard.AssertReferencesNone(

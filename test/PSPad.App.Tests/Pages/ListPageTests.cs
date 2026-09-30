@@ -98,7 +98,7 @@ public class ListPageTests : Bunit.TestContext
 
         var items = page.FindAll(".mud-fab-menu-item");
         Assert.Equal("Add item", items[0].GetAttribute("aria-label"));
-        Assert.Equal("Rename list", items[1].GetAttribute("aria-label"));
+        Assert.Equal("Edit list", items[1].GetAttribute("aria-label"));
         Assert.Equal("Delete list", items[2].GetAttribute("aria-label"));
     }
 
@@ -508,21 +508,19 @@ public class ListPageTests : Bunit.TestContext
         page.FindComponents<TaskRow>().Single(row => row.Instance.Task.Id == task.Id);
 
     [Fact]
-    public async Task RenamingFromTheFabMenuRenamesTheList()
+    public void EditingFromTheFabMenuOpensTheListPanel()
     {
         var list = NewList("Zakupy");
-        var replica = Arrange(list);
+        Arrange(list);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/lists/{list.Id}");
 
         var page = Render(BuildListPageWithDialogs(list.Id));
         page.Find(".pspad-fab .mud-fab-menu-button").Click();
         page.FindAll(".mud-fab-menu-item")[1].Click();
 
-        var field = page.Find("div.mud-dialog input");
-        field.Input("Zakupy tygodniowe");
-        page.FindAll("div.mud-dialog button").Last().Click();
-
-        var stored = await replica.LoadAsync<TaskList>(list.Id);
-        Assert.Equal("Zakupy tygodniowe", stored!.Name);
+        Assert.EndsWith($"/lists/{list.Id}?list={list.Id}", navigation.Uri);
+        Assert.Empty(page.FindAll("div.mud-dialog"));
     }
 
     [Fact]
@@ -570,7 +568,7 @@ public class ListPageTests : Bunit.TestContext
 
         var items = page.FindAll(".mud-fab-menu-item");
         Assert.Equal("Add task", items[0].GetAttribute("aria-label"));
-        Assert.Equal("Rename list", items[1].GetAttribute("aria-label"));
+        Assert.Equal("Edit list", items[1].GetAttribute("aria-label"));
         Assert.Equal("Delete list", items[2].GetAttribute("aria-label"));
     }
 
@@ -623,7 +621,7 @@ public class ListPageTests : Bunit.TestContext
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, 0, kind),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, kind),
             DateTimeOffset.UnixEpoch));
         return list;
     }

@@ -1,6 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
@@ -107,6 +108,40 @@ public class MongoBackfillTests(MongoFixture fixture)
 
         var stored = await context.Collection<ReferenceItem>()
             .Find(Builders<ReferenceItem>.Filter.Eq(entry => entry.Id, itemId))
+            .SingleAsync(ct);
+        Assert.Equal(at, stored.CreatedAt);
+    }
+
+    [Fact]
+    public async Task ItFillsAListsCreatedAtFromItsCreatedEvent()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var context = Persistence.TestContext.For(fixture);
+        var userId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        var at = new DateTimeOffset(2026, 4, 1, 8, 0, 0, TimeSpan.Zero);
+
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), userId, listId, Guid.NewGuid(), "List"), DateTimeOffset.UtcNow));
+        var document = list.ToBsonDocument();
+        document.Remove("createdAt");
+        await context.Collection<BsonDocument>("tasklists").InsertOneAsync(document, cancellationToken: ct);
+        await context.Collection<StoredEvent>("events").InsertOneAsync(new StoredEvent
+        {
+            Seq = 1,
+            UserId = userId,
+            AggregateType = nameof(TaskList),
+            AggregateId = listId,
+            Type = nameof(TaskListCreated),
+            Payload = "{}",
+            At = at
+        }, cancellationToken: ct);
+
+        await MongoBackfill.EnsureCreatedAtAsync(context, ct);
+
+        var stored = await context.Collection<TaskList>()
+            .Find(Builders<TaskList>.Filter.Eq(entry => entry.Id, listId))
             .SingleAsync(ct);
         Assert.Equal(at, stored.CreatedAt);
     }

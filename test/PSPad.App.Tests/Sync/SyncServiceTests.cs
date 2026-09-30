@@ -4,6 +4,7 @@ using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Sync;
 using PSPad.Contracts;
+using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
 
@@ -134,6 +135,27 @@ public class SyncServiceTests
         Assert.Equal(1, outcome.Pulled);
         Assert.Equal(17, await replica.MarkerAsync());
         Assert.Equal("Home", (await replica.LoadAsync<Area>(area.Id))!.Name);
+    }
+
+    [Fact]
+    public async Task APulledAreaViewLandsInTheReplica()
+    {
+        var replica = new InMemoryReplica();
+        var list = Guid.NewGuid();
+        var view = new AreaView();
+        view.Apply(new ListsReordered(Guid.NewGuid(), User, DateTimeOffset.UnixEpoch, Guid.NewGuid(), [list]));
+        var api = new FakeApi
+        {
+            Pull = new(5, new Dictionary<string, JsonElement[]>
+            {
+                ["areaviews"] = [JsonSerializer.SerializeToElement(view, new JsonSerializerOptions(JsonSerializerDefaults.Web))]
+            }, [])
+        };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        var stored = await replica.LoadAsync<AreaView>(view.Id);
+        Assert.Equal([list], stored!.Order);
     }
 
     [Fact]

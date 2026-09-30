@@ -8,6 +8,7 @@ using PSPad.App.Components;
 using PSPad.App.Pages;
 using PSPad.App.State.Replica;
 using PSPad.App.Tests;
+using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
@@ -48,7 +49,7 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ItOrdersListsByPositionNotCreationOrder()
+    public void WithoutAViewListsFollowCreationDate()
     {
         var area = NewArea("Dom");
         var remont = NewList(area.Id, "Remont", 2);
@@ -63,6 +64,27 @@ public class AreaBoardTests : Bunit.TestContext
             < markup.IndexOf("Ogród", StringComparison.Ordinal));
         Assert.True(markup.IndexOf("Ogród", StringComparison.Ordinal)
             < markup.IndexOf("Remont", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AStoredViewDecidesTheOrder()
+    {
+        var area = NewArea("Dom");
+        var zakupy = NewList(area.Id, "Zakupy", 0);
+        var ogrod = NewList(area.Id, "Ogród", 1);
+        var remont = NewList(area.Id, "Remont", 2);
+        var view = new AreaView();
+        view.Apply(new ListsReordered(
+            AreaView.IdFor(User, area.Id), User, DateTimeOffset.UnixEpoch, area.Id, [remont.Id, zakupy.Id]));
+        Arrange(area, zakupy, ogrod, remont, view);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        var markup = page.Markup;
+        Assert.True(markup.IndexOf("Remont", StringComparison.Ordinal)
+            < markup.IndexOf("Zakupy", StringComparison.Ordinal));
+        Assert.True(markup.IndexOf("Zakupy", StringComparison.Ordinal)
+            < markup.IndexOf("Ogród", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -329,6 +351,23 @@ public class AreaBoardTests : Bunit.TestContext
             new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), shopping.Id, "Kup farbę")));
 
         page.WaitForAssertion(() => Assert.Contains("Kup farbę", page.Markup));
+    }
+
+    [Fact]
+    public void EditingAListFromItsCardOpensTheListPanel()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy", 0);
+        Arrange(area, list);
+
+        var page = Render(BuildAreaBoardWithDialogs(area.Id));
+        var navigation = page.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/areas/{area.Id}");
+        page.Find(".pspad-list-menu button").Click();
+        page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Edit").Click();
+
+        Assert.EndsWith($"/areas/{area.Id}?list={list.Id}", navigation.Uri);
+        Assert.Empty(page.FindAll("div.mud-dialog"));
     }
 
     [Fact]
@@ -614,16 +653,16 @@ public class AreaBoardTests : Bunit.TestContext
         return area;
     }
 
-    static TaskList NewList(Guid areaId, string name, int position) =>
-        NewList(areaId, name, position, ListKind.Tasks);
+    static TaskList NewList(Guid areaId, string name, int createdMinute) =>
+        NewList(areaId, name, createdMinute, ListKind.Tasks);
 
-    static TaskList NewList(Guid areaId, string name, int position, ListKind kind)
+    static TaskList NewList(Guid areaId, string name, int createdMinute, ListKind kind)
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, position, kind),
-            DateTimeOffset.UnixEpoch));
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, kind),
+            DateTimeOffset.UnixEpoch.AddMinutes(createdMinute)));
         return list;
     }
 

@@ -17,6 +17,17 @@ public class GoalDetailPanelTests : Bunit.TestContext
     static readonly DateOnly Today = new(2026, 9, 12);
 
     [Fact]
+    public void TheNameIsTheUnboxedHeadingFieldTasksUse()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var panel = Render<GoalDetailPanel>(parameters => parameters.Add(p => p.IsNew, true));
+
+        Assert.Equal("Goal name", panel.Find(".pspad-goal-name-field input").GetAttribute("placeholder"));
+        Assert.Empty(panel.FindAll(".pspad-goal-name-field .mud-input-outlined"));
+    }
+
+    [Fact]
     public void WithNoGoalItShowsNothing()
     {
         AppTestHost.Arrange(this, User, Today);

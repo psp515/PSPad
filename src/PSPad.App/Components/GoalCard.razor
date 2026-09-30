@@ -14,7 +14,7 @@
         }
     </Subtitle>
     <Actions>
-        <ThingMenu Class="pspad-goal-menu" OnRename="@OnRename" OnDelete="@OnDelete">
+        <ThingMenu Class="pspad-goal-menu" OnEdit="@OnEdit" OnDelete="@OnDelete">
             <Extra>
                 @foreach (var status in Enum.GetValues<GoalStatus>().Where(status => status != Goal.Status))
                 {
@@ -44,7 +44,7 @@
 
     [Parameter] public EventCallback<GoalStatus> OnStatus { get; set; }
 
-    [Parameter] public EventCallback OnRename { get; set; }
+    [Parameter] public EventCallback OnEdit { get; set; }
 
     [Parameter] public EventCallback OnDelete { get; set; }
 

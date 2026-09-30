@@ -2,7 +2,7 @@
 title: Extract element ordering into its own module, out of the Tasks domain
 tags: [architecture, domain, ui, future-work]
 date: 2026-09-12
-status: Proposed
+status: Superseded by ADR-0051
 ---
 
 # ADR-0012: Extract element ordering into its own module, out of the Tasks domain

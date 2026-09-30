@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.App.Layout;
+using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
@@ -122,7 +123,7 @@ public class AreaDetailPanelTests : Bunit.TestContext
         var area = NewArea("Dom", 0);
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Zakupy", 0), DateTimeOffset.UnixEpoch));
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Zakupy"), DateTimeOffset.UnixEpoch));
         var task = new TodoTask();
         task.ApplyAll(TodoTask.Decide(
             null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), list.Id, "Kup chleb"), DateTimeOffset.UnixEpoch));
@@ -142,7 +143,7 @@ public class AreaDetailPanelTests : Bunit.TestContext
         var area = NewArea("Dom", 0);
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Przepisy", 0, ListKind.Reference),
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Przepisy", ListKind.Reference),
             DateTimeOffset.UnixEpoch));
         var item = new ReferenceItem();
         item.ApplyAll(ReferenceItem.Decide(
@@ -170,6 +171,99 @@ public class AreaDetailPanelTests : Bunit.TestContext
 
         var stored = await replica.LoadAsync<Area>(area.Id);
         Assert.False(stored!.Deleted);
+    }
+
+    [Fact]
+    public void TheNameIsTheUnboxedHeadingFieldTasksUse()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var panel = Render<AreaDetailPanel>(parameters => parameters.Add(p => p.IsNew, true));
+
+        Assert.Equal("Area name", panel.Find(".pspad-area-name-field input").GetAttribute("placeholder"));
+        Assert.Empty(panel.FindAll(".pspad-area-name-field .mud-input-outlined"));
+    }
+
+    [Fact]
+    public void AnExistingAreaListsItsListsInBoardOrder()
+    {
+        var area = NewArea("Dom", 0);
+        var zakupy = NewList(area.Id, "Zakupy", 0);
+        var remont = NewList(area.Id, "Remont", 1);
+        var ogrod = NewList(area.Id, "Ogród", 2);
+        var view = new AreaView();
+        view.Apply(new ListsReordered(
+            AreaView.IdFor(User, area.Id), User, DateTimeOffset.UnixEpoch, area.Id, [ogrod.Id]));
+        AppTestHost.Arrange(this, User, Today, area, zakupy, remont, ogrod, view);
+
+        var panel = RenderWithOverlays(area.Id);
+
+        Assert.Equal(["Ogród", "Zakupy", "Remont"], ListNames(panel));
+    }
+
+    [Fact]
+    public void EveryListEndsInADragHandle()
+    {
+        var area = NewArea("Dom", 0);
+        AppTestHost.Arrange(this, User, Today, area, NewList(area.Id, "Zakupy", 0), NewList(area.Id, "Remont", 1));
+
+        var panel = RenderWithOverlays(area.Id);
+
+        var rows = panel.FindAll(".pspad-area-list-row");
+        Assert.Equal(2, rows.Count);
+        Assert.All(rows, row => Assert.Contains("pspad-drag-handle", row.LastElementChild!.ClassName));
+        Assert.Empty(panel.FindAll(".pspad-area-list-up"));
+        Assert.Empty(panel.FindAll(".pspad-area-list-down"));
+    }
+
+    [Fact]
+    public async Task DroppingAListStoresTheNewOrder()
+    {
+        var area = NewArea("Dom", 0);
+        var zakupy = NewList(area.Id, "Zakupy", 0);
+        var remont = NewList(area.Id, "Remont", 1);
+        var ogrod = NewList(area.Id, "Ogród", 2);
+        var replica = AppTestHost.Arrange(this, User, Today, area, zakupy, remont, ogrod);
+
+        var panel = RenderWithOverlays(area.Id);
+        Drag.Drop<TaskList>(panel, list => list.Name == "Zakupy", 2);
+
+        var view = await replica.LoadAsync<AreaView>(AreaView.IdFor(User, area.Id));
+        Assert.Equal([remont.Id, ogrod.Id, zakupy.Id], view!.Order);
+        panel.WaitForAssertion(() => Assert.Equal(["Remont", "Ogród", "Zakupy"], ListNames(panel)));
+    }
+
+    [Fact]
+    public void AnAreaWithoutListsSaysSo()
+    {
+        var area = NewArea("Dom", 0);
+        AppTestHost.Arrange(this, User, Today, area);
+
+        var panel = RenderWithOverlays(area.Id);
+
+        Assert.Contains("No lists yet.", panel.Find(".pspad-area-lists").TextContent);
+    }
+
+    [Fact]
+    public void ANewAreaHasNoListsSection()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var panel = Render<AreaDetailPanel>(parameters => parameters.Add(p => p.IsNew, true));
+
+        Assert.Empty(panel.FindAll(".pspad-area-lists"));
+    }
+
+    static string[] ListNames(IRenderedComponent<ContainerFragment> panel) =>
+        [.. panel.FindAll(".pspad-area-list-name").Select(name => name.TextContent.Trim())];
+
+    static TaskList NewList(Guid areaId, string name, int createdMinute)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name),
+            DateTimeOffset.UnixEpoch.AddMinutes(createdMinute)));
+        return list;
     }
 
     [Fact]

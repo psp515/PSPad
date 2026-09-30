@@ -28,7 +28,10 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, list);
         var navigation = Services.GetRequiredService<NavigationManager>();
 
-        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)list.Id));
+        var closed = false;
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters
+            .Add(p => p.NewInList, (Guid?)list.Id).Add(p => p.OnClose, () => closed = true));
         panel.Find(".pspad-item-name-field input").Input("Bigos");
         panel.Find(".pspad-panel-save").Click();
 
@@ -36,7 +39,8 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var created = Assert.Single(items);
         Assert.Equal(list.Id, created.ListId);
         Assert.Equal("Bigos", created.Name);
-        Assert.Contains($"item={created.Id}", navigation.Uri);
+        Assert.True(closed);
+        Assert.DoesNotContain("item=", navigation.Uri);
     }
 
     [Fact]
@@ -177,7 +181,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task MovingAFieldDownSendsMoveReferenceField()
+    public async Task DroppingAFieldSendsMoveReferenceField()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
         var item = NewItem(list.Id, "Bigos");
@@ -186,7 +190,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, list, item);
 
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
-        panel.FindAll(".pspad-field-down")[0].Click();
+        Drag.Drop(panel, item.Fields[0], 1);
 
         var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Equal("Servings", reloaded!.Fields[0].Label);
@@ -194,7 +198,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task MovingTheLastFieldUpSendsToIndexOneOfThree()
+    public async Task DroppingTheLastFieldAtOneSendsToIndexOneOfThree()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
         var item = NewItem(list.Id, "Bigos");
@@ -204,14 +208,14 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, list, item);
 
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
-        panel.FindAll(".pspad-field-up")[2].Click();
+        Drag.Drop(panel, item.Fields[2], 1);
 
         var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Equal(["Time", "Difficulty", "Servings"], reloaded!.Fields.Select(field => field.Label));
     }
 
     [Fact]
-    public async Task MovingTheFirstFieldDownSendsToIndexOneOfThree()
+    public async Task DroppingTheFirstFieldAtOneSendsToIndexOneOfThree()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
         var item = NewItem(list.Id, "Bigos");
@@ -221,14 +225,14 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, list, item);
 
         var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
-        panel.FindAll(".pspad-field-down")[0].Click();
+        Drag.Drop(panel, item.Fields[0], 1);
 
         var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Equal(["Servings", "Time", "Difficulty"], reloaded!.Fields.Select(field => field.Label));
     }
 
     [Fact]
-    public void ANewItemNavigatesWithReplaceSoBackDoesNotReturnToAddMode()
+    public void AddingAnItemNeverOpensIt()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
         AppTestHost.Arrange(this, User, Today, list);
@@ -238,8 +242,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         panel.Find(".pspad-item-name-field input").Input("Bigos");
         panel.Find(".pspad-panel-save").Click();
 
-        var entry = Assert.Single(navigation.History);
-        Assert.True(entry.Options.ReplaceHistoryEntry);
+        Assert.Empty(navigation.History);
     }
 
     [Fact]
@@ -396,7 +399,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
             option => option.TextContent.Trim() == "Path"));
         panel.FindAll(".mud-list-item").First(option => option.TextContent.Trim() == "Path").Click();
         panel.Find(".pspad-field-save").Click();
-        panel.FindAll(".pspad-field-up")[1].Click();
+        Drag.Drop<ReferenceField>(panel, field => field.Label == "Site", 0);
         panel.Find(".pspad-markdown-input textarea").Input("Slow cooked");
         panel.Find(".pspad-markdown-input textarea").Blur();
         panel.Find(".pspad-panel-save").Click();
@@ -407,7 +410,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         Assert.Equal("path", created.Fields[0].Display);
         Assert.Equal("45 min", created.Fields[1].Value);
         Assert.Equal("Slow cooked", created.Description);
-        Assert.Contains($"item={created.Id}", navigation.Uri);
+        Assert.DoesNotContain("item=", navigation.Uri);
     }
 
     [Fact]
@@ -470,7 +473,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task ARejectedFieldAfterCreateWarnsAndStillOpensTheItem()
+    public async Task ARejectedFieldAfterCreateWarnsAndStillCloses()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
         var replica = AppTestHost.Arrange(this, User, Today, list);
@@ -478,7 +481,10 @@ public class ReferenceItemPanelTests : Bunit.TestContext
             new RejectingHandler<AddReferenceField>("A field needs a label."));
         var navigation = Services.GetRequiredService<NavigationManager>();
 
-        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)list.Id));
+        var closed = false;
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters
+            .Add(p => p.NewInList, (Guid?)list.Id).Add(p => p.OnClose, () => closed = true));
         panel.Find(".pspad-item-name-field input").Input("Bigos");
         AddDraftField(panel, "Time", "45 min");
         panel.Find(".pspad-panel-save").Click();
@@ -486,8 +492,9 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var snackbar = Services.GetRequiredService<ISnackbar>();
         Assert.Contains(snackbar.ShownSnackbars, snack =>
             snack.Message?.Contains("A field needs a label.") == true && snack.Severity == Severity.Warning);
-        var created = Assert.Single(await replica.LoadAllAsync<ReferenceItem>(User));
-        Assert.Contains($"item={created.Id}", navigation.Uri);
+        Assert.Single(await replica.LoadAllAsync<ReferenceItem>(User));
+        Assert.True(closed);
+        Assert.DoesNotContain("item=", navigation.Uri);
     }
 
     [Fact]
@@ -498,7 +505,10 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         var gate = new GatedHandler<CreateReferenceItem>();
         Services.AddSingleton<ICommandHandler<CreateReferenceItem>>(gate);
 
-        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)list.Id));
+        var closes = 0;
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters
+            .Add(p => p.NewInList, (Guid?)list.Id).Add(p => p.OnClose, () => closes++));
         panel.Find(".pspad-item-name-field input").Input("Bigos");
         panel.Find(".pspad-panel-save").Click();
         panel.WaitForAssertion(() => Assert.Equal(1, gate.Calls));
@@ -506,7 +516,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         panel.Find(".pspad-item-name-field input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
         gate.Open();
 
-        panel.WaitForAssertion(() => Assert.Contains("item=", Services.GetRequiredService<NavigationManager>().Uri));
+        panel.WaitForAssertion(() => Assert.Equal(1, closes));
         Assert.Equal(1, gate.Calls);
     }
 
@@ -578,7 +588,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0, ListKind.Reference),
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, ListKind.Reference),
             DateTimeOffset.UnixEpoch));
         return list;
     }
@@ -587,7 +597,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0),
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name),
             DateTimeOffset.UnixEpoch));
         return list;
     }

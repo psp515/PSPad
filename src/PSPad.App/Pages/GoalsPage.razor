@@ -90,7 +90,7 @@ else
                       Today="@State.Today"
                       OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
                       OnStatus="@(status => SetStatusAsync(goal, status))"
-                      OnRename="@(() => EditGoal(goal))"
+                      OnEdit="@(() => EditGoal(goal))"
                       OnDelete="@(() => DeleteAsync(goal))" />
         </MudItem>;
     IReadOnlyList<TodoTask> _tasks = [];

@@ -7,6 +7,7 @@
     <ProjectReference Include="..\modules\PSPad.Module.Tasks\PSPad.Module.Tasks.csproj" />
     <ProjectReference Include="..\modules\PSPad.Module.Statistics\PSPad.Module.Statistics.csproj" />
     <ProjectReference Include="..\modules\PSPad.Module.Identity\PSPad.Module.Identity.csproj" />
+    <ProjectReference Include="..\modules\PSPad.Module.Presentation\PSPad.Module.Presentation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

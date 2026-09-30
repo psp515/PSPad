@@ -146,8 +146,8 @@ public class DeleteCascadeEndpointTests(MongoFixture fixture)
 
         var results = await PostAsync(client, ct,
             Envelope(new CreateArea(Guid.NewGuid(), user, areaId, "Cascade", 99)),
-            Envelope(new CreateTaskList(Guid.NewGuid(), user, listIds[0], areaId, "Errands", 0)),
-            Envelope(new CreateTaskList(Guid.NewGuid(), user, listIds[1], areaId, "Chores", 1)),
+            Envelope(new CreateTaskList(Guid.NewGuid(), user, listIds[0], areaId, "Errands")),
+            Envelope(new CreateTaskList(Guid.NewGuid(), user, listIds[1], areaId, "Chores")),
             Envelope(new CreateTask(Guid.NewGuid(), user, taskIds[0], listIds[0], "post office")),
             Envelope(new CreateTask(Guid.NewGuid(), user, taskIds[1], listIds[0], "pharmacy")),
             Envelope(new CreateTask(Guid.NewGuid(), user, taskIds[2], listIds[1], "vacuum")),

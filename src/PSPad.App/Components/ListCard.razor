@@ -18,12 +18,7 @@
             <MudIconButton Class="pspad-add-task" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
                            OnClick="@OnAddTaskClick" />
         }
-        <ThingMenu Class="pspad-list-menu"
-                   OnRename="@OnRename" OnDelete="@OnDelete">
-            <Extra>
-                <MudMenuItem OnClick="@OnMove">Move to area</MudMenuItem>
-            </Extra>
-        </ThingMenu>
+        <ThingMenu Class="pspad-list-menu" OnEdit="@OnEdit" OnDelete="@OnDelete" />
     </Actions>
 </ThingCard>
 
@@ -50,11 +45,9 @@
 
     [Parameter] public EventCallback OnAddItemClick { get; set; }
 
-    [Parameter] public EventCallback OnRename { get; set; }
+    [Parameter] public EventCallback OnEdit { get; set; }
 
     [Parameter] public EventCallback OnDelete { get; set; }
-
-    [Parameter] public EventCallback OnMove { get; set; }
 
     bool IsReference => List.Kind == ListKind.Reference;
 

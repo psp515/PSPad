@@ -36,7 +36,7 @@ public class OfflineRoundTripTests(MongoFixture fixture)
         await outbox.AppendAsync(Guid.NewGuid(), Envelope(
             new CreateArea(Guid.NewGuid(), user, areaId, "Home", 0)));
         await outbox.AppendAsync(Guid.NewGuid(), Envelope(
-            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Errands", 0)));
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Errands")));
         await outbox.AppendAsync(Guid.NewGuid(), Envelope(
             new CreateTask(Guid.NewGuid(), user, taskId, listId, "Buy milk")));
 
@@ -96,7 +96,7 @@ public class OfflineRoundTripTests(MongoFixture fixture)
         await outbox.AppendAsync(Guid.NewGuid(), Envelope(
             new CreateArea(Guid.NewGuid(), user, areaId, "Home", 0)));
         await outbox.AppendAsync(Guid.NewGuid(), Envelope(
-            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Errands", 0)));
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Errands")));
         await outbox.AppendAsync(Guid.NewGuid(), Envelope(
             new CreateTask(Guid.NewGuid(), user, taskId, listId, "Buy milk")));
         await outbox.AppendAsync(Guid.NewGuid(), Envelope(
@@ -176,7 +176,7 @@ public class OfflineRoundTripTests(MongoFixture fixture)
         await outbox.AppendAsync(Guid.NewGuid(), Envelope(
             new CreateArea(Guid.NewGuid(), user, areaId, "Print shop", 0)));
         await outbox.AppendAsync(Guid.NewGuid(), Envelope(
-            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", 0, ListKind.Reference)));
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", ListKind.Reference)));
         await outbox.AppendAsync(Guid.NewGuid(), Envelope(
             new CreateReferenceItem(Guid.NewGuid(), user, itemId, listId, "PLA Black", 0)));
         await outbox.AppendAsync(Guid.NewGuid(), Envelope(

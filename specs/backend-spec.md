@@ -29,10 +29,12 @@ src/
     PSPad.Module.Tasks/         areas, lists, Inbox, tasks, steps, goals, recurrence, Today, reference items — pure, WASM-safe
     PSPad.Module.Statistics/    queries over the event log
     PSPad.Module.Identity/      User, time zone, first-sign-in provisioning
+    PSPad.Module.Presentation/  per-user views of shared data (AreaView: list order) — pure, WASM-safe
 test/
   PSPad.Module.Tasks.Tests/       unit only
   PSPad.Module.Statistics.Tests/  unit only
   PSPad.Module.Identity.Tests/    unit only
+  PSPad.Module.Presentation.Tests/ unit only
   PSPad.Api.Tests/                integration, Testcontainers MongoDB
   PSPad.App.Tests/                unit + bUnit
   PSPad.TestInfrastructure/       Mongo fixture, category attributes, architecture guards
@@ -48,9 +50,10 @@ References run one way only:
 | `PSPad.Module.Tasks` | `PSPad.Abstractions` — and nothing else. This is the purity rule (AD-4) |
 | `PSPad.Module.Statistics` | `PSPad.Abstractions`, `PSPad.Contracts`, `PSPad.Module.Tasks` (event types only, for its handlers' `switch` patterns) |
 | `PSPad.Module.Identity` | `PSPad.Abstractions`, `PSPad.Contracts` |
+| `PSPad.Module.Presentation` | `PSPad.Abstractions` — and nothing else; no module references it back (`adr/0051`) |
 | `PSPad.Infrastructure` | `PSPad.Abstractions`, `PSPad.Contracts` — never a module |
 | `PSPad.Api` | everything |
-| `PSPad.App` | `PSPad.Module.Tasks`, `PSPad.Abstractions`, `PSPad.Contracts` — never `PSPad.Infrastructure` |
+| `PSPad.App` | `PSPad.Module.Tasks`, `PSPad.Module.Presentation`, `PSPad.Abstractions`, `PSPad.Contracts` — never `PSPad.Infrastructure` |
 
 `PSPad.Infrastructure` stores documents generically by `T`, so it never
 needs to know a module exists. `PSPad.App` references `PSPad.Module.Tasks`
@@ -62,7 +65,16 @@ Enforced by architecture guard tests, not just this document: no
 `MongoDB.*`/`Microsoft.AspNetCore.*`/`System.Net.Http` inside
 `PSPad.Module.Tasks` or `PSPad.Abstractions`; no `PSPad.Infrastructure`/
 `MongoDB.*`/`Microsoft.AspNetCore.*` inside `PSPad.Module.Statistics`; no
-module reference inside `PSPad.Infrastructure`.
+module reference inside `PSPad.Infrastructure` or `PSPad.Module.Presentation`;
+no `PSPad.Module.Presentation` reference inside `PSPad.Module.Tasks`.
+
+Commands are discovered by reflection over `CommandModules.Names`
+(`PSPad.Contracts`) — `PSPad.Module.Tasks` and `PSPad.Module.Presentation` —
+by `CommandCatalogue` and by both hosts' handler registration. A new
+command-carrying module is added there, once.
+
+What each module owns, must never absorb, and where it grows next is in
+`specs/modules-spec.md`.
 
 `PSPad.App` never writes to standard error. Blazor WebAssembly treats any
 stderr output as a crash and raises its "An unhandled error has occurred"
@@ -140,11 +152,12 @@ transactions require one. Dev, prod and tests all run the same shape.
 |---|---|---|
 | `users` | one per person | `timeZone` (IANA), `provisionedAt` |
 | `areas` | user-defined areas | `name`, `position` |
-| `tasklists` | task lists, each inside one area | `areaId`, `name`, `position`, `kind` (`Tasks` or `Reference`, fixed at creation) |
+| `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation). Documents written before `adr/0051` still carry a `position` nobody reads |
 | `inboxes` | one per user | `items[]` |
 | `todotasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `completedDays[]`, `createdAt`, `description` (Markdown) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
 | `referenceitems` | items in a `Reference` list | `listId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`) |
+| `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
 | `events` | the domain event log and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
@@ -258,6 +271,18 @@ not stated there:
   `RequireAcceptsReferences`). `CreateTaskList` and `MoveTaskListToArea`
   reject a missing or deleted target area. An Inbox item only ever becomes a
   task — it never organises into a `Reference` list.
+- List order is presentation, not domain (`adr/0051`). `TaskList` carries
+  no position; `AreaView` (Presentation module) holds a user's `Order` of
+  one area's lists, created by the first `ReorderLists` and addressed by the
+  deterministic `AreaView.IdFor(userId, areaId)`. `ReorderLists` carries the
+  order the client displays plus the moved list and target index, so the
+  module never reads `TaskList`; it rejects an empty area, a list missing
+  from the order, duplicates and another user's view, and emits nothing when
+  the order is unchanged. Display order is `Arranged.Sort`: ids in `Order`
+  first, then every other list by `createdAt`, then id; stale ids are
+  ignored, so deleting or moving a list never touches a view and area
+  deletion leaves its view orphaned (account deletion sweeps it).
+  `TaskList.CreatedAt` is backfilled from `TaskListCreated` at startup.
 - `ReferenceItem` (`adr/0047`) is its own aggregate, not a kind of task: a
   `Name`, Markdown `Description`, `Starred`, dense `Position` and ordered
   `ReferenceField(Id, Label, Value, Display?, Position)`. `Display` is an
@@ -311,7 +336,7 @@ client's current one — an already-installed client that only just updated
 to a build with a new sync collection — the next pull asks `since = 0`
 once instead of the stored marker, so documents in that new collection are
 not silently skipped forever by a marker that had already advanced past
-them (`adr/0049`).
+them (`adr/0049`). `areaviews` (`adr/0051`) is such a collection.
 
 **App updates are offered, never forced** (`adr/0040`). The published
 service worker keeps the browser's waiting state — no `skipWaiting()` on

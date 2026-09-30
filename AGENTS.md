@@ -90,7 +90,8 @@ lives in domain layer, one place, shared client and server.
 **AD-1 — Modular monolith, three modules.** `PSPad.Module.Tasks` (areas, Inbox,
 lists, tasks, steps, goals, recurrence, Today), `PSPad.Module.Statistics`
 (denormalized records projected from domain events; tiles, charts, heatmap,
-feed), `PSPad.Module.Identity`. Inside a module, features are folders holding
+feed), `PSPad.Module.Identity`, and `PSPad.Module.Presentation` (per-user views of
+shared data, AD-11). Inside a module, features are folders holding
 their commands, events, aggregate, handlers. No Services/Repositories
 layering. No microservices.
 
@@ -141,6 +142,13 @@ Statistics' own records are a read-side projection off `events` — AD-2's
 "never a parallel audit table" still holds, because the log stays the one
 thing written in the transaction; see `adr/0036` and `adr/0037`.
 
+**AD-11 — Presentation is its own module, per user.** How a user sees data
+(list order today; list theming later) lives in `PSPad.Module.Presentation`,
+never on a Tasks aggregate. `AreaView` per `(user, area)` holds list order;
+no view means creation-date order. References `Abstractions` only, WASM-safe,
+nothing references it but the hosts. Supersedes `adr/0012`; see `adr/0051`
+and `specs/modules-spec.md`.
+
 ---
 
 ## 6. Repo layout (planned)
@@ -159,10 +167,12 @@ src/
     PSPad.Module.Tasks/       areas, lists, Inbox, tasks, steps, goals, recurrence, Today — WASM-safe
     PSPad.Module.Statistics/  event-projected records, labels, charts, feed
     PSPad.Module.Identity/    User, time zone, first-sign-in provisioning
+    PSPad.Module.Presentation/ per-user views: AreaView (list order) — WASM-safe
 test/
   PSPad.Module.Tasks.Tests/       unit only, no I/O
   PSPad.Module.Statistics.Tests/  unit only
   PSPad.Module.Identity.Tests/    unit only
+  PSPad.Module.Presentation.Tests/ unit only
   PSPad.Api.Tests/              integration, Testcontainers MongoDB
   PSPad.App.Tests/              unit + bUnit component tests
   PSPad.TestInfrastructure/     Mongo fixture, trait constants, architecture guards
@@ -186,6 +196,10 @@ One module-to-module edge exists, and only one: `Statistics` references
 rather than a string lookup at render time. It runs one way — an
 `ArchitectureTests` guard fails the build if `Tasks` ever references
 `Statistics`. See `adr/0037`.
+
+`Presentation` has no module edge at all: it references `Abstractions` only,
+and guards fail the build if it references a module or `Tasks` references
+it. What each module owns and where it grows next is `specs/modules-spec.md`.
 
 ---
 
@@ -337,7 +351,7 @@ ADRs they produced stay in `adr/`):
   containers. Authoritative for anything below the UI.
 
 Both are rulebooks describing current behaviour, not history. `adr/0012`
-(ordering module) is still `Proposed` and still unbuilt. `adr/0022` (drawer
+(ordering module) is superseded by `adr/0051`, below. `adr/0022` (drawer
 cleanup: dead account-menu arrow removed, Settings and App info as sidebar
 rows, area actions moved to a FAB) and `adr/0023` (search pulled from the
 sidebar for now, drawer footer with date/time and license) are `Active` and
@@ -385,6 +399,17 @@ is now marked Built. `adr/0050` (phones navigate from a bottom bar with My
 Day raised in the centre, a right-hand account drawer and area chips;
 desktop keeps the sidebar) is `Active` and built on this branch too.
 
+List ordering (issue #96) shipped on this branch: `adr/0051` (a
+`PSPad.Module.Presentation` holds per-user views of shared data — `AreaView`
+orders an area's lists, `TaskList.Position` gives way to `CreatedAt` as the
+fallback order, and the area board packs its cards through `MasonryGrid`) is
+`Active` and built here, superseding `adr/0012`. `specs/list-ordering-design.md`
+is marked Built; `specs/modules-spec.md` is the standing rulebook for module
+boundaries and names `ListView` as Presentation's next extension point.
+`adr/0052` (every thing is created and edited in its side panel — name
+first, other fields below, adding closes; popups only for delete
+confirmations and in-panel pickers) is `Active` and built here too.
+
 ---
 
 ## 9. Future order
@@ -426,7 +451,9 @@ plans live under `.superpowers/sdd/<feature>/` and are not committed.
 read the spec that covers it — `specs/backend-spec.md` for anything touching
 the command pipeline, storage shape, domain rules, sync, identity/session or
 the HTTP surface; `specs/ui-spec.md` for anything touching the client's
-component choice, layout, page structure, theming or navigation. They answer
+component choice, layout, page structure, theming or navigation;
+`specs/modules-spec.md` before adding an aggregate or deciding which module a
+new concern belongs in. They answer
 *what the intended behaviour is* at a level the code does not state and
 AGENTS.md only summarises. Where a spec and an ADR disagree, the ADR wins —
 it is the decision of record; where a spec and the code disagree, say so
@@ -500,7 +527,7 @@ tradeoff.
 **Architecture decisions go in `adr/`.** One file per decision,
 using `adr/template.md`'s format (title, tags, date, status,
 context, decision, alternatives, consequences). AGENTS.md §5 stays the
-terse day-to-day summary (AD-1 … AD-10); the ADR is where the reasoning and
+terse day-to-day summary (AD-1 … AD-11); the ADR is where the reasoning and
 rejected alternatives live. Changing your mind about a past decision never
 edits an old ADR's Decision or Consequences — write a new one that
 supersedes it and update the old one's status line.

@@ -165,7 +165,7 @@ public class DeleteCascadeTests
     TaskList SeedList(Guid areaId)
     {
         var list = new TaskList();
-        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, areaId, "Errands", 0));
+        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, areaId, "Errands"));
         _lists.Seed(list);
         return list;
     }
