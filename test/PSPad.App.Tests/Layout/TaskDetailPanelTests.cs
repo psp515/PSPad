@@ -538,6 +538,25 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task ACustomRepeatCanBeYearly()
+    {
+        var task = Recurring(NewTask("Car insurance"), RecurrenceRule.Daily(Today));
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-repeat");
+        panel.Find(".pspad-repeat-custom").Click();
+        panel.WaitForElement(".pspad-repeat-dialog");
+        panel.Find(".pspad-repeat-unit .mud-select-input").MouseDown();
+        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "years").Click();
+        panel.Find(".pspad-repeat-save").Click();
+
+        var rule = (await replica.LoadAsync<TodoTask>(task.Id))!.Recurrence!;
+        Assert.Equal(RecurrenceKind.Yearly, rule.Kind);
+        Assert.Equal(Today, rule.StartsOn);
+    }
+
+    [Fact]
     public async Task PickingARepeatFromItsMenuMakesTheTaskRecurring()
     {
         var task = NewTask("Read a book");
