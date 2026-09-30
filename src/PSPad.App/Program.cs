@@ -68,6 +68,7 @@ builder.Services.AddSingleton<IClock, BrowserClock>();
 builder.Services.AddScoped<CommandSender>();
 builder.Services.AddScoped<ReplicaOwnership>();
 builder.Services.AddTransient<IViewport, BrowserViewport>();
+builder.Services.AddTransient<IBreakpoints, BrowserBreakpoints>();
 builder.Services.AddScoped<Clipboard>();
 builder.Services.AddPSPadCommands();
 

@@ -2,6 +2,7 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Presentation.AreaViews
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Ordering
@@ -9,6 +10,7 @@
 @inject IDocumentStore<ReferenceItem> Store
 @inject IDocumentStore<Area> Areas
 @inject IDocumentStore<TaskList> Lists
+@inject IDocumentStore<AreaView> Views
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -146,7 +148,8 @@
         var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
         _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
         var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
-        _lists = [.. lists.Where(list => !list.Deleted && list.Kind == ListKind.Reference).OrderBy(list => list.CreatedAt)];
+        var views = await Views.LoadAllAsync(State.UserId, CancellationToken.None);
+        _lists = [.. ListOrder.Arrange(_areas, lists, views).Where(list => list.Kind == ListKind.Reference)];
     }
 
     async Task AddOnEnterAsync(KeyboardEventArgs args)

@@ -8,6 +8,7 @@ using PSPad.App.Components;
 using PSPad.App.Pages;
 using PSPad.App.State.Replica;
 using PSPad.App.Tests;
+using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
@@ -63,6 +64,27 @@ public class AreaBoardTests : Bunit.TestContext
             < markup.IndexOf("Ogród", StringComparison.Ordinal));
         Assert.True(markup.IndexOf("Ogród", StringComparison.Ordinal)
             < markup.IndexOf("Remont", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AStoredViewDecidesTheOrder()
+    {
+        var area = NewArea("Dom");
+        var zakupy = NewList(area.Id, "Zakupy", 0);
+        var ogrod = NewList(area.Id, "Ogród", 1);
+        var remont = NewList(area.Id, "Remont", 2);
+        var view = new AreaView();
+        view.Apply(new ListsReordered(
+            AreaView.IdFor(User, area.Id), User, DateTimeOffset.UnixEpoch, area.Id, [remont.Id, zakupy.Id]));
+        Arrange(area, zakupy, ogrod, remont, view);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        var markup = page.Markup;
+        Assert.True(markup.IndexOf("Remont", StringComparison.Ordinal)
+            < markup.IndexOf("Zakupy", StringComparison.Ordinal));
+        Assert.True(markup.IndexOf("Zakupy", StringComparison.Ordinal)
+            < markup.IndexOf("Ogród", StringComparison.Ordinal));
     }
 
     [Fact]
