@@ -26,7 +26,7 @@ the old one's status line to point at the new number.
 | [0009](0009-integration-tests-own-their-database.md) | Integration tests own a real, disposable MongoDB via Testcontainers | Active | 2026-09-12 | testing, persistence |
 | [0010](0010-modular-monolith-three-modules.md) | Split the modular monolith into three separate module projects | Active (supersedes [0001](0001-vertical-slice-folders-in-one-project.md); `PSPad.Module.History` renamed to `PSPad.Module.Statistics` by [0038](0038-history-renamed-to-statistics.md)) | 2026-09-12 | architecture, modularity |
 | [0011](0011-aggregate-documents-are-truth.md) | Aggregate documents are truth; events are the log beside them | Active (supersedes [0002](0002-cqrs-event-sourced-write-side.md)) | 2026-09-12 | architecture, persistence, event-sourcing |
-| [0012](0012-extract-ordering-into-its-own-module.md) | Extract element ordering into its own module, out of the Tasks domain | Proposed | 2026-09-12 | architecture, domain, ui, future-work |
+| [0012](0012-extract-ordering-into-its-own-module.md) | Extract element ordering into its own module, out of the Tasks domain | Superseded by [0051](0051-presentation-module-per-user-views.md) | 2026-09-12 | architecture, domain, ui, future-work |
 | [0013](0013-responsive-shell-and-per-device-theme.md) | Keep sections and areas on separate navigation surfaces, and the theme per device | Superseded by [0014](0014-one-navigation-tree-at-every-width.md) | 2026-09-12 | ui, offline, identity |
 | [0014](0014-one-navigation-tree-at-every-width.md) | One navigation tree at every width, revealed rather than rebuilt | Active (supersedes [0013](0013-responsive-shell-and-per-device-theme.md); Goals' placement superseded by [0017](0017-promote-goals-to-a-sidebar-row.md); History's placement superseded by [0020](0020-history-sidebar-row-and-settings-screen.md)) | 2026-09-12 | ui, offline, identity |
 | [0015](0015-one-self-host-compose-stack.md) | One `.env`-driven self-host compose stack | Active (realm and client naming amended by [0026](0026-one-shared-realm-for-every-self-hosted-app.md)) | 2026-09-14 | deployment, security, identity |
@@ -65,6 +65,7 @@ the old one's status line to point at the new number.
 | [0048](0048-descriptions-are-markdown.md) | Descriptions are Markdown, rendered client-side with raw HTML disabled | Active | 2026-09-28 | domain, ui, security |
 | [0049](0049-a-replica-that-learns-a-new-collection-pulls-from-zero.md) | A replica that learns a new collection pulls from zero, once | Active | 2026-09-28 | sync, offline |
 | [0050](0050-phones-navigate-from-a-bottom-bar.md) | Phones navigate from a bottom bar, not a drawer | Active (amends [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md) and [0023](0023-sidebar-search-removed-footer-added.md) below `md`) | 2026-09-29 | ui, navigation, mobile |
+| [0051](0051-presentation-module-per-user-views.md) | A Presentation module holds per-user views of shared data | Active | 2026-09-30 | architecture, modularity, domain, ui, sync |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
