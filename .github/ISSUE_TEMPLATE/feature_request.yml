@@ -3,10 +3,6 @@ description: Suggest a new capability or a change to an existing one.
 title: "feat: "
 labels: ["enhancement"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        PSPad is a GTD notepad. Planned work is listed in the roadmap in `AGENTS.md` (§9). Check it and open issues first.
   - type: textarea
     id: problem
     attributes:
