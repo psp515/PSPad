@@ -1,0 +1,81 @@
+name: Bug report
+description: Something in PSPad behaves wrong or breaks.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Check open issues first so the same bug is not filed twice.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Today / My Day
+        - Inbox
+        - Tasks, steps, recurrence
+        - Goals
+        - Reference lists
+        - Statistics
+        - Sign-in / account (Keycloak)
+        - Offline mode / sync
+        - UI / layout (phone or desktop)
+        - Self-hosting / Docker
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, including any error message.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. See ...
+    validations:
+      required: true
+  - type: dropdown
+    id: connectivity
+    attributes:
+      label: Network state
+      options:
+        - Online
+        - Offline
+        - Went offline, then back online
+        - Not sure
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Image tag or commit SHA.
+  - type: input
+    id: environment
+    attributes:
+      label: Device and browser
+      placeholder: Android 15, Chrome 140, installed PWA
+  - type: input
+    id: time-zone
+    attributes:
+      label: Account time zone
+      description: Relevant for Today, due dates and recurrence bugs.
+      placeholder: Europe/Warsaw
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Browser console, API container logs, screenshots. Remove tokens and personal data.
+      render: text
