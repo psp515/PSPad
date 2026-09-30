@@ -44,7 +44,13 @@
 
         @if (_item is not null)
         {
-            <div class="px-2 pb-2 d-flex flex-column gap-1">
+            <div class="pl-5 pr-3 pb-3">
+                <StepList @key="_draft" Draft="@_draft.Steps" UserId="@State.UserId" Disabled="@Disabled" />
+            </div>
+
+            <MudDivider />
+
+            <div class="py-2 px-2 d-flex flex-column gap-1">
                 <ListRow Areas="@_areas" Lists="@_lists" Value="@_draft.ListId"
                          ValueChanged="@(listId => _draft.ListId = listId)" Disabled="@Disabled" />
                 <DueDateRow Value="@_draft.DueOn" ValueChanged="@(dueOn => _draft.DueOn = dueOn)"
@@ -54,6 +60,11 @@
                 <GoalRow Goals="@_goals" Value="@_draft.GoalId" ValueChanged="@(goalId => _draft.GoalId = goalId)"
                          Disabled="@Disabled" />
             </div>
+
+            <PanelSection Title="Description" Class="pspad-inbox-description">
+                <MarkdownField @key="_draft" Value="@_draft.Description" OnSave="@SaveDescriptionAsync"
+                               Disabled="@Disabled" />
+            </PanelSection>
         }
     </ChildContent>
     <Footer>
@@ -191,6 +202,28 @@
         {
             await Sender.SendAsync(new StarTask(Guid.NewGuid(), userId, taskId, true));
         }
+
+        foreach (var step in _draft.Steps)
+        {
+            await Sender.SendAsync(new AddStep(Guid.NewGuid(), userId, taskId, Guid.NewGuid(), step));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_draft.Description))
+        {
+            await Sender.SendAsync(new SetTaskDescription(Guid.NewGuid(), userId, taskId, _draft.Description));
+        }
+    }
+
+    Task<bool> SaveDescriptionAsync(string text)
+    {
+        if (Disabled)
+        {
+            return Task.FromResult(false);
+        }
+
+        _draft.Description = text;
+        StateHasChanged();
+        return Task.FromResult(true);
     }
 
     async Task DiscardAsync()
@@ -217,5 +250,9 @@
         public Guid? GoalId { get; set; }
 
         public bool Starred { get; set; }
+
+        public List<string> Steps { get; } = [];
+
+        public string Description { get; set; } = "";
     }
 }

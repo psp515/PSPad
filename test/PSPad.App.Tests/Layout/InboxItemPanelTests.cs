@@ -152,6 +152,46 @@ public class InboxItemPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task ConvertingCarriesTheDraftStepsAndDescriptionOntoTheTask()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        var inbox = NewInbox("Kupić mleko");
+        var replica = AppTestHost.Arrange(this, User, Today, inbox, area, list);
+
+        var panel = RenderWithOverlays(inbox.Items[0].Id);
+        var step = panel.Find(".pspad-step-add input");
+        step.Input("Sprawdzić lodówkę");
+        step.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        panel.Find(".pspad-step-add input").Input("Iść do sklepu");
+        panel.Find(".pspad-step-add input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        panel.Find(".pspad-inbox-description textarea").Input("**Owsiane**, 2 l");
+        panel.Find(".pspad-inbox-description textarea").Blur();
+        panel.Find(".pspad-panel-save").Click();
+
+        var task = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal(["Sprawdzić lodówkę", "Iść do sklepu"], task.Steps.Select(s => s.Name));
+        Assert.Equal("**Owsiane**, 2 l", task.Description);
+        Assert.Empty((await replica.LoadAsync<Inbox>(inbox.Id))!.Items);
+    }
+
+    [Fact]
+    public async Task ConvertingWithoutStepsOrDescriptionLeavesThemEmpty()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        var inbox = NewInbox("Kupić mleko");
+        var replica = AppTestHost.Arrange(this, User, Today, inbox, area, list);
+
+        var panel = RenderWithOverlays(inbox.Items[0].Id);
+        panel.Find(".pspad-panel-save").Click();
+
+        var task = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Empty(task.Steps);
+        Assert.True(string.IsNullOrEmpty(task.Description));
+    }
+
+    [Fact]
     public async Task RenamingAnItemSavesItWithoutConvertingIt()
     {
         var area = NewArea("Dom");
