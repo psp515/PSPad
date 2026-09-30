@@ -58,6 +58,41 @@ public class StepListTests : Bunit.TestContext
         Assert.Empty(stored!.Steps);
     }
 
+    [Fact]
+    public async Task ADraftCollectsStepsInOrderWithoutSendingCommands()
+    {
+        var replica = AppTestHost.Arrange(this, User, Today);
+        var draft = new List<string>();
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
+        var field = steps.Find(".pspad-step-add input");
+        field.Input("Check the fridge");
+        field.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        field.Input("   ");
+        field.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        field.Input("Go to the shop");
+        field.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        Assert.Equal(["Check the fridge", "Go to the shop"], draft);
+        Assert.Equal(["Check the fridge", "Go to the shop"],
+            steps.FindAll(".pspad-step-name").Select(name => name.TextContent));
+        Assert.Empty(steps.FindAll(".pspad-step-check"));
+        Assert.Empty(await replica.LoadAllAsync<TodoTask>(User));
+    }
+
+    [Fact]
+    public void RemovingADraftStepDropsItFromTheDraft()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<string> { "Check the fridge", "Go to the shop" };
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
+        steps.FindAll(".pspad-step-remove")[0].Click();
+
+        Assert.Equal(["Go to the shop"], draft);
+        Assert.Single(steps.FindAll(".pspad-step-name"));
+    }
+
     static TodoTask NewTask()
     {
         var task = new TodoTask();

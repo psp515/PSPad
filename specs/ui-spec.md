@@ -385,6 +385,9 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    `MudTextField` with no underline or label.
 3. **Steps** (outside Add) — `StepList`: `MudCheckBox` rows with a remove
    icon, then an unboxed "Add step"/"Next step" field (Enter adds).
+   Given `Draft` (a `List<string>`) instead of `Task`, it edits that list
+   in place and sends nothing — rows show a muted empty-box icon rather
+   than a checkbox. The Inbox convert form uses it this way.
 4. Property rows, each a `PropertyRow` — icon · label · value, the whole
    row a `MudMenu` activator; an empty value reads in the muted text colour
    ("No due date", "Never", "No goal"), a clearable one carries a trailing
@@ -493,13 +496,18 @@ addressed as `?inbox=new` (the Inbox FAB or its empty state) or
 `?inbox={itemId}` (tapping an item card), via `InboxQuery`.
 - **Capture:** only a Name field, with **Add** at the bottom left; Enter
   also adds. The item keeps the time it was captured, which its card shows.
-- **An existing item** opens as a convert-to-task form: Name, then
-  `ListRow`, `DueDateRow`, `PriorityRow` and `GoalRow`, plus a star in the
-  header. The Name field is the item's own text and saves as it commits
+- **An existing item** opens as a convert-to-task form: Name, then a
+  draft `StepList`, then `ListRow`, `DueDateRow`, `PriorityRow` and
+  `GoalRow`, then a Description `PanelSection` holding `MarkdownField`,
+  plus a star in the header — the same order as `TaskDetailPanel`. Draft
+  steps and the description live only in the panel until conversion;
+  closing without converting drops them, as it drops the other draft
+  edits. Draft steps have no checkbox and no due date. The Name field is the item's own text and saves as it commits
   (`RenameInboxItem`), so an item can be reworded without being converted.
   - **Convert to task** on the left sends `OrganiseInboxItem` and then only
-    the edits that differ from the defaults, so one tap files a finished
-    task.
+    the edits that differ from the defaults — one `AddStep` per draft step
+    in order, and `SetTaskDescription` for a non-blank description — so one
+    tap files a finished task.
   - **Discard** on the right removes the item.
   - The List row starts on the list used for the previous conversion
     (`AppState.LastInboxListId`), falling back to the first list.
