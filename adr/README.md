@@ -69,5 +69,5 @@ the old one's status line to point at the new number.
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
-AGENTS.md stays the terse day-to-day reference (AD-1 … AD-10); this index is
+AGENTS.md stays the terse day-to-day reference (AD-1 … AD-11); this index is
 where the reasoning and rejected alternatives behind each one live.

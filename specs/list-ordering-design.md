@@ -1,6 +1,6 @@
 # List ordering and the masonry area board — design
 
-Status: In progress. Issue #96. Decision of record:
+Status: Built. Issue #96. Decision of record:
 [ADR-0051](../adr/0051-presentation-module-per-user-views.md), which
 supersedes [ADR-0012](../adr/0012-extract-ordering-into-its-own-module.md).
 
