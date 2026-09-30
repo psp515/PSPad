@@ -104,7 +104,7 @@ public class ListCardTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ACollapsedCardRendersNoRows()
+    public void ACollapsedCardFoldsItsRowsAway()
     {
         var collapse = Arrange();
         var list = List("Remont");
@@ -112,7 +112,7 @@ public class ListCardTests : Bunit.TestContext
 
         var card = Render(list, Tasks(list.Id, 3));
 
-        Assert.Empty(card.FindComponents<TaskRow>());
+        Assert.False(card.FindComponent<MudCollapse>().Instance.Expanded);
         Assert.Contains("Remont", card.Markup);
     }
 

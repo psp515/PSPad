@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using PSPad.App.Components;
 using PSPad.App.State;
 using PSPad.Module.Tasks.Tasks;
@@ -87,12 +88,10 @@ public class ThingCardTests : Bunit.TestContext
         Arrange();
 
         var card = Render<ThingCard>(parameters => Base(parameters, Tasks(1))
-            .Add(p => p.ListNameOf, _ => "Groceries")
-            .Add(p => p.CreatedOnOf, _ => new DateOnly(2026, 9, 3)));
+            .Add(p => p.ListNameOf, _ => "Groceries"));
         var row = card.FindComponent<TaskRow>().Instance;
 
         Assert.Equal("Groceries", row.ListName);
-        Assert.Equal(new DateOnly(2026, 9, 3), row.CreatedOn);
     }
 
     [Fact]
@@ -109,14 +108,25 @@ public class ThingCardTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ACollapsedCardRendersNoRows()
+    public void ACollapsedCardFoldsItsBodyAway()
     {
         var collapse = Arrange();
         Toggle(collapse, Id);
 
         var card = Render(Tasks(3));
 
-        Assert.Empty(card.FindComponents<TaskRow>());
+        Assert.False(card.FindComponent<MudCollapse>().Instance.Expanded);
+    }
+
+    [Fact]
+    public void AnOpenCardUnfoldsItsBody()
+    {
+        Arrange();
+
+        var card = Render(Tasks(3));
+
+        Assert.True(card.FindComponent<MudCollapse>().Instance.Expanded);
+        Assert.Equal(3, card.FindComponents<TaskRow>().Count);
     }
 
     [Fact]

@@ -20,8 +20,7 @@
         @Actions
     </div>
 
-    @if (!Collapsed)
-    {
+    <MudCollapse Expanded="@(!Collapsed)">
         <MudDivider />
 
         @if (Count == 0 && EmptyText is not null)
@@ -37,7 +36,7 @@
             @foreach (var task in Open.Take(Preview))
             {
                 <TaskRow @key="task.Id" Task="@task" Today="@Today"
-                         ListName="@ListNameOf?.Invoke(task)" CreatedOn="@CreatedOnOf?.Invoke(task)"
+                         ListName="@ListNameOf?.Invoke(task)"
                          OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
             }
         }
@@ -49,7 +48,7 @@
                 @($"Show all ({Count})")
             </MudButton>
         }
-    }
+    </MudCollapse>
 </MudPaper>
 
 @code {
@@ -84,8 +83,6 @@
     [Parameter] public DateOnly Today { get; set; }
 
     [Parameter] public Func<TodoTask, string?>? ListNameOf { get; set; }
-
-    [Parameter] public Func<TodoTask, DateOnly?>? CreatedOnOf { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
 

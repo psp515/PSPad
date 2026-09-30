@@ -286,8 +286,7 @@ screen `/goals/{id}`.
 `/goals`, the goal's name as title with a small outlined status `MudChip`
 (In progress / Achieved — `Color.Success` — / Not achieved) and its due
 date as a caption under it. Tasks come first: every open task as its own
-card (list name and added day on each row), then a collapsed **Completed
-(N)**. The charts are a separate section at the bottom (`mt-8`, their own
+card (list name on each row), then a collapsed **Completed (N)**. The charts are a separate section at the bottom (`mt-8`, their own
 `MudGrid`): the **Progress** card and, for dated goals, the **Pace** card,
 each half width from `md` up. Tasks and charts never share a grid. With
 no open tasks it shows an `EmptyState` "No open tasks." with no create
@@ -325,10 +324,29 @@ results. One `ListCard`, one `GoalCard`, one `InboxItemCard`. `ListCard` and
 `GoalCard` are thin wrappers over one `ThingCard` — collapse arrow, title
 link, open count, `⋯` menu, at most five open `TaskRow`s and a
 **Show all (N)** link to the thing's own screen — and differ only in their
-header extras and row caption: a goal card's rows name their list and the
-day the task was added (`Added 12 Sep`, in the user's time zone). A single
-component per concept means a rule like never-overdue-for-recurring-tasks
-cannot drift between the screens that display it.
+header extras and row caption: a goal card's rows name their list. The
+card's body sits in a `MudCollapse`, so collapsing and expanding animate
+its height and the cards below slide with it. A single component per
+concept means a rule like never-overdue-for-recurring-tasks cannot drift
+between the screens that display it.
+
+**One row shape.** `TaskRow`, `ReferenceRow` and `InboxItemCard` share it,
+so every row and card is the same height wherever it appears — My Day, the
+list and goal screens, the Inbox and area-board cards (`pspad-row`, 60px):
+- A 40px leading slot: the task's checkbox, or a muted icon (bookmark for a
+  reference item, inbox tray for an Inbox item) so names line up.
+- The name on one line, cut with an ellipsis, the full name as its `title`.
+- A second line only when there is something to show; without one the name
+  centres vertically in the same fixed height. It never wraps: what does
+  not fit is clipped.
+- Only the star on the right (none on an Inbox card).
+
+A task's second line runs, in this order: due date (red when overdue,
+"Until 12 Oct" on a repeat), step progress (checklist icon and `0/4`), the
+repeat icon, the description icon, the priority dot, then the list name
+where the screen passes one (My Day, goal screen and goal cards). Each
+piece keeps whole; only the list name shrinks, with an ellipsis. The day
+a task was added is never on a row — the task panel's footer carries it.
 
 **Repeating rows.** `TaskRow` shows a repeating task's due date as
 "Until 12 Oct", never red. A repeat past its Until (`TodoTask.EndedBy`)
@@ -482,9 +500,15 @@ adds one icon, not N call sites.
 list has no Done/open split (an item is never finished) and no add-task FAB
 action — its FAB item is "Add item," opening `ReferenceItemPanel` in Add
 mode instead of `TaskDetailPanel`. `ReferenceRow` shows the item's name, a
-star toggle and — when the item has fields — a caption joining its first
-two `Label: value` pairs with " · ", quantities normalized
-(`FieldDisplay.NormalizeQuantity`). The empty-list and delete-confirmation
+star toggle and — when the item has fields — one small `MudChip` per field
+on its second line, in field order, as many as fit: the chips wrap onto a
+clipped line, so a chip is shown whole or not at all. A link
+(`FieldKind.Link` that passes `LinkSafety`) is a chip with a link icon and
+only its label, a real `<a>` opening the URL in a new tab; a path is a chip
+with a folder icon and its label that copies the path (snackbar "Copied");
+anything else reads `Label: value`, quantities normalized
+(`FieldDisplay.NormalizeQuantity`), cut with an ellipsis. Tapping a chip
+never opens the item. The empty-list and delete-confirmation
 copy read "items" instead of "tasks" for a `Reference` list
 (`DeleteWarning`).
 

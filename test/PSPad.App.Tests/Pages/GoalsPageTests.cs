@@ -100,7 +100,7 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ATasksRowNamesItsListAndTheDayItWasAdded()
+    public void ATasksRowNamesItsListButNotTheDayItWasAdded()
     {
         var goal = NewGoal("Eat healthier");
         var list = NewList("Health");
@@ -110,7 +110,7 @@ public class GoalsPageTests : Bunit.TestContext
         var row = page.FindComponent<TaskRow>();
 
         Assert.Equal("Health", row.Instance.ListName);
-        Assert.Equal("Added 1 Jan", row.Find(".pspad-created").TextContent.Trim());
+        Assert.DoesNotContain("Added", row.Markup);
     }
 
     [Fact]

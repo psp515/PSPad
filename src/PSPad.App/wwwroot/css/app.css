@@ -534,6 +534,97 @@ button.pspad-heatmap-cell:focus-visible {
     color: var(--mud-palette-text-secondary) !important;
 }
 
+.pspad-row {
+    height: 60px;
+    box-sizing: border-box;
+}
+
+.pspad-row .mud-checkbox {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.pspad-row-lead {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    flex-shrink: 0;
+}
+
+.pspad-row-body {
+    flex-grow: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+}
+
+.pspad-row-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pspad-row-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 20px;
+    overflow: hidden;
+    white-space: nowrap;
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-row-meta > * {
+    flex-shrink: 0;
+}
+
+.pspad-row-meta .mud-icon-size-small {
+    font-size: 1rem;
+}
+
+.pspad-row-meta .pspad-priority {
+    font-size: 0.625rem;
+}
+
+.pspad-row-meta > .pspad-row-list {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Wrapping chips onto a clipped second line hides whole chips, never half of one. */
+.pspad-row-chips {
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.pspad-row-chip-slot {
+    display: inline-flex;
+    max-width: 180px;
+}
+
+.pspad-row-chip.mud-chip {
+    height: 20px;
+    margin: 0;
+    max-width: 100%;
+    font-size: 0.75rem;
+}
+
+.pspad-row-chip .mud-chip-content {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pspad-row-star {
+    flex-shrink: 0;
+}
+
 .pspad-step {
     min-height: 44px;
     padding: 0 4px;
