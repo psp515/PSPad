@@ -8,6 +8,5 @@ public sealed record TaskListCreated(
     DateTimeOffset At,
     Guid AreaId,
     string Name,
-    int Position,
     ListKind Kind = ListKind.Tasks)
     : DomainEvent(AggregateId, UserId, At);

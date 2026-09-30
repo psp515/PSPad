@@ -66,7 +66,7 @@ public class ReferenceItemPersistenceTests(MongoFixture fixture)
 
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), user, Guid.NewGuid(), Guid.NewGuid(), "Filaments", 0, ListKind.Reference),
+            null, new CreateTaskList(Guid.NewGuid(), user, Guid.NewGuid(), Guid.NewGuid(), "Filaments", ListKind.Reference),
             DateTimeOffset.UtcNow));
 
         await context.Collection<TaskList>().InsertOneAsync(list, cancellationToken: ct);

@@ -77,7 +77,7 @@ public class RepeatIntervalPersistenceTests(MongoFixture fixture)
         var listId = Guid.NewGuid();
         await Send(client,
             new CreateArea(Guid.NewGuid(), user, areaId, "Home", 0),
-            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Chores", 0));
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Chores"));
         return listId;
     }
 

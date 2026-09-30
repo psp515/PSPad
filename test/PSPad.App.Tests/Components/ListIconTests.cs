@@ -26,7 +26,7 @@ public class ListIconTests
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Recipes", 0,
+            new CreateTaskList(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Recipes",
                 ListKind.Reference),
             DateTimeOffset.UnixEpoch));
 

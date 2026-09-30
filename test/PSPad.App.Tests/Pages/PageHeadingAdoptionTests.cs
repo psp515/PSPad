@@ -36,7 +36,7 @@ public class PageHeadingAdoptionTests : Bunit.TestContext
         area.ApplyAll(Area.Decide(null, new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), "Home", 0), DateTimeOffset.UnixEpoch));
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Shopping", 0, ListKind.Tasks),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Shopping", ListKind.Tasks),
             DateTimeOffset.UnixEpoch));
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12), area, list);
 

@@ -52,7 +52,7 @@ public class InboxTests
         inboxStore.Seed(inbox);
         var taskStore = new FakeDocumentStore<TodoTask>();
         var list = new TaskList();
-        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, Guid.NewGuid(), "Errands", 0));
+        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, Guid.NewGuid(), "Errands"));
         var listStore = new FakeDocumentStore<TaskList>();
         listStore.Seed(list);
         var work = new FakeUnitOfWork();

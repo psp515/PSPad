@@ -14,7 +14,7 @@ public class TaskListTests
     public void ALisIsCreatedInsideOneArea()
     {
         var areaId = Guid.NewGuid();
-        var command = new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, "Errands", 0);
+        var command = new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, "Errands");
 
         var created = Assert.IsType<TaskListCreated>(
             Assert.Single(TaskList.Decide(null, command, Now)));
@@ -24,9 +24,20 @@ public class TaskListTests
     }
 
     [Fact]
+    public void CreationRecordsWhenTheListWasCreated()
+    {
+        var list = new TaskList();
+
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Errands"), Now));
+
+        Assert.Equal(Now, list.CreatedAt);
+    }
+
+    [Fact]
     public void ListsWithoutAnAreaAreRejected()
     {
-        var command = new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.Empty, "Errands", 0);
+        var command = new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.Empty, "Errands");
 
         Assert.Throws<DomainRejectedException>(() => TaskList.Decide(null, command, Now));
     }
@@ -55,7 +66,7 @@ public class TaskListTests
     static TaskList Existing()
     {
         var list = new TaskList();
-        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, Guid.NewGuid(), "Errands", 0));
+        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, Guid.NewGuid(), "Errands"));
         return list;
     }
 }

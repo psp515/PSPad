@@ -126,7 +126,7 @@ public class DeleteWarningTests
         var list = new TaskList();
         var id = Guid.NewGuid();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, id, areaId, "List", 0), DateTimeOffset.UnixEpoch));
+            null, new CreateTaskList(Guid.NewGuid(), User, id, areaId, "List"), DateTimeOffset.UnixEpoch));
 
         if (deleted)
         {

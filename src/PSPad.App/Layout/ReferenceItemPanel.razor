@@ -146,7 +146,7 @@
         var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
         _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
         var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
-        _lists = [.. lists.Where(list => !list.Deleted && list.Kind == ListKind.Reference).OrderBy(list => list.Position)];
+        _lists = [.. lists.Where(list => !list.Deleted && list.Kind == ListKind.Reference).OrderBy(list => list.CreatedAt)];
     }
 
     async Task AddOnEnterAsync(KeyboardEventArgs args)

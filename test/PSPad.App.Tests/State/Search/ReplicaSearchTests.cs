@@ -124,7 +124,7 @@ public class ReplicaSearchTests
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Filaments", 0, ListKind.Reference),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Filaments", ListKind.Reference),
             DateTimeOffset.UnixEpoch));
         Save(list);
 
@@ -157,7 +157,7 @@ public class ReplicaSearchTests
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Filaments", 0, ListKind.Reference),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Filaments", ListKind.Reference),
             DateTimeOffset.UnixEpoch));
         Save(list);
 
@@ -191,7 +191,7 @@ public class ReplicaSearchTests
         list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Remont", 0),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Remont"),
             DateTimeOffset.UnixEpoch));
         Save(list);
 

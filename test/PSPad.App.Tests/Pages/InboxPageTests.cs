@@ -190,7 +190,7 @@ public class InboxPageTests : Bunit.TestContext
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0),
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name),
             DateTimeOffset.UnixEpoch));
         return list;
     }

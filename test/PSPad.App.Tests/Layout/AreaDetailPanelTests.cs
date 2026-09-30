@@ -122,7 +122,7 @@ public class AreaDetailPanelTests : Bunit.TestContext
         var area = NewArea("Dom", 0);
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Zakupy", 0), DateTimeOffset.UnixEpoch));
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Zakupy"), DateTimeOffset.UnixEpoch));
         var task = new TodoTask();
         task.ApplyAll(TodoTask.Decide(
             null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), list.Id, "Kup chleb"), DateTimeOffset.UnixEpoch));
@@ -142,7 +142,7 @@ public class AreaDetailPanelTests : Bunit.TestContext
         var area = NewArea("Dom", 0);
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Przepisy", 0, ListKind.Reference),
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), area.Id, "Przepisy", ListKind.Reference),
             DateTimeOffset.UnixEpoch));
         var item = new ReferenceItem();
         item.ApplyAll(ReferenceItem.Decide(

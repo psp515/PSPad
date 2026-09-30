@@ -239,7 +239,7 @@ public class AppShellTests : Bunit.TestContext
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Przepisy", 0, ListKind.Reference),
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Przepisy", ListKind.Reference),
             DateTimeOffset.UnixEpoch));
         var item = new ReferenceItem();
         item.ApplyAll(ReferenceItem.Decide(

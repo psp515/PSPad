@@ -230,7 +230,7 @@ public class StatisticsEndpointTests(MongoFixture fixture)
         await client.PostAsJsonAsync("/api/commands", new[]
         {
             Envelope(new CreateArea(Guid.NewGuid(), user, areaId, "Home", 0)),
-            Envelope(new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Errands", 0)),
+            Envelope(new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Errands")),
             Envelope(new CreateTask(Guid.NewGuid(), user, taskId, listId, name))
         }, ct);
 

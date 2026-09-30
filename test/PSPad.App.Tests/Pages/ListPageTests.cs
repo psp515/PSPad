@@ -623,7 +623,7 @@ public class ListPageTests : Bunit.TestContext
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, 0, kind),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name, kind),
             DateTimeOffset.UnixEpoch));
         return list;
     }

@@ -138,7 +138,7 @@ public class ReferenceHandlerTests
         areas.Seed(area);
 
         var list = new TaskList();
-        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, area.Id, "Filaments", 0, ListKind.Reference));
+        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, area.Id, "Filaments", ListKind.Reference));
         _lists.Seed(list);
         var item = SeedItem(list.Id);
 
@@ -204,7 +204,7 @@ public class ReferenceHandlerTests
     TaskList SeedTaskList()
     {
         var list = new TaskList();
-        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, Guid.NewGuid(), "Errands", 0));
+        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, Guid.NewGuid(), "Errands"));
         _lists.Seed(list);
         return list;
     }
@@ -212,7 +212,7 @@ public class ReferenceHandlerTests
     TaskList SeedReferenceList()
     {
         var list = new TaskList();
-        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, Guid.NewGuid(), "Filaments", 0, ListKind.Reference));
+        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, Guid.NewGuid(), "Filaments", ListKind.Reference));
         _lists.Seed(list);
         return list;
     }

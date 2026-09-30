@@ -36,7 +36,7 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
         var response = await client.PostAsJsonAsync("/api/commands", new[]
         {
             Envelope(new CreateArea(Guid.NewGuid(), user, areaId, "Print shop", 0)),
-            Envelope(new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", 0, ListKind.Reference)),
+            Envelope(new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", ListKind.Reference)),
             Envelope(new CreateReferenceItem(Guid.NewGuid(), user, itemId, listId, "PLA Black", 0)),
             Envelope(new RenameReferenceItem(Guid.NewGuid(), user, itemId, "PLA Jet Black")),
             Envelope(new SetReferenceItemDescription(Guid.NewGuid(), user, itemId, "Dry 4h at 50 °C")),
@@ -67,7 +67,7 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
         var response = await client.PostAsJsonAsync("/api/commands", new[]
         {
             Envelope(new CreateArea(Guid.NewGuid(), user, areaId, "Print shop", 0)),
-            Envelope(new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", 0, ListKind.Reference)),
+            Envelope(new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", ListKind.Reference)),
             Envelope(new CreateTask(Guid.NewGuid(), user, Guid.NewGuid(), listId, "Buy filament"))
         }, ct);
 
@@ -95,7 +95,7 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
         var response = await client.PostAsJsonAsync("/api/commands", new[]
         {
             Envelope(new CreateArea(Guid.NewGuid(), user, areaId, "Print shop", 0)),
-            Envelope(new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", 0, ListKind.Reference)),
+            Envelope(new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", ListKind.Reference)),
             Envelope(new CreateInbox(Guid.NewGuid(), user, inboxId)),
             Envelope(new CaptureToInbox(Guid.NewGuid(), user, inboxId, itemId, "Buy filament")),
             Envelope(new OrganiseInboxItem(Guid.NewGuid(), user, inboxId, itemId, listId, Guid.NewGuid()))
@@ -125,7 +125,7 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
 
         await Send(client, ct,
             new CreateArea(Guid.NewGuid(), user, areaId, "Print shop", 0),
-            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", 0, ListKind.Reference),
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", ListKind.Reference),
             new CreateReferenceItem(Guid.NewGuid(), user, itemId, listId, "PLA Black", 0));
 
         await Send(client, ct, new DeleteTaskList(Guid.NewGuid(), user, listId));
@@ -159,7 +159,7 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
 
         await Send(client, ct,
             new CreateArea(Guid.NewGuid(), user, areaId, "Print shop", 0),
-            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", 0, ListKind.Reference),
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", ListKind.Reference),
             new CreateReferenceItem(Guid.NewGuid(), user, Guid.NewGuid(), listId, "PLA Black", 0));
 
         var context = Persistence.TestContext.For(fixture);
@@ -193,7 +193,7 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
 
         await Send(client, ct,
             new CreateArea(Guid.NewGuid(), user, areaId, "Home", 0),
-            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Chores", 0),
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Chores"),
             new CreateTask(Guid.NewGuid(), user, taskId, listId, "Read a book"));
 
         var response = await client.PostAsJsonAsync("/api/commands", new[]

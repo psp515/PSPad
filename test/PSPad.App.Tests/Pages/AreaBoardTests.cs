@@ -48,7 +48,7 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ItOrdersListsByPositionNotCreationOrder()
+    public void WithoutAViewListsFollowCreationDate()
     {
         var area = NewArea("Dom");
         var remont = NewList(area.Id, "Remont", 2);
@@ -614,16 +614,16 @@ public class AreaBoardTests : Bunit.TestContext
         return area;
     }
 
-    static TaskList NewList(Guid areaId, string name, int position) =>
-        NewList(areaId, name, position, ListKind.Tasks);
+    static TaskList NewList(Guid areaId, string name, int createdMinute) =>
+        NewList(areaId, name, createdMinute, ListKind.Tasks);
 
-    static TaskList NewList(Guid areaId, string name, int position, ListKind kind)
+    static TaskList NewList(Guid areaId, string name, int createdMinute, ListKind kind)
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
             null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, position, kind),
-            DateTimeOffset.UnixEpoch));
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, kind),
+            DateTimeOffset.UnixEpoch.AddMinutes(createdMinute)));
         return list;
     }
 

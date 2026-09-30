@@ -26,7 +26,7 @@ public class ReferenceSyncTests(MongoFixture fixture)
 
         await Send(client, ct,
             new CreateArea(Guid.NewGuid(), user, areaId, "Print shop", 0),
-            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", 0, ListKind.Reference),
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", ListKind.Reference),
             new CreateReferenceItem(Guid.NewGuid(), user, itemId, listId, "PLA Black", 0));
 
         var first = await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
@@ -53,7 +53,7 @@ public class ReferenceSyncTests(MongoFixture fixture)
         var listId = Guid.NewGuid();
         await Send(theirsClient, ct,
             new CreateArea(Guid.NewGuid(), theirsUser, areaId, "Print shop", 0),
-            new CreateTaskList(Guid.NewGuid(), theirsUser, listId, areaId, "Filaments", 0, ListKind.Reference),
+            new CreateTaskList(Guid.NewGuid(), theirsUser, listId, areaId, "Filaments", ListKind.Reference),
             new CreateReferenceItem(Guid.NewGuid(), theirsUser, Guid.NewGuid(), listId, "PLA Black", 0));
 
         var theirsSync = await theirsClient.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);

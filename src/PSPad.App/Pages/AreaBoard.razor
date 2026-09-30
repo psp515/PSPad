@@ -114,7 +114,7 @@ else
         _areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
 
         var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        _lists = [.. lists.Where(list => list.AreaId == AreaId && !list.Deleted).OrderBy(list => list.Position)];
+        _lists = [.. lists.Where(list => list.AreaId == AreaId && !list.Deleted).OrderBy(list => list.CreatedAt)];
 
         _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _items = await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None);

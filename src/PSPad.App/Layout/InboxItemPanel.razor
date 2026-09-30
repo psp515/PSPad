@@ -119,7 +119,7 @@
             _lists = [.. lists.Where(list => !list.Deleted && list.Kind == ListKind.Tasks
                     && _areas.Any(area => area.Id == list.AreaId))
                 .OrderBy(list => _areas.ToList().FindIndex(area => area.Id == list.AreaId))
-                .ThenBy(list => list.Position)];
+                .ThenBy(list => list.CreatedAt)];
             var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
             _goals = [.. goals.Where(goal => !goal.Deleted)];
         }

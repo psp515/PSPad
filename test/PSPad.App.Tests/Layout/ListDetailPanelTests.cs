@@ -42,7 +42,7 @@ public class ListDetailPanelTests : Bunit.TestContext
     public async Task AddingANewListCreatesItAfterTheOthersInThatAreaAndCloses()
     {
         var area = NewArea("Dom");
-        var existing = NewList(area.Id, "Zakupy", 3);
+        var existing = NewList(area.Id, "Zakupy");
         var replica = AppTestHost.Arrange(this, User, Today, area, existing);
         var closed = false;
 
@@ -55,7 +55,7 @@ public class ListDetailPanelTests : Bunit.TestContext
         var lists = await replica.LoadAllAsync<TaskList>(User);
         var created = Assert.Single(lists, list => list.Name == "Ogród");
         Assert.Equal(area.Id, created.AreaId);
-        Assert.True(created.Position > existing.Position);
+        Assert.True(created.CreatedAt > existing.CreatedAt);
         Assert.True(closed);
     }
 
@@ -134,11 +134,11 @@ public class ListDetailPanelTests : Bunit.TestContext
         return area;
     }
 
-    static TaskList NewList(Guid areaId, string name, int position)
+    static TaskList NewList(Guid areaId, string name)
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(null,
-            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, position),
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name),
             DateTimeOffset.UnixEpoch));
         return list;
     }

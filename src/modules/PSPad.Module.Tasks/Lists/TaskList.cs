@@ -12,7 +12,7 @@ public sealed class TaskList : Aggregate
     public string Name { get; private set; } = "";
 
     [JsonInclude]
-    public int Position { get; private set; }
+    public DateTimeOffset? CreatedAt { get; private set; }
 
     [JsonInclude]
     public ListKind Kind { get; private set; } = ListKind.Tasks;
@@ -38,7 +38,6 @@ public sealed class TaskList : Aggregate
                     at,
                     create.AreaId,
                     RequireName(create.Name),
-                    create.Position,
                     create.Kind)];
 
             case RenameTaskList rename:
@@ -75,7 +74,7 @@ public sealed class TaskList : Aggregate
                 UserId = created.UserId;
                 AreaId = created.AreaId;
                 Name = created.Name;
-                Position = created.Position;
+                CreatedAt = created.At;
                 Kind = created.Kind;
                 break;
             case TaskListRenamed renamed:

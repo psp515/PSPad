@@ -71,11 +71,8 @@
             return;
         }
 
-        var siblings = (await Lists.LoadAllAsync(State.UserId, CancellationToken.None))
-            .Where(list => !list.Deleted && list.AreaId == areaId);
         await Sender.SendAsync(new CreateTaskList(
-            Guid.NewGuid(), State.UserId, Guid.NewGuid(), areaId, name,
-            Positions.Next(siblings.Select(list => list.Position)), _kind));
+            Guid.NewGuid(), State.UserId, Guid.NewGuid(), areaId, name, _kind));
 
         _draftName = "";
         _kind = ListKind.Tasks;

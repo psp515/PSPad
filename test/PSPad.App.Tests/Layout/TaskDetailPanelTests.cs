@@ -887,7 +887,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0),
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name),
             DateTimeOffset.UnixEpoch));
         return list;
     }
@@ -896,7 +896,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, 0, ListKind.Reference),
+            null, new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, ListKind.Reference),
             DateTimeOffset.UnixEpoch));
         return list;
     }

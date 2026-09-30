@@ -176,7 +176,7 @@
         var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
         _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
         var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
-        _lists = [.. lists.Where(list => !list.Deleted && list.Kind == ListKind.Tasks).OrderBy(list => list.Position)];
+        _lists = [.. lists.Where(list => !list.Deleted && list.Kind == ListKind.Tasks).OrderBy(list => list.CreatedAt)];
         var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
         _goals = [.. goals.Where(goal => !goal.Deleted)];
     }
