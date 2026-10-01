@@ -161,15 +161,21 @@ New indexes: `tasklists {_members.userId: 1, seq: 1}`,
 ### 3.2 The membership set
 
 Every sync response carries `memberListIds` — the lists the caller belongs to
-and does not own. The client reconciles after writing the delta:
+and does not own. The client reconciles after writing the delta, but only
+when the replica has a recorded owner — a device holding nothing yet for
+this user would otherwise see every list as foreign and purge it:
 
 - A list in the replica, not owned by the caller, not in `memberListIds` —
   purge it and its tasks and reference items. One rule for leaving, removal,
   the owner deleting the list, and the owner deleting their account (a raw
   wipe that leaves no tombstones).
 - A list in `memberListIds` missing from the replica (another device of the
-  same user joined) — the next pull sends `full=<listIds>`; the server
-  returns those lists and all their live children regardless of `since`.
+  same user joined) — the same pull asks again with `full=<listIds>` at the
+  marker it just saved; the server returns those lists and all their live
+  children regardless of `since`. A failed full pull
+  (`HttpRequestException`) is swallowed rather than written to the marker —
+  the list stays missing and the next sync's reconciliation retries it,
+  instead of a flaky connection wedging every later delta pull behind it.
 
 ### 3.3 Join
 

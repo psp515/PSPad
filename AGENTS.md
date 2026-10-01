@@ -430,8 +430,15 @@ owner name and members rather than a second aggregate; `ListAccess` admits
 owner or member to content commands; events split `UserId` the owner from
 `ActorId` the actor; `IServerOnlyCommand` keeps a command off
 `/api/commands`) is `Active` and built so far: the domain state, commands,
-access rule and owner/actor split are in. The membership-widened sync
-(`memberListIds`, `full=` backfill), "Shared with me", Today across member
+access rule and owner/actor split are in. Plan 2 of the stack is also
+built: `SyncReader` widens `tasklists`/`todotasks`/`referenceitems` to a
+member's lists and carries `memberListIds` on every response; `full=`
+backfills those lists in full regardless of `since`; `POST
+/api/lists/join` joins by invite token; the replica reconciles membership
+after each pull (purging foreign lists, pulling missing member lists in
+the same pull, skipping entirely with no recorded owner, retrying a failed
+full pull next sync); and account deletion pulls the caller out of other
+owners' `_members` before its sweep. "Shared with me", Today across member
 lists, Statistics' owner/actor records, and public snapshots
 (`PSPad.Module.Sharing`) are the plans still ahead, each with further ADRs
 of its own.

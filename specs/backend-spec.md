@@ -218,9 +218,11 @@ transaction; the returned value stamps both the event and the aggregate's
   one serves startup replay, which reads forward across every user ordered by
   `seq` alone and so cannot use either compound index
 - every aggregate collection: `{userId: 1, seq: 1}` (delta sync)
-- `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`
-- `tasklists`: `{userId: 1, areaId: 1}`
-- `referenceitems`: `{userId: 1, listId: 1}`
+- `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`, `{listId: 1, seq: 1}` (a member's delta sync)
+- `tasklists`: `{userId: 1, areaId: 1}`, `{_members.userId: 1, seq: 1}` (a
+  member's delta sync), sparse `{inviteToken: 1}` (join lookup; sparse
+  because most lists carry no token)
+- `referenceitems`: `{userId: 1, listId: 1}`, `{listId: 1, seq: 1}` (a member's delta sync)
 - `processed_commands`: TTL index on `at`, 30 days
 - `statistics_records`: `{userId: 1, _id: -1}` (the feed page),
   `{userId: 1, kind: 1, at: 1}` (the charts' window),
@@ -360,10 +362,43 @@ not stated there:
 
 ## 5. Sync
 
-`GET /api/sync?since={seq}` returns every aggregate document for the caller
-with `seq > since`, the events in that range, and the new marker. The
-client overwrites its replica with what it receives — the server is truth,
-the replica is disposable (AD-6).
+`GET /api/sync?since={seq}&full={listIds}` returns every aggregate document
+the caller can see with `seq > since` — owned, plus `tasklists` the caller
+is a member of and `todotasks`/`referenceitems` in a list the caller is a
+member of — the events in that range (still `userId == caller` only; the
+client does not read them), and the new marker. `full` is a comma-joined
+list of ids the caller is a member of: those lists and their live children
+come back in full regardless of `since`, letting a device that just joined,
+or a second device of an already-joined user, catch up on a membership it
+has no delta history for. The response also carries `memberListIds` — the
+live lists the caller belongs to and does not own — on every call, not only
+a `full` one. The client overwrites its replica with what it receives — the
+server is truth, the replica is disposable (AD-6).
+
+**Reconciling membership.** `SyncService` saves the delta, then — only when
+the replica has a recorded owner and the response carries
+`memberListIds` — reconciles against it: a list in the replica not owned by
+the caller and missing from `memberListIds` is purged along with its tasks
+and reference items; one rule covers leaving, removal, the owner deleting
+the list, and the owner deleting their account. A list in `memberListIds`
+missing from the replica is pulled in the same pull, by asking again with
+`full=` at the just-saved marker. A device holding nothing yet for this user
+has no recorded owner, so reconciliation is skipped entirely — every list
+would otherwise look foreign. A failed full pull (`HttpRequestException`) is
+swallowed and never written to the marker; the missing list stays missing
+and the next sync retries it, instead of every delta pull wedging behind a
+flaky connection. `IReplica.LoadAllAsync<T>()` returns every row of a type —
+a replica holds one user's whole visible world, not only what that user
+owns — and `IReplica.RemoveAsync` deletes one row; `replica.js`'s `getAll`
+reads a type's rows with the key range `bound([type], [type, []])`.
+
+`POST /api/lists/join {token}` resolves an invite token to a list, runs
+`JoinTaskList` through the normal pipeline as the caller, and on acceptance
+returns `200 JoinListResponse(ListId, Documents)` — that list and its live
+children, via the same reader `full` uses. An unknown or cleared token, a
+deleted list, or a rejected join (already a member, or the owner joining
+their own list) all return `404`. The client's `JoinAsync` writes the
+response straight into the replica.
 
 `POST /api/commands` takes a batch of command envelopes from the outbox, in
 order, and returns one result per envelope. Rejections surface to the user,
@@ -514,12 +549,18 @@ directly in `PSPad.Api`:
    the request began (`ChannelDomainEventDispatcher.DrainAsync`, capped at
    10 seconds, `adr/0041`). Otherwise a projection still in flight writes
    `statistics_*` documents back after the wipe.
-2. In one MongoDB transaction, enumerate every collection in the database
+2. In the same transaction, before the sweep: pull the caller out of
+   `_members` on every other owner's `tasklists` document they belong to
+   (`$pull` by `userId`), stamping each with a fresh `seq` so those owners'
+   next sync carries the departure. The caller's own lists are untouched
+   here — they are deleted outright by the sweep below, same as everything
+   else they own.
+3. In one MongoDB transaction, enumerate every collection in the database
    (`Database.ListCollectionNames()`) and run
    `DeleteMany({ userId: callerId })` against each — including `events` and
    `processed_commands`. No collection name is hardcoded, so a new aggregate
    added later (a habit, a yearly goal) is covered with no code change here.
-3. Only once that transaction commits, call Keycloak's Admin REST API
+4. Only once that transaction commits, call Keycloak's Admin REST API
    (`DELETE /admin/realms/{realm}/users/{sub}`), authenticating with the
    existing bootstrap master-realm admin credentials
    (`KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD`) — no new realm client
@@ -533,12 +574,12 @@ directly in `PSPad.Api`:
    report which parts finished, not to fail the request. A failure before
    the Mongo transaction commits is the only case that returns a non-2xx,
    and it means nothing was deleted.
-4. There is no local password to check (no local password store exists at
+5. There is no local password to check (no local password store exists at
    all — Keycloak is the only sign-in path, §6 above), so the client-side
    confirmation is a typed-email match, not a password prompt. That is a UX
    safeguard against misclicks, not the authorization boundary — the caller's
    own validated JWT `sub` is, and the handler only ever deletes that id.
-5. The caller is authenticated but the operation still requires
+6. The caller is authenticated but the operation still requires
    connectivity; it does not go through the offline session model in the
    table above.
 
@@ -549,7 +590,8 @@ directly in `PSPad.Api`:
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/api/commands` | Execute a batch of commands. The only write endpoint |
-| `GET` | `/api/sync?since=` | Delta pull |
+| `GET` | `/api/sync?since=&full=` | Delta pull, widened to lists the caller is a member of; `full` (comma-joined list ids the caller belongs to) returns those lists and their children in full regardless of `since` |
+| `POST` | `/api/lists/join` | Join a shared list by its invite token. `200 JoinListResponse(ListId, Documents)`, or `404` for an unknown/cleared token, a deleted list, or a rejected join. Not through the outbox — see §5 |
 | `GET` | `/api/today` | Server-side Today, for a cold client |
 | `GET` | `/api/statistics/records?before=&limit=` | The statistics feed, newest first. `limit` clamps to 1..200, default 50 |
 | `GET` | `/api/statistics/overview?days=` | Tiles and the five chart series. `days` is 30, 90 or 365, default 30 |
