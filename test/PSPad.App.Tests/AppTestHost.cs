@@ -73,7 +73,9 @@ public static class AppTestHost
         var syncTrigger = new NoOpSyncTrigger();
         context.Services.AddSingleton(services => new CommandSender(services, work, syncTrigger));
         context.Services.AddSingleton<ISyncTrigger>(syncTrigger);
-        context.Services.AddSingleton(new ReplicaOwnership(replica, outbox, statisticsCache));
+        context.Services.AddSingleton<ISnapshotCache>(new InMemorySnapshotCache());
+        context.Services.AddSingleton(services =>
+            new ReplicaOwnership(replica, outbox, statisticsCache, services.GetRequiredService<ISnapshotCache>()));
         context.Services.AddScoped<Clipboard>();
         context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop: true));
         context.Services.AddSingleton<IBreakpoints>(new FakeBreakpoints(MudBlazor.Breakpoint.Xs));

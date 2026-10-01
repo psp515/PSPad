@@ -1,0 +1,229 @@
+@page "/s/{Token}"
+@layout PublicLayout
+@using PSPad.Abstractions
+@using PSPad.App.Api
+@using PSPad.App.Auth
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.Contracts
+@using PSPad.Module.Tasks.References
+@inject PublicSnapshotsClient Client
+@inject ISnapshotCache Cache
+@inject ISnapshotsApi SnapshotsApi
+@inject LocalAuthenticationStateProvider Authentication
+@inject IClock Clock
+@inject ISnackbar Snackbar
+
+<div class="pspad-snapshot-page">
+    <div class="pspad-snapshot-topbar d-flex justify-end pa-2">
+        @if (_signedIn)
+        {
+            <MudButton Variant="Variant.Text" Href="/">Open PSPad</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Text" Href="authentication/login">Log in</MudButton>
+        }
+    </div>
+
+    @if (_state == SnapshotPageState.NotFound)
+    {
+        <EmptyState Icon="@Icons.Material.Outlined.LinkOff" Message="This snapshot has expired or never existed." />
+        <div class="pspad-snapshot-welcome-link pa-2">
+            <MudLink Href="/welcome">What is PSPad?</MudLink>
+        </div>
+    }
+    else if (_state == SnapshotPageState.NoConnection)
+    {
+        <EmptyState Icon="@Icons.Material.Outlined.WifiOff" Message="Connect to the internet to open this snapshot." />
+    }
+    else if (_snapshot is not null)
+    {
+        @if (_offline)
+        {
+            <MudAlert Severity="Severity.Warning" Class="pspad-snapshot-offline-banner ma-2">
+                Offline — showing the copy from @_snapshot.CreatedAt.ToString("d MMM yyyy").
+            </MudAlert>
+        }
+
+        <header class="pspad-snapshot-header pa-2">
+            <MudText Typo="Typo.h1">@_snapshot.Name</MudText>
+            <MudText Typo="Typo.caption">
+                Snapshot from @_snapshot.CreatedAt.ToString("d MMM yyyy") · expires @_snapshot.ExpiresAt.ToString("d MMM yyyy")
+            </MudText>
+        </header>
+
+        <div class="pspad-snapshot-entries pa-2">
+            @if (_snapshot.Kind == "Tasks")
+            {
+                @foreach (var task in _snapshot.Tasks)
+                {
+                    <MudPaper Outlined="true" Class="pa-2 mb-2 pspad-snapshot-task">
+                        <div class="d-flex align-center gap-2">
+                            <MudCheckBox T="bool" Value="@task.Marked" Disabled="@_offline"
+                                         ValueChanged="@(_ => ToggleTaskAsync(task))" Color="Color.Primary" Dense="true" />
+                            <MudText Typo="Typo.body1" Style="@(task.Done ? "text-decoration:line-through" : "")">@task.Name</MudText>
+                            @if (task.Starred)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Color="Color.Primary" />
+                            }
+                            @if (task.DueOn is { } due)
+                            {
+                                <MudText Typo="Typo.caption">@due.ToString("d MMM")</MudText>
+                            }
+                        </div>
+
+                        <MarkdownField Value="@task.Description" ReadOnly="true" />
+
+                        @foreach (var step in task.Steps)
+                        {
+                            <div class="d-flex align-center gap-2 pspad-snapshot-step ml-4">
+                                <MudCheckBox T="bool" Value="@step.Marked" Disabled="@_offline"
+                                             ValueChanged="@(_ => ToggleStepAsync(task, step))" Color="Color.Primary" Dense="true" />
+                                <MudText Typo="Typo.body2" Style="@(step.Done ? "text-decoration:line-through" : "")">@step.Name</MudText>
+                            </div>
+                        }
+                    </MudPaper>
+                }
+            }
+            else
+            {
+                @foreach (var item in _snapshot.Items)
+                {
+                    <MudPaper Outlined="true" Class="pa-2 mb-2 pspad-snapshot-item">
+                        <div class="d-flex align-center gap-2">
+                            <MudCheckBox T="bool" Value="@item.Marked" Disabled="@_offline"
+                                         ValueChanged="@(_ => ToggleItemAsync(item))" Color="Color.Primary" Dense="true" />
+                            <MudText Typo="Typo.body1">@item.Name</MudText>
+                            @if (item.Starred)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Color="Color.Primary" />
+                            }
+                        </div>
+
+                        <MarkdownField Value="@item.Description" ReadOnly="true" />
+
+                        @foreach (var field in item.Fields)
+                        {
+                            <div class="pspad-snapshot-field">
+                                <MudText Typo="Typo.caption">@field.Label</MudText>
+                                <ReferenceFieldValue Field="@ToReferenceField(field)" />
+                            </div>
+                        }
+                    </MudPaper>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Token { get; set; } = "";
+
+    enum SnapshotPageState
+    {
+        Loading,
+        NotFound,
+        NoConnection,
+        Ready
+    }
+
+    SnapshotPageState _state = SnapshotPageState.Loading;
+    SnapshotView? _snapshot;
+    bool _offline;
+    bool _signedIn;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    async Task LoadAsync()
+    {
+        var session = await Authentication.SessionAsync();
+        _signedIn = session is not null;
+
+        SnapshotView? snapshot;
+        try
+        {
+            snapshot = await Client.GetAsync(Token);
+        }
+        catch (HttpRequestException)
+        {
+            var cached = await Cache.GetAsync(Token);
+            if (cached is not null && cached.ExpiresAt > Clock.UtcNow)
+            {
+                _snapshot = cached;
+                _offline = true;
+                _state = SnapshotPageState.Ready;
+                return;
+            }
+
+            _state = SnapshotPageState.NoConnection;
+            return;
+        }
+
+        if (snapshot is null)
+        {
+            _state = SnapshotPageState.NotFound;
+            return;
+        }
+
+        _snapshot = snapshot;
+        _offline = false;
+        _state = SnapshotPageState.Ready;
+
+        if (_signedIn)
+        {
+            _ = SnapshotsApi.RecordVisitAsync(Token);
+            await Cache.SaveAsync(Token, snapshot);
+        }
+    }
+
+    async Task ToggleTaskAsync(SnapshotTaskView task) => await ToggleAsync(task.Id, null, !task.Marked);
+
+    async Task ToggleStepAsync(SnapshotTaskView task, SnapshotStepView step) =>
+        await ToggleAsync(task.Id, step.Id, !step.Marked);
+
+    async Task ToggleItemAsync(SnapshotItemView item) => await ToggleAsync(item.Id, null, !item.Marked);
+
+    async Task ToggleAsync(Guid entryId, Guid? stepId, bool marked)
+    {
+        if (_snapshot is null)
+        {
+            return;
+        }
+
+        var previous = _snapshot;
+        _snapshot = WithMark(_snapshot, entryId, stepId, marked);
+
+        var ok = await Client.MarkAsync(Token, entryId, stepId, marked);
+        if (!ok)
+        {
+            _snapshot = previous;
+            Snackbar.Add("Couldn't save that tick. Try again.", Severity.Warning);
+        }
+    }
+
+    static SnapshotView WithMark(SnapshotView snapshot, Guid entryId, Guid? stepId, bool marked) =>
+        snapshot with
+        {
+            Tasks = snapshot.Tasks.Select(task => WithTaskMark(task, entryId, stepId, marked)).ToArray(),
+            Items = snapshot.Items
+                .Select(item => item.Id == entryId ? item with { Marked = marked } : item)
+                .ToArray()
+        };
+
+    static SnapshotTaskView WithTaskMark(SnapshotTaskView task, Guid entryId, Guid? stepId, bool marked)
+    {
+        if (stepId is { } step)
+        {
+            return task with
+            {
+                Steps = task.Steps.Select(s => s.Id == step ? s with { Marked = marked } : s).ToArray()
+            };
+        }
+
+        return task.Id == entryId ? task with { Marked = marked } : task;
+    }
+
+    static ReferenceField ToReferenceField(SnapshotFieldView field) =>
+        new(Guid.Empty, field.Label, field.Value, field.Display, 0);
+}

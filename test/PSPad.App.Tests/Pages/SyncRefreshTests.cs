@@ -36,7 +36,9 @@ public class SyncRefreshTests : Bunit.TestContext
         // Search renders what the typed query last matched, not a standing view of the replica.
         typeof(SearchPage),
         // JoinPage joins once and navigates away; it never settles into a standing replica view.
-        typeof(JoinPage)
+        typeof(JoinPage),
+        // SnapshotPage renders a frozen server copy (or its own offline cache), never the replica.
+        typeof(SnapshotPage)
     ];
 
     public static TheoryData<Type> ReplicaBackedPages()
