@@ -13,7 +13,7 @@ public class SnapshotCacheTests
         var cache = new InMemorySnapshotCache();
         var snapshot = Sample("tok1", DateTimeOffset.UtcNow.AddDays(1));
 
-        await cache.SaveAsync("tok1", snapshot);
+        await cache.SaveAsync("tok1", snapshot, DateTimeOffset.UtcNow);
 
         Assert.Equal(snapshot, await cache.GetAsync("tok1"));
     }
@@ -32,8 +32,8 @@ public class SnapshotCacheTests
         var cache = new InMemorySnapshotCache();
         var first = Sample("tok1", DateTimeOffset.UtcNow.AddDays(1));
         var second = Sample("tok2", DateTimeOffset.UtcNow.AddDays(2));
-        await cache.SaveAsync("tok1", first);
-        await cache.SaveAsync("tok2", second);
+        await cache.SaveAsync("tok1", first, DateTimeOffset.UtcNow);
+        await cache.SaveAsync("tok2", second, DateTimeOffset.UtcNow);
 
         var all = await cache.AllAsync();
 
@@ -43,13 +43,29 @@ public class SnapshotCacheTests
     }
 
     [Fact]
+    public async Task AllAsyncCarriesTheVisitTimeSeparatelyFromTheSnapshotsCreatedAt()
+    {
+        var cache = new InMemorySnapshotCache();
+        var publishedAt = DateTimeOffset.UtcNow.AddDays(-10);
+        var openedAt = DateTimeOffset.UtcNow;
+        var snapshot = new SnapshotView(
+            Guid.NewGuid(), "List", "Tasks", publishedAt, publishedAt.AddDays(20), [], []);
+
+        await cache.SaveAsync("tok1", snapshot, openedAt);
+
+        var entry = Assert.Single(await cache.AllAsync());
+        Assert.Equal(openedAt, entry.OpenedAt);
+        Assert.NotEqual(snapshot.CreatedAt, entry.OpenedAt);
+    }
+
+    [Fact]
     public async Task SavingTheSameTokenAgainOverwritesIt()
     {
         var cache = new InMemorySnapshotCache();
-        await cache.SaveAsync("tok1", Sample("tok1", DateTimeOffset.UtcNow.AddDays(1)));
+        await cache.SaveAsync("tok1", Sample("tok1", DateTimeOffset.UtcNow.AddDays(1)), DateTimeOffset.UtcNow);
         var updated = Sample("tok1", DateTimeOffset.UtcNow.AddDays(5));
 
-        await cache.SaveAsync("tok1", updated);
+        await cache.SaveAsync("tok1", updated, DateTimeOffset.UtcNow);
 
         Assert.Equal(updated, await cache.GetAsync("tok1"));
     }
@@ -59,8 +75,8 @@ public class SnapshotCacheTests
     {
         var cache = new InMemorySnapshotCache();
         var now = DateTimeOffset.UtcNow;
-        await cache.SaveAsync("expired", Sample("expired", now.AddDays(-1)));
-        await cache.SaveAsync("live", Sample("live", now.AddDays(1)));
+        await cache.SaveAsync("expired", Sample("expired", now.AddDays(-1)), now);
+        await cache.SaveAsync("live", Sample("live", now.AddDays(1)), now);
 
         await cache.PruneAsync(now);
 
@@ -72,8 +88,8 @@ public class SnapshotCacheTests
     public async Task ClearAsyncDropsEverything()
     {
         var cache = new InMemorySnapshotCache();
-        await cache.SaveAsync("tok1", Sample("tok1", DateTimeOffset.UtcNow.AddDays(1)));
-        await cache.SaveAsync("tok2", Sample("tok2", DateTimeOffset.UtcNow.AddDays(1)));
+        await cache.SaveAsync("tok1", Sample("tok1", DateTimeOffset.UtcNow.AddDays(1)), DateTimeOffset.UtcNow);
+        await cache.SaveAsync("tok2", Sample("tok2", DateTimeOffset.UtcNow.AddDays(1)), DateTimeOffset.UtcNow);
 
         await cache.ClearAsync();
 

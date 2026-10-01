@@ -7,12 +7,12 @@ public sealed class SnapshotCache(IJSRuntime js) : ISnapshotCache, IAsyncDisposa
 {
     IJSObjectReference? _module;
 
-    public async Task SaveAsync(string token, SnapshotView snapshot)
+    public async Task SaveAsync(string token, SnapshotView snapshot, DateTimeOffset openedAt)
     {
         try
         {
             var module = await ModuleAsync();
-            await module.InvokeVoidAsync("putSnapshot", new SnapshotRow(token, snapshot));
+            await module.InvokeVoidAsync("putSnapshot", new SnapshotRow(token, snapshot, openedAt));
         }
         catch (JSException)
         {
@@ -33,13 +33,13 @@ public sealed class SnapshotCache(IJSRuntime js) : ISnapshotCache, IAsyncDisposa
         }
     }
 
-    public async Task<IReadOnlyList<(string Token, SnapshotView Snapshot)>> AllAsync()
+    public async Task<IReadOnlyList<(string Token, SnapshotView Snapshot, DateTimeOffset OpenedAt)>> AllAsync()
     {
         try
         {
             var module = await ModuleAsync();
             var rows = await module.InvokeAsync<SnapshotRow[]>("allSnapshots");
-            return rows.Select(row => (row.Token, row.Snapshot)).ToArray();
+            return rows.Select(row => (row.Token, row.Snapshot, row.OpenedAt)).ToArray();
         }
         catch (JSException)
         {
@@ -49,7 +49,7 @@ public sealed class SnapshotCache(IJSRuntime js) : ISnapshotCache, IAsyncDisposa
 
     public async Task PruneAsync(DateTimeOffset now)
     {
-        foreach (var (token, snapshot) in await AllAsync())
+        foreach (var (token, snapshot, _) in await AllAsync())
         {
             if (snapshot.ExpiresAt <= now)
             {
@@ -60,7 +60,7 @@ public sealed class SnapshotCache(IJSRuntime js) : ISnapshotCache, IAsyncDisposa
 
     public async Task ClearAsync()
     {
-        foreach (var (token, _) in await AllAsync())
+        foreach (var (token, _, _) in await AllAsync())
         {
             await DeleteAsync(token);
         }
@@ -89,5 +89,5 @@ public sealed class SnapshotCache(IJSRuntime js) : ISnapshotCache, IAsyncDisposa
         }
     }
 
-    sealed record SnapshotRow(string Token, SnapshotView Snapshot);
+    sealed record SnapshotRow(string Token, SnapshotView Snapshot, DateTimeOffset OpenedAt);
 }

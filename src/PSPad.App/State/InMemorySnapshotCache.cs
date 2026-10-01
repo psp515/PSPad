@@ -4,25 +4,25 @@ namespace PSPad.App.State;
 
 public sealed class InMemorySnapshotCache : ISnapshotCache
 {
-    readonly Dictionary<string, SnapshotView> _snapshots = [];
+    readonly Dictionary<string, (SnapshotView Snapshot, DateTimeOffset OpenedAt)> _snapshots = [];
 
-    public Task SaveAsync(string token, SnapshotView snapshot)
+    public Task SaveAsync(string token, SnapshotView snapshot, DateTimeOffset openedAt)
     {
-        _snapshots[token] = snapshot;
+        _snapshots[token] = (snapshot, openedAt);
         return Task.CompletedTask;
     }
 
     public Task<SnapshotView?> GetAsync(string token) =>
-        Task.FromResult(_snapshots.GetValueOrDefault(token));
+        Task.FromResult(_snapshots.TryGetValue(token, out var entry) ? entry.Snapshot : null);
 
-    public Task<IReadOnlyList<(string Token, SnapshotView Snapshot)>> AllAsync() =>
-        Task.FromResult<IReadOnlyList<(string Token, SnapshotView Snapshot)>>(
-            _snapshots.Select(pair => (pair.Key, pair.Value)).ToArray());
+    public Task<IReadOnlyList<(string Token, SnapshotView Snapshot, DateTimeOffset OpenedAt)>> AllAsync() =>
+        Task.FromResult<IReadOnlyList<(string Token, SnapshotView Snapshot, DateTimeOffset OpenedAt)>>(
+            _snapshots.Select(pair => (pair.Key, pair.Value.Snapshot, pair.Value.OpenedAt)).ToArray());
 
     public Task PruneAsync(DateTimeOffset now)
     {
         foreach (var token in _snapshots
-            .Where(pair => pair.Value.ExpiresAt <= now)
+            .Where(pair => pair.Value.Snapshot.ExpiresAt <= now)
             .Select(pair => pair.Key)
             .ToArray())
         {

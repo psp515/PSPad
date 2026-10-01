@@ -4,6 +4,7 @@ using AngleSharp.Html.Dom;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using PSPad.Abstractions;
 using PSPad.App.Api;
 using PSPad.App.Auth;
 using PSPad.App.Components;
@@ -113,7 +114,7 @@ public class SnapshotPageTests : Bunit.TestContext
     {
         var snapshot = SampleTaskSnapshot();
         Arrange(snapshot, throwOnGet: true);
-        await _cache.SaveAsync("tok123", snapshot);
+        await _cache.SaveAsync("tok123", snapshot, DateTimeOffset.UtcNow);
 
         var page = RenderPage("tok123");
 
@@ -142,6 +143,20 @@ public class SnapshotPageTests : Bunit.TestContext
 
         Assert.Contains("tok123", _api.Visited);
         Assert.NotNull(await _cache.GetAsync("tok123"));
+    }
+
+    [Fact]
+    public async Task ASignedInVisitorCachesTheVisitTimeNotTheSnapshotsCreatedAt()
+    {
+        var snapshot = SampleTaskSnapshot();
+        Arrange(snapshot, session: SampleSession());
+
+        RenderPage("tok123");
+
+        var cached = Assert.Single(await _cache.AllAsync(), entry => entry.Token == "tok123");
+        Assert.NotEqual(snapshot.CreatedAt, cached.OpenedAt);
+        var clock = Services.GetRequiredService<IClock>();
+        Assert.Equal(clock.UtcNow, cached.OpenedAt);
     }
 
     [Fact]

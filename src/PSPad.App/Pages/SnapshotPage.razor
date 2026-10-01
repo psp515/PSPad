@@ -173,7 +173,7 @@
         if (_signedIn)
         {
             _ = SnapshotsApi.RecordVisitAsync(Token);
-            await Cache.SaveAsync(Token, snapshot);
+            await Cache.SaveAsync(Token, snapshot, Clock.UtcNow);
         }
     }
 

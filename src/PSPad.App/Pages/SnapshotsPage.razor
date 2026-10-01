@@ -62,7 +62,7 @@ else
     {
         var cached = await Cache.AllAsync();
         return [.. cached.Select(entry => new SnapshotVisitView(
-            entry.Token, entry.Snapshot.Name, entry.Snapshot.ExpiresAt, entry.Snapshot.CreatedAt))];
+            entry.Token, entry.Snapshot.Name, entry.Snapshot.ExpiresAt, entry.OpenedAt))];
     }
 
     static IReadOnlyList<SnapshotVisitView> Sorted(IReadOnlyList<SnapshotVisitView> rows, DateTimeOffset now) =>

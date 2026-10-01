@@ -153,7 +153,7 @@ public class ReplicaOwnershipTests
         var replica = new InMemoryReplica();
         var outbox = new InMemoryOutbox();
         var snapshots = NewSnapshotCache();
-        await snapshots.SaveAsync("tok", SampleSnapshot());
+        await snapshots.SaveAsync("tok", SampleSnapshot(), DateTimeOffset.UtcNow);
         var previousUser = Guid.NewGuid();
         await replica.SetOwnerAsync(previousUser);
         var ownership = new ReplicaOwnership(replica, outbox, NewCache(), snapshots);
@@ -171,7 +171,7 @@ public class ReplicaOwnershipTests
         var snapshots = NewSnapshotCache();
         var user = Guid.NewGuid();
         await replica.SetOwnerAsync(user);
-        await snapshots.SaveAsync("tok", SampleSnapshot());
+        await snapshots.SaveAsync("tok", SampleSnapshot(), DateTimeOffset.UtcNow);
         var ownership = new ReplicaOwnership(replica, outbox, NewCache(), snapshots);
 
         await ownership.EnsureCurrentUserAsync(user);

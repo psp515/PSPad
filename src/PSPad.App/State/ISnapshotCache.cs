@@ -4,11 +4,11 @@ namespace PSPad.App.State;
 
 public interface ISnapshotCache
 {
-    Task SaveAsync(string token, SnapshotView snapshot);
+    Task SaveAsync(string token, SnapshotView snapshot, DateTimeOffset openedAt);
 
     Task<SnapshotView?> GetAsync(string token);
 
-    Task<IReadOnlyList<(string Token, SnapshotView Snapshot)>> AllAsync();
+    Task<IReadOnlyList<(string Token, SnapshotView Snapshot, DateTimeOffset OpenedAt)>> AllAsync();
 
     Task PruneAsync(DateTimeOffset now);
 

@@ -42,7 +42,7 @@ public class SnapshotsPageTests : Bunit.TestContext
         var now = Now();
         var cache = new InMemorySnapshotCache();
         await cache.SaveAsync("tok-cached", new SnapshotView(
-            Guid.NewGuid(), "Cached list", "Tasks", now.AddDays(-3), now.AddDays(5), [], []));
+            Guid.NewGuid(), "Cached list", "Tasks", now.AddDays(-3), now.AddDays(5), [], []), now);
         Arrange(new FakeSnapshotsApi(), online: false, cache: cache);
 
         var page = Render();
@@ -56,7 +56,7 @@ public class SnapshotsPageTests : Bunit.TestContext
         var now = Now();
         var cache = new InMemorySnapshotCache();
         await cache.SaveAsync("tok-cached", new SnapshotView(
-            Guid.NewGuid(), "Cached list", "Tasks", now.AddDays(-3), now.AddDays(5), [], []));
+            Guid.NewGuid(), "Cached list", "Tasks", now.AddDays(-3), now.AddDays(5), [], []), now);
         Arrange(new FakeSnapshotsApi { Throws = true }, online: true, cache: cache);
 
         var page = Render();
@@ -70,12 +70,29 @@ public class SnapshotsPageTests : Bunit.TestContext
         var now = Now();
         var cache = new InMemorySnapshotCache();
         await cache.SaveAsync("tok-expired", new SnapshotView(
-            Guid.NewGuid(), "Expired list", "Tasks", now.AddDays(-10), now.AddDays(-1), [], []));
+            Guid.NewGuid(), "Expired list", "Tasks", now.AddDays(-10), now.AddDays(-1), [], []), now);
         Arrange(new FakeSnapshotsApi(), online: false, cache: cache);
 
         var page = Render();
 
         Assert.DoesNotContain("Expired list", page.Markup);
+    }
+
+    [Fact]
+    public async Task OfflineOpenedDateIsTheVisitTimeNotTheSnapshotsPublishTime()
+    {
+        var now = Now();
+        var publishedAt = now.AddDays(-10);
+        var openedAt = now;
+        var cache = new InMemorySnapshotCache();
+        await cache.SaveAsync("tok-cached", new SnapshotView(
+            Guid.NewGuid(), "Cached list", "Tasks", publishedAt, now.AddDays(5), [], []), openedAt);
+        Arrange(new FakeSnapshotsApi(), online: false, cache: cache);
+
+        var page = Render();
+
+        Assert.Contains($"Opened {openedAt:d MMM yyyy}", page.Markup);
+        Assert.DoesNotContain($"Opened {publishedAt:d MMM yyyy}", page.Markup);
     }
 
     [Fact]
