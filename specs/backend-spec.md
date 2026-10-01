@@ -776,10 +776,12 @@ See `adr/0054`.
 **A versioned projection rebuilds once when its shape changes.**
 `statistics_state.projectionVersion` (absent = 1) is compared against
 `StatisticsProjection.Version` on every start
-(`IProjectionMarker.AdoptVersionAsync`). An older or absent version resets
-`lastProcessedSeq` to 0, drops `statistics_records`,
-`statistics_inbox_records` and `statistics_labels`
-(`IStatisticsReset.ClearAsync`) and recreates their indexes, before the
+(`IProjectionMarker.IsBehindAsync`). An older or absent version first drops
+`statistics_records`, `statistics_inbox_records` and `statistics_labels`
+(`IStatisticsReset.ClearAsync`) and recreates their indexes, and only then
+resets `lastProcessedSeq` to 0 and records the new version
+(`AdoptVersionAsync`) — so a clear that fails, or a host that dies between
+the two, leaves the old version and the next start clears again. Then the
 normal replay path (above) rebuilds every row from `events` alone. No
 migration script; the log is the source (`adr/0054`).
 

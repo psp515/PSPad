@@ -55,16 +55,13 @@ public class StatisticsReplayTests
             return Task.CompletedTask;
         }
 
-        public Task<bool> AdoptVersionAsync(int version, CancellationToken ct)
-        {
-            if (Version >= version)
-            {
-                return Task.FromResult(false);
-            }
+        public Task<bool> IsBehindAsync(int version, CancellationToken ct) => Task.FromResult(Version < version);
 
+        public Task AdoptVersionAsync(int version, CancellationToken ct)
+        {
             Current = 0;
             Version = version;
-            return Task.FromResult(true);
+            return Task.CompletedTask;
         }
     }
 
@@ -77,6 +74,11 @@ public class StatisticsReplayTests
             Cleared++;
             return Task.CompletedTask;
         }
+    }
+
+    sealed class ThrowingReset : IStatisticsReset
+    {
+        public Task ClearAsync(CancellationToken ct) => throw new InvalidOperationException("Drop failed.");
     }
 
     sealed class RecordingHandler : IDomainEventHandler
@@ -264,5 +266,26 @@ public class StatisticsReplayTests
 
         Assert.Equal(0, reset.Cleared);
         Assert.Equal([3], handler.Seen);
+    }
+
+    [Fact]
+    public async Task AFailedClearLeavesTheOldVersionSoTheNextStartClearsAgain()
+    {
+        var log = new FakeEventLog(Created(1), Created(2));
+        var marker = new FakeMarker(100, version: 1);
+        var handler = new RecordingHandler();
+
+        await Replay(log, marker, new ThrowingReset(), handler).CatchUpAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, marker.Version);
+        Assert.Equal(100, marker.Current);
+        Assert.Empty(handler.Seen);
+
+        var reset = new FakeReset();
+        await Replay(log, marker, reset, handler).CatchUpAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, reset.Cleared);
+        Assert.Equal([1, 2], handler.Seen);
+        Assert.Equal(StatisticsProjection.Version, marker.Version);
     }
 }

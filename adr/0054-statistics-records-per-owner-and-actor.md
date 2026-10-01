@@ -134,3 +134,12 @@ member's business just because they completed the owner's task — if a
 future design decision wants a member to see goal progress on lists they
 work on, that is a new decision, not something this ADR's `GoalId: null`
 accidentally enables.
+
+## Amendment (2026-10-01, final review)
+
+The order is reversed: `StatisticsReplay` asks `IProjectionMarker.IsBehindAsync`,
+clears, and only then calls `AdoptVersionAsync` (now a plain write). Adopting
+first meant a failed drop — or a host dying between the two — left the new
+version recorded over the old rows, so the next start replayed from zero on
+top of them and doubled every count. Clearing is idempotent, so retrying it
+on the next start is safe.

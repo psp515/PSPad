@@ -269,8 +269,8 @@ Inbox is never shared, so it never gets an actor copy or a composite id.
 ### 5.3 Rebuild
 
 `statistics_state` gains `projectionVersion`. At startup, a version older than
-the code's drops the `statistics_*` collections, resets `lastProcessedSeq` to
-0 and replays the whole log through the existing replay path (`adr/0036`). No
+the code's drops the `statistics_*` collections, then (only once the drop
+succeeded) resets `lastProcessedSeq` to 0 and records the version, and replays the whole log through the existing replay path (`adr/0036`). No
 migration code; the log is the source.
 
 ### 5.4 What the actor's record carries

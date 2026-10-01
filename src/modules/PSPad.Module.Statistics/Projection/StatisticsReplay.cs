@@ -26,9 +26,11 @@ public sealed class StatisticsReplay(
 
     async Task ReplayAsync(CancellationToken ct)
     {
-        if (await marker.AdoptVersionAsync(StatisticsProjection.Version, ct))
+        if (await marker.IsBehindAsync(StatisticsProjection.Version, ct))
         {
+            // Cleared before the version moves, so a clear that fails is retried on the next start.
             await reset.ClearAsync(ct);
+            await marker.AdoptVersionAsync(StatisticsProjection.Version, ct);
         }
 
         var subscribers = handlers.ToArray();

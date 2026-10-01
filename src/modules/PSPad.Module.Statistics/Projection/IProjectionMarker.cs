@@ -6,6 +6,7 @@ public interface IProjectionMarker
 
     Task WriteAsync(long seq, CancellationToken ct);
 
-    // true when the stored version was older (or absent): the marker is reset to 0 and the new version recorded.
-    Task<bool> AdoptVersionAsync(int version, CancellationToken ct);
+    Task<bool> IsBehindAsync(int version, CancellationToken ct);
+
+    Task AdoptVersionAsync(int version, CancellationToken ct);
 }
