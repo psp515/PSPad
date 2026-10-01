@@ -74,6 +74,29 @@ public class MembershipReconcileTests
     }
 
     [Fact]
+    public async Task AFailedFullPullNeverStallsTheMarker()
+    {
+        var listId = Guid.NewGuid();
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        var area = new Module.Tasks.Areas.Area();
+        area.ApplyAll(Module.Tasks.Areas.Area.Decide(
+            null, new Module.Tasks.Areas.CreateArea(Guid.NewGuid(), Me, Guid.NewGuid(), "Home", 0),
+            DateTimeOffset.UnixEpoch));
+        var api = new ScriptedApi(
+            new SyncResponse(5, new Dictionary<string, JsonElement[]>
+            {
+                ["areas"] = [Serialize(area)]
+            }, [], MemberListIds: [listId]),
+            throwOnFull: true);
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.NotNull(await replica.LoadAsync<Module.Tasks.Areas.Area>(area.Id));
+        Assert.Equal(5, await replica.MarkerAsync());
+    }
+
+    [Fact]
     public async Task AnOldServerWithoutTheSetPurgesNothing()
     {
         var listId = Guid.NewGuid();
@@ -162,7 +185,8 @@ public class MembershipReconcileTests
     sealed class ScriptedApi(
         SyncResponse? first = null,
         SyncResponse? second = null,
-        JoinListResponse? joinResponse = null) : ISyncApi
+        JoinListResponse? joinResponse = null,
+        bool throwOnFull = false) : ISyncApi
     {
         int _calls;
 
@@ -175,6 +199,12 @@ public class MembershipReconcileTests
         {
             FullRequests.Add(full);
             _calls++;
+
+            if (_calls > 1 && throwOnFull)
+            {
+                throw new HttpRequestException("Boom.");
+            }
+
             return Task.FromResult(_calls == 1 ? first : second);
         }
 

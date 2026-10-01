@@ -3,6 +3,7 @@ using PSPad.Abstractions;
 using PSPad.App.Api;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
+using PSPad.Contracts;
 
 namespace PSPad.App.Sync;
 
@@ -90,7 +91,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         {
             var missing = await ReconcileAsync(owner, memberLists);
 
-            if (missing.Count > 0 && await api.SyncAsync(response.Marker, missing) is { } whole)
+            if (missing.Count > 0 && await FullPullAsync(response.Marker, missing) is { } whole)
             {
                 pulled += await SaveAsync(whole.Documents);
             }
@@ -99,6 +100,20 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         await replica.SetMarkerAsync(response.Marker);
         await replica.SetCollectionsFingerprintAsync(CollectionsFingerprint);
         return pulled;
+    }
+
+    // A failing full pull must not stall the marker -- the missing list stays missing and the
+    // next sync retries it, instead of every delta pull wedging behind it forever.
+    async Task<SyncResponse?> FullPullAsync(long marker, IReadOnlyCollection<Guid> missing)
+    {
+        try
+        {
+            return await api.SyncAsync(marker, missing);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     async Task<int> SaveAsync(IReadOnlyDictionary<string, JsonElement[]> documents)
