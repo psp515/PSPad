@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\shared\PSPad.Abstractions\PSPad.Abstractions.csproj" />
     <ProjectReference Include="..\..\shared\PSPad.Contracts\PSPad.Contracts.csproj" />
     <ProjectReference Include="..\PSPad.Module.Tasks\PSPad.Module.Tasks.csproj" />
