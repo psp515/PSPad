@@ -641,6 +641,53 @@ mount: offline it shows `EmptyState` "Joining needs a connection." with a
 longer works." with "Go to My Day". On success it triggers a sync and
 navigates straight to `/lists/{listId}`.
 
+**Public snapshots sit in their own `PanelSection`, "Public snapshots",
+below Sharing — owner only.** `Components/SnapshotPublisher.razor` offers
+expiry presets as `MudChip`s (1 day / 7 days / 30 days) plus a **Date**
+chip that opens a `MudDatePicker` capped at 365 days out; **Publish
+snapshot** flushes the outbox first (`ISyncTrigger.SyncNowAsync` — a
+snapshot is built from server state) and is disabled outright while
+offline, with a caption explaining why. A published snapshot copies its
+link to the clipboard and shows a success snackbar; each active snapshot
+below lists its expiry with a copy button and a **Revoke** button
+(`ConfirmDialog`, "The link stops working."). A custom date resolves to
+the end of that day in the user's own time zone, not UTC midnight.
+
+**`SnapshotMarkChip`** — a small outlined `MudChip`, "Marked on a
+snapshot" — renders on a task, step or reference item's row and in its
+panel whenever it carries at least one snapshot mark. The panel offers
+**Dismiss**, sending `ClearTaskSnapshotMarks` or
+`ClearReferenceItemSnapshotMarks`; completing the task itself is a
+separate, deliberate action the chip never triggers.
+
+**`/s/{token}`** (`Pages/SnapshotPage.razor`, `PublicLayout`, anonymous —
+outside `AppShell` like `/welcome`) renders the frozen list: a top bar
+with **Log in** or **Open PSPad** depending on whether a local session
+exists, the list's name and "Snapshot from {date} · expires {date}", then
+every task (struck through if done, its steps beneath, `MarkdownField`
+`ReadOnly` for the description) or reference item (its fields via
+`ReferenceFieldValue`). Each entry and step carries its own `MudCheckBox`
+for the mark — optimistic, reverting with a snackbar ("Couldn't save that
+tick.") on failure, disabled while offline. An unknown or expired token
+renders one `EmptyState` ("This snapshot has expired or never existed.")
+with a link to `/welcome` — the two cases are deliberately
+indistinguishable. Offline with no cached copy shows a different
+`EmptyState` ("Connect to the internet to open this snapshot."); offline
+with a cached copy shows the snapshot behind a warning `MudAlert`
+("Offline — showing the copy from {date}.") with every checkbox disabled.
+A signed-in visitor's open is recorded (`POST /api/me/snapshot-visits`)
+and the snapshot cached to IndexedDB for that offline path.
+
+**`/snapshots`** (`Pages/SnapshotsPage.razor`, signed-in) is **List
+snapshots**: a `MudList` of every snapshot the caller has opened, newest
+first, name plus "Expires {date} · Opened {date}", each row linking to
+`/s/{token}`. An empty list shows `EmptyState` ("Snapshots you open while
+signed in show up here."). Online it reads `/api/me/snapshot-visits`;
+offline, or on request failure, it falls back to the IndexedDB cache,
+pruning expired entries from both sources before display. A sidebar row
+(desktop, after Statistics) and an `AccountDrawer` row (phone, before
+Settings) link here.
+
 **Inbox items use the same shell.** `Layout/InboxItemPanel.razor` is
 addressed as `?inbox=new` (the Inbox FAB or its empty state) or
 `?inbox={itemId}` (tapping an item card), via `InboxQuery`.
@@ -958,7 +1005,8 @@ the example. The Consistency heatmap is not a `MudChart` — see §1.
 
 **Sidebar**, top to bottom, one navigation tree at `md`+: a
 non-interactive `AccountBadge` (avatar, display name, email — a label, not
-a control), then a nav group of **My Day / Inbox / Goals / Statistics**,
+a control), then a nav group of **My Day / Inbox / Goals / Statistics /
+List snapshots**,
 divider, the user's areas in `Position` order, then **Shared with me**
 (`People` icon) when the user has a member list, then **+ New area**,
 divider, **Settings** / **App info**, then a spacer, then a footer
@@ -981,6 +1029,8 @@ and footer moved into `AccountDrawer` (`adr/0050`).
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |
 | `/goals/{goalId}` | goal screen — every task of one goal |
+| `/snapshots` | List snapshots — public snapshots the caller has opened while signed in, newest first |
+| `/s/{token}` | a public snapshot, anonymous, outside `AppShell` |
 | `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-captures bar chart, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
 | `/settings` | Settings (account + change password + sign-out; application settings: time zone, theme, accent; sync status; delete account) |

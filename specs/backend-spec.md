@@ -20,6 +20,9 @@ read that first for the "why one modular monolith", this for the mechanics.
 PSPad.slnx
 src/
   PSPad.Api/                   Minimal API, endpoints, DI composition, Dockerfile
+                               (Snapshots/ holds the Sharing module's Mongo and
+                               command adapters, namespaced `PSPad.Api.Snapshots`
+                               — not `.Sharing`, to avoid clashing with a test helper)
   PSPad.App/                   Blazor WASM PWA, MudBlazor, IndexedDB replica + outbox, Dockerfile (nginx)
   shared/
     PSPad.Abstractions/        ICommandHandler<T>, IDocumentStore<T>, IUnitOfWork, IClock, Aggregate
@@ -30,11 +33,13 @@ src/
     PSPad.Module.Statistics/    queries over the event log
     PSPad.Module.Identity/      User, time zone, first-sign-in provisioning
     PSPad.Module.Presentation/  per-user views of shared data (AreaView: list order) — pure, WASM-safe
+    PSPad.Module.Sharing/       public snapshots — frozen list copies, server-side only (adr/0055)
 test/
   PSPad.Module.Tasks.Tests/       unit only
   PSPad.Module.Statistics.Tests/  unit only
   PSPad.Module.Identity.Tests/    unit only
   PSPad.Module.Presentation.Tests/ unit only
+  PSPad.Module.Sharing.Tests/     unit only
   PSPad.Api.Tests/                integration, Testcontainers MongoDB
   PSPad.App.Tests/                unit + bUnit
   PSPad.TestInfrastructure/       Mongo fixture, category attributes, architecture guards
@@ -51,6 +56,7 @@ References run one way only:
 | `PSPad.Module.Statistics` | `PSPad.Abstractions`, `PSPad.Contracts`, `PSPad.Module.Tasks` (event types only, for its handlers' `switch` patterns) |
 | `PSPad.Module.Identity` | `PSPad.Abstractions`, `PSPad.Contracts` |
 | `PSPad.Module.Presentation` | `PSPad.Abstractions` — and nothing else; no module references it back (`adr/0051`) |
+| `PSPad.Module.Sharing` | `PSPad.Abstractions`, `PSPad.Module.Tasks` (aggregate shapes only, to build a snapshot — `adr/0055`) |
 | `PSPad.Infrastructure` | `PSPad.Abstractions`, `PSPad.Contracts` — never a module |
 | `PSPad.Api` | everything |
 | `PSPad.App` | `PSPad.Module.Tasks`, `PSPad.Module.Presentation`, `PSPad.Abstractions`, `PSPad.Contracts` — never `PSPad.Infrastructure` |
@@ -64,9 +70,19 @@ edits and server state agree.
 Enforced by architecture guard tests, not just this document: no
 `MongoDB.*`/`Microsoft.AspNetCore.*`/`System.Net.Http` inside
 `PSPad.Module.Tasks` or `PSPad.Abstractions`; no `PSPad.Infrastructure`/
-`MongoDB.*`/`Microsoft.AspNetCore.*` inside `PSPad.Module.Statistics`; no
-module reference inside `PSPad.Infrastructure` or `PSPad.Module.Presentation`;
-no `PSPad.Module.Presentation` reference inside `PSPad.Module.Tasks`.
+`MongoDB.*`/`Microsoft.AspNetCore.*` inside `PSPad.Module.Statistics` or
+`PSPad.Module.Sharing`; no module reference inside `PSPad.Infrastructure` or
+`PSPad.Module.Presentation`; no `PSPad.Module.Presentation` or
+`PSPad.Module.Sharing` reference inside `PSPad.Module.Tasks`; no
+`PSPad.Module.Statistics`/`PSPad.Module.Presentation` reference inside
+`PSPad.Module.Sharing`.
+
+Two module-to-module edges exist, and only these two: `Statistics` →
+`Tasks` and `Sharing` → `Tasks`, both one way and both for the same reason —
+each pattern-matches on Tasks' own event or aggregate types, so a rename
+breaks the build rather than a mismatch surfacing at render time
+(`adr/0037`, `adr/0055`). `ArchitectureTests` guards both directions failing
+the build if `Tasks` ever references either back.
 
 Commands are discovered by reflection over `CommandModules.Names`
 (`PSPad.Contracts`) — `PSPad.Module.Tasks` and `PSPad.Module.Presentation` —
@@ -191,9 +207,9 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `areas` | user-defined areas | `name`, `position` |
 | `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation), `inviteToken` (`adr/0053`, null = not shared), `ownerName`, `_members[]` (`userId`, `displayName`, `joinedAt`; the leading underscore keeps the BSON field name stable, like `_steps`). Documents written before `adr/0051` still carry a `position` nobody reads |
 | `inboxes` | one per user | `items[]` |
-| `todotasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown) |
+| `todotasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0055`) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
-| `referenceitems` | items in a `Reference` list | `listId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`) |
+| `referenceitems` | items in a `Reference` list | `listId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`), `snapshotMarks[]` (`snapshotId`, `markedAt` — `adr/0055`) |
 | `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
 | `listviews` | one per (user, list): that user's placement of a shared list | `_id` = `ListView.IdFor(userId, listId)`, `listId`, `areaId?` (null = "Shared with me") |
 | `events` | the domain event log and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
@@ -203,6 +219,8 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `statistics_inbox_records` | the Inbox-captures chart | `_id` = the event's `seq`, `userId`, `at`, `itemId` |
 | `statistics_labels` | area, list and goal names for the feed | `_id` = the aggregate's id, `userId`, `kind`, `name`, `deleted` |
 | `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq`, `projectionVersion` (`adr/0054`) |
+| `list_snapshots` | a frozen, owner-published copy of one list (`adr/0055`) | `_id` (GUID), `token` (unique, server-generated, distinct from `_id`), `userId` (owner), `listId`, `kind`, `name`, `createdAt`, `expiresAt`, `tasks[]` or `items[]` — each entry its own `id`/`name`/`done`/`marked`/`markedAt`, steps or fields nested the same way. Content is frozen at publish; only `marked`/`markedAt` change afterwards |
+| `snapshot_visits` | a signed-in visitor's own record of opening a snapshot | `_id` = `"{userId}:{snapshotId}"`, `userId`, `snapshotId`, `token`, `name`, `expiresAt`, `visitedAt` |
 
 Every aggregate document carries `_id` (GUID), `userId`, `version`
 (optimistic concurrency), `seq` (sequence of the last touching event) and
@@ -224,6 +242,12 @@ transaction; the returned value stamps both the event and the aggregate's
   member's delta sync), sparse `{inviteToken: 1}` (join lookup; sparse
   because most lists carry no token)
 - `referenceitems`: `{userId: 1, listId: 1}`, `{listId: 1, seq: 1}` (a member's delta sync)
+- `list_snapshots`: unique `{token: 1}`, TTL on `expiresAt`
+  (`expireAfterSeconds: 0`), `{userId: 1, listId: 1}` (the panel's active list)
+- `snapshot_visits`: TTL on `expiresAt`, `{userId: 1, visitedAt: -1}` (the
+  List snapshots tab). TTL deletion lags the instant, so both collections'
+  reads also check `expiresAt > now` themselves rather than trusting the
+  sweep to have already run
 - `processed_commands`: TTL index on `at`, 30 days
 - `statistics_records`: `{userId: 1, seq: -1}` (the feed page, `adr/0054`
   replaces `{userId: 1, _id: -1}` now that `_id` is no longer the bare `seq`),
@@ -369,6 +393,19 @@ not stated there:
   any other list. `GET /api/today` and the client's Today projection both
   include tasks from lists the caller is a member of, same `TodayRule`, the
   viewer's own time zone.
+- Snapshot marks (`adr/0055`): `TodoTask.SnapshotMarks` and
+  `ReferenceItem.SnapshotMarks` each hold `SnapshotMark(SnapshotId,
+  StepId?, MarkedAt)` — a note that a public-snapshot visitor ticked this
+  entry, never a state change. `MarkTaskFromSnapshot` /
+  `MarkReferenceItemFromSnapshot` are `IServerOnlyCommand`s run by
+  `PSPad.Module.Sharing` with the list owner as `UserId`; they add or
+  remove one mark, reject a deleted task or an unknown step, and emit
+  nothing when the mark is unchanged. `ClearTaskSnapshotMarks` /
+  `ClearReferenceItemSnapshotMarks` are ordinary owner-or-member commands
+  that dismiss every mark a task (steps included) or item carries. A mark
+  never completes a task, checks a step, ticks an occurrence or enters
+  `TodayRule.Plan` — it is purely a chip the owner sees; Statistics ignores
+  every one of these events, by omission from its projections' `switch`.
 
 ---
 
@@ -572,7 +609,11 @@ directly in `PSPad.Api`:
    (`Database.ListCollectionNames()`) and run
    `DeleteMany({ userId: callerId })` against each — including `events` and
    `processed_commands`. No collection name is hardcoded, so a new aggregate
-   added later (a habit, a yearly goal) is covered with no code change here.
+   added later (a habit, a yearly goal) is covered with no code change here —
+   `list_snapshots` and `snapshot_visits` (`adr/0055`) needed none either,
+   since both carry `userId` like every other collection; only
+   `tasklists._members`, a nested array rather than a document of its own,
+   needed the explicit `$pull` in step 2.
 4. Only once that transaction commits, call Keycloak's Admin REST API
    (`DELETE /admin/realms/{realm}/users/{sub}`), authenticating with the
    existing bootstrap master-realm admin credentials
@@ -611,11 +652,23 @@ directly in `PSPad.Api`:
 | `GET` | `/api/me` | Current user; provisions on first call, heals display name |
 | `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only) |
 | `DELETE` | `/api/account` | Delete the caller's account: every Mongo document scoped to their `userId`, then their Keycloak user. Not a command — see §6 |
+| `POST` | `/api/lists/{id}/snapshots` | Owner only. Publish a frozen copy; `{expiresAt}` → `{id, token, expiresAt}`. Online-only, like `/api/me/timezone` (`adr/0055`) |
+| `GET` | `/api/lists/{id}/snapshots` | Owner only. That list's active (unexpired) snapshots |
+| `DELETE` | `/api/snapshots/{id}` | Owner only. Revoke a snapshot |
+| `POST` | `/api/me/snapshot-visits` | Record that the caller opened a snapshot by token |
+| `GET` | `/api/me/snapshot-visits` | The caller's unexpired visits, newest first — the List snapshots tab |
+| `GET` | `/api/public/snapshots/{token}` | **Anonymous.** The frozen snapshot, or `404` for an unknown or expired token — indistinguishable by design |
+| `POST` | `/api/public/snapshots/{token}/marks` | **Anonymous.** `{entryId, stepId?, marked}` — tick or untick an entry; saved on the snapshot, then run against the owner's task through a server-only command |
 | `GET` | `/health` | Liveness, unauthenticated |
 
 Writes go through one endpoint because every write is a command and the
 outbox ships them in batches — splitting per feature would buy nothing and
-make ordering harder to honour.
+make ordering harder to honour. The two `/api/public/*` routes are the one
+exception: they sit in their own `AllowAnonymous` route group
+(`/api/public`), rate-limited by a fixed window per IP (60 requests/minute
+by default, overridable through `Sharing:PublicRequestsPerMinute` — a code
+default for tests, not a documented self-hoster setting) rather than by
+authentication, since there is no caller identity to limit by.
 
 ---
 

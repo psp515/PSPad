@@ -1,8 +1,9 @@
 # Sharing — design
 
-Status: Building — plans 1–3 built. Issues: #103 (share a list with people who have an
+Status: Built. Issues: #103 (share a list with people who have an
 account), #104 (public read-only snapshot for people who do not). Decisions
-of record, to be written with the build: ADR-0053, ADR-0054, ADR-0055 (§9).
+of record: ADR-0053, ADR-0054, ADR-0055 (§9). Live updates for the owner's
+chips — a push rather than next sync — are issue #105, a separate spec.
 
 Two features, one spec, because both start from the same list panel and both
 end in the same drawer:
@@ -125,12 +126,13 @@ an occurrence, never enters the Today rule, and Statistics ignores its events.
 |---|---|---|---|
 | `MarkTaskFromSnapshot(taskId, stepId?, snapshotId, marked)` | Sharing, as owner | **no** | Server-only; `/api/commands` rejects it. Adds or removes one mark. Rejects a deleted task or unknown step; no event when unchanged |
 | `MarkReferenceItemFromSnapshot(itemId, snapshotId, marked)` | Sharing, as owner | **no** | Same, for reference items |
-| `ClearSnapshotMarks(taskOrItemId)` | owner or member | yes | Dismisses every chip on the task (steps included) or item |
+| `ClearTaskSnapshotMarks(taskId)` | owner or member | yes | Dismisses every chip on the task, steps included; no event when it carries none |
+| `ClearReferenceItemSnapshotMarks(itemId)` | owner or member | yes | Same, for a reference item |
 
-Events: `TaskSnapshotMarked`, `TaskSnapshotUnmarked`,
-`ReferenceItemSnapshotMarked`, `ReferenceItemSnapshotUnmarked`,
-`SnapshotMarksCleared`. `ActorId` = `UserId` (the owner); there is no
-account behind an anonymous visitor.
+Events: `TaskSnapshotMarkSet`, `TaskSnapshotMarksCleared`,
+`ReferenceItemSnapshotMarkSet`, `ReferenceItemSnapshotMarksCleared`.
+`ActorId` = `UserId` (the owner); there is no account behind an anonymous
+visitor.
 
 Sharing drives Tasks only through these commands, the way integrations do
 (`adr/0045`) — Tasks never learns Sharing exists. Clearing a chip touches only
@@ -383,7 +385,8 @@ Both roles:
 
 - A task, step or reference item with snapshot marks shows a "Marked on a
   snapshot" chip in its row and panel; the panel offers **Dismiss**
-  (`ClearSnapshotMarks`). Completing the task is a separate, deliberate tap.
+  (`ClearTaskSnapshotMarks` / `ClearReferenceItemSnapshotMarks`). Completing
+  the task is a separate, deliberate tap.
 
 ## 8. HTTP surface
 
@@ -449,7 +452,8 @@ Unit — `PSPad.Module.Tasks.Tests`:
 - Cross-owner moves rejected.
 - Snapshot marks: mark and unmark a task, a step, an item; unchanged emits
   nothing; deleted task and unknown step rejected; marks never complete,
-  check or affect `TodayRule.Plan`; `ClearSnapshotMarks` by owner and member.
+  check or affect `TodayRule.Plan`; `ClearTaskSnapshotMarks` /
+  `ClearReferenceItemSnapshotMarks` by owner and member.
 
 Unit — Presentation: `ListView` placement, unchanged emits nothing, another
 user's view rejected. Statistics: one event → two records with roles; actor

@@ -82,6 +82,34 @@ anything but itself. Be referenced by Tasks. Presentation events
 
 ---
 
+## PSPad.Module.Sharing
+
+**Purpose.** Public, account-free access to a frozen copy of a list
+(`adr/0055`). Everything a signed-in member needs — `ListAccess`,
+membership, `ListView` placement — stays in `PSPad.Module.Tasks` and
+`PSPad.Module.Presentation`; this module exists only for the visitor who
+has no account at all.
+
+**Owns.** `ListSnapshot` (frozen `Tasks[]`/`Items[]`, each entry carrying
+its own mark), `SnapshotBuilder`, `SnapshotPublishing`, `SnapshotMarking`,
+`SnapshotVisit`. Collections `list_snapshots`, `snapshot_visits`.
+
+**Must not.** Be referenced by `PSPad.Module.Tasks` — the edge runs one way,
+Sharing reads Tasks' aggregate shapes to build a copy, never the reverse.
+Reference `PSPad.Module.Statistics`, `PSPad.Module.Presentation`,
+`PSPad.Infrastructure`, MongoDB or ASP.NET Core directly — it stays a pure,
+server-side model like Tasks itself, hosted by `PSPad.Api`'s own adapters
+(`PSPad.Api.Snapshots`). Write a Tasks document except through the two
+server-only commands (`MarkTaskFromSnapshot`, `MarkReferenceItemFromSnapshot`)
+that `adr/0053`'s `IServerOnlyCommand` mechanism was built for. Put a
+snapshot in the event log or sync protocol — it is online-only, frozen at
+publish time, and useless to a device that only has its own replica.
+
+**Extension points.** Live chips on the owner's side instead of next-sync —
+issue #105, a separate spec.
+
+---
+
 ## PSPad.Module.Identity
 
 **Purpose.** Who the user is: `User`, time zone, display name, first-sign-in

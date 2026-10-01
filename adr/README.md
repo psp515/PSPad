@@ -70,6 +70,7 @@ the old one's status line to point at the new number.
 | [0053](0053-yearly-repeats-and-lead-time.md) | Repeats can be yearly, and a task's lead time sets how far ahead it shows | Active (amends [0043](0043-repeat-interval-and-until-date.md)) | 2026-09-30 | domain, recurrence, today, ui |
 | [0053](0053-lists-are-shared-by-membership.md) | Lists are shared by membership on TaskList | Active (extends [0051](0051-presentation-module-per-user-views.md); amends [0034](0034-account-deletion-bypasses-the-command-pipeline.md) and [0042](0042-deleting-a-container-cascades-to-its-children.md)) | 2026-10-01 | architecture, domain, sync, identity |
 | [0054](0054-statistics-records-per-owner-and-actor.md) | Statistics writes one record for the owner and one for the actor, versioned for a clean rebuild | Active (amends [0037](0037-statistics-owns-denormalised-records.md)) | 2026-10-01 | architecture, persistence, analytics, sync, identity |
+| [0055](0055-public-snapshots-are-frozen-copies.md) | Public snapshots are frozen copies, served from a new Sharing module | Active | 2026-10-01 | architecture, modularity, domain, persistence, security |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

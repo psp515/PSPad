@@ -50,7 +50,11 @@ per-day occurrences), goals (global, many tasks to one), reference lists
 a `Reference` list, never on Today), shared lists (a `TaskList` carries an
 invite link; a member edits its content, sees it on their own Today, and
 files it into one of their own areas or leaves it in "Shared with me"),
-Today screen (cross-area, member lists included), a Statistics
+public snapshots (a frozen, token-linked copy of a list, published by its
+owner for anyone to open without an account, until an expiry the owner
+picks; a visitor ticks a task, step or item as a mark, never a completion,
+and a signed-in visitor finds every snapshot they opened under List
+snapshots), Today screen (cross-area, member lists included), a Statistics
 screen (tiles, four charts, a consistency heatmap, an Inbox-captures bar
 chart, a collapsed record feed) built from denormalized records projected
 off the domain event log, offline PWA, auth.
@@ -90,13 +94,14 @@ lives in domain layer, one place, shared client and server.
 
 ## 5. Architecture decisions
 
-**AD-1 — Modular monolith, three modules.** `PSPad.Module.Tasks` (areas, Inbox,
+**AD-1 — Modular monolith, five modules.** `PSPad.Module.Tasks` (areas, Inbox,
 lists, tasks, steps, goals, recurrence, Today), `PSPad.Module.Statistics`
 (denormalized records projected from domain events; tiles, charts, heatmap,
-feed), `PSPad.Module.Identity`, and `PSPad.Module.Presentation` (per-user views of
-shared data, AD-11). Inside a module, features are folders holding
-their commands, events, aggregate, handlers. No Services/Repositories
-layering. No microservices.
+feed), `PSPad.Module.Identity`, `PSPad.Module.Presentation` (per-user views of
+shared data, AD-11), and `PSPad.Module.Sharing` (public snapshots — frozen
+list copies served without an account, AD-13). Inside a module,
+features are folders holding their commands, events, aggregate, handlers.
+No Services/Repositories layering. No microservices.
 
 **AD-2 — Aggregate documents are truth; events are the log beside them.**
 Commands decide, aggregates apply, one transaction writes the document, its
@@ -173,11 +178,13 @@ src/
     PSPad.Module.Statistics/  event-projected records, labels, charts, feed
     PSPad.Module.Identity/    User, time zone, first-sign-in provisioning
     PSPad.Module.Presentation/ per-user views: AreaView (list order) — WASM-safe
+    PSPad.Module.Sharing/     public snapshots — frozen list copies, server-only
 test/
   PSPad.Module.Tasks.Tests/       unit only, no I/O
   PSPad.Module.Statistics.Tests/  unit only
   PSPad.Module.Identity.Tests/    unit only
   PSPad.Module.Presentation.Tests/ unit only
+  PSPad.Module.Sharing.Tests/     unit only
   PSPad.Api.Tests/              integration, Testcontainers MongoDB
   PSPad.App.Tests/              unit + bUnit component tests
   PSPad.TestInfrastructure/     Mongo fixture, trait constants, architecture guards
@@ -195,12 +202,14 @@ References run one way only: `Tasks` sees `Abstractions` and nothing else;
 `Infrastructure` never sees a module; `App` never sees `Infrastructure`; `Api`
 sees everything and is the only place a module meets MongoDB.
 
-One module-to-module edge exists, and only one: `Statistics` references
-`Tasks`, because its projections pattern-match on Tasks' own event types
-(`TaskCompleted`, `OccurrenceCompleted`, …) and a rename must break the build
-rather than a string lookup at render time. It runs one way — an
-`ArchitectureTests` guard fails the build if `Tasks` ever references
-`Statistics`. See `adr/0037`.
+Two module-to-module edges exist, and only these two: `Statistics` →
+`Tasks` and `Sharing` → `Tasks`, both one way and both for the same
+reason — each pattern-matches on Tasks' own event or aggregate types
+(`TaskCompleted`, `OccurrenceCompleted`, `TaskList`, `TodoTask`,
+`ReferenceItem`, …) so a rename must break the build rather than a string
+lookup or a mismatched copy at render time. `ArchitectureTests` guards both
+directions, failing the build if `Tasks` ever references `Statistics` or
+`Sharing`. See `adr/0037` and `adr/0055`.
 
 `Presentation` has no module edge at all: it references `Abstractions` only,
 and guards fail the build if it references a module or `Tasks` references
@@ -216,6 +225,18 @@ stay owner-only through `TaskList.Require`. Every event's `UserId` is the
 aggregate's owner, `ActorId` is who actually acted. Sync widens to a membership set,
 with a `full=` backfill for a list a device does not yet hold — built in
 the next plan. See `adr/0053`.
+
+**AD-13 — Public snapshots are frozen copies, served from a new module.**
+`PSPad.Module.Sharing` owns `ListSnapshot` (a frozen copy of a list's
+tasks or items, each entry carrying its own mark) and `SnapshotVisit`.
+Publishing is online-only HTTP, never a command — a snapshot is useless
+offline and never enters the event log or sync. The token is 18 random
+bytes, base64url, generated server-side, distinct from the snapshot's own
+id; unknown and expired tokens answer the same 404. A visitor's tick is
+saved on the frozen copy first, then run against the owner's real task
+through `MarkTaskFromSnapshot` / `MarkReferenceItemFromSnapshot`
+(`IServerOnlyCommand`, reusing AD-12's mechanism), the owner as `UserId`.
+Both collections carry a TTL index on `expiresAt`. See `adr/0055`.
 
 ---
 
@@ -429,7 +450,7 @@ boundaries and names `ListView` as Presentation's next extension point.
 first, other fields below, adding closes; popups only for delete
 confirmations and in-panel pickers) is `Active` and built here too.
 
-Sharing (#103, #104, `specs/sharing-spec.md`) is in progress on
+Sharing (#103, #104, `specs/sharing-spec.md`) is built on
 `feature/103`. `adr/0053` (a `TaskList` carries its own invite token,
 owner name and members rather than a second aggregate; `ListAccess` admits
 owner or member to content commands; events split `UserId` the owner from
@@ -452,9 +473,19 @@ tasks in the viewer's own time zone; the list panel's Sharing section
 (invite link, members, Leave list for a member) and `/join/{token}`
 cover the join flow; a shared marker sits on `ListCard`, and owner-only
 controls (rename, delete, move, the goal row) are hidden from a member.
-Statistics' owner/actor records and public snapshots
-(`PSPad.Module.Sharing`) are the plans still ahead, each with further ADRs
-of its own.
+`adr/0054` (Statistics writes one record for the owner and one for the
+actor when they differ, `"{seq}:{userId}"` record ids, a versioned
+projection rebuild) is `Active` and built here too. `adr/0055` (public
+snapshots are frozen copies served from a new `PSPad.Module.Sharing` —
+the second module-to-module edge after Statistics, server-generated
+tokens, TTL expiry, anonymous rate-limited marks reaching Tasks through
+`IServerOnlyCommand`s) is `Active` and built here as well: the `Sharing`
+module, its two collections and TTL indexes, the owner's publish/revoke
+and list panel's Public snapshots section, the anonymous `/api/public`
+group, the public `/s/{token}` page with an IndexedDB offline cache, and
+the signed-in `/snapshots` List snapshots tab are all in. Live push of a
+visitor's mark to the owner, instead of next sync, is issue #105, a
+separate spec.
 
 ---
 
