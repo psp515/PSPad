@@ -199,10 +199,10 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `events` | the domain event log and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
-| `statistics_records` | the statistics feed and every chart | `_id` = the event's `seq`, `userId`, `at`, `kind`, `taskId`, `taskName`, `listId`, `goalId`, `dueOn`, `occurrenceDay`, `completionNumber` |
+| `statistics_records` | the statistics feed and every chart | `_id` = `"{seq}:{userId}"` (`adr/0054`), `seq`, `role` (`Owner` \| `Actor`), `userId`, `at`, `kind`, `taskId`, `taskName`, `listId`, `goalId`, `dueOn`, `occurrenceDay`, `completionNumber` |
 | `statistics_inbox_records` | the Inbox-captures chart | `_id` = the event's `seq`, `userId`, `at`, `itemId` |
 | `statistics_labels` | area, list and goal names for the feed | `_id` = the aggregate's id, `userId`, `kind`, `name`, `deleted` |
-| `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq` |
+| `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq`, `projectionVersion` (`adr/0054`) |
 
 Every aggregate document carries `_id` (GUID), `userId`, `version`
 (optimistic concurrency), `seq` (sequence of the last touching event) and
@@ -225,7 +225,8 @@ transaction; the returned value stamps both the event and the aggregate's
   because most lists carry no token)
 - `referenceitems`: `{userId: 1, listId: 1}`, `{listId: 1, seq: 1}` (a member's delta sync)
 - `processed_commands`: TTL index on `at`, 30 days
-- `statistics_records`: `{userId: 1, _id: -1}` (the feed page),
+- `statistics_records`: `{userId: 1, seq: -1}` (the feed page, `adr/0054`
+  replaces `{userId: 1, _id: -1}` now that `_id` is no longer the bare `seq`),
   `{userId: 1, kind: 1, at: 1}` (the charts' window),
   `{userId: 1, taskId: 1, kind: 1}` (the completion counter)
 - `statistics_inbox_records`: `{userId: 1, at: 1}` (the captures window)
@@ -692,8 +693,35 @@ boot, whether or not its handler already succeeded — the deliberate cost of
 type name back to its CLR type for replay's JSON deserialization.
 
 **Records are immutable and idempotent by construction.**
-`StatisticsRecord.Id` is the source event's `seq`, so a duplicate dispatch
-or a replay upserts over the same row rather than duplicating it.
+`StatisticsRecord.Id` is `"{seq}:{userId}"` (`adr/0054`) — not the bare `seq`,
+since a shared event can produce two records, one per user it concerns — so a
+duplicate dispatch or a replay upserts over the same row rather than
+duplicating it. `StatisticsRecordView.Id` on the wire is still the `long`
+`Seq`, unchanged for the client's `before=` paging.
+
+**Two records when owner and actor differ.** `StatisticsRecordProjection`
+writes one record when `ActorId == UserId`, as before `adr/0053`. Otherwise
+it writes the owner's record (`Role: Owner`) and a second, actor-facing copy
+(`Role: Actor`): same `Seq`, `UserId` set to the actor, `GoalId` cleared,
+`CompletionNumber` recomputed against the actor's own completions of that
+task. `statistics_inbox_records` never gets an actor copy — the Inbox is
+never shared. Labels resolve by id (`ILabelStore.ByIdsAsync`), not by the
+caller's `userId`, so a member's feed can still name a list or goal that
+belongs to the owner. `StatisticsCharts.Outstanding`, its tiles
+(`NetChange` included) and `ByGoal` all restrict to `Role: Owner` records —
+a member's own "outstanding" line and net change must not move because they
+completed someone else's task, and a task's goal stays the owner's business.
+See `adr/0054`.
+
+**A versioned projection rebuilds once when its shape changes.**
+`statistics_state.projectionVersion` (absent = 1) is compared against
+`StatisticsProjection.Version` on every start
+(`IProjectionMarker.AdoptVersionAsync`). An older or absent version resets
+`lastProcessedSeq` to 0, drops `statistics_records`,
+`statistics_inbox_records` and `statistics_labels`
+(`IStatisticsReset.ClearAsync`) and recreates their indexes, before the
+normal replay path (above) rebuilds every row from `events` alone. No
+migration script; the log is the source (`adr/0054`).
 
 **Record shape and enrichment.** `StatisticsRecord` (fields in §3) is built
 from its source event's payload alone — no live lookup at projection time.

@@ -251,9 +251,10 @@ records: one under the owner's `userId`, one under the actor's. Records gain
 
 ### 5.2 Record identity
 
-`statistics_records` and `statistics_inbox_records` change `_id` from the
-event `seq` to `"{seq}:{userId}"` and gain a `seq` field. The feed pages by
-`seq`; indexes `{userId: 1, seq: -1}` replaces `{userId: 1, _id: -1}`.
+`statistics_records` changes `_id` from the event `seq` to `"{seq}:{userId}"`
+and gains a `seq` field. The feed pages by `seq`; index `{userId: 1, seq: -1}`
+replaces `{userId: 1, _id: -1}`. `statistics_inbox_records` is unchanged — the
+Inbox is never shared, so it never gets an actor copy or a composite id.
 
 ### 5.3 Rebuild
 
