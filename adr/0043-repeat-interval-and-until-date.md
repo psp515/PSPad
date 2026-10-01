@@ -2,7 +2,7 @@
 title: A repeat carries an interval, and a repeating task's due date is its inclusive end
 tags: [domain, recurrence, today, ui]
 date: 2026-09-28
-status: Active
+status: Active (amended by [0051](0051-yearly-repeats-and-lead-time.md))
 ---
 
 # ADR-0043: A repeat carries an interval, and a repeating task's due date is its inclusive end

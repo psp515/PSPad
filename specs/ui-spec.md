@@ -440,7 +440,7 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    - **Repeat** (`RecurrenceEditor`, Add included — the draft's rule is
      sent as `SetTaskRecurrence` after `CreateTask`, before the due date) —
      Daily, Weekdays, Weekly on today's weekday, Monthly on today's day,
-     Yearly on today's date, Custom…. Presets start today. Custom… opens a `MudDialog`:
+     Yearly on today's date, Custom… Presets start today. Custom… opens a `MudDialog`:
      Every [1–99] [days | weeks | months | years], weekday chips (weeks, Monday
      first), On day 1–31 (months), Starts (date picker, default the current
      rule's start or today; years show no weekday chips or day field); moving Starts moves the weekday chip or

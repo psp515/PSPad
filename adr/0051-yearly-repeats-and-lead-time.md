@@ -79,6 +79,9 @@ Repeating shows Repeat and Until. Switching clears the other side's fields.
   look-ahead's reach — at most 99 months, a few thousand `OccursOn` calls
   per task. Acceptable for one user's tasks; revisit if it shows in
   profiles.
+- Switching a task to One-time drops its repeat's done days (the
+  existing removal behaviour), so one misclick loses the in-app tally;
+  Statistics keeps its records.
 - The Reminders subsystem gets a stored "how early" per task to schedule
   from, without a new field.
 - Old documents need no migration: `LeadTime` reads `null`, the old

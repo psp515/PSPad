@@ -127,6 +127,64 @@ public class LeadTimePlanTests
         Assert.Empty(plan.Upcoming);
     }
 
+    [Fact]
+    public void ADailyRepeatWithTomorrowTickedAndAThreeDayLeadShowsTheDayAfterInUpcoming()
+    {
+        var task = Lead(Recurring(RecurrenceRule.Daily(Today)), LeadTime.Of(3, LeadUnit.Days));
+        TickOccurrence(task, Today.AddDays(1));
+
+        var plan = TodayRule.Plan([task], Today, Utc);
+
+        Assert.Empty(plan.Tomorrow);
+        Assert.Equal(Today.AddDays(2), Assert.Single(plan.Upcoming).DueOn);
+    }
+
+    [Fact]
+    public void ADailyRepeatWithTomorrowTickedAndADayLeadShowsNothingAhead()
+    {
+        var task = Lead(Recurring(RecurrenceRule.Daily(Today)), LeadTime.Of(1, LeadUnit.Days));
+        TickOccurrence(task, Today.AddDays(1));
+
+        var plan = TodayRule.Plan([task], Today, Utc);
+
+        Assert.Empty(plan.Tomorrow);
+        Assert.Empty(plan.Upcoming);
+    }
+
+    [Fact]
+    public void AMonthsLeadShowsAStepDueInTwentyDaysUsingTheStepDate()
+    {
+        var task = WithStepDue(Today.AddDays(20));
+        Lead(task, LeadTime.Of(1, LeadUnit.Months));
+
+        var plan = TodayRule.Plan([task], Today, Utc);
+
+        Assert.Equal(Today.AddDays(20), Assert.Single(plan.Upcoming).DueOn);
+    }
+
+    [Fact]
+    public void WithoutALeadAStepDueInTwentyDaysIsNotShown()
+    {
+        var task = WithStepDue(Today.AddDays(20));
+
+        var plan = TodayRule.Plan([task], Today, Utc);
+
+        Assert.Empty(plan.Upcoming);
+        Assert.Empty(plan.Tomorrow);
+    }
+
+    static void TickOccurrence(TodoTask task, DateOnly day) =>
+        task.ApplyAll(TodoTask.Decide(task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, day, true), Now));
+
+    static TodoTask WithStepDue(DateOnly day)
+    {
+        var task = TodoTaskTests.Existing();
+        var stepId = Guid.NewGuid();
+        task.ApplyAll(TodoTask.Decide(task, new AddStep(Guid.NewGuid(), User, task.Id, stepId, "call"), Now));
+        task.ApplyAll(TodoTask.Decide(task, new SetStepDueDate(Guid.NewGuid(), User, task.Id, stepId, day), Now));
+        return task;
+    }
+
     static TodoTask Due(DateOnly day)
     {
         var task = TodoTaskTests.Existing();

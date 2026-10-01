@@ -122,8 +122,8 @@ Switching:
   due date (a due date is not an end). Sent as `SetTaskRecurrence` then
   `SetTaskDueDate(null)`; in Add, the draft changes and nothing is sent.
 - Repeating → One-time sends `SetTaskRecurrence(null)` and clears Until.
-  `completedDays` stay in the document, as they do today when a repeat is
-  removed.
+  the repeat's done days are dropped, as they are today when a repeat is
+  removed; Statistics records keep the history.
 
 The Repeat menu drops **Never** and its row loses the clear ✕: the toggle
 is how a repeat ends being a repeat.
