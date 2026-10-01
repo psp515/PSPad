@@ -95,7 +95,7 @@ everyone else; `TaskList.Require` (owner only) stays for list-level commands.
   `OrganiseInboxItem` into the list. A handler that does not load the parent
   list today starts loading it.
 - **Owner only** — `RenameTaskList`, `DeleteTaskList`, `MoveTaskListToArea`,
-  the four sharing commands above, and `SetTaskGoal`.
+  the four sharing commands above, and `LinkTaskToGoal`.
 
 ### 2.4 Owner and actor
 
@@ -148,14 +148,14 @@ they filed there — filing is a `ListView`, not `TaskList.AreaId` (§4).
 
 `SyncReader` widens two filters; everything else keeps `userId == caller`:
 
-- `tasklists`: `userId == caller` **or** `members.userId == caller`.
+- `tasklists`: `userId == caller` **or** `_members.userId == caller` (the private `_members` field keeps its name in BSON, like `_steps`).
 - `todotasks`, `referenceitems`: `userId == caller` **or**
   `listId ∈ memberLists(caller)`.
 
 `events` in the response stay `userId == caller`; the client does not read
 them.
 
-New indexes: `tasklists {members.userId: 1, seq: 1}`,
+New indexes: `tasklists {_members.userId: 1, seq: 1}`,
 `todotasks {listId: 1, seq: 1}`, `referenceitems {listId: 1, seq: 1}`.
 
 ### 3.2 The membership set
@@ -434,7 +434,7 @@ Unit — `PSPad.Module.Tasks.Tests`:
 - Every sharing command and rejection; join idempotent for owner and member;
   rotate keeps members.
 - `ListAccess`: owner and member pass, stranger and removed member rejected,
-  for each content command family; list-level commands and `SetTaskGoal`
+  for each content command family; list-level commands and `LinkTaskToGoal`
   reject members.
 - Owner/actor: a member's `CreateTask`, `OrganiseInboxItem`,
   `CreateReferenceItem` produce owner-owned aggregates with `ActorId` the
