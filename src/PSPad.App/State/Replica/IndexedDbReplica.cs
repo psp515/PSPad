@@ -17,7 +17,7 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
     public async Task<IReadOnlyList<T>> LoadAllAsync<T>(Guid userId) where T : Aggregate
     {
         var module = await ModuleAsync();
-        var rows = await module.InvokeAsync<ReplicaRow[]>("getAll", typeof(T).Name, userId);
+        var rows = await module.InvokeAsync<ReplicaRow[]>("getAll", typeof(T).Name);
         return rows.Select(row => row.To<T>()).ToArray();
     }
 
@@ -25,6 +25,12 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
     {
         var module = await ModuleAsync();
         await module.InvokeVoidAsync("put", ReplicaRow.From(aggregate));
+    }
+
+    public async Task RemoveAsync(Guid id)
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("remove", id);
     }
 
     public async Task<long> MarkerAsync()

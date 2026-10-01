@@ -65,9 +65,14 @@ export function get(id) {
   return run('documents', 'readonly', documents => documents.get(id));
 }
 
-export function getAll(type, userId) {
+export function getAll(type) {
+  // Arrays sort after every string in IndexedDB keys, so [type, []] bounds every [type, userId].
   return run('documents', 'readonly', documents =>
-    documents.index('type_user').getAll([type, userId]));
+    documents.index('type_user').getAll(IDBKeyRange.bound([type], [type, []])));
+}
+
+export function remove(id) {
+  return run('documents', 'readwrite', documents => documents.delete(id));
 }
 
 export function put(document) {

@@ -194,6 +194,8 @@ public class SyncRefreshTests : Bunit.TestContext
 
         public Task SaveAsync(Aggregate aggregate) => inner.SaveAsync(aggregate);
 
+        public Task RemoveAsync(Guid id) => inner.RemoveAsync(id);
+
         public Task<long> MarkerAsync() => inner.MarkerAsync();
 
         public Task SetMarkerAsync(long marker) => inner.SetMarkerAsync(marker);

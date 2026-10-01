@@ -22,15 +22,27 @@ public class ReplicaTests
     }
 
     [Fact]
-    public async Task LoadAllFiltersByUser()
+    public async Task LoadAllReturnsEveryRowRegardlessOfOwner()
     {
         var replica = new InMemoryReplica();
         await replica.SaveAsync(NewArea("Mine"));
         await replica.SaveAsync(NewArea("Theirs", Guid.NewGuid()));
 
-        var mine = await replica.LoadAllAsync<Area>(User);
+        var all = await replica.LoadAllAsync<Area>(User);
 
-        Assert.Equal(["Mine"], mine.Select(area => area.Name));
+        Assert.Equal(["Mine", "Theirs"], all.Select(area => area.Name));
+    }
+
+    [Fact]
+    public async Task RemoveDropsTheDocument()
+    {
+        var replica = new InMemoryReplica();
+        var area = NewArea("Home");
+        await replica.SaveAsync(area);
+
+        await replica.RemoveAsync(area.Id);
+
+        Assert.Null(await replica.LoadAsync<Area>(area.Id));
     }
 
     [Fact]

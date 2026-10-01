@@ -73,33 +73,96 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         // A client built before a collection existed skipped its rows silently while still
         // advancing its marker past them, so a stale fingerprint forces one full re-pull.
         var since = storedFingerprint == CollectionsFingerprint ? await replica.MarkerAsync() : 0;
-        var response = await api.SyncAsync(since);
+        var response = await api.SyncAsync(since, []);
 
         if (response is null)
         {
             return 0;
         }
 
-        var pulled = 0;
+        var pulled = await SaveAsync(response.Documents);
 
-        foreach (var (collection, documents) in response.Documents)
+        var me = await replica.OwnerAsync();
+
+        // With no recorded owner, every list looks foreign -- skip reconciliation entirely so the
+        // user's own lists are never purged.
+        if (me is { } owner && response.MemberListIds is { } memberLists)
         {
-            if (!Collections.TryGetValue(collection, out var type))
-            {
-                continue;
-            }
+            var missing = await ReconcileAsync(owner, memberLists);
 
-            foreach (var document in documents)
+            if (missing.Count > 0 && await api.SyncAsync(response.Marker, missing) is { } whole)
             {
-                var aggregate = (Aggregate)JsonSerializer.Deserialize(document.GetRawText(), type,
-                    new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
-                await replica.SaveAsync(aggregate);
-                pulled++;
+                pulled += await SaveAsync(whole.Documents);
             }
         }
 
         await replica.SetMarkerAsync(response.Marker);
         await replica.SetCollectionsFingerprintAsync(CollectionsFingerprint);
         return pulled;
+    }
+
+    async Task<int> SaveAsync(IReadOnlyDictionary<string, JsonElement[]> documents)
+    {
+        var saved = 0;
+
+        foreach (var (collection, rows) in documents)
+        {
+            if (!Collections.TryGetValue(collection, out var type))
+            {
+                continue;
+            }
+
+            foreach (var row in rows)
+            {
+                var aggregate = (Aggregate)JsonSerializer.Deserialize(row.GetRawText(), type,
+                    new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+                await replica.SaveAsync(aggregate);
+                saved++;
+            }
+        }
+
+        return saved;
+    }
+
+    async Task<IReadOnlyList<Guid>> ReconcileAsync(Guid me, IReadOnlyCollection<Guid> memberLists)
+    {
+        var lists = await replica.LoadAllAsync<Module.Tasks.Lists.TaskList>(me);
+        var held = lists.Select(list => list.Id).ToHashSet();
+
+        foreach (var lost in lists.Where(list => list.UserId != me && !memberLists.Contains(list.Id)))
+        {
+            await PurgeAsync(lost.Id);
+        }
+
+        return memberLists.Where(id => !held.Contains(id)).ToArray();
+    }
+
+    async Task PurgeAsync(Guid listId)
+    {
+        foreach (var task in (await replica.LoadAllAsync<Module.Tasks.Tasks.TodoTask>(Guid.Empty))
+                     .Where(task => task.ListId == listId))
+        {
+            await replica.RemoveAsync(task.Id);
+        }
+
+        foreach (var item in (await replica.LoadAllAsync<Module.Tasks.References.ReferenceItem>(Guid.Empty))
+                     .Where(item => item.ListId == listId))
+        {
+            await replica.RemoveAsync(item.Id);
+        }
+
+        await replica.RemoveAsync(listId);
+    }
+
+    public async Task<Guid?> JoinAsync(string token, CancellationToken ct)
+    {
+        var joined = await api.JoinAsync(token);
+        if (joined is null)
+        {
+            return null;
+        }
+
+        await SaveAsync(joined.Documents);
+        return joined.ListId;
     }
 }

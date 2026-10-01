@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using PSPad.App.Statistics;
 using PSPad.Contracts;
@@ -48,7 +49,18 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
         return await response.Content.ReadFromJsonAsync<CommandResponse[]>() ?? [];
     }
 
-    public Task<SyncResponse?> SyncAsync(long since) => GetAsync<SyncResponse>($"api/sync?since={since}");
+    public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
+        GetAsync<SyncResponse>(full.Count == 0
+            ? $"api/sync?since={since}"
+            : $"api/sync?since={since}&full={string.Join(',', full)}");
+
+    public async Task<JoinListResponse?> JoinAsync(string token)
+    {
+        var response = await http.PostAsJsonAsync("api/lists/join", new JoinListRequest(token));
+        return response.StatusCode == HttpStatusCode.NotFound
+            ? null
+            : await response.EnsureSuccessStatusCode().Content.ReadFromJsonAsync<JoinListResponse>();
+    }
 
     public Task<StatisticsOverview?> OverviewAsync(int days) =>
         GetAsync<StatisticsOverview>($"api/statistics/overview?days={days}");
