@@ -407,6 +407,23 @@ public class StatisticsChartsTests
     }
 
     [Fact]
+    public void ByGoalCountsOnlyTheOwnersOwnRecords()
+    {
+        var goal = Guid.NewGuid();
+
+        var bars = StatisticsCharts.ByGoal(
+        [
+            Record(1, RecordKind.Completed, Today, role: RecordRole.Actor),
+            Record(2, RecordKind.Completed, Today, goalId: goal, role: RecordRole.Owner)
+        ], [Goal(goal, "Fitness")]);
+
+        var noGoal = Assert.Single(bars, bar => bar.GoalId is null);
+        Assert.Equal(0, noGoal.Count);
+        var fitness = Assert.Single(bars, bar => bar.GoalId == goal);
+        Assert.Equal(1, fitness.Count);
+    }
+
+    [Fact]
     public void TheNoGoalBarIsThereEvenWhenEveryTaskHasAGoal()
     {
         var goal = Guid.NewGuid();

@@ -107,12 +107,13 @@ public static class StatisticsCharts
             names[label.Id] = label.Name;
         }
 
+        var owned = records.Where(record => record.Role == RecordRole.Owner).ToList();
         var totals = new Dictionary<Guid, int>();
         var withoutGoal = 0;
 
-        foreach (var record in records
+        foreach (var record in owned
                      .Where(record => record.Kind == RecordKind.Completed)
-                     .Concat(FinalOccurrenceTicks(records)))
+                     .Concat(FinalOccurrenceTicks(owned)))
         {
             if (record.GoalId is { } goalId)
             {
