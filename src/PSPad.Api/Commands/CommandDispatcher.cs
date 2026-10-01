@@ -28,23 +28,37 @@ public sealed class CommandDispatcher(IServiceProvider services)
             return new CommandResponse(command.CommandId, false, "That command is for a different user.", Unrecoverable: true);
         }
 
+        if (command is IServerOnlyCommand)
+        {
+            return new CommandResponse(command.CommandId, false, $"{envelope.Type} cannot be sent from a client.", Unrecoverable: true);
+        }
+
+        if (services.GetService(typeof(ICommandHandler<>).MakeGenericType(type)) is null)
+        {
+            return new CommandResponse(command.CommandId, false, $"No handler for {envelope.Type}.", Unrecoverable: true);
+        }
+
+        var result = await RunAsync(command, ct);
+        return new CommandResponse(command.CommandId, result.Accepted, result.Rejection);
+    }
+
+    public async Task<CommandResult> RunAsync(ICommand command, CancellationToken ct)
+    {
         var work = services.GetService<IUnitOfWork>();
         if (work is not null && await work.IsProcessedAsync(command.CommandId, ct))
         {
             // Checked here, not in Decide: by replay time the aggregate already reflects the
             // first application, so the domain layer alone cannot tell a replay from a genuine conflict.
-            return new CommandResponse(command.CommandId, true, null);
+            return CommandResult.Ok();
         }
 
-        var handler = services.GetService(typeof(ICommandHandler<>).MakeGenericType(type));
+        var handler = services.GetService(typeof(ICommandHandler<>).MakeGenericType(command.GetType()));
         if (handler is null)
         {
-            return new CommandResponse(command.CommandId, false, $"No handler for {envelope.Type}.", Unrecoverable: true);
+            return CommandResult.Rejected($"No handler for {command.GetType().Name}.");
         }
 
         var method = handler.GetType().GetMethod(nameof(ICommandHandler<ICommand>.HandleAsync))!;
-        var result = await (Task<CommandResult>)method.Invoke(handler, [command, ct])!;
-
-        return new CommandResponse(command.CommandId, result.Accepted, result.Rejection);
+        return await (Task<CommandResult>)method.Invoke(handler, [command, ct])!;
     }
 }
