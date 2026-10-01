@@ -1,0 +1,223 @@
+@using PSPad.Abstractions
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Lists
+@inject IDocumentStore<TaskList> Lists
+@inject AppState State
+@inject CommandSender Sender
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject Clipboard Clipboard
+@inject NavigationManager Navigation
+
+<PanelSection Title="Sharing" Class="pspad-list-sharing">
+    @if (IsMine)
+    {
+        <MudSwitch T="bool" Class="pspad-share-switch" Value="@IsShared" ValueChanged="@ToggleShareAsync"
+                   Color="Color.Primary" Disabled="@Disabled" Label="Invite link" />
+
+        @if (_list.InviteToken is { } token)
+        {
+            <div class="d-flex align-center gap-1">
+                <MudTextField T="string" Class="pspad-share-link flex-grow-1" Value="@LinkFor(token)"
+                              ReadOnly="true" Variant="Variant.Outlined" />
+                <MudIconButton Class="pspad-share-copy" Icon="@Icons.Material.Outlined.ContentCopy"
+                               aria-label="Copy link" OnClick="@CopyLinkAsync" />
+            </div>
+
+            <MudButton Class="pspad-share-new-link" Variant="Variant.Text" Disabled="@Disabled"
+                       OnClick="@NewLinkAsync">
+                New link
+            </MudButton>
+        }
+
+        <MudText Typo="Typo.subtitle2" Class="mt-2">Members</MudText>
+
+        @if (_list.Members.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="pspad-muted pspad-share-empty">Nobody has joined yet.</MudText>
+        }
+        else
+        {
+            <MudList T="string" Class="pspad-share-members">
+                @foreach (var member in _list.Members)
+                {
+                    <MudListItem T="string" @key="member.UserId" Class="pspad-share-member">
+                        <div class="d-flex align-center gap-2">
+                            <div class="flex-grow-1">
+                                <MudText Typo="Typo.body2">@member.DisplayName</MudText>
+                                <MudText Typo="Typo.caption" Class="pspad-muted">joined @member.JoinedAt.ToString("d MMM yyyy")</MudText>
+                            </div>
+                            <MudIconButton Class="pspad-share-remove" Icon="@Icons.Material.Outlined.PersonRemove"
+                                           aria-label="@($"Remove {member.DisplayName}")" Disabled="@Disabled"
+                                           OnClick="@(() => RemoveMemberAsync(member))" />
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="pspad-share-owner">Shared by @_list.OwnerName</MudText>
+
+        @if (_list.Members.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="pspad-muted pspad-share-empty">Nobody has joined yet.</MudText>
+        }
+        else
+        {
+            <MudList T="string" Class="pspad-share-members">
+                @foreach (var member in _list.Members)
+                {
+                    <MudListItem T="string" @key="member.UserId" Class="pspad-share-member">
+                        <MudText Typo="Typo.body2">@member.DisplayName</MudText>
+                        <MudText Typo="Typo.caption" Class="pspad-muted">joined @member.JoinedAt.ToString("d MMM yyyy")</MudText>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+
+        @if (_list.InviteToken is { } memberToken)
+        {
+            <div class="d-flex align-center gap-1">
+                <MudTextField T="string" Class="pspad-share-link flex-grow-1" Value="@LinkFor(memberToken)"
+                              ReadOnly="true" Variant="Variant.Outlined" />
+                <MudIconButton Class="pspad-share-copy" Icon="@Icons.Material.Outlined.ContentCopy"
+                               aria-label="Copy link" OnClick="@CopyLinkAsync" />
+            </div>
+        }
+
+        <MudButton Class="pspad-share-leave" Variant="Variant.Text" Color="Color.Error" Disabled="@Disabled"
+                   OnClick="@LeaveAsync">
+            Leave list
+        </MudButton>
+    }
+</PanelSection>
+
+@code {
+    [Parameter, EditorRequired] public TaskList List { get; set; } = null!;
+
+    [Parameter] public bool IsMine { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    TaskList _list = null!;
+
+    protected override void OnParametersSet() => _list = List;
+
+    bool IsShared => _list.InviteToken is not null;
+
+    string LinkFor(string token) => InviteToken.LinkFor(Navigation.BaseUri, token);
+
+    async Task ToggleShareAsync(bool on)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (on)
+        {
+            await Sender.SendAsync(new ShareTaskList(
+                Guid.NewGuid(), State.UserId, _list.Id, InviteToken.New(), State.DisplayName));
+        }
+        else
+        {
+            await Sender.SendAsync(new StopSharingTaskList(Guid.NewGuid(), State.UserId, _list.Id));
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task NewLinkAsync()
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (!await ConfirmAsync(
+            "New link",
+            "Anyone holding the old link can no longer join. People already in the list stay.",
+            "New link"))
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new ShareTaskList(
+            Guid.NewGuid(), State.UserId, _list.Id, InviteToken.New(), State.DisplayName));
+        await ReloadAsync();
+    }
+
+    async Task RemoveMemberAsync(ListMember member)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (!await ConfirmAsync(
+            "Remove member", $"Remove {member.DisplayName} from this list?", "Remove"))
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new RemoveListMember(Guid.NewGuid(), State.UserId, _list.Id, member.UserId));
+        await ReloadAsync();
+    }
+
+    async Task LeaveAsync()
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (!await ConfirmAsync(
+            "Leave list", $"Leave {_list.Name}? It disappears from your devices.", "Leave"))
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new LeaveTaskList(Guid.NewGuid(), State.UserId, _list.Id));
+        Navigation.NavigateTo($"/areas/{SharedWithMe.AreaId}");
+    }
+
+    async Task CopyLinkAsync()
+    {
+        var token = _list.InviteToken;
+
+        if (token is null)
+        {
+            return;
+        }
+
+        var copied = await Clipboard.CopyAsync(LinkFor(token));
+        Snackbar.Add(
+            copied ? "Link copied." : "Could not copy — select the link instead.",
+            copied ? Severity.Success : Severity.Warning);
+    }
+
+    async Task<bool> ConfirmAsync(string title, string message, string confirmText)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, message },
+            { dialog => dialog.ConfirmText, confirmText }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(title, parameters);
+        var result = await dialog.Result;
+        return result is { Canceled: false };
+    }
+
+    async Task ReloadAsync()
+    {
+        var reloaded = await Lists.LoadAsync(_list.Id, CancellationToken.None);
+
+        if (reloaded is not null)
+        {
+            _list = reloaded;
+        }
+    }
+}

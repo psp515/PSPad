@@ -5,7 +5,7 @@
     <DialogActions>
         <MudButton OnClick="@(() => Dialog.Cancel())">Cancel</MudButton>
         <MudButton Color="Color.Error" OnClick="@(() => Dialog.Close(DialogResult.Ok(true)))">
-            Delete
+            @ConfirmText
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -14,4 +14,6 @@
     [CascadingParameter] IMudDialogInstance Dialog { get; set; } = null!;
 
     [Parameter] public string Message { get; set; } = "Delete this?";
+
+    [Parameter] public string ConfirmText { get; set; } = "Delete";
 }
