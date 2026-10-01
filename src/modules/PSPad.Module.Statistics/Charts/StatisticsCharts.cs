@@ -47,7 +47,7 @@ public static class StatisticsCharts
     {
         var first = today.AddDays(1 - days);
         var lifecycle = records
-            .Where(record => IsLifecycle(record.Kind))
+            .Where(record => record.Role == RecordRole.Owner && IsLifecycle(record.Kind))
             .Select(record => (Record: record, Day: DayOf(record.At, zone)))
             .OrderBy(entry => entry.Day)
             .ThenBy(entry => entry.Record.Seq)

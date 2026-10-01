@@ -60,7 +60,8 @@ public sealed class MongoStatisticsStore(MongoContext context) : IStatisticsStor
             .Find(
                 Builders<StatisticsRecord>.Filter.Eq(record => record.UserId, userId) &
                 Builders<StatisticsRecord>.Filter.Lt(record => record.At, from) &
-                Builders<StatisticsRecord>.Filter.In(record => record.Kind, Lifecycle))
+                Builders<StatisticsRecord>.Filter.In(record => record.Kind, Lifecycle) &
+                Builders<StatisticsRecord>.Filter.Eq(record => record.Role, RecordRole.Owner))
             .SortBy(record => record.Seq)
             .Project(record => new { record.TaskId, record.Kind })
             .ToListAsync(ct);

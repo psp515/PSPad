@@ -22,11 +22,13 @@ public class StatisticsChartsTests
         DateOnly? dueOn = null,
         Guid? goalId = null,
         DateOnly? occurrenceDay = null,
-        DateTimeOffset? at = null) =>
+        DateTimeOffset? at = null,
+        RecordRole role = RecordRole.Owner) =>
         new()
         {
             Id = StatisticsRecord.IdFor(id, User),
             Seq = id,
+            Role = role,
             UserId = User,
             At = at ?? Midday(day),
             Kind = kind,
@@ -223,6 +225,18 @@ public class StatisticsChartsTests
         ], Today, 3, Zone, Open());
 
         Assert.Equal(new[] { 2, 1, 0 }, series.Select(point => point.Count));
+    }
+
+    [Fact]
+    public void OutstandingIgnoresActorRecords()
+    {
+        var series = StatisticsCharts.Outstanding(
+        [
+            Record(1, RecordKind.Created, Today, role: RecordRole.Actor),
+            Record(2, RecordKind.Created, Today, role: RecordRole.Owner)
+        ], Today, 1, Zone, Open());
+
+        Assert.Equal(1, series[^1].Count);
     }
 
     [Fact]

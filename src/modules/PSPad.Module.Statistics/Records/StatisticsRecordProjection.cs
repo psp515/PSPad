@@ -9,10 +9,33 @@ public sealed class StatisticsRecordProjection(IStatisticsStore store) : IDomain
     {
         var record = await BuildAsync(envelope, ct);
 
-        if (record is not null)
+        if (record is null)
         {
-            await store.SaveAsync(record, ct);
+            return;
         }
+
+        await store.SaveAsync(record, ct);
+
+        if (envelope.Event.Actor != envelope.Event.UserId)
+        {
+            await store.SaveAsync(await AsActorAsync(record, envelope, ct), ct);
+        }
+    }
+
+    async Task<StatisticsRecord> AsActorAsync(StatisticsRecord owner, DomainEventEnvelope envelope, CancellationToken ct)
+    {
+        var actor = envelope.Event.Actor;
+
+        return owner with
+        {
+            Id = StatisticsRecord.IdFor(envelope.Seq, actor),
+            UserId = actor,
+            Role = RecordRole.Actor,
+            GoalId = null,
+            CompletionNumber = owner.Kind == RecordKind.Completed
+                ? await store.CountCompletionsBeforeAsync(actor, owner.TaskId, envelope.Seq, ct) + 1
+                : owner.CompletionNumber
+        };
     }
 
     async Task<StatisticsRecord?> BuildAsync(DomainEventEnvelope envelope, CancellationToken ct) =>
