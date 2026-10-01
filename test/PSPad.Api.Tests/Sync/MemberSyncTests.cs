@@ -1,6 +1,4 @@
 using System.Net.Http.Json;
-using Microsoft.Extensions.DependencyInjection;
-using PSPad.Api.Commands;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
@@ -20,13 +18,14 @@ public class MemberSyncTests(MongoFixture fixture)
         var owner = factory.ClientFor(Guid.NewGuid().ToString());
         var ownerId = await Sharing.SignInAsync(owner, ct);
         var member = factory.ClientFor(Guid.NewGuid().ToString());
-        var memberId = await Sharing.SignInAsync(member, ct);
+        await Sharing.SignInAsync(member, ct);
 
-        var listId = await Sharing.SharedListAsync(owner, ownerId, ct);
+        var token = Sharing.FreshToken();
+        var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
         var taskId = Guid.NewGuid();
         await Sharing.SendAsync(owner, ct, new CreateTask(Guid.NewGuid(), ownerId, taskId, listId, "Przeczytać"));
 
-        await JoinAsync(factory, memberId, listId, ct);
+        await Sharing.JoinAsync(member, ct, token);
 
         var sync = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
 
@@ -45,12 +44,13 @@ public class MemberSyncTests(MongoFixture fixture)
         var owner = factory.ClientFor(Guid.NewGuid().ToString());
         var ownerId = await Sharing.SignInAsync(owner, ct);
         var member = factory.ClientFor(Guid.NewGuid().ToString());
-        var memberId = await Sharing.SignInAsync(member, ct);
+        await Sharing.SignInAsync(member, ct);
 
-        var listId = await Sharing.SharedListAsync(owner, ownerId, ct);
+        var token = Sharing.FreshToken();
+        var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
         var taskId = Guid.NewGuid();
         await Sharing.SendAsync(owner, ct, new CreateTask(Guid.NewGuid(), ownerId, taskId, listId, "Przeczytać"));
-        await JoinAsync(factory, memberId, listId, ct);
+        await Sharing.JoinAsync(member, ct, token);
 
         var first = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
 
@@ -91,12 +91,13 @@ public class MemberSyncTests(MongoFixture fixture)
         var owner = factory.ClientFor(Guid.NewGuid().ToString());
         var ownerId = await Sharing.SignInAsync(owner, ct);
         var member = factory.ClientFor(Guid.NewGuid().ToString());
-        var memberId = await Sharing.SignInAsync(member, ct);
+        await Sharing.SignInAsync(member, ct);
 
-        var listId = await Sharing.SharedListAsync(owner, ownerId, ct);
+        var token = Sharing.FreshToken();
+        var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
         var taskId = Guid.NewGuid();
         await Sharing.SendAsync(owner, ct, new CreateTask(Guid.NewGuid(), ownerId, taskId, listId, "Przeczytać"));
-        await JoinAsync(factory, memberId, listId, ct);
+        await Sharing.JoinAsync(member, ct, token);
 
         var first = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
 
@@ -138,21 +139,14 @@ public class MemberSyncTests(MongoFixture fixture)
         var member = factory.ClientFor(Guid.NewGuid().ToString());
         var memberId = await Sharing.SignInAsync(member, ct);
 
-        var listId = await Sharing.SharedListAsync(owner, ownerId, ct);
-        await JoinAsync(factory, memberId, listId, ct);
+        var token = Sharing.FreshToken();
+        var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
+        await Sharing.JoinAsync(member, ct, token);
 
         await Sharing.SendAsync(owner, ct, new RemoveListMember(Guid.NewGuid(), ownerId, listId, memberId));
 
         var sync = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
 
         Assert.Empty(sync!.MemberListIds ?? []);
-    }
-
-    static async Task JoinAsync(ApiFactory factory, Guid memberId, Guid listId, CancellationToken ct)
-    {
-        using var scope = factory.Services.CreateScope();
-        var result = await scope.ServiceProvider.GetRequiredService<CommandDispatcher>()
-            .RunAsync(new JoinTaskList(Guid.NewGuid(), memberId, listId, Sharing.Token, "Anna"), ct);
-        Assert.True(result.Accepted, result.Rejection);
     }
 }
