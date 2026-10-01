@@ -394,7 +394,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
 
-        Assert.Equal("Dom / Zakupy", panel.Find(".pspad-panel-title").TextContent.Trim());
+        Assert.Equal("Dom › Zakupy", panel.Find(".pspad-panel-title").TextContent.Trim());
         panel.Find(".pspad-task-star");
     }
 
@@ -589,7 +589,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
 
         var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
         Assert.Equal(office.Id, reloaded!.ListId);
-        panel.WaitForAssertion(() => Assert.Contains("Praca / Biuro", panel.Find(".pspad-panel-title").TextContent));
+        panel.WaitForAssertion(() => Assert.Contains("Praca › Biuro", panel.Find(".pspad-panel-title").TextContent));
     }
 
     [Fact]

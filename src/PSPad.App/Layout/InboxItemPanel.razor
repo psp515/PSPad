@@ -94,7 +94,7 @@
     InboxItem? _item;
     Guid? _draftFor;
     bool _draftIsNew;
-    ListPlacement _placement = ListPlacement.For(Guid.Empty, [], [], [], []);
+    ListPlacement _placement = ListPlacement.Empty;
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<Goal> _goals = [];
     Draft _draft = new();

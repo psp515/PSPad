@@ -121,7 +121,7 @@
     enum PanelMode { Closed, Add, Edit, View }
 
     TodoTask? _task;
-    ListPlacement _placement = ListPlacement.For(Guid.Empty, [], [], [], []);
+    ListPlacement _placement = ListPlacement.Empty;
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<Goal> _goals = [];
     Guid? _draftFor;

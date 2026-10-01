@@ -21,7 +21,7 @@
 </PropertyRow>
 
 @code {
-    [Parameter] public ListPlacement Placement { get; set; } = ListPlacement.For(Guid.Empty, [], [], [], []);
+    [Parameter] public ListPlacement Placement { get; set; } = ListPlacement.Empty;
 
     [Parameter] public IReadOnlyList<TaskList> Lists { get; set; } = [];
 
@@ -34,7 +34,7 @@
     public static string? PathOf(Guid? listId, ListPlacement placement, IReadOnlyList<TaskList> lists)
     {
         var list = lists.FirstOrDefault(list => list.Id == listId);
-        return list is null ? null : $"{placement.AreaName(placement.AreaOf(list))} / {list.Name}";
+        return list is null ? null : $"{placement.AreaName(placement.AreaOf(list))} › {list.Name}";
     }
 
     string? PathOf(Guid? listId) => PathOf(listId, Placement, Lists);

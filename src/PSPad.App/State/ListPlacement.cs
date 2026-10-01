@@ -27,6 +27,8 @@ public sealed class ListPlacement
         All = all;
     }
 
+    public static readonly ListPlacement Empty = For(Guid.Empty, [], [], [], []);
+
     public IReadOnlyList<TaskList> All { get; }
 
     public bool HasShared => InArea(SharedWithMe.AreaId).Count > 0;
