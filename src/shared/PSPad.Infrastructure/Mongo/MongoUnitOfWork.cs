@@ -46,10 +46,11 @@ public sealed class MongoUnitOfWork(
 
             var events = context.Collection<StoredEvent>("events");
 
-            foreach (var (aggregate, staged) in _staged)
+            foreach (var (aggregate, stagedEvents) in _staged)
             {
-                foreach (var @event in staged)
+                foreach (var staged in stagedEvents)
                 {
+                    var @event = staged.UserId == userId ? staged : staged with { ActorId = userId };
                     var seq = await _sequence.NextAsync(session, ct);
                     aggregate.Seq = seq;
                     published.Add(new DomainEventEnvelope(seq, @event));
