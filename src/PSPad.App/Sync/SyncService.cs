@@ -21,7 +21,8 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         ["goals"] = typeof(Module.Tasks.Goals.Goal),
         ["inboxes"] = typeof(Module.Tasks.Inbox.Inbox),
         ["referenceitems"] = typeof(Module.Tasks.References.ReferenceItem),
-        ["areaviews"] = typeof(Module.Presentation.AreaViews.AreaView)
+        ["areaviews"] = typeof(Module.Presentation.AreaViews.AreaView),
+        ["listviews"] = typeof(Module.Presentation.ListViews.ListView)
     };
 
     public async Task<SyncOutcome> SyncAsync(CancellationToken ct)

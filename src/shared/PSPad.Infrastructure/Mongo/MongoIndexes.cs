@@ -6,7 +6,7 @@ namespace PSPad.Infrastructure.Mongo;
 public static class MongoIndexes
 {
     static readonly string[] AggregateCollections =
-        ["areas", "tasklists", "todotasks", "goals", "inboxes", "users", "referenceitems", "areaviews"];
+        ["areas", "tasklists", "todotasks", "goals", "inboxes", "users", "referenceitems", "areaviews", "listviews"];
 
     public static async Task EnsureAsync(MongoContext context, CancellationToken ct)
     {
