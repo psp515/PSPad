@@ -5,7 +5,7 @@ date: 2026-09-30
 status: Active
 ---
 
-# ADR-0051: Repeats can be yearly, and a task's lead time sets how far ahead it shows
+# ADR-0053: Repeats can be yearly, and a task's lead time sets how far ahead it shows
 
 > Amends [ADR-0043](0043-repeat-interval-and-until-date.md) (repeat interval
 > and until date).

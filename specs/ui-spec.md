@@ -291,7 +291,7 @@ today." when Overdue is empty too. Each task is its own outlined
 never rows inside one shared paper. Upcoming groups its rows under a muted
 caption per day (`DueDateRow.Describe`). Membership comes from
 `TodayRule.Plan`, never from the page. Upcoming's reach is per task: its
-lead time, one week by default (`adr/0051`). A recurring row ahead of today
+lead time, one week by default (`adr/0053`). A recurring row ahead of today
 ticks the occurrence on its own day, not today's. Goals in progress are
 `GoalSummaryCard`s ordered by due date, undated last, and open the goal
 screen `/goals/{id}`.
@@ -428,7 +428,7 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      One-time | Repeating; its value is whether the task (or Add's draft)
      has a rule. One-time shows Due; Repeating shows Repeat then Until.
      Switching to Repeating sets Daily from today and clears the due date;
-     switching to One-time clears the repeat and Until (`adr/0051`).
+     switching to One-time clears the repeat and Until (`adr/0053`).
    - **Due** (`DueDateRow`) — on a repeating task labelled **Until**,
      empty as "No end date" and never red when past (`FlagsPast`). Today / Tomorrow / In 2 days / Next week (the
      next Monday), each with its date, then "Pick a date…" opening a

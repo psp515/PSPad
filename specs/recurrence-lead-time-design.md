@@ -1,7 +1,7 @@
 # Yearly repeats, lead time and one-time vs repeating — design
 
 Status: Built. Decision of record:
-[ADR-0051](../adr/0051-yearly-repeats-and-lead-time.md). Issue #100.
+[ADR-0053](../adr/0053-yearly-repeats-and-lead-time.md). Issue #100.
 
 Three asks from one issue:
 
@@ -151,7 +151,7 @@ and no day field — Starts picks the date. Descriptions: "Yearly on 15 Mar",
 
 ## 4. Records and docs
 
-- `adr/0051` (Proposed until built, then Active) and its index row; amends
+- `adr/0053` (Proposed until built, then Active) and its index row; amends
   `adr/0043`.
 - `specs/backend-spec.md` §4 (yearly kind, lead time, look-ahead) and the
   `todotasks` field list; `specs/ui-spec.md` task panel and My Day
