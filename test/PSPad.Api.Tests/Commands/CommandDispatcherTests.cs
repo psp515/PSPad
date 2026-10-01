@@ -148,7 +148,7 @@ public class CommandDispatcherServerOnlyTests(MongoFixture fixture)
         var ownerId = (await owner.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
         var areaId = Guid.NewGuid();
         var listId = Guid.NewGuid();
-        const string token = "k3Jv9s2mQ0x7b1nR4tYw8eZa";
+        var token = Guid.NewGuid().ToString("N");
 
         await Send(owner, ct,
             new CreateArea(Guid.NewGuid(), ownerId, areaId, "Dom", 0),

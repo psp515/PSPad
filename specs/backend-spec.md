@@ -239,8 +239,11 @@ transaction; the returned value stamps both the event and the aggregate's
 - every aggregate collection: `{userId: 1, seq: 1}` (delta sync)
 - `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`, `{listId: 1, seq: 1}` (a member's delta sync)
 - `tasklists`: `{userId: 1, areaId: 1}`, `{_members.userId: 1, seq: 1}` (a
-  member's delta sync), sparse `{inviteToken: 1}` (join lookup; sparse
-  because most lists carry no token)
+  member's delta sync), unique partial `{inviteToken: 1}` named
+  `inviteToken_unique` (`partialFilterExpression: {inviteToken: {$type:
+  "string"}}`; join lookup, and no two lists may hold one token — a
+  duplicate-key write on commit is rejected as "That invite link is already
+  in use."; startup drops the older sparse `inviteToken_1`)
 - `referenceitems`: `{userId: 1, listId: 1}`, `{listId: 1, seq: 1}` (a member's delta sync)
 - `list_snapshots`: unique `{token: 1}`, TTL on `expiresAt`
   (`expireAfterSeconds: 0`), `{userId: 1, listId: 1}` (the panel's active list)

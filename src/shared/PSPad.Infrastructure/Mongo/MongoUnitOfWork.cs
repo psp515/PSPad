@@ -92,6 +92,11 @@ public sealed class MongoUnitOfWork(
                     commandId);
             }
         }
+        catch (MongoWriteException duplicate) when (IsDuplicateInviteToken(duplicate))
+        {
+            await session.AbortTransactionAsync(ct);
+            throw new DomainRejectedException("That invite link is already in use.");
+        }
         catch
         {
             await session.AbortTransactionAsync(ct);
@@ -103,6 +108,10 @@ public sealed class MongoUnitOfWork(
             published.Clear();
         }
     }
+
+    static bool IsDuplicateInviteToken(MongoWriteException exception) =>
+        exception.WriteError?.Category == ServerErrorCategory.DuplicateKey &&
+        exception.WriteError.Message.Contains(MongoIndexes.InviteTokenIndex, StringComparison.Ordinal);
 
     Task ReplaceAsync(IClientSessionHandle session, Aggregate aggregate, CancellationToken ct)
     {

@@ -31,11 +31,10 @@ public static class MongoIndexes
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("areaId")),
             new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending("_members.userId").Ascending("seq")),
-            new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending("inviteToken"),
-                new CreateIndexOptions<BsonDocument> { Sparse = true })
+                Builders<BsonDocument>.IndexKeys.Ascending("_members.userId").Ascending("seq"))
         ], ct);
+
+        await EnsureUniqueInviteTokenAsync(context, ct);
 
         await context.Collection<BsonDocument>("referenceitems").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(
@@ -84,6 +83,29 @@ public static class MongoIndexes
                 new CreateIndexOptions { ExpireAfter = TimeSpan.Zero }),
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("userId").Descending("visitedAt"))
         ], ct);
+    }
+
+    public const string InviteTokenIndex = "inviteToken_unique";
+
+    static async Task EnsureUniqueInviteTokenAsync(MongoContext context, CancellationToken ct)
+    {
+        var lists = context.Collection<BsonDocument>("tasklists");
+        var existing = await (await lists.Indexes.ListAsync(ct)).ToListAsync(ct);
+        if (existing.Any(index => index["name"] == "inviteToken_1"))
+        {
+            await lists.Indexes.DropOneAsync("inviteToken_1", ct);
+        }
+
+        await lists.Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("inviteToken"),
+                new CreateIndexOptions<BsonDocument>
+                {
+                    Name = InviteTokenIndex,
+                    Unique = true,
+                    PartialFilterExpression = Builders<BsonDocument>.Filter.Type("inviteToken", BsonType.String)
+                }),
+            cancellationToken: ct);
     }
 
     public static async Task EnsureStatisticsAsync(MongoContext context, CancellationToken ct)

@@ -8,8 +8,6 @@ namespace PSPad.Api.Tests.Sync;
 
 public static class Sharing
 {
-    public const string Token = "k3Jv9s2mQ0x7b1nR4tYw8eZa";
-
     public static async Task<Guid> SignInAsync(HttpClient client, CancellationToken ct) =>
         (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
 
@@ -26,12 +24,13 @@ public static class Sharing
     }
 
     public static async Task<HttpResponseMessage> JoinAsync(
-        HttpClient member, CancellationToken ct, string token = Token) =>
+        HttpClient member, CancellationToken ct, string token) =>
         await member.PostAsJsonAsync("/api/lists/join", new JoinListRequest(token), ct);
 
     public static async Task<Guid> SharedListAsync(
-        HttpClient owner, Guid ownerId, CancellationToken ct, ListKind kind = ListKind.Tasks, string token = Token)
+        HttpClient owner, Guid ownerId, CancellationToken ct, ListKind kind = ListKind.Tasks, string? token = null)
     {
+        token ??= FreshToken();
         var areaId = Guid.NewGuid();
         var listId = Guid.NewGuid();
         await SendAsync(owner, ct,

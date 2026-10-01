@@ -120,3 +120,12 @@ its own, and plan 2 will need the owner's replica to see it. The owner/actor
 split is paid on every event forever, even for the overwhelming majority
 that have no sharing involved — `ActorId` is null there and costs one
 nullable field.
+
+## Amendment (2026-10-01, final review)
+
+The client still mints the invite token, so the server makes it unique:
+`tasklists` carries a unique partial index on `inviteToken` (strings only),
+and a duplicate-key write on commit becomes the command rejection "That
+invite link is already in use." rather than a 500. Without it a second list
+could take a token already handed out, and `POST /api/lists/join` would
+resolve it to whichever list came first.
