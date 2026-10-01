@@ -522,12 +522,18 @@ button.pspad-heatmap-cell:focus-visible {
 }
 
 .pspad-property-label {
-    min-width: 72px;
+    flex: 0 0 88px;
+    margin-right: 12px;
     text-align: left;
+    white-space: nowrap;
 }
 
 .pspad-property-value {
+    flex: 1 1 auto;
+    min-width: 0;
     text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .pspad-muted {

@@ -421,7 +421,9 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    in place and sends nothing — rows show a muted empty-box icon rather
    than a checkbox. The Inbox convert form uses it this way.
 4. Property rows, each a `PropertyRow` — icon · label · value, the whole
-   row a `MudMenu` activator; an empty value reads in the muted text colour
+   row a `MudMenu` activator; the label sits in a fixed 88px column, never
+   wraps, and a long value wraps beneath itself rather than running into
+   the label; an empty value reads in the muted text colour
    ("No due date", "No goal"), a clearable one carries a trailing
    ✕:
    - **Kind** (`MudToggleGroup<bool>`, `pspad-task-kind`, above the rows) —
