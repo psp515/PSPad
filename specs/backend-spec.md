@@ -195,6 +195,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
 | `referenceitems` | items in a `Reference` list | `listId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`) |
 | `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
+| `listviews` | one per (user, list): that user's placement of a shared list | `_id` = `ListView.IdFor(userId, listId)`, `listId`, `areaId?` (null = "Shared with me") |
 | `events` | the domain event log and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
@@ -357,6 +358,16 @@ not stated there:
   ownership by moving. Organising an Inbox item into a list the actor is a
   member of is allowed: it becomes a task owned by the list's owner, while
   the Inbox itself stays the actor's own aggregate.
+- Placement of a shared list is presentation too. `ListView`
+  (Presentation module) holds one user's `AreaId?` for a list they are a
+  member of, set by `PlaceList`; `null` leaves it in "Shared with me", a
+  client-side virtual area, never an `Area` document. A view naming a
+  deleted or unknown area, or no view at all, falls back to "Shared with
+  me" the same way a missing `AreaView` falls back to creation order. A
+  filed list joins that area's `AreaView.Order` through `ReorderLists` like
+  any other list. `GET /api/today` and the client's Today projection both
+  include tasks from lists the caller is a member of, same `TodayRule`, the
+  viewer's own time zone.
 
 ---
 
@@ -430,7 +441,8 @@ client's current one — an already-installed client that only just updated
 to a build with a new sync collection — the next pull asks `since = 0`
 once instead of the stored marker, so documents in that new collection are
 not silently skipped forever by a marker that had already advanced past
-them (`adr/0049`). `areaviews` (`adr/0051`) is such a collection.
+them (`adr/0049`). `areaviews` (`adr/0051`) and `listviews` (`adr/0053`) are
+such collections.
 
 **App updates are offered, never forced** (`adr/0040`). The published
 service worker keeps the browser's waiting state — no `skipWaiting()` on
@@ -592,7 +604,7 @@ directly in `PSPad.Api`:
 | `POST` | `/api/commands` | Execute a batch of commands. The only write endpoint |
 | `GET` | `/api/sync?since=&full=` | Delta pull, widened to lists the caller is a member of; `full` (comma-joined list ids the caller belongs to) returns those lists and their children in full regardless of `since` |
 | `POST` | `/api/lists/join` | Join a shared list by its invite token. `200 JoinListResponse(ListId, Documents)`, or `404` for an unknown/cleared token, a deleted list, or a rejected join. Not through the outbox — see §5 |
-| `GET` | `/api/today` | Server-side Today, for a cold client |
+| `GET` | `/api/today` | Server-side Today, for a cold client; includes tasks from lists the caller is a member of, in the caller's own time zone |
 | `GET` | `/api/statistics/records?before=&limit=` | The statistics feed, newest first. `limit` clamps to 1..200, default 50 |
 | `GET` | `/api/statistics/overview?days=` | Tiles and the five chart series. `days` is 30, 90 or 365, default 30 |
 | `GET` | `/api/me` | Current user; provisions on first call, heals display name |

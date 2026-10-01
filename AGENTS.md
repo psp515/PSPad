@@ -47,7 +47,10 @@ name + due date + goal + priority + star + steps + Markdown description),
 steps (own due date, ordered, dense positions), recurrence (template +
 per-day occurrences), goals (global, many tasks to one), reference lists
 (items — name + Markdown description + star + ordered labelled fields — in
-a `Reference` list, never on Today), Today screen (cross-area), a Statistics
+a `Reference` list, never on Today), shared lists (a `TaskList` carries an
+invite link; a member edits its content, sees it on their own Today, and
+files it into one of their own areas or leaves it in "Shared with me"),
+Today screen (cross-area, member lists included), a Statistics
 screen (tiles, four charts, a consistency heatmap, an Inbox-captures bar
 chart, a collapsed record feed) built from denormalized records projected
 off the domain event log, offline PWA, auth.
@@ -145,9 +148,11 @@ thing written in the transaction; see `adr/0036` and `adr/0037`.
 **AD-11 — Presentation is its own module, per user.** How a user sees data
 (list order today; list theming later) lives in `PSPad.Module.Presentation`,
 never on a Tasks aggregate. `AreaView` per `(user, area)` holds list order;
-no view means creation-date order. References `Abstractions` only, WASM-safe,
-nothing references it but the hosts. Supersedes `adr/0012`; see `adr/0051`
-and `specs/modules-spec.md`.
+no view means creation-date order. `ListView` per `(user, list)` holds
+where a member files a shared list, next to `AreaView`; no view, or one
+naming a dead area, falls back to "Shared with me". References
+`Abstractions` only, WASM-safe, nothing references it but the hosts.
+Supersedes `adr/0012`; see `adr/0051` and `specs/modules-spec.md`.
 
 ---
 
@@ -438,8 +443,16 @@ backfills those lists in full regardless of `since`; `POST
 after each pull (purging foreign lists, pulling missing member lists in
 the same pull, skipping entirely with no recorded owner, retrying a failed
 full pull next sync); and account deletion pulls the caller out of other
-owners' `_members` before its sweep. "Shared with me", Today across member
-lists, Statistics' owner/actor records, and public snapshots
+owners' `_members` before its sweep. Plan 3 is built too: `ListView`
+(`PSPad.Module.Presentation`, `AreaId?`, `PlaceList`) lets a member file a
+shared list into one of their own areas; "Shared with me" is the fallback
+virtual area (sidebar row, area chip, board with no FAB) for the rest;
+`GET /api/today` and the client's Today projection include member lists'
+tasks in the viewer's own time zone; the list panel's Sharing section
+(invite link, members, Leave list for a member) and `/join/{token}`
+cover the join flow; a shared marker sits on `ListCard`, and owner-only
+controls (rename, delete, move, the goal row) are hidden from a member.
+Statistics' owner/actor records and public snapshots
 (`PSPad.Module.Sharing`) are the plans still ahead, each with further ADRs
 of its own.
 

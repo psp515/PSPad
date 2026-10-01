@@ -579,6 +579,59 @@ never opens the item. The empty-list and delete-confirmation
 copy read "items" instead of "tasks" for a `Reference` list
 (`DeleteWarning`).
 
+**Sharing lives in the list panel, a `PanelSection` below the list's own
+fields.** `Components/ListSharingSection.razor` branches on ownership:
+
+- **Owner.** An "Invite link" `MudSwitch` turns sharing on (`ShareTaskList`)
+  or off (`StopSharingTaskList`, members stay). On, the link
+  (`{origin}/join/{token}`, `InviteToken.LinkFor`) sits in a read-only
+  field with a copy button, below it **New link** — confirmed, since the
+  old link stops working while members keep their place. Then **Members**:
+  each a row with their name, join date and a remove icon
+  (`PersonRemove`), confirmed via `ConfirmDialog`; nobody yet reads
+  "Nobody has joined yet."
+- **Member.** "Shared by {OwnerName}" (set by `ShareTaskList`, not read
+  from the owner's `User` document), the same read-only members list with
+  no remove icon, the link read-only with its copy button but no rotate,
+  and **Leave list** (`Color.Error`), confirmed, which sends `LeaveTaskList`
+  and navigates to "Shared with me" — the list is gone from this device.
+
+Every sharing action reloads the list from the replica so the panel
+reflects the fresh token or member set without a full page reload.
+
+**A member's list panel, task panel and board hide owner-only controls.**
+`ListDetailPanel`'s kind-readonly display, area picker and **Delete list**
+render only for the owner (`ListPlacement.IsMine`); `ListPage`'s and
+`AreaBoard`'s FAB Menus drop their **Edit list** / **Delete list** items
+the same way, keeping **Add task**/**Add item**. `ListCard`'s `⋯` menu
+drops **Delete** for a list the viewer does not own (`ThingMenu`'s
+`OnDelete` left unbound). `TaskDetailPanel`'s goal row shows only when the
+open task is the viewer's own (`task.UserId == me`) — a member edits a
+shared task but never its owner's goal.
+
+**A shared list carries a marker wherever it is a card.** `ListCard` shows
+a `People` icon in its actions when `List.IsShared` (members or an active
+token), with a `MudTooltip` reading "Shared · N people" (one more than
+`Members.Count`, the owner included) or "Shared · 1 person" for a list with
+no joiners yet.
+
+**"Shared with me" is a virtual area, not an `Area` document.** A
+client-side constant (`State/SharedWithMe`, id
+`0000000a-0000-0000-0000-000000000001`) for member lists nobody has filed
+elsewhere (`ListPlacement`, `PlaceList`). It shows last: a `People`-icon
+row in the desktop sidebar after the user's own areas (`NavSidebar`), the
+last chip in the phone's `AreaChips`, and the areas index falls back to it
+when the user owns no area but has a shared list. Its board
+(`/areas/{SharedWithMe.AreaId}`, `AreaBoard`) is the same `MasonryGrid` as
+any area, but carries no FAB — a member cannot create a list here — and an
+empty board reads "Nothing is shared with you right now." instead of "No
+lists yet."
+
+**`/join/{token}`** (`Pages/JoinPage.razor`, signed-in only) joins on
+mount: offline it shows `EmptyState` "Joining needs a connection." with a
+"Try again" retry; an unknown or cleared token shows "This invite link no
+longer works." with "Go to My Day". On success it triggers a sync and
+navigates straight to `/lists/{listId}`.
 
 **Inbox items use the same shell.** `Layout/InboxItemPanel.razor` is
 addressed as `?inbox=new` (the Inbox FAB or its empty state) or
@@ -760,7 +813,8 @@ wrapped in a `MudMenu`, both pinned with the `pspad-fab` CSS class. Built
 directly on each page, not through a shared component — each page's FAB is
 a handful of lines specific to that page's own actions:
 
-- **Zero actions** → no FAB.
+- **Zero actions** → no FAB — "Shared with me" is this case: a member
+  cannot create a list there.
 - **One action** → a plain `MudFab`, performing the action directly
   (typically opening a dialog).
 - **Two or more actions** → one `MudFab` opening a `MudMenu` ("FAB Menu")
@@ -776,7 +830,7 @@ icon reads unambiguously on its own.
 | Area | New list, Edit area & order lists (→ area panel), Delete area | FAB Menu |
 | Goals | Add goal (→ new-goal panel) | plain `MudFab` |
 | Goal | Edit goal (→ goal panel), Delete goal | FAB Menu |
-| List | Add task (→ new-task panel) or Add item (→ new-item panel) for a `Reference` list, Edit list (→ list panel), Delete list | FAB Menu |
+| List | Add task (→ new-task panel) or Add item (→ new-item panel) for a `Reference` list, plus Edit list (→ list panel) and Delete list for the owner | FAB Menu |
 | Inbox | Capture (→ capture panel) | plain `MudFab` |
 | My Day, Settings, Statistics | none | no FAB |
 
@@ -897,9 +951,10 @@ the example. The Consistency heatmap is not a `MudChart` — see §1.
 **Sidebar**, top to bottom, one navigation tree at `md`+: a
 non-interactive `AccountBadge` (avatar, display name, email — a label, not
 a control), then a nav group of **My Day / Inbox / Goals / Statistics**,
-divider, the user's areas in `Position` order plus **+ New area**, divider,
-**Settings** / **App info**, then a spacer, then a footer (connection
-status, current date/time, "PSPad · GPL v3"). There is no search field in
+divider, the user's areas in `Position` order, then **Shared with me**
+(`People` icon) when the user has a member list, then **+ New area**,
+divider, **Settings** / **App info**, then a spacer, then a footer
+(connection status, current date/time, "PSPad · GPL v3"). There is no search field in
 the sidebar (temporarily unreachable from the UI, tracked as a known gap,
 not a page to recreate speculatively) and no dropdown on the account badge.
 Below `md` there is no sidebar: phones navigate through `MobileTopBar` and
@@ -913,7 +968,8 @@ and footer moved into `AccountDrawer` (`adr/0050`).
 | `/` | My Day |
 | `/inbox` | Inbox |
 | `/areas` | opens the last-used area on this device, else the first; empty state when there are none |
-| `/areas/{areaId}` | area screen — list cards |
+| `/areas/{areaId}` | area screen — list cards; `SharedWithMe.AreaId` renders "Shared with me", no FAB |
+| `/join/{token}` | join a shared list by its invite token, then opens it |
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |
 | `/goals/{goalId}` | goal screen — every task of one goal |

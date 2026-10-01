@@ -1,6 +1,6 @@
 # Sharing — design
 
-Status: Proposed. Issues: #103 (share a list with people who have an
+Status: Building — plans 1–3 built. Issues: #103 (share a list with people who have an
 account), #104 (public read-only snapshot for people who do not). Decisions
 of record, to be written with the build: ADR-0053, ADR-0054, ADR-0055 (§9).
 

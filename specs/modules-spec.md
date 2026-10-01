@@ -39,7 +39,12 @@ Presentation view in its own issue; until then, don't add new ones.
 **Owns.** `AreaView` — one per `(user, area)`, id `AreaView.IdFor(userId,
 areaId)`, holding `Order` of the area's lists; `ReorderLists`;
 `Ordering/Arranged.Sort` (stored order first, then creation date, then id).
-Collection `areaviews`.
+`ListView` — one per `(user, list)`, id `ListView.IdFor(userId, listId)`,
+holding `AreaId?`: where that user files a shared list they are a member
+of; `PlaceList` sets it, `null` returns the list to "Shared with me". A
+missing view, or one naming a deleted or unknown area, falls back to
+"Shared with me" the same way a missing `AreaView` falls back to creation
+order. Collections `areaviews`, `listviews`.
 
 **Must not.** Reference any module — commands carry what the view needs
 (e.g. the displayed order), so the module never reads a Tasks aggregate.
@@ -49,10 +54,9 @@ creation order.
 
 **Extension points.**
 
-- `ListView` — one per `(user, list)`: the list's colour and icon (list
+- `ListView` fields beyond `AreaId`: the list's colour and icon (list
   theming), and the order of its steps or reference items once those
-  positions leave Tasks. Add it here, next to `AreaView`, not as fields on
-  `TaskList`. Not built.
+  positions leave Tasks. Add fields here, not on `TaskList`. Not built.
 - The sidebar's area order — a user-level view, replacing `Area.Position`.
   Not built.
 - A new view follows `AreaView`'s shape: deterministic id from user +
