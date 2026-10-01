@@ -2,7 +2,7 @@
 title: Repeats can be yearly, and a task's lead time sets how far ahead it shows
 tags: [domain, recurrence, today, ui]
 date: 2026-09-30
-status: Proposed
+status: Active
 ---
 
 # ADR-0051: Repeats can be yearly, and a task's lead time sets how far ahead it shows

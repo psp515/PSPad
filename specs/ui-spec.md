@@ -290,7 +290,8 @@ today." when Overdue is empty too. Each task is its own outlined
 `MudPaper` card in a `MudItem`, sized to its content like the goal cards,
 never rows inside one shared paper. Upcoming groups its rows under a muted
 caption per day (`DueDateRow.Describe`). Membership comes from
-`TodayRule.Plan`, never from the page. A recurring row ahead of today
+`TodayRule.Plan`, never from the page. Upcoming's reach is per task: its
+lead time, one week by default (`adr/0051`). A recurring row ahead of today
 ticks the occurrence on its own day, not today's. Goals in progress are
 `GoalSummaryCard`s ordered by due date, undated last, and open the goal
 screen `/goals/{id}`.
@@ -421,8 +422,13 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    than a checkbox. The Inbox convert form uses it this way.
 4. Property rows, each a `PropertyRow` — icon · label · value, the whole
    row a `MudMenu` activator; an empty value reads in the muted text colour
-   ("No due date", "Never", "No goal"), a clearable one carries a trailing
+   ("No due date", "No goal"), a clearable one carries a trailing
    ✕:
+   - **Kind** (`MudToggleGroup<bool>`, `pspad-task-kind`, above the rows) —
+     One-time | Repeating; its value is whether the task (or Add's draft)
+     has a rule. One-time shows Due; Repeating shows Repeat then Until.
+     Switching to Repeating sets Daily from today and clears the due date;
+     switching to One-time clears the repeat and Until (`adr/0051`).
    - **Due** (`DueDateRow`) — on a repeating task labelled **Until**,
      empty as "No end date" and never red when past (`FlagsPast`). Today / Tomorrow / In 2 days / Next week (the
      next Monday), each with its date, then "Pick a date…" opening a
@@ -434,24 +440,29 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    - **Repeat** (`RecurrenceEditor`, Add included — the draft's rule is
      sent as `SetTaskRecurrence` after `CreateTask`, before the due date) —
      Daily, Weekdays, Weekly on today's weekday, Monthly on today's day,
-     Custom…, Never. Presets start today. Custom… opens a `MudDialog`:
-     Every [1–99] [days | weeks | months], weekday chips (weeks, Monday
+     Yearly on today's date, Custom…. Presets start today. Custom… opens a `MudDialog`:
+     Every [1–99] [days | weeks | months | years], weekday chips (weeks, Monday
      first), On day 1–31 (months), Starts (date picker, default the current
-     rule's start or today); moving Starts moves the weekday chip or
+     rule's start or today; years show no weekday chips or day field); moving Starts moves the weekday chip or
      day-of-month default with it until the user has picked one; Save
      stays disabled until the fields are valid. Setting a repeat on a task
      whose due date falls before the rule's start clears that date (sent
      after `SetTaskRecurrence`), so the repeat does not start already
      ended. The value reads "Daily", "Weekly on Mon, Thu", "Every 3 weeks
-     on Mon", "Every 2 days", "Every 6 months on day 15". A repeating task
+     on Mon", "Every 2 days", "Every 6 months on day 15", "Yearly on 15 Mar",
+     "Every 2 years on 15 Mar". A repeating task
      shows its last seven occurrences as chips under the row, then a muted
      tally caption: "Not done yet", "Done N times", or "Done N times · M in
      a row" (`RepeatTally`).
+   - **Remind me** (`LeadTimeRow`, `pspad-task-lead`, after Due/Until) —
+     1 day, 3 days, 1 week, 2 weeks, 1 month, Custom… (a `MudDialog`: [1–99]
+     [days | weeks | months]). Empty reads "1 week before" in the muted
+     colour; a set value ("3 days before") carries a ✕. In Add the draft's
+     lead time is sent as `SetTaskLeadTime` after the due date.
    - **Priority** — the four fixed levels with coloured dots.
    - **Goal** — the user's goals.
    - **List** (outside Add) — lists grouped under area headings; picking
      one moves the task at once. There is no Move button.
-   Room for later task fields (reminders) goes under the rows.
 5. **Description** (outside Add) — a `PanelSection` titled "Description"
    holding the task's `MarkdownField` (see below).
 6. Footer — "Created …" on the left, a red trash `MudIconButton` on the

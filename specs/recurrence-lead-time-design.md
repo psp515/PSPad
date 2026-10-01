@@ -1,6 +1,6 @@
 # Yearly repeats, lead time and one-time vs repeating — design
 
-Status: Designed. Decision of record:
+Status: Built. Decision of record:
 [ADR-0051](../adr/0051-yearly-repeats-and-lead-time.md). Issue #100.
 
 Three asks from one issue:
