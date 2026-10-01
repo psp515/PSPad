@@ -122,17 +122,23 @@ the list's owner with the member as `ActorId`.
 `CommandDispatcher.DispatchAsync` refuses one with
 `Unrecoverable: true` before it reaches a handler — `/api/commands` is a
 client-facing surface only. A server-only command still runs through
-`CommandDispatcher.RunAsync` from an HTTP endpoint that owns the trust
-decision itself (`JoinTaskList` from `POST /api/lists/join`).
+`CommandDispatcher.RunAsync`, called directly from server code that owns
+its own trust decision instead of trusting the caller (`JoinTaskList` is
+marked this way today; the HTTP entry point that calls it is a later
+plan's work).
 
 **List access** (`adr/0053`). `ListAccess.To(list, actorId)` returns an
 `OwnerId`/`ActorId` pair for the owner or any member of `list`, and rejects
 everyone else; `TaskList.Require` (owner only) stays for list-level
 commands. Every content handler — tasks, steps, recurrence, descriptions,
 stars, priorities, due dates, completion, occurrences, reference items and
-their fields — loads the parent `TaskList` to resolve it
-(`ListAccessLoading.AccessAsync`), even one that previously loaded only its
-own aggregate.
+their fields, including `LinkTaskToGoal` — loads the parent `TaskList` to
+resolve `ListAccess` (`ListAccessLoading.AccessAsync`), even one that
+previously loaded only its own aggregate. `LinkTaskToGoal` reaches
+`TodoTask.Decide` the same way as any content command; the aggregate itself
+then rejects a non-owner `ListAccess.ActorId` (goals are the owner's), so
+the owner-only gate sits in the aggregate's rule, not in which loader the
+handler calls.
 
 Aggregates keep rules pure and testable with no store: `Decide(command)`
 returns the events a command produces, or throws `DomainRejectedException`;
@@ -336,10 +342,14 @@ not stated there:
   for the owner or an existing member). `ListAccess` admits the owner or a
   member to every content command on tasks, steps, reference items and
   their fields, plus `CreateTask`, `CreateReferenceItem`,
-  `OrganiseInboxItem`; list-level commands (`RenameTaskList`,
-  `DeleteTaskList`, `MoveTaskListToArea`, the five sharing commands) and
-  `LinkTaskToGoal` stay owner-only (goals are the owner's). Every event
-  carries the owner as `UserId`; `ActorId` records who actually acted.
+  `OrganiseInboxItem`, and `LinkTaskToGoal`; list-level commands
+  (`RenameTaskList`, `DeleteTaskList`, `MoveTaskListToArea`, the five
+  sharing commands) stay owner-only through `TaskList.Require`.
+  `LinkTaskToGoal` goes through `ListAccess` like any content command, but
+  `TodoTask.Decide` itself rejects a non-owner actor — goals are the
+  owner's, so the gate lives in the aggregate's rule rather than in the
+  loader. Every event carries the owner as `UserId`; `ActorId` records who
+  actually acted.
   `MoveTaskToList` and `MoveReferenceItemToList` reject a target list whose
   owner differs from the source list's — a task or item never crosses
   ownership by moving. Organising an Inbox item into a list the actor is a

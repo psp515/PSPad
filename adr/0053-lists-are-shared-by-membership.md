@@ -43,9 +43,13 @@ priorities, due dates, completion, occurrences, reference items and their
 fields, plus `CreateTask`, `CreateReferenceItem`, `OrganiseInboxItem`.
 `TaskList.Require` (owner only) stays for list-level commands —
 `RenameTaskList`, `DeleteTaskList`, `MoveTaskListToArea`, the five sharing
-commands, and `LinkTaskToGoal` (goals are the owner's). A handler that
-previously loaded nothing but the task now loads its parent list to resolve
-access (`ListAccessLoading.AccessAsync`).
+commands. `LinkTaskToGoal` goes through `ListAccess` like any content
+command — it loads the list and calls `TodoTask.Decide` with that access —
+but `TodoTask.Decide` itself rejects a non-owner (`!grant.ByOwner`, "Only
+the list's owner links a goal."): the gate is in the aggregate, not in
+which loader the handler used, because goals are the owner's. A handler
+that previously loaded nothing but the task now loads its parent list to
+resolve access (`ListAccessLoading.AccessAsync`).
 
 `DomainEvent` gains `ActorId` (`Guid?`, defaults to `UserId` through the
 `Actor` property). `UserId` on every event stays the **aggregate's owner**;
@@ -60,11 +64,13 @@ member's `CreateTask` produces a task owned by the list's owner.
 
 `IServerOnlyCommand` (a marker on `ICommand`) keeps a command out of
 `/api/commands`: `CommandDispatcher.DispatchAsync` refuses it with
-`Unrecoverable: true` before it reaches a handler, the same path
-`JoinTaskList` uses today (`POST /api/lists/join` calls
-`CommandDispatcher.RunAsync` directly, bypassing the client-facing check).
-The next plan's `MarkTaskFromSnapshot` and `MarkReferenceItemFromSnapshot`
-(`specs/sharing-spec.md` §2.6) reuse the same marker.
+`Unrecoverable: true` before it reaches a handler. `JoinTaskList` is marked
+this way; the next plan wires its HTTP entry point, `POST /api/lists/join`,
+which will call `CommandDispatcher.RunAsync` directly from server code,
+bypassing the client-facing check the same way any future server-only
+command's own endpoint does. The next plan's `MarkTaskFromSnapshot` and
+`MarkReferenceItemFromSnapshot` (`specs/sharing-spec.md` §2.6) reuse the
+same marker.
 
 `MoveTaskToList` and `MoveReferenceItemToList` reject a target list whose
 owner differs from the source list's — a task or item never crosses

@@ -204,9 +204,11 @@ it. What each module owns and where it grows next is `specs/modules-spec.md`.
 **AD-12 — Lists are shared by membership.** A `TaskList` carries its own
 sharing state — `InviteToken`, `OwnerName`, `Members[]` — rather than a
 second aggregate; `UserId` always stays the owner. `ListAccess` admits the
-owner or a member to content commands; list-level commands and
-`LinkTaskToGoal` stay owner-only. Every event's `UserId` is the aggregate's
-owner, `ActorId` is who actually acted. Sync widens to a membership set,
+owner or a member to content commands, `LinkTaskToGoal` included — but its
+aggregate rule itself still rejects a non-owner, since goals are the
+owner's; list-level commands (rename, delete, move, the sharing commands)
+stay owner-only through `TaskList.Require`. Every event's `UserId` is the
+aggregate's owner, `ActorId` is who actually acted. Sync widens to a membership set,
 with a `full=` backfill for a list a device does not yet hold — built in
 the next plan. See `adr/0053`.
 
@@ -430,8 +432,9 @@ owner or member to content commands; events split `UserId` the owner from
 `/api/commands`) is `Active` and built so far: the domain state, commands,
 access rule and owner/actor split are in. The membership-widened sync
 (`memberListIds`, `full=` backfill), "Shared with me", Today across member
-lists, Statistics' owner/actor records (`adr/0054`), and public snapshots
-(`PSPad.Module.Sharing`, `adr/0055`) are the plans still ahead.
+lists, Statistics' owner/actor records, and public snapshots
+(`PSPad.Module.Sharing`) are the plans still ahead, each with further ADRs
+of its own.
 
 ---
 
