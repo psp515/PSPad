@@ -31,20 +31,27 @@
     <MudSkeleton SkeletonType="SkeletonType.Text" Width="30%" Height="40px" Class="mb-4" />
     <CardSkeleton Count="3" />
 }
-else if (_area is not null)
+else if (_isShared || _area is not null)
 {
     <div class="d-md-none">
-        <AreaChips Areas="@_areas" Current="@AreaId" />
+        <AreaChips Areas="@_areas" Current="@AreaId" HasShared="@_hasShared" />
     </div>
 
-    <PageHeading Title="@_area.Name" />
+    <PageHeading Title="@(_isShared ? SharedWithMe.Name : _area!.Name)" />
 
     @if (_lists.Count == 0)
     {
         <MudGrid Spacing="4">
             <MudItem xs="12" sm="6" lg="4" xl="3">
-                <EmptyState Icon="@Icons.Material.Outlined.ListAlt" Message="No lists yet." CreateText="New list"
-                            OnCreate="@NewList" />
+                @if (_isShared)
+                {
+                    <EmptyState Icon="@Icons.Material.Outlined.ListAlt" Message="Nothing is shared with you right now." />
+                }
+                else
+                {
+                    <EmptyState Icon="@Icons.Material.Outlined.ListAlt" Message="No lists yet." CreateText="New list"
+                                OnCreate="@NewList" />
+                }
             </MudItem>
         </MudGrid>
     }
@@ -63,20 +70,23 @@ else if (_area is not null)
         </MasonryGrid>
     }
 
-    <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
-        <MudTooltip Text="New list">
-            <MudFabMenuItem OnClick="@NewList" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
-                            Size="Size.Small" UserAttributes="@NewListAttributes" />
-        </MudTooltip>
-        <MudTooltip Text="Edit area & order lists">
-            <MudFabMenuItem OnClick="@EditArea" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
-                            Size="Size.Small" UserAttributes="@EditAreaAttributes" />
-        </MudTooltip>
-        <MudTooltip Text="Delete area">
-            <MudFabMenuItem OnClick="@DeleteAreaAsync" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Primary"
-                            Size="Size.Small" UserAttributes="@DeleteAreaAttributes" />
-        </MudTooltip>
-    </MudFabMenu>
+    @if (!_isShared)
+    {
+        <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
+            <MudTooltip Text="New list">
+                <MudFabMenuItem OnClick="@NewList" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
+                                Size="Size.Small" UserAttributes="@NewListAttributes" />
+            </MudTooltip>
+            <MudTooltip Text="Edit area & order lists">
+                <MudFabMenuItem OnClick="@EditArea" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
+                                Size="Size.Small" UserAttributes="@EditAreaAttributes" />
+            </MudTooltip>
+            <MudTooltip Text="Delete area">
+                <MudFabMenuItem OnClick="@DeleteAreaAsync" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Primary"
+                                Size="Size.Small" UserAttributes="@DeleteAreaAttributes" />
+            </MudTooltip>
+        </MudFabMenu>
+    }
 }
 else
 {
@@ -91,6 +101,8 @@ else
 
     bool _loaded;
     Area? _area;
+    bool _isShared;
+    bool _hasShared;
     IReadOnlyList<Area> _areas = [];
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<TodoTask> _tasks = [];
@@ -113,8 +125,17 @@ else
 
     async Task ReloadAsync()
     {
-        var area = await AreaStore.LoadAsync(AreaId, CancellationToken.None);
-        _area = area is null || area.Deleted ? null : area;
+        _isShared = AreaId == SharedWithMe.AreaId;
+
+        if (_isShared)
+        {
+            _area = null;
+        }
+        else
+        {
+            var area = await AreaStore.LoadAsync(AreaId, CancellationToken.None);
+            _area = area is null || area.Deleted ? null : area;
+        }
 
         _areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
 
@@ -123,6 +144,7 @@ else
         var listViews = await ListViewStore.LoadAllAsync(State.UserId, CancellationToken.None);
         var placement = ListPlacement.For(State.UserId, _areas, lists, views, listViews);
         _lists = placement.InArea(AreaId);
+        _hasShared = placement.HasShared;
 
         _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _items = await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None);

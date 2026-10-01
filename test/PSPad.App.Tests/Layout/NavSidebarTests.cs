@@ -146,6 +146,27 @@ public class NavSidebarTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheSidebarShowsSharedWithMeOnlyWhenSomethingIsShared()
+    {
+        Arrange();
+
+        var without = Render<NavSidebar>(parameters => parameters
+            .Add(p => p.Areas, Areas("Dom"))
+            .Add(p => p.Email, "ada@example.com")
+            .Add(p => p.UserId, User)
+            .Add(p => p.HasShared, false));
+        Assert.DoesNotContain("Shared with me", without.Markup);
+
+        var with = Render<NavSidebar>(parameters => parameters
+            .Add(p => p.Areas, Areas("Dom"))
+            .Add(p => p.Email, "ada@example.com")
+            .Add(p => p.UserId, User)
+            .Add(p => p.HasShared, true));
+        Assert.Contains("Shared with me", with.Markup);
+        Assert.Contains($"/areas/{SharedWithMe.AreaId}\"", with.Markup);
+    }
+
+    [Fact]
     public void NoAreaRowCarriesAMenuAnymore()
     {
         Arrange();

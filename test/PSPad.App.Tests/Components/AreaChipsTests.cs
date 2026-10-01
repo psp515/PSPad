@@ -57,6 +57,26 @@ public class AreaChipsTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ASharedWithMeChipAppearsOnlyWhenSomethingIsShared()
+    {
+        AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
+        var home = NewArea("Home", 0);
+
+        var without = Render<AreaChips>(parameters => parameters
+            .Add(p => p.Areas, new[] { home })
+            .Add(p => p.Current, home.Id)
+            .Add(p => p.HasShared, false));
+        Assert.DoesNotContain("Shared with me", without.Markup);
+
+        var with = Render<AreaChips>(parameters => parameters
+            .Add(p => p.Areas, new[] { home })
+            .Add(p => p.Current, home.Id)
+            .Add(p => p.HasShared, true));
+        var chip = with.Find($"a[href='/areas/{PSPad.App.State.SharedWithMe.AreaId}']");
+        Assert.Contains("Shared with me", chip.TextContent);
+    }
+
+    [Fact]
     public void NewAreaOpensTheNewAreaPanel()
     {
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));

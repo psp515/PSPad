@@ -3,7 +3,9 @@ using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using PSPad.App.Components;
 using PSPad.App.Pages;
+using PSPad.App.State;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Lists;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Pages;
@@ -55,11 +57,35 @@ public class AreasIndexTests : Bunit.TestContext
         Assert.EndsWith("?area=new", navigation.Uri);
     }
 
+    [Fact]
+    public void AreasIndexFallsBackToSharedWithMe()
+    {
+        var owner = Guid.NewGuid();
+        var shared = NewMemberList(owner, User, "Errands");
+        AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12), shared);
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+
+        var page = Render<AreasIndex>();
+
+        page.WaitForAssertion(() => Assert.EndsWith($"/areas/{SharedWithMe.AreaId}", navigation.Uri));
+    }
+
     static Area NewArea(string name, int position)
     {
         var area = new Area();
         area.ApplyAll(Area.Decide(
             null, new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), name, position), DateTimeOffset.UnixEpoch));
         return area;
+    }
+
+    static TaskList NewMemberList(Guid owner, Guid member, string name)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), owner, Guid.NewGuid(), Guid.NewGuid(), name),
+            DateTimeOffset.UnixEpoch));
+        list.Apply(new TaskListShared(list.Id, owner, DateTimeOffset.UnixEpoch, "k3Jv9s2mQ0x7b1nR4tYw8eZa", "Owner"));
+        list.Apply(new TaskListJoined(list.Id, owner, DateTimeOffset.UnixEpoch, member, "Member"));
+        return list;
     }
 }
