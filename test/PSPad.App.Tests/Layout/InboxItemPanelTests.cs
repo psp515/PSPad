@@ -91,7 +91,7 @@ public class InboxItemPanelTests : Bunit.TestContext
         var panel = Render<InboxItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)inbox.Items[0].Id));
 
         Assert.Equal("Kupić mleko", panel.Find(".pspad-inbox-name-field input").GetAttribute("value"));
-        Assert.Contains("Dom › Zakupy", panel.Find(".pspad-task-list").TextContent);
+        Assert.Contains("Dom / Zakupy", panel.Find(".pspad-task-list").TextContent);
         panel.Find(".pspad-task-due");
         panel.Find(".pspad-task-priority");
         panel.Find(".pspad-task-goal");
@@ -244,7 +244,7 @@ public class InboxItemPanelTests : Bunit.TestContext
 
         Assert.Equal(repairs.Id, Services.GetRequiredService<AppState>().LastInboxListId);
         var second = Render<InboxItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)secondItemId));
-        Assert.Contains("Dom › Remont", second.Find(".pspad-task-list").TextContent);
+        Assert.Contains("Dom / Remont", second.Find(".pspad-task-list").TextContent);
     }
 
     [Fact]

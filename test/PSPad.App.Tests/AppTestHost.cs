@@ -12,6 +12,7 @@ using PSPad.App.Statistics;
 using PSPad.App.Theme;
 using PSPad.App.Updates;
 using PSPad.Module.Presentation.AreaViews;
+using PSPad.Module.Presentation.ListViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Inbox;
@@ -52,6 +53,7 @@ public static class AppTestHost
         context.Services.AddSingleton<IDocumentStore<Inbox>>(new ReplicaDocumentStore<Inbox>(replica));
         context.Services.AddSingleton<IDocumentStore<ReferenceItem>>(new ReplicaDocumentStore<ReferenceItem>(replica));
         context.Services.AddSingleton<IDocumentStore<AreaView>>(new ReplicaDocumentStore<AreaView>(replica));
+        context.Services.AddSingleton<IDocumentStore<ListView>>(new ReplicaDocumentStore<ListView>(replica));
         context.Services.AddPSPadCommands();
         context.Services.AddSingleton(new AppState { UserId = userId, Today = today });
         context.Services.AddSingleton(new PageHeader());

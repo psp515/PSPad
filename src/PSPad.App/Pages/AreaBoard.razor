@@ -5,6 +5,7 @@
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Presentation.AreaViews
+@using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Ordering
@@ -15,6 +16,7 @@
 @inject IDocumentStore<TodoTask> TaskStore
 @inject IDocumentStore<ReferenceItem> ItemStore
 @inject IDocumentStore<AreaView> ViewStore
+@inject IDocumentStore<ListView> ListViewStore
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -117,8 +119,10 @@ else
         _areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
 
         var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        var view = await ViewStore.LoadAsync(AreaView.IdFor(State.UserId, AreaId), CancellationToken.None);
-        _lists = ListOrder.InArea(AreaId, lists, view);
+        var views = await ViewStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var listViews = await ListViewStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var placement = ListPlacement.For(State.UserId, _areas, lists, views, listViews);
+        _lists = placement.InArea(AreaId);
 
         _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _items = await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None);

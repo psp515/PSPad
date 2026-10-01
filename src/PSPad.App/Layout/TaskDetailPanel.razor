@@ -3,6 +3,7 @@
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Presentation.AreaViews
+@using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Lists
@@ -12,6 +13,7 @@
 @inject IDocumentStore<Area> Areas
 @inject IDocumentStore<TaskList> Lists
 @inject IDocumentStore<AreaView> Views
+@inject IDocumentStore<ListView> ListViews
 @inject IDocumentStore<Goal> Goals
 @inject AppState State
 @inject CommandSender Sender
@@ -78,7 +80,7 @@
 
             @if (_task is not null)
             {
-                <ListRow Areas="@_areas" Lists="@_lists" Value="@_task.ListId" ValueChanged="@MoveToListAsync"
+                <ListRow Placement="@_placement" Lists="@_lists" Value="@_task.ListId" ValueChanged="@MoveToListAsync"
                          Disabled="@Disabled" />
             }
         </div>
@@ -119,7 +121,7 @@
     enum PanelMode { Closed, Add, Edit, View }
 
     TodoTask? _task;
-    IReadOnlyList<Area> _areas = [];
+    ListPlacement _placement = ListPlacement.For(Guid.Empty, [], [], [], []);
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<Goal> _goals = [];
     Guid? _draftFor;
@@ -168,7 +170,7 @@
 
     string CreatedText => _task?.CreatedAt is { } created ? $"Created {created:ddd, d MMM yyyy}" : "";
 
-    string? PathOf(Guid listId) => ListRow.PathOf(listId, _areas, _lists);
+    string? PathOf(Guid listId) => ListRow.PathOf(listId, _placement, _lists);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -192,10 +194,15 @@
         }
 
         var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
-        _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
         var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
         var views = await Views.LoadAllAsync(State.UserId, CancellationToken.None);
-        _lists = [.. ListOrder.Arrange(_areas, lists, views).Where(list => list.Kind == ListKind.Tasks)];
+        var listViews = await ListViews.LoadAllAsync(State.UserId, CancellationToken.None);
+        _placement = ListPlacement.For(State.UserId, areas, lists, views, listViews);
+
+        var current = _task is null ? null : _placement.All.FirstOrDefault(list => list.Id == _task.ListId);
+        _lists = [.. _placement.All.Where(list =>
+            list.Kind == ListKind.Tasks && (current is null || list.UserId == current.UserId))];
+
         var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
         _goals = [.. goals.Where(goal => !goal.Deleted)];
     }

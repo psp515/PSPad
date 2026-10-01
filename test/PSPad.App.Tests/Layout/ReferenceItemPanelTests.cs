@@ -286,7 +286,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         AppTestHost.Arrange(this, User, Today, area, referenceList, otherReferenceList, taskList, item);
 
         var panel = RenderWithOverlays(itemId: item.Id);
-        Assert.Contains("Dom › Przepisy", panel.Find(".pspad-task-list").TextContent);
+        Assert.Contains("Dom / Przepisy", panel.Find(".pspad-task-list").TextContent);
         OpenRow(panel, ".pspad-task-list");
 
         var options = panel.FindAll(".pspad-list-option").Select(option => option.TextContent.Trim()).ToArray();
@@ -312,7 +312,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
 
         var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Equal(manuals.Id, reloaded!.ListId);
-        panel.WaitForAssertion(() => Assert.Contains("Praca › Instrukcje", panel.Find(".pspad-task-list").TextContent));
+        panel.WaitForAssertion(() => Assert.Contains("Praca / Instrukcje", panel.Find(".pspad-task-list").TextContent));
     }
 
     [Fact]
@@ -376,7 +376,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         Assert.Equal(["Labels", "Description"],
             panel.FindAll(".pspad-panel-section").Select(section =>
                 section.QuerySelector(".pspad-panel-section-title")!.TextContent.Trim()));
-        Assert.Contains("Dom › Przepisy", panel.Find(".pspad-task-list").TextContent);
+        Assert.Contains("Dom / Przepisy", panel.Find(".pspad-task-list").TextContent);
         Assert.NotNull(panel.Find(".pspad-field-add-label"));
         Assert.NotNull(panel.Find(".pspad-markdown-input"));
         Assert.Empty(panel.FindAll(".pspad-item-footer"));
@@ -439,7 +439,7 @@ public class ReferenceItemPanelTests : Bunit.TestContext
         panel.Find(".pspad-item-name-field input").Input("Bigos");
         OpenRow(panel, ".pspad-task-list");
         panel.FindAll(".pspad-list-option").Single(option => option.TextContent.Contains("Notatki")).Click();
-        panel.WaitForAssertion(() => Assert.Contains("Dom › Notatki", panel.Find(".pspad-task-list").TextContent));
+        panel.WaitForAssertion(() => Assert.Contains("Dom / Notatki", panel.Find(".pspad-task-list").TextContent));
         panel.Find(".pspad-panel-save").Click();
 
         var created = Assert.Single(await replica.LoadAllAsync<ReferenceItem>(User));
