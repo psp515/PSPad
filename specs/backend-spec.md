@@ -91,7 +91,12 @@ One shape, both sides of the wire:
 ```csharp
 public interface IAggregate { Guid Id { get; } Guid UserId { get; } int Version { get; } }
 public interface ICommand { Guid CommandId { get; } Guid UserId { get; } }
-public abstract record DomainEvent(Guid AggregateId, Guid UserId, DateTimeOffset At);
+public interface IServerOnlyCommand : ICommand;
+public abstract record DomainEvent(Guid AggregateId, Guid UserId, DateTimeOffset At)
+{
+    public Guid? ActorId { get; init; }
+    public Guid Actor => ActorId ?? UserId;
+}
 public interface ICommandHandler<in TCommand> where TCommand : ICommand
 {
     Task<CommandResult> HandleAsync(TCommand command, CancellationToken ct);
@@ -102,6 +107,32 @@ public sealed record CommandResult(bool Accepted, string? Rejection = null)
     public static CommandResult Rejected(string reason) => new(false, reason);
 }
 ```
+
+**Owner and actor** (`adr/0053`). `UserId` on every event is the
+**aggregate's owner**; `ActorId` is who actually issued the command, set
+only when it differs. `Decide`/`When` never stamp it — `MongoUnitOfWork
+.CommitAsync` compares each staged event's `UserId` against the
+authenticated caller on the way into the transaction and sets `ActorId`
+when they differ, so the Tasks module stays ignorant of sharing entirely.
+A creation event (`TaskCreated`, `ReferenceItemCreated`) takes its owner
+from the target list, so a member's `CreateTask` produces a task owned by
+the list's owner with the member as `ActorId`.
+
+**Server-only commands.** `IServerOnlyCommand` is a marker with no members;
+`CommandDispatcher.DispatchAsync` refuses one with
+`Unrecoverable: true` before it reaches a handler — `/api/commands` is a
+client-facing surface only. A server-only command still runs through
+`CommandDispatcher.RunAsync` from an HTTP endpoint that owns the trust
+decision itself (`JoinTaskList` from `POST /api/lists/join`).
+
+**List access** (`adr/0053`). `ListAccess.To(list, actorId)` returns an
+`OwnerId`/`ActorId` pair for the owner or any member of `list`, and rejects
+everyone else; `TaskList.Require` (owner only) stays for list-level
+commands. Every content handler — tasks, steps, recurrence, descriptions,
+stars, priorities, due dates, completion, occurrences, reference items and
+their fields — loads the parent `TaskList` to resolve it
+(`ListAccessLoading.AccessAsync`), even one that previously loaded only its
+own aggregate.
 
 Aggregates keep rules pure and testable with no store: `Decide(command)`
 returns the events a command produces, or throws `DomainRejectedException`;
@@ -152,7 +183,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 |---|---|---|
 | `users` | one per person | `timeZone` (IANA), `provisionedAt` |
 | `areas` | user-defined areas | `name`, `position` |
-| `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation). Documents written before `adr/0051` still carry a `position` nobody reads |
+| `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation), `inviteToken` (`adr/0053`, null = not shared), `ownerName`, `_members[]` (`userId`, `displayName`, `joinedAt`; the leading underscore keeps the BSON field name stable, like `_steps`). Documents written before `adr/0051` still carry a `position` nobody reads |
 | `inboxes` | one per user | `items[]` |
 | `todotasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
@@ -298,6 +329,22 @@ not stated there:
 - `TodoTask.Description` (Markdown, `SetTaskDescription`) is rendered
   client-side only (`adr/0048`) — the domain stores and moves a plain string,
   never parses it.
+- Sharing (`adr/0053`): five list commands — `ShareTaskList` (set/rotate
+  the invite token, owner-only), `StopSharingTaskList` (clear it, owner-only,
+  members stay), `RemoveListMember` (owner-only), `LeaveTaskList`
+  (member-only, rejects the owner), `JoinTaskList` (server-only, idempotent
+  for the owner or an existing member). `ListAccess` admits the owner or a
+  member to every content command on tasks, steps, reference items and
+  their fields, plus `CreateTask`, `CreateReferenceItem`,
+  `OrganiseInboxItem`; list-level commands (`RenameTaskList`,
+  `DeleteTaskList`, `MoveTaskListToArea`, the five sharing commands) and
+  `LinkTaskToGoal` stay owner-only (goals are the owner's). Every event
+  carries the owner as `UserId`; `ActorId` records who actually acted.
+  `MoveTaskToList` and `MoveReferenceItemToList` reject a target list whose
+  owner differs from the source list's — a task or item never crosses
+  ownership by moving. Organising an Inbox item into a list the actor is a
+  member of is allowed: it becomes a task owned by the list's owner, while
+  the Inbox itself stays the actor's own aggregate.
 
 ---
 

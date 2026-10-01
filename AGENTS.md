@@ -201,6 +201,15 @@ rather than a string lookup at render time. It runs one way — an
 and guards fail the build if it references a module or `Tasks` references
 it. What each module owns and where it grows next is `specs/modules-spec.md`.
 
+**AD-12 — Lists are shared by membership.** A `TaskList` carries its own
+sharing state — `InviteToken`, `OwnerName`, `Members[]` — rather than a
+second aggregate; `UserId` always stays the owner. `ListAccess` admits the
+owner or a member to content commands; list-level commands and
+`LinkTaskToGoal` stay owner-only. Every event's `UserId` is the aggregate's
+owner, `ActorId` is who actually acted. Sync widens to a membership set,
+with a `full=` backfill for a list a device does not yet hold — built in
+the next plan. See `adr/0053`.
+
 ---
 
 ## 7. Testing
@@ -412,6 +421,17 @@ boundaries and names `ListView` as Presentation's next extension point.
 `adr/0052` (every thing is created and edited in its side panel — name
 first, other fields below, adding closes; popups only for delete
 confirmations and in-panel pickers) is `Active` and built here too.
+
+Sharing (#103, #104, `specs/sharing-spec.md`) is in progress on
+`feature/103`. `adr/0053` (a `TaskList` carries its own invite token,
+owner name and members rather than a second aggregate; `ListAccess` admits
+owner or member to content commands; events split `UserId` the owner from
+`ActorId` the actor; `IServerOnlyCommand` keeps a command off
+`/api/commands`) is `Active` and built so far: the domain state, commands,
+access rule and owner/actor split are in. The membership-widened sync
+(`memberListIds`, `full=` backfill), "Shared with me", Today across member
+lists, Statistics' owner/actor records (`adr/0054`), and public snapshots
+(`PSPad.Module.Sharing`, `adr/0055`) are the plans still ahead.
 
 ---
 
