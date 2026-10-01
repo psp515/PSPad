@@ -47,7 +47,12 @@ public sealed class TodoTask : Aggregate
     [JsonInclude]
     HashSet<DateOnly> _completedDays = [];
 
+    [JsonInclude]
+    List<SnapshotMark> _snapshotMarks = [];
+
     public IReadOnlyList<Step> Steps => _steps.OrderBy(step => step.Position).ToArray();
+
+    public IReadOnlyList<SnapshotMark> SnapshotMarks => _snapshotMarks;
 
     public Step? NextUncheckedStep => Steps.FirstOrDefault(step => !step.Checked);
 
@@ -235,6 +240,23 @@ public sealed class TodoTask : Aggregate
                         ticking.Id, grant.OwnerId, at, occurrence.Day, occurrence.Completed,
                         ticking.Name, ticking.ListId, ticking.GoalId)];
 
+            case MarkTaskFromSnapshot mark:
+                var marking = Require(task, grant);
+                if (mark.StepId is { } stepId)
+                {
+                    RequireStep(marking, stepId);
+                }
+
+                var present = marking._snapshotMarks.Any(existing =>
+                    existing.SnapshotId == mark.SnapshotId && existing.StepId == mark.StepId);
+                return present == mark.Marked
+                    ? []
+                    : [new TaskSnapshotMarkSet(marking.Id, grant.OwnerId, at, mark.SnapshotId, mark.StepId, mark.Marked)];
+
+            case ClearTaskSnapshotMarks:
+                var clearing = Require(task, grant);
+                return clearing._snapshotMarks.Count == 0 ? [] : [new TaskSnapshotMarksCleared(clearing.Id, grant.OwnerId, at)];
+
             default:
                 throw new DomainRejectedException($"A task cannot handle {command.GetType().Name}.");
         }
@@ -299,7 +321,20 @@ public sealed class TodoTask : Aggregate
                 break;
             case StepRemoved stepRemoved:
                 _steps.RemoveAll(step => step.Id == stepRemoved.StepId);
+                _snapshotMarks.RemoveAll(existing => existing.StepId == stepRemoved.StepId);
                 Densify();
+                break;
+            case TaskSnapshotMarkSet markSet:
+                _snapshotMarks.RemoveAll(existing =>
+                    existing.SnapshotId == markSet.SnapshotId && existing.StepId == markSet.StepId);
+                if (markSet.Marked)
+                {
+                    _snapshotMarks.Add(new SnapshotMark(markSet.SnapshotId, markSet.StepId, markSet.At));
+                }
+
+                break;
+            case TaskSnapshotMarksCleared:
+                _snapshotMarks.Clear();
                 break;
             case TaskRecurrenceSet recurrenceSet:
                 Recurrence = recurrenceSet.Rule;

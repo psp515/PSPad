@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Ordering;
+using PSPad.Module.Tasks.Tasks;
 
 namespace PSPad.Module.Tasks.References;
 
@@ -28,7 +29,12 @@ public sealed class ReferenceItem : Aggregate
     [JsonInclude]
     List<ReferenceField> _fields = [];
 
+    [JsonInclude]
+    List<SnapshotMark> _snapshotMarks = [];
+
     public IReadOnlyList<ReferenceField> Fields => _fields.OrderBy(entry => entry.Position).ToArray();
+
+    public IReadOnlyList<SnapshotMark> SnapshotMarks => _snapshotMarks;
 
     public static IReadOnlyList<DomainEvent> Decide(
         ReferenceItem? item, ICommand command, DateTimeOffset at, ListAccess? access = null)
@@ -109,6 +115,19 @@ public sealed class ReferenceItem : Aggregate
                 RequireField(removing, remove.FieldId);
                 return [new ReferenceFieldRemoved(removing.Id, grant.OwnerId, at, remove.FieldId)];
 
+            case MarkReferenceItemFromSnapshot mark:
+                var marking = Require(item, grant);
+                var present = marking._snapshotMarks.Any(existing => existing.SnapshotId == mark.SnapshotId);
+                return present == mark.Marked
+                    ? []
+                    : [new ReferenceItemSnapshotMarkSet(marking.Id, grant.OwnerId, at, mark.SnapshotId, mark.Marked)];
+
+            case ClearReferenceItemSnapshotMarks:
+                var clearing = Require(item, grant);
+                return clearing._snapshotMarks.Count == 0
+                    ? []
+                    : [new ReferenceItemSnapshotMarksCleared(clearing.Id, grant.OwnerId, at)];
+
             default:
                 throw new DomainRejectedException($"A reference item cannot handle {command.GetType().Name}.");
         }
@@ -157,6 +176,17 @@ public sealed class ReferenceItem : Aggregate
             case ReferenceFieldRemoved removed:
                 _fields.RemoveAll(field => field.Id == removed.FieldId);
                 Densify();
+                break;
+            case ReferenceItemSnapshotMarkSet markSet:
+                _snapshotMarks.RemoveAll(existing => existing.SnapshotId == markSet.SnapshotId);
+                if (markSet.Marked)
+                {
+                    _snapshotMarks.Add(new SnapshotMark(markSet.SnapshotId, null, markSet.At));
+                }
+
+                break;
+            case ReferenceItemSnapshotMarksCleared:
+                _snapshotMarks.Clear();
                 break;
         }
     }

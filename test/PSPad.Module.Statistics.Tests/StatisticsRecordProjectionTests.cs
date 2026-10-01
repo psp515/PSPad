@@ -150,6 +150,17 @@ public class StatisticsRecordProjectionTests
     }
 
     [Fact]
+    public async Task SnapshotMarksAreNotActivity()
+    {
+        var store = new InMemoryStatisticsStore();
+        var marked = new TaskSnapshotMarkSet(Guid.NewGuid(), User, At, Guid.NewGuid(), null, true);
+
+        await new StatisticsRecordProjection(store).HandleAsync(new DomainEventEnvelope(9, marked), CancellationToken.None);
+
+        Assert.Empty(store.Records);
+    }
+
+    [Fact]
     public async Task TheOwnersOwnActionWritesOneRecord()
     {
         var store = new InMemoryStatisticsStore();
