@@ -15,10 +15,15 @@ public sealed class MoveTaskToListHandler(
 
         try
         {
-            var events = TodoTask.Decide(task, command, clock.UtcNow);
+            var access = await lists.AccessAsync(task?.ListId, command.UserId, ct);
+            var events = TodoTask.Decide(task, command, clock.UtcNow, access);
             if (events.Count > 0)
             {
-                TaskList.RequireAcceptsTasks(await lists.LoadAsync(command.ListId, ct), command.UserId);
+                var target = TaskList.RequireAcceptsTasks(await lists.LoadAsync(command.ListId, ct), command.UserId);
+                if (target.OwnerId != access.OwnerId)
+                {
+                    throw new DomainRejectedException("A task can only move between lists of the same owner.");
+                }
             }
 
             task!.ApplyAll(events);
