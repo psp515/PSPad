@@ -675,7 +675,15 @@ exception: they sit in their own `AllowAnonymous` route group
 (`/api/public`), rate-limited by a fixed window per IP (60 requests/minute
 by default, overridable through `Sharing:PublicRequestsPerMinute` — a code
 default for tests, not a documented self-hoster setting) rather than by
-authentication, since there is no caller identity to limit by.
+authentication, since there is no caller identity to limit by. Behind a
+reverse proxy every visitor would share the proxy's address, so the API
+relies on ASP.NET Core's built-in `ASPNETCORE_FORWARDEDHEADERS_ENABLED`
+(compose maps it from `API_BEHIND_PROXY`, default `false`): the host's
+startup filter puts `UseForwardedHeaders` (`X-Forwarded-For`,
+`X-Forwarded-Proto`, any proxy trusted, last hop only) ahead of the whole
+pipeline, `UseRateLimiter` included, so `RemoteIpAddress` is the visitor's.
+Off by default because with port 5000 open directly a caller could forge the
+header.
 
 ---
 

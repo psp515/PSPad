@@ -127,6 +127,38 @@ public class PublicSnapshotTests(MongoFixture fixture)
         Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
     }
 
+    [Fact]
+    public async Task BehindAProxyEachForwardedVisitorHasTheirOwnLimit()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(
+            fixture, configuration: new Dictionary<string, string?>
+            {
+                ["Sharing:PublicRequestsPerMinute"] = "1",
+                ["ForwardedHeaders_Enabled"] = "true"
+            });
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var listId = await CreatePlainListAsync(owner, ownerId, ct);
+        var published = await PublishAsync(owner, listId, ct);
+
+        var first = await VisitFromAsync(factory, published.Token, "203.0.113.1", ct);
+        var second = await VisitFromAsync(factory, published.Token, "203.0.113.2", ct);
+        var firstAgain = await VisitFromAsync(factory, published.Token, "203.0.113.1", ct);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, firstAgain.StatusCode);
+    }
+
+    static Task<HttpResponseMessage> VisitFromAsync(
+        ApiFactory factory, string token, string address, CancellationToken ct)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/public/snapshots/{token}");
+        request.Headers.Add("X-Forwarded-For", address);
+        return factory.CreateClient().SendAsync(request, ct);
+    }
+
     static async Task<PublishedSnapshotView> PublishAsync(HttpClient owner, Guid listId, CancellationToken ct)
     {
         var response = await owner.PostAsJsonAsync(
