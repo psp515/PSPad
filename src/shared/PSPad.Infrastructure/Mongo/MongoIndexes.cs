@@ -64,7 +64,7 @@ public static class MongoIndexes
         await context.Collection<BsonDocument>("statistics_records").Indexes.CreateManyAsync(
         [
             new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending("userId").Descending("_id")),
+                Builders<BsonDocument>.IndexKeys.Ascending("userId").Descending("seq")),
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("kind").Ascending("at")),
             new CreateIndexModel<BsonDocument>(

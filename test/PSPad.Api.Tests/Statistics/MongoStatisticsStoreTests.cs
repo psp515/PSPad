@@ -15,7 +15,8 @@ public class MongoStatisticsStoreTests(MongoFixture fixture)
     static StatisticsRecord Record(long id, Guid userId, RecordKind kind, Guid taskId, DateTimeOffset at) =>
         new()
         {
-            Id = id,
+            Id = StatisticsRecord.IdFor(id, userId),
+            Seq = id,
             UserId = userId,
             At = at,
             Kind = kind,
@@ -91,10 +92,10 @@ public class MongoStatisticsStoreTests(MongoFixture fixture)
         await store.SaveAsync(Record(second, userId, RecordKind.Created, Guid.NewGuid(), Noon), ct);
 
         var newest = await store.PageAsync(userId, null, 1, ct);
-        var older = await store.PageAsync(userId, newest[0].Id, 1, ct);
+        var older = await store.PageAsync(userId, newest[0].Seq, 1, ct);
 
-        Assert.Equal(second, newest[0].Id);
-        Assert.Equal(first, Assert.Single(older).Id);
+        Assert.Equal(second, newest[0].Seq);
+        Assert.Equal(first, Assert.Single(older).Seq);
     }
 
     [Fact]

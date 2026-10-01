@@ -25,7 +25,8 @@ public class StatisticsChartsTests
         DateTimeOffset? at = null) =>
         new()
         {
-            Id = id,
+            Id = StatisticsRecord.IdFor(id, User),
+            Seq = id,
             UserId = User,
             At = at ?? Midday(day),
             Kind = kind,

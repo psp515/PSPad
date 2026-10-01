@@ -24,8 +24,8 @@ public class StatisticsReaderTests
             Pages.Add((before, limit));
 
             return Task.FromResult<IReadOnlyList<StatisticsRecord>>(records
-                .Where(record => record.UserId == userId && (before is null || record.Id < before))
-                .OrderByDescending(record => record.Id)
+                .Where(record => record.UserId == userId && (before is null || record.Seq < before))
+                .OrderByDescending(record => record.Seq)
                 .Take(limit)
                 .ToArray());
         }
@@ -71,7 +71,8 @@ public class StatisticsReaderTests
         Guid? listId = null, Guid? goalId = null, int? completionNumber = null) =>
         new()
         {
-            Id = id,
+            Id = StatisticsRecord.IdFor(id, User),
+            Seq = id,
             UserId = User,
             At = At,
             Kind = kind,

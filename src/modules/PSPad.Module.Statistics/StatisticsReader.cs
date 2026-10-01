@@ -44,7 +44,7 @@ public sealed class StatisticsReader(
         var snapshot = current.GetValueOrDefault(record.TaskId, Unknown);
 
         return new StatisticsRecordView(
-            record.Id,
+            record.Seq,
             record.At,
             record.Kind.ToString(),
             record.TaskId,

@@ -50,7 +50,7 @@ public static class StatisticsCharts
             .Where(record => IsLifecycle(record.Kind))
             .Select(record => (Record: record, Day: DayOf(record.At, zone)))
             .OrderBy(entry => entry.Day)
-            .ThenBy(entry => entry.Record.Id)
+            .ThenBy(entry => entry.Record.Seq)
             .ToList();
 
         var open = new HashSet<Guid>(openAtStart);
@@ -175,7 +175,7 @@ public static class StatisticsCharts
         records
             .Where(record => record.OccurrenceDay is not null && IsOccurrence(record.Kind))
             .GroupBy(record => (record.TaskId, record.OccurrenceDay))
-            .Select(group => group.MaxBy(record => record.Id)!)
+            .Select(group => group.MaxBy(record => record.Seq)!)
             .Where(record => record.Kind == RecordKind.OccurrenceTicked);
 
     static bool IsOccurrence(RecordKind kind) =>

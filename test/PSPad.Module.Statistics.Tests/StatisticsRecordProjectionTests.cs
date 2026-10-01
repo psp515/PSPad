@@ -24,7 +24,7 @@ public class StatisticsRecordProjectionTests
         public Task<int> CountCompletionsBeforeAsync(Guid userId, Guid taskId, long seq, CancellationToken ct) =>
             Task.FromResult(Saved.Count(record =>
                 record.UserId == userId && record.TaskId == taskId &&
-                record.Kind == RecordKind.Completed && record.Id < seq));
+                record.Kind == RecordKind.Completed && record.Seq < seq));
 
         public Task<IReadOnlyList<StatisticsRecord>> PageAsync(Guid userId, long? before, int limit, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<StatisticsRecord>>(Saved);
@@ -34,6 +34,23 @@ public class StatisticsRecordProjectionTests
 
         public Task<IReadOnlySet<Guid>> OpenTaskIdsBeforeAsync(Guid userId, DateTimeOffset from, CancellationToken ct) =>
             throw new NotSupportedException();
+    }
+
+    [Fact]
+    public async Task ARecordIsKeyedBySeqAndUser()
+    {
+        var store = new FakeStore();
+        var taskId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        var created = new TaskCreated(taskId, User, At, listId, "Dune");
+
+        await new StatisticsRecordProjection(store).HandleAsync(
+            new DomainEventEnvelope(42, created), CancellationToken.None);
+
+        var record = Assert.Single(store.Saved);
+        Assert.Equal(StatisticsRecord.IdFor(42, User), record.Id);
+        Assert.Equal(42, record.Seq);
+        Assert.Equal(RecordRole.Owner, record.Role);
     }
 
     [Fact]
@@ -47,7 +64,9 @@ public class StatisticsRecordProjectionTests
         await new StatisticsRecordProjection(store).HandleAsync(new DomainEventEnvelope(9, completed), CancellationToken.None);
 
         var record = Assert.Single(store.Saved);
-        Assert.Equal(9, record.Id);
+        Assert.Equal(StatisticsRecord.IdFor(9, User), record.Id);
+        Assert.Equal(9, record.Seq);
+        Assert.Equal(RecordRole.Owner, record.Role);
         Assert.Equal(RecordKind.Completed, record.Kind);
         Assert.Equal("Fix the sink", record.TaskName);
         Assert.Equal(listId, record.ListId);
@@ -66,7 +85,7 @@ public class StatisticsRecordProjectionTests
         await projection.HandleAsync(new DomainEventEnvelope(9, first), CancellationToken.None);
         await projection.HandleAsync(new DomainEventEnvelope(14, second), CancellationToken.None);
 
-        Assert.Equal(2, store.Saved.Single(record => record.Id == 14).CompletionNumber);
+        Assert.Equal(2, store.Saved.Single(record => record.Seq == 14).CompletionNumber);
     }
 
     [Fact]

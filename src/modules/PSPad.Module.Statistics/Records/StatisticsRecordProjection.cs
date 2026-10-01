@@ -58,7 +58,9 @@ public sealed class StatisticsRecordProjection(IStatisticsStore store) : IDomain
     static StatisticsRecord Base(DomainEventEnvelope envelope, RecordKind kind, string name) =>
         new()
         {
-            Id = envelope.Seq,
+            Id = StatisticsRecord.IdFor(envelope.Seq, envelope.Event.UserId),
+            Seq = envelope.Seq,
+            Role = RecordRole.Owner,
             UserId = envelope.Event.UserId,
             At = envelope.Event.At,
             Kind = kind,

@@ -24,7 +24,7 @@ public sealed class MongoStatisticsStore(MongoContext context) : IStatisticsStor
             Builders<StatisticsRecord>.Filter.Eq(record => record.UserId, userId) &
             Builders<StatisticsRecord>.Filter.Eq(record => record.TaskId, taskId) &
             Builders<StatisticsRecord>.Filter.Eq(record => record.Kind, RecordKind.Completed) &
-            Builders<StatisticsRecord>.Filter.Lt(record => record.Id, seq),
+            Builders<StatisticsRecord>.Filter.Lt(record => record.Seq, seq),
             cancellationToken: ct);
 
     public async Task<IReadOnlyList<StatisticsRecord>> PageAsync(
@@ -34,12 +34,12 @@ public sealed class MongoStatisticsStore(MongoContext context) : IStatisticsStor
 
         if (before is not null)
         {
-            filter &= Builders<StatisticsRecord>.Filter.Lt(record => record.Id, before.Value);
+            filter &= Builders<StatisticsRecord>.Filter.Lt(record => record.Seq, before.Value);
         }
 
         return await Records
             .Find(filter)
-            .SortByDescending(record => record.Id)
+            .SortByDescending(record => record.Seq)
             .Limit(limit)
             .ToListAsync(ct);
     }
@@ -50,7 +50,7 @@ public sealed class MongoStatisticsStore(MongoContext context) : IStatisticsStor
             .Find(
                 Builders<StatisticsRecord>.Filter.Eq(record => record.UserId, userId) &
                 Builders<StatisticsRecord>.Filter.Gte(record => record.At, from))
-            .SortBy(record => record.Id)
+            .SortBy(record => record.Seq)
             .ToListAsync(ct);
 
     public async Task<IReadOnlySet<Guid>> OpenTaskIdsBeforeAsync(
@@ -61,7 +61,7 @@ public sealed class MongoStatisticsStore(MongoContext context) : IStatisticsStor
                 Builders<StatisticsRecord>.Filter.Eq(record => record.UserId, userId) &
                 Builders<StatisticsRecord>.Filter.Lt(record => record.At, from) &
                 Builders<StatisticsRecord>.Filter.In(record => record.Kind, Lifecycle))
-            .SortBy(record => record.Id)
+            .SortBy(record => record.Seq)
             .Project(record => new { record.TaskId, record.Kind })
             .ToListAsync(ct);
 
