@@ -12,10 +12,13 @@ end in the same drawer:
    offline, and they edit its content as freely as the owner. The owner
    rotates the link, stops it, or removes a member at any time; a member can
    leave.
-2. **Public snapshots (#104).** The owner publishes a read-only, frozen copy
-   of a list under a link that anyone can open without an account, until an
-   expiry the owner picks. A signed-in visitor finds every snapshot they
-   opened under **List snapshots** in the drawer.
+2. **Public snapshots (#104).** The owner publishes a frozen copy of a list
+   under a link that anyone can open without an account, until an expiry the
+   owner picks. Visitors cannot change the content, but they can tick a task,
+   step or reference item as done; the tick shows to every visitor and reaches
+   the owner as a chip on the real task — never as a completion. A signed-in
+   visitor finds every snapshot they opened under **List snapshots** in the
+   drawer.
 
 ## 1. Scope
 
@@ -31,13 +34,20 @@ In:
 - Statistics: owner and actor each get a record.
 - Public snapshots: frozen at creation, preset or custom expiry, several per
   list, revocable early.
+- Snapshot marks: anonymous visitors tick or untick tasks, steps and
+  reference items; the owner's task or item gets a "marked on a snapshot"
+  chip through ordinary sync.
 - List snapshots drawer tab for signed-in visitors.
 
 Out:
 
 - Sharing an area, a goal, or the Inbox.
 - Approving joiners; per-member permissions; invites to a named account.
-- Live public pages; editing a snapshot.
+- Live public pages; editing a snapshot's content.
+- Live push of changes (snapshot marks, member edits) to open clients — its
+  own spec, `specs/live-updates-design.md`. Until then changes arrive on the
+  next sync (poll, app start, reconnect, command).
+- Who marked: marks are anonymous.
 - Per-person completion of a shared recurring task (one `completedDays` for
   everyone).
 - Notifications when someone joins or edits.
@@ -103,7 +113,30 @@ owner differs from the source list's. `OrganiseInboxItem` into a list the
 actor is a member of is allowed — the Inbox item becomes a task owned by the
 list's owner; the Inbox stays the actor's.
 
-### 2.6 Cascades
+### 2.6 Snapshot marks
+
+`TodoTask` gains `SnapshotMarks[]` — `SnapshotMark(SnapshotId, StepId?,
+MarkedAt)`, `StepId` null for the task itself. `ReferenceItem` gains
+`SnapshotMarks[]` — `SnapshotMark(SnapshotId, null, MarkedAt)`. A mark is a
+note for the owner, not a state change: it never completes, checks or ticks
+an occurrence, never enters the Today rule, and Statistics ignores its events.
+
+| Command | Who | Offline | Effect / rejections |
+|---|---|---|---|
+| `MarkTaskFromSnapshot(taskId, stepId?, snapshotId, marked)` | Sharing, as owner | **no** | Server-only; `/api/commands` rejects it. Adds or removes one mark. Rejects a deleted task or unknown step; no event when unchanged |
+| `MarkReferenceItemFromSnapshot(itemId, snapshotId, marked)` | Sharing, as owner | **no** | Same, for reference items |
+| `ClearSnapshotMarks(taskOrItemId)` | owner or member | yes | Dismisses every chip on the task (steps included) or item |
+
+Events: `TaskSnapshotMarked`, `TaskSnapshotUnmarked`,
+`ReferenceItemSnapshotMarked`, `ReferenceItemSnapshotUnmarked`,
+`SnapshotMarksCleared`. `ActorId` = `UserId` (the owner); there is no
+account behind an anonymous visitor.
+
+Sharing drives Tasks only through these commands, the way integrations do
+(`adr/0045`) — Tasks never learns Sharing exists. Clearing a chip touches only
+the task; the snapshot keeps its tick for visitors.
+
+### 2.7 Cascades
 
 Unchanged (`adr/0042`). The owner deleting a list or its area deletes it for
 everyone. A member deleting one of *their* areas never touches a shared list
@@ -252,9 +285,12 @@ online-only HTTP, like `PUT /api/me/timezone`.
 
 `_id` (GUID), `token` (unique index, ≥128-bit URL-safe, distinct from the
 id), `userId` (owner), `listId`, `kind`, `name`, `createdAt`, `expiresAt`,
-`tasks[]` (`name`, `done`, `dueOn`, `priority`, `starred`, `description`,
-`steps[]` (`name`, `done`)) or `items[]` (`name`, `description`, `starred`,
-`fields[]` (`label`, `value`, `display`)), in display order.
+`tasks[]` (`id`, `name`, `done`, `dueOn`, `priority`, `starred`,
+`description`, `marked`, `markedAt`, `steps[]` (`id`, `name`, `done`,
+`marked`, `markedAt`)) or `items[]` (`id`, `name`, `description`, `starred`,
+`marked`, `markedAt`, `fields[]` (`label`, `value`, `display`)), in display
+order. `id` is the source task, step or item id, so a mark can find it.
+Content is frozen; only `marked`/`markedAt` change after creation.
 
 Excluded: goals, recurrence rules, area, members, anything outside the list.
 A repeating task shows as open with its name and description.
@@ -269,24 +305,43 @@ year ahead; the server rejects anything outside (now, now + 365 days].
 Snapshots are taken from **server** state, so the client flushes its outbox
 first and the action is disabled offline.
 
-### 6.4 `snapshot_visits`
+### 6.4 Marks
+
+`POST /api/public/snapshots/{token}/marks` with `{entryId, stepId?, marked}`,
+anonymous, rate-limited like the read. Any visitor may tick or untick any
+entry; the token is the guard and the snapshot expires.
+
+1. Sharing sets `marked`/`markedAt` on the snapshot entry and saves. Unknown
+   entry or expired snapshot → 404; unchanged → 204, nothing further.
+2. It then runs `MarkTaskFromSnapshot` or `MarkReferenceItemFromSnapshot`
+   through the server pipeline with the owner as `UserId` and a fresh
+   `CommandId`. A rejection (the task was deleted since) is logged and
+   ignored — the snapshot's tick stands.
+
+The owner's devices see the chip on their next sync; no push (live updates
+are their own spec).
+
+### 6.5 `snapshot_visits`
 
 `_id` = `"{userId}:{snapshotId}"`, `userId`, `snapshotId`, `token`, `name`,
 `expiresAt`, `visitedAt`. TTL on `expiresAt`. Written when a signed-in user
 opens a snapshot (including their own).
 
-### 6.5 Public page
+### 6.6 Public page
 
 Client route `/s/{token}`, anonymous, outside `AppShell` like `/welcome`:
 the list name, "Snapshot from {date} · expires {date}", tasks (done ones
 struck through, steps beneath) or reference items (fields as in
-`ReferenceRow`), Markdown via `MarkdownField` `ReadOnly`. Expired or unknown
+`ReferenceRow`), Markdown via `MarkdownField` `ReadOnly`. Every task, step and
+item has a checkbox for its mark — distinct from "done" (which is frozen
+owner state): a marked entry shows a "Marked" chip. Toggling is optimistic
+and reverts with a snackbar on failure; offline the checkboxes are disabled. Expired or unknown
 token: one "This snapshot has expired or never existed" screen — the two are
 deliberately indistinguishable. If a local session exists, the page also
 records the visit and caches the snapshot in IndexedDB (`snapshots` store,
 not a sync collection) for offline reading.
 
-### 6.6 List snapshots tab
+### 6.7 List snapshots tab
 
 A sidebar row (desktop) and an `AccountDrawer` row (phone), after Goals /
 before Settings respectively: **List snapshots**, route `/snapshots`. Lists
@@ -317,6 +372,12 @@ Member:
 - Task panel hides the goal field. Move-to-list pickers offer only lists with
   the same owner.
 
+Both roles:
+
+- A task, step or reference item with snapshot marks shows a "Marked on a
+  snapshot" chip in its row and panel; the panel offers **Dismiss**
+  (`ClearSnapshotMarks`). Completing the task is a separate, deliberate tap.
+
 ## 8. HTTP surface
 
 | Method | Path | Auth | Purpose |
@@ -327,10 +388,11 @@ Member:
 | `GET` | `/api/lists/{id}/snapshots` | owner | Active snapshots of the list |
 | `DELETE` | `/api/snapshots/{id}` | owner | Revoke |
 | `GET` | `/api/public/snapshots/{token}` | **anonymous** | The snapshot, or 404 when unknown or expired |
+| `POST` | `/api/public/snapshots/{token}/marks` | **anonymous** | `{entryId, stepId?, marked}` — tick or untick (§6.4) |
 | `POST` | `/api/me/snapshot-visits` | user | `{token}` — record a visit |
 | `GET` | `/api/me/snapshot-visits` | user | Visits, newest first, unexpired |
 
-The anonymous endpoint gets a fixed-window rate limit per IP; token entropy is
+The anonymous endpoints get a fixed-window rate limit per IP; token entropy is
 the real guard.
 
 **Account deletion** (`adr/0034`) extends its sweep: `list_snapshots`,
@@ -351,7 +413,9 @@ No new service, variable, port or secret; install docs unchanged.
 - **ADR-0054** — Statistics records per owner and actor, `"{seq}:{userId}"`
   ids, versioned rebuild. Amends `adr/0037`.
 - **ADR-0055** — Public snapshots: frozen copies in `PSPad.Module.Sharing`,
-  online-only HTTP, TTL expiry, the second module edge.
+  online-only HTTP, TTL expiry, the second module edge; anonymous marks reach
+  Tasks as server-only commands (rejected: Tasks subscribing to a Sharing
+  event, which would reverse the module edge).
 - `AGENTS.md`: §3 scope gains sharing and snapshots; §5 new AD-12 (sharing),
   AD-1 and §6 gain `PSPad.Module.Sharing`, AD-11 mentions `ListView`; §6
   documents the second module edge.
@@ -376,11 +440,15 @@ Unit — `PSPad.Module.Tasks.Tests`:
   `CreateReferenceItem` produce owner-owned aggregates with `ActorId` the
   member.
 - Cross-owner moves rejected.
+- Snapshot marks: mark and unmark a task, a step, an item; unchanged emits
+  nothing; deleted task and unknown step rejected; marks never complete,
+  check or affect `TodayRule.Plan`; `ClearSnapshotMarks` by owner and member.
 
 Unit — Presentation: `ListView` placement, unchanged emits nothing, another
 user's view rejected. Statistics: one event → two records with roles; actor
 record without goal; Outstanding ignores `Actor`. Sharing:
-`SnapshotBuilder` content, ordering, exclusions.
+`SnapshotBuilder` content, ordering, exclusions, source ids; Statistics
+ignores mark events.
 
 Integration — `PSPad.Api.Tests`:
 
@@ -392,6 +460,9 @@ Integration — `PSPad.Api.Tests`:
   stranger rejected.
 - `GET /api/today` includes shared tasks in the member's zone.
 - Statistics rebuild on version bump; two records per member event.
+- Snapshot marks: anonymous tick lands on the snapshot and as a chip in the
+  owner's next sync; untick removes both; deleted task keeps the snapshot
+  tick; `/api/commands` rejects `MarkTaskFromSnapshot`; expired → 404.
 - Snapshots: create, anonymous read, expired → 404, revoke, rate limit,
   visits, account deletion sweeps all sharing collections and pulls
   membership.
@@ -402,5 +473,6 @@ bUnit — `PSPad.App.Tests`:
 - "Shared with me" appears only with unplaced member lists; filing moves it.
 - Sharing section per role; goal field hidden for members.
 - Purge reconciliation on the replica.
-- `/s/{token}` renders tasks and items, expired screen; `/snapshots` online
+- `/s/{token}` renders tasks and items, mark toggles and revert on failure,
+  expired screen; "Marked on a snapshot" chip and Dismiss; `/snapshots` online
   and cached.
