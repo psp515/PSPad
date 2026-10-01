@@ -805,7 +805,7 @@ the task's current name, or renders `(deleted task)` if the task is gone.
 day and un-ticking it produce two records, `OccurrenceTicked` and
 `OccurrenceUnticked` — never an update to the first. A chart that needs the
 current tick state resolves each `(TaskId, OccurrenceDay)` pair to its
-highest-`Id` record. `statistics_labels` is a separate projection
+highest-`Seq` record. `statistics_labels` is a separate projection
 (`AreaCreated`/`Renamed`/`Deleted`, `TaskListCreated`/`Renamed`/`Deleted`,
 `GoalCreated`/`Renamed`/`Deleted`) holding the current name of every area,
 list and goal without Statistics ever reading `Tasks`' own collections. Two

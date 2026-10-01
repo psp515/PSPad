@@ -119,4 +119,9 @@ in this system until #105 changes that for this one path. Account deletion's
 generic `userId` sweep already covers `list_snapshots` and `snapshot_visits`
 with no code change, because both carry `userId` like every other
 collection — only `tasklists.Members`, a nested array, needed the explicit
-`$pull` `adr/0053` added.
+`$pull` `adr/0053` added. A snapshot outlives its list: deleting the list
+leaves every published snapshot of it serving its frozen content until it
+expires, or until the owner revokes it (`DELETE /api/snapshots/{id}`) — the
+list panel that lists them is gone with the list, so in practice it runs to
+its expiry. Accepted: the content was already published to whoever holds
+the link, and expiry is bounded by the owner's own choice at publish time.

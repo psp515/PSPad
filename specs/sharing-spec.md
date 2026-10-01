@@ -178,7 +178,7 @@ this user would otherwise see every list as foreign and purge it:
   wipe that leaves no tombstones).
 - A list in `memberListIds` missing from the replica (another device of the
   same user joined) — the same pull asks again with `full=<listIds>` at the
-  marker it just saved; the server returns those lists and all their live
+  marker this pull just received (before it is written); the server returns those lists and all their live
   children regardless of `since`. A failed full pull
   (`HttpRequestException`) is swallowed rather than written to the marker —
   the list stays missing and the next sync's reconciliation retries it,
@@ -291,7 +291,7 @@ New, server-side module `PSPad.Module.Sharing`, referencing `Abstractions`
 and `Tasks` — the second module-to-module edge, same direction and reason as
 Statistics' (it reads Tasks' aggregate shapes; a rename must break the
 build). Guards: `Tasks` never references `Sharing`; `Sharing` never
-references `Statistics` or `Presentation`.
+references `Statistics`, `Presentation`, `Identity` or `Contracts`.
 
 Owns `ListSnapshot`, `SnapshotBuilder.Build(list, tasks, items, now,
 expiresAt)` (pure) and `SnapshotVisit`. Not commands, not in the event log, not
@@ -321,6 +321,8 @@ Owner only. Expiry presets 1 day, 7 days, 30 days, or a date picked up to one
 year ahead; the server rejects anything outside (now, now + 365 days].
 Snapshots are taken from **server** state, so the client flushes its outbox
 first and the action is disabled offline.
+Deleting the list does not revoke its snapshots: each keeps serving its
+frozen content until it expires or is revoked (`adr/0055`).
 
 ### 6.4 Marks
 
@@ -360,8 +362,8 @@ not a sync collection) for offline reading.
 
 ### 6.7 List snapshots tab
 
-A sidebar row (desktop) and an `AccountDrawer` row (phone), after Goals /
-before Settings respectively: **List snapshots**, route `/snapshots`. Lists
+A sidebar row (desktop, after Statistics) and an `AccountDrawer` row (phone,
+before Settings): **List snapshots**, route `/snapshots`. Lists
 visits newest first with name and expiry; opens `/s/{token}`. Online it
 fetches the list; offline it shows the cached ones. Expired entries drop out
 on both sides.
@@ -373,9 +375,10 @@ All in the list's side panel (`ListDetailPanel`, `adr/0052`), new
 
 Owner:
 
-- Invite link: off by default. Turning it on runs `ShareTaskList`; shows the
-  URL `{origin}/join/{token}` with Copy, **New link** (rotate, confirm) and
-  **Stop link**.
+- Invite link: a switch, off by default. Turning it on runs `ShareTaskList`
+  and shows the URL `{origin}/join/{token}` with Copy and **New link**
+  (rotate, confirm); turning it off runs `StopSharingTaskList` — the switch
+  is the "stop link" control, there is no separate button.
 - Members: name and joined date, Remove (confirm popup).
 - Public snapshots: **Publish snapshot** with an expiry picker (chips 1 d /
   7 d / 30 d / Date); active snapshots with created/expiry, Copy and Revoke.
@@ -419,7 +422,13 @@ from every other owner's `tasklists.members`, each touched list stamped with
 a fresh `seq` from `counters` so owners' replicas see it. Owners' lists vanish
 for members through §3.2.
 
-No new service, variable, port or secret; install docs unchanged.
+No new service, port or secret. `Sharing:PublicRequestsPerMinute` is a
+configuration key with a code default (60), there for tests, not a
+documented self-hoster setting. One self-hoster variable did come with the
+final review: `API_BEHIND_PROXY` (maps to
+`ASPNETCORE_FORWARDEDHEADERS_ENABLED`) so the public rate limit sees each
+visitor's address behind a reverse proxy; `.env.example` and the install
+docs cover it.
 
 ## 9. Docs and records
 

@@ -16,5 +16,5 @@ public class ArchitectureTests
     public void SharingKnowsOnlyTasks() =>
         AssemblyReferenceGuard.AssertReferencesNone(
             typeof(SharingModuleMarker).Assembly,
-            "PSPad.Module.Statistics", "PSPad.Module.Presentation", "PSPad.Module.Identity");
+            "PSPad.Module.Statistics", "PSPad.Module.Presentation", "PSPad.Module.Identity", "PSPad.Contracts");
 }
