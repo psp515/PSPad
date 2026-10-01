@@ -152,13 +152,18 @@ they filed there — filing is a `ListView`, not `TaskList.AreaId` (§4).
 
 - `tasklists`: `userId == caller` **or** `_members.userId == caller` (the private `_members` field keeps its name in BSON, like `_steps`).
 - `todotasks`, `referenceitems`: `userId == caller` **or**
-  `listId ∈ memberLists(caller)`.
+  `listId ∈ memberLists(caller)` **or** `previousListId ∈ memberLists(caller)`.
+  `PreviousListId` is the list a task or item last left (set by
+  `TaskMovedToList` / `ReferenceItemMovedToList`), so a row the owner moves
+  out of a shared list reaches members once more, naming a list they do not
+  hold; the client then drops it (§3.2).
 
 `events` in the response stay `userId == caller`; the client does not read
 them.
 
 New indexes: `tasklists {_members.userId: 1, seq: 1}`,
-`todotasks {listId: 1, seq: 1}`, `referenceitems {listId: 1, seq: 1}`.
+`todotasks`/`referenceitems` `{listId: 1, seq: 1}` and
+`{previousListId: 1, seq: 1}`.
 
 ### 3.2 The membership set
 
@@ -178,6 +183,9 @@ this user would otherwise see every list as foreign and purge it:
   (`HttpRequestException`) is swallowed rather than written to the marker —
   the list stays missing and the next sync's reconciliation retries it,
   instead of a flaky connection wedging every later delta pull behind it.
+- A task or reference item not owned by the caller whose `ListId` names a
+  list the replica does not hold — drop it. That is a row the owner moved
+  out of a shared list into one the caller cannot see.
 
 ### 3.3 Join
 

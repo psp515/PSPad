@@ -12,6 +12,9 @@ public sealed class TodoTask : Aggregate
     public Guid ListId { get; private set; }
 
     [JsonInclude]
+    public Guid? PreviousListId { get; private set; }
+
+    [JsonInclude]
     public string Name { get; private set; } = "";
 
     [JsonInclude]
@@ -289,6 +292,7 @@ public sealed class TodoTask : Aggregate
                 GoalId = linked.GoalId;
                 break;
             case TaskMovedToList moved:
+                PreviousListId = ListId;
                 ListId = moved.ListId;
                 break;
             case TaskCompleted completed:

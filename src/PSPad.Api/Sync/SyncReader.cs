@@ -66,13 +66,17 @@ public sealed class SyncReader(MongoContext context)
             Owned<TaskList>(userId) | Builders<TaskList>.Filter.Eq("_members.userId", userId),
             Builders<TaskList>.Filter.In(list => list.Id, wholeLists), ct);
         var todoTasks = await ReadAsync(session, since,
-            Owned<TodoTask>(userId) | Builders<TodoTask>.Filter.In(task => task.ListId, memberListIds),
+            Owned<TodoTask>(userId) |
+            Builders<TodoTask>.Filter.In(task => task.ListId, memberListIds) |
+            Builders<TodoTask>.Filter.In(task => task.PreviousListId, memberListIds.Select(id => (Guid?)id)),
             Builders<TodoTask>.Filter.In(task => task.ListId, wholeLists), ct);
         var goals = await ReadAsync<Goal>(session, since, Owned<Goal>(userId), None<Goal>(), ct);
         var inboxes = await ReadAsync<Inbox>(session, since, Owned<Inbox>(userId), None<Inbox>(), ct);
         var users = await ReadAsync<User>(session, since, Owned<User>(userId), None<User>(), ct);
         var referenceItems = await ReadAsync(session, since,
-            Owned<ReferenceItem>(userId) | Builders<ReferenceItem>.Filter.In(item => item.ListId, memberListIds),
+            Owned<ReferenceItem>(userId) |
+            Builders<ReferenceItem>.Filter.In(item => item.ListId, memberListIds) |
+            Builders<ReferenceItem>.Filter.In(item => item.PreviousListId, memberListIds.Select(id => (Guid?)id)),
             Builders<ReferenceItem>.Filter.In(item => item.ListId, wholeLists), ct);
         var areaViews = await ReadAsync<AreaView>(session, since, Owned<AreaView>(userId), None<AreaView>(), ct);
         var listViews = await ReadAsync<ListView>(session, since, Owned<ListView>(userId), None<ListView>(), ct);

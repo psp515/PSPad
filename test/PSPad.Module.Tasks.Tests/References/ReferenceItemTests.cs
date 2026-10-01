@@ -114,6 +114,16 @@ public class ReferenceItemTests
     }
 
     [Fact]
+    public void MovingRemembersTheListItLeft()
+    {
+        var item = Item();
+
+        item.ApplyAll(ReferenceItem.Decide(item, new MoveReferenceItemToList(Guid.NewGuid(), User, item.Id, Guid.NewGuid()), Now));
+
+        Assert.Equal(List, item.PreviousListId);
+    }
+
+    [Fact]
     public void DeletingMarksItDeletedAndLaterCommandsAreRejected()
     {
         var item = Item();

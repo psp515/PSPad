@@ -36,6 +36,52 @@ public class MembershipReconcileTests
     }
 
     [Fact]
+    public async Task ARowMovedIntoAListIDoNotHoldIsDropped()
+    {
+        var sharedId = Guid.NewGuid();
+        var privateId = Guid.NewGuid();
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        await replica.SaveAsync(ListOwnedBy(Owner, sharedId));
+        var task = TaskIn(sharedId);
+        var item = ItemIn(sharedId);
+        await replica.SaveAsync(task);
+        await replica.SaveAsync(item);
+        task.ApplyAll(TodoTask.Decide(
+            task, new MoveTaskToList(Guid.NewGuid(), Owner, task.Id, privateId), DateTimeOffset.UnixEpoch));
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new MoveReferenceItemToList(Guid.NewGuid(), Owner, item.Id, privateId), DateTimeOffset.UnixEpoch));
+        var api = new ScriptedApi(new SyncResponse(2, new Dictionary<string, JsonElement[]>
+        {
+            ["todotasks"] = [Serialize(task)],
+            ["referenceitems"] = [Serialize(item)]
+        }, [], MemberListIds: [sharedId]));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.NotNull(await replica.LoadAsync<TaskList>(sharedId));
+        Assert.Null(await replica.LoadAsync<TodoTask>(task.Id));
+        Assert.Null(await replica.LoadAsync<ReferenceItem>(item.Id));
+    }
+
+    [Fact]
+    public async Task MyOwnTasksStayEvenWhenTheirListHasNotArrived()
+    {
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(
+            null, new CreateTask(Guid.NewGuid(), Me, Guid.NewGuid(), Guid.NewGuid(), "Mine"),
+            DateTimeOffset.UnixEpoch));
+        await replica.SaveAsync(task);
+        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), [], MemberListIds: []));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.NotNull(await replica.LoadAsync<TodoTask>(task.Id));
+    }
+
+    [Fact]
     public async Task MyOwnListsAreNeverPurged()
     {
         var listId = Guid.NewGuid();

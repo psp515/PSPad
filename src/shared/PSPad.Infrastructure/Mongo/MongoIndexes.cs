@@ -47,6 +47,10 @@ public static class MongoIndexes
                 new CreateIndexModel<BsonDocument>(
                     Builders<BsonDocument>.IndexKeys.Ascending("listId").Ascending("seq")),
                 cancellationToken: ct);
+            await context.Collection<BsonDocument>(name).Indexes.CreateOneAsync(
+                new CreateIndexModel<BsonDocument>(
+                    Builders<BsonDocument>.IndexKeys.Ascending("previousListId").Ascending("seq")),
+                cancellationToken: ct);
         }
 
         await context.Collection<BsonDocument>("events").Indexes.CreateManyAsync(

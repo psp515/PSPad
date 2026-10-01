@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -148,5 +149,67 @@ public class MemberSyncTests(MongoFixture fixture)
         var sync = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
 
         Assert.Empty(sync!.MemberListIds ?? []);
+    }
+
+    [Fact]
+    public async Task ATaskMovedOutOfASharedListReachesTheMemberOnceMore()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var member = factory.ClientFor(Guid.NewGuid().ToString());
+        await Sharing.SignInAsync(member, ct);
+
+        var token = Sharing.FreshToken();
+        var sharedId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
+        var privateId = await PrivateListAsync(owner, ownerId, ListKind.Tasks, ct);
+        var taskId = Guid.NewGuid();
+        await Sharing.SendAsync(owner, ct, new CreateTask(Guid.NewGuid(), ownerId, taskId, sharedId, "Przeczytać"));
+        await Sharing.JoinAsync(member, ct, token);
+        var first = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
+
+        await Sharing.SendAsync(owner, ct, new MoveTaskToList(Guid.NewGuid(), ownerId, taskId, privateId));
+
+        var second = await member.GetFromJsonAsync<SyncResponse>($"/api/sync?since={first!.Marker}", ct);
+        var taskRow = Assert.Single(second!.Documents["todotasks"]);
+        Assert.Equal(taskId, taskRow.GetProperty("id").GetGuid());
+        Assert.Equal(privateId, taskRow.GetProperty("listId").GetGuid());
+        Assert.DoesNotContain(second.Documents["tasklists"], row => row.GetProperty("id").GetGuid() == privateId);
+    }
+
+    [Fact]
+    public async Task AReferenceItemMovedOutOfASharedListReachesTheMemberOnceMore()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var member = factory.ClientFor(Guid.NewGuid().ToString());
+        await Sharing.SignInAsync(member, ct);
+
+        var token = Sharing.FreshToken();
+        var sharedId = await Sharing.SharedListAsync(owner, ownerId, ct, ListKind.Reference, token);
+        var privateId = await PrivateListAsync(owner, ownerId, ListKind.Reference, ct);
+        var itemId = Guid.NewGuid();
+        await Sharing.SendAsync(owner, ct, new CreateReferenceItem(Guid.NewGuid(), ownerId, itemId, sharedId, "PLA", 0));
+        await Sharing.JoinAsync(member, ct, token);
+        var first = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
+
+        await Sharing.SendAsync(owner, ct, new MoveReferenceItemToList(Guid.NewGuid(), ownerId, itemId, privateId));
+
+        var second = await member.GetFromJsonAsync<SyncResponse>($"/api/sync?since={first!.Marker}", ct);
+        var itemRow = Assert.Single(second!.Documents["referenceitems"]);
+        Assert.Equal(privateId, itemRow.GetProperty("listId").GetGuid());
+    }
+
+    static async Task<Guid> PrivateListAsync(HttpClient owner, Guid ownerId, ListKind kind, CancellationToken ct)
+    {
+        var areaId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        await Sharing.SendAsync(owner, ct,
+            new Module.Tasks.Areas.CreateArea(Guid.NewGuid(), ownerId, areaId, "Prywatne", 0),
+            new CreateTaskList(Guid.NewGuid(), ownerId, listId, areaId, "Moje", kind));
+        return listId;
     }
 }

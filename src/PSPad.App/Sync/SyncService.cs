@@ -96,6 +96,8 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
             {
                 pulled += await SaveAsync(whole.Documents);
             }
+
+            await DropStrandedAsync(owner);
         }
 
         await replica.SetMarkerAsync(response.Marker);
@@ -151,6 +153,24 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         }
 
         return memberLists.Where(id => !held.Contains(id)).ToArray();
+    }
+
+    // A row the owner moved out of a shared list arrives once, naming a list this device never holds.
+    async Task DropStrandedAsync(Guid me)
+    {
+        var held = (await replica.LoadAllAsync<Module.Tasks.Lists.TaskList>(me)).Select(list => list.Id).ToHashSet();
+
+        foreach (var task in (await replica.LoadAllAsync<Module.Tasks.Tasks.TodoTask>(Guid.Empty))
+                     .Where(task => task.UserId != me && !held.Contains(task.ListId)))
+        {
+            await replica.RemoveAsync(task.Id);
+        }
+
+        foreach (var item in (await replica.LoadAllAsync<Module.Tasks.References.ReferenceItem>(Guid.Empty))
+                     .Where(item => item.UserId != me && !held.Contains(item.ListId)))
+        {
+            await replica.RemoveAsync(item.Id);
+        }
     }
 
     async Task PurgeAsync(Guid listId)

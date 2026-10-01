@@ -207,9 +207,9 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `areas` | user-defined areas | `name`, `position` |
 | `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation), `inviteToken` (`adr/0053`, null = not shared), `ownerName`, `_members[]` (`userId`, `displayName`, `joinedAt`; the leading underscore keeps the BSON field name stable, like `_steps`). Documents written before `adr/0051` still carry a `position` nobody reads |
 | `inboxes` | one per user | `items[]` |
-| `todotasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0055`) |
+| `todotasks` | tasks with steps inline | `listId`, `previousListId` (the list it last left, null until moved), `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0055`) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
-| `referenceitems` | items in a `Reference` list | `listId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`), `snapshotMarks[]` (`snapshotId`, `markedAt` — `adr/0055`) |
+| `referenceitems` | items in a `Reference` list | `listId`, `previousListId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`), `snapshotMarks[]` (`snapshotId`, `markedAt` — `adr/0055`) |
 | `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
 | `listviews` | one per (user, list): that user's placement of a shared list | `_id` = `ListView.IdFor(userId, listId)`, `listId`, `areaId?` (null = "Shared with me") |
 | `events` | the domain event log and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
@@ -237,14 +237,14 @@ transaction; the returned value stamps both the event and the aggregate's
   one serves startup replay, which reads forward across every user ordered by
   `seq` alone and so cannot use either compound index
 - every aggregate collection: `{userId: 1, seq: 1}` (delta sync)
-- `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`, `{listId: 1, seq: 1}` (a member's delta sync)
+- `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`, `{listId: 1, seq: 1}` and `{previousListId: 1, seq: 1}` (a member's delta sync)
 - `tasklists`: `{userId: 1, areaId: 1}`, `{_members.userId: 1, seq: 1}` (a
   member's delta sync), unique partial `{inviteToken: 1}` named
   `inviteToken_unique` (`partialFilterExpression: {inviteToken: {$type:
   "string"}}`; join lookup, and no two lists may hold one token — a
   duplicate-key write on commit is rejected as "That invite link is already
   in use."; startup drops the older sparse `inviteToken_1`)
-- `referenceitems`: `{userId: 1, listId: 1}`, `{listId: 1, seq: 1}` (a member's delta sync)
+- `referenceitems`: `{userId: 1, listId: 1}`, `{listId: 1, seq: 1}` and `{previousListId: 1, seq: 1}` (a member's delta sync)
 - `list_snapshots`: unique `{token: 1}`, TTL on `expiresAt`
   (`expireAfterSeconds: 0`), `{userId: 1, listId: 1}` (the panel's active list)
 - `snapshot_visits`: TTL on `expiresAt`, `{userId: 1, visitedAt: -1}` (the
@@ -416,7 +416,8 @@ not stated there:
 
 `GET /api/sync?since={seq}&full={listIds}` returns every aggregate document
 the caller can see with `seq > since` — owned, plus `tasklists` the caller
-is a member of and `todotasks`/`referenceitems` in a list the caller is a
+is a member of and `todotasks`/`referenceitems` whose `listId` or
+`previousListId` (the list a moved row last left) is a list the caller is a
 member of — the events in that range (still `userId == caller` only; the
 client does not read them), and the new marker. `full` is a comma-joined
 list of ids the caller is a member of: those lists and their live children
@@ -439,7 +440,10 @@ has no recorded owner, so reconciliation is skipped entirely — every list
 would otherwise look foreign. A failed full pull (`HttpRequestException`) is
 swallowed and never written to the marker; the missing list stays missing
 and the next sync retries it, instead of every delta pull wedging behind a
-flaky connection. `IReplica.LoadAllAsync<T>()` returns every row of a type —
+flaky connection. Last, a task or reference item the caller does not own
+whose `ListId` names a list the replica does not hold is dropped — a row the
+owner moved out of a shared list, delivered once more through
+`previousListId`. `IReplica.LoadAllAsync<T>()` returns every row of a type —
 a replica holds one user's whole visible world, not only what that user
 owns — and `IReplica.RemoveAsync` deletes one row; `replica.js`'s `getAll`
 reads a type's rows with the key range `bound([type], [type, []])`.
