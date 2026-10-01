@@ -1,0 +1,70 @@
+@page "/snapshots"
+@attribute [Authorize]
+@using PSPad.Abstractions
+@using PSPad.App.Api
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.Sync
+@using PSPad.Contracts
+@inject ISnapshotsApi SnapshotsApi
+@inject ISnapshotCache Cache
+@inject IConnectivity Connectivity
+@inject IClock Clock
+
+<PageHeading Title="List snapshots" />
+
+@if (_rows.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Outlined.Link"
+                Message="Snapshots you open while signed in show up here." />
+}
+else
+{
+    <MudList T="string">
+        @foreach (var row in _rows)
+        {
+            <MudListItem @key="row.Token" T="string" Href="@($"/s/{row.Token}")">
+                <MudText>@row.Name</MudText>
+                <MudText Typo="Typo.caption">
+                    Expires @row.ExpiresAt.ToString("d MMM yyyy") · Opened @row.VisitedAt.ToString("d MMM yyyy")
+                </MudText>
+            </MudListItem>
+        }
+    </MudList>
+}
+
+@code {
+    IReadOnlyList<SnapshotVisitView> _rows = [];
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    async Task LoadAsync()
+    {
+        var now = Clock.UtcNow;
+        await Cache.PruneAsync(now);
+
+        if (Connectivity.IsOnline)
+        {
+            try
+            {
+                _rows = Sorted(await SnapshotsApi.VisitsAsync(), now);
+                return;
+            }
+            catch (HttpRequestException)
+            {
+            }
+        }
+
+        _rows = Sorted(await CachedRowsAsync(), now);
+    }
+
+    async Task<IReadOnlyList<SnapshotVisitView>> CachedRowsAsync()
+    {
+        var cached = await Cache.AllAsync();
+        return [.. cached.Select(entry => new SnapshotVisitView(
+            entry.Token, entry.Snapshot.Name, entry.Snapshot.ExpiresAt, entry.Snapshot.CreatedAt))];
+    }
+
+    static IReadOnlyList<SnapshotVisitView> Sorted(IReadOnlyList<SnapshotVisitView> rows, DateTimeOffset now) =>
+        [.. rows.Where(row => row.ExpiresAt > now).OrderByDescending(row => row.VisitedAt)];
+}

@@ -23,6 +23,7 @@ public class NavSidebarTests : Bunit.TestContext
     [InlineData("Inbox")]
     [InlineData("Goals")]
     [InlineData("Statistics")]
+    [InlineData("List snapshots")]
     [InlineData("New area")]
     [InlineData("Settings")]
     [InlineData("App info")]
@@ -98,6 +99,18 @@ public class NavSidebarTests : Bunit.TestContext
 
         Assert.Contains("/goals\"", sidebar.Markup);
         Assert.Contains("/statistics\"", sidebar.Markup);
+    }
+
+    [Fact]
+    public void ListSnapshotsIsASidebarRowAfterStatistics()
+    {
+        Arrange();
+
+        var sidebar = Render(Areas("Dom"));
+
+        Assert.Contains("/snapshots\"", sidebar.Markup);
+        var markup = sidebar.Markup;
+        Assert.True(markup.IndexOf("/statistics\"") < markup.IndexOf("/snapshots\""));
     }
 
     [Fact]

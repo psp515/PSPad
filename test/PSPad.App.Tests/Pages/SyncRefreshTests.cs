@@ -38,7 +38,9 @@ public class SyncRefreshTests : Bunit.TestContext
         // JoinPage joins once and navigates away; it never settles into a standing replica view.
         typeof(JoinPage),
         // SnapshotPage renders a frozen server copy (or its own offline cache), never the replica.
-        typeof(SnapshotPage)
+        typeof(SnapshotPage),
+        // SnapshotsPage lists the server's visit records (or its own offline cache), never the replica.
+        typeof(SnapshotsPage)
     ];
 
     public static TheoryData<Type> ReplicaBackedPages()
