@@ -599,15 +599,23 @@ fields.** `Components/ListSharingSection.razor` branches on ownership:
 Every sharing action reloads the list from the replica so the panel
 reflects the fresh token or member set without a full page reload.
 
-**A member's list panel, task panel and board hide owner-only controls.**
-`ListDetailPanel`'s kind-readonly display, area picker and **Delete list**
-render only for the owner (`ListPlacement.IsMine`); `ListPage`'s and
-`AreaBoard`'s FAB Menus drop their **Edit list** / **Delete list** items
-the same way, keeping **Add task**/**Add item**. `ListCard`'s `⋯` menu
-drops **Delete** for a list the viewer does not own (`ThingMenu`'s
-`OnDelete` left unbound). `TaskDetailPanel`'s goal row shows only when the
-open task is the viewer's own (`task.UserId == me`) — a member edits a
-shared task but never its owner's goal.
+**A member's list panel hides owner-only controls; its own filing picker
+takes their place.** `ListDetailPanel`'s kind icon/label render for owner
+and member alike — only the owner's name field, **Area** `MudSelect` and
+**Delete list** check `IsMine` (the panel's own `_list.UserId ==
+State.UserId`, not `ListPlacement`). A member sees a **File under**
+`MudSelect` instead of the owner's **Area** one: the member's own live
+areas plus "Shared with me" (`null`), sending `PlaceList` on change and
+preselecting whatever `ListView` already has on file for that
+`(user, list)`. `ListPage`'s FAB Menu drops **Edit list** / **Delete list**
+for a member, keeping **Add task**/**Add item**; `AreaBoard`'s FAB Menu
+carries only the area's own actions (New list, Edit area, Delete area) —
+it has no per-list items to drop. `ListCard`'s `⋯` menu (`ThingMenu`) keeps
+**Edit** for everyone — it opens the panel, which restricts itself — and
+drops only **Delete** for a list the viewer does not own (`OnDelete` left
+unbound). `TaskDetailPanel`'s goal row shows only when the open task is
+the viewer's own (`task.UserId == me`) — a member edits a shared task but
+never its owner's goal.
 
 **A shared list carries a marker wherever it is a card.** `ListCard` shows
 a `People` icon in its actions when `List.IsShared` (members or an active
