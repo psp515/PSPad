@@ -191,6 +191,17 @@ public class ListCardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ASharedByLinkListWithNobodyJoinedUsesTheSingularPerson()
+    {
+        Arrange();
+        var list = SharedList("Zakupy", 0);
+
+        var card = Render(list, Tasks(list.Id, 1));
+
+        Assert.Equal("Shared · 1 person", card.FindComponent<MudTooltip>().Instance.Text);
+    }
+
+    [Fact]
     public void AnUnsharedListShowsNoSharedMarker()
     {
         Arrange();

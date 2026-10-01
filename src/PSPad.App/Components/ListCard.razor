@@ -61,7 +61,11 @@
 
     bool IsShared => List.IsShared || List.InviteToken is not null;
 
-    string SharedTooltip => $"Shared · {List.Members.Count + 1} people";
+    string SharedTooltip => (List.Members.Count + 1) switch
+    {
+        1 => "Shared · 1 person",
+        var count => $"Shared · {count} people"
+    };
 
     RenderFragment ItemRows => @<text>
         @foreach (var item in Items.Take(ThingCard.Preview))

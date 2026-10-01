@@ -1120,8 +1120,20 @@ public class TaskDetailPanelTests : Bunit.TestContext
     {
         var owner = Guid.NewGuid();
         var shared = NewMemberList(owner, User, "Errands");
-        var task = NewTask("Buy milk", shared.Id);
+        var task = NewMemberTask(owner, User, shared.Id, "Buy milk");
         AppTestHost.Arrange(this, User, Today, shared, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Empty(panel.FindAll(".pspad-task-goal"));
+    }
+
+    [Fact]
+    public void TheGoalRowIsHiddenForAMembersTaskEvenWhenItsListHasNotLoaded()
+    {
+        var owner = Guid.NewGuid();
+        var task = NewMemberTask(owner, User, Guid.NewGuid(), "Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
 
@@ -1149,6 +1161,15 @@ public class TaskDetailPanelTests : Bunit.TestContext
         list.Apply(new TaskListShared(list.Id, owner, DateTimeOffset.UnixEpoch, "k3Jv9s2mQ0x7b1nR4tYw8eZa", "Owner"));
         list.Apply(new TaskListJoined(list.Id, owner, DateTimeOffset.UnixEpoch, member, "Member"));
         return list;
+    }
+
+    static TodoTask NewMemberTask(Guid owner, Guid member, Guid listId, string name)
+    {
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(
+            null, new CreateTask(Guid.NewGuid(), member, Guid.NewGuid(), listId, name),
+            DateTimeOffset.UnixEpoch, new PSPad.Module.Tasks.Lists.ListAccess(owner, member)));
+        return task;
     }
 
     static PSPad.Module.Tasks.Goals.Goal NewGoalWith(string name, PSPad.Module.Tasks.Goals.GoalStatus status)

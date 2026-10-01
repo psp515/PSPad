@@ -207,9 +207,11 @@
         _lists = [.. _placement.All.Where(list =>
             list.Kind == ListKind.Tasks && (current is null || list.UserId == current.UserId))];
 
-        var owningListId = _task?.ListId ?? NewInList;
-        var owningList = owningListId is null ? null : _placement.All.FirstOrDefault(list => list.Id == owningListId);
-        _goalVisible = owningList is null || owningList.UserId == State.UserId;
+        _goalVisible = _task is not null
+            ? _task.UserId == State.UserId
+            : NewInList is { } newListId &&
+              _placement.All.FirstOrDefault(list => list.Id == newListId) is { } newList &&
+              newList.UserId == State.UserId;
 
         var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
         _goals = [.. goals.Where(goal => !goal.Deleted)];
