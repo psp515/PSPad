@@ -5,7 +5,7 @@ using PSPad.Contracts;
 
 namespace PSPad.App.Api;
 
-public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi
+public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ISnapshotsApi
 {
     public Task<MeResponse?> MeAsync() => GetAsync<MeResponse>("api/me");
 
@@ -72,6 +72,32 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
             : $"api/statistics/records?limit={limit}&before={before}";
         return await GetAsync<StatisticsRecordView[]>(query) ?? [];
     }
+
+    public async Task<PublishedSnapshotView?> PublishAsync(Guid listId, DateTimeOffset expiresAt)
+    {
+        var response = await http.PostAsJsonAsync($"api/lists/{listId}/snapshots", new PublishSnapshotRequest(expiresAt));
+        return response.IsSuccessStatusCode
+            ? await response.Content.ReadFromJsonAsync<PublishedSnapshotView>()
+            : null;
+    }
+
+    public async Task<IReadOnlyList<PublishedSnapshotView>> ForListAsync(Guid listId) =>
+        await GetAsync<PublishedSnapshotView[]>($"api/lists/{listId}/snapshots") ?? [];
+
+    public async Task<bool> RevokeAsync(Guid snapshotId)
+    {
+        var response = await http.DeleteAsync($"api/snapshots/{snapshotId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> RecordVisitAsync(string token)
+    {
+        var response = await http.PostAsJsonAsync("api/me/snapshot-visits", new RecordVisitRequest(token));
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<IReadOnlyList<SnapshotVisitView>> VisitsAsync() =>
+        await GetAsync<SnapshotVisitView[]>("api/me/snapshot-visits") ?? [];
 
     Task<T?> GetAsync<T>(string uri) => http.GetFromJsonAsync<T>(uri);
 }

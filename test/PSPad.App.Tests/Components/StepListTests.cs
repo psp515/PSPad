@@ -59,6 +59,38 @@ public class StepListTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AStepMarkedOnASnapshotShowsTheMarkChip()
+    {
+        var task = NewTask();
+        task.ApplyAll(TodoTask.Decide(
+            task, new AddStep(Guid.NewGuid(), User, task.Id, Guid.NewGuid(), "Check the fridge"),
+            DateTimeOffset.UnixEpoch));
+        var stepId = task.Steps.Single().Id;
+        task.ApplyAll(TodoTask.Decide(
+            task, new MarkTaskFromSnapshot(Guid.NewGuid(), User, task.Id, stepId, Guid.NewGuid(), true),
+            DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
+
+        Assert.Contains("pspad-snapshot-mark", steps.Markup);
+    }
+
+    [Fact]
+    public void AStepWithoutAMarkShowsNoChip()
+    {
+        var task = NewTask();
+        task.ApplyAll(TodoTask.Decide(
+            task, new AddStep(Guid.NewGuid(), User, task.Id, Guid.NewGuid(), "Check the fridge"),
+            DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
+
+        Assert.DoesNotContain("pspad-snapshot-mark", steps.Markup);
+    }
+
+    [Fact]
     public async Task ADraftCollectsStepsInOrderWithoutSendingCommands()
     {
         var replica = AppTestHost.Arrange(this, User, Today);

@@ -95,6 +95,23 @@
                                Disabled="@Disabled" />
             </PanelSection>
         }
+
+        @if (_task is not null && _task.SnapshotMarks.Count > 0)
+        {
+            <PanelSection Title="Snapshot marks" Class="pspad-task-snapshot-marks">
+                <div class="d-flex align-center gap-2">
+                    <SnapshotMarkChip />
+                    <MudText Typo="Typo.caption" Class="pspad-muted">
+                        @NewestMark(_task.SnapshotMarks)!.MarkedAt.ToString("d MMM yyyy")
+                    </MudText>
+                    <MudSpacer />
+                    <MudButton Class="pspad-task-snapshot-dismiss" Variant="Variant.Text" Disabled="@Disabled"
+                               OnClick="@DismissSnapshotMarksAsync">
+                        Dismiss
+                    </MudButton>
+                </div>
+            </PanelSection>
+        }
     </ChildContent>
     <Footer>
         @if (_task is not null)
@@ -508,6 +525,20 @@
         await Sender.SendAsync(new MoveTaskToList(Guid.NewGuid(), State.UserId, _task.Id, listId));
         await ReloadAsync();
     }
+
+    async Task DismissSnapshotMarksAsync()
+    {
+        if (Disabled || _task is null)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new ClearTaskSnapshotMarks(Guid.NewGuid(), State.UserId, _task.Id));
+        await ReloadAsync();
+    }
+
+    static SnapshotMark? NewestMark(IReadOnlyList<SnapshotMark> marks) =>
+        marks.OrderByDescending(mark => mark.MarkedAt).FirstOrDefault();
 
     async Task DeleteAsync()
     {

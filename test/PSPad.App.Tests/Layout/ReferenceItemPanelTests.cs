@@ -22,6 +22,36 @@ public class ReferenceItemPanelTests : Bunit.TestContext
     static readonly DateOnly Today = new(2026, 9, 12);
 
     [Fact]
+    public async Task DismissingSnapshotMarksClearsThem()
+    {
+        var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
+        var item = NewItem(list.Id, "Bigos");
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new MarkReferenceItemFromSnapshot(Guid.NewGuid(), User, item.Id, Guid.NewGuid(), true),
+            DateTimeOffset.UnixEpoch));
+        var replica = AppTestHost.Arrange(this, User, Today, list, item);
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
+        Assert.Contains("pspad-snapshot-mark", panel.Markup);
+        panel.Find(".pspad-item-snapshot-dismiss").Click();
+
+        var reloaded = await replica.LoadAsync<ReferenceItem>(item.Id);
+        Assert.Empty(reloaded!.SnapshotMarks);
+    }
+
+    [Fact]
+    public void WithNoSnapshotMarksThereIsNoSnapshotSection()
+    {
+        var list = NewReferenceList(Guid.NewGuid(), "Przepisy");
+        var item = NewItem(list.Id, "Bigos");
+        AppTestHost.Arrange(this, User, Today, list, item);
+
+        var panel = Render<ReferenceItemPanel>(parameters => parameters.Add(p => p.ItemId, (Guid?)item.Id));
+
+        Assert.Empty(panel.FindAll(".pspad-item-snapshot-marks"));
+    }
+
+    [Fact]
     public async Task ANewItemIsCreatedInTheList()
     {
         var list = NewReferenceList(Guid.NewGuid(), "Przepisy");

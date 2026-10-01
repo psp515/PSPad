@@ -8,6 +8,7 @@
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Ordering
 @using PSPad.Module.Tasks.References
+@using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<ReferenceItem> Store
 @inject IDocumentStore<Area> Areas
 @inject IDocumentStore<TaskList> Lists
@@ -63,6 +64,23 @@
                 <MarkdownField @key="@((object?)_item?.Id ?? _draft)" Value="@Description" OnSave="@SaveDescriptionAsync"
                                Disabled="@Disabled" />
             </PanelSection>
+
+            @if (_item is not null && _item.SnapshotMarks.Count > 0)
+            {
+                <PanelSection Title="Snapshot marks" Class="pspad-item-snapshot-marks">
+                    <div class="d-flex align-center gap-2">
+                        <SnapshotMarkChip />
+                        <MudText Typo="Typo.caption" Class="pspad-muted">
+                            @NewestMark(_item.SnapshotMarks)!.MarkedAt.ToString("d MMM yyyy")
+                        </MudText>
+                        <MudSpacer />
+                        <MudButton Class="pspad-item-snapshot-dismiss" Variant="Variant.Text" Disabled="@Disabled"
+                                   OnClick="@DismissSnapshotMarksAsync">
+                            Dismiss
+                        </MudButton>
+                    </div>
+                </PanelSection>
+            }
         }
     </ChildContent>
     <Footer>
@@ -330,6 +348,20 @@
 
         await ReloadAsync();
     }
+
+    async Task DismissSnapshotMarksAsync()
+    {
+        if (Disabled || _item is null)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new ClearReferenceItemSnapshotMarks(Guid.NewGuid(), State.UserId, _item.Id));
+        await ReloadAsync();
+    }
+
+    static SnapshotMark? NewestMark(IReadOnlyList<SnapshotMark> marks) =>
+        marks.OrderByDescending(mark => mark.MarkedAt).FirstOrDefault();
 
     async Task DeleteAsync()
     {

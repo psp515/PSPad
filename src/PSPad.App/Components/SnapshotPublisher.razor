@@ -1,0 +1,185 @@
+@using PSPad.Abstractions
+@using PSPad.App.Api
+@using PSPad.App.State
+@using PSPad.App.Sync
+@using PSPad.Contracts
+@using PSPad.Module.Tasks.Lists
+@inject ISnapshotsApi Snapshots
+@inject ISyncTrigger SyncTrigger
+@inject IConnectivity Connectivity
+@inject IClock Clock
+@inject AppState State
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject Clipboard Clipboard
+@inject NavigationManager Navigation
+
+<PanelSection Title="Public snapshots" Class="pspad-snapshot-publisher">
+    <div class="d-flex align-center gap-1 flex-wrap pspad-snapshot-presets">
+        @foreach (var preset in Presets)
+        {
+            <MudChip T="string" Class="pspad-snapshot-preset" Size="Size.Small"
+                     Variant="@(!_customDate && _selectedDays == preset.Days ? Variant.Filled : Variant.Outlined)"
+                     Color="Color.Primary" Disabled="@Disabled" OnClick="@(() => SelectPreset(preset.Days))">
+                @preset.Label
+            </MudChip>
+        }
+        <MudChip T="string" Class="pspad-snapshot-preset-date" Size="Size.Small"
+                 Variant="@(_customDate ? Variant.Filled : Variant.Outlined)" Color="Color.Primary"
+                 Disabled="@Disabled" OnClick="@SelectDate">
+            Date
+        </MudChip>
+    </div>
+
+    @if (_customDate)
+    {
+        <MudDatePicker Class="pspad-snapshot-date" Date="@_date" DateChanged="@DateChangedAsync"
+                       MaxDate="@MaxDate" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+    }
+
+    <div class="d-flex flex-column gap-1">
+        <MudButton Class="pspad-snapshot-publish" Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@(Disabled || !Connectivity.IsOnline || _publishing || (_customDate && _date is null))"
+                   OnClick="@PublishAsync">
+            Publish snapshot
+        </MudButton>
+
+        @if (!Connectivity.IsOnline)
+        {
+            <MudText Typo="Typo.caption" Class="pspad-muted pspad-snapshot-offline">
+                Publishing needs a connection.
+            </MudText>
+        }
+    </div>
+
+    @foreach (var snapshot in _snapshots)
+    {
+        <div @key="snapshot.Id" class="d-flex align-center gap-1 pspad-snapshot">
+            <MudText Typo="Typo.body2" Class="flex-grow-1">Expires @snapshot.ExpiresAt.ToString("d MMM yyyy")</MudText>
+            <MudIconButton Class="pspad-snapshot-copy" Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small"
+                           aria-label="Copy link" OnClick="@(() => CopyAsync(snapshot.Token))" />
+            <MudIconButton Class="pspad-snapshot-revoke" Icon="@Icons.Material.Outlined.Delete" Size="Size.Small"
+                           Color="Color.Error" aria-label="Revoke snapshot" Disabled="@Disabled"
+                           OnClick="@(() => RevokeAsync(snapshot))" />
+        </div>
+    }
+</PanelSection>
+
+@code {
+    [Parameter, EditorRequired] public TaskList List { get; set; } = null!;
+
+    [Parameter] public bool Disabled { get; set; }
+
+    static readonly (string Label, int Days)[] Presets = [("1 day", 1), ("7 days", 7), ("30 days", 30)];
+
+    Guid? _listId;
+    IReadOnlyList<PublishedSnapshotView> _snapshots = [];
+    int _selectedDays = 7;
+    bool _customDate;
+    DateTime? _date;
+    bool _publishing;
+
+    DateTime MaxDate => Clock.UtcNow.AddDays(365).DateTime;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_listId == List.Id)
+        {
+            return;
+        }
+
+        _listId = List.Id;
+        _snapshots = await Snapshots.ForListAsync(List.Id);
+    }
+
+    void SelectPreset(int days)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        _selectedDays = days;
+        _customDate = false;
+    }
+
+    void SelectDate()
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        _customDate = true;
+    }
+
+    void DateChangedAsync(DateTime? date) => _date = date;
+
+    async Task PublishAsync()
+    {
+        if (Disabled || !Connectivity.IsOnline || _publishing || (_customDate && _date is null))
+        {
+            return;
+        }
+
+        _publishing = true;
+        try
+        {
+            await SyncTrigger.SyncNowAsync();
+
+            var expiresAt = _customDate
+                ? new DateTimeOffset(DateOnly.FromDateTime(_date!.Value).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero)
+                : Clock.UtcNow.AddDays(_selectedDays);
+
+            var published = await Snapshots.PublishAsync(List.Id, expiresAt);
+
+            if (published is null)
+            {
+                Snackbar.Add("Couldn't publish the snapshot.", Severity.Warning);
+                return;
+            }
+
+            _snapshots = [.. _snapshots, published];
+            await Clipboard.CopyAsync(SnapshotLinks.For(Navigation.BaseUri, published.Token));
+            Snackbar.Add("Snapshot published. Link copied.", Severity.Success);
+        }
+        finally
+        {
+            _publishing = false;
+        }
+    }
+
+    async Task CopyAsync(string token)
+    {
+        var copied = await Clipboard.CopyAsync(SnapshotLinks.For(Navigation.BaseUri, token));
+        Snackbar.Add(
+            copied ? "Link copied." : "Could not copy — select the link instead.",
+            copied ? Severity.Success : Severity.Warning);
+    }
+
+    async Task RevokeAsync(PublishedSnapshotView snapshot)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, "Revoke this snapshot? The link stops working." },
+            { dialog => dialog.ConfirmText, "Revoke" }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Revoke snapshot", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        if (await Snapshots.RevokeAsync(snapshot.Id))
+        {
+            _snapshots = [.. _snapshots.Where(active => active.Id != snapshot.Id)];
+        }
+    }
+}

@@ -3,7 +3,9 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using PSPad.Abstractions;
+using PSPad.App.Api;
 using PSPad.App.State;
+using PSPad.Contracts;
 using PSPad.App.State.Dispatch;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
@@ -68,7 +70,9 @@ public static class AppTestHost
         var statisticsCache = new StatisticsCache(context.JSInterop.JSRuntime);
         context.Services.AddSingleton(statisticsCache);
 
-        context.Services.AddSingleton(services => new CommandSender(services, work, new NoOpSyncTrigger()));
+        var syncTrigger = new NoOpSyncTrigger();
+        context.Services.AddSingleton(services => new CommandSender(services, work, syncTrigger));
+        context.Services.AddSingleton<ISyncTrigger>(syncTrigger);
         context.Services.AddSingleton(new ReplicaOwnership(replica, outbox, statisticsCache));
         context.Services.AddScoped<Clipboard>();
         context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop: true));
@@ -76,6 +80,7 @@ public static class AppTestHost
         context.Services.AddSingleton<ServerReachability>();
         context.Services.AddSingleton<IConnectivity>(new AlwaysOnline());
         context.Services.AddSingleton<IAppUpdates>(new FakeAppUpdates());
+        context.Services.AddSingleton<ISnapshotsApi>(new NoOpSnapshotsApi());
 
         return replica;
     }
@@ -164,5 +169,21 @@ public static class AppTestHost
     sealed class NoOpSyncTrigger : ISyncTrigger
     {
         public Task SyncNowAsync() => Task.CompletedTask;
+    }
+
+    sealed class NoOpSnapshotsApi : ISnapshotsApi
+    {
+        public Task<PublishedSnapshotView?> PublishAsync(Guid listId, DateTimeOffset expiresAt) =>
+            Task.FromResult<PublishedSnapshotView?>(null);
+
+        public Task<IReadOnlyList<PublishedSnapshotView>> ForListAsync(Guid listId) =>
+            Task.FromResult<IReadOnlyList<PublishedSnapshotView>>([]);
+
+        public Task<bool> RevokeAsync(Guid snapshotId) => Task.FromResult(false);
+
+        public Task<bool> RecordVisitAsync(string token) => Task.FromResult(false);
+
+        public Task<IReadOnlyList<SnapshotVisitView>> VisitsAsync() =>
+            Task.FromResult<IReadOnlyList<SnapshotVisitView>>([]);
     }
 }

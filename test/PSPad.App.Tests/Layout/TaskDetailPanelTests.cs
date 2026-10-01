@@ -74,6 +74,34 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task DismissingSnapshotMarksClearsThem()
+    {
+        var task = NewTask("Buy milk");
+        task.ApplyAll(TodoTask.Decide(
+            task, new MarkTaskFromSnapshot(Guid.NewGuid(), User, task.Id, null, Guid.NewGuid(), true),
+            DateTimeOffset.UnixEpoch));
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        Assert.Contains("pspad-snapshot-mark", panel.Markup);
+        panel.Find(".pspad-task-snapshot-dismiss").Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Empty(reloaded!.SnapshotMarks);
+    }
+
+    [Fact]
+    public void WithNoSnapshotMarksThereIsNoSnapshotSection()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Empty(panel.FindAll(".pspad-task-snapshot-marks"));
+    }
+
+    [Fact]
     public async Task CompletingATaskWhileDisabledDoesNotChangeItsState()
     {
         var task = NewTask("Buy milk");
