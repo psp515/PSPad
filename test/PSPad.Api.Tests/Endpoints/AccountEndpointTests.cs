@@ -4,6 +4,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using PSPad.Api.Tests.Identity;
 using PSPad.Api.Tests.Persistence;
+using PSPad.Api.Tests.Sync;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Presentation.AreaViews;
@@ -191,6 +192,74 @@ public class AccountEndpointTests(MongoFixture fixture)
         var second = await client.DeleteAsync("/api/account", ct);
 
         second.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task DeletingAMembersAccountRemovesThemFromSharedLists()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture, new FakeKeycloakAdminClient(succeeds: true));
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var member = factory.ClientFor(Guid.NewGuid().ToString());
+        await Sharing.SignInAsync(member, ct);
+
+        var token = Sharing.FreshToken();
+        var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
+        await Sharing.JoinAsync(member, ct, token);
+
+        (await member.DeleteAsync("/api/account", ct)).EnsureSuccessStatusCode();
+
+        var sync = await owner.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
+        var listRow = Assert.Single(sync!.Documents["tasklists"], row => row.GetProperty("id").GetGuid() == listId);
+        Assert.Empty(listRow.GetProperty("_members").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task TheOwnersNextPullSeesTheMembershipChange()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture, new FakeKeycloakAdminClient(succeeds: true));
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var member = factory.ClientFor(Guid.NewGuid().ToString());
+        await Sharing.SignInAsync(member, ct);
+
+        var token = Sharing.FreshToken();
+        var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
+        await Sharing.JoinAsync(member, ct, token);
+
+        var afterJoin = await owner.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
+
+        (await member.DeleteAsync("/api/account", ct)).EnsureSuccessStatusCode();
+
+        var afterDeletion = await owner.GetFromJsonAsync<SyncResponse>($"/api/sync?since={afterJoin!.Marker}", ct);
+
+        var listRow = Assert.Single(
+            afterDeletion!.Documents["tasklists"], row => row.GetProperty("id").GetGuid() == listId);
+        Assert.Empty(listRow.GetProperty("_members").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task DeletingAnOwnersAccountLeavesMembersWithNothing()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture, new FakeKeycloakAdminClient(succeeds: true));
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var member = factory.ClientFor(Guid.NewGuid().ToString());
+        await Sharing.SignInAsync(member, ct);
+
+        var token = Sharing.FreshToken();
+        await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
+        await Sharing.JoinAsync(member, ct, token);
+
+        (await owner.DeleteAsync("/api/account", ct)).EnsureSuccessStatusCode();
+
+        var sync = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
+
+        Assert.Empty(sync!.Documents["tasklists"]);
+        Assert.Empty(sync.MemberListIds ?? []);
     }
 
     static async Task<Dictionary<string, long>> CountsPerCollectionAsync(
