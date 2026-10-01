@@ -45,7 +45,7 @@ public class SyncReaderSnapshotTests(MongoFixture fixture)
 
         var reader = new SyncReader(context);
 
-        var result = await reader.ReadAsync(userId, 0, ct);
+        var result = await reader.ReadAsync(userId, 0, [], ct);
 
         Assert.True(
             result.Marker >= laterCollisionSeq,
@@ -53,7 +53,7 @@ public class SyncReaderSnapshotTests(MongoFixture fixture)
         Assert.Contains(result.Documents["areas"], row => row.GetProperty("id").GetGuid() == areaId);
         Assert.Contains(result.Documents["todotasks"], row => row.GetProperty("id").GetGuid() == taskId);
 
-        var second = await reader.ReadAsync(userId, result.Marker, ct);
+        var second = await reader.ReadAsync(userId, result.Marker, [], ct);
         Assert.Empty(second.Documents["areas"]);
         Assert.Empty(second.Documents["todotasks"]);
     }

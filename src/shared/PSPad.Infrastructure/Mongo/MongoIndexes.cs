@@ -26,15 +26,29 @@ public static class MongoIndexes
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("dueOn"))
         ], ct);
 
-        await context.Collection<BsonDocument>("tasklists").Indexes.CreateOneAsync(
+        await context.Collection<BsonDocument>("tasklists").Indexes.CreateManyAsync(
+        [
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("areaId")),
-            cancellationToken: ct);
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("_members.userId").Ascending("seq")),
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("inviteToken"),
+                new CreateIndexOptions<BsonDocument> { Sparse = true })
+        ], ct);
 
         await context.Collection<BsonDocument>("referenceitems").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("listId")),
             cancellationToken: ct);
+
+        foreach (var name in new[] { "todotasks", "referenceitems" })
+        {
+            await context.Collection<BsonDocument>(name).Indexes.CreateOneAsync(
+                new CreateIndexModel<BsonDocument>(
+                    Builders<BsonDocument>.IndexKeys.Ascending("listId").Ascending("seq")),
+                cancellationToken: ct);
+        }
 
         await context.Collection<BsonDocument>("events").Indexes.CreateManyAsync(
         [

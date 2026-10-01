@@ -21,14 +21,15 @@ public sealed class SyncReader(MongoContext context)
         IncludeFields = true
     };
 
-    public async Task<SyncResponse> ReadAsync(Guid userId, long since, CancellationToken ct)
+    public async Task<SyncResponse> ReadAsync(
+        Guid userId, long since, IReadOnlyCollection<Guid> full, CancellationToken ct)
     {
         using var session = await context.Client.StartSessionAsync(cancellationToken: ct);
         session.StartTransaction(new TransactionOptions(readConcern: ReadConcern.Snapshot));
 
         try
         {
-            var response = await ReadWithinSessionAsync(session, userId, since, ct);
+            var response = await ReadWithinSessionAsync(session, userId, since, full, ct);
             await session.CommitTransactionAsync(ct);
             return response;
         }
@@ -40,7 +41,7 @@ public sealed class SyncReader(MongoContext context)
     }
 
     async Task<SyncResponse> ReadWithinSessionAsync(
-        IClientSessionHandle session, Guid userId, long since, CancellationToken ct)
+        IClientSessionHandle session, Guid userId, long since, IReadOnlyCollection<Guid> full, CancellationToken ct)
     {
         var events = await context.Collection<StoredEvent>("events")
             .Find(session,
@@ -49,14 +50,30 @@ public sealed class SyncReader(MongoContext context)
             .SortBy(entry => entry.Seq)
             .ToListAsync(ct);
 
-        var areas = await ReadCollectionAsync<Area>(session, userId, since, ct);
-        var taskLists = await ReadCollectionAsync<TaskList>(session, userId, since, ct);
-        var todoTasks = await ReadCollectionAsync<TodoTask>(session, userId, since, ct);
-        var goals = await ReadCollectionAsync<Goal>(session, userId, since, ct);
-        var inboxes = await ReadCollectionAsync<Inbox>(session, userId, since, ct);
-        var users = await ReadCollectionAsync<User>(session, userId, since, ct);
-        var referenceItems = await ReadCollectionAsync<ReferenceItem>(session, userId, since, ct);
-        var areaViews = await ReadCollectionAsync<AreaView>(session, userId, since, ct);
+        var memberListIds = await context.Collection<TaskList>()
+            .Find(session,
+                Builders<TaskList>.Filter.Eq("_members.userId", userId) &
+                Builders<TaskList>.Filter.Eq(list => list.Deleted, false))
+            .Project(list => list.Id)
+            .ToListAsync(ct);
+
+        var visible = new HashSet<Guid>(memberListIds);
+        var wholeLists = full.Where(visible.Contains).ToArray();
+
+        var areas = await ReadAsync<Area>(session, since, Owned<Area>(userId), None<Area>(), ct);
+        var taskLists = await ReadAsync(session, since,
+            Owned<TaskList>(userId) | Builders<TaskList>.Filter.Eq("_members.userId", userId),
+            Builders<TaskList>.Filter.In(list => list.Id, wholeLists), ct);
+        var todoTasks = await ReadAsync(session, since,
+            Owned<TodoTask>(userId) | Builders<TodoTask>.Filter.In(task => task.ListId, memberListIds),
+            Builders<TodoTask>.Filter.In(task => task.ListId, wholeLists), ct);
+        var goals = await ReadAsync<Goal>(session, since, Owned<Goal>(userId), None<Goal>(), ct);
+        var inboxes = await ReadAsync<Inbox>(session, since, Owned<Inbox>(userId), None<Inbox>(), ct);
+        var users = await ReadAsync<User>(session, since, Owned<User>(userId), None<User>(), ct);
+        var referenceItems = await ReadAsync(session, since,
+            Owned<ReferenceItem>(userId) | Builders<ReferenceItem>.Filter.In(item => item.ListId, memberListIds),
+            Builders<ReferenceItem>.Filter.In(item => item.ListId, wholeLists), ct);
+        var areaViews = await ReadAsync<AreaView>(session, since, Owned<AreaView>(userId), None<AreaView>(), ct);
 
         var documents = new Dictionary<string, JsonElement[]>
         {
@@ -88,17 +105,17 @@ public sealed class SyncReader(MongoContext context)
             documents,
             events.Select(entry => new SyncEvent(
                 entry.Seq, entry.AggregateType, entry.AggregateId, entry.Type, entry.Payload, entry.At))
-                .ToArray());
+                .ToArray(),
+            [.. memberListIds]);
     }
 
-    async Task<(JsonElement[] Rows, long HighestSeq)> ReadCollectionAsync<T>(
-        IClientSessionHandle session, Guid userId, long since, CancellationToken ct)
+    async Task<(JsonElement[] Rows, long HighestSeq)> ReadAsync<T>(
+        IClientSessionHandle session, long since, FilterDefinition<T> visible, FilterDefinition<T> whole,
+        CancellationToken ct)
         where T : Aggregate
     {
         var rows = await context.Collection<T>()
-            .Find(session,
-                Builders<T>.Filter.Eq(document => document.UserId, userId) &
-                Builders<T>.Filter.Gt(document => document.Seq, since))
+            .Find(session, (visible & Builders<T>.Filter.Gt(document => document.Seq, since)) | whole)
             .ToListAsync(ct);
 
         var highestSeq = rows.Count > 0 ? rows.Max(row => row.Seq) : 0;
@@ -115,4 +132,10 @@ public sealed class SyncReader(MongoContext context)
 
         return newest?.Seq ?? 0;
     }
+
+    static FilterDefinition<T> Owned<T>(Guid userId) where T : Aggregate =>
+        Builders<T>.Filter.Eq(document => document.UserId, userId);
+
+    static FilterDefinition<T> None<T>() where T : Aggregate =>
+        Builders<T>.Filter.In(document => document.Id, Array.Empty<Guid>());
 }
