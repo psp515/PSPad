@@ -1,0 +1,64 @@
+@page "/join/{Token}"
+@attribute [Authorize]
+@using PSPad.App.Components
+@using PSPad.App.Sync
+@inject SyncService Sync
+@inject IConnectivity Connectivity
+@inject ISyncTrigger SyncTrigger
+@inject NavigationManager Navigation
+
+@if (_state == JoinState.DeadLink)
+{
+    <EmptyState Icon="@Icons.Material.Outlined.LinkOff" Message="This invite link no longer works."
+                CreateText="Go to My Day" OnCreate="@GoHome" />
+}
+else if (_state == JoinState.Offline)
+{
+    <EmptyState Icon="@Icons.Material.Outlined.WifiOff" Message="Joining needs a connection."
+                CreateText="Try again" OnCreate="@JoinAsync" />
+}
+
+@code {
+    [Parameter] public string Token { get; set; } = "";
+
+    enum JoinState
+    {
+        Joining,
+        DeadLink,
+        Offline
+    }
+
+    JoinState _state = JoinState.Joining;
+
+    protected override Task OnInitializedAsync() => JoinAsync();
+
+    async Task JoinAsync()
+    {
+        _state = JoinState.Joining;
+
+        if (!Connectivity.IsOnline)
+        {
+            _state = JoinState.Offline;
+            return;
+        }
+
+        try
+        {
+            var listId = await Sync.JoinAsync(Token, CancellationToken.None);
+            if (listId is null)
+            {
+                _state = JoinState.DeadLink;
+                return;
+            }
+
+            _ = SyncTrigger.SyncNowAsync();
+            Navigation.NavigateTo($"/lists/{listId}");
+        }
+        catch (HttpRequestException)
+        {
+            _state = JoinState.Offline;
+        }
+    }
+
+    void GoHome() => Navigation.NavigateTo("/");
+}

@@ -34,7 +34,9 @@ public class SyncRefreshTests : Bunit.TestContext
         // The statistics screen reads the server's projected records over plain REST, not the replica.
         typeof(StatisticsPage),
         // Search renders what the typed query last matched, not a standing view of the replica.
-        typeof(SearchPage)
+        typeof(SearchPage),
+        // JoinPage joins once and navigates away; it never settles into a standing replica view.
+        typeof(JoinPage)
     ];
 
     public static TheoryData<Type> ReplicaBackedPages()
