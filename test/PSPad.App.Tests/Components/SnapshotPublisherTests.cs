@@ -2,8 +2,10 @@ using Bunit;
 using Bunit.Rendering;
 using MudBlazor;
 using Microsoft.Extensions.DependencyInjection;
+using PSPad.Abstractions;
 using PSPad.App.Api;
 using PSPad.App.Components;
+using PSPad.App.State;
 using PSPad.App.Sync;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Areas;
@@ -47,6 +49,34 @@ public class SnapshotPublisherTests : Bunit.TestContext
 
         Assert.True(publisher.Find(".pspad-snapshot-publish").HasAttribute("disabled"));
         Assert.Contains("Publishing needs a connection.", publisher.Markup);
+    }
+
+    [Fact]
+    public async Task PickingTodayInAPositiveOffsetZoneExpiresAtNextLocalMidnightUtc()
+    {
+        var api = new FakeSnapshotsApi();
+        Arrange(api, new RecordingSyncTrigger());
+        Services.GetRequiredService<AppState>().TimeZone = "Europe/Warsaw";
+        var list = NewList();
+
+        var publisher = Render(list);
+        publisher.Find(".pspad-snapshot-preset-date").Click();
+        await PickDateAsync(publisher, Today);
+        publisher.Find(".pspad-snapshot-publish").Click();
+
+        var (_, expiresAt) = Assert.Single(api.Published);
+        var zone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw");
+        var expectedLocalMidnight = Today.AddDays(1).ToDateTime(TimeOnly.MinValue);
+        var expectedUtc = TimeZoneInfo.ConvertTimeToUtc(
+            DateTime.SpecifyKind(expectedLocalMidnight, DateTimeKind.Unspecified), zone);
+        Assert.Equal(expectedUtc, expiresAt.UtcDateTime);
+        Assert.True(expiresAt > Services.GetRequiredService<IClock>().UtcNow);
+    }
+
+    static Task PickDateAsync(IRenderedComponent<ContainerFragment> publisher, DateOnly date)
+    {
+        var picker = publisher.FindComponent<MudDatePicker>();
+        return publisher.InvokeAsync(() => picker.Instance.DateChanged.InvokeAsync(date.ToDateTime(TimeOnly.MinValue)));
     }
 
     [Fact]

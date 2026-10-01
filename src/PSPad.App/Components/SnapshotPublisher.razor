@@ -128,7 +128,7 @@
             await SyncTrigger.SyncNowAsync();
 
             var expiresAt = _customDate
-                ? new DateTimeOffset(DateOnly.FromDateTime(_date!.Value).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero)
+                ? EndOfLocalDay(DateOnly.FromDateTime(_date!.Value))
                 : Clock.UtcNow.AddDays(_selectedDays);
 
             var published = await Snapshots.PublishAsync(List.Id, expiresAt);
@@ -147,6 +147,13 @@
         {
             _publishing = false;
         }
+    }
+
+    DateTimeOffset EndOfLocalDay(DateOnly day)
+    {
+        var zone = LocalToday.Zone(State.TimeZone);
+        var nextLocalMidnight = DateTime.SpecifyKind(day.AddDays(1).ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
+        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(nextLocalMidnight, zone), TimeSpan.Zero);
     }
 
     async Task CopyAsync(string token)
