@@ -8,6 +8,12 @@
            EmptyText="@(IsReference ? "No items yet." : null)"
            OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen">
     <Actions>
+        @if (IsShared)
+        {
+            <MudTooltip Text="@SharedTooltip">
+                <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Class="pspad-list-shared" />
+            </MudTooltip>
+        }
         @if (IsReference)
         {
             <MudIconButton Class="pspad-add-item" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
@@ -18,7 +24,7 @@
             <MudIconButton Class="pspad-add-task" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
                            OnClick="@OnAddTaskClick" />
         }
-        <ThingMenu Class="pspad-list-menu" OnEdit="@OnEdit" OnDelete="@OnDelete" />
+        <ThingMenu Class="pspad-list-menu" OnEdit="@OnEdit" OnDelete="@(IsMine ? OnDelete : default)" />
     </Actions>
 </ThingCard>
 
@@ -49,7 +55,13 @@
 
     [Parameter] public EventCallback OnDelete { get; set; }
 
+    [Parameter] public bool IsMine { get; set; } = true;
+
     bool IsReference => List.Kind == ListKind.Reference;
+
+    bool IsShared => List.IsShared || List.InviteToken is not null;
+
+    string SharedTooltip => $"Shared · {List.Members.Count + 1} people";
 
     RenderFragment ItemRows => @<text>
         @foreach (var item in Items.Take(ThingCard.Preview))

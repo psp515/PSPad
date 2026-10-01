@@ -573,6 +573,31 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AMembersFabMenuOffersNoEditOrDeleteForTheSharedList()
+    {
+        var owner = Guid.NewGuid();
+        var shared = NewMemberList(owner, User, "Errands");
+        Arrange(shared);
+
+        var page = Render(BuildListPageWithDialogs(shared.Id));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+
+        var items = page.FindAll(".mud-fab-menu-item");
+        Assert.Equal(["Add task"], items.Select(item => item.GetAttribute("aria-label")));
+    }
+
+    static TaskList NewMemberList(Guid owner, Guid member, string name)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), owner, Guid.NewGuid(), Guid.NewGuid(), name),
+            DateTimeOffset.UnixEpoch));
+        list.Apply(new TaskListShared(list.Id, owner, DateTimeOffset.UnixEpoch, "k3Jv9s2mQ0x7b1nR4tYw8eZa", "Owner"));
+        list.Apply(new TaskListJoined(list.Id, owner, DateTimeOffset.UnixEpoch, member, "Member"));
+        return list;
+    }
+
+    [Fact]
     public void TheInlineAddTaskFieldAndHeaderMenuAreGone()
     {
         var list = NewList("Zakupy");

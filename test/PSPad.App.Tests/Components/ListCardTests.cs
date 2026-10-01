@@ -180,6 +180,40 @@ public class ListCardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheHeaderShowsASharedMarkerWithTheMemberCount()
+    {
+        Arrange();
+        var list = SharedList("Zakupy", 1);
+
+        var card = Render(list, Tasks(list.Id, 1));
+
+        Assert.Equal("Shared · 2 people", card.FindComponent<MudTooltip>().Instance.Text);
+    }
+
+    [Fact]
+    public void AnUnsharedListShowsNoSharedMarker()
+    {
+        Arrange();
+        var list = List("Zakupy");
+
+        var card = Render(list, Tasks(list.Id, 1));
+
+        Assert.Empty(card.FindComponents<MudTooltip>());
+    }
+
+    [Fact]
+    public void TheMenuOffersNoDeleteWhenTheListIsNotMine()
+    {
+        Arrange();
+        var list = List("Zakupy");
+
+        var card = Render(BuildCardWithPopover(list, () => { }, () => { }, isMine: false));
+
+        card.Find(".pspad-list-menu button").Click();
+        Assert.Equal(["Edit"], card.FindAll(".mud-menu-item").Select(item => item.TextContent.Trim()));
+    }
+
+    [Fact]
     public void AReferenceListsCardShowsItsItemsAsReferenceRows()
     {
         Arrange();
@@ -274,7 +308,7 @@ public class ListCardTests : Bunit.TestContext
 
     // MudMenu portals its open content through MudPopoverProvider, so this render
     // tree needs one alongside ListCard for the menu item clicks to be reachable.
-    RenderFragment BuildCardWithPopover(TaskList list, Action onEdit, Action onDelete) => builder =>
+    RenderFragment BuildCardWithPopover(TaskList list, Action onEdit, Action onDelete, bool isMine = true) => builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
         builder.CloseComponent();
@@ -283,6 +317,7 @@ public class ListCardTests : Bunit.TestContext
         builder.AddAttribute(3, nameof(ListCard.Today), Today);
         builder.AddAttribute(4, nameof(ListCard.OnEdit), new EventCallback(null, onEdit));
         builder.AddAttribute(5, nameof(ListCard.OnDelete), new EventCallback(null, onDelete));
+        builder.AddAttribute(6, nameof(ListCard.IsMine), isMine);
         builder.CloseComponent();
     };
 
@@ -302,6 +337,19 @@ public class ListCardTests : Bunit.TestContext
             null,
             new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name),
             DateTimeOffset.UnixEpoch));
+        return list;
+    }
+
+    static TaskList SharedList(string name, int memberCount)
+    {
+        var list = List(name);
+        list.Apply(new TaskListShared(list.Id, User, DateTimeOffset.UnixEpoch, "k3Jv9s2mQ0x7b1nR4tYw8eZa", "Owner"));
+
+        for (var index = 0; index < memberCount; index++)
+        {
+            list.Apply(new TaskListJoined(list.Id, User, DateTimeOffset.UnixEpoch, Guid.NewGuid(), $"Member {index}"));
+        }
+
         return list;
     }
 

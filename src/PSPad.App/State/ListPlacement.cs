@@ -92,5 +92,7 @@ public sealed class ListPlacement
 
     public string AreaName(Guid areaId) => _areaNames.GetValueOrDefault(areaId, "");
 
-    public bool IsMine(TaskList list) => list.UserId == _me;
+    public bool IsMine(TaskList list) => IsMine(_me, list);
+
+    public static bool IsMine(Guid userId, TaskList list) => list.UserId == userId;
 }
