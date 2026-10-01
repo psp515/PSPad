@@ -108,6 +108,58 @@ public class TodayEndpointTests(MongoFixture fixture)
         Assert.DoesNotContain(strangerToday!, entry => entry.TaskId == taskId);
     }
 
+    [Fact]
+    public async Task AMembersOwnTaskInASharedListShowsOnceOnToday()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var member = factory.ClientFor(Guid.NewGuid().ToString(), "Europe/Warsaw");
+        var memberId = await Sharing.SignInAsync(member, ct);
+
+        var token = Sharing.FreshToken();
+        var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
+        await Sharing.JoinAsync(member, ct, token);
+
+        var taskId = Guid.NewGuid();
+        var today = TodayRule.TodayIn(
+            DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw"));
+        await Sharing.SendAsync(member, ct,
+            new CreateTask(Guid.NewGuid(), memberId, taskId, listId, "Odkurzyć"),
+            new SetTaskDueDate(Guid.NewGuid(), memberId, taskId, today));
+
+        var memberToday = await member.GetFromJsonAsync<TodayEntry[]>("/api/today", ct);
+
+        Assert.Single(memberToday!, entry => entry.TaskId == taskId);
+    }
+
+    [Fact]
+    public async Task ADeletedTaskInAMemberListIsNotOnToday()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var member = factory.ClientFor(Guid.NewGuid().ToString(), "Europe/Warsaw");
+        await Sharing.SignInAsync(member, ct);
+
+        var token = Sharing.FreshToken();
+        var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
+        var taskId = Guid.NewGuid();
+        var today = TodayRule.TodayIn(
+            DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw"));
+        await Sharing.SendAsync(owner, ct,
+            new CreateTask(Guid.NewGuid(), ownerId, taskId, listId, "Oddać książki"),
+            new SetTaskDueDate(Guid.NewGuid(), ownerId, taskId, today),
+            new DeleteTask(Guid.NewGuid(), ownerId, taskId));
+        await Sharing.JoinAsync(member, ct, token);
+
+        var memberToday = await member.GetFromJsonAsync<TodayEntry[]>("/api/today", ct);
+
+        Assert.DoesNotContain(memberToday!, entry => entry.TaskId == taskId);
+    }
+
     static async Task<Guid> SeedTask(HttpClient client, Guid user)
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;

@@ -38,7 +38,8 @@ public static class TodayEndpoints
                           Builders<TodoTask>.Filter.Eq(task => task.Deleted, false))
                     .ToListAsync(ct);
 
-            return Results.Ok(TodayRule.Select([.. all, .. shared], today));
+            var merged = all.Concat(shared).DistinctBy(task => task.Id).ToArray();
+            return Results.Ok(TodayRule.Select(merged, today));
         });
     }
 }
