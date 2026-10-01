@@ -49,6 +49,11 @@ public class StatisticsReaderTests
 
         public Task<IReadOnlyList<StatisticsLabel>> AllAsync(Guid userId, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<StatisticsLabel>>(labels);
+
+        public Task<IReadOnlyList<StatisticsLabel>> ByIdsAsync(
+            IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<StatisticsLabel>>(
+                labels.Where(label => ids.Contains(label.Id)).ToArray());
     }
 
     sealed class FakeSnapshots(Dictionary<Guid, TaskSnapshot> snapshots) : ITaskSnapshotSource
@@ -213,6 +218,38 @@ public class StatisticsReaderTests
             .ReadAsync(User, null, 0, TestContext.Current.CancellationToken);
 
         Assert.Equal(50, store.Pages[0].Limit);
+    }
+
+    [Fact]
+    public async Task AMembersFeedNamesTheOwnersList()
+    {
+        var member = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+        var actorRecord = new StatisticsRecord
+        {
+            Id = StatisticsRecord.IdFor(1, member),
+            Seq = 1,
+            Role = RecordRole.Actor,
+            UserId = member,
+            At = At,
+            Kind = RecordKind.Completed,
+            TaskId = taskId,
+            TaskName = "Dune",
+            ListId = listId
+        };
+        var reader = ReaderOver(
+            new FakeStore(actorRecord),
+            new FakeLabelStore(Label(listId, LabelKind.List, "Książki")),
+            new FakeSnapshots(new Dictionary<Guid, TaskSnapshot>
+            {
+                [taskId] = new(TaskStatus.Done, "Dune")
+            }));
+
+        var view = Assert.Single(
+            await reader.ReadAsync(member, null, 50, TestContext.Current.CancellationToken));
+
+        Assert.Equal("Książki", view.ListName);
     }
 
     [Fact]

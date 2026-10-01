@@ -5,7 +5,7 @@ using PSPad.Contracts;
 namespace PSPad.Module.Statistics;
 
 public sealed class StatisticsReplay(
-    IEventLog log, IProjectionMarker marker, IEnumerable<IDomainEventHandler> handlers,
+    IEventLog log, IProjectionMarker marker, IStatisticsReset reset, IEnumerable<IDomainEventHandler> handlers,
     ILogger<StatisticsReplay> logger)
     : IDomainEventReplay
 {
@@ -26,6 +26,11 @@ public sealed class StatisticsReplay(
 
     async Task ReplayAsync(CancellationToken ct)
     {
+        if (await marker.AdoptVersionAsync(StatisticsProjection.Version, ct))
+        {
+            await reset.ClearAsync(ct);
+        }
+
         var subscribers = handlers.ToArray();
         var from = await marker.ReadAsync(ct);
         var persisted = from;

@@ -91,6 +91,10 @@ public class StatisticsOverviewReaderTests
 
         public Task<IReadOnlyList<StatisticsLabel>> AllAsync(Guid userId, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<StatisticsLabel>>(labels);
+
+        public Task<IReadOnlyList<StatisticsLabel>> ByIdsAsync(
+            IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+            throw new NotSupportedException();
     }
 
     static InboxRecord Capture(long id, DateOnly day) =>

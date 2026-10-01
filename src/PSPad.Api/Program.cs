@@ -46,6 +46,7 @@ builder.Services.AddScoped<IStatisticsStore, MongoStatisticsStore>();
 builder.Services.AddScoped<ILabelStore, MongoLabelStore>();
 builder.Services.AddScoped<IInboxRecordStore, MongoInboxRecordStore>();
 builder.Services.AddScoped<IProjectionMarker, MongoProjectionMarker>();
+builder.Services.AddScoped<IStatisticsReset, MongoStatisticsReset>();
 builder.Services.AddScoped<ITaskSnapshotSource, MongoTaskSnapshotSource>();
 builder.Services.AddScoped<IDomainEventHandler, StatisticsRecordProjection>();
 builder.Services.AddScoped<IDomainEventHandler, StatisticsLabelProjection>();

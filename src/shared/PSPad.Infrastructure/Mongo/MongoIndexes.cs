@@ -61,6 +61,17 @@ public static class MongoIndexes
                 Builders<BsonDocument>.IndexKeys.Ascending("seq"))
         ], ct);
 
+        await EnsureStatisticsAsync(context, ct);
+
+        await context.Collection<BsonDocument>("processed_commands").Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("at"),
+                new CreateIndexOptions { ExpireAfter = TimeSpan.FromDays(30) }),
+            cancellationToken: ct);
+    }
+
+    public static async Task EnsureStatisticsAsync(MongoContext context, CancellationToken ct)
+    {
         await context.Collection<BsonDocument>("statistics_records").Indexes.CreateManyAsync(
         [
             new CreateIndexModel<BsonDocument>(
@@ -78,12 +89,6 @@ public static class MongoIndexes
 
         await context.Collection<BsonDocument>("statistics_labels").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("userId")),
-            cancellationToken: ct);
-
-        await context.Collection<BsonDocument>("processed_commands").Indexes.CreateOneAsync(
-            new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending("at"),
-                new CreateIndexOptions { ExpireAfter = TimeSpan.FromDays(30) }),
             cancellationToken: ct);
     }
 }

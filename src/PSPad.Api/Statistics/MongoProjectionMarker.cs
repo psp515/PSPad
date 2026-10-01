@@ -28,4 +28,22 @@ public sealed class MongoProjectionMarker(MongoContext context) : IProjectionMar
             Builders<BsonDocument>.Update.Set(Field, seq),
             new UpdateOptions { IsUpsert = true },
             ct);
+
+    public async Task<bool> AdoptVersionAsync(int version, CancellationToken ct)
+    {
+        var state = await State.Find(TheMarker).FirstOrDefaultAsync(ct);
+        var stored = state?.GetValue("projectionVersion", 1).ToInt32() ?? 0;
+
+        if (stored >= version)
+        {
+            return false;
+        }
+
+        await State.UpdateOneAsync(
+            TheMarker,
+            Builders<BsonDocument>.Update.Set(Field, 0L).Set("projectionVersion", version),
+            new UpdateOptions { IsUpsert = true },
+            ct);
+        return true;
+    }
 }
