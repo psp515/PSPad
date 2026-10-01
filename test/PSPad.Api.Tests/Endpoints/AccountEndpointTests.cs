@@ -9,6 +9,7 @@ using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Lists;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Api.Tests.Endpoints;
@@ -260,6 +261,42 @@ public class AccountEndpointTests(MongoFixture fixture)
 
         Assert.Empty(sync!.Documents["tasklists"]);
         Assert.Empty(sync.MemberListIds ?? []);
+    }
+
+    [Fact]
+    public async Task DeletingAnAccountRemovesItsSnapshotsAndVisits()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture, new FakeKeycloakAdminClient(succeeds: true));
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var areaId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        await Sharing.SendAsync(owner, ct,
+            new CreateArea(Guid.NewGuid(), ownerId, areaId, "Home", 0),
+            new CreateTaskList(Guid.NewGuid(), ownerId, listId, areaId, "Groceries", ListKind.Tasks));
+
+        var publishResponse = await owner.PostAsJsonAsync(
+            $"/api/lists/{listId}/snapshots", new PublishSnapshotRequest(DateTimeOffset.UtcNow.AddDays(1)), ct);
+        publishResponse.EnsureSuccessStatusCode();
+        var published = await publishResponse.Content.ReadFromJsonAsync<PublishedSnapshotView>(ct);
+
+        (await owner.PostAsJsonAsync("/api/me/snapshot-visits", new RecordVisitRequest(published!.Token), ct))
+            .EnsureSuccessStatusCode();
+
+        (await owner.DeleteAsync("/api/account", ct)).EnsureSuccessStatusCode();
+
+        var context = Persistence.TestContext.For(fixture);
+        Assert.Equal(
+            0,
+            await context.Collection<BsonDocument>("list_snapshots")
+                .Find(Builders<BsonDocument>.Filter.Eq("userId", ownerId))
+                .CountDocumentsAsync(ct));
+        Assert.Equal(
+            0,
+            await context.Collection<BsonDocument>("snapshot_visits")
+                .Find(Builders<BsonDocument>.Filter.Eq("userId", ownerId))
+                .CountDocumentsAsync(ct));
     }
 
     static async Task<Dictionary<string, long>> CountsPerCollectionAsync(

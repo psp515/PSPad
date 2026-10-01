@@ -1,13 +1,18 @@
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using PSPad.Abstractions;
 using PSPad.Api.Commands;
 using PSPad.Api.Endpoints;
 using PSPad.Api.Identity;
+using PSPad.Api.Snapshots;
 using PSPad.Api.Statistics;
 using PSPad.Api.Sync;
 using PSPad.Infrastructure;
 using PSPad.Infrastructure.Events;
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Sharing.Ports;
+using PSPad.Module.Sharing.Snapshots;
 using PSPad.Module.Statistics;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +30,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.MapInboundClaims = false;
     });
 builder.Services.AddAuthorization();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("public", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("Sharing:PublicRequestsPerMinute", 60),
+            Window = TimeSpan.FromMinutes(1)
+        }));
+});
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
@@ -56,11 +73,19 @@ builder.Services.AddScoped<StatisticsReader>();
 builder.Services.AddScoped<StatisticsOverviewReader>();
 builder.Services.AddHostedService<DomainEventPump>();
 
+builder.Services.AddScoped<ISnapshotStore, MongoSnapshotStore>();
+builder.Services.AddScoped<ISnapshotVisitStore, MongoSnapshotVisitStore>();
+builder.Services.AddScoped<IListContent, MongoListContent>();
+builder.Services.AddScoped<IServerCommands, DispatcherServerCommands>();
+builder.Services.AddScoped<SnapshotPublishing>();
+builder.Services.AddScoped<SnapshotMarking>();
+
 var app = builder.Build();
 
 app.UseCors("AppClient");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapGet("/health", () => "healthy");
 
@@ -72,6 +97,10 @@ api.MapTodayEndpoints();
 api.MapMeEndpoints();
 api.MapAccountEndpoints();
 api.MapStatisticsEndpoints();
+api.MapSnapshotEndpoints();
+
+var open = app.MapGroup("/api/public").AllowAnonymous().RequireRateLimiting("public");
+open.MapPublicSnapshotEndpoints();
 
 await MongoIndexes.EnsureAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 await MongoBackfill.EnsureCreatedAtAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
