@@ -121,6 +121,25 @@ public class JoinListTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task JoiningADeletedListIs404()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var member = factory.ClientFor(Guid.NewGuid().ToString());
+        await Sharing.SignInAsync(member, ct);
+
+        var token = Sharing.FreshToken();
+        var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
+        await Sharing.SendAsync(owner, ct, new DeleteTaskList(Guid.NewGuid(), ownerId, listId));
+
+        var response = await Sharing.JoinAsync(member, ct, token);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task TheOwnerJoiningTheirOwnListIsHarmless()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
