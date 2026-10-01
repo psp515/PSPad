@@ -15,10 +15,15 @@ public sealed class MoveReferenceItemToListHandler(
 
         try
         {
-            var events = ReferenceItem.Decide(item, command, clock.UtcNow);
+            var access = await lists.AccessAsync(item?.ListId, command.UserId, ct);
+            var events = ReferenceItem.Decide(item, command, clock.UtcNow, access);
             if (events.Count > 0)
             {
-                TaskList.RequireAcceptsReferences(await lists.LoadAsync(command.ListId, ct), command.UserId);
+                var target = TaskList.RequireAcceptsReferences(await lists.LoadAsync(command.ListId, ct), command.UserId);
+                if (target.OwnerId != access.OwnerId)
+                {
+                    throw new DomainRejectedException("An item can only move between lists of the same owner.");
+                }
             }
 
             item!.ApplyAll(events);

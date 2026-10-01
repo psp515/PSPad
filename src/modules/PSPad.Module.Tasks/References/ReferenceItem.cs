@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Ordering;
 
 namespace PSPad.Module.Tasks.References;
@@ -29,8 +30,11 @@ public sealed class ReferenceItem : Aggregate
 
     public IReadOnlyList<ReferenceField> Fields => _fields.OrderBy(entry => entry.Position).ToArray();
 
-    public static IReadOnlyList<DomainEvent> Decide(ReferenceItem? item, ICommand command, DateTimeOffset at)
+    public static IReadOnlyList<DomainEvent> Decide(
+        ReferenceItem? item, ICommand command, DateTimeOffset at, ListAccess? access = null)
     {
+        var grant = access ?? ListAccess.Owner(command.UserId);
+
         switch (command)
         {
             case CreateReferenceItem create:
@@ -44,66 +48,66 @@ public sealed class ReferenceItem : Aggregate
                     throw new DomainRejectedException("An item has to live in a list.");
                 }
 
-                return [new ReferenceItemCreated(create.ItemId, create.UserId, at, create.ListId, RequireName(create.Name), create.Position)];
+                return [new ReferenceItemCreated(create.ItemId, grant.OwnerId, at, create.ListId, RequireName(create.Name), create.Position)];
 
             case RenameReferenceItem rename:
-                var renaming = Require(item, rename.UserId);
+                var renaming = Require(item, grant);
                 var name = RequireName(rename.Name);
-                return renaming.Name == name ? [] : [new ReferenceItemRenamed(renaming.Id, rename.UserId, at, name)];
+                return renaming.Name == name ? [] : [new ReferenceItemRenamed(renaming.Id, grant.OwnerId, at, name)];
 
             case SetReferenceItemDescription describe:
-                var describing = Require(item, describe.UserId);
+                var describing = Require(item, grant);
                 var description = (describe.Description ?? "").TrimEnd();
                 return describing.Description == description
                     ? []
-                    : [new ReferenceItemDescriptionSet(describing.Id, describe.UserId, at, description)];
+                    : [new ReferenceItemDescriptionSet(describing.Id, grant.OwnerId, at, description)];
 
             case StarReferenceItem star:
-                var starring = Require(item, star.UserId);
-                return starring.Starred == star.Starred ? [] : [new ReferenceItemStarred(starring.Id, star.UserId, at, star.Starred)];
+                var starring = Require(item, grant);
+                return starring.Starred == star.Starred ? [] : [new ReferenceItemStarred(starring.Id, grant.OwnerId, at, star.Starred)];
 
             case MoveReferenceItemToList move:
-                var moving = Require(item, move.UserId);
+                var moving = Require(item, grant);
                 if (move.ListId == Guid.Empty)
                 {
                     throw new DomainRejectedException("An item has to live in a list.");
                 }
 
-                return moving.ListId == move.ListId ? [] : [new ReferenceItemMovedToList(moving.Id, move.UserId, at, move.ListId)];
+                return moving.ListId == move.ListId ? [] : [new ReferenceItemMovedToList(moving.Id, grant.OwnerId, at, move.ListId)];
 
             case DeleteReferenceItem delete:
-                var deleting = Require(item, delete.UserId);
-                return [new ReferenceItemDeleted(deleting.Id, delete.UserId, at, deleting.Name)];
+                var deleting = Require(item, grant);
+                return [new ReferenceItemDeleted(deleting.Id, grant.OwnerId, at, deleting.Name)];
 
             case AddReferenceField add:
-                var adding = Require(item, add.UserId);
+                var adding = Require(item, grant);
                 return adding.Fields.Any(field => field.Id == add.FieldId)
                     ? []
                     : [new ReferenceFieldAdded(
-                        adding.Id, add.UserId, at, add.FieldId, RequireLabel(add.Label), (add.Value ?? "").TrimEnd(), Hint(add.Display),
+                        adding.Id, grant.OwnerId, at, add.FieldId, RequireLabel(add.Label), (add.Value ?? "").TrimEnd(), Hint(add.Display),
                         Positions.Next(adding.Fields.Select(field => field.Position)))];
 
             case EditReferenceField edit:
-                var editing = Require(item, edit.UserId);
+                var editing = Require(item, grant);
                 var existing = RequireField(editing, edit.FieldId);
                 var label = RequireLabel(edit.Label);
                 var value = (edit.Value ?? "").TrimEnd();
                 var hint = Hint(edit.Display);
                 return existing.Label == label && existing.Value == value && existing.Display == hint
                     ? []
-                    : [new ReferenceFieldEdited(editing.Id, edit.UserId, at, edit.FieldId, label, value, hint)];
+                    : [new ReferenceFieldEdited(editing.Id, grant.OwnerId, at, edit.FieldId, label, value, hint)];
 
             case MoveReferenceField moveField:
-                var reordering = Require(item, moveField.UserId);
+                var reordering = Require(item, grant);
                 RequireField(reordering, moveField.FieldId);
                 var order = Positions.Move(
                     reordering.Fields.Select(field => field.Id).ToArray(), moveField.FieldId, moveField.ToIndex);
-                return [new ReferenceFieldsReordered(reordering.Id, moveField.UserId, at, order)];
+                return [new ReferenceFieldsReordered(reordering.Id, grant.OwnerId, at, order)];
 
             case RemoveReferenceField remove:
-                var removing = Require(item, remove.UserId);
+                var removing = Require(item, grant);
                 RequireField(removing, remove.FieldId);
-                return [new ReferenceFieldRemoved(removing.Id, remove.UserId, at, remove.FieldId)];
+                return [new ReferenceFieldRemoved(removing.Id, grant.OwnerId, at, remove.FieldId)];
 
             default:
                 throw new DomainRejectedException($"A reference item cannot handle {command.GetType().Name}.");
@@ -175,14 +179,14 @@ public sealed class ReferenceItem : Aggregate
         }
     }
 
-    internal static ReferenceItem Require(ReferenceItem? item, Guid userId)
+    internal static ReferenceItem Require(ReferenceItem? item, ListAccess grant)
     {
         if (item is null || item.Deleted)
         {
             throw new DomainRejectedException("That item no longer exists.");
         }
 
-        if (item.UserId != userId)
+        if (item.UserId != grant.OwnerId)
         {
             throw new DomainRejectedException("That item belongs to somebody else.");
         }
