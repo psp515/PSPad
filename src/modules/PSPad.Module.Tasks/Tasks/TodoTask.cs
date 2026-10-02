@@ -212,11 +212,11 @@ public sealed class TodoTask : Aggregate
                     : [new TaskRecurrenceSet(repeating.Id, grant.OwnerId, at, recurrence.Rule)];
 
             case SetTaskLeadTime lead:
-                var leading = Require(task, lead.UserId);
+                var leading = Require(task, grant);
                 lead.LeadTime?.Validate();
                 return leading.LeadTime == lead.LeadTime
                     ? []
-                    : [new TaskLeadTimeSet(leading.Id, lead.UserId, at, lead.LeadTime)];
+                    : [new TaskLeadTimeSet(leading.Id, grant.OwnerId, at, lead.LeadTime)];
 
             case SetTaskDescription describe:
                 var describing = Require(task, grant);
