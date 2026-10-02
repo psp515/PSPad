@@ -12,7 +12,6 @@ using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Recurrence;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
-using System.Globalization;
 
 namespace PSPad.App.Tests.Layout;
 
@@ -500,28 +499,6 @@ public class TaskDetailPanelTests : Bunit.TestContext
 
         var dialog = panel.WaitForElement(".pspad-due-dialog");
         Assert.DoesNotContain("d-none", dialog.ClassName);
-
-        var targetMonth = new DateOnly(Today.Year, Today.Month, 1);
-
-        while (true)
-        {
-            // TODO: Most XD test i have ever seen
-            var header = dialog.QuerySelector(".mud-button-month p")!.TextContent.Trim();
-
-            if (DateTime.TryParseExact(
-                    header,
-                    "MMMM yyyy",
-                    CultureInfo.CurrentCulture,
-                    DateTimeStyles.None,
-                    out var displayedMonth) &&
-                displayedMonth.Year == targetMonth.Year &&
-                displayedMonth.Month == targetMonth.Month)
-            {
-                break;
-            }
-
-            dialog.QuerySelector(".mud-picker-nav-button-prev")!.Click();
-        }
 
         dialog.QuerySelectorAll("button.mud-day")
             .First(day => day.TextContent.Trim() == "20" && !day.ClassList.Contains("mud-hidden"))
