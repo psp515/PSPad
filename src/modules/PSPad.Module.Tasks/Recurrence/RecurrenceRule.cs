@@ -25,6 +25,9 @@ public sealed record RecurrenceRule(
             ? throw new DomainRejectedException("A monthly repeat needs a day between 1 and 31.")
             : new RecurrenceRule(RecurrenceKind.MonthlyOnDay, startsOn, [], dayOfMonth);
 
+    public static RecurrenceRule Yearly(DateOnly startsOn) =>
+        new(RecurrenceKind.Yearly, startsOn, [], 0);
+
     public RecurrenceRule EveryNth(int interval) =>
         interval is < 1 or > 99
             ? throw new DomainRejectedException("A repeat interval must be between 1 and 99.")
@@ -44,6 +47,9 @@ public sealed record RecurrenceRule(
                 && (MondayOf(day).DayNumber - MondayOf(StartsOn).DayNumber) / 7 % Every == 0,
             RecurrenceKind.MonthlyOnDay => day.Day == EffectiveDayIn(day.Year, day.Month)
                 && (MonthIndexOf(day) - MonthIndexOf(StartsOn)) % Every == 0,
+            RecurrenceKind.Yearly => day.Month == StartsOn.Month
+                && day.Day == Math.Min(StartsOn.Day, DateTime.DaysInMonth(day.Year, day.Month))
+                && (day.Year - StartsOn.Year) % Every == 0,
             _ => false
         };
     }

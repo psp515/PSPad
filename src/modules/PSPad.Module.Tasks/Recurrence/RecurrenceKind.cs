@@ -4,5 +4,6 @@ public enum RecurrenceKind
 {
     Daily = 0,
     Weekly = 1,
-    MonthlyOnDay = 2
+    MonthlyOnDay = 2,
+    Yearly = 3
 }

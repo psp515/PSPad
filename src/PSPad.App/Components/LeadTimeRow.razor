@@ -1,0 +1,118 @@
+@using PSPad.Module.Tasks.Tasks
+
+<PropertyRow Class="pspad-task-lead" Icon="@Icons.Material.Outlined.NotificationsNone" Label="Remind me"
+             Value="@Describe(Value)" HasValue="@(Value is not null)" Disabled="@Disabled"
+             OnClear="@(() => ChooseAsync(null))">
+    <MudText Typo="Typo.caption" Class="pspad-lead-hint pspad-muted d-block px-4 pt-2 pb-1" Style="max-width:260px">
+        @Hint
+    </MudText>
+    @foreach (var preset in Presets)
+    {
+        <MudMenuItem Class="pspad-lead-option" OnClick="@(() => ChooseAsync(preset))">@Describe(preset)</MudMenuItem>
+    }
+    <MudDivider />
+    <MudMenuItem Class="pspad-lead-custom" Icon="@Icons.Material.Outlined.Tune" OnClick="@OpenCustom">Custom…</MudMenuItem>
+</PropertyRow>
+
+<MudDialog @bind-Visible="_customising" Class="pspad-lead-dialog" Options="@CustomOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Remind me</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.caption" Class="pspad-lead-hint pspad-muted d-block mb-3">@Hint</MudText>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudNumericField T="int" Class="pspad-lead-amount" @bind-Value="_amount" Min="1" Max="99"
+                             Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width:96px" />
+            <MudSelect T="LeadUnit" Class="pspad-lead-unit" @bind-Value="_unit"
+                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var unit in Units)
+                {
+                    <MudSelectItem T="LeadUnit" Value="@unit">@UnitOf(unit, 2)</MudSelectItem>
+                }
+            </MudSelect>
+            <MudText Typo="Typo.body2">before</MudText>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Class="pspad-lead-cancel" OnClick="@(() => _customising = false)">Cancel</MudButton>
+        <MudButton Class="pspad-lead-save" Color="Color.Primary" Disabled="@(!CanSave)"
+                   OnClick="@SaveCustomAsync">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public LeadTime? Value { get; set; }
+
+    [Parameter] public EventCallback<LeadTime?> ValueChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    bool _customising;
+    int _amount = 1;
+    LeadUnit _unit = LeadUnit.Days;
+
+    static readonly DialogOptions CustomOptions = new() { CloseOnEscapeKey = true, BackdropClick = true };
+
+    static readonly LeadTime[] Presets =
+    [
+        new(1, LeadUnit.Days), new(3, LeadUnit.Days), new(1, LeadUnit.Weeks), new(2, LeadUnit.Weeks),
+        new(1, LeadUnit.Months)
+    ];
+
+    static readonly LeadUnit[] Units = [LeadUnit.Days, LeadUnit.Weeks, LeadUnit.Months];
+
+    static readonly LeadTime DefaultLookAhead = new(1, LeadUnit.Weeks);
+
+    const string Hint = "How early the task shows in Upcoming. On its due date it moves to Today as usual.";
+
+    bool CanSave => _amount is >= 1 and <= 99;
+
+    public static string Describe(LeadTime? lead)
+    {
+        var shown = lead ?? DefaultLookAhead;
+        return $"{shown.Amount} {UnitOf(shown.Unit, shown.Amount)} before";
+    }
+
+    static string UnitOf(LeadUnit unit, int amount) => (unit, amount == 1) switch
+    {
+        (LeadUnit.Weeks, true) => "week",
+        (LeadUnit.Weeks, false) => "weeks",
+        (LeadUnit.Months, true) => "month",
+        (LeadUnit.Months, false) => "months",
+        (_, true) => "day",
+        _ => "days"
+    };
+
+    void OpenCustom()
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        _amount = Value?.Amount ?? 1;
+        _unit = Value?.Unit ?? LeadUnit.Days;
+        _customising = true;
+    }
+
+    async Task SaveCustomAsync()
+    {
+        if (!CanSave)
+        {
+            return;
+        }
+
+        _customising = false;
+        await ChooseAsync(LeadTime.Of(_amount, _unit));
+    }
+
+    async Task ChooseAsync(LeadTime? lead)
+    {
+        if (Disabled || lead == Value)
+        {
+            return;
+        }
+
+        await ValueChanged.InvokeAsync(lead);
+    }
+}

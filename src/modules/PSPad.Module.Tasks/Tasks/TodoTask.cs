@@ -35,6 +35,9 @@ public sealed class TodoTask : Aggregate
     public RecurrenceRule? Recurrence { get; private set; }
 
     [JsonInclude]
+    public LeadTime? LeadTime { get; private set; }
+
+    [JsonInclude]
     public string Description { get; private set; } = "";
 
     [JsonInclude]
@@ -191,6 +194,13 @@ public sealed class TodoTask : Aggregate
                     ? []
                     : [new TaskRecurrenceSet(repeating.Id, recurrence.UserId, at, recurrence.Rule)];
 
+            case SetTaskLeadTime lead:
+                var leading = Require(task, lead.UserId);
+                lead.LeadTime?.Validate();
+                return leading.LeadTime == lead.LeadTime
+                    ? []
+                    : [new TaskLeadTimeSet(leading.Id, lead.UserId, at, lead.LeadTime)];
+
             case SetTaskDescription describe:
                 var describing = Require(task, describe.UserId);
                 var description = (describe.Description ?? "").TrimEnd();
@@ -289,6 +299,9 @@ public sealed class TodoTask : Aggregate
                     _completedDays.Clear();
                 }
 
+                break;
+            case TaskLeadTimeSet lead:
+                LeadTime = lead.LeadTime;
                 break;
             case TaskDescriptionSet described:
                 Description = described.Description;

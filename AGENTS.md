@@ -398,6 +398,9 @@ and `specs/backend-spec.md` cover the shapes; `specs/reference-lists-design.md`
 is now marked Built. `adr/0050` (phones navigate from a bottom bar with My
 Day raised in the centre, a right-hand account drawer and area chips;
 desktop keeps the sidebar) is `Active` and built on this branch too.
+`adr/0053` (yearly repeats; a per-task lead time sets how far ahead Tomorrow
+and Upcoming show a task; a One-time | Repeating toggle in the task panel) is
+`Active` and built on this branch too.
 
 List ordering (issue #96) shipped on this branch: `adr/0051` (a
 `PSPad.Module.Presentation` holds per-user views of shared data — `AreaView`

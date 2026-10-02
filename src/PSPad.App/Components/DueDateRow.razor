@@ -20,7 +20,7 @@
 <MudDialog @bind-Visible="_picking" Class="pspad-due-dialog" ContentClass="pa-0" Options="@PickerOptions">
     <DialogContent>
         <MudDatePicker PickerVariant="PickerVariant.Static" Elevation="0" ShowToolbar="false" Date="@AsDateTime(Value)"
-                       DateChanged="@PickedAsync" />
+                       @bind-PickerMonth="_shownMonth" DateChanged="@PickedAsync" />
     </DialogContent>
 </MudDialog>
 
@@ -40,6 +40,8 @@
     [Parameter] public bool FlagsPast { get; set; } = true;
 
     bool _picking;
+
+    DateTime? _shownMonth;
 
     static readonly DialogOptions PickerOptions = new() { CloseOnEscapeKey = true, BackdropClick = true, NoHeader = true };
 
@@ -71,7 +73,13 @@
 
     static DateTime? AsDateTime(DateOnly? day) => day?.ToDateTime(TimeOnly.MinValue);
 
-    void OpenPicker() => _picking = !Disabled;
+    static DateTime FirstOfMonth(DateOnly day) => new(day.Year, day.Month, 1);
+
+    void OpenPicker()
+    {
+        _shownMonth = FirstOfMonth(Value ?? Today);
+        _picking = !Disabled;
+    }
 
     async Task PickedAsync(DateTime? date)
     {

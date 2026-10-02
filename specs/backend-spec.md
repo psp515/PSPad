@@ -154,7 +154,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `areas` | user-defined areas | `name`, `position` |
 | `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation). Documents written before `adr/0051` still carry a `position` nobody reads |
 | `inboxes` | one per user | `items[]` |
-| `todotasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `completedDays[]`, `createdAt`, `description` (Markdown) |
+| `todotasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
 | `referenceitems` | items in a `Reference` list | `listId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`) |
 | `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
@@ -210,6 +210,7 @@ not stated there:
   clamped to the month's length, in every Nth month counted from
   `StartsOn`'s month. Documents without the field read `Interval = 0`;
   `Every` treats anything below 1 as 1 (`adr/0043`).
+- `RecurrenceKind.Yearly` fires on `StartsOn`'s month and day, clamped to the month's length (29 Feb → 28 Feb in non-leap years), in every Nth year counted from `StartsOn`'s year (`adr/0053`).
 - A repeating task's `DueOn` is its inclusive end ("Until"). Repeat and due
   date combine in either order. `TodoTask.OccursOn(day)` = rule occurs and
   `day <= DueOn`; Today, Upcoming, occurrence chips and `CompleteOccurrence`
@@ -226,13 +227,14 @@ not stated there:
 - `RepeatTally.Of(task, today)` derives the done count (`completedDays`)
   and the streak: done occurrences walking back from today, today's pending
   occurrence not breaking it.
+- `TodoTask.LeadTime` (optional; 1–99 days, weeks or months; `SetTaskLeadTime`) is the task's look-ahead for Tomorrow and Upcoming; with none it is 7 days. `LeadTime.Shows(day, today)` — `day > today` and `FirstShownFor(day) <= today`. It never moves a task into Today or Overdue (`adr/0053`).
 - `TodayRule.Plan(tasks, today, zone)` splits the day into Overdue and
   Today (exactly `Select`'s entries), Starred, Tomorrow, Upcoming (the day after
-  tomorrow through `today + 7`) and Completed (completed on `today` in the
+  tomorrow onwards, as far as each task's look-ahead reaches) and Completed (completed on `today` in the
   user's zone, or today's ticked occurrence). A task's date is its
   earliest trigger — due date or next unchecked step. A recurring task
   shows at most once beyond today, as its next unticked occurrence within
-  the week; it is never overdue.
+  its look-ahead; it is never overdue.
 - Starred holds open, starred, one-off tasks not overdue or due today
   (undated first, then by date); they are left out of Tomorrow and
   Upcoming. The star never enters `Select` (`adr/0035`).

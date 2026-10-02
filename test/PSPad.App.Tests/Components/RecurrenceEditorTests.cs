@@ -1,3 +1,6 @@
+using Bunit;
+using Microsoft.Extensions.DependencyInjection;
+using MudBlazor.Services;
 using PSPad.App.Components;
 using PSPad.Module.Tasks.Recurrence;
 using PSPad.TestInfrastructure;
@@ -39,5 +42,38 @@ public class RecurrenceEditorTests
     public void TheTallyReadsAsDoneCountAndStreak(int total, int streak, string expected)
     {
         Assert.Equal(expected, RecurrenceEditor.DescribeTally(new RepeatTally(total, streak)));
+    }
+
+    [Fact]
+    public void AYearlyRuleNamesItsDayAndMonth()
+    {
+        var rule = RecurrenceRule.Yearly(new DateOnly(2026, 3, 15));
+
+        Assert.Equal("Yearly on 15 Mar", RecurrenceEditor.Describe(rule));
+        Assert.Equal("Every 2 years on 15 Mar", RecurrenceEditor.Describe(rule.EveryNth(2)));
+    }
+
+    [Fact]
+    public async Task TheMenuOffersYearlyOnTodayAndNoNever()
+    {
+        await using var context = new Bunit.TestContext();
+        context.JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
+        context.Services.AddMudServices();
+        var menu = context.Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<RecurrenceEditor>(1);
+            builder.AddAttribute(2, nameof(RecurrenceEditor.Value), RecurrenceRule.Daily(Start));
+            builder.AddAttribute(3, nameof(RecurrenceEditor.Today), Start);
+            builder.CloseComponent();
+        });
+
+        Assert.Empty(menu.FindAll(".pspad-task-repeat .pspad-property-clear"));
+        menu.Find(".pspad-task-repeat .pspad-property-activator").Click();
+
+        var options = menu.FindAll(".pspad-repeat-option").Select(item => item.TextContent.Trim()).ToArray();
+        Assert.Contains("Yearly on 24 Sep", options);
+        Assert.DoesNotContain("Never", options);
     }
 }

@@ -1,9 +1,9 @@
+@using System.Globalization
 @using PSPad.Module.Tasks.Recurrence
 @using PSPad.Module.Tasks.Tasks
 
 <PropertyRow Class="pspad-task-repeat" Icon="@Icons.Material.Outlined.Repeat" Label="Repeat"
-             Value="@Describe(Value)" HasValue="@(Value is not null)" Disabled="@Disabled"
-             OnClear="@(() => ChooseAsync(null))">
+             Value="@Describe(Value)" HasValue="@(Value is not null)" Disabled="@Disabled">
     <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => ChooseAsync(RecurrenceRule.Daily(Today)))">Daily</MudMenuItem>
     <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => ChooseAsync(Weekdays(Today)))">Weekdays</MudMenuItem>
     <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => ChooseAsync(RecurrenceRule.Weekly(Today, Today.DayOfWeek)))">
@@ -12,9 +12,10 @@
     <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => ChooseAsync(RecurrenceRule.MonthlyOnDay(Today, Today.Day)))">
         @($"Monthly on day {Today.Day}")
     </MudMenuItem>
+    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => ChooseAsync(RecurrenceRule.Yearly(Today)))">
+        @($"Yearly on {YearlyDay(Today)}")
+    </MudMenuItem>
     <MudMenuItem Class="pspad-repeat-custom" Icon="@Icons.Material.Outlined.Tune" OnClick="@OpenCustom">Custom…</MudMenuItem>
-    <MudDivider />
-    <MudMenuItem Class="pspad-repeat-option" OnClick="@(() => ChooseAsync(null))">Never</MudMenuItem>
 </PropertyRow>
 
 @if (Task?.Recurrence is not null)
@@ -147,7 +148,8 @@
 
     static readonly DialogOptions CustomOptions = new() { CloseOnEscapeKey = true, BackdropClick = true };
 
-    static readonly RecurrenceKind[] Units = [RecurrenceKind.Daily, RecurrenceKind.Weekly, RecurrenceKind.MonthlyOnDay];
+    static readonly RecurrenceKind[] Units =
+        [RecurrenceKind.Daily, RecurrenceKind.Weekly, RecurrenceKind.MonthlyOnDay, RecurrenceKind.Yearly];
 
     static readonly DayOfWeek[] WeekOrder =
     [
@@ -171,6 +173,7 @@
             && !r.Days.Contains(DayOfWeek.Sunday) => "Weekdays",
         { Kind: RecurrenceKind.Weekly } r => "Weekly on " + DayList(r),
         { Kind: RecurrenceKind.MonthlyOnDay } r => $"Monthly on day {r.DayOfMonth}",
+        { Kind: RecurrenceKind.Yearly } r => $"Yearly on {YearlyDay(r.StartsOn)}",
         _ => "Custom"
     };
 
@@ -188,8 +191,11 @@
         RecurrenceKind.Daily => $"Every {rule.Every} days",
         RecurrenceKind.Weekly => $"Every {rule.Every} weeks on {DayList(rule)}",
         RecurrenceKind.MonthlyOnDay => $"Every {rule.Every} months on day {rule.DayOfMonth}",
+        RecurrenceKind.Yearly => $"Every {rule.Every} years on {YearlyDay(rule.StartsOn)}",
         _ => "Custom"
     };
+
+    static string YearlyDay(DateOnly day) => day.ToString("d MMM", CultureInfo.InvariantCulture);
 
     static string DayList(RecurrenceRule rule) =>
         string.Join(", ", rule.Days.OrderBy(day => ((int)day + 6) % 7).Select(day => day.ToString()[..3]));
@@ -198,6 +204,7 @@
     {
         RecurrenceKind.Daily => "days",
         RecurrenceKind.Weekly => "weeks",
+        RecurrenceKind.Yearly => "years",
         _ => "months"
     };
 
@@ -245,6 +252,7 @@
         {
             RecurrenceKind.Weekly => RecurrenceRule.Weekly(start, [.. _days!]),
             RecurrenceKind.MonthlyOnDay => RecurrenceRule.MonthlyOnDay(start, _dayOfMonth),
+            RecurrenceKind.Yearly => RecurrenceRule.Yearly(start),
             _ => RecurrenceRule.Daily(start)
         };
 

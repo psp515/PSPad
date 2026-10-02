@@ -51,12 +51,26 @@
         <MudDivider />
 
         <div class="py-2 px-2 d-flex flex-column gap-1">
+            <MudToggleGroup T="bool" Value="@Repeats" ValueChanged="@KindAsync" Class="pspad-task-kind mx-2 mb-1"
+                            Color="Color.Primary" Outlined="true" Size="Size.Small" Disabled="@Disabled">
+                <MudToggleItem Value="false" Text="One-time" />
+                <MudToggleItem Value="true" Text="Repeating" />
+            </MudToggleGroup>
+
+            @if (Repeats)
+            {
+                <RecurrenceEditor Value="@Recurrence" ValueChanged="@RecurrenceAsync" Task="@_task"
+                                  Today="@State.Today" Disabled="@Disabled" />
+            }
+
             <DueDateRow Value="@DueOn" ValueChanged="@DueDateAsync" Today="@State.Today" Disabled="@Disabled"
                         Label="@(Repeats ? "Until" : "Due")" EmptyText="@(Repeats ? "No end date" : "No due date")"
                         FlagsPast="@(!Repeats)" />
 
-            <RecurrenceEditor Value="@Recurrence" ValueChanged="@RecurrenceAsync" Task="@_task" Today="@State.Today"
-                              Disabled="@Disabled" />
+            @if (Repeats || DueOn is not null)
+            {
+                <LeadTimeRow Value="@LeadTime" ValueChanged="@LeadTimeAsync" Disabled="@Disabled" />
+            }
 
             <PriorityRow Value="@Priority" ValueChanged="@PriorityAsync" Disabled="@Disabled" />
 
@@ -144,6 +158,8 @@
 
     RecurrenceRule? Recurrence => _task is null ? _draft.Recurrence : _task.Recurrence;
 
+    LeadTime? LeadTime => _task is null ? _draft.LeadTime : _task.LeadTime;
+
     bool Repeats => Recurrence is not null;
 
     bool Done => _task is not null && (_task.IsRecurring
@@ -230,6 +246,11 @@
         if (_draft.DueOn is { } due)
         {
             await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, taskId, due));
+        }
+
+        if (_draft.LeadTime is { } lead)
+        {
+            await Sender.SendAsync(new SetTaskLeadTime(Guid.NewGuid(), State.UserId, taskId, lead));
         }
 
         if (_draft.Priority != Priority.None)
@@ -354,6 +375,49 @@
         await ReloadAsync();
     }
 
+    async Task KindAsync(bool repeats)
+    {
+        if (Disabled || repeats == Repeats)
+        {
+            return;
+        }
+
+        var rule = repeats ? RecurrenceRule.Daily(State.Today) : null;
+
+        if (_task is null)
+        {
+            _draft.Recurrence = rule;
+            _draft.DueOn = null;
+            return;
+        }
+
+        await Sender.SendAsync(new SetTaskRecurrence(Guid.NewGuid(), State.UserId, _task.Id, rule));
+
+        if (_task.DueOn is not null)
+        {
+            await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, _task.Id, null));
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task LeadTimeAsync(LeadTime? lead)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_task is null)
+        {
+            _draft.LeadTime = lead;
+            return;
+        }
+
+        await Sender.SendAsync(new SetTaskLeadTime(Guid.NewGuid(), State.UserId, _task.Id, lead));
+        await ReloadAsync();
+    }
+
     async Task PriorityAsync(Priority priority)
     {
         if (Disabled || priority == Priority)
@@ -458,6 +522,8 @@
         public DateOnly? DueOn { get; set; }
 
         public RecurrenceRule? Recurrence { get; set; }
+
+        public LeadTime? LeadTime { get; set; }
 
         public Priority Priority { get; set; } = Priority.None;
 
