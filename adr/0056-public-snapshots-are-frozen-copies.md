@@ -5,7 +5,7 @@ date: 2026-10-01
 status: Active
 ---
 
-# ADR-0055: Public snapshots are frozen copies, served from a new Sharing module
+# ADR-0056: Public snapshots are frozen copies, served from a new Sharing module
 
 ## Context
 
@@ -16,7 +16,7 @@ will be. Visitors need to tick a task, step or reference item as done, and
 the owner needs to see those ticks as chips on their own copy, without the
 tick ever becoming a completion someone else caused.
 
-Three things stood in the way of reusing member sharing (`adr/0053`) for
+Three things stood in the way of reusing member sharing (`adr/0054`) for
 this. First, an anonymous visitor has no `userId` — `ListAccess` and every
 sync filter key off one, and there is no account to admit. Second, the
 content has to survive the owner editing or deleting the list afterwards;
@@ -66,7 +66,7 @@ token and an expired one return the same 404 — nothing distinguishes "never
 existed" from "existed once" to a visitor holding a dead link.
 
 A visitor's tick reaches the owner through the same server-only-command
-door `adr/0053` opened for `JoinTaskList`: `SnapshotMarking` saves the mark
+door `adr/0054` opened for `JoinTaskList`: `SnapshotMarking` saves the mark
 on the frozen copy first (so every visitor sees it immediately, even if the
 real task is gone), then runs `MarkTaskFromSnapshot` or
 `MarkReferenceItemFromSnapshot` — both `IServerOnlyCommand`, excluded from
@@ -119,7 +119,7 @@ in this system until #105 changes that for this one path. Account deletion's
 generic `userId` sweep already covers `list_snapshots` and `snapshot_visits`
 with no code change, because both carry `userId` like every other
 collection — only `tasklists.Members`, a nested array, needed the explicit
-`$pull` `adr/0053` added. A snapshot outlives its list: deleting the list
+`$pull` `adr/0054` added. A snapshot outlives its list: deleting the list
 leaves every published snapshot of it serving its frozen content until it
 expires, or until the owner revokes it (`DELETE /api/snapshots/{id}`) — the
 list panel that lists them is gone with the list, so in practice it runs to

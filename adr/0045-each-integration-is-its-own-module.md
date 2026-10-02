@@ -2,7 +2,7 @@
 title: Each integration is its own module, driving Tasks through server-only commands
 tags: [architecture, modularity, integrations, domain]
 date: 2026-09-28
-status: Proposed — pattern reused by `PSPad.Module.Sharing` (adr/0055), the
+status: Proposed — pattern reused by `PSPad.Module.Sharing` (adr/0056), the
   first module outside an integration to drive Tasks through
   `IServerOnlyCommand`s
 ---

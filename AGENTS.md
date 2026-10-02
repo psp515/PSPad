@@ -209,7 +209,7 @@ reason — each pattern-matches on Tasks' own event or aggregate types
 `ReferenceItem`, …) so a rename must break the build rather than a string
 lookup or a mismatched copy at render time. `ArchitectureTests` guards both
 directions, failing the build if `Tasks` ever references `Statistics` or
-`Sharing`. See `adr/0037` and `adr/0055`.
+`Sharing`. See `adr/0037` and `adr/0056`.
 
 `Presentation` has no module edge at all: it references `Abstractions` only,
 and guards fail the build if it references a module or `Tasks` references
@@ -224,7 +224,7 @@ owner's; list-level commands (rename, delete, move, the sharing commands)
 stay owner-only through `TaskList.Require`. Every event's `UserId` is the
 aggregate's owner, `ActorId` is who actually acted. Sync widens to a membership set,
 with a `full=` backfill for a list a device does not yet hold — built in
-the next plan. See `adr/0053`.
+the next plan. See `adr/0054`.
 
 **AD-13 — Public snapshots are frozen copies, served from a new module.**
 `PSPad.Module.Sharing` owns `ListSnapshot` (a frozen copy of a list's
@@ -236,7 +236,7 @@ id; unknown and expired tokens answer the same 404. A visitor's tick is
 saved on the frozen copy first, then run against the owner's real task
 through `MarkTaskFromSnapshot` / `MarkReferenceItemFromSnapshot`
 (`IServerOnlyCommand`, reusing AD-12's mechanism), the owner as `UserId`.
-Both collections carry a TTL index on `expiresAt`. See `adr/0055`.
+Both collections carry a TTL index on `expiresAt`. See `adr/0056`.
 
 ---
 
@@ -451,7 +451,7 @@ first, other fields below, adding closes; popups only for delete
 confirmations and in-panel pickers) is `Active` and built here too.
 
 Sharing (#103, #104, `specs/sharing-spec.md`) is built on
-`feature/103`. `adr/0053` (a `TaskList` carries its own invite token,
+`feature/103`. `adr/0054` (a `TaskList` carries its own invite token,
 owner name and members rather than a second aggregate; `ListAccess` admits
 owner or member to content commands; events split `UserId` the owner from
 `ActorId` the actor; `IServerOnlyCommand` keeps a command off
@@ -473,9 +473,9 @@ tasks in the viewer's own time zone; the list panel's Sharing section
 (invite link, members, Leave list for a member) and `/join/{token}`
 cover the join flow; a shared marker sits on `ListCard`, and owner-only
 controls (rename, delete, move, the goal row) are hidden from a member.
-`adr/0054` (Statistics writes one record for the owner and one for the
+`adr/0055` (Statistics writes one record for the owner and one for the
 actor when they differ, `"{seq}:{userId}"` record ids, a versioned
-projection rebuild) is `Active` and built here too. `adr/0055` (public
+projection rebuild) is `Active` and built here too. `adr/0056` (public
 snapshots are frozen copies served from a new `PSPad.Module.Sharing` —
 the second module-to-module edge after Statistics, server-generated
 tokens, TTL expiry, anonymous rate-limited marks reaching Tasks through

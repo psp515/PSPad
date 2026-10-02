@@ -2,7 +2,7 @@
 title: Deleting an area or list deletes what it contains
 tags: [domain, persistence, offline]
 date: 2026-09-27
-status: Active (extended to reference items by [0047](0047-reference-items-are-their-own-aggregate.md); amended by [0053](0053-lists-are-shared-by-membership.md))
+status: Active (extended to reference items by [0047](0047-reference-items-are-their-own-aggregate.md); amended by [0054](0054-lists-are-shared-by-membership.md))
 ---
 
 # ADR-0042: Deleting an area or list deletes what it contains

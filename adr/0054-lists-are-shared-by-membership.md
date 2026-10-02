@@ -5,7 +5,7 @@ date: 2026-10-01
 status: Active — Extends ADR-0051, amends ADR-0034 and ADR-0042
 ---
 
-# ADR-0053: Lists are shared by membership on TaskList
+# ADR-0054: Lists are shared by membership on TaskList
 
 ## Context
 

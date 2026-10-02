@@ -5,11 +5,11 @@ date: 2026-10-01
 status: Active — amends ADR-0037
 ---
 
-# ADR-0054: Statistics writes one record for the owner and one for the actor, versioned for a clean rebuild
+# ADR-0055: Statistics writes one record for the owner and one for the actor, versioned for a clean rebuild
 
 ## Context
 
-`adr/0053` split every domain event's `UserId` (the aggregate's owner) from
+`adr/0054` split every domain event's `UserId` (the aggregate's owner) from
 `ActorId` (who actually issued the command). Before sharing, the two were
 always the same person, and `StatisticsRecord` carried a single `UserId` —
 whoever's history the record belonged to. Once a member can complete the
@@ -102,7 +102,7 @@ rather than duplicating rows.
   feed and charts entirely. The whole point of sharing is that the owner's
   side keeps working as before.
 - **Write only the owner's record, no actor copy.** Rejected: this is what
-  shipped before `adr/0053` made the owner/actor distinction possible, and
+  shipped before `adr/0054` made the owner/actor distinction possible, and
   it is the gap this ADR exists to close — a member's own statistics screen
   would never show work they did on a shared list, which reads as "my
   completions vanished" from the member's point of view.
@@ -120,7 +120,7 @@ rather than duplicating rows.
 
 A shared task's completion costs a second write and, going forward, a
 second row per user who ever interacts with it — paid only on sharing's
-actual usage, not on every event the way `adr/0053`'s `ActorId` field is.
+actual usage, not on every event the way `adr/0054`'s `ActorId` field is.
 The first start after this deploy replays the entire event log once, which
 is slow in proportion to how much history exists and briefly leaves
 statistics endpoints answering from an empty projection while it runs — an

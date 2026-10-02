@@ -85,7 +85,7 @@ anything but itself. Be referenced by Tasks. Presentation events
 ## PSPad.Module.Sharing
 
 **Purpose.** Public, account-free access to a frozen copy of a list
-(`adr/0055`). Everything a signed-in member needs — `ListAccess`,
+(`adr/0056`). Everything a signed-in member needs — `ListAccess`,
 membership, `ListView` placement — stays in `PSPad.Module.Tasks` and
 `PSPad.Module.Presentation`; this module exists only for the visitor who
 has no account at all.
@@ -101,7 +101,7 @@ Reference `PSPad.Module.Statistics`, `PSPad.Module.Presentation`,
 server-side model like Tasks itself, hosted by `PSPad.Api`'s own adapters
 (`PSPad.Api.Snapshots`). Write a Tasks document except through the two
 server-only commands (`MarkTaskFromSnapshot`, `MarkReferenceItemFromSnapshot`)
-that `adr/0053`'s `IServerOnlyCommand` mechanism was built for. Put a
+that `adr/0054`'s `IServerOnlyCommand` mechanism was built for. Put a
 snapshot in the event log or sync protocol — it is online-only, frozen at
 publish time, and useless to a device that only has its own replica.
 

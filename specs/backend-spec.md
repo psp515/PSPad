@@ -33,7 +33,7 @@ src/
     PSPad.Module.Statistics/    queries over the event log
     PSPad.Module.Identity/      User, time zone, first-sign-in provisioning
     PSPad.Module.Presentation/  per-user views of shared data (AreaView: list order) — pure, WASM-safe
-    PSPad.Module.Sharing/       public snapshots — frozen list copies, server-side only (adr/0055)
+    PSPad.Module.Sharing/       public snapshots — frozen list copies, server-side only (adr/0056)
 test/
   PSPad.Module.Tasks.Tests/       unit only
   PSPad.Module.Statistics.Tests/  unit only
@@ -56,7 +56,7 @@ References run one way only:
 | `PSPad.Module.Statistics` | `PSPad.Abstractions`, `PSPad.Contracts`, `PSPad.Module.Tasks` (event types only, for its handlers' `switch` patterns) |
 | `PSPad.Module.Identity` | `PSPad.Abstractions`, `PSPad.Contracts` |
 | `PSPad.Module.Presentation` | `PSPad.Abstractions` — and nothing else; no module references it back (`adr/0051`) |
-| `PSPad.Module.Sharing` | `PSPad.Abstractions`, `PSPad.Module.Tasks` (aggregate shapes only, to build a snapshot — `adr/0055`) |
+| `PSPad.Module.Sharing` | `PSPad.Abstractions`, `PSPad.Module.Tasks` (aggregate shapes only, to build a snapshot — `adr/0056`) |
 | `PSPad.Infrastructure` | `PSPad.Abstractions`, `PSPad.Contracts` — never a module |
 | `PSPad.Api` | everything |
 | `PSPad.App` | `PSPad.Module.Tasks`, `PSPad.Module.Presentation`, `PSPad.Abstractions`, `PSPad.Contracts` — never `PSPad.Infrastructure` |
@@ -81,7 +81,7 @@ Two module-to-module edges exist, and only these two: `Statistics` →
 `Tasks` and `Sharing` → `Tasks`, both one way and both for the same reason —
 each pattern-matches on Tasks' own event or aggregate types, so a rename
 breaks the build rather than a mismatch surfacing at render time
-(`adr/0037`, `adr/0055`). `ArchitectureTests` guards both directions failing
+(`adr/0037`, `adr/0056`). `ArchitectureTests` guards both directions failing
 the build if `Tasks` ever references either back.
 
 Commands are discovered by reflection over `CommandModules.Names`
@@ -124,7 +124,7 @@ public sealed record CommandResult(bool Accepted, string? Rejection = null)
 }
 ```
 
-**Owner and actor** (`adr/0053`). `UserId` on every event is the
+**Owner and actor** (`adr/0054`). `UserId` on every event is the
 **aggregate's owner**; `ActorId` is who actually issued the command, set
 only when it differs. `Decide`/`When` never stamp it — `MongoUnitOfWork
 .CommitAsync` compares each staged event's `UserId` against the
@@ -143,7 +143,7 @@ its own trust decision instead of trusting the caller (`JoinTaskList` is
 marked this way today; the HTTP entry point that calls it is a later
 plan's work).
 
-**List access** (`adr/0053`). `ListAccess.To(list, actorId)` returns an
+**List access** (`adr/0054`). `ListAccess.To(list, actorId)` returns an
 `OwnerId`/`ActorId` pair for the owner or any member of `list`, and rejects
 everyone else; `TaskList.Require` (owner only) stays for list-level
 commands. Every content handler — tasks, steps, recurrence, descriptions,
@@ -205,21 +205,21 @@ transactions require one. Dev, prod and tests all run the same shape.
 |---|---|---|
 | `users` | one per person | `timeZone` (IANA), `provisionedAt` |
 | `areas` | user-defined areas | `name`, `position` |
-| `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation), `inviteToken` (`adr/0053`, null = not shared), `ownerName`, `_members[]` (`userId`, `displayName`, `joinedAt`; the leading underscore keeps the BSON field name stable, like `_steps`). Documents written before `adr/0051` still carry a `position` nobody reads |
+| `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation), `inviteToken` (`adr/0054`, null = not shared), `ownerName`, `_members[]` (`userId`, `displayName`, `joinedAt`; the leading underscore keeps the BSON field name stable, like `_steps`). Documents written before `adr/0051` still carry a `position` nobody reads |
 | `inboxes` | one per user | `items[]` |
-| `todotasks` | tasks with steps inline | `listId`, `previousListId` (the list it last left, null until moved), `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0055`) |
+| `todotasks` | tasks with steps inline | `listId`, `previousListId` (the list it last left, null until moved), `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0056`) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
-| `referenceitems` | items in a `Reference` list | `listId`, `previousListId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`), `snapshotMarks[]` (`snapshotId`, `markedAt` — `adr/0055`) |
+| `referenceitems` | items in a `Reference` list | `listId`, `previousListId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`), `snapshotMarks[]` (`snapshotId`, `markedAt` — `adr/0056`) |
 | `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
 | `listviews` | one per (user, list): that user's placement of a shared list | `_id` = `ListView.IdFor(userId, listId)`, `listId`, `areaId?` (null = "Shared with me") |
 | `events` | the domain event log and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
-| `statistics_records` | the statistics feed and every chart | `_id` = `"{seq}:{userId}"` (`adr/0054`), `seq`, `role` (`Owner` \| `Actor`), `userId`, `at`, `kind`, `taskId`, `taskName`, `listId`, `goalId`, `dueOn`, `occurrenceDay`, `completionNumber` |
+| `statistics_records` | the statistics feed and every chart | `_id` = `"{seq}:{userId}"` (`adr/0055`), `seq`, `role` (`Owner` \| `Actor`), `userId`, `at`, `kind`, `taskId`, `taskName`, `listId`, `goalId`, `dueOn`, `occurrenceDay`, `completionNumber` |
 | `statistics_inbox_records` | the Inbox-captures chart | `_id` = the event's `seq`, `userId`, `at`, `itemId` |
 | `statistics_labels` | area, list and goal names for the feed | `_id` = the aggregate's id, `userId`, `kind`, `name`, `deleted` |
-| `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq`, `projectionVersion` (`adr/0054`) |
-| `list_snapshots` | a frozen, owner-published copy of one list (`adr/0055`) | `_id` (GUID), `token` (unique, server-generated, distinct from `_id`), `userId` (owner), `listId`, `kind`, `name`, `createdAt`, `expiresAt`, `tasks[]` or `items[]` — each entry its own `id`/`name`/`done`/`marked`/`markedAt`, steps or fields nested the same way. Content is frozen at publish; only `marked`/`markedAt` change afterwards |
+| `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq`, `projectionVersion` (`adr/0055`) |
+| `list_snapshots` | a frozen, owner-published copy of one list (`adr/0056`) | `_id` (GUID), `token` (unique, server-generated, distinct from `_id`), `userId` (owner), `listId`, `kind`, `name`, `createdAt`, `expiresAt`, `tasks[]` or `items[]` — each entry its own `id`/`name`/`done`/`marked`/`markedAt`, steps or fields nested the same way. Content is frozen at publish; only `marked`/`markedAt` change afterwards |
 | `snapshot_visits` | a signed-in visitor's own record of opening a snapshot | `_id` = `"{userId}:{snapshotId}"`, `userId`, `snapshotId`, `token`, `name`, `expiresAt`, `visitedAt` |
 
 Every aggregate document carries `_id` (GUID), `userId`, `version`
@@ -252,7 +252,7 @@ transaction; the returned value stamps both the event and the aggregate's
   reads also check `expiresAt > now` themselves rather than trusting the
   sweep to have already run
 - `processed_commands`: TTL index on `at`, 30 days
-- `statistics_records`: `{userId: 1, seq: -1}` (the feed page, `adr/0054`
+- `statistics_records`: `{userId: 1, seq: -1}` (the feed page, `adr/0055`
   replaces `{userId: 1, _id: -1}` now that `_id` is no longer the bare `seq`),
   `{userId: 1, kind: 1, at: 1}` (the charts' window),
   `{userId: 1, taskId: 1, kind: 1}` (the completion counter)
@@ -366,7 +366,7 @@ not stated there:
 - `TodoTask.Description` (Markdown, `SetTaskDescription`) is rendered
   client-side only (`adr/0048`) — the domain stores and moves a plain string,
   never parses it.
-- Sharing (`adr/0053`): five list commands — `ShareTaskList` (set/rotate
+- Sharing (`adr/0054`): five list commands — `ShareTaskList` (set/rotate
   the invite token, owner-only), `StopSharingTaskList` (clear it, owner-only,
   members stay), `RemoveListMember` (owner-only), `LeaveTaskList`
   (member-only, rejects the owner), `JoinTaskList` (server-only, idempotent
@@ -396,7 +396,7 @@ not stated there:
   any other list. `GET /api/today` and the client's Today projection both
   include tasks from lists the caller is a member of, same `TodayRule`, the
   viewer's own time zone.
-- Snapshot marks (`adr/0055`): `TodoTask.SnapshotMarks` and
+- Snapshot marks (`adr/0056`): `TodoTask.SnapshotMarks` and
   `ReferenceItem.SnapshotMarks` each hold `SnapshotMark(SnapshotId,
   StepId?, MarkedAt)` — a note that a public-snapshot visitor ticked this
   entry, never a state change. `MarkTaskFromSnapshot` /
@@ -487,7 +487,7 @@ client's current one — an already-installed client that only just updated
 to a build with a new sync collection — the next pull asks `since = 0`
 once instead of the stored marker, so documents in that new collection are
 not silently skipped forever by a marker that had already advanced past
-them (`adr/0049`). `areaviews` (`adr/0051`) and `listviews` (`adr/0053`) are
+them (`adr/0049`). `areaviews` (`adr/0051`) and `listviews` (`adr/0054`) are
 such collections.
 
 **App updates are offered, never forced** (`adr/0040`). The published
@@ -618,7 +618,7 @@ directly in `PSPad.Api`:
    `DeleteMany({ userId: callerId })` against each — including `events` and
    `processed_commands`. No collection name is hardcoded, so a new aggregate
    added later (a habit, a yearly goal) is covered with no code change here —
-   `list_snapshots` and `snapshot_visits` (`adr/0055`) needed none either,
+   `list_snapshots` and `snapshot_visits` (`adr/0056`) needed none either,
    since both carry `userId` like every other collection; only
    `tasklists._members`, a nested array rather than a document of its own,
    needed the explicit `$pull` in step 2.
@@ -660,7 +660,7 @@ directly in `PSPad.Api`:
 | `GET` | `/api/me` | Current user; provisions on first call, heals display name |
 | `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only) |
 | `DELETE` | `/api/account` | Delete the caller's account: every Mongo document scoped to their `userId`, then their Keycloak user. Not a command — see §6 |
-| `POST` | `/api/lists/{id}/snapshots` | Owner only. Publish a frozen copy; `{expiresAt}` → `{id, token, expiresAt}`. Online-only, like `/api/me/timezone` (`adr/0055`) |
+| `POST` | `/api/lists/{id}/snapshots` | Owner only. Publish a frozen copy; `{expiresAt}` → `{id, token, expiresAt}`. Online-only, like `/api/me/timezone` (`adr/0056`) |
 | `GET` | `/api/lists/{id}/snapshots` | Owner only. That list's active (unexpired) snapshots |
 | `DELETE` | `/api/snapshots/{id}` | Owner only. Revoke a snapshot |
 | `POST` | `/api/me/snapshot-visits` | Record that the caller opened a snapshot by token |
@@ -762,14 +762,14 @@ boot, whether or not its handler already succeeded — the deliberate cost of
 type name back to its CLR type for replay's JSON deserialization.
 
 **Records are immutable and idempotent by construction.**
-`StatisticsRecord.Id` is `"{seq}:{userId}"` (`adr/0054`) — not the bare `seq`,
+`StatisticsRecord.Id` is `"{seq}:{userId}"` (`adr/0055`) — not the bare `seq`,
 since a shared event can produce two records, one per user it concerns — so a
 duplicate dispatch or a replay upserts over the same row rather than
 duplicating it. `StatisticsRecordView.Id` on the wire is still the `long`
 `Seq`, unchanged for the client's `before=` paging.
 
 **Two records when owner and actor differ.** `StatisticsRecordProjection`
-writes one record when `ActorId == UserId`, as before `adr/0053`. Otherwise
+writes one record when `ActorId == UserId`, as before `adr/0054`. Otherwise
 it writes the owner's record (`Role: Owner`) and a second, actor-facing copy
 (`Role: Actor`): same `Seq`, `UserId` set to the actor, `GoalId` cleared,
 `CompletionNumber` recomputed against the actor's own completions of that
@@ -780,7 +780,7 @@ belongs to the owner. `StatisticsCharts.Outstanding`, its tiles
 (`NetChange` included) and `ByGoal` all restrict to `Role: Owner` records —
 a member's own "outstanding" line and net change must not move because they
 completed someone else's task, and a task's goal stays the owner's business.
-See `adr/0054`.
+See `adr/0055`.
 
 **A versioned projection rebuilds once when its shape changes.**
 `statistics_state.projectionVersion` (absent = 1) is compared against
@@ -792,7 +792,7 @@ resets `lastProcessedSeq` to 0 and records the new version
 (`AdoptVersionAsync`) — so a clear that fails, or a host that dies between
 the two, leaves the old version and the next start clears again. Then the
 normal replay path (above) rebuilds every row from `events` alone. No
-migration script; the log is the source (`adr/0054`).
+migration script; the log is the source (`adr/0055`).
 
 **Record shape and enrichment.** `StatisticsRecord` (fields in §3) is built
 from its source event's payload alone — no live lookup at projection time.

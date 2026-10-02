@@ -2,7 +2,7 @@
 
 Status: Built. Issues: #103 (share a list with people who have an
 account), #104 (public read-only snapshot for people who do not). Decisions
-of record: ADR-0053, ADR-0054, ADR-0055 (§9). Live updates for the owner's
+of record: ADR-0054, ADR-0055, ADR-0056 (§9). Live updates for the owner's
 chips — a push rather than next sync — are issue #105, a separate spec.
 
 Two features, one spec, because both start from the same list panel and both
@@ -326,7 +326,7 @@ year ahead; the server rejects anything outside (now, now + 365 days].
 Snapshots are taken from **server** state, so the client flushes its outbox
 first and the action is disabled offline.
 Deleting the list does not revoke its snapshots: each keeps serving its
-frozen content until it expires or is revoked (`adr/0055`).
+frozen content until it expires or is revoked (`adr/0056`).
 
 ### 6.4 Marks
 
@@ -436,14 +436,14 @@ docs cover it.
 
 ## 9. Docs and records
 
-- **ADR-0053** — Lists are shared by membership on `TaskList`: owner/actor
+- **ADR-0054** — Lists are shared by membership on `TaskList`: owner/actor
   split on events, `ListAccess`, membership-set sync with `full=` backfill,
   `ListView` placement. Rejected: a `Sharing`-owned `ListShare` behind an
   access port; per-document reader lists. Extends `adr/0051`; amends
   `adr/0034` (sweep) and `adr/0042` (cross-owner moves).
-- **ADR-0054** — Statistics records per owner and actor, `"{seq}:{userId}"`
+- **ADR-0055** — Statistics records per owner and actor, `"{seq}:{userId}"`
   ids, versioned rebuild. Amends `adr/0037`.
-- **ADR-0055** — Public snapshots: frozen copies in `PSPad.Module.Sharing`,
+- **ADR-0056** — Public snapshots: frozen copies in `PSPad.Module.Sharing`,
   online-only HTTP, TTL expiry, the second module edge; anonymous marks reach
   Tasks as server-only commands (rejected: Tasks subscribing to a Sharing
   event, which would reverse the module edge).
