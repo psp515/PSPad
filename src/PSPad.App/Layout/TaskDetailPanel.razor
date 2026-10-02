@@ -67,7 +67,10 @@
                         Label="@(Repeats ? "Until" : "Due")" EmptyText="@(Repeats ? "No end date" : "No due date")"
                         FlagsPast="@(!Repeats)" />
 
-            <LeadTimeRow Value="@LeadTime" ValueChanged="@LeadTimeAsync" Disabled="@Disabled" />
+            @if (Repeats || DueOn is not null)
+            {
+                <LeadTimeRow Value="@LeadTime" ValueChanged="@LeadTimeAsync" Disabled="@Disabled" />
+            }
 
             <PriorityRow Value="@Priority" ValueChanged="@PriorityAsync" Disabled="@Disabled" />
 

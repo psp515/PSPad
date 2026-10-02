@@ -417,7 +417,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
     [Fact]
     public void StepsFollowTheNameAndPropertyRowsFollowTheSteps()
     {
-        var task = NewTask("Buy milk");
+        var task = Due(NewTask("Buy milk"), Today.AddDays(3));
         AppTestHost.Arrange(this, User, Today, task);
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
@@ -843,9 +843,9 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public void AOneTimeTaskShowsDueAndRemindButNoRepeat()
+    public void AOneTimeTaskWithADueDateShowsDueAndRemindButNoRepeat()
     {
-        var task = NewTask("Renew passport");
+        var task = Due(NewTask("Renew passport"), Today.AddDays(30));
         AppTestHost.Arrange(this, User, Today, task);
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
@@ -854,6 +854,45 @@ public class TaskDetailPanelTests : Bunit.TestContext
         Assert.Contains("Due", panel.Find(".pspad-task-due").TextContent);
         Assert.Empty(panel.FindAll(".pspad-task-repeat"));
         Assert.Contains("1 week before", panel.Find(".pspad-task-lead").TextContent);
+    }
+
+    [Fact]
+    public void AOneTimeTaskWithoutADueDateHidesRemind()
+    {
+        var task = NewTask("Renew passport");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        panel.Find(".pspad-task-due");
+        Assert.Empty(panel.FindAll(".pspad-task-lead"));
+    }
+
+    [Fact]
+    public void SettingADueDateOnAOneTimeTaskRevealsRemind()
+    {
+        var task = NewTask("Renew passport");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-due");
+        panel.FindAll(".pspad-due-quick")[1].Click();
+
+        panel.WaitForAssertion(() => panel.Find(".pspad-task-lead"));
+    }
+
+    [Fact]
+    public void ANewOneTimeTaskShowsRemindOnlyOnceItHasADueDate()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var panel = RenderWithOverlays(newInList: Guid.NewGuid());
+        Assert.Empty(panel.FindAll(".pspad-task-lead"));
+
+        OpenRow(panel, ".pspad-task-due");
+        panel.FindAll(".pspad-due-quick")[1].Click();
+
+        panel.WaitForAssertion(() => panel.Find(".pspad-task-lead"));
     }
 
     [Fact]
@@ -908,7 +947,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
     [Fact]
     public async Task PickingALeadTimeSetsIt()
     {
-        var task = NewTask("Renew passport");
+        var task = Due(NewTask("Renew passport"), Today.AddDays(30));
         var replica = AppTestHost.Arrange(this, User, Today, task);
 
         var panel = RenderWithOverlays(taskId: task.Id);
@@ -921,9 +960,35 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheLeadTimeMenuExplainsItShowsTheTaskInUpcoming()
+    {
+        var task = Due(NewTask("Renew passport"), Today.AddDays(30));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-lead");
+
+        Assert.Contains("Upcoming", panel.Find(".pspad-lead-hint").TextContent);
+    }
+
+    [Fact]
+    public void TheCustomLeadTimeDialogExplainsItShowsTheTaskInUpcoming()
+    {
+        var task = Due(NewTask("Renew passport"), Today.AddDays(30));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-lead");
+        panel.Find(".pspad-lead-custom").Click();
+
+        var dialog = panel.WaitForElement(".pspad-lead-dialog");
+        Assert.Contains("Upcoming", dialog.QuerySelector(".pspad-lead-hint")!.TextContent);
+    }
+
+    [Fact]
     public async Task ClearingALeadTimeFallsBackToTheDefault()
     {
-        var task = NewTask("Renew passport");
+        var task = Due(NewTask("Renew passport"), Today.AddDays(30));
         task.ApplyAll(TodoTask.Decide(task, new SetTaskLeadTime(
             Guid.NewGuid(), User, task.Id, LeadTime.Of(1, LeadUnit.Months)), DateTimeOffset.UnixEpoch));
         var replica = AppTestHost.Arrange(this, User, Today, task);
@@ -938,7 +1003,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
     [Fact]
     public async Task ACustomLeadTimeIsSaved()
     {
-        var task = NewTask("Renew passport");
+        var task = Due(NewTask("Renew passport"), Today.AddDays(30));
         var replica = AppTestHost.Arrange(this, User, Today, task);
 
         var panel = RenderWithOverlays(taskId: task.Id);
@@ -994,6 +1059,13 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var picker = panel.FindComponents<MudDatePicker>()
             .Single(found => found.Instance.Class?.Contains("pspad-repeat-start") == true);
         return panel.InvokeAsync(() => picker.Instance.DateChanged.InvokeAsync(start.ToDateTime(TimeOnly.MinValue)));
+    }
+
+    static TodoTask Due(TodoTask task, DateOnly day)
+    {
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, day), DateTimeOffset.UnixEpoch));
+        return task;
     }
 
     static TodoTask Recurring(TodoTask task, RecurrenceRule rule)

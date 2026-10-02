@@ -3,6 +3,9 @@
 <PropertyRow Class="pspad-task-lead" Icon="@Icons.Material.Outlined.NotificationsNone" Label="Remind me"
              Value="@Describe(Value)" HasValue="@(Value is not null)" Disabled="@Disabled"
              OnClear="@(() => ChooseAsync(null))">
+    <MudText Typo="Typo.caption" Class="pspad-lead-hint pspad-muted d-block px-4 pt-2 pb-1" Style="max-width:260px">
+        @Hint
+    </MudText>
     @foreach (var preset in Presets)
     {
         <MudMenuItem Class="pspad-lead-option" OnClick="@(() => ChooseAsync(preset))">@Describe(preset)</MudMenuItem>
@@ -16,6 +19,7 @@
         <MudText Typo="Typo.h6">Remind me</MudText>
     </TitleContent>
     <DialogContent>
+        <MudText Typo="Typo.caption" Class="pspad-lead-hint pspad-muted d-block mb-3">@Hint</MudText>
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
             <MudNumericField T="int" Class="pspad-lead-amount" @bind-Value="_amount" Min="1" Max="99"
                              Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width:96px" />
@@ -58,6 +62,8 @@
     static readonly LeadUnit[] Units = [LeadUnit.Days, LeadUnit.Weeks, LeadUnit.Months];
 
     static readonly LeadTime DefaultLookAhead = new(1, LeadUnit.Weeks);
+
+    const string Hint = "How early the task shows in Upcoming. On its due date it moves to Today as usual.";
 
     bool CanSave => _amount is >= 1 and <= 99;
 

@@ -456,11 +456,16 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      shows its last seven occurrences as chips under the row, then a muted
      tally caption: "Not done yet", "Done N times", or "Done N times · M in
      a row" (`RepeatTally`).
-   - **Remind me** (`LeadTimeRow`, `pspad-task-lead`, after Due/Until) —
+   - **Remind me** (`LeadTimeRow`, `pspad-task-lead`, after Due/Until;
+     on a one-time task only once it has a due date, since it counts back
+     from one) —
      1 day, 3 days, 1 week, 2 weeks, 1 month, Custom… (a `MudDialog`: [1–99]
      [days | weeks | months]). Empty reads "1 week before" in the muted
      colour; a set value ("3 days before") carries a ✕. In Add the draft's
-     lead time is sent as `SetTaskLeadTime` after the due date.
+     lead time is sent as `SetTaskLeadTime` after the due date. The menu and
+     the Custom dialog both open with a muted caption (`pspad-lead-hint`)
+     saying the value sets how early the task shows in Upcoming and that it
+     still moves to Today on its due date.
    - **Priority** — the four fixed levels with coloured dots.
    - **Goal** — the user's goals.
    - **List** (outside Add) — lists grouped under area headings; picking
