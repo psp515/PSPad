@@ -129,3 +129,11 @@ and a duplicate-key write on commit becomes the command rejection "That
 invite link is already in use." rather than a 500. Without it a second list
 could take a token already handed out, and `POST /api/lists/join` would
 resolve it to whichever list came first.
+
+A task or reference item moved out of a shared list would otherwise never
+reach members again, since the member filter matched its current `listId`
+only. Both aggregates now keep `PreviousListId` (the list a row last left);
+`SyncReader` matches `listId` **or** `previousListId` against the member set,
+and the client drops a foreign row whose `ListId` names a list it does not
+hold. The cost: later edits to a moved row still travel to the old list's
+members until they are dropped on arrival.
