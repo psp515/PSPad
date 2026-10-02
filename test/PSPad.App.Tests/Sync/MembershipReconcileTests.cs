@@ -65,6 +65,30 @@ public class MembershipReconcileTests
     }
 
     [Fact]
+    public async Task AMovedOutStubIsDropped()
+    {
+        var sharedId = Guid.NewGuid();
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        await replica.SaveAsync(ListOwnedBy(Owner, sharedId));
+        var task = TaskIn(sharedId);
+        await replica.SaveAsync(task);
+        var stub = JsonSerializer.SerializeToElement(new
+        {
+            id = task.Id, userId = Owner, listId = Guid.NewGuid(), previousListId = sharedId,
+            version = 3, deleted = false, seq = 9L
+        });
+        var api = new ScriptedApi(new SyncResponse(9, new Dictionary<string, JsonElement[]>
+        {
+            ["todotasks"] = [stub]
+        }, [], MemberListIds: [sharedId]));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Null(await replica.LoadAsync<TodoTask>(task.Id));
+    }
+
+    [Fact]
     public async Task MyOwnTasksStayEvenWhenTheirListHasNotArrived()
     {
         var replica = new InMemoryReplica();

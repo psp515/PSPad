@@ -61,6 +61,8 @@ public sealed class SyncReader(MongoContext context)
         var visible = new HashSet<Guid>(memberListIds);
         var wholeLists = full.Where(visible.Contains).ToArray();
 
+        bool Readable(Guid ownerId, Guid listId) => ownerId == userId || visible.Contains(listId);
+
         var areas = await ReadAsync<Area>(session, since, Owned<Area>(userId), None<Area>(), ct);
         var taskLists = await ReadAsync(session, since,
             Owned<TaskList>(userId) | Builders<TaskList>.Filter.Eq("_members.userId", userId),
@@ -69,7 +71,10 @@ public sealed class SyncReader(MongoContext context)
             Owned<TodoTask>(userId) |
             Builders<TodoTask>.Filter.In(task => task.ListId, memberListIds) |
             Builders<TodoTask>.Filter.In(task => task.PreviousListId, memberListIds.Select(id => (Guid?)id)),
-            Builders<TodoTask>.Filter.In(task => task.ListId, wholeLists), ct);
+            Builders<TodoTask>.Filter.In(task => task.ListId, wholeLists), ct,
+            task => Readable(task.UserId, task.ListId)
+                ? Serialize(task)
+                : Stub(task, task.ListId, task.PreviousListId));
         var goals = await ReadAsync<Goal>(session, since, Owned<Goal>(userId), None<Goal>(), ct);
         var inboxes = await ReadAsync<Inbox>(session, since, Owned<Inbox>(userId), None<Inbox>(), ct);
         var users = await ReadAsync<User>(session, since, Owned<User>(userId), None<User>(), ct);
@@ -77,7 +82,10 @@ public sealed class SyncReader(MongoContext context)
             Owned<ReferenceItem>(userId) |
             Builders<ReferenceItem>.Filter.In(item => item.ListId, memberListIds) |
             Builders<ReferenceItem>.Filter.In(item => item.PreviousListId, memberListIds.Select(id => (Guid?)id)),
-            Builders<ReferenceItem>.Filter.In(item => item.ListId, wholeLists), ct);
+            Builders<ReferenceItem>.Filter.In(item => item.ListId, wholeLists), ct,
+            item => Readable(item.UserId, item.ListId)
+                ? Serialize(item)
+                : Stub(item, item.ListId, item.PreviousListId));
         var areaViews = await ReadAsync<AreaView>(session, since, Owned<AreaView>(userId), None<AreaView>(), ct);
         var listViews = await ReadAsync<ListView>(session, since, Owned<ListView>(userId), None<ListView>(), ct);
 
@@ -118,7 +126,7 @@ public sealed class SyncReader(MongoContext context)
 
     async Task<(JsonElement[] Rows, long HighestSeq)> ReadAsync<T>(
         IClientSessionHandle session, long since, FilterDefinition<T> visible, FilterDefinition<T> whole,
-        CancellationToken ct)
+        CancellationToken ct, Func<T, JsonElement>? project = null)
         where T : Aggregate
     {
         var rows = await context.Collection<T>()
@@ -127,8 +135,24 @@ public sealed class SyncReader(MongoContext context)
 
         var highestSeq = rows.Count > 0 ? rows.Max(row => row.Seq) : 0;
 
-        return (rows.Select(row => JsonSerializer.SerializeToElement(row, JsonOptions)).ToArray(), highestSeq);
+        return (rows.Select(project ?? Serialize).ToArray(), highestSeq);
     }
+
+    static JsonElement Serialize<T>(T row) where T : Aggregate =>
+        JsonSerializer.SerializeToElement(row, JsonOptions);
+
+    // A row reached only through previousListId left the caller's lists; it carries just enough to be dropped.
+    static JsonElement Stub(Aggregate row, Guid listId, Guid? previousListId) =>
+        JsonSerializer.SerializeToElement(new
+        {
+            row.Id,
+            row.UserId,
+            ListId = listId,
+            PreviousListId = previousListId,
+            row.Version,
+            row.Deleted,
+            row.Seq
+        }, JsonOptions);
 
     async Task<long> HighestSeqAsync(IClientSessionHandle session, Guid userId, CancellationToken ct)
     {

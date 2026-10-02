@@ -442,8 +442,9 @@ swallowed and never written to the marker; the missing list stays missing
 and the next sync retries it, instead of every delta pull wedging behind a
 flaky connection. Last, a task or reference item the caller does not own
 whose `ListId` names a list the replica does not hold is dropped — a row the
-owner moved out of a shared list, delivered once more through
-`previousListId`. `IReplica.LoadAllAsync<T>()` returns every row of a type —
+owner moved out of a shared list, delivered through `previousListId` as a
+stub (`id`, `userId`, `listId`, `previousListId`, `version`, `deleted`,
+`seq` only — never its name, description, steps, fields, dates or marks). `IReplica.LoadAllAsync<T>()` returns every row of a type —
 a replica holds one user's whole visible world, not only what that user
 owns — and `IReplica.RemoveAsync` deletes one row; `replica.js`'s `getAll`
 reads a type's rows with the key range `bound([type], [type, []])`.

@@ -135,5 +135,7 @@ reach members again, since the member filter matched its current `listId`
 only. Both aggregates now keep `PreviousListId` (the list a row last left);
 `SyncReader` matches `listId` **or** `previousListId` against the member set,
 and the client drops a foreign row whose `ListId` names a list it does not
-hold. The cost: later edits to a moved row still travel to the old list's
-members until they are dropped on arrival.
+hold. A row matched only through `previousListId` is sent as a stub — ids,
+`listId`, `previousListId`, version, deleted flag and `seq`, no content — so
+nothing written after the move reaches former members; the cost left is one
+small stub per later change.

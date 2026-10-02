@@ -169,12 +169,18 @@ public class MemberSyncTests(MongoFixture fixture)
         await Sharing.JoinAsync(member, ct, token);
         var first = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
 
-        await Sharing.SendAsync(owner, ct, new MoveTaskToList(Guid.NewGuid(), ownerId, taskId, privateId));
+        await Sharing.SendAsync(owner, ct,
+            new SetTaskDescription(Guid.NewGuid(), ownerId, taskId, "Rozdział 3"),
+            new MoveTaskToList(Guid.NewGuid(), ownerId, taskId, privateId),
+            new RenameTask(Guid.NewGuid(), ownerId, taskId, "Prywatne"));
 
         var second = await member.GetFromJsonAsync<SyncResponse>($"/api/sync?since={first!.Marker}", ct);
         var taskRow = Assert.Single(second!.Documents["todotasks"]);
         Assert.Equal(taskId, taskRow.GetProperty("id").GetGuid());
         Assert.Equal(privateId, taskRow.GetProperty("listId").GetGuid());
+        Assert.DoesNotContain("Prywatne", taskRow.GetRawText());
+        Assert.DoesNotContain("Rozdział", taskRow.GetRawText());
+        Assert.DoesNotContain("Przeczytać", taskRow.GetRawText());
         Assert.DoesNotContain(second.Documents["tasklists"], row => row.GetProperty("id").GetGuid() == privateId);
     }
 
@@ -196,11 +202,18 @@ public class MemberSyncTests(MongoFixture fixture)
         await Sharing.JoinAsync(member, ct, token);
         var first = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
 
-        await Sharing.SendAsync(owner, ct, new MoveReferenceItemToList(Guid.NewGuid(), ownerId, itemId, privateId));
+        await Sharing.SendAsync(owner, ct,
+            new SetReferenceItemDescription(Guid.NewGuid(), ownerId, itemId, "Sucha szpula"),
+            new MoveReferenceItemToList(Guid.NewGuid(), ownerId, itemId, privateId),
+            new RenameReferenceItem(Guid.NewGuid(), ownerId, itemId, "Prywatne"));
 
         var second = await member.GetFromJsonAsync<SyncResponse>($"/api/sync?since={first!.Marker}", ct);
         var itemRow = Assert.Single(second!.Documents["referenceitems"]);
+        Assert.Equal(itemId, itemRow.GetProperty("id").GetGuid());
         Assert.Equal(privateId, itemRow.GetProperty("listId").GetGuid());
+        Assert.DoesNotContain("Prywatne", itemRow.GetRawText());
+        Assert.DoesNotContain("Sucha", itemRow.GetRawText());
+        Assert.DoesNotContain("PLA", itemRow.GetRawText());
     }
 
     static async Task<Guid> PrivateListAsync(HttpClient owner, Guid ownerId, ListKind kind, CancellationToken ct)

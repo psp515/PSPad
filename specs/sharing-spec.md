@@ -156,7 +156,11 @@ they filed there — filing is a `ListView`, not `TaskList.AreaId` (§4).
   `PreviousListId` is the list a task or item last left (set by
   `TaskMovedToList` / `ReferenceItemMovedToList`), so a row the owner moves
   out of a shared list reaches members once more, naming a list they do not
-  hold; the client then drops it (§3.2).
+  hold; the client then drops it (§3.2). A row matched only through
+  `previousListId` (caller neither owns it nor belongs to its current list)
+  is sent as a stub — `id`, `userId`, `listId`, `previousListId`, `version`,
+  `deleted`, `seq` and nothing else — so none of its later content reaches
+  former members.
 
 `events` in the response stay `userId == caller`; the client does not read
 them.
