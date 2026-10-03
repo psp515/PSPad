@@ -183,7 +183,7 @@
         }
 
         await Sender.SendAsync(new LeaveTaskList(Guid.NewGuid(), State.UserId, _list.Id));
-        Navigation.NavigateTo($"/areas/{SharedWithMe.AreaId}");
+        Navigation.NavigateTo(AreaLinks.For(SharedWithMe.AreaId));
     }
 
     async Task CopyLinkAsync()

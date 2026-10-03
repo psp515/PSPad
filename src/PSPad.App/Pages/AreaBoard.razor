@@ -1,4 +1,5 @@
 @page "/areas/{AreaId:guid}"
+@page "/areas/shared"
 @attribute [Authorize]
 @using PSPad.Abstractions
 @using PSPad.App.Components
@@ -117,7 +118,19 @@ else
 
     protected override void OnInitialized() => Sender.Sent += OnCommandSent;
 
-    protected override async Task OnParametersSetAsync() => await ReloadAsync();
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsSharedRoute())
+        {
+            AreaId = SharedWithMe.AreaId;
+        }
+
+        await ReloadAsync();
+    }
+
+    bool IsSharedRoute() =>
+        Navigation.ToBaseRelativePath(Navigation.Uri).Split('?')[0].TrimEnd('/')
+            .Equals("areas/shared", StringComparison.OrdinalIgnoreCase);
 
     void OnCommandSent() => InvokeAsync(async () =>
     {

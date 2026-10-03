@@ -83,7 +83,7 @@ public class ListSharingSectionTests : Bunit.TestContext
         panel.FindAll("div.mud-dialog button").Last().Click();
 
         var nav = Services.GetRequiredService<NavigationManager>();
-        Assert.EndsWith($"/areas/{SharedWithMe.AreaId}", nav.Uri);
+        Assert.EndsWith(SharedWithMe.Href, nav.Uri);
     }
 
     [Fact]

@@ -40,7 +40,7 @@
         {
             @foreach (var area in Areas.OrderBy(area => area.Position))
             {
-                <MudNavLink @key="area.Id" Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
+                <MudNavLink @key="area.Id" Href="@AreaLinks.For(area.Id)" Icon="@Icons.Material.Filled.Folder">
                     @area.Name
                 </MudNavLink>
             }
@@ -48,7 +48,7 @@
 
         @if (HasShared)
         {
-            <MudNavLink Href="@($"/areas/{SharedWithMe.AreaId}")" Icon="@Icons.Material.Filled.People">
+            <MudNavLink Href="@AreaLinks.For(SharedWithMe.AreaId)" Icon="@Icons.Material.Filled.People">
                 @SharedWithMe.Name
             </MudNavLink>
         }

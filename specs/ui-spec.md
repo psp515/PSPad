@@ -1024,7 +1024,8 @@ and footer moved into `AccountDrawer` (`adr/0050`).
 | `/` | My Day |
 | `/inbox` | Inbox |
 | `/areas` | opens the last-used area on this device, else the first; empty state when there are none |
-| `/areas/{areaId}` | area screen — list cards; `SharedWithMe.AreaId` renders "Shared with me", no FAB |
+| `/areas/{areaId}` | area screen — list cards |
+| `/areas/shared` | the same screen for `SharedWithMe.AreaId` — "Shared with me", no FAB |
 | `/join/{token}` | join a shared list by its invite token, then opens it |
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |

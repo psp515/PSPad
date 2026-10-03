@@ -31,7 +31,7 @@
 }
 else if (_list is not null)
 {
-    <PageHeading Title="@_list.Name" Subtitle="@_areaName" BackHref="@($"/areas/{_areaId}")"
+    <PageHeading Title="@_list.Name" Subtitle="@_areaName" BackHref="@AreaLinks.For(_areaId)"
                  BackLabel="Back to area" BackClass="pspad-back-to-area">
         <Adornment>
             <MudIcon Icon="@ListIcon.For(_list)" Title="@ListIcon.LabelFor(_list)" Color="Color.Primary" Class="pspad-list-icon" />
@@ -235,7 +235,7 @@ else
 
         var areaId = _areaId;
         await Sender.SendAsync(new DeleteTaskList(Guid.NewGuid(), State.UserId, ListId));
-        Navigation.NavigateTo($"/areas/{areaId}");
+        Navigation.NavigateTo(AreaLinks.For(areaId));
     }
 
     async Task ToggleAsync(TodoTask task)

@@ -67,7 +67,7 @@ public class AreasIndexTests : Bunit.TestContext
 
         var page = Render<AreasIndex>();
 
-        page.WaitForAssertion(() => Assert.EndsWith($"/areas/{SharedWithMe.AreaId}", navigation.Uri));
+        page.WaitForAssertion(() => Assert.EndsWith(SharedWithMe.Href, navigation.Uri));
     }
 
     static Area NewArea(string name, int position)

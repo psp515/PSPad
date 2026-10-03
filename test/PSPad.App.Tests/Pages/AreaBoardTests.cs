@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -675,6 +676,21 @@ public class AreaBoardTests : Bunit.TestContext
         Arrange(shared);
 
         var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, SharedWithMe.AreaId));
+
+        Assert.Contains("Shared with me", page.Markup);
+        Assert.Contains("Errands", page.Markup);
+    }
+
+    [Fact]
+    public void TheReadableSharedRouteRendersTheSharedBoard()
+    {
+        var owner = Guid.NewGuid();
+        var shared = NewMemberList(owner, User, "Errands");
+        Arrange(shared);
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo("/areas/shared");
+
+        var page = Render<AreaBoard>();
 
         Assert.Contains("Shared with me", page.Markup);
         Assert.Contains("Errands", page.Markup);

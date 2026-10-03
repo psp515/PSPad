@@ -51,7 +51,7 @@ else
 
             if (placement.HasShared)
             {
-                Navigation.NavigateTo($"/areas/{SharedWithMe.AreaId}", replace: true);
+                Navigation.NavigateTo(AreaLinks.For(SharedWithMe.AreaId), replace: true);
                 return;
             }
 
@@ -59,7 +59,7 @@ else
             return;
         }
 
-        Navigation.NavigateTo($"/areas/{target.Id}", replace: true);
+        Navigation.NavigateTo(AreaLinks.For(target.Id), replace: true);
     }
 
     void NewArea() => Navigation.NavigateTo(AreaQuery.ForNew(Navigation.Uri));

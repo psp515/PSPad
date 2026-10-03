@@ -457,7 +457,7 @@ public class ListPageTests : Bunit.TestContext
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, shared.Id));
 
         var back = page.Find(".pspad-back-to-area");
-        Assert.Equal($"/areas/{PSPad.App.State.SharedWithMe.AreaId}", back.GetAttribute("href"));
+        Assert.Equal(PSPad.App.State.SharedWithMe.Href, back.GetAttribute("href"));
     }
 
     [Fact]

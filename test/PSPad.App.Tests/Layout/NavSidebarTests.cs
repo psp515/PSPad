@@ -176,7 +176,7 @@ public class NavSidebarTests : Bunit.TestContext
             .Add(p => p.UserId, User)
             .Add(p => p.HasShared, true));
         Assert.Contains("Shared with me", with.Markup);
-        Assert.Contains($"/areas/{SharedWithMe.AreaId}\"", with.Markup);
+        Assert.Contains($"{SharedWithMe.Href}\"", with.Markup);
     }
 
     [Fact]

@@ -6,7 +6,7 @@
     @foreach (var area in Areas.Where(area => !area.Deleted).OrderBy(area => area.Position))
     {
         var current = area.Id == Current;
-        <MudChip @key="area.Id" T="Guid" Value="@area.Id" Href="@($"/areas/{area.Id}")" Size="Size.Small" Class="ma-0"
+        <MudChip @key="area.Id" T="Guid" Value="@area.Id" Href="@AreaLinks.For(area.Id)" Size="Size.Small" Class="ma-0"
                  Color="@(current ? Color.Primary : Color.Default)"
                  Variant="@(current ? Variant.Filled : Variant.Outlined)"
                  UserAttributes="@(current ? CurrentPage : NoAttributes)">@area.Name</MudChip>
@@ -14,7 +14,7 @@
     @if (HasShared)
     {
         var current = Current == SharedWithMe.AreaId;
-        <MudChip T="Guid" Value="@SharedWithMe.AreaId" Href="@($"/areas/{SharedWithMe.AreaId}")" Size="Size.Small" Class="ma-0"
+        <MudChip T="Guid" Value="@SharedWithMe.AreaId" Href="@AreaLinks.For(SharedWithMe.AreaId)" Size="Size.Small" Class="ma-0"
                  Color="@(current ? Color.Primary : Color.Default)"
                  Variant="@(current ? Variant.Filled : Variant.Outlined)"
                  UserAttributes="@(current ? CurrentPage : NoAttributes)">@SharedWithMe.Name</MudChip>
