@@ -660,7 +660,7 @@ panel whenever it carries at least one snapshot mark. The panel offers
 `ClearReferenceItemSnapshotMarks`; completing the task itself is a
 separate, deliberate action the chip never triggers.
 
-**`/s/{token}`** (`Pages/SnapshotPage.razor`, `PublicLayout`, anonymous —
+**`/public/snapshot/{token}`** (`Pages/SnapshotPage.razor`, `PublicLayout`, anonymous —
 outside `AppShell` like `/welcome`) renders the frozen list: a top bar
 with **Log in** or **Open PSPad** depending on whether a local session
 exists, the list's name and "Snapshot from {date} · expires {date}", then
@@ -681,7 +681,7 @@ and the snapshot cached to IndexedDB for that offline path.
 **`/snapshots`** (`Pages/SnapshotsPage.razor`, signed-in) is **List
 snapshots**: a `MudList` of every snapshot the caller has opened, newest
 first, name plus "Expires {date} · Opened {date}", each row linking to
-`/s/{token}`. An empty list shows `EmptyState` ("Snapshots you open while
+`/public/snapshot/{token}`. An empty list shows `EmptyState` ("Snapshots you open while
 signed in show up here."). Online it reads `/api/me/snapshot-visits`;
 offline, or on request failure, it falls back to the IndexedDB cache,
 pruning expired entries from both sources before display. A sidebar row
@@ -1031,7 +1031,7 @@ and footer moved into `AccountDrawer` (`adr/0050`).
 | `/goals` | Goals |
 | `/goals/{goalId}` | goal screen — every task of one goal |
 | `/snapshots` | List snapshots — public snapshots the caller has opened while signed in, newest first |
-| `/s/{token}` | a public snapshot, anonymous, outside `AppShell` |
+| `/public/snapshot/{token}` | a public snapshot, anonymous, outside `AppShell` |
 | `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-captures bar chart, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
 | `/settings` | Settings (account + change password + sign-out; application settings: time zone, theme, accent; sync status; delete account) |

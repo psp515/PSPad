@@ -23,7 +23,7 @@ else
     <MudList T="string">
         @foreach (var row in _rows)
         {
-            <MudListItem @key="row.Token" T="string" Href="@($"/s/{row.Token}")">
+            <MudListItem @key="row.Token" T="string" Href="@SnapshotLinks.Route(row.Token)">
                 <MudText>@row.Name</MudText>
                 <MudText Typo="Typo.caption">
                     Expires @row.ExpiresAt.ToString("d MMM yyyy") · Opened @row.VisitedAt.ToString("d MMM yyyy")

@@ -482,7 +482,7 @@ tokens, TTL expiry, anonymous rate-limited marks reaching Tasks through
 `IServerOnlyCommand`s) is `Active` and built here as well: the `Sharing`
 module, its two collections and TTL indexes, the owner's publish/revoke
 and list panel's Public snapshots section, the anonymous `/api/public`
-group, the public `/s/{token}` page with an IndexedDB offline cache, and
+group, the public `/public/snapshot/{token}` page with an IndexedDB offline cache, and
 the signed-in `/snapshots` List snapshots tab are all in. Live push of a
 visitor's mark to the owner, instead of next sync, is issue #105, a
 separate spec.

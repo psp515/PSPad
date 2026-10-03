@@ -122,7 +122,7 @@ public class SnapshotsPageTests : Bunit.TestContext
         Assert.Contains("Weekly list", page.Markup);
         Assert.Contains("Expires", page.Markup);
         Assert.Contains("Opened", page.Markup);
-        Assert.Contains("/s/tok-1", page.Markup);
+        Assert.Contains("/public/snapshot/tok-1", page.Markup);
     }
 
     IRenderedComponent<SnapshotsPage> Render() => Render<SnapshotsPage>();

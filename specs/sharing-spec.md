@@ -352,7 +352,7 @@ opens a snapshot (including their own).
 
 ### 6.6 Public page
 
-Client route `/s/{token}`, anonymous, outside `AppShell` like `/welcome`:
+Client route `/public/snapshot/{token}`, anonymous, outside `AppShell` like `/welcome`:
 the list name, "Snapshot from {date} · expires {date}", tasks (done ones
 struck through, steps beneath) or reference items (fields as in
 `ReferenceRow`), Markdown via `MarkdownField` `ReadOnly`. Every task, step and
@@ -368,7 +368,7 @@ not a sync collection) for offline reading.
 
 A sidebar row (desktop, after Statistics) and an `AccountDrawer` row (phone,
 before Settings): **List snapshots**, route `/snapshots`. Lists
-visits newest first with name and expiry; opens `/s/{token}`. Online it
+visits newest first with name and expiry; opens `/public/snapshot/{token}`. Online it
 fetches the list; offline it shows the cached ones. Expired entries drop out
 on both sides.
 
@@ -505,6 +505,6 @@ bUnit — `PSPad.App.Tests`:
 - "Shared with me" appears only with unplaced member lists; filing moves it.
 - Sharing section per role; goal field hidden for members.
 - Purge reconciliation on the replica.
-- `/s/{token}` renders tasks and items, mark toggles and revert on failure,
+- `/public/snapshot/{token}` renders tasks and items, mark toggles and revert on failure,
   expired screen; "Marked on a snapshot" chip and Dismiss; `/snapshots` online
   and cached.
