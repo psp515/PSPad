@@ -448,6 +448,52 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AMembersBackButtonLeadsToSharedWithMeWhenTheListIsUnfiled()
+    {
+        var owner = Guid.NewGuid();
+        var shared = NewMemberList(owner, User, "Errands");
+        Arrange(shared);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, shared.Id));
+
+        var back = page.Find(".pspad-back-to-area");
+        Assert.Equal($"/areas/{PSPad.App.State.SharedWithMe.AreaId}", back.GetAttribute("href"));
+    }
+
+    [Fact]
+    public void AMembersBackButtonLeadsToTheAreaTheyFiledTheListUnder()
+    {
+        var owner = Guid.NewGuid();
+        var shared = NewMemberList(owner, User, "Errands");
+        var myArea = NewArea("Chores");
+        var view = PlaceView(User, shared.Id, myArea.Id);
+        Arrange(myArea, shared, view);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, shared.Id));
+
+        var back = page.Find(".pspad-back-to-area");
+        Assert.Equal($"/areas/{myArea.Id}", back.GetAttribute("href"));
+    }
+
+    static PSPad.Module.Tasks.Areas.Area NewArea(string name)
+    {
+        var area = new PSPad.Module.Tasks.Areas.Area();
+        area.ApplyAll(PSPad.Module.Tasks.Areas.Area.Decide(
+            null, new PSPad.Module.Tasks.Areas.CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), name, 0),
+            DateTimeOffset.UnixEpoch));
+        return area;
+    }
+
+    static PSPad.Module.Presentation.ListViews.ListView PlaceView(Guid me, Guid listId, Guid? areaId)
+    {
+        var view = new PSPad.Module.Presentation.ListViews.ListView();
+        view.ApplyAll(PSPad.Module.Presentation.ListViews.ListView.Decide(
+            null, new PSPad.Module.Presentation.ListViews.PlaceList(Guid.NewGuid(), me, listId, areaId),
+            DateTimeOffset.UnixEpoch));
+        return view;
+    }
+
+    [Fact]
     public void EachTaskIsItsOwnCard()
     {
         var list = NewList("Zakupy");

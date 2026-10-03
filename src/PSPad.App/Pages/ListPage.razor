@@ -4,6 +4,8 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Presentation.AreaViews
+@using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.References
@@ -12,6 +14,8 @@
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<TodoTask> TaskStore
 @inject IDocumentStore<ReferenceItem> ItemStore
+@inject IDocumentStore<AreaView> ViewStore
+@inject IDocumentStore<ListView> ListViewStore
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -27,7 +31,7 @@
 }
 else if (_list is not null)
 {
-    <PageHeading Title="@_list.Name" Subtitle="@_areaName" BackHref="@($"/areas/{_list.AreaId}")"
+    <PageHeading Title="@_list.Name" Subtitle="@_areaName" BackHref="@($"/areas/{_areaId}")"
                  BackLabel="Back to area" BackClass="pspad-back-to-area">
         <Adornment>
             <MudIcon Icon="@ListIcon.For(_list)" Title="@ListIcon.LabelFor(_list)" Color="Color.Primary" Class="pspad-list-icon" />
@@ -144,6 +148,7 @@ else
     bool _loaded;
     bool _isMine = true;
     TaskList? _list;
+    Guid _areaId;
     string? _areaName;
     IReadOnlyList<TodoTask> _open = [];
     IReadOnlyList<TodoTask> _done = [];
@@ -167,10 +172,17 @@ else
 
     async Task ReloadAsync()
     {
-        var list = await ListStore.LoadAsync(ListId, CancellationToken.None);
+        var areas = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var views = await ViewStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var listViews = await ListViewStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var placement = ListPlacement.For(State.UserId, areas, lists, views, listViews);
+
+        var list = lists.FirstOrDefault(candidate => candidate.Id == ListId);
         _list = list is null || list.Deleted ? null : list;
         _isMine = _list is null || ListPlacement.IsMine(State.UserId, _list);
-        _areaName = _list is null ? null : (await AreaStore.LoadAsync(_list.AreaId, CancellationToken.None))?.Name;
+        _areaId = _list is null ? Guid.Empty : placement.AreaOf(_list);
+        _areaName = _list is null ? null : placement.AreaName(_areaId);
 
         if (_list is { Kind: ListKind.Reference })
         {
@@ -221,7 +233,7 @@ else
             return;
         }
 
-        var areaId = _list.AreaId;
+        var areaId = _areaId;
         await Sender.SendAsync(new DeleteTaskList(Guid.NewGuid(), State.UserId, ListId));
         Navigation.NavigateTo($"/areas/{areaId}");
     }
