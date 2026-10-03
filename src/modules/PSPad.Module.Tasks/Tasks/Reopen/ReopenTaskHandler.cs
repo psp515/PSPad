@@ -1,9 +1,13 @@
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Lists;
 
 namespace PSPad.Module.Tasks.Tasks;
 
-public sealed class ReopenTaskHandler(IDocumentStore<TodoTask> store, IUnitOfWork work, IClock clock)
-    : ICommandHandler<ReopenTask>
+public sealed class ReopenTaskHandler(
+    IDocumentStore<TodoTask> store,
+    IDocumentStore<TaskList> lists,
+    IUnitOfWork work,
+    IClock clock) : ICommandHandler<ReopenTask>
 {
     public async Task<CommandResult> HandleAsync(ReopenTask command, CancellationToken ct)
     {
@@ -11,7 +15,8 @@ public sealed class ReopenTaskHandler(IDocumentStore<TodoTask> store, IUnitOfWor
 
         try
         {
-            var events = TodoTask.Decide(task, command, clock.UtcNow);
+            var access = await lists.AccessAsync(task?.ListId, command.UserId, ct);
+            var events = TodoTask.Decide(task, command, clock.UtcNow, access);
             task!.ApplyAll(events);
             work.Stage(task, events);
             await work.CommitAsync(command.CommandId, command.UserId, ct);

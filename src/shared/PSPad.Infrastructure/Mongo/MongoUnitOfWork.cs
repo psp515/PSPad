@@ -46,10 +46,11 @@ public sealed class MongoUnitOfWork(
 
             var events = context.Collection<StoredEvent>("events");
 
-            foreach (var (aggregate, staged) in _staged)
+            foreach (var (aggregate, stagedEvents) in _staged)
             {
-                foreach (var @event in staged)
+                foreach (var staged in stagedEvents)
                 {
+                    var @event = staged.UserId == userId ? staged : staged with { ActorId = userId };
                     var seq = await _sequence.NextAsync(session, ct);
                     aggregate.Seq = seq;
                     published.Add(new DomainEventEnvelope(seq, @event));
@@ -91,6 +92,11 @@ public sealed class MongoUnitOfWork(
                     commandId);
             }
         }
+        catch (MongoWriteException duplicate) when (IsDuplicateInviteToken(duplicate))
+        {
+            await session.AbortTransactionAsync(ct);
+            throw new DomainRejectedException("That invite link is already in use.");
+        }
         catch
         {
             await session.AbortTransactionAsync(ct);
@@ -102,6 +108,10 @@ public sealed class MongoUnitOfWork(
             published.Clear();
         }
     }
+
+    static bool IsDuplicateInviteToken(MongoWriteException exception) =>
+        exception.WriteError?.Category == ServerErrorCategory.DuplicateKey &&
+        exception.WriteError.Message.Contains(MongoIndexes.InviteTokenIndex, StringComparison.Ordinal);
 
     Task ReplaceAsync(IClientSessionHandle session, Aggregate aggregate, CancellationToken ct)
     {

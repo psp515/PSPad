@@ -12,10 +12,13 @@ public class MongoStatisticsStoreTests(MongoFixture fixture)
 
     MongoStatisticsStore Store() => new(Persistence.TestContext.For(fixture));
 
-    static StatisticsRecord Record(long id, Guid userId, RecordKind kind, Guid taskId, DateTimeOffset at) =>
+    static StatisticsRecord Record(
+        long id, Guid userId, RecordKind kind, Guid taskId, DateTimeOffset at, RecordRole role = RecordRole.Owner) =>
         new()
         {
-            Id = id,
+            Id = StatisticsRecord.IdFor(id, userId),
+            Seq = id,
+            Role = role,
             UserId = userId,
             At = at,
             Kind = kind,
@@ -80,6 +83,22 @@ public class MongoStatisticsStoreTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task AnActorsRecordNeverCountsAsOpen()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var userId = Guid.NewGuid();
+        var store = Store();
+        var ownTask = Guid.NewGuid();
+        var sharedTask = Guid.NewGuid();
+        await store.SaveAsync(Record(Seq(), userId, RecordKind.Created, ownTask, Noon.AddHours(-1)), ct);
+        await store.SaveAsync(Record(Seq(), userId, RecordKind.Created, sharedTask, Noon.AddHours(-1), RecordRole.Actor), ct);
+
+        var open = await store.OpenTaskIdsBeforeAsync(userId, Noon, ct);
+
+        Assert.Equal([ownTask], open);
+    }
+
+    [Fact]
     public async Task APageWalksBackwardsFromTheMarker()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
@@ -91,10 +110,10 @@ public class MongoStatisticsStoreTests(MongoFixture fixture)
         await store.SaveAsync(Record(second, userId, RecordKind.Created, Guid.NewGuid(), Noon), ct);
 
         var newest = await store.PageAsync(userId, null, 1, ct);
-        var older = await store.PageAsync(userId, newest[0].Id, 1, ct);
+        var older = await store.PageAsync(userId, newest[0].Seq, 1, ct);
 
-        Assert.Equal(second, newest[0].Id);
-        Assert.Equal(first, Assert.Single(older).Id);
+        Assert.Equal(second, newest[0].Seq);
+        Assert.Equal(first, Assert.Single(older).Seq);
     }
 
     [Fact]

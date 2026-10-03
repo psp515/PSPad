@@ -34,6 +34,27 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ATaskFromASharedListDueTodayShowsUnderToday()
+    {
+        var owner = Guid.NewGuid();
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), owner, Guid.NewGuid(), Guid.NewGuid(), "Wspólna"),
+            DateTimeOffset.UnixEpoch));
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(
+            null, new CreateTask(Guid.NewGuid(), owner, Guid.NewGuid(), list.Id, "Oddać książki"),
+            DateTimeOffset.UnixEpoch));
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), owner, task.Id, Today), DateTimeOffset.UnixEpoch));
+        Arrange(list, task);
+
+        var page = Render<Today>();
+
+        Assert.Contains("Oddać książki", page.Find(".pspad-day-today").TextContent);
+    }
+
+    [Fact]
     public void TheOverdueSectionIsAbsentWhenNothingIsOverdue()
     {
         var list = NewList("Zakupy");

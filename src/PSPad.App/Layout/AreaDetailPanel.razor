@@ -3,6 +3,7 @@
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Presentation.AreaViews
+@using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Ordering
@@ -13,6 +14,7 @@
 @inject IDocumentStore<TodoTask> TaskStore
 @inject IDocumentStore<ReferenceItem> ItemStore
 @inject IDocumentStore<AreaView> ViewStore
+@inject IDocumentStore<ListView> ListViewStore
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -93,9 +95,12 @@
             return;
         }
 
+        var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
         var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        var view = await ViewStore.LoadAsync(AreaView.IdFor(State.UserId, _area.Id), CancellationToken.None);
-        _lists = ListOrder.InArea(_area.Id, lists, view);
+        var views = await ViewStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var listViews = await ListViewStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var placement = ListPlacement.For(State.UserId, areas, lists, views, listViews);
+        _lists = placement.InArea(_area.Id);
         // MudDropZone keeps its own index per item; a fresh container is the only way to drop it after a reload.
         _listsRevision++;
     }

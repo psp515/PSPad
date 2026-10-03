@@ -3,14 +3,17 @@
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Presentation.AreaViews
+@using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Ordering
 @using PSPad.Module.Tasks.References
+@using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<ReferenceItem> Store
 @inject IDocumentStore<Area> Areas
 @inject IDocumentStore<TaskList> Lists
 @inject IDocumentStore<AreaView> Views
+@inject IDocumentStore<ListView> ListViews
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -53,7 +56,7 @@
             <MudDivider />
 
             <div class="py-2 px-2 d-flex flex-column gap-1">
-                <ListRow Areas="@_areas" Lists="@_lists" Value="@ListId" ValueChanged="@MoveToListAsync"
+                <ListRow Placement="@_placement" Lists="@_lists" Value="@ListId" ValueChanged="@MoveToListAsync"
                          Disabled="@Disabled" />
             </div>
 
@@ -61,6 +64,23 @@
                 <MarkdownField @key="@((object?)_item?.Id ?? _draft)" Value="@Description" OnSave="@SaveDescriptionAsync"
                                Disabled="@Disabled" />
             </PanelSection>
+
+            @if (_item is not null && _item.SnapshotMarks.Count > 0)
+            {
+                <PanelSection Title="Snapshot marks" Class="pspad-item-snapshot-marks">
+                    <div class="d-flex align-center gap-2">
+                        <SnapshotMarkChip />
+                        <MudText Typo="Typo.caption" Class="pspad-muted">
+                            @NewestMark(_item.SnapshotMarks)!.MarkedAt.ToString("d MMM yyyy")
+                        </MudText>
+                        <MudSpacer />
+                        <MudButton Class="pspad-item-snapshot-dismiss" Variant="Variant.Text" Disabled="@Disabled"
+                                   OnClick="@DismissSnapshotMarksAsync">
+                            Dismiss
+                        </MudButton>
+                    </div>
+                </PanelSection>
+            }
         }
     </ChildContent>
     <Footer>
@@ -91,7 +111,7 @@
     enum PanelMode { Closed, Add, Edit, View }
 
     ReferenceItem? _item;
-    IReadOnlyList<Area> _areas = [];
+    ListPlacement _placement = ListPlacement.Empty;
     IReadOnlyList<TaskList> _lists = [];
     Guid? _draftFor;
     bool _creating;
@@ -146,10 +166,14 @@
         }
 
         var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
-        _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
         var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
         var views = await Views.LoadAllAsync(State.UserId, CancellationToken.None);
-        _lists = [.. ListOrder.Arrange(_areas, lists, views).Where(list => list.Kind == ListKind.Reference)];
+        var listViews = await ListViews.LoadAllAsync(State.UserId, CancellationToken.None);
+        _placement = ListPlacement.For(State.UserId, areas, lists, views, listViews);
+
+        var current = ListId is null ? null : _placement.All.FirstOrDefault(list => list.Id == ListId);
+        _lists = [.. _placement.All.Where(list =>
+            list.Kind == ListKind.Reference && (current is null || list.UserId == current.UserId))];
     }
 
     async Task AddOnEnterAsync(KeyboardEventArgs args)
@@ -324,6 +348,20 @@
 
         await ReloadAsync();
     }
+
+    async Task DismissSnapshotMarksAsync()
+    {
+        if (Disabled || _item is null)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new ClearReferenceItemSnapshotMarks(Guid.NewGuid(), State.UserId, _item.Id));
+        await ReloadAsync();
+    }
+
+    static SnapshotMark? NewestMark(IReadOnlyList<SnapshotMark> marks) =>
+        marks.OrderByDescending(mark => mark.MarkedAt).FirstOrDefault();
 
     async Task DeleteAsync()
     {

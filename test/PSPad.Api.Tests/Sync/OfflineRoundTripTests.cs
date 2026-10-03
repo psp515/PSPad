@@ -207,8 +207,18 @@ public class OfflineRoundTripTests(MongoFixture fixture)
             return await response.Content.ReadFromJsonAsync<CommandResponse[]>() ?? [];
         }
 
-        public Task<SyncResponse?> SyncAsync(long since) =>
-            http.GetFromJsonAsync<SyncResponse>($"/api/sync?since={since}");
+        public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
+            http.GetFromJsonAsync<SyncResponse>(full.Count == 0
+                ? $"/api/sync?since={since}"
+                : $"/api/sync?since={since}&full={string.Join(',', full)}");
+
+        public async Task<JoinListResponse?> JoinAsync(string token)
+        {
+            var response = await http.PostAsJsonAsync("/api/lists/join", new JoinListRequest(token));
+            return response.StatusCode == System.Net.HttpStatusCode.NotFound
+                ? null
+                : await response.EnsureSuccessStatusCode().Content.ReadFromJsonAsync<JoinListResponse>();
+        }
     }
 
     static CommandEnvelope Envelope<T>(T command) where T : notnull =>

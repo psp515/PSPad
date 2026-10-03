@@ -6,5 +6,7 @@ public interface ISyncApi
 {
     Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes);
 
-    Task<SyncResponse?> SyncAsync(long since);
+    Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full);
+
+    Task<JoinListResponse?> JoinAsync(string token);
 }

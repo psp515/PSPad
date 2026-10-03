@@ -235,6 +235,26 @@ public class TaskRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ATaskWithASnapshotMarkShowsTheMarkChip()
+    {
+        Arrange();
+
+        var row = Render(Marked(Task("Buy milk")));
+
+        Assert.Contains("pspad-snapshot-mark", row.Markup);
+    }
+
+    [Fact]
+    public void ATaskWithoutASnapshotMarkShowsNoMarkChip()
+    {
+        Arrange();
+
+        var row = Render(Task("Buy milk"));
+
+        Assert.DoesNotContain("pspad-snapshot-mark", row.Markup);
+    }
+
+    [Fact]
     public void ATaskWithoutPriorityShowsNoDot()
     {
         Arrange();
@@ -311,6 +331,14 @@ public class TaskRowTests : Bunit.TestContext
     {
         task.ApplyAll(TodoTask.Decide(
             task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, day, true),
+            DateTimeOffset.UnixEpoch));
+        return task;
+    }
+
+    static TodoTask Marked(TodoTask task)
+    {
+        task.ApplyAll(TodoTask.Decide(
+            task, new MarkTaskFromSnapshot(Guid.NewGuid(), User, task.Id, null, Guid.NewGuid(), true),
             DateTimeOffset.UnixEpoch));
         return task;
     }

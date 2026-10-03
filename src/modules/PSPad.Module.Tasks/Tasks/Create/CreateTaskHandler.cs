@@ -15,8 +15,8 @@ public sealed class CreateTaskHandler(
 
         try
         {
-            var events = TodoTask.Decide(existing, command, clock.UtcNow);
-            TaskList.RequireAcceptsTasks(await lists.LoadAsync(command.ListId, ct), command.UserId);
+            var access = TaskList.RequireAcceptsTasks(await lists.LoadAsync(command.ListId, ct), command.UserId);
+            var events = TodoTask.Decide(existing, command, clock.UtcNow, access);
             var task = existing ?? new TodoTask();
             task.ApplyAll(events);
             work.Stage(task, events);

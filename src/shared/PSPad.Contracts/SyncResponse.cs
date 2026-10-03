@@ -8,4 +8,5 @@ public sealed record SyncEvent(
 public sealed record SyncResponse(
     long Marker,
     IReadOnlyDictionary<string, JsonElement[]> Documents,
-    SyncEvent[] Events);
+    SyncEvent[] Events,
+    Guid[]? MemberListIds = null);

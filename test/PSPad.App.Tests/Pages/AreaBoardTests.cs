@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,6 +7,7 @@ using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
 using PSPad.App.Pages;
+using PSPad.App.State;
 using PSPad.App.State.Replica;
 using PSPad.App.Tests;
 using PSPad.Module.Presentation.AreaViews;
@@ -663,6 +665,57 @@ public class AreaBoardTests : Bunit.TestContext
             null,
             new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, kind),
             DateTimeOffset.UnixEpoch.AddMinutes(createdMinute)));
+        return list;
+    }
+
+    [Fact]
+    public void TheSharedBoardListsUnfiledMemberLists()
+    {
+        var owner = Guid.NewGuid();
+        var shared = NewMemberList(owner, User, "Errands");
+        Arrange(shared);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, SharedWithMe.AreaId));
+
+        Assert.Contains("Shared with me", page.Markup);
+        Assert.Contains("Errands", page.Markup);
+    }
+
+    [Fact]
+    public void TheReadableSharedRouteRendersTheSharedBoard()
+    {
+        var owner = Guid.NewGuid();
+        var shared = NewMemberList(owner, User, "Errands");
+        Arrange(shared);
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo("/areas/shared");
+
+        var page = Render<AreaBoard>();
+
+        Assert.Contains("Shared with me", page.Markup);
+        Assert.Contains("Errands", page.Markup);
+    }
+
+    [Fact]
+    public void TheSharedBoardHasNoAreaActions()
+    {
+        var owner = Guid.NewGuid();
+        var shared = NewMemberList(owner, User, "Errands");
+        Arrange(shared);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, SharedWithMe.AreaId));
+
+        Assert.Empty(page.FindAll(".pspad-fab"));
+    }
+
+    static TaskList NewMemberList(Guid owner, Guid member, string name)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), owner, Guid.NewGuid(), Guid.NewGuid(), name),
+            DateTimeOffset.UnixEpoch));
+        list.Apply(new TaskListShared(list.Id, owner, DateTimeOffset.UnixEpoch, "k3Jv9s2mQ0x7b1nR4tYw8eZa", "Owner"));
+        list.Apply(new TaskListJoined(list.Id, owner, DateTimeOffset.UnixEpoch, member, "Member"));
         return list;
     }
 

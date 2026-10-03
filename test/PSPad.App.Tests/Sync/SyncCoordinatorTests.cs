@@ -169,7 +169,10 @@ public class SyncCoordinatorTests : Bunit.TestContext
             Task.FromResult<IReadOnlyList<CommandResponse>>(
                 [.. envelopes.Select(_ => new CommandResponse(Guid.NewGuid(), true, null))]);
 
-        public Task<SyncResponse?> SyncAsync(long since) => Task.FromResult<SyncResponse?>(pull);
+        public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
+            Task.FromResult<SyncResponse?>(pull);
+
+        public Task<JoinListResponse?> JoinAsync(string token) => Task.FromResult<JoinListResponse?>(null);
     }
 
     sealed class FixedConnectivity(bool online) : IConnectivity
@@ -192,12 +195,14 @@ public class SyncCoordinatorTests : Bunit.TestContext
         public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
             Task.FromResult<IReadOnlyList<CommandResponse>>([]);
 
-        public async Task<SyncResponse?> SyncAsync(long since)
+        public async Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full)
         {
             SyncCalls++;
             await _gate.Task;
             return pull;
         }
+
+        public Task<JoinListResponse?> JoinAsync(string token) => Task.FromResult<JoinListResponse?>(null);
 
         public void Release() => _gate.SetResult();
     }

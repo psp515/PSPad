@@ -1,5 +1,5 @@
 const DB_NAME = 'pspad';
-const VERSION = 2;
+const VERSION = 3;
 
 let connection;
 
@@ -43,6 +43,9 @@ function openAt(version) {
       if (!db.objectStoreNames.contains('session')) {
         db.createObjectStore('session', { keyPath: 'key' });
       }
+      if (!db.objectStoreNames.contains('snapshots')) {
+        db.createObjectStore('snapshots', { keyPath: 'token' });
+      }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -65,9 +68,14 @@ export function get(id) {
   return run('documents', 'readonly', documents => documents.get(id));
 }
 
-export function getAll(type, userId) {
+export function getAll(type) {
+  // Arrays sort after every string in IndexedDB keys, so [type, []] bounds every [type, userId].
   return run('documents', 'readonly', documents =>
-    documents.index('type_user').getAll([type, userId]));
+    documents.index('type_user').getAll(IDBKeyRange.bound([type], [type, []])));
+}
+
+export function remove(id) {
+  return run('documents', 'readwrite', documents => documents.delete(id));
 }
 
 export function put(document) {
@@ -117,6 +125,22 @@ export function count() {
 
 export function clearOutbox() {
   return run('outbox', 'readwrite', outbox => outbox.clear());
+}
+
+export function putSnapshot(entry) {
+  return run('snapshots', 'readwrite', snapshots => snapshots.put(entry));
+}
+
+export function getSnapshot(token) {
+  return run('snapshots', 'readonly', snapshots => snapshots.get(token));
+}
+
+export function allSnapshots() {
+  return run('snapshots', 'readonly', snapshots => snapshots.getAll());
+}
+
+export function deleteSnapshot(token) {
+  return run('snapshots', 'readwrite', snapshots => snapshots.delete(token));
 }
 
 export function clearReplica() {

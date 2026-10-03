@@ -2,6 +2,7 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.References
@@ -10,6 +11,7 @@
 @inject IDocumentStore<TaskList> Lists
 @inject IDocumentStore<TodoTask> TaskStore
 @inject IDocumentStore<ReferenceItem> ItemStore
+@inject IDocumentStore<ListView> ListViews
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -21,7 +23,8 @@
     <div class="px-2 pt-3 pb-1">
         <MudTextField T="string" Class="pspad-list-name-field flex-grow-1 px-2" Value="@(_list?.Name ?? _draftName)"
                       ValueChanged="@NameChangedAsync" Placeholder="List name" Typo="Typo.h6" Underline="false"
-                      Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
+                      Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@(Disabled || !IsMine)"
+                      OnKeyDown="@AddOnEnterAsync" />
     </div>
 
     <MudDivider />
@@ -42,14 +45,31 @@
                 <MudText Typo="Typo.body2">@ListIcon.LabelFor(_list)</MudText>
             </div>
 
-            <MudSelect T="Guid" Class="pspad-list-area" Label="Area" Variant="Variant.Outlined"
-                       Value="@_list.AreaId" ValueChanged="@AreaChangedAsync" Disabled="@Disabled"
-                       ToStringFunc="@AreaName" AnchorOrigin="Origin.BottomCenter">
-                @foreach (var area in _areas)
-                {
-                    <MudSelectItem T="Guid" Value="@area.Id">@area.Name</MudSelectItem>
-                }
-            </MudSelect>
+            @if (IsMine)
+            {
+                <MudSelect T="Guid" Class="pspad-list-area" Label="Area" Variant="Variant.Outlined"
+                           Value="@_list.AreaId" ValueChanged="@AreaChangedAsync" Disabled="@Disabled"
+                           ToStringFunc="@AreaName" AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var area in _areas)
+                    {
+                        <MudSelectItem T="Guid" Value="@area.Id">@area.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else
+            {
+                <MudSelect T="Guid?" Class="pspad-list-filed-area" Label="File under" Variant="Variant.Outlined"
+                           Value="@_filedAreaId" ValueChanged="@FileUnderAsync" Disabled="@Disabled"
+                           ToStringFunc="@FiledAreaName" AnchorOrigin="Origin.BottomCenter">
+                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">@SharedWithMe.Name</MudSelectItem>
+                    @foreach (var area in _areas)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)area.Id)">@area.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            <ListSharingSection List="@_list" IsMine="@IsMine" Disabled="@Disabled" />
         }
     </div>
 </DetailPanel>
@@ -68,14 +88,17 @@
     string _draftName = "";
     string _areaName = "";
     ListKind _kind = ListKind.Tasks;
+    Guid? _filedAreaId;
 
     bool IsNew => NewInArea is not null;
+
+    bool IsMine => _list is null || _list.UserId == State.UserId;
 
     string Title => (_list is null ? "New list" : "List") + (_areaName.Length == 0 ? "" : $" · {_areaName}");
 
     EventCallback SaveCallback => IsNew ? EventCallback.Factory.Create(this, CreateAsync) : default;
 
-    EventCallback DeleteCallback => _list is not null ? EventCallback.Factory.Create(this, DeleteAsync) : default;
+    EventCallback DeleteCallback => _list is not null && IsMine ? EventCallback.Factory.Create(this, DeleteAsync) : default;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -86,7 +109,9 @@
         }
 
         var list = ListId is null || IsNew ? null : await Lists.LoadAsync(ListId.Value, CancellationToken.None);
-        _list = list is { Deleted: false } && list.UserId == State.UserId ? list : null;
+        _list = list is { Deleted: false } && (list.UserId == State.UserId || list.HasMember(State.UserId))
+            ? list
+            : null;
 
         if (!IsNew && _list is null)
         {
@@ -95,10 +120,29 @@
 
         var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
         _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
-        _areaName = AreaName(_list?.AreaId ?? NewInArea!.Value);
+        _areaName = IsMine ? AreaName(_list?.AreaId ?? NewInArea!.Value) : "";
+
+        if (_list is not null && !IsMine)
+        {
+            var view = await ListViews.LoadAsync(ListView.IdFor(State.UserId, _list.Id), CancellationToken.None);
+            _filedAreaId = view?.AreaId;
+        }
     }
 
     string AreaName(Guid areaId) => _areas.FirstOrDefault(area => area.Id == areaId)?.Name ?? "";
+
+    string FiledAreaName(Guid? areaId) => areaId is null ? SharedWithMe.Name : AreaName(areaId.Value);
+
+    async Task FileUnderAsync(Guid? areaId)
+    {
+        if (Disabled || _list is null || areaId == _filedAreaId)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new PlaceList(Guid.NewGuid(), State.UserId, _list.Id, areaId));
+        _filedAreaId = areaId;
+    }
 
     async Task NameChangedAsync(string name)
     {
@@ -110,6 +154,11 @@
         if (_list is null)
         {
             _draftName = name;
+            return;
+        }
+
+        if (!IsMine)
+        {
             return;
         }
 

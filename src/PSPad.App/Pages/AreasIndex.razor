@@ -3,8 +3,12 @@
 @using PSPad.Abstractions
 @using PSPad.App.Components
 @using PSPad.App.State
+@using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Lists
 @inject IDocumentStore<Area> AreaStore
+@inject IDocumentStore<TaskList> ListStore
+@inject IDocumentStore<ListView> ListViewStore
 @inject AppState State
 @inject LastArea Remembered
 @inject NavigationManager Navigation
@@ -41,11 +45,21 @@ else
 
         if (target is null)
         {
+            var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
+            var listViews = await ListViewStore.LoadAllAsync(State.UserId, CancellationToken.None);
+            var placement = ListPlacement.For(State.UserId, areas, lists, [], listViews);
+
+            if (placement.HasShared)
+            {
+                Navigation.NavigateTo(AreaLinks.For(SharedWithMe.AreaId), replace: true);
+                return;
+            }
+
             _empty = true;
             return;
         }
 
-        Navigation.NavigateTo($"/areas/{target.Id}", replace: true);
+        Navigation.NavigateTo(AreaLinks.For(target.Id), replace: true);
     }
 
     void NewArea() => Navigation.NavigateTo(AreaQuery.ForNew(Navigation.Uri));

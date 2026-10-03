@@ -41,6 +41,13 @@
                 }
             </div>
         }
+
+        @if (Item.SnapshotMarks.Count > 0)
+        {
+            <div class="pspad-row-meta">
+                <SnapshotMarkChip />
+            </div>
+        }
     </div>
 
     <MudIconButton Class="pspad-row-star" Size="Size.Small" Color="Color.Primary"

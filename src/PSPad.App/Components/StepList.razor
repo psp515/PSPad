@@ -29,6 +29,10 @@
                          Size="Size.Small" Disabled="@Disabled" aria-label="@step.Name" />
             <MudText Typo="Typo.body2" Class="@($"flex-grow-1 pspad-step-name {(step.Checked ? "pspad-muted" : "")}")"
                      Style="@(step.Checked ? "text-decoration:line-through" : "")">@step.Name</MudText>
+            @if (MarkFor(step) is not null)
+            {
+                <SnapshotMarkChip />
+            }
             <MudIconButton Class="pspad-step-remove" Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
                            aria-label="@($"Remove {step.Name}")" Disabled="@Disabled"
                            OnClick="@(() => RemoveAsync(step))" />
@@ -55,6 +59,8 @@
     string _newStep = "";
 
     int StepCount => Draft?.Count ?? Task?.Steps.Count ?? 0;
+
+    SnapshotMark? MarkFor(Step step) => Task?.SnapshotMarks.FirstOrDefault(mark => mark.StepId == step.Id);
 
     async System.Threading.Tasks.Task AddOnEnterAsync(KeyboardEventArgs args)
     {

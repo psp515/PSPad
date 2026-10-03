@@ -601,8 +601,10 @@ public class AppShellTests : Bunit.TestContext
         public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
             Task.FromResult<IReadOnlyList<CommandResponse>>([]);
 
-        public Task<SyncResponse?> SyncAsync(long since) =>
+        public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
             pulls[Math.Min(_call++, pulls.Length - 1)];
+
+        public Task<JoinListResponse?> JoinAsync(string token) => Task.FromResult<JoinListResponse?>(null);
     }
 
     sealed class AlwaysOnline : IConnectivity
@@ -621,7 +623,9 @@ public class AppShellTests : Bunit.TestContext
         public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
             Task.FromResult<IReadOnlyList<CommandResponse>>([]);
 
-        public Task<SyncResponse?> SyncAsync(long since) => pull;
+        public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) => pull;
+
+        public Task<JoinListResponse?> JoinAsync(string token) => Task.FromResult<JoinListResponse?>(null);
     }
 
     void Arrange(

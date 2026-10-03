@@ -3,7 +3,9 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using PSPad.Abstractions;
+using PSPad.App.Api;
 using PSPad.App.State;
+using PSPad.Contracts;
 using PSPad.App.State.Dispatch;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
@@ -12,6 +14,7 @@ using PSPad.App.Statistics;
 using PSPad.App.Theme;
 using PSPad.App.Updates;
 using PSPad.Module.Presentation.AreaViews;
+using PSPad.Module.Presentation.ListViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Inbox;
@@ -52,6 +55,7 @@ public static class AppTestHost
         context.Services.AddSingleton<IDocumentStore<Inbox>>(new ReplicaDocumentStore<Inbox>(replica));
         context.Services.AddSingleton<IDocumentStore<ReferenceItem>>(new ReplicaDocumentStore<ReferenceItem>(replica));
         context.Services.AddSingleton<IDocumentStore<AreaView>>(new ReplicaDocumentStore<AreaView>(replica));
+        context.Services.AddSingleton<IDocumentStore<ListView>>(new ReplicaDocumentStore<ListView>(replica));
         context.Services.AddPSPadCommands();
         context.Services.AddSingleton(new AppState { UserId = userId, Today = today });
         context.Services.AddSingleton(new PageHeader());
@@ -66,14 +70,19 @@ public static class AppTestHost
         var statisticsCache = new StatisticsCache(context.JSInterop.JSRuntime);
         context.Services.AddSingleton(statisticsCache);
 
-        context.Services.AddSingleton(services => new CommandSender(services, work, new NoOpSyncTrigger()));
-        context.Services.AddSingleton(new ReplicaOwnership(replica, outbox, statisticsCache));
+        var syncTrigger = new NoOpSyncTrigger();
+        context.Services.AddSingleton(services => new CommandSender(services, work, syncTrigger));
+        context.Services.AddSingleton<ISyncTrigger>(syncTrigger);
+        context.Services.AddSingleton<ISnapshotCache>(new InMemorySnapshotCache());
+        context.Services.AddSingleton(services =>
+            new ReplicaOwnership(replica, outbox, statisticsCache, services.GetRequiredService<ISnapshotCache>()));
         context.Services.AddScoped<Clipboard>();
         context.Services.AddSingleton<IViewport>(new FakeViewport(isDesktop: true));
         context.Services.AddSingleton<IBreakpoints>(new FakeBreakpoints(MudBlazor.Breakpoint.Xs));
         context.Services.AddSingleton<ServerReachability>();
         context.Services.AddSingleton<IConnectivity>(new AlwaysOnline());
         context.Services.AddSingleton<IAppUpdates>(new FakeAppUpdates());
+        context.Services.AddSingleton<ISnapshotsApi>(new NoOpSnapshotsApi());
 
         return replica;
     }
@@ -162,5 +171,21 @@ public static class AppTestHost
     sealed class NoOpSyncTrigger : ISyncTrigger
     {
         public Task SyncNowAsync() => Task.CompletedTask;
+    }
+
+    sealed class NoOpSnapshotsApi : ISnapshotsApi
+    {
+        public Task<PublishedSnapshotView?> PublishAsync(Guid listId, DateTimeOffset expiresAt) =>
+            Task.FromResult<PublishedSnapshotView?>(null);
+
+        public Task<IReadOnlyList<PublishedSnapshotView>> ForListAsync(Guid listId) =>
+            Task.FromResult<IReadOnlyList<PublishedSnapshotView>>([]);
+
+        public Task<bool> RevokeAsync(Guid snapshotId) => Task.FromResult(false);
+
+        public Task<bool> RecordVisitAsync(string token) => Task.FromResult(false);
+
+        public Task<IReadOnlyList<SnapshotVisitView>> VisitsAsync() =>
+            Task.FromResult<IReadOnlyList<SnapshotVisitView>>([]);
     }
 }

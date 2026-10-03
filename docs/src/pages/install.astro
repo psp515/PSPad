@@ -151,6 +151,13 @@ cd PSPad</code></pre>
         <strong>Valid redirect URIs</strong>. <strong>Web origins</strong> follows
         automatically (it's <code>+</code>, unless you've changed it).
       </li>
+      <li>
+        Set <code>API_BEHIND_PROXY=true</code> in <code>docker/.env</code>. Public snapshot
+        links are rate-limited per visitor address; without it every visitor arrives from the
+        proxy's address and they all share one limit. Only do this once port <code>5000</code>
+        is no longer reachable except through the proxy — otherwise a caller can forge
+        <code>X-Forwarded-For</code>.
+      </li>
       <li>Recreate the stack:
         <pre><code>docker compose -f docker/compose.yaml up -d --force-recreate</code></pre>
       </li>

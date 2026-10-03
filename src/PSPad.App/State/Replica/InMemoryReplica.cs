@@ -13,12 +13,17 @@ public sealed class InMemoryReplica : IReplica
         Task.FromResult(_documents.GetValueOrDefault(id) as T);
 
     public Task<IReadOnlyList<T>> LoadAllAsync<T>(Guid userId) where T : Aggregate =>
-        Task.FromResult<IReadOnlyList<T>>(
-            _documents.Values.OfType<T>().Where(document => document.UserId == userId).ToArray());
+        Task.FromResult<IReadOnlyList<T>>(_documents.Values.OfType<T>().ToArray());
 
     public Task SaveAsync(Aggregate aggregate)
     {
         _documents[aggregate.Id] = aggregate;
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveAsync(Guid id)
+    {
+        _documents.Remove(id);
         return Task.CompletedTask;
     }
 

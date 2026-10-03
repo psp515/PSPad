@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Ordering;
 using PSPad.Module.Tasks.Recurrence;
 
@@ -9,6 +10,9 @@ public sealed class TodoTask : Aggregate
 {
     [JsonInclude]
     public Guid ListId { get; private set; }
+
+    [JsonInclude]
+    public Guid? PreviousListId { get; private set; }
 
     [JsonInclude]
     public string Name { get; private set; } = "";
@@ -46,7 +50,12 @@ public sealed class TodoTask : Aggregate
     [JsonInclude]
     HashSet<DateOnly> _completedDays = [];
 
+    [JsonInclude]
+    List<SnapshotMark> _snapshotMarks = [];
+
     public IReadOnlyList<Step> Steps => _steps.OrderBy(step => step.Position).ToArray();
+
+    public IReadOnlyList<SnapshotMark> SnapshotMarks => _snapshotMarks;
 
     public Step? NextUncheckedStep => Steps.FirstOrDefault(step => !step.Checked);
 
@@ -59,8 +68,11 @@ public sealed class TodoTask : Aggregate
 
     public bool EndedBy(DateOnly today) => IsRecurring && DueOn < today;
 
-    public static IReadOnlyList<DomainEvent> Decide(TodoTask? task, ICommand command, DateTimeOffset at)
+    public static IReadOnlyList<DomainEvent> Decide(
+        TodoTask? task, ICommand command, DateTimeOffset at, ListAccess? access = null)
     {
+        var grant = access ?? ListAccess.Owner(command.UserId);
+
         switch (command)
         {
             case CreateTask create:
@@ -74,39 +86,44 @@ public sealed class TodoTask : Aggregate
                     throw new DomainRejectedException("A task has to live in a list.");
                 }
 
-                return [new TaskCreated(create.TaskId, create.UserId, at, create.ListId, RequireName(create.Name))];
+                return [new TaskCreated(create.TaskId, grant.OwnerId, at, create.ListId, RequireName(create.Name))];
 
             case RenameTask rename:
-                var renaming = Require(task, rename.UserId);
+                var renaming = Require(task, grant);
                 var name = RequireName(rename.Name);
-                return renaming.Name == name ? [] : [new TaskRenamed(renaming.Id, rename.UserId, at, name)];
+                return renaming.Name == name ? [] : [new TaskRenamed(renaming.Id, grant.OwnerId, at, name)];
 
             case SetTaskDueDate due:
-                var dating = Require(task, due.UserId);
+                var dating = Require(task, grant);
                 return dating.DueOn == due.DueOn
                     ? []
-                    : [new TaskDueDateSet(dating.Id, due.UserId, at, due.DueOn)];
+                    : [new TaskDueDateSet(dating.Id, grant.OwnerId, at, due.DueOn)];
 
             case SetTaskPriority priority:
-                var prioritising = Require(task, priority.UserId);
+                var prioritising = Require(task, grant);
                 return prioritising.Priority == priority.Priority
                     ? []
-                    : [new TaskPrioritySet(prioritising.Id, priority.UserId, at, priority.Priority)];
+                    : [new TaskPrioritySet(prioritising.Id, grant.OwnerId, at, priority.Priority)];
 
             case StarTask star:
-                var starring = Require(task, star.UserId);
+                var starring = Require(task, grant);
                 return starring.Starred == star.Starred
                     ? []
-                    : [new TaskStarred(starring.Id, star.UserId, at, star.Starred)];
+                    : [new TaskStarred(starring.Id, grant.OwnerId, at, star.Starred)];
 
             case LinkTaskToGoal link:
-                var linking = Require(task, link.UserId);
+                var linking = Require(task, grant);
+                if (!grant.ByOwner)
+                {
+                    throw new DomainRejectedException("Only the list's owner links a goal.");
+                }
+
                 return linking.GoalId == link.GoalId
                     ? []
-                    : [new TaskLinkedToGoal(linking.Id, link.UserId, at, link.GoalId, linking.Name)];
+                    : [new TaskLinkedToGoal(linking.Id, grant.OwnerId, at, link.GoalId, linking.Name)];
 
             case MoveTaskToList move:
-                var moving = Require(task, move.UserId);
+                var moving = Require(task, grant);
                 if (move.ListId == Guid.Empty)
                 {
                     throw new DomainRejectedException("A task has to live in a list.");
@@ -114,10 +131,10 @@ public sealed class TodoTask : Aggregate
 
                 return moving.ListId == move.ListId
                     ? []
-                    : [new TaskMovedToList(moving.Id, move.UserId, at, move.ListId, moving.Name)];
+                    : [new TaskMovedToList(moving.Id, grant.OwnerId, at, move.ListId, moving.Name)];
 
             case CompleteTask complete:
-                var completing = Require(task, complete.UserId);
+                var completing = Require(task, grant);
                 if (completing.IsRecurring)
                 {
                     throw new DomainRejectedException("Tick today's occurrence instead of the whole task.");
@@ -126,65 +143,65 @@ public sealed class TodoTask : Aggregate
                 return completing.CompletedAt is not null
                     ? []
                     : [new TaskCompleted(
-                        completing.Id, complete.UserId, at,
+                        completing.Id, grant.OwnerId, at,
                         completing.Name, completing.ListId, completing.GoalId, completing.DueOn)];
 
             case ReopenTask reopen:
-                var reopening = Require(task, reopen.UserId);
+                var reopening = Require(task, grant);
                 return reopening.CompletedAt is null
                     ? []
-                    : [new TaskReopened(reopening.Id, reopen.UserId, at, reopening.Name, reopening.ListId)];
+                    : [new TaskReopened(reopening.Id, grant.OwnerId, at, reopening.Name, reopening.ListId)];
 
             case DeleteTask delete:
-                var deleting = Require(task, delete.UserId);
+                var deleting = Require(task, grant);
                 return deleting.Deleted
                     ? []
-                    : [new TaskDeleted(deleting.Id, delete.UserId, at, deleting.Name)];
+                    : [new TaskDeleted(deleting.Id, grant.OwnerId, at, deleting.Name)];
 
             case AddStep add:
-                var adding = Require(task, add.UserId);
+                var adding = Require(task, grant);
                 return adding.Steps.Any(step => step.Id == add.StepId)
                     ? []
                     : [new StepAdded(
-                        adding.Id, add.UserId, at, add.StepId, RequireName(add.Name),
+                        adding.Id, grant.OwnerId, at, add.StepId, RequireName(add.Name),
                         Positions.Next(adding.Steps.Select(step => step.Position)))];
 
             case RenameStep renameStep:
-                var stepRenaming = Require(task, renameStep.UserId);
+                var stepRenaming = Require(task, grant);
                 var existingStep = RequireStep(stepRenaming, renameStep.StepId);
                 var stepName = RequireName(renameStep.Name);
                 return existingStep.Name == stepName
                     ? []
-                    : [new StepRenamed(stepRenaming.Id, renameStep.UserId, at, renameStep.StepId, stepName)];
+                    : [new StepRenamed(stepRenaming.Id, grant.OwnerId, at, renameStep.StepId, stepName)];
 
             case SetStepDueDate stepDue:
-                var stepDating = Require(task, stepDue.UserId);
+                var stepDating = Require(task, grant);
                 var dated = RequireStep(stepDating, stepDue.StepId);
                 return dated.DueOn == stepDue.DueOn
                     ? []
-                    : [new StepDueDateSet(stepDating.Id, stepDue.UserId, at, stepDue.StepId, stepDue.DueOn)];
+                    : [new StepDueDateSet(stepDating.Id, grant.OwnerId, at, stepDue.StepId, stepDue.DueOn)];
 
             case CheckStep check:
-                var checking = Require(task, check.UserId);
+                var checking = Require(task, grant);
                 var checkedStep = RequireStep(checking, check.StepId);
                 return checkedStep.Checked == check.Checked
                     ? []
-                    : [new StepChecked(checking.Id, check.UserId, at, check.StepId, check.Checked)];
+                    : [new StepChecked(checking.Id, grant.OwnerId, at, check.StepId, check.Checked)];
 
             case MoveStep moveStep:
-                var stepMoving = Require(task, moveStep.UserId);
+                var stepMoving = Require(task, grant);
                 RequireStep(stepMoving, moveStep.StepId);
                 var order = Positions.Move(
                     stepMoving.Steps.Select(step => step.Id).ToArray(), moveStep.StepId, moveStep.ToIndex);
-                return [new StepsReordered(stepMoving.Id, moveStep.UserId, at, order)];
+                return [new StepsReordered(stepMoving.Id, grant.OwnerId, at, order)];
 
             case RemoveStep removeStep:
-                var removing = Require(task, removeStep.UserId);
+                var removing = Require(task, grant);
                 RequireStep(removing, removeStep.StepId);
-                return [new StepRemoved(removing.Id, removeStep.UserId, at, removeStep.StepId)];
+                return [new StepRemoved(removing.Id, grant.OwnerId, at, removeStep.StepId)];
 
             case SetTaskRecurrence recurrence:
-                var repeating = Require(task, recurrence.UserId);
+                var repeating = Require(task, grant);
                 if (recurrence.Rule?.Interval is < 0 or > 99)
                 {
                     throw new DomainRejectedException("A repeat interval must be between 1 and 99.");
@@ -192,24 +209,24 @@ public sealed class TodoTask : Aggregate
 
                 return repeating.Recurrence == recurrence.Rule
                     ? []
-                    : [new TaskRecurrenceSet(repeating.Id, recurrence.UserId, at, recurrence.Rule)];
+                    : [new TaskRecurrenceSet(repeating.Id, grant.OwnerId, at, recurrence.Rule)];
 
             case SetTaskLeadTime lead:
-                var leading = Require(task, lead.UserId);
+                var leading = Require(task, grant);
                 lead.LeadTime?.Validate();
                 return leading.LeadTime == lead.LeadTime
                     ? []
-                    : [new TaskLeadTimeSet(leading.Id, lead.UserId, at, lead.LeadTime)];
+                    : [new TaskLeadTimeSet(leading.Id, grant.OwnerId, at, lead.LeadTime)];
 
             case SetTaskDescription describe:
-                var describing = Require(task, describe.UserId);
+                var describing = Require(task, grant);
                 var description = (describe.Description ?? "").TrimEnd();
                 return describing.Description == description
                     ? []
-                    : [new TaskDescriptionSet(describing.Id, describe.UserId, at, description)];
+                    : [new TaskDescriptionSet(describing.Id, grant.OwnerId, at, description)];
 
             case CompleteOccurrence occurrence:
-                var ticking = Require(task, occurrence.UserId);
+                var ticking = Require(task, grant);
                 if (ticking.Recurrence is null)
                 {
                     throw new DomainRejectedException("That task does not repeat.");
@@ -223,8 +240,25 @@ public sealed class TodoTask : Aggregate
                 return ticking.CompletedDays.Contains(occurrence.Day) == occurrence.Completed
                     ? []
                     : [new OccurrenceCompleted(
-                        ticking.Id, occurrence.UserId, at, occurrence.Day, occurrence.Completed,
+                        ticking.Id, grant.OwnerId, at, occurrence.Day, occurrence.Completed,
                         ticking.Name, ticking.ListId, ticking.GoalId)];
+
+            case MarkTaskFromSnapshot mark:
+                var marking = Require(task, grant);
+                if (mark.StepId is { } stepId)
+                {
+                    RequireStep(marking, stepId);
+                }
+
+                var present = marking._snapshotMarks.Any(existing =>
+                    existing.SnapshotId == mark.SnapshotId && existing.StepId == mark.StepId);
+                return present == mark.Marked
+                    ? []
+                    : [new TaskSnapshotMarkSet(marking.Id, grant.OwnerId, at, mark.SnapshotId, mark.StepId, mark.Marked)];
+
+            case ClearTaskSnapshotMarks:
+                var clearing = Require(task, grant);
+                return clearing._snapshotMarks.Count == 0 ? [] : [new TaskSnapshotMarksCleared(clearing.Id, grant.OwnerId, at)];
 
             default:
                 throw new DomainRejectedException($"A task cannot handle {command.GetType().Name}.");
@@ -258,6 +292,7 @@ public sealed class TodoTask : Aggregate
                 GoalId = linked.GoalId;
                 break;
             case TaskMovedToList moved:
+                PreviousListId = ListId;
                 ListId = moved.ListId;
                 break;
             case TaskCompleted completed:
@@ -290,7 +325,20 @@ public sealed class TodoTask : Aggregate
                 break;
             case StepRemoved stepRemoved:
                 _steps.RemoveAll(step => step.Id == stepRemoved.StepId);
+                _snapshotMarks.RemoveAll(existing => existing.StepId == stepRemoved.StepId);
                 Densify();
+                break;
+            case TaskSnapshotMarkSet markSet:
+                _snapshotMarks.RemoveAll(existing =>
+                    existing.SnapshotId == markSet.SnapshotId && existing.StepId == markSet.StepId);
+                if (markSet.Marked)
+                {
+                    _snapshotMarks.Add(new SnapshotMark(markSet.SnapshotId, markSet.StepId, markSet.At));
+                }
+
+                break;
+            case TaskSnapshotMarksCleared:
+                _snapshotMarks.Clear();
                 break;
             case TaskRecurrenceSet recurrenceSet:
                 Recurrence = recurrenceSet.Rule;
@@ -342,14 +390,14 @@ public sealed class TodoTask : Aggregate
         task.Steps.FirstOrDefault(step => step.Id == stepId)
         ?? throw new DomainRejectedException("That step is not on this task.");
 
-    static TodoTask Require(TodoTask? task, Guid userId)
+    static TodoTask Require(TodoTask? task, ListAccess grant)
     {
         if (task is null || task.Deleted)
         {
             throw new DomainRejectedException("That task no longer exists.");
         }
 
-        if (task.UserId != userId)
+        if (task.UserId != grant.OwnerId)
         {
             throw new DomainRejectedException("That task belongs to somebody else.");
         }

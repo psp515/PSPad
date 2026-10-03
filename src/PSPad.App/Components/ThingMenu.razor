@@ -2,7 +2,10 @@
          AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="@Class">
     <MudMenuItem OnClick="@OnEdit">Edit</MudMenuItem>
     @Extra
-    <MudMenuItem OnClick="@OnDelete">Delete</MudMenuItem>
+    @if (OnDelete.HasDelegate)
+    {
+        <MudMenuItem OnClick="@OnDelete">Delete</MudMenuItem>
+    }
 </MudMenu>
 
 @code {

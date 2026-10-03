@@ -34,7 +34,7 @@ public class StatisticsOverviewReaderTests
 
             return Task.FromResult<IReadOnlyList<StatisticsRecord>>(records
                 .Where(record => record.UserId == userId && record.At >= from)
-                .OrderBy(record => record.Id)
+                .OrderBy(record => record.Seq)
                 .ToArray());
         }
 
@@ -46,7 +46,7 @@ public class StatisticsOverviewReaderTests
 
             foreach (var record in records
                          .Where(record => record.UserId == userId && record.At < from)
-                         .OrderBy(record => record.Id))
+                         .OrderBy(record => record.Seq))
             {
                 if (record.Kind is RecordKind.Created or RecordKind.Reopened)
                 {
@@ -91,6 +91,10 @@ public class StatisticsOverviewReaderTests
 
         public Task<IReadOnlyList<StatisticsLabel>> AllAsync(Guid userId, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<StatisticsLabel>>(labels);
+
+        public Task<IReadOnlyList<StatisticsLabel>> ByIdsAsync(
+            IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+            throw new NotSupportedException();
     }
 
     static InboxRecord Capture(long id, DateOnly day) =>
@@ -107,7 +111,8 @@ public class StatisticsOverviewReaderTests
         long id, RecordKind kind, DateOnly day, Guid taskId, Guid? goalId = null) =>
         new()
         {
-            Id = id,
+            Id = StatisticsRecord.IdFor(id, User),
+            Seq = id,
             UserId = User,
             At = Midday(day),
             Kind = kind,

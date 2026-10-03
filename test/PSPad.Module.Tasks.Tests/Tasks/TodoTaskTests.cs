@@ -105,6 +105,19 @@ public class TodoTaskTests
         Assert.Equal(created, task.CreatedAt);
     }
 
+    [Fact]
+    public void MovingRemembersTheListItLeft()
+    {
+        var task = Existing();
+        var left = task.ListId;
+        var target = Guid.NewGuid();
+
+        task.ApplyAll(TodoTask.Decide(task, new MoveTaskToList(Guid.NewGuid(), User, task.Id, target), Now));
+
+        Assert.Equal(target, task.ListId);
+        Assert.Equal(left, task.PreviousListId);
+    }
+
     internal static TodoTask Existing()
     {
         var task = new TodoTask();

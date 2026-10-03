@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.JSInterop;
+using PSPad.App.State;
 using PSPad.App.State.Dispatch;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
@@ -18,7 +19,7 @@ public class ReplicaOwnershipTests
     {
         var replica = new InMemoryReplica();
         var outbox = new InMemoryOutbox();
-        var ownership = new ReplicaOwnership(replica, outbox, NewCache());
+        var ownership = new ReplicaOwnership(replica, outbox, NewCache(), NewSnapshotCache());
         var user = Guid.NewGuid();
 
         await ownership.EnsureCurrentUserAsync(user);
@@ -31,7 +32,7 @@ public class ReplicaOwnershipTests
     public async Task AFreshSignInReportsThatTheDeviceHoldsNothingYet()
     {
         var replica = new InMemoryReplica();
-        var ownership = new ReplicaOwnership(replica, new InMemoryOutbox(), NewCache());
+        var ownership = new ReplicaOwnership(replica, new InMemoryOutbox(), NewCache(), NewSnapshotCache());
 
         await ownership.EnsureCurrentUserAsync(Guid.NewGuid());
 
@@ -43,7 +44,7 @@ public class ReplicaOwnershipTests
     {
         var replica = new InMemoryReplica();
         var user = Guid.NewGuid();
-        var ownership = new ReplicaOwnership(replica, new InMemoryOutbox(), NewCache());
+        var ownership = new ReplicaOwnership(replica, new InMemoryOutbox(), NewCache(), NewSnapshotCache());
         await ownership.EnsureCurrentUserAsync(user);
         await replica.SetMarkerAsync(41);
 
@@ -56,7 +57,7 @@ public class ReplicaOwnershipTests
     public async Task SigningInAsSomeoneElseMakesTheDeviceEmptyAgain()
     {
         var replica = new InMemoryReplica();
-        var ownership = new ReplicaOwnership(replica, new InMemoryOutbox(), NewCache());
+        var ownership = new ReplicaOwnership(replica, new InMemoryOutbox(), NewCache(), NewSnapshotCache());
         await ownership.EnsureCurrentUserAsync(Guid.NewGuid());
         await replica.SetMarkerAsync(41);
 
@@ -71,7 +72,7 @@ public class ReplicaOwnershipTests
         var replica = new InMemoryReplica();
         var outbox = new InMemoryOutbox();
         await outbox.AppendAsync(Guid.NewGuid(), Envelope());
-        var ownership = new ReplicaOwnership(replica, outbox, NewCache());
+        var ownership = new ReplicaOwnership(replica, outbox, NewCache(), NewSnapshotCache());
         var user = Guid.NewGuid();
 
         await ownership.EnsureCurrentUserAsync(user);
@@ -88,7 +89,7 @@ public class ReplicaOwnershipTests
         var user = Guid.NewGuid();
         await replica.SetOwnerAsync(user);
         await outbox.AppendAsync(Guid.NewGuid(), Envelope());
-        var ownership = new ReplicaOwnership(replica, outbox, NewCache());
+        var ownership = new ReplicaOwnership(replica, outbox, NewCache(), NewSnapshotCache());
 
         await ownership.EnsureCurrentUserAsync(user);
 
@@ -104,7 +105,7 @@ public class ReplicaOwnershipTests
         await replica.SetOwnerAsync(previousUser);
         await replica.SetMarkerAsync(42);
         await outbox.AppendAsync(Guid.NewGuid(), Envelope());
-        var ownership = new ReplicaOwnership(replica, outbox, NewCache());
+        var ownership = new ReplicaOwnership(replica, outbox, NewCache(), NewSnapshotCache());
         var nextUser = Guid.NewGuid();
 
         await ownership.EnsureCurrentUserAsync(nextUser);
@@ -123,7 +124,7 @@ public class ReplicaOwnershipTests
         await cache.WriteAsync(30, SampleOverview());
         var previousUser = Guid.NewGuid();
         await replica.SetOwnerAsync(previousUser);
-        var ownership = new ReplicaOwnership(replica, outbox, cache);
+        var ownership = new ReplicaOwnership(replica, outbox, cache, NewSnapshotCache());
 
         await ownership.EnsureCurrentUserAsync(Guid.NewGuid());
 
@@ -139,14 +140,51 @@ public class ReplicaOwnershipTests
         var user = Guid.NewGuid();
         await replica.SetOwnerAsync(user);
         await cache.WriteAsync(30, SampleOverview());
-        var ownership = new ReplicaOwnership(replica, outbox, cache);
+        var ownership = new ReplicaOwnership(replica, outbox, cache, NewSnapshotCache());
 
         await ownership.EnsureCurrentUserAsync(user);
 
         Assert.NotNull(await cache.ReadAsync(30));
     }
 
+    [Fact]
+    public async Task ADifferentUserSigningInClearsTheSnapshotCacheToo()
+    {
+        var replica = new InMemoryReplica();
+        var outbox = new InMemoryOutbox();
+        var snapshots = NewSnapshotCache();
+        await snapshots.SaveAsync("tok", SampleSnapshot(), DateTimeOffset.UtcNow);
+        var previousUser = Guid.NewGuid();
+        await replica.SetOwnerAsync(previousUser);
+        var ownership = new ReplicaOwnership(replica, outbox, NewCache(), snapshots);
+
+        await ownership.EnsureCurrentUserAsync(Guid.NewGuid());
+
+        Assert.Null(await snapshots.GetAsync("tok"));
+    }
+
+    [Fact]
+    public async Task TheSameUserSigningInAgainKeepsTheSnapshotCache()
+    {
+        var replica = new InMemoryReplica();
+        var outbox = new InMemoryOutbox();
+        var snapshots = NewSnapshotCache();
+        var user = Guid.NewGuid();
+        await replica.SetOwnerAsync(user);
+        await snapshots.SaveAsync("tok", SampleSnapshot(), DateTimeOffset.UtcNow);
+        var ownership = new ReplicaOwnership(replica, outbox, NewCache(), snapshots);
+
+        await ownership.EnsureCurrentUserAsync(user);
+
+        Assert.NotNull(await snapshots.GetAsync("tok"));
+    }
+
     static StatisticsCache NewCache() => new(new FakeJsRuntime());
+
+    static InMemorySnapshotCache NewSnapshotCache() => new();
+
+    static SnapshotView SampleSnapshot() =>
+        new(Guid.NewGuid(), "List", "Tasks", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(1), [], []);
 
     static StatisticsOverview SampleOverview() =>
         new(new StatisticsTilesView(0, 0, 0, 0), [], [], [], [], [], []);

@@ -30,7 +30,13 @@ public sealed class StatisticsReader(
 
         var current = await snapshots.CurrentAsync(
             records.Select(record => record.TaskId).Distinct().ToArray(), ct);
-        var names = (await labels.AllAsync(userId, ct))
+        var labelIds = records
+            .SelectMany(record => new[] { record.ListId, record.GoalId })
+            .Where(id => id is not null)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToArray();
+        var names = (await labels.ByIdsAsync(labelIds, ct))
             .ToDictionary(label => label.Id, label => label.Name);
 
         return records.Select(record => View(record, current, names)).ToArray();
@@ -44,7 +50,7 @@ public sealed class StatisticsReader(
         var snapshot = current.GetValueOrDefault(record.TaskId, Unknown);
 
         return new StatisticsRecordView(
-            record.Id,
+            record.Seq,
             record.At,
             record.Kind.ToString(),
             record.TaskId,
