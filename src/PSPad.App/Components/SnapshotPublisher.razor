@@ -14,34 +14,32 @@
 @inject Clipboard Clipboard
 @inject NavigationManager Navigation
 
-<PanelSection Title="Public snapshots" Class="pspad-snapshot-publisher">
-    <div class="d-flex align-center gap-1 flex-wrap pspad-snapshot-presets">
-        @foreach (var preset in Presets)
+<div class="d-flex flex-column gap-3 pspad-snapshot-publisher">
+    <MudPaper Outlined="true" Class="pa-4 d-flex flex-column gap-2">
+        <MudText Typo="Typo.body2" Class="pspad-muted">
+            A frozen copy of this list anyone can open without an account. Visitors can tick; you see their ticks here.
+        </MudText>
+        <MudText Typo="Typo.overline" Class="pspad-muted">Link works for</MudText>
+        <MudToggleGroup T="int" Value="@_selectedDays" ValueChanged="@SelectDays" Color="Color.Primary"
+                        Outlined="true" Disabled="@Disabled">
+            @foreach (var preset in Presets)
+            {
+                <MudToggleItem T="int" Value="@preset.Days" Text="@preset.Label" Class="pspad-snapshot-preset" />
+            }
+            <MudToggleItem T="int" Value="0" Text="Date…" Class="pspad-snapshot-preset-date" />
+        </MudToggleGroup>
+
+        @if (_selectedDays == 0)
         {
-            <MudChip T="string" Class="pspad-snapshot-preset" Size="Size.Small"
-                     Variant="@(!_customDate && _selectedDays == preset.Days ? Variant.Filled : Variant.Outlined)"
-                     Color="Color.Primary" Disabled="@Disabled" OnClick="@(() => SelectPreset(preset.Days))">
-                @preset.Label
-            </MudChip>
+            <MudDatePicker Class="pspad-snapshot-date" Date="@_date" DateChanged="@DateChangedAsync"
+                           MaxDate="@MaxDate" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
         }
-        <MudChip T="string" Class="pspad-snapshot-preset-date" Size="Size.Small"
-                 Variant="@(_customDate ? Variant.Filled : Variant.Outlined)" Color="Color.Primary"
-                 Disabled="@Disabled" OnClick="@SelectDate">
-            Date
-        </MudChip>
-    </div>
 
-    @if (_customDate)
-    {
-        <MudDatePicker Class="pspad-snapshot-date" Date="@_date" DateChanged="@DateChangedAsync"
-                       MaxDate="@MaxDate" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
-    }
-
-    <div class="d-flex flex-column gap-1">
-        <MudButton Class="pspad-snapshot-publish" Variant="Variant.Filled" Color="Color.Primary"
-                   Disabled="@(Disabled || !Connectivity.IsOnline || _publishing || (_customDate && _date is null))"
+        <MudButton Class="pspad-snapshot-publish" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   StartIcon="@Icons.Material.Filled.Upload"
+                   Disabled="@(Disabled || !Connectivity.IsOnline || _publishing || PlannedExpiry is null)"
                    OnClick="@PublishAsync">
-            Publish snapshot
+            @PublishText
         </MudButton>
 
         @if (!Connectivity.IsOnline)
@@ -50,20 +48,76 @@
                 Publishing needs a connection.
             </MudText>
         }
-    </div>
+    </MudPaper>
 
-    @foreach (var snapshot in _snapshots)
+    @if (_snapshots.Count == 0)
     {
-        <div @key="snapshot.Id" class="d-flex align-center gap-1 pspad-snapshot">
-            <MudText Typo="Typo.body2" Class="flex-grow-1">Expires @snapshot.ExpiresAt.ToString("d MMM yyyy")</MudText>
-            <MudIconButton Class="pspad-snapshot-copy" Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small"
-                           aria-label="Copy link" OnClick="@(() => CopyAsync(snapshot.Token))" />
-            <MudIconButton Class="pspad-snapshot-revoke" Icon="@Icons.Material.Outlined.Delete" Size="Size.Small"
-                           Color="Color.Error" aria-label="Revoke snapshot" Disabled="@Disabled"
-                           OnClick="@(() => RevokeAsync(snapshot))" />
+        <MudText Typo="Typo.body2" Class="pspad-muted">No live links. Published copies show up here.</MudText>
+    }
+    else
+    {
+        <div>
+            <MudText Typo="Typo.overline" Class="pspad-muted">Live links · @_snapshots.Count</MudText>
+            <MudPaper Outlined="true">
+                @foreach (var snapshot in Newest)
+                {
+                    var expanded = _expanded == snapshot.Id;
+                    var daysLeft = DaysLeft(snapshot);
+                    <div @key="snapshot.Id" class="pa-3 pspad-snapshot">
+                        <div class="d-flex align-center gap-3">
+                            <div class="d-flex flex-column align-center pspad-snapshot-days">
+                                <MudText Typo="Typo.h6" Color="@(daysLeft.Urgent ? Color.Warning : Color.Primary)">@daysLeft.Text</MudText>
+                                <MudText Typo="Typo.caption" Class="pspad-muted">@(daysLeft.Text == "1" ? "day left" : "days left")</MudText>
+                            </div>
+                            <div class="flex-grow-1 d-flex flex-column gap-1">
+                                <MudText Typo="Typo.body1">Published @snapshot.CreatedAt.ToString("d MMM")</MudText>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    @if (snapshot.Ticks > 0)
+                                    {
+                                        <MudChip T="string" Class="pspad-snapshot-ticks" Size="Size.Small" Variant="Variant.Text"
+                                                 Color="Color.Success">@snapshot.Ticks ticked</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Class="pspad-snapshot-ticks" Size="Size.Small" Variant="Variant.Text">No ticks yet</MudChip>
+                                    }
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@snapshot.Entries entries</MudChip>
+                                </div>
+                            </div>
+                            <MudIconButton Class="pspad-snapshot-qr-toggle" Icon="@Icons.Material.Outlined.QrCode2"
+                                           Size="Size.Small" aria-label="Show QR code" aria-expanded="@(expanded ? "true" : "false")"
+                                           OnClick="@(() => ToggleExpanded(snapshot.Id))" />
+                            <MudIconButton Class="pspad-snapshot-copy" Icon="@Icons.Material.Outlined.ContentCopy"
+                                           Size="Size.Small" aria-label="Copy link"
+                                           OnClick="@(() => CopyAsync(snapshot.Token))" />
+                        </div>
+
+                        @if (expanded)
+                        {
+                            var link = SnapshotLinks.For(Navigation.BaseUri, snapshot.Token);
+                            <div class="d-flex gap-3 align-center mt-3">
+                                <QrCode Value="@link" Size="120" Label="Snapshot link QR code" />
+                                <div class="d-flex flex-column gap-1 flex-grow-1">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                               OnClick="@(() => CopyAsync(snapshot.Token))">Copy link</MudButton>
+                                    <MudButton Class="pspad-snapshot-open" Variant="Variant.Outlined" Size="Size.Small"
+                                               Href="@link" Target="_blank">Open</MudButton>
+                                    <MudButton Class="pspad-snapshot-revoke" Variant="Variant.Text" Color="Color.Error"
+                                               Size="Size.Small" Disabled="@Disabled"
+                                               OnClick="@(() => RevokeAsync(snapshot))">Revoke</MudButton>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    @if (snapshot.Id != Newest[^1].Id)
+                    {
+                        <MudDivider />
+                    }
+                }
+            </MudPaper>
         </div>
     }
-</PanelSection>
+</div>
 
 @code {
     [Parameter, EditorRequired] public TaskList List { get; set; } = null!;
@@ -75,9 +129,23 @@
     Guid? _listId;
     IReadOnlyList<PublishedSnapshotView> _snapshots = [];
     int _selectedDays = 7;
-    bool _customDate;
+    Guid? _expanded;
     DateTime? _date;
     bool _publishing;
+
+    IReadOnlyList<PublishedSnapshotView> Newest => [.. _snapshots.OrderByDescending(snapshot => snapshot.CreatedAt)];
+
+    DateTimeOffset? PlannedExpiry => _selectedDays == 0
+        ? _date is { } date ? EndOfLocalDay(DateOnly.FromDateTime(date)) : null
+        : Clock.UtcNow.AddDays(_selectedDays);
+
+    string PublishText => PlannedExpiry is { } expiry ? $"Publish until {expiry:d MMM}" : "Pick a date";
+
+    (string Text, bool Urgent) DaysLeft(PublishedSnapshotView snapshot)
+    {
+        var remaining = (snapshot.ExpiresAt - Clock.UtcNow).TotalDays;
+        return remaining < 1 ? ("<1", true) : (((int)remaining).ToString(), remaining < 2);
+    }
 
     DateTime MaxDate => Clock.UtcNow.AddDays(365).DateTime;
 
@@ -90,34 +158,24 @@
 
         _listId = List.Id;
         _snapshots = await Snapshots.ForListAsync(List.Id);
+        _expanded = Newest.Count > 0 ? Newest[0].Id : null;
     }
 
-    void SelectPreset(int days)
+    void SelectDays(int days)
     {
-        if (Disabled)
+        if (!Disabled)
         {
-            return;
+            _selectedDays = days;
         }
-
-        _selectedDays = days;
-        _customDate = false;
     }
 
-    void SelectDate()
-    {
-        if (Disabled)
-        {
-            return;
-        }
-
-        _customDate = true;
-    }
+    void ToggleExpanded(Guid id) => _expanded = _expanded == id ? null : id;
 
     void DateChangedAsync(DateTime? date) => _date = date;
 
     async Task PublishAsync()
     {
-        if (Disabled || !Connectivity.IsOnline || _publishing || (_customDate && _date is null))
+        if (Disabled || !Connectivity.IsOnline || _publishing || PlannedExpiry is null)
         {
             return;
         }
@@ -127,9 +185,7 @@
         {
             await SyncTrigger.SyncNowAsync();
 
-            var expiresAt = _customDate
-                ? EndOfLocalDay(DateOnly.FromDateTime(_date!.Value))
-                : Clock.UtcNow.AddDays(_selectedDays);
+            var expiresAt = PlannedExpiry!.Value;
 
             var published = await Snapshots.PublishAsync(List.Id, expiresAt);
 
@@ -140,6 +196,7 @@
             }
 
             _snapshots = [.. _snapshots, published];
+            _expanded = published.Id;
             await Clipboard.CopyAsync(SnapshotLinks.For(Navigation.BaseUri, published.Token));
             Snackbar.Add("Snapshot published. Link copied.", Severity.Success);
         }

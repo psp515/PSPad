@@ -95,6 +95,57 @@ public class SnapshotPublisherTests : Bunit.TestContext
         Assert.Single(api.Revoked);
     }
 
+    static readonly DateTimeOffset Midnight = new(Today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+
+    [Fact]
+    public void ALiveLinkShowsDaysLeftAndTicks()
+    {
+        var api = new FakeSnapshotsApi();
+        api.Active.Add(new PublishedSnapshotView(Guid.NewGuid(), "tok-1", Midnight, Midnight.AddDays(6), Entries: 12, Ticks: 4));
+        Arrange(api, new RecordingSyncTrigger());
+
+        var publisher = Render(NewList());
+
+        Assert.Contains("6", publisher.Find(".pspad-snapshot-days").TextContent);
+        Assert.Contains("4 ticked", publisher.Find(".pspad-snapshot-ticks").TextContent);
+        Assert.Contains("12 entries", publisher.Markup);
+    }
+
+    [Fact]
+    public void ALinkWithNoTicksSaysSo()
+    {
+        var api = new FakeSnapshotsApi();
+        api.Active.Add(new PublishedSnapshotView(Guid.NewGuid(), "tok-1", Midnight, Midnight.AddHours(5)));
+        Arrange(api, new RecordingSyncTrigger());
+
+        var publisher = Render(NewList());
+
+        Assert.Contains("No ticks yet", publisher.Find(".pspad-snapshot-ticks").TextContent);
+        Assert.Contains("<1", publisher.Find(".pspad-snapshot-days").TextContent);
+    }
+
+    [Fact]
+    public void TheNewestLinkShowsItsQrCodeAndTheToggleHidesIt()
+    {
+        var api = new FakeSnapshotsApi();
+        api.Active.Add(new PublishedSnapshotView(Guid.NewGuid(), "tok-1", Midnight, Midnight.AddDays(6)));
+        Arrange(api, new RecordingSyncTrigger());
+
+        var publisher = Render(NewList());
+        Assert.Single(publisher.FindAll("img.pspad-qr"));
+
+        publisher.Find(".pspad-snapshot-qr-toggle").Click();
+        Assert.Empty(publisher.FindAll("img.pspad-qr"));
+    }
+
+    [Fact]
+    public void ThePublishButtonNamesTheExpiryDate()
+    {
+        Arrange(new FakeSnapshotsApi(), new RecordingSyncTrigger());
+        var publisher = Render(NewList());
+        Assert.Contains("Publish until 19 Sep", publisher.Find(".pspad-snapshot-publish").TextContent);
+    }
+
     IRenderedComponent<ContainerFragment> Render(TaskList list) => Render(builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
