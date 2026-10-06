@@ -485,7 +485,10 @@ tokens, TTL expiry, anonymous rate-limited marks reaching Tasks through
 module, its two collections and TTL indexes, the owner's publish/revoke
 and list panel's Public snapshots section, the anonymous `/api/public`
 group, the public `/public/snapshot/{token}` page with an IndexedDB offline cache, and
-the signed-in `/snapshots` List snapshots tab are all in. Live push of a
+the signed-in `/snapshots` List snapshots tab are all in. `adr/0057`
+(an invite needs the link and a 6-character code, lives 30 minutes, closes
+after five wrong codes, and members never sync its secrets) is `Active`
+and built here too, amending `adr/0054`. Live push of a
 visitor's mark to the owner, instead of next sync, is issue #105, a
 separate spec.
 

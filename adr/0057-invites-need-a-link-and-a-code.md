@@ -28,7 +28,7 @@ identical 404 for every bad token or code and a 410 only when both match but
 time is up; each user gets 10 join attempts per 30 minutes. Token and code are
 compared in constant time. Members never receive token, code, expiry or the
 failure count through sync. A list shared before this change has no code or
-expiry and counts as expired.
+expiry and can never be joined: it answers the uniform 404, not 410.
 
 ## Considered alternatives
 

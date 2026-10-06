@@ -2,17 +2,18 @@
 
 Status: Built. Issues: #103 (share a list with people who have an
 account), #104 (public read-only snapshot for people who do not). Decisions
-of record: ADR-0054, ADR-0055, ADR-0056 (§9). Live updates for the owner's
+of record: ADR-0054, ADR-0055, ADR-0056, ADR-0057 (§9). Live updates for the owner's
 chips — a push rather than next sync — are issue #105, a separate spec.
 
 Two features, one spec, because both start from the same list panel and both
 end in the same drawer:
 
-1. **Member sharing (#103).** The owner turns on an invite link. Any signed-in
-   person who opens it becomes a member: the list syncs to them, works
-   offline, and they edit its content as freely as the owner. The owner
-   rotates the link, stops it, or removes a member at any time; a member can
-   leave.
+1. **Member sharing (#103).** The owner makes an invite: a link plus a
+   6-character code, passed separately, alive for 30 minutes. A signed-in
+   person who opens the link and enters the code becomes a member: the list
+   syncs to them, works offline, and they edit its content as freely as the
+   owner. Five wrong codes close the invite. The owner makes a new invite,
+   ends it, or removes a member at any time; a member can leave.
 2. **Public snapshots (#104).** The owner publishes a frozen copy of a list
    under a link that anyone can open without an account, until an expiry the
    owner picks. Visitors cannot change the content, but they can tick a task,
@@ -25,7 +26,9 @@ end in the same drawer:
 
 In:
 
-- Invite link per list (`Tasks` and `Reference` kinds), reusable, rotatable.
+- Invite per list (`Tasks` and `Reference` kinds): link + 6-character code,
+  30 minutes from creation, closed by five wrong codes, replaceable by a new
+  invite (members stay).
 - Members: create, edit, tick, reorder, delete tasks, steps and reference
   items in the list. Owner-only: rename, delete, move to area, sharing,
   goals.
@@ -65,7 +68,7 @@ Out:
   generated on the client beside the token; shown `XXX-XXX`, compared
   normalised (upper-cased, `-` and whitespace dropped).
 - `InviteExpiresAt` — `TaskListShared.At` + 30 minutes. A list shared before
-  `adr/0057` has no code or expiry and counts as expired.
+  `adr/0057` has no code or expiry and can never be joined (the uniform 404).
 - `WrongCodes` — failed joins on the current invite; the fifth clears token,
   code and expiry. Members never receive token, code, expiry or count
   through sync (`adr/0057`).
@@ -206,9 +209,11 @@ and its live children. The joining device writes them into its replica at
 once.
 
 The client route `/join/{token}` requires sign-in (returning to the same URL
-after it), calls the endpoint, and navigates to the list. Offline it shows
-"Joining needs a connection" and a retry. A bad link or code shows "That
-link or code doesn't work."; an expired invite "This invite has expired".
+after it), asks for the code (pre-filled from a QR's `#code=` fragment),
+calls the endpoint, and navigates to the list. Offline it shows "Joining
+needs a connection" and a retry. A bad link or code shows "That link or
+code doesn't work."; an expired invite "This invite has expired"; a `429`
+"Too many tries".
 
 ### 3.4 Losing access with commands queued
 
@@ -418,7 +423,7 @@ Both roles:
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| `POST` | `/api/lists/join` | user | Join by token; returns list and children |
+| `POST` | `/api/lists/join` | user | Join by token and code; returns list and children. Uniform `404`, `410` expired, `429` rate limit |
 | `GET` | `/api/sync?since=&full=` | user | `full` = list ids to return whole; response adds `memberListIds` |
 | `POST` | `/api/lists/{id}/snapshots` | owner | `{expiresAt}` → `{id, token, expiresAt}` |
 | `GET` | `/api/lists/{id}/snapshots` | owner | Active snapshots of the list |
@@ -458,6 +463,10 @@ docs cover it.
   online-only HTTP, TTL expiry, the second module edge; anonymous marks reach
   Tasks as server-only commands (rejected: Tasks subscribing to a Sharing
   event, which would reverse the module edge).
+- **ADR-0057** — Invites need a link and a code, live 30 minutes, close after
+  five wrong codes; uniform 404, 410 only when both match an expired invite,
+  10 join attempts per user per 30 minutes; members never sync the secrets.
+  Amends ADR-0054.
 - `AGENTS.md`: §3 scope gains sharing and snapshots; §5 new AD-12 (sharing),
   AD-1 and §6 gain `PSPad.Module.Sharing`, AD-11 mentions `ListView`; §6
   documents the second module edge.
@@ -495,7 +504,10 @@ ignores mark events.
 
 Integration — `PSPad.Api.Tests`:
 
-- Join over HTTP returns list and children; wrong and rotated tokens fail.
+- Join over HTTP returns list and children; an unknown or replaced token, a
+  wrong code, a closed invite and a deleted list all answer the same empty
+  404; a right token and code on an expired invite answer 410; the 11th
+  attempt in 30 minutes answers 429.
 - Member sync sees owner's documents; `memberListIds`; `full=` backfill;
   removal, leave, list delete and owner account deletion each purge on the
   member's next pull.
