@@ -50,7 +50,13 @@
         }
     </MudPaper>
 
-    @if (_snapshots.Count == 0)
+    @if (_unreachable)
+    {
+        <div class="pspad-snapshot-unreachable">
+            <EmptyState Icon="@Icons.Material.Outlined.CloudOff" Message="Live links need a connection." />
+        </div>
+    }
+    else if (_snapshots.Count == 0)
     {
         <MudText Typo="Typo.body2" Class="pspad-muted">No live links. Published copies show up here.</MudText>
     }
@@ -70,7 +76,7 @@
                                 <MudText Typo="Typo.caption" Class="pspad-muted">@(daysLeft.Text == "1" ? "day left" : "days left")</MudText>
                             </div>
                             <div class="flex-grow-1 d-flex flex-column gap-1">
-                                <MudText Typo="Typo.body1">Published @snapshot.CreatedAt.ToString("d MMM")</MudText>
+                                <MudText Typo="Typo.body1">Published @Local(snapshot.CreatedAt).ToString("d MMM")</MudText>
                                 <div class="d-flex gap-1 flex-wrap">
                                     @if (snapshot.Ticks > 0)
                                     {
@@ -132,6 +138,7 @@
     Guid? _expanded;
     DateTime? _date;
     bool _publishing;
+    bool _unreachable;
 
     IReadOnlyList<PublishedSnapshotView> Newest => [.. _snapshots.OrderByDescending(snapshot => snapshot.CreatedAt)];
 
@@ -139,25 +146,52 @@
         ? _date is { } date ? EndOfLocalDay(DateOnly.FromDateTime(date)) : null
         : Clock.UtcNow.AddDays(_selectedDays);
 
-    string PublishText => PlannedExpiry is { } expiry ? $"Publish until {expiry:d MMM}" : "Pick a date";
+    string PublishText => (_selectedDays, _date) switch
+    {
+        (0, { } date) => $"Publish until {date:d MMM}",
+        (0, null) => "Pick a date",
+        _ => $"Publish until {Local(PlannedExpiry!.Value):d MMM}"
+    };
+
+    DateTime Local(DateTimeOffset moment) => TimeZoneInfo.ConvertTime(moment, LocalToday.Zone(State.TimeZone)).DateTime;
 
     (string Text, bool Urgent) DaysLeft(PublishedSnapshotView snapshot)
     {
-        var remaining = (snapshot.ExpiresAt - Clock.UtcNow).TotalDays;
-        return remaining < 1 ? ("<1", true) : (((int)remaining).ToString(), remaining < 2);
+        var days = Math.Max(1, (int)Math.Ceiling((snapshot.ExpiresAt - Clock.UtcNow).TotalDays));
+        return (days.ToString(), days <= 1);
     }
 
     DateTime MaxDate => Clock.UtcNow.AddDays(365).DateTime;
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_listId == List.Id)
+        if (_listId != List.Id)
+        {
+            await LoadAsync();
+        }
+    }
+
+    async Task LoadAsync()
+    {
+        _unreachable = true;
+        _snapshots = [];
+
+        if (!Connectivity.IsOnline)
+        {
+            return;
+        }
+
+        try
+        {
+            _snapshots = await Snapshots.ForListAsync(List.Id);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
             return;
         }
 
         _listId = List.Id;
-        _snapshots = await Snapshots.ForListAsync(List.Id);
+        _unreachable = false;
         _expanded = Newest.Count > 0 ? Newest[0].Id : null;
     }
 
@@ -185,9 +219,7 @@
         {
             await SyncTrigger.SyncNowAsync();
 
-            var expiresAt = PlannedExpiry!.Value;
-
-            var published = await Snapshots.PublishAsync(List.Id, expiresAt);
+            var published = await TryPublishAsync(PlannedExpiry!.Value);
 
             if (published is null)
             {
@@ -195,7 +227,15 @@
                 return;
             }
 
-            _snapshots = [.. _snapshots, published];
+            if (_unreachable)
+            {
+                await LoadAsync();
+            }
+            else
+            {
+                _snapshots = [.. _snapshots, published];
+            }
+
             _expanded = published.Id;
             await Clipboard.CopyAsync(SnapshotLinks.For(Navigation.BaseUri, published.Token));
             Snackbar.Add("Snapshot published. Link copied.", Severity.Success);
@@ -203,6 +243,18 @@
         finally
         {
             _publishing = false;
+        }
+    }
+
+    async Task<PublishedSnapshotView?> TryPublishAsync(DateTimeOffset expiresAt)
+    {
+        try
+        {
+            return await Snapshots.PublishAsync(List.Id, expiresAt);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            return null;
         }
     }
 
@@ -241,9 +293,24 @@
             return;
         }
 
-        if (await Snapshots.RevokeAsync(snapshot.Id))
+        if (await TryRevokeAsync(snapshot.Id))
         {
             _snapshots = [.. _snapshots.Where(active => active.Id != snapshot.Id)];
+            return;
+        }
+
+        Snackbar.Add("Couldn't revoke the snapshot.", Severity.Warning);
+    }
+
+    async Task<bool> TryRevokeAsync(Guid snapshotId)
+    {
+        try
+        {
+            return await Snapshots.RevokeAsync(snapshotId);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            return false;
         }
     }
 }

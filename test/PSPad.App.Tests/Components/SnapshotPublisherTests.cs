@@ -121,7 +121,125 @@ public class SnapshotPublisherTests : Bunit.TestContext
         var publisher = Render(NewList());
 
         Assert.Contains("No ticks yet", publisher.Find(".pspad-snapshot-ticks").TextContent);
-        Assert.Contains("<1", publisher.Find(".pspad-snapshot-days").TextContent);
+        Assert.Equal("1", publisher.Find(".pspad-snapshot-days h6").TextContent.Trim());
+    }
+
+    [Fact]
+    public void AFreshSevenDayLinkShowsSevenDaysLeft()
+    {
+        var api = new FakeSnapshotsApi();
+        api.Active.Add(new PublishedSnapshotView(Guid.NewGuid(), "tok-1", Midnight, Midnight.AddDays(7).AddMinutes(-1)));
+        Arrange(api, new RecordingSyncTrigger());
+
+        var publisher = Render(NewList());
+
+        Assert.Equal("7", publisher.Find(".pspad-snapshot-days h6").TextContent.Trim());
+    }
+
+    [Fact]
+    public void AFreshOneDayLinkShowsOneDayLeft()
+    {
+        var api = new FakeSnapshotsApi();
+        api.Active.Add(new PublishedSnapshotView(Guid.NewGuid(), "tok-1", Midnight, Midnight.AddDays(1).AddMinutes(-1)));
+        Arrange(api, new RecordingSyncTrigger());
+
+        var publisher = Render(NewList());
+
+        var days = publisher.Find(".pspad-snapshot-days h6");
+        Assert.Equal("1", days.TextContent.Trim());
+        Assert.Contains("mud-warning-text", days.ClassName);
+    }
+
+    [Fact]
+    public async Task APickedDateIsNamedInTheUsersZone()
+    {
+        Arrange(new FakeSnapshotsApi(), new RecordingSyncTrigger());
+        Services.GetRequiredService<AppState>().TimeZone = "America/New_York";
+
+        var publisher = Render(NewList());
+        publisher.Find(".pspad-snapshot-preset-date").Click();
+        await PickDateAsync(publisher, Today);
+
+        Assert.Contains("Publish until 12 Sep", publisher.Find(".pspad-snapshot-publish").TextContent);
+    }
+
+    [Fact]
+    public void APresetIsNamedByItsLocalExpiryDate()
+    {
+        Arrange(new FakeSnapshotsApi(), new RecordingSyncTrigger());
+        Services.GetRequiredService<AppState>().TimeZone = "America/New_York";
+
+        var publisher = Render(NewList());
+
+        Assert.Contains("Publish until 18 Sep", publisher.Find(".pspad-snapshot-publish").TextContent);
+    }
+
+    [Fact]
+    public void ThePublishedDateIsShownInTheUsersZone()
+    {
+        var api = new FakeSnapshotsApi();
+        api.Active.Add(new PublishedSnapshotView(Guid.NewGuid(), "tok-1", Midnight, Midnight.AddDays(6)));
+        Arrange(api, new RecordingSyncTrigger());
+        Services.GetRequiredService<AppState>().TimeZone = "America/New_York";
+
+        var publisher = Render(NewList());
+
+        Assert.Contains("Published 11 Sep", publisher.Markup);
+    }
+
+    [Fact]
+    public void OfflineTheLiveLinksAreNotFetched()
+    {
+        var api = new FakeSnapshotsApi();
+        api.Active.Add(new PublishedSnapshotView(Guid.NewGuid(), "tok-1", Midnight, Midnight.AddDays(6)));
+        Arrange(api, new RecordingSyncTrigger(), online: false);
+
+        var publisher = Render(NewList());
+
+        Assert.Equal(0, api.ForListCalls);
+        Assert.Single(publisher.FindAll(".pspad-snapshot-unreachable"));
+        Assert.Empty(publisher.FindAll(".pspad-snapshot"));
+    }
+
+    [Fact]
+    public void AFailedFetchShowsTheUnreachableState()
+    {
+        var api = new FakeSnapshotsApi { ThrowOnForList = true };
+        Arrange(api, new RecordingSyncTrigger());
+
+        var publisher = Render(NewList());
+
+        Assert.Single(publisher.FindAll(".pspad-snapshot-unreachable"));
+    }
+
+    [Fact]
+    public void AFailedRevokeWarnsAndKeepsTheRow()
+    {
+        var api = new FakeSnapshotsApi { ThrowOnRevoke = true };
+        api.Active.Add(new PublishedSnapshotView(Guid.NewGuid(), "tok-1", Midnight, Midnight.AddDays(6)));
+        Arrange(api, new RecordingSyncTrigger());
+
+        var publisher = Render(NewList());
+        publisher.Find(".pspad-snapshot-revoke").Click();
+        publisher.FindAll("div.mud-dialog button").Last().Click();
+
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Severity == Severity.Warning);
+        Assert.Single(publisher.FindAll(".pspad-snapshot"));
+    }
+
+    [Fact]
+    public void AFailedPublishWarns()
+    {
+        var api = new FakeSnapshotsApi { ThrowOnPublish = true };
+        Arrange(api, new RecordingSyncTrigger());
+
+        var publisher = Render(NewList());
+        publisher.Find(".pspad-snapshot-publish").Click();
+
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Severity == Severity.Warning);
+        Assert.Empty(publisher.FindAll(".pspad-snapshot"));
     }
 
     [Fact]
@@ -186,19 +304,45 @@ public class SnapshotPublisherTests : Bunit.TestContext
 
         public List<PublishedSnapshotView> Active { get; } = [];
 
+        public int ForListCalls { get; private set; }
+
+        public bool ThrowOnForList { get; init; }
+
+        public bool ThrowOnPublish { get; init; }
+
+        public bool ThrowOnRevoke { get; init; }
+
         public Task<PublishedSnapshotView?> PublishAsync(Guid listId, DateTimeOffset expiresAt)
         {
+            if (ThrowOnPublish)
+            {
+                throw new HttpRequestException("offline");
+            }
+
             Published.Add((listId, expiresAt));
             var view = new PublishedSnapshotView(Guid.NewGuid(), $"token-{Published.Count}", DateTimeOffset.UtcNow, expiresAt);
             Active.Add(view);
             return Task.FromResult<PublishedSnapshotView?>(view);
         }
 
-        public Task<IReadOnlyList<PublishedSnapshotView>> ForListAsync(Guid listId) =>
-            Task.FromResult<IReadOnlyList<PublishedSnapshotView>>([.. Active]);
+        public Task<IReadOnlyList<PublishedSnapshotView>> ForListAsync(Guid listId)
+        {
+            ForListCalls++;
+            if (ThrowOnForList)
+            {
+                throw new HttpRequestException("offline");
+            }
+
+            return Task.FromResult<IReadOnlyList<PublishedSnapshotView>>([.. Active]);
+        }
 
         public Task<bool> RevokeAsync(Guid snapshotId)
         {
+            if (ThrowOnRevoke)
+            {
+                throw new TaskCanceledException("offline");
+            }
+
             Revoked.Add(snapshotId);
             Active.RemoveAll(snapshot => snapshot.Id == snapshotId);
             return Task.FromResult(true);
