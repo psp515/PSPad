@@ -14,6 +14,11 @@ public sealed record ListSnapshot
     public DateTimeOffset ExpiresAt { get; init; }
     public IReadOnlyList<SnapshotTask> Tasks { get; init; } = [];
     public IReadOnlyList<SnapshotItem> Items { get; init; } = [];
+    public string OwnerName { get; init; } = "";
+
+    public int EntryCount => Tasks.Count + Items.Count;
+
+    public int TickCount => Tasks.Count(task => task.Marked) + Items.Count(item => item.Marked);
 
     public bool IsLiveAt(DateTimeOffset now) => ExpiresAt > now;
 

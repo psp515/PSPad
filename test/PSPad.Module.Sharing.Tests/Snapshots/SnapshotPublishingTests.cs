@@ -20,7 +20,7 @@ public class SnapshotPublishingTests
     {
         var publishing = NewPublishing(new FakeListContent { List = null });
 
-        var (outcome, snapshot) = await publishing.PublishAsync(Owner, ListId, Now.AddDays(1), Today, CancellationToken.None);
+        var (outcome, snapshot) = await publishing.PublishAsync(Owner, "Łukasz", ListId, Now.AddDays(1), Today, CancellationToken.None);
 
         Assert.Equal(PublishOutcome.NotFound, outcome);
         Assert.Null(snapshot);
@@ -33,7 +33,7 @@ public class SnapshotPublishingTests
         list.ApplyAll(TaskList.Decide(list, new DeleteTaskList(Guid.NewGuid(), Owner, list.Id), Now));
         var publishing = NewPublishing(new FakeListContent { List = list });
 
-        var (outcome, _) = await publishing.PublishAsync(Owner, ListId, Now.AddDays(1), Today, CancellationToken.None);
+        var (outcome, _) = await publishing.PublishAsync(Owner, "Łukasz", ListId, Now.AddDays(1), Today, CancellationToken.None);
 
         Assert.Equal(PublishOutcome.NotFound, outcome);
     }
@@ -43,7 +43,7 @@ public class SnapshotPublishingTests
     {
         var publishing = NewPublishing(new FakeListContent { List = TasksList() });
 
-        var (outcome, _) = await publishing.PublishAsync(Stranger, ListId, Now.AddDays(1), Today, CancellationToken.None);
+        var (outcome, _) = await publishing.PublishAsync(Stranger, "Łukasz", ListId, Now.AddDays(1), Today, CancellationToken.None);
 
         Assert.Equal(PublishOutcome.NotOwner, outcome);
     }
@@ -54,7 +54,7 @@ public class SnapshotPublishingTests
     {
         var publishing = NewPublishing(new FakeListContent { List = TasksList() });
 
-        var (outcome, _) = await publishing.PublishAsync(Owner, ListId, expiresAt, Today, CancellationToken.None);
+        var (outcome, _) = await publishing.PublishAsync(Owner, "Łukasz", ListId, expiresAt, Today, CancellationToken.None);
 
         Assert.Equal(PublishOutcome.BadExpiry, outcome);
     }
@@ -73,7 +73,7 @@ public class SnapshotPublishingTests
         var publishing = NewPublishing(new FakeListContent { List = TasksList() }, store);
         var expiresAt = Now.AddDays(7);
 
-        var (outcome, snapshot) = await publishing.PublishAsync(Owner, ListId, expiresAt, Today, CancellationToken.None);
+        var (outcome, snapshot) = await publishing.PublishAsync(Owner, "Łukasz", ListId, expiresAt, Today, CancellationToken.None);
 
         Assert.Equal(PublishOutcome.Published, outcome);
         Assert.NotNull(snapshot);
@@ -138,7 +138,7 @@ public class SnapshotPublishingTests
 
     static async Task<ListSnapshot> Publish(SnapshotPublishing publishing, DateTimeOffset expiresAt)
     {
-        var (_, snapshot) = await publishing.PublishAsync(Owner, ListId, expiresAt, Today, CancellationToken.None);
+        var (_, snapshot) = await publishing.PublishAsync(Owner, "Łukasz", ListId, expiresAt, Today, CancellationToken.None);
         return snapshot!;
     }
 

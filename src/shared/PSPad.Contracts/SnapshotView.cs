@@ -7,4 +7,5 @@ public sealed record SnapshotView(
     DateTimeOffset CreatedAt,
     DateTimeOffset ExpiresAt,
     SnapshotTaskView[] Tasks,
-    SnapshotItemView[] Items);
+    SnapshotItemView[] Items,
+    string OwnerName = "");

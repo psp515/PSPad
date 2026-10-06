@@ -8,7 +8,7 @@ public sealed class SnapshotPublishing(ISnapshotStore snapshots, IListContent co
     public static readonly TimeSpan LongestLife = TimeSpan.FromDays(365);
 
     public async Task<(PublishOutcome Outcome, ListSnapshot? Snapshot)> PublishAsync(
-        Guid userId, Guid listId, DateTimeOffset expiresAt, DateOnly today, CancellationToken ct)
+        Guid userId, string ownerName, Guid listId, DateTimeOffset expiresAt, DateOnly today, CancellationToken ct)
     {
         var (list, tasks, items) = await content.LoadAsync(listId, ct);
         if (list is null || list.Deleted)
@@ -28,7 +28,7 @@ public sealed class SnapshotPublishing(ISnapshotStore snapshots, IListContent co
         }
 
         var snapshot = SnapshotBuilder.Build(
-            Guid.NewGuid(), SnapshotTokens.New(), list, tasks, items, now, expiresAt, today);
+            Guid.NewGuid(), SnapshotTokens.New(), list, tasks, items, now, expiresAt, today, ownerName);
         await snapshots.SaveAsync(snapshot, ct);
         return (PublishOutcome.Published, snapshot);
     }

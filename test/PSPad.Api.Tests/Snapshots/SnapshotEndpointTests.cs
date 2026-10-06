@@ -31,7 +31,9 @@ public class SnapshotEndpointTests(MongoFixture fixture)
         Assert.Equal(24, published!.Token.Length);
 
         var list = await owner.GetFromJsonAsync<PublishedSnapshotView[]>($"/api/lists/{listId}/snapshots", ct);
-        Assert.Contains(list!, snapshot => snapshot.Token == published.Token);
+        var listed = Assert.Single(list!, snapshot => snapshot.Token == published.Token);
+        Assert.Equal(0, listed.Ticks);
+        Assert.Equal(0, listed.Entries);
     }
 
     [Fact]

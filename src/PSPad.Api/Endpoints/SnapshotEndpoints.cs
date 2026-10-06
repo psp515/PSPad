@@ -26,7 +26,7 @@ public static class SnapshotEndpoints
             var zone = TimeZoneInfo.FindSystemTimeZoneById(user?.TimeZone ?? "Etc/UTC");
             var today = TodayRule.TodayIn(clock.UtcNow, zone);
 
-            var (outcome, snapshot) = await publishing.PublishAsync(current.UserId, id, request.ExpiresAt, today, ct);
+            var (outcome, snapshot) = await publishing.PublishAsync(current.UserId, current.DisplayName, id, request.ExpiresAt, today, ct);
 
             return outcome switch
             {

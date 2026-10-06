@@ -13,10 +13,11 @@ public static class SnapshotViews
             snapshot.CreatedAt,
             snapshot.ExpiresAt,
             snapshot.Tasks.Select(ToTaskView).ToArray(),
-            snapshot.Items.Select(ToItemView).ToArray());
+            snapshot.Items.Select(ToItemView).ToArray(),
+            snapshot.OwnerName);
 
     public static PublishedSnapshotView ToPublished(ListSnapshot snapshot) =>
-        new(snapshot.Id, snapshot.Token, snapshot.CreatedAt, snapshot.ExpiresAt);
+        new(snapshot.Id, snapshot.Token, snapshot.CreatedAt, snapshot.ExpiresAt, snapshot.EntryCount, snapshot.TickCount);
 
     static SnapshotTaskView ToTaskView(SnapshotTask task) =>
         new(

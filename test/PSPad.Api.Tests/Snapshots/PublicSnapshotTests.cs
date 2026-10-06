@@ -20,7 +20,7 @@ public class PublicSnapshotTests(MongoFixture fixture)
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         await using var factory = new ApiFactory(fixture);
-        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var owner = factory.ClientFor(Guid.NewGuid().ToString(), name: "Ada Lovelace");
         var ownerId = await Sharing.SignInAsync(owner, ct);
         var areaId = Guid.NewGuid();
         var listId = Guid.NewGuid();
@@ -40,7 +40,8 @@ public class PublicSnapshotTests(MongoFixture fixture)
         response.EnsureSuccessStatusCode();
 
         var view = await response.Content.ReadFromJsonAsync<SnapshotView>(ct);
-        var task = Assert.Single(view!.Tasks);
+        Assert.Equal("Ada Lovelace", view!.OwnerName);
+        var task = Assert.Single(view.Tasks);
         Assert.Equal("Buy milk", task.Name);
         Assert.False(task.Done);
         Assert.Equal("Whole milk, two liters", task.Description);

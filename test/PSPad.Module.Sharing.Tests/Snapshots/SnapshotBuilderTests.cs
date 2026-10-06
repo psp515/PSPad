@@ -271,8 +271,29 @@ public class SnapshotBuilderTests
         Assert.False(snapshot.IsLiveAt(ExpiresAt.AddSeconds(1)));
     }
 
+    [Fact]
+    public void ItCarriesTheOwnerName() =>
+        Assert.Equal("Łukasz", Build(TasksList(), [], []).OwnerName);
+
+    [Fact]
+    public void ItCountsTopLevelEntriesAndTicks()
+    {
+        var snapshot = Build(TasksList(), [], []) with
+        {
+            Tasks =
+            [
+                new SnapshotTask(Guid.NewGuid(), "A", false, null, Priority.None, false, "", true, Now, []),
+                new SnapshotTask(Guid.NewGuid(), "B", false, null, Priority.None, false, "", false, null, []),
+                new SnapshotTask(Guid.NewGuid(), "C", false, null, Priority.None, false, "", true, Now, [])
+            ]
+        };
+
+        Assert.Equal(3, snapshot.EntryCount);
+        Assert.Equal(2, snapshot.TickCount);
+    }
+
     static ListSnapshot Build(TaskList list, IEnumerable<TodoTask> tasks, IEnumerable<ReferenceItem> items) =>
-        SnapshotBuilder.Build(SnapshotId, Token, list, tasks, items, Now, ExpiresAt, Today);
+        SnapshotBuilder.Build(SnapshotId, Token, list, tasks, items, Now, ExpiresAt, Today, "Łukasz");
 
     static TaskList TasksList()
     {

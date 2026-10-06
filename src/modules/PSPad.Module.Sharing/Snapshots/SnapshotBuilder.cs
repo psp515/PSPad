@@ -8,7 +8,8 @@ public static class SnapshotBuilder
 {
     public static ListSnapshot Build(
         Guid id, string token, TaskList list, IEnumerable<TodoTask> tasks,
-        IEnumerable<ReferenceItem> items, DateTimeOffset now, DateTimeOffset expiresAt, DateOnly today) =>
+        IEnumerable<ReferenceItem> items, DateTimeOffset now, DateTimeOffset expiresAt, DateOnly today,
+        string ownerName) =>
         new()
         {
             Id = id,
@@ -19,6 +20,7 @@ public static class SnapshotBuilder
             Name = list.Name,
             CreatedAt = now,
             ExpiresAt = expiresAt,
+            OwnerName = ownerName.Trim(),
             Tasks = OrderTasks(tasks, list.Id, today)
                 .Select(task => ToSnapshotTask(task, id, today))
                 .ToArray(),
