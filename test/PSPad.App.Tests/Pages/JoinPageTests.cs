@@ -25,6 +25,7 @@ public class JoinPageTests : Bunit.TestContext
         var listId = Guid.NewGuid();
         var trigger = new RecordingSyncTrigger();
         Arrange(Joined(listId), trigger: trigger);
+        NavigateTo("join/abc123#code=K7M4PX");
 
         var page = RenderPage("abc123");
 
@@ -34,44 +35,93 @@ public class JoinPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheCodeInTheFragmentIsSentWithTheToken()
+    public void ACodeInTheFragmentJoinsAtOnce()
     {
-        var api = Arrange(Joined(Guid.NewGuid()));
-        Services.GetRequiredService<NavigationManager>().NavigateTo("join/abc123#code=K7M-4PX");
+        var listId = Guid.NewGuid();
+        var api = Arrange(Joined(listId));
+        NavigateTo("join/tok#code=K7M4PX");
 
-        RenderPage("abc123");
+        var page = RenderPage("tok");
 
-        Assert.Equal(("abc123", "K7M-4PX"), api.JoinedWith);
+        Assert.Equal(("tok", "K7M4PX"), api.Calls.Single());
+        Assert.EndsWith($"/lists/{listId}", page.Services.GetRequiredService<NavigationManager>().Uri);
     }
-
-    [Theory]
-    [MemberData(nameof(Failures))]
-    public void AFailedJoinShowsTheDeadLink(JoinOutcome outcome)
-    {
-        Arrange(outcome);
-
-        var page = RenderPage("deadtoken");
-
-        Assert.Equal("This invite link no longer works.", page.FindComponent<EmptyState>().Instance.Message);
-    }
-
-    public static TheoryData<JoinOutcome> Failures() =>
-        [new JoinOutcome.Invalid(), new JoinOutcome.Expired(), new JoinOutcome.TooManyTries()];
 
     [Fact]
-    public void ADeadLinkOffersToGoHome()
+    public void WithoutACodeItAsksForOne()
+    {
+        var api = Arrange(new JoinOutcome.Invalid());
+        NavigateTo("join/tok");
+
+        var page = RenderPage("tok");
+
+        Assert.Empty(api.Calls);
+        Assert.True(page.Find(".pspad-join-submit").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void TypingAWellFormedCodeEnablesJoinAndSendsItNormalised()
+    {
+        var api = Arrange(Joined(Guid.NewGuid()));
+        NavigateTo("join/tok");
+        var page = RenderPage("tok");
+
+        page.Find(".pspad-join-code input").Input("k7m-4px");
+        page.Find(".pspad-join-submit").Click();
+
+        Assert.Equal(("tok", "K7M4PX"), api.Calls.Single());
+    }
+
+    [Fact]
+    public void AnInvalidAnswerShowsOneGenericErrorAndKeepsTheInput()
     {
         Arrange(new JoinOutcome.Invalid());
+        NavigateTo("join/tok");
+        var page = RenderPage("tok");
 
-        var page = RenderPage("deadtoken");
+        page.Find(".pspad-join-code input").Input("k7m-4px");
+        page.Find(".pspad-join-submit").Click();
 
-        var empty = page.FindComponent<EmptyState>();
-        Assert.Equal("This invite link no longer works.", empty.Instance.Message);
+        Assert.Contains("That link or code doesn't work.", page.Find(".pspad-join-invalid").TextContent);
+        Assert.Equal("k7m-4px", page.Find(".pspad-join-code input").GetAttribute("value"));
+    }
 
+    [Fact]
+    public void AnInvalidFragmentCodeShowsTheErrorAboveTheEntryCard()
+    {
+        Arrange(new JoinOutcome.Invalid());
+        NavigateTo("join/tok#code=K7M4PX");
+
+        var page = RenderPage("tok");
+
+        Assert.Contains("That link or code doesn't work.", page.Find(".pspad-join-invalid").TextContent);
+        Assert.NotNull(page.Find(".pspad-join-code"));
+    }
+
+    [Fact]
+    public void AnExpiredAnswerSaysSoAndOffersMyDay()
+    {
+        Arrange(new JoinOutcome.Expired());
+        NavigateTo("join/tok#code=K7M4PX");
+
+        var page = RenderPage("tok");
+
+        Assert.Contains("This invite has expired", page.Markup);
+        Assert.Contains("Invites work for 30 minutes. Ask the owner for a new link and code.", page.Markup);
         page.Find(".pspad-empty-state").Click();
-
         var navigation = page.Services.GetRequiredService<NavigationManager>();
         Assert.Equal(navigation.BaseUri, navigation.Uri);
+    }
+
+    [Fact]
+    public void ThrottlingIsExplained()
+    {
+        Arrange(new JoinOutcome.TooManyTries());
+        NavigateTo("join/tok#code=K7M4PX");
+
+        var page = RenderPage("tok");
+
+        Assert.Contains("Too many tries.", page.Find(".pspad-join-throttled").TextContent);
     }
 
     [Fact]
@@ -80,6 +130,8 @@ public class JoinPageTests : Bunit.TestContext
         var listId = Guid.NewGuid();
         var connectivity = new ToggleableConnectivity(isOnline: false);
         Arrange(Joined(listId), connectivity: connectivity);
+
+        NavigateTo("join/abc123#code=K7M4PX");
 
         var page = RenderPage("abc123");
 
@@ -98,11 +150,15 @@ public class JoinPageTests : Bunit.TestContext
     {
         Arrange(new JoinOutcome.Invalid(), throwing: true);
 
+        NavigateTo("join/abc123#code=K7M4PX");
+
         var page = RenderPage("abc123");
 
         var empty = page.FindComponent<EmptyState>();
         Assert.Equal("Joining needs a connection.", empty.Instance.Message);
     }
+
+    void NavigateTo(string uri) => Services.GetRequiredService<NavigationManager>().NavigateTo(uri);
 
     IRenderedComponent<JoinPage> RenderPage(string token) =>
         Render<JoinPage>(parameters => parameters.Add(p => p.Token, token));
@@ -139,11 +195,11 @@ public class JoinPageTests : Bunit.TestContext
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
             Task.FromResult<SyncResponse?>(null);
 
-        public (string Token, string Code)? JoinedWith { get; private set; }
+        public List<(string Token, string Code)> Calls { get; } = [];
 
         public Task<JoinOutcome> JoinAsync(string token, string code)
         {
-            JoinedWith = (token, code);
+            Calls.Add((token, code));
             return throwing ? throw new HttpRequestException("Boom.") : Task.FromResult(outcome);
         }
     }

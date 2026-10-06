@@ -2,20 +2,64 @@
 @attribute [Authorize]
 @using PSPad.App.Components
 @using PSPad.App.Sync
+@using PSPad.Module.Tasks.Lists
 @inject SyncService Sync
 @inject IConnectivity Connectivity
 @inject ISyncTrigger SyncTrigger
 @inject NavigationManager Navigation
 
-@if (_state == JoinState.DeadLink)
+@if (_state == JoinState.Expired)
 {
-    <EmptyState Icon="@Icons.Material.Outlined.LinkOff" Message="This invite link no longer works."
-                CreateText="Go to My Day" OnCreate="@GoHome" />
+    <MudStack Class="pa-4 mx-auto" Style="max-width: 420px" Spacing="2" AlignItems="AlignItems.Center">
+        <EmptyState Icon="@Icons.Material.Outlined.TimerOff" Message="This invite has expired"
+                    CreateText="Go to My Day" OnCreate="@GoHome" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+            Invites work for 30 minutes. Ask the owner for a new link and code.
+        </MudText>
+    </MudStack>
 }
 else if (_state == JoinState.Offline)
 {
     <EmptyState Icon="@Icons.Material.Outlined.WifiOff" Message="Joining needs a connection."
                 CreateText="Try again" OnCreate="@JoinAsync" />
+}
+else if (_state != JoinState.Joining)
+{
+    <MudStack Class="pa-4 mx-auto" Style="max-width: 420px" Spacing="2">
+        <MudPaper Elevation="1" Class="pa-6">
+            <MudStack Spacing="3" AlignItems="AlignItems.Center">
+                <MudAvatar Color="Color.Primary" Variant="Variant.Outlined">
+                    <MudIcon Icon="@Icons.Material.Outlined.Lock" />
+                </MudAvatar>
+                <MudText Typo="Typo.h6">Enter the invite code</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                    The person who shared the list has a 6-character code. Ask them for it.
+                </MudText>
+                @if (_state == JoinState.Invalid)
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="pspad-join-invalid" Style="width: 100%">
+                        That link or code doesn't work.
+                    </MudAlert>
+                }
+                else if (_state == JoinState.Throttled)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="pspad-join-throttled" Style="width: 100%">
+                        Too many tries. Wait a few minutes and try again.
+                    </MudAlert>
+                }
+                <MudTextField T="string" @bind-Value="_input" Immediate="true" Variant="Variant.Outlined"
+                              Label="Code" MaxLength="7" InputType="InputType.Text" InputMode="InputMode.text"
+                              Typo="Typo.h5" Class="pspad-join-code" Style="text-align: center; letter-spacing: 0.3em; font-family: monospace"
+                              HelperText="Letters and numbers — no 0, O, 1, I or L."
+                              UserAttributes="@(new Dictionary<string, object?> { ["autocomplete"] = "one-time-code" })" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="pspad-join-submit"
+                           Disabled="@(!CanSubmit)" OnClick="@SubmitAsync">Join list</MudButton>
+            </MudStack>
+        </MudPaper>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+            Scanned the QR code? The code is filled in for you.
+        </MudText>
+    </MudStack>
 }
 
 @code {
@@ -24,13 +68,32 @@ else if (_state == JoinState.Offline)
     enum JoinState
     {
         Joining,
-        DeadLink,
+        Entry,
+        Invalid,
+        Throttled,
+        Expired,
         Offline
     }
 
     JoinState _state = JoinState.Joining;
+    string _input = "";
 
-    protected override Task OnInitializedAsync() => JoinAsync();
+    bool CanSubmit => InviteCodes.IsWellFormed(InviteCodes.Normalize(_input));
+
+    protected override async Task OnInitializedAsync()
+    {
+        var code = InviteCodes.Normalize(CodeFromFragment());
+        if (InviteCodes.IsWellFormed(code))
+        {
+            _input = code;
+            await JoinAsync();
+            return;
+        }
+
+        _state = JoinState.Entry;
+    }
+
+    Task SubmitAsync() => JoinAsync();
 
     async Task JoinAsync()
     {
@@ -44,14 +107,20 @@ else if (_state == JoinState.Offline)
 
         try
         {
-            if (await Sync.JoinAsync(Token, CodeFromFragment(), CancellationToken.None) is not JoinOutcome.Joined joined)
+            var outcome = await Sync.JoinAsync(Token, InviteCodes.Normalize(_input), CancellationToken.None);
+            if (outcome is JoinOutcome.Joined joined)
             {
-                _state = JoinState.DeadLink;
+                _ = SyncTrigger.SyncNowAsync();
+                Navigation.NavigateTo($"/lists/{joined.ListId}");
                 return;
             }
 
-            _ = SyncTrigger.SyncNowAsync();
-            Navigation.NavigateTo($"/lists/{joined.ListId}");
+            _state = outcome switch
+            {
+                JoinOutcome.Expired => JoinState.Expired,
+                JoinOutcome.TooManyTries => JoinState.Throttled,
+                _ => JoinState.Invalid
+            };
         }
         catch (HttpRequestException)
         {
@@ -59,12 +128,15 @@ else if (_state == JoinState.Offline)
         }
     }
 
-    string CodeFromFragment()
+    string CodeFromFragment() => ParseCode(new Uri(Navigation.Uri).Fragment);
+
+    static string ParseCode(string fragment)
     {
-        const string marker = "#code=";
-        var uri = Navigation.Uri;
-        var at = uri.IndexOf(marker, StringComparison.Ordinal);
-        return at < 0 ? "" : Uri.UnescapeDataString(uri[(at + marker.Length)..]);
+        const string marker = "code=";
+        var trimmed = fragment.TrimStart('#');
+        return trimmed.StartsWith(marker, StringComparison.Ordinal)
+            ? Uri.UnescapeDataString(trimmed[marker.Length..])
+            : "";
     }
 
     void GoHome() => Navigation.NavigateTo("/");
