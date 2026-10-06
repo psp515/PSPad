@@ -207,8 +207,8 @@ once.
 
 The client route `/join/{token}` requires sign-in (returning to the same URL
 after it), calls the endpoint, and navigates to the list. Offline it shows
-"Joining needs a connection" and a retry. A dead token shows "This invite
-link no longer works".
+"Joining needs a connection" and a retry. A bad link or code shows "That
+link or code doesn't work."; an expired invite "This invite has expired".
 
 ### 3.4 Losing access with commands queued
 
@@ -381,27 +381,31 @@ on both sides.
 
 ## 7. UI
 
-All in the list's side panel (`ListDetailPanel`, `adr/0052`), new
-**Sharing** section:
+All in the list's side panel (`ListDetailPanel`, `adr/0052`). Details shows
+two nav rows, **Members** and (owner only) **Public snapshots**; each opens a
+sub-view (`?view=members|snapshots`) with a back arrow. The full shapes live
+in `specs/ui-spec.md`.
 
-Owner:
+Owner, Members view:
 
-- Invite link: a switch, off by default. Turning it on runs `ShareTaskList`
-  and shows the URL `{origin}/join/{token}` with Copy and **New link**
-  (rotate, confirm); turning it off runs `StopSharingTaskList` — the switch
-  is the "stop link" control, there is no separate button.
-- Members: name and joined date, Remove (confirm popup).
-- Public snapshots: **Publish snapshot** with an expiry picker (chips 1 d /
-  7 d / 30 d / Date); active snapshots with created/expiry, Copy and Revoke.
+- Invite link card: none / live / expired / closed. Live shows a QR code
+  (link and code), the link with Copy, the 6-character code, **New link**
+  (confirm) and **End link now** (`StopSharingTaskList`). The invite lasts
+  30 minutes; five wrong codes close it.
+- People: name and joined date, Remove (confirm popup). **Stop sharing**
+  removes everyone.
 
-Member:
+Owner, Public snapshots view: **Publish snapshot** with an expiry picker
+(1 d / 7 d / 30 d / Date); live links with days left, tick and entry counts,
+QR, Copy, Open and Revoke.
 
-- "Shared by {OwnerName}", the member list read-only, the invite link with
-  Copy, **Leave list** (confirm).
-- Rename, delete, move-to-area and the Sharing controls hidden; **File under**
-  an area picker (`PlaceList`) shown instead.
-- Task panel hides the goal field. Move-to-list pickers offer only lists with
-  the same owner.
+Member, Members view:
+
+- "Shared by {OwnerName}", the people list read-only, **Show in my area**
+  (`PlaceList`) and **Leave list** (confirm). No invite link or code.
+- Rename, delete and move-to-area hidden on Details; no Public snapshots
+  row. Task panel hides the goal field. Move-to-list pickers offer only
+  lists with the same owner.
 
 Both roles:
 

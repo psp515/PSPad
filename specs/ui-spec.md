@@ -579,32 +579,72 @@ never opens the item. The empty-list and delete-confirmation
 copy read "items" instead of "tasks" for a `Reference` list
 (`DeleteWarning`).
 
-**Sharing lives in the list panel, a `PanelSection` below the list's own
-fields.** `Components/ListSharingSection.razor` branches on ownership:
+**Sharing opens from the list panel's Details view as two nav rows.**
+`ListDetailPanel` shows the name, the kind label, the owner's **Area**
+`MudSelect`, then one `MudPaper` holding a `MudList` of rows: **Members**
+(secondary text "Only you", "Nobody joined yet", "N joined", or for an
+owner with a live invite "N joined · link M min left") and — owner only —
+**Public snapshots** (secondary text "None live", "1 live link", "N live
+links", or "Needs a connection" offline or when the request fails; the
+summary loads once per list and tolerates failure). A row navigates to
+`?view=members` or `?view=snapshots` (`ListPanelView`, `ListQuery`); the
+sub-view replaces the Details body, takes the row's name as its title and
+shows a back arrow (`DetailPanel.OnBack`) returning to `?view=`-less
+Details. A non-owner asking for `?view=snapshots` falls back to Details.
+On a phone the panel is full width, so each sub-view is its own full-screen
+page.
 
-- **Owner.** An "Invite link" `MudSwitch` turns sharing on (`ShareTaskList`)
-  or off (`StopSharingTaskList`, members stay). On, the link
-  (`{origin}/join/{token}`, `InviteToken.LinkFor`) sits in a read-only
-  field with a copy button, below it **New link** — confirmed, since the
-  old link stops working while members keep their place. Then **Members**:
-  each a row with their name, join date and a remove icon
-  (`PersonRemove`), confirmed via `ConfirmDialog`; nobody yet reads
-  "Nobody has joined yet."
-- **Member.** "Shared by {OwnerName}" (set by `ShareTaskList`, not read
-  from the owner's `User` document), the same read-only members list with
-  no remove icon, the link read-only with its copy button but no rotate,
-  and **Leave list** (`Color.Error`), confirmed, which sends `LeaveTaskList`
-  and navigates to "Shared with me" — the list is gone from this device.
+**Members sub-view** (`Components/ListMembersView.razor`) branches on
+ownership.
 
-Every sharing action reloads the list from the replica so the panel
-reflects the fresh token or member set without a full page reload.
+- **Owner.** `InviteLinkCard`, then **People · N** (owner plus members): a
+  `MudList` of rows with initials avatar (`AvatarColor`), "You" for the
+  owner, an **Owner** chip, and for each member their name, join date and a
+  remove icon (`PersonRemove`, confirmed via `ConfirmDialog`). **Stop
+  sharing · remove everyone** (confirmed) shows while there are members or a
+  live invite.
+- **Member.** A "Shared by {OwnerName}" card with a "You can edit" chip, the
+  same people list without remove icons and "Only {OwnerName} can invite
+  people.", the **Show in my area** `MudSelect` (filing, see below) and
+  **Leave list** (`Color.Error`, confirmed, sends `LeaveTaskList` and
+  navigates to "Shared with me"). A member never sees the invite link or
+  code — the server does not sync them.
+
+**`InviteLinkCard`** is a `MudPaper` titled "Invite link" with a state chip.
+An invite is a link plus a 6-character code and lives 30 minutes
+(`TaskList.InviteLife`). Four states:
+
+- **None** (never shared): "Only you use this list", explanation, **Create
+  invite link** (`ShareTaskList` with a fresh `InviteToken` and
+  `InviteCode`).
+- **Live:** chip "N min left" (re-rendered every 30 s), a
+  `MudProgressLinear` and "Works until HH:mm" in the user's time zone, the
+  `QrCode` (carries link and code, `InviteCode.QrLinkFor`), the read-only
+  link field with **Copy** (the copied link carries no code), the code
+  (`InviteCodes.Format`, "K7M-4PX") in its own card with its own copy
+  button, **New link** (confirmed — the old link stops, members stay) and
+  **End link now** (`StopSharingTaskList`).
+- **Expired:** chip "Expired HH:mm", an info alert that nobody can join with
+  the old link and code and the people already in stay, **Create link ·
+  30 min**.
+- **Closed:** chip "Closed", a warning alert that five wrong codes closed
+  the link, **Create link · 30 min**.
+
+Every action reloads the list from the replica so the card reflects the
+fresh token and code.
+
+**`QrCode`** renders a QR PNG (QRCoder, ECC level M) as a data URI in an
+`<img class="pspad-qr">` inside a `MudPaper` with a hard-coded white
+background, so the code stays dark on white in the dark theme too — a
+scanner needs the contrast.
 
 **A member's list panel hides owner-only controls; its own filing picker
 takes their place.** `ListDetailPanel`'s kind icon/label render for owner
 and member alike — only the owner's name field, **Area** `MudSelect` and
 **Delete list** check `IsMine` (the panel's own `_list.UserId ==
-State.UserId`, not `ListPlacement`). A member sees a **File under**
-`MudSelect` instead of the owner's **Area** one: the member's own live
+State.UserId`, not `ListPlacement`). A member's **Show in my area**
+`MudSelect` (in the Members sub-view, not on Details) takes the owner's
+**Area** one's place: the member's own live
 areas plus "Shared with me" (`null`), sending `PlaceList` on change and
 preselecting whatever `ListView` already has on file for that
 `(user, list)`. `ListPage`'s FAB Menu drops **Edit list** / **Delete list**
@@ -635,22 +675,31 @@ any area, but carries no FAB — a member cannot create a list here — and an
 empty board reads "Nothing is shared with you right now." instead of "No
 lists yet."
 
-**`/join/{token}`** (`Pages/JoinPage.razor`, signed-in only) joins on
-mount: offline it shows `EmptyState` "Joining needs a connection." with a
-"Try again" retry; an unknown or cleared token shows "This invite link no
-longer works." with "Go to My Day". On success it triggers a sync and
-navigates straight to `/lists/{listId}`.
+**`/join/{token}`** (`Pages/JoinPage.razor`, signed-in only) asks for the
+invite code. A `#code=` fragment (from the QR) that is well-formed fills it
+in and joins at once; otherwise a card reads "Enter the invite code" with a
+monospace code `MudTextField` and **Join list**, enabled once the code is
+well-formed. Outcomes: success triggers a sync and navigates to
+`/lists/{listId}`; a wrong link or code shows an error alert "That link or
+code doesn't work." (one message for both — the server answers one 404);
+an expired invite replaces the card with `EmptyState` "This invite has
+expired" and "Invites work for 30 minutes."; too many tries (429) shows a
+warning alert "Too many tries. Wait a few minutes and try again."; offline
+shows `EmptyState` "Joining needs a connection." with "Try again".
 
-**Public snapshots sit in their own `PanelSection`, "Public snapshots",
-below Sharing — owner only.** `Components/SnapshotPublisher.razor` offers
-expiry presets as `MudChip`s (1 day / 7 days / 30 days) plus a **Date**
-chip that opens a `MudDatePicker` capped at 365 days out; **Publish
+**Public snapshots are the owner-only `?view=snapshots` sub-view.**
+`Components/SnapshotPublisher.razor` offers expiry presets in a
+`MudToggleGroup` (1 day / 7 days / 30 days) plus a **Date…** item that
+opens a `MudDatePicker` capped at 365 days out; **Publish
 snapshot** flushes the outbox first (`ISyncTrigger.SyncNowAsync` — a
 snapshot is built from server state) and is disabled outright while
 offline, with a caption explaining why. A published snapshot copies its
-link to the clipboard and shows a success snackbar; each active snapshot
-below lists its expiry with a copy button and a **Revoke** button
-(`ConfirmDialog`, "The link stops working."). A custom date resolves to
+link to the clipboard and shows a success snackbar. Below, "Live links · N"
+lists each active snapshot: days left (warning colour when urgent),
+"Published {date}", chips "N ticked" / "No ticks yet" and "N entries", a
+copy button and a QR toggle that expands the `QrCode`, **Copy link**,
+**Open** and **Revoke** (`ConfirmDialog`, "The link stops working."); none
+live reads "No live links. Published copies show up here." A custom date resolves to
 the end of that day in the user's own time zone, not UTC midnight.
 
 **`SnapshotMarkChip`** — a small outlined `MudChip`, "Marked on a
@@ -660,23 +709,31 @@ panel whenever it carries at least one snapshot mark. The panel offers
 `ClearReferenceItemSnapshotMarks`; completing the task itself is a
 separate, deliberate action the chip never triggers.
 
-**`/public/snapshot/{token}`** (`Pages/SnapshotPage.razor`, `PublicLayout`, anonymous —
-outside `AppShell` like `/welcome`) renders the frozen list: a top bar
-with **Log in** or **Open PSPad** depending on whether a local session
-exists, the list's name and "Snapshot from {date} · expires {date}", then
-every task (struck through if done, its steps beneath, `MarkdownField`
-`ReadOnly` for the description) or reference item (its fields via
-`ReferenceFieldValue`). Each entry and step carries its own `MudCheckBox`
-for the mark — optimistic, reverting with a snackbar ("Couldn't save that
-tick.") on failure, disabled while offline. An unknown or expired token
-renders one `EmptyState` ("This snapshot has expired or never existed.")
-with a link to `/welcome` — the two cases are deliberately
-indistinguishable. Offline with no cached copy shows a different
-`EmptyState` ("Connect to the internet to open this snapshot."); offline
-with a cached copy shows the snapshot behind a warning `MudAlert`
-("Offline — showing the copy from {date}.") with every checkbox disabled.
-A signed-in visitor's open is recorded (`POST /api/me/snapshot-visits`)
-and the snapshot cached to IndexedDB for that offline path.
+**`/public/snapshot/{token}`** (`Pages/SnapshotPage.razor`, `PublicLayout`,
+anonymous — outside `AppShell` like `/welcome`) is themed with the app's
+palette. A slim top bar (brand mark, **Log in** or **Open PSPad** depending
+on whether a local session exists); a hero `MudPaper` on `mud-theme-primary`
+with "Public snapshot · shared by {OwnerName}" (owner omitted when blank),
+the list's name, outlined chips "Copy from {date}" and "Link works until
+{date}", and "N of M ticked by visitors" over a `MudProgressLinear`; an info
+alert explaining that a tick is seen by everyone with the link and by the
+owner. A `Tasks` snapshot shows **To do · N** (each open task a `MudPaper`
+with its own `MudCheckBox`, star, due chip, a "ticked" chip, `MarkdownField`
+`ReadOnly` description and indented steps with their own checkboxes), then
+**Already done by {owner} · N** (struck-through names, no checkboxes); a
+`Reference` snapshot lists items with their checkbox, description and fields
+(`ReferenceFieldValue`). A footer reads "A read-only copy made with PSPad."
+with a "What is PSPad?" link to `/welcome`. Ticks are optimistic, reverting
+with a snackbar ("Couldn't save that tick. Try again.") on failure, and
+disabled while offline. An unknown or expired token renders one
+`EmptyState` ("This snapshot has expired or never existed.") with a link to
+`/welcome` — the two cases are deliberately indistinguishable. Offline with
+no cached copy shows a different `EmptyState` ("Connect to the internet to
+open this snapshot."); offline with a cached copy shows the snapshot behind
+a warning `MudAlert` ("Offline — showing the copy from {date}. Ticks are
+paused.") with every checkbox disabled. A signed-in visitor's open is
+recorded (`POST /api/me/snapshot-visits`) and the snapshot cached to
+IndexedDB for that offline path.
 
 **`/snapshots`** (`Pages/SnapshotsPage.razor`, signed-in) is **List
 snapshots**: a `MudList` of every snapshot the caller has opened, newest
