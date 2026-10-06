@@ -791,3 +791,10 @@ button.pspad-heatmap-cell:focus-visible {
     font-family: ui-monospace, "Roboto Mono", monospace;
     letter-spacing: 0.12em;
 }
+
+.pspad-snapshot-mark,
+.pspad-snapshot-mark svg {
+    width: 28px;
+    height: 28px;
+    display: block;
+}

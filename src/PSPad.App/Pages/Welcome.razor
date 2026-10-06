@@ -4,16 +4,12 @@
 @using PSPad.App.Auth
 @using PSPad.App.Components
 @using PSPad.App.Layout
-@using PSPad.App.Theme
 @using PSPad.Module.Tasks.Recurrence
 @using PSPad.Module.Tasks.Tasks
 @inject NavigationManager Navigation
 @inject IClock Clock
-@inject ThemePreference Preference
 
 <div class="pspad-welcome">
-    <MudThemeProvider @ref="_themeProvider" Theme="@Preference.Theme" IsDarkMode="@Preference.IsDark" />
-
     <div class="pspad-welcome-content">
         <header class="pspad-welcome-text">
             <div class="pspad-welcome-icon">
@@ -45,9 +41,6 @@
 </div>
 
 @code {
-    MudThemeProvider? _themeProvider;
-    bool _themeReady;
-
     DateOnly Today => DateOnly.FromDateTime(Clock.UtcNow.UtcDateTime);
 
     IReadOnlyList<TodoTask> DemoTasks = [];
@@ -65,19 +58,6 @@
     }
 
     protected override void OnInitialized() => DemoTasks = BuildDemoTasks();
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender || _themeProvider is null || _themeReady)
-        {
-            return;
-        }
-
-        _themeReady = true;
-        var systemPrefersDark = await _themeProvider.GetSystemDarkModeAsync();
-        await Preference.InitialiseAsync(systemPrefersDark);
-        StateHasChanged();
-    }
 
     IReadOnlyList<TodoTask> BuildDemoTasks()
     {

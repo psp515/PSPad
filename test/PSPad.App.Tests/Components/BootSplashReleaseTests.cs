@@ -32,6 +32,7 @@ public class BootSplashReleaseTests : Bunit.TestContext
     [Fact]
     public void TheSignedOutScreensTearTheSplashDown()
     {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 3, 10));
         JSInterop.SetupVoid("pspadBoot.done");
 
         Render<PublicLayout>(parameters => parameters.Add(layout => layout.Body, Content));
