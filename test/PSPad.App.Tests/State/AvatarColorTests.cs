@@ -51,4 +51,11 @@ public class AvatarColorTests
     {
         Assert.Equal(expected, AvatarColor.InitialOf(email));
     }
+
+    [Theory]
+    [InlineData("Łukasz Kolber", "ŁK")]
+    [InlineData("anna", "A")]
+    [InlineData("  ", "?")]
+    public void InitialsComeFromTheFirstTwoWords(string name, string expected) =>
+        Assert.Equal(expected, AvatarColor.InitialsOf(name));
 }

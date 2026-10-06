@@ -782,3 +782,12 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-markdown-view h4 { font-size: 1.1rem; }
 .pspad-markdown-view h5 { font-size: 1.05rem; }
 .pspad-markdown-view h6 { font-size: 1rem; }
+
+.pspad-invite-code {
+    border-style: dashed !important;
+}
+
+.pspad-invite-code-value {
+    font-family: ui-monospace, "Roboto Mono", monospace;
+    letter-spacing: 0.12em;
+}

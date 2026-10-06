@@ -4,7 +4,6 @@
 @using PSPad.App.State.Dispatch
 @using PSPad.App.Api
 @using PSPad.App.Sync
-@using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.References
@@ -13,7 +12,6 @@
 @inject IDocumentStore<TaskList> Lists
 @inject IDocumentStore<TodoTask> TaskStore
 @inject IDocumentStore<ReferenceItem> ItemStore
-@inject IDocumentStore<ListView> ListViews
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -51,7 +49,7 @@
             @switch (EffectiveView)
             {
                 case ListPanelView.Members:
-                    <ListSharingSection List="@_list" IsMine="@IsMine" Disabled="@Disabled" />
+                    <ListMembersView List="@_list" IsMine="@IsMine" Disabled="@Disabled" />
                     break;
                 case ListPanelView.Snapshots when IsMine:
                     <SnapshotPublisher List="@_list" Disabled="@Disabled" />
@@ -70,18 +68,6 @@
                             @foreach (var area in _areas)
                             {
                                 <MudSelectItem T="Guid" Value="@area.Id">@area.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    }
-                    else
-                    {
-                        <MudSelect T="Guid?" Class="pspad-list-filed-area" Label="File under" Variant="Variant.Outlined"
-                                   Value="@_filedAreaId" ValueChanged="@FileUnderAsync" Disabled="@Disabled"
-                                   ToStringFunc="@FiledAreaName" AnchorOrigin="Origin.BottomCenter">
-                            <MudSelectItem T="Guid?" Value="@((Guid?)null)">@SharedWithMe.Name</MudSelectItem>
-                            @foreach (var area in _areas)
-                            {
-                                <MudSelectItem T="Guid?" Value="@((Guid?)area.Id)">@area.Name</MudSelectItem>
                             }
                         </MudSelect>
                     }
@@ -124,7 +110,6 @@
     string _draftName = "";
     string _areaName = "";
     ListKind _kind = ListKind.Tasks;
-    Guid? _filedAreaId;
 
     bool IsNew => NewInArea is not null;
 
@@ -185,12 +170,6 @@
         _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
         _areaName = IsMine ? AreaName(_list?.AreaId ?? NewInArea!.Value) : "";
 
-        if (_list is not null && !IsMine)
-        {
-            var view = await ListViews.LoadAsync(ListView.IdFor(State.UserId, _list.Id), CancellationToken.None);
-            _filedAreaId = view?.AreaId;
-        }
-
         if (_list is not null && IsMine && EffectiveView == ListPanelView.Details && _summaryListId != _list.Id)
         {
             _summaryListId = _list.Id;
@@ -231,19 +210,6 @@
     }
 
     string AreaName(Guid areaId) => _areas.FirstOrDefault(area => area.Id == areaId)?.Name ?? "";
-
-    string FiledAreaName(Guid? areaId) => areaId is null ? SharedWithMe.Name : AreaName(areaId.Value);
-
-    async Task FileUnderAsync(Guid? areaId)
-    {
-        if (Disabled || _list is null || areaId == _filedAreaId)
-        {
-            return;
-        }
-
-        await Sender.SendAsync(new PlaceList(Guid.NewGuid(), State.UserId, _list.Id, areaId));
-        _filedAreaId = areaId;
-    }
 
     async Task NameChangedAsync(string name)
     {

@@ -1,0 +1,229 @@
+@using System.Globalization
+@using PSPad.Abstractions
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Lists
+@implements IDisposable
+@inject AppState State
+@inject CommandSender Sender
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject Clipboard Clipboard
+@inject NavigationManager Navigation
+@inject IClock Clock
+
+<MudPaper Outlined="true" Class="pspad-invite-card pa-4 d-flex flex-column gap-3">
+    <div class="d-flex align-center justify-space-between gap-2">
+        <MudText Typo="Typo.subtitle1">Invite link</MudText>
+        @if (IsClosed)
+        {
+            <MudChip T="string" Class="pspad-invite-state ma-0" Size="Size.Small" Color="Color.Error"
+                     Variant="Variant.Text">Closed</MudChip>
+        }
+        else if (IsLive)
+        {
+            <MudChip T="string" Class="pspad-invite-left ma-0" Size="Size.Small" Color="Color.Primary"
+                     Variant="Variant.Text" Icon="@Icons.Material.Outlined.Timer">@($"{MinutesLeft} min left")</MudChip>
+        }
+        else if (!NeverShared)
+        {
+            <MudChip T="string" Class="pspad-invite-state ma-0" Size="Size.Small">@ExpiredText</MudChip>
+        }
+    </div>
+
+    @if (IsLive)
+    {
+        <div>
+            <MudProgressLinear Color="Color.Primary" Value="@PercentLeft" Rounded="true" />
+            <MudText Typo="Typo.caption" Class="pspad-muted d-block mt-1">
+                @($"Works until {LocalTime(List.InviteExpiresAt!.Value)}. People who joined stay after it ends.")
+            </MudText>
+        </div>
+
+        <div class="d-flex flex-column align-center gap-1">
+            <QrCode Value="@QrValue" Size="176" Label="QR code for the invite link" />
+            <MudText Typo="Typo.caption" Class="pspad-muted">The QR code carries the link and the code</MudText>
+        </div>
+
+        <div class="d-flex align-center gap-2">
+            <MudTextField T="string" Class="pspad-share-link flex-grow-1" Value="@Link" ReadOnly="true"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Link" />
+            <MudButton Class="pspad-invite-copy" Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Outlined.ContentCopy" OnClick="@CopyLinkAsync">
+                Copy
+            </MudButton>
+        </div>
+
+        <MudPaper Outlined="true" Class="pspad-invite-code pa-3 d-flex align-center gap-2">
+            <div class="flex-grow-1">
+                <MudText Typo="Typo.caption" Class="pspad-muted d-block">Invite code — tell it separately</MudText>
+                <MudText Typo="Typo.h5" Class="pspad-invite-code-value">@InviteCodes.Format(List.InviteCode!)</MudText>
+            </div>
+            <MudIconButton Class="pspad-invite-code-copy" Icon="@Icons.Material.Outlined.ContentCopy"
+                           aria-label="Copy code" OnClick="@CopyCodeAsync" />
+        </MudPaper>
+
+        <MudText Typo="Typo.caption" Class="pspad-muted">
+            Someone with only the link can't join. After 5 wrong codes the link closes.
+        </MudText>
+
+        <div class="d-flex align-center gap-2">
+            <MudButton Class="pspad-invite-new" Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Refresh" Disabled="@Disabled" OnClick="@NewLinkAsync">
+                New link
+            </MudButton>
+            <MudButton Class="pspad-invite-end" Variant="Variant.Text" Color="Color.Error" Disabled="@Disabled"
+                       OnClick="@EndLinkAsync">
+                End link now
+            </MudButton>
+        </div>
+    }
+    else if (NeverShared && !IsClosed)
+    {
+        <div class="d-flex flex-column align-center gap-2 text-center py-2">
+            <MudAvatar Color="Color.Primary">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" />
+            </MudAvatar>
+            <MudText Typo="Typo.subtitle2">Only you use this list</MudText>
+            <MudText Typo="Typo.body2" Class="pspad-muted">
+                Create an invite link or QR code. It works for 30 minutes — whoever opens it in that time can add, edit and tick tasks.
+            </MudText>
+            <MudButton Class="pspad-invite-create mt-1" Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Outlined.Link" Disabled="@Disabled" OnClick="@CreateAsync">
+                Create invite link
+            </MudButton>
+        </div>
+    }
+    else
+    {
+        @if (IsClosed)
+        {
+            <MudAlert Class="pspad-invite-closed" Severity="Severity.Warning" Dense="true">
+                Someone entered a wrong code 5 times, so the link closed. Create a new one when you're ready.
+            </MudAlert>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                @($"Nobody can join with the old link and code. The {PeopleStaying} already in the list stay.")
+            </MudAlert>
+        }
+        <MudButton Class="pspad-invite-create" Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Outlined.Link" Disabled="@Disabled" OnClick="@CreateAsync">
+            Create link · 30 min
+        </MudButton>
+    }
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public TaskList List { get; set; } = null!;
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    Timer? _timer;
+
+    bool IsClosed => List.ClosedByWrongCodes;
+
+    bool IsLive => List.IsInviteLiveAt(Clock.UtcNow);
+
+    bool NeverShared => List.InviteToken is null && List.Members.Count == 0;
+
+    TimeSpan Left => List.InviteExpiresAt!.Value - Clock.UtcNow;
+
+    int MinutesLeft => (int)Math.Ceiling(Left.TotalMinutes);
+
+    double PercentLeft => Math.Clamp(Left / TaskList.InviteLife * 100, 0, 100);
+
+    string ExpiredText => List.InviteToken is not null && List.InviteExpiresAt is { } expiredAt
+        ? $"Expired {LocalTime(expiredAt)}"
+        : "No link";
+
+    string PeopleStaying => List.Members.Count == 1 ? "1 person" : $"{List.Members.Count} people";
+
+    string Link => InviteToken.LinkFor(Navigation.BaseUri, List.InviteToken!);
+
+    string QrValue => InviteCode.QrLinkFor(Navigation.BaseUri, List.InviteToken!, List.InviteCode!);
+
+    string LocalTime(DateTimeOffset at) =>
+        TimeZoneInfo.ConvertTime(at, LocalToday.Zone(State.TimeZone)).ToString("HH:mm", CultureInfo.InvariantCulture);
+
+    protected override void OnInitialized() =>
+        _timer = new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+
+    async Task CreateAsync()
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        await ShareAsync();
+    }
+
+    async Task NewLinkAsync()
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (!await ConfirmAsync(
+            "New link", "The old link stops working now. People already in the list stay.", "New link"))
+        {
+            return;
+        }
+
+        await ShareAsync();
+    }
+
+    async Task EndLinkAsync()
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new StopSharingTaskList(Guid.NewGuid(), State.UserId, List.Id));
+        await OnChanged.InvokeAsync();
+    }
+
+    async Task ShareAsync()
+    {
+        await Sender.SendAsync(new ShareTaskList(
+            Guid.NewGuid(), State.UserId, List.Id, InviteToken.New(), InviteCode.New(), State.DisplayName));
+        await OnChanged.InvokeAsync();
+    }
+
+    async Task CopyLinkAsync()
+    {
+        var copied = await Clipboard.CopyAsync(Link);
+        Snackbar.Add(
+            copied ? "Link copied." : "Could not copy — select the link instead.",
+            copied ? Severity.Success : Severity.Warning);
+    }
+
+    async Task CopyCodeAsync()
+    {
+        var copied = await Clipboard.CopyAsync(InviteCodes.Format(List.InviteCode!));
+        Snackbar.Add(
+            copied ? "Code copied." : "Could not copy — read the code out instead.",
+            copied ? Severity.Success : Severity.Warning);
+    }
+
+    async Task<bool> ConfirmAsync(string title, string message, string confirmText)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, message },
+            { dialog => dialog.ConfirmText, confirmText }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(title, parameters);
+        var result = await dialog.Result;
+        return result is { Canceled: false };
+    }
+
+    public void Dispose() => _timer?.Dispose();
+}

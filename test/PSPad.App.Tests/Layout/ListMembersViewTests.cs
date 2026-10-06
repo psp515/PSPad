@@ -13,54 +13,23 @@ using PSPad.TestInfrastructure;
 namespace PSPad.App.Tests.Layout;
 
 [UnitTest]
-public class ListSharingSectionTests : Bunit.TestContext
+public class ListMembersViewTests : Bunit.TestContext
 {
+    const string Token = "shared-token-1234567890";
+    const string Code = "K7M4PX";
     static readonly Guid User = Guid.NewGuid();
     static readonly Guid Owner = Guid.NewGuid();
     static readonly DateOnly Today = new(2026, 9, 12);
-
-    [Fact]
-    public async Task TurningTheLinkOnSharesTheList()
-    {
-        var area = NewArea(User, "Dom");
-        var list = NewList(User, area.Id, "Zakupy");
-        var replica = AppTestHost.Arrange(this, User, Today, area, list);
-        Services.GetRequiredService<AppState>().DisplayName = "Lukasz";
-
-        var panel = RenderWithOverlays(list.Id);
-        panel.Find(".pspad-share-switch input").Change(true);
-
-        var stored = await replica.LoadAsync<TaskList>(list.Id);
-        Assert.NotNull(stored!.InviteToken);
-        Assert.Equal(24, stored.InviteToken!.Length);
-        Assert.Equal("Lukasz", stored.OwnerName);
-        panel.WaitForAssertion(() => Assert.NotEmpty(panel.FindAll(".pspad-share-link")));
-    }
-
-    [Fact]
-    public async Task TurningTheLinkOffStopsSharing()
-    {
-        var area = NewArea(User, "Dom");
-        var list = Share(NewList(User, area.Id, "Zakupy"), "a".PadRight(24, 'x'), "Lukasz");
-        var replica = AppTestHost.Arrange(this, User, Today, area, list);
-
-        var panel = RenderWithOverlays(list.Id);
-        panel.Find(".pspad-share-switch input").Change(false);
-
-        var stored = await replica.LoadAsync<TaskList>(list.Id);
-        Assert.Null(stored!.InviteToken);
-        panel.WaitForAssertion(() => Assert.Empty(panel.FindAll(".pspad-share-link")));
-    }
+    static readonly DateTimeOffset Midnight = new(Today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 
     [Fact]
     public async Task TheOwnerSeesMembersAndCanRemoveThem()
     {
         var area = NewArea(User, "Dom");
-        var token = "shared-token-1234567890";
-        var list = Join(Share(NewList(User, area.Id, "Zakupy"), token, "Lukasz"), token, Owner, "Kasia");
+        var list = Join(Share(NewList(User, area.Id), Midnight), Token, Owner, "Kasia");
         var replica = AppTestHost.Arrange(this, User, Today, area, list);
 
-        var panel = RenderWithOverlays(list.Id);
+        var panel = RenderWithOverlays(list.Id, ListPanelView.Members);
         Assert.Contains("Kasia", panel.Find(".pspad-share-member").TextContent);
         panel.Find(".pspad-share-remove").Click();
         panel.FindAll("div.mud-dialog button").Last().Click();
@@ -72,13 +41,12 @@ public class ListSharingSectionTests : Bunit.TestContext
     [Fact]
     public void AMemberSeesWhoSharedItAndCanLeave()
     {
-        var area = NewArea(Owner, "Dom");
-        var list = Join(Share(NewList(Owner, area.Id, "Zakupy"), "shared-token-1234567890", "Kasia"), "shared-token-1234567890", User, "Lukasz");
+        var list = Join(Share(NewList(Owner), Midnight), Token, User, "Lukasz");
         AppTestHost.Arrange(this, User, Today, list);
 
-        var panel = RenderWithOverlays(list.Id);
+        var panel = RenderWithOverlays(list.Id, ListPanelView.Members);
 
-        Assert.Contains("Shared by Kasia", panel.Find(".pspad-share-owner").TextContent);
+        Assert.Contains("Kasia", panel.Find(".pspad-share-owner").TextContent);
         panel.Find(".pspad-share-leave").Click();
         panel.FindAll("div.mud-dialog button").Last().Click();
 
@@ -89,25 +57,24 @@ public class ListSharingSectionTests : Bunit.TestContext
     [Fact]
     public void AMemberCannotRenameOrDelete()
     {
-        var area = NewArea(Owner, "Dom");
-        var list = Join(Share(NewList(Owner, area.Id, "Zakupy"), "shared-token-1234567890", "Kasia"), "shared-token-1234567890", User, "Lukasz");
+        var list = Join(Share(NewList(Owner), Midnight), Token, User, "Lukasz");
         AppTestHost.Arrange(this, User, Today, list);
 
         var panel = RenderWithOverlays(list.Id, ListPanelView.Details);
 
         Assert.True(panel.Find(".pspad-list-name-field input").HasAttribute("disabled"));
         Assert.Empty(panel.FindAll(".pspad-panel-delete"));
+        Assert.Empty(panel.FindAll(".pspad-list-filed-area"));
     }
 
     [Fact]
     public async Task AMemberFilesTheListUnderTheirArea()
     {
-        var ownerArea = NewArea(Owner, "Dom");
         var myArea = NewArea(User, "Praca");
-        var list = Join(Share(NewList(Owner, ownerArea.Id, "Zakupy"), "shared-token-1234567890", "Kasia"), "shared-token-1234567890", User, "Lukasz");
+        var list = Join(Share(NewList(Owner), Midnight), Token, User, "Lukasz");
         var replica = AppTestHost.Arrange(this, User, Today, myArea, list);
 
-        var panel = RenderWithOverlays(list.Id, ListPanelView.Details);
+        var panel = RenderWithOverlays(list.Id, ListPanelView.Members);
         panel.Find(".pspad-list-filed-area .mud-select-input").MouseDown();
         panel.WaitForAssertion(() => Assert.Contains(panel.FindAll(".mud-list-item"),
             option => option.TextContent.Trim() == "Praca"));
@@ -118,7 +85,35 @@ public class ListSharingSectionTests : Bunit.TestContext
         Assert.Equal(myArea.Id, view.AreaId);
     }
 
-    IRenderedComponent<ContainerFragment> RenderWithOverlays(Guid listId, ListPanelView view = ListPanelView.Members) => Render(builder =>
+    [Fact]
+    public void AMemberNeverSeesTheInviteLink()
+    {
+        var list = Join(Share(NewList(Owner), Midnight), Token, User, "Lukasz");
+        AppTestHost.Arrange(this, User, Today, list);
+
+        var panel = RenderWithOverlays(list.Id, ListPanelView.Members);
+
+        Assert.Empty(panel.FindAll(".pspad-invite-copy"));
+        Assert.Empty(panel.FindAll("img.pspad-qr"));
+        Assert.Contains("Only Kasia can invite people.", panel.Markup);
+    }
+
+    [Fact]
+    public async Task StoppingSharingRemovesEveryone()
+    {
+        var list = Join(Share(NewList(User), Midnight), Token, Owner, "Kasia");
+        var replica = AppTestHost.Arrange(this, User, Today, list);
+
+        var panel = RenderWithOverlays(list.Id, ListPanelView.Members);
+        panel.Find(".pspad-share-stop").Click();
+        panel.FindAll("div.mud-dialog button").Last().Click();
+
+        var stored = await replica.LoadAsync<TaskList>(list.Id);
+        Assert.Null(stored!.InviteToken);
+        Assert.Empty(stored.Members);
+    }
+
+    IRenderedComponent<ContainerFragment> RenderWithOverlays(Guid listId, ListPanelView view) => Render(builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
         builder.CloseComponent();
@@ -138,25 +133,29 @@ public class ListSharingSectionTests : Bunit.TestContext
         return area;
     }
 
-    static TaskList NewList(Guid userId, Guid areaId, string name)
+    static TaskList NewList(Guid userId) => NewList(userId, Guid.NewGuid());
+
+    static TaskList NewList(Guid userId, Guid areaId)
     {
         var list = new TaskList();
         list.ApplyAll(TaskList.Decide(
-            null, new CreateTaskList(Guid.NewGuid(), userId, Guid.NewGuid(), areaId, name), DateTimeOffset.UnixEpoch));
+            null, new CreateTaskList(Guid.NewGuid(), userId, Guid.NewGuid(), areaId, "Zakupy"), DateTimeOffset.UnixEpoch));
         return list;
     }
 
-    static TaskList Share(TaskList list, string token, string ownerName)
+    static TaskList Share(TaskList list, DateTimeOffset at)
     {
+        var ownerName = list.UserId == Owner ? "Kasia" : "Lukasz";
         list.ApplyAll(TaskList.Decide(
-            list, new ShareTaskList(Guid.NewGuid(), list.UserId, list.Id, token, "K7M4PX", ownerName), DateTimeOffset.UnixEpoch));
+            list, new ShareTaskList(Guid.NewGuid(), list.UserId, list.Id, Token, Code, ownerName), at));
         return list;
     }
 
     static TaskList Join(TaskList list, string token, Guid memberId, string displayName)
     {
+        var at = list.InviteExpiresAt!.Value - TaskList.InviteLife;
         list.ApplyAll(TaskList.Decide(
-            list, new JoinTaskList(Guid.NewGuid(), memberId, list.Id, token, "K7M4PX", displayName), DateTimeOffset.UnixEpoch));
+            list, new JoinTaskList(Guid.NewGuid(), memberId, list.Id, token, Code, displayName), at));
         return list;
     }
 }
