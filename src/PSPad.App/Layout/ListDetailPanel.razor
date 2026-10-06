@@ -25,7 +25,7 @@
 <DetailPanel Open="@(IsNew || _list is not null)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose" OnBack="@BackCallback"
              OnSave="@SaveCallback" SaveText="Add list" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
              OnDelete="@DeleteCallback" DeleteText="Delete list" Disabled="@Disabled">
-    @if (View == ListPanelView.Details)
+    @if (EffectiveView == ListPanelView.Details)
     {
         <div class="px-2 pt-3 pb-1">
             <MudTextField T="string" Class="pspad-list-name-field flex-grow-1 px-2" Value="@(_list?.Name ?? _draftName)"
@@ -48,7 +48,7 @@
         }
         else
         {
-            @switch (View)
+            @switch (EffectiveView)
             {
                 case ListPanelView.Members:
                     <ListSharingSection List="@_list" IsMine="@IsMine" Disabled="@Disabled" />
@@ -130,7 +130,7 @@
 
     bool IsMine => _list is null || _list.UserId == State.UserId;
 
-    string Title => View switch
+    string Title => EffectiveView switch
     {
         ListPanelView.Members => "Members",
         ListPanelView.Snapshots => "Public snapshots",
@@ -138,8 +138,11 @@
     };
 
     string _snapshotsSummary = "";
+    Guid? _summaryListId;
 
-    EventCallback BackCallback => _list is not null && View != ListPanelView.Details
+    ListPanelView EffectiveView => View == ListPanelView.Snapshots && !IsMine ? ListPanelView.Details : View;
+
+    EventCallback BackCallback => _list is not null && EffectiveView != ListPanelView.Details
         ? EventCallback.Factory.Create(this, () => Navigation.NavigateTo(ListQuery.For(Navigation.Uri, _list.Id, ListPanelView.Details)))
         : default;
 
@@ -158,7 +161,7 @@
 
     EventCallback SaveCallback => IsNew ? EventCallback.Factory.Create(this, CreateAsync) : default;
 
-    EventCallback DeleteCallback => _list is not null && IsMine && View == ListPanelView.Details ? EventCallback.Factory.Create(this, DeleteAsync) : default;
+    EventCallback DeleteCallback => _list is not null && IsMine && EffectiveView == ListPanelView.Details ? EventCallback.Factory.Create(this, DeleteAsync) : default;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -188,10 +191,25 @@
             _filedAreaId = view?.AreaId;
         }
 
-        if (_list is not null && IsMine && View == ListPanelView.Details)
+        if (_list is not null && IsMine && EffectiveView == ListPanelView.Details && _summaryListId != _list.Id)
         {
-            _snapshotsSummary = await LoadSnapshotsSummaryAsync(_list.Id);
+            _summaryListId = _list.Id;
+            _snapshotsSummary = "";
+            _ = RefreshSnapshotsSummaryAsync(_list.Id);
         }
+    }
+
+    async Task RefreshSnapshotsSummaryAsync(Guid listId)
+    {
+        var summary = await LoadSnapshotsSummaryAsync(listId);
+
+        if (_summaryListId != listId)
+        {
+            return;
+        }
+
+        _snapshotsSummary = summary;
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task<string> LoadSnapshotsSummaryAsync(Guid listId)
@@ -201,8 +219,15 @@
             return "Needs a connection";
         }
 
-        var live = (await SnapshotsApi.ForListAsync(listId)).Count;
-        return live switch { 0 => "None live", 1 => "1 live link", _ => $"{live} live links" };
+        try
+        {
+            var live = (await SnapshotsApi.ForListAsync(listId)).Count;
+            return live switch { 0 => "None live", 1 => "1 live link", _ => $"{live} live links" };
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            return "Needs a connection";
+        }
     }
 
     string AreaName(Guid areaId) => _areas.FirstOrDefault(area => area.Id == areaId)?.Name ?? "";

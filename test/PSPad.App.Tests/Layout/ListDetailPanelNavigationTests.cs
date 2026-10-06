@@ -3,7 +3,9 @@ using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using PSPad.App.Api;
 using PSPad.App.Layout;
+using PSPad.Contracts;
 using PSPad.App.State;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
@@ -80,14 +82,86 @@ public class ListDetailPanelNavigationTests : Bunit.TestContext
         Assert.Empty(panel.FindAll(".pspad-list-name-field"));
     }
 
-    IRenderedComponent<ContainerFragment> Render(ListPanelView view) => Render(builder =>
+    [Fact]
+    public void AFailingSnapshotsApiStillRendersDetailsOffline()
+    {
+        Services.AddSingleton<ISnapshotsApi>(new CountingSnapshotsApi(throws: true));
+
+        var panel = Render(ListPanelView.Details);
+
+        panel.WaitForAssertion(() =>
+            Assert.Contains("Needs a connection", panel.Find(".pspad-list-snapshots-link").TextContent));
+        Assert.NotNull(panel.Find(".pspad-list-members-link"));
+    }
+
+    [Fact]
+    public void ReRenderingTheSameListLoadsTheSummaryOnce()
+    {
+        var api = new CountingSnapshotsApi(throws: false);
+        Services.AddSingleton<ISnapshotsApi>(api);
+
+        var panel = Render(ListPanelView.Details);
+        panel.WaitForAssertion(() =>
+            Assert.Contains("None live", panel.Find(".pspad-list-snapshots-link").TextContent));
+        panel.Render();
+        panel.Render();
+
+        Assert.Equal(1, api.Calls);
+    }
+
+    [Fact]
+    public void ANonOwnerAtSnapshotsGetsTheDetailsViewWithoutBack()
+    {
+        var owner = Guid.NewGuid();
+        var foreign = new TaskList();
+        foreign.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), owner, Guid.NewGuid(), Guid.NewGuid(), "Cudza"), DateTimeOffset.UnixEpoch));
+        foreign.ApplyAll(TaskList.Decide(
+            foreign, new ShareTaskList(Guid.NewGuid(), owner, foreign.Id, "shared-token-1234567890", "K7M4PX", "Kasia"), DateTimeOffset.UnixEpoch));
+        foreign.ApplyAll(TaskList.Decide(
+            foreign, new JoinTaskList(Guid.NewGuid(), User, foreign.Id, "shared-token-1234567890", "K7M4PX", "Ja"), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, foreign);
+
+        var panel = Render(foreign.Id, ListPanelView.Snapshots);
+
+        Assert.DoesNotContain("Public snapshots", panel.Find(".pspad-panel-title").TextContent);
+        Assert.Empty(panel.FindAll(".pspad-panel-back"));
+        Assert.NotNull(panel.Find(".pspad-list-members-link"));
+    }
+
+    sealed class CountingSnapshotsApi(bool throws) : ISnapshotsApi
+    {
+        public int Calls { get; private set; }
+
+        public Task<IReadOnlyList<PublishedSnapshotView>> ForListAsync(Guid listId)
+        {
+            Calls++;
+            return throws
+                ? throw new HttpRequestException("down")
+                : Task.FromResult<IReadOnlyList<PublishedSnapshotView>>([]);
+        }
+
+        public Task<PublishedSnapshotView?> PublishAsync(Guid listId, DateTimeOffset expiresAt) =>
+            Task.FromResult<PublishedSnapshotView?>(null);
+
+        public Task<bool> RevokeAsync(Guid snapshotId) => Task.FromResult(false);
+
+        public Task<bool> RecordVisitAsync(string token) => Task.FromResult(false);
+
+        public Task<IReadOnlyList<SnapshotVisitView>> VisitsAsync() =>
+            Task.FromResult<IReadOnlyList<SnapshotVisitView>>([]);
+    }
+
+    IRenderedComponent<ContainerFragment> Render(ListPanelView view) => Render(_list.Id, view);
+
+    IRenderedComponent<ContainerFragment> Render(Guid listId, ListPanelView view) => Render(builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
         builder.CloseComponent();
         builder.OpenComponent<MudDialogProvider>(1);
         builder.CloseComponent();
         builder.OpenComponent<ListDetailPanel>(2);
-        builder.AddAttribute(3, nameof(ListDetailPanel.ListId), (Guid?)_list.Id);
+        builder.AddAttribute(3, nameof(ListDetailPanel.ListId), (Guid?)listId);
         builder.AddAttribute(4, nameof(ListDetailPanel.View), view);
         builder.CloseComponent();
     });
