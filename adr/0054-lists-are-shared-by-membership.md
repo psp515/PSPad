@@ -2,7 +2,7 @@
 title: Lists are shared by membership on TaskList
 tags: [architecture, domain, sync, identity]
 date: 2026-10-01
-status: Active — Extends ADR-0051, amends ADR-0034 and ADR-0042
+status: Active — Extends ADR-0051, amends ADR-0034 and ADR-0042; amended by ADR-0057
 ---
 
 # ADR-0054: Lists are shared by membership on TaskList

@@ -24,8 +24,8 @@ public static class Sharing
     }
 
     public static async Task<HttpResponseMessage> JoinAsync(
-        HttpClient member, CancellationToken ct, string token) =>
-        await member.PostAsJsonAsync("/api/lists/join", new JoinListRequest(token), ct);
+        HttpClient member, CancellationToken ct, string token, string? code = null) =>
+        await member.PostAsJsonAsync("/api/lists/join", new JoinListRequest(token, code ?? Code), ct);
 
     public static async Task<Guid> SharedListAsync(
         HttpClient owner, Guid ownerId, CancellationToken ct, ListKind kind = ListKind.Tasks, string? token = null)
@@ -36,9 +36,11 @@ public static class Sharing
         await SendAsync(owner, ct,
             new CreateArea(Guid.NewGuid(), ownerId, areaId, "Dom", 0),
             new CreateTaskList(Guid.NewGuid(), ownerId, listId, areaId, "Książki", kind),
-            new ShareTaskList(Guid.NewGuid(), ownerId, listId, token, "Owner"));
+            new ShareTaskList(Guid.NewGuid(), ownerId, listId, token, Code, "Owner"));
         return listId;
     }
+
+    public const string Code = "K7M4PX";
 
     public static string FreshToken() => Guid.NewGuid().ToString("N");
 }

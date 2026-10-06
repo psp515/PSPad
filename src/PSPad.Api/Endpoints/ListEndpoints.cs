@@ -32,7 +32,7 @@ public static class ListEndpoints
             }
 
             var result = await dispatcher.RunAsync(
-                new JoinTaskList(Guid.NewGuid(), user.UserId, list.Id, request.Token, user.DisplayName), ct);
+                new JoinTaskList(Guid.NewGuid(), user.UserId, list.Id, request.Token, request.Code ?? "", user.DisplayName), ct);
 
             if (!result.Accepted)
             {

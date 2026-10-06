@@ -91,7 +91,7 @@ public class JoinListTests(MongoFixture fixture)
         var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
         await Sharing.SendAsync(owner, ct,
             new ShareTaskList(
-                Guid.NewGuid(), ownerId, listId, token + "x", "Owner"));
+                Guid.NewGuid(), ownerId, listId, token + "x", Sharing.Code, "Owner"));
 
         var response = await Sharing.JoinAsync(member, ct, token);
 
@@ -119,7 +119,7 @@ public class JoinListTests(MongoFixture fixture)
             new CreateArea(Guid.NewGuid(), thiefId, areaId, "Dom", 0),
             new CreateTaskList(Guid.NewGuid(), thiefId, thiefListId, areaId, "Pułapka"));
         var envelope = new CommandEnvelope(nameof(ShareTaskList), JsonSerializer.SerializeToElement(
-            new ShareTaskList(Guid.NewGuid(), thiefId, thiefListId, token, "Thief")));
+            new ShareTaskList(Guid.NewGuid(), thiefId, thiefListId, token, Sharing.Code, "Thief")));
         var hijack = await thief.PostAsJsonAsync("/api/commands", new[] { envelope }, ct);
 
         Assert.Equal(HttpStatusCode.OK, hijack.StatusCode);

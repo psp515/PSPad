@@ -68,9 +68,10 @@ the old one's status line to point at the new number.
 | [0051](0051-presentation-module-per-user-views.md) | A Presentation module holds per-user views of shared data | Active | 2026-09-30 | architecture, modularity, domain, ui, sync |
 | [0052](0052-create-and-edit-in-side-panels.md) | Create and edit every thing in its side panel, never a popup | Active | 2026-09-30 | ui, consistency |
 | [0053](0053-yearly-repeats-and-lead-time.md) | Repeats can be yearly, and a task's lead time sets how far ahead it shows | Active (amends [0043](0043-repeat-interval-and-until-date.md)) | 2026-09-30 | domain, recurrence, today, ui |
-| [0054](0054-lists-are-shared-by-membership.md) | Lists are shared by membership on TaskList | Active (extends [0051](0051-presentation-module-per-user-views.md); amends [0034](0034-account-deletion-bypasses-the-command-pipeline.md) and [0042](0042-deleting-a-container-cascades-to-its-children.md)) | 2026-10-01 | architecture, domain, sync, identity |
+| [0054](0054-lists-are-shared-by-membership.md) | Lists are shared by membership on TaskList | Active (extends [0051](0051-presentation-module-per-user-views.md); amended by [0057](0057-invites-need-a-link-and-a-code.md); amends [0034](0034-account-deletion-bypasses-the-command-pipeline.md) and [0042](0042-deleting-a-container-cascades-to-its-children.md)) | 2026-10-01 | architecture, domain, sync, identity |
 | [0055](0055-statistics-records-per-owner-and-actor.md) | Statistics writes one record for the owner and one for the actor, versioned for a clean rebuild | Active (amends [0037](0037-statistics-owns-denormalised-records.md)) | 2026-10-01 | architecture, persistence, analytics, sync, identity |
 | [0056](0056-public-snapshots-are-frozen-copies.md) | Public snapshots are frozen copies, served from a new Sharing module | Active | 2026-10-01 | architecture, modularity, domain, persistence, security |
+| [0057](0057-invites-need-a-link-and-a-code.md) | Invites need a link and a code, and expire after 30 minutes | Active (amends [0054](0054-lists-are-shared-by-membership.md)) | 2026-10-05 | security, domain, sync |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

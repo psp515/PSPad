@@ -1,3 +1,3 @@
 namespace PSPad.Contracts;
 
-public sealed record JoinListRequest(string Token);
+public sealed record JoinListRequest(string Token, string Code = "");

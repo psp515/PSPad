@@ -148,14 +148,14 @@ public class ListSharingSectionTests : Bunit.TestContext
     static TaskList Share(TaskList list, string token, string ownerName)
     {
         list.ApplyAll(TaskList.Decide(
-            list, new ShareTaskList(Guid.NewGuid(), list.UserId, list.Id, token, ownerName), DateTimeOffset.UnixEpoch));
+            list, new ShareTaskList(Guid.NewGuid(), list.UserId, list.Id, token, "K7M4PX", ownerName), DateTimeOffset.UnixEpoch));
         return list;
     }
 
     static TaskList Join(TaskList list, string token, Guid memberId, string displayName)
     {
         list.ApplyAll(TaskList.Decide(
-            list, new JoinTaskList(Guid.NewGuid(), memberId, list.Id, token, displayName), DateTimeOffset.UnixEpoch));
+            list, new JoinTaskList(Guid.NewGuid(), memberId, list.Id, token, "K7M4PX", displayName), DateTimeOffset.UnixEpoch));
         return list;
     }
 }

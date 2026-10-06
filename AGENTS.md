@@ -224,7 +224,9 @@ owner's; list-level commands (rename, delete, move, the sharing commands)
 stay owner-only through `TaskList.Require`. Every event's `UserId` is the
 aggregate's owner, `ActorId` is who actually acted. Sync widens to a membership set,
 with a `full=` backfill for a list a device does not yet hold — built in
-the next plan. See `adr/0054`.
+the next plan. An invite is a link token plus a 6-character code, live 30
+minutes from `TaskListShared`; five wrong codes close it and members never
+sync either secret — `adr/0057`. See `adr/0054`.
 
 **AD-13 — Public snapshots are frozen copies, served from a new module.**
 `PSPad.Module.Sharing` owns `ListSnapshot` (a frozen copy of a list's

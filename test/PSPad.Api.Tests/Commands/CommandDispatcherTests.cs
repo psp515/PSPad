@@ -1,3 +1,4 @@
+using PSPad.Api.Tests.Sync;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -128,7 +129,7 @@ public class CommandDispatcherServerOnlyTests(MongoFixture fixture)
         await using var factory = new ApiFactory(fixture);
         var client = factory.ClientFor(Guid.NewGuid().ToString());
         var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
-        var join = new JoinTaskList(Guid.NewGuid(), user, Guid.NewGuid(), "k3Jv9s2mQ0x7b1nR4tYw8eZa", "Anna");
+        var join = new JoinTaskList(Guid.NewGuid(), user, Guid.NewGuid(), "k3Jv9s2mQ0x7b1nR4tYw8eZa", Sharing.Code, "Anna");
 
         var response = await client.PostAsJsonAsync("/api/commands",
             new[] { new CommandEnvelope(nameof(JoinTaskList), JsonSerializer.SerializeToElement(join)) }, ct);
@@ -153,14 +154,14 @@ public class CommandDispatcherServerOnlyTests(MongoFixture fixture)
         await Send(owner, ct,
             new CreateArea(Guid.NewGuid(), ownerId, areaId, "Dom", 0),
             new CreateTaskList(Guid.NewGuid(), ownerId, listId, areaId, "Zakupy"),
-            new ShareTaskList(Guid.NewGuid(), ownerId, listId, token, "Owner"));
+            new ShareTaskList(Guid.NewGuid(), ownerId, listId, token, Sharing.Code, "Owner"));
 
         var member = factory.ClientFor(Guid.NewGuid().ToString());
         var memberId = (await member.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
 
         using var scope = factory.Services.CreateScope();
         var result = await scope.ServiceProvider.GetRequiredService<CommandDispatcher>()
-            .RunAsync(new JoinTaskList(Guid.NewGuid(), memberId, listId, token, "Anna"), ct);
+            .RunAsync(new JoinTaskList(Guid.NewGuid(), memberId, listId, token, Sharing.Code, "Anna"), ct);
 
         Assert.True(result.Accepted, result.Rejection);
 

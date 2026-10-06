@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 
@@ -6,6 +8,10 @@ namespace PSPad.Module.Tasks.Lists;
 public sealed class TaskList : Aggregate
 {
     const int ShortestToken = 22;
+
+    public const int MostWrongCodes = 5;
+
+    public static readonly TimeSpan InviteLife = TimeSpan.FromMinutes(30);
 
     [JsonInclude]
     public Guid AreaId { get; private set; }
@@ -23,12 +29,41 @@ public sealed class TaskList : Aggregate
     public string? InviteToken { get; private set; }
 
     [JsonInclude]
+    public string? InviteCode { get; private set; }
+
+    [JsonInclude]
+    public DateTimeOffset? InviteExpiresAt { get; private set; }
+
+    [JsonInclude]
+    public int WrongCodes { get; private set; }
+
+    [JsonInclude]
     public string? OwnerName { get; private set; }
 
     [JsonInclude]
     List<ListMember> _members = [];
 
     public IReadOnlyList<ListMember> Members => _members;
+
+    public bool ClosedByWrongCodes => InviteToken is null && WrongCodes >= MostWrongCodes;
+
+    public bool IsInviteLiveAt(DateTimeOffset now) =>
+        InviteToken is not null && InviteCode is not null && InviteExpiresAt is { } expiresAt && now < expiresAt;
+
+    public InviteCheck CheckInvite(string token, string code, DateTimeOffset now)
+    {
+        if (!SameSecret(InviteToken, token))
+        {
+            return InviteCheck.Unknown;
+        }
+
+        if (!SameSecret(InviteCode, InviteCodes.Normalize(code)))
+        {
+            return IsInviteLiveAt(now) ? InviteCheck.WrongCode : InviteCheck.Unknown;
+        }
+
+        return IsInviteLiveAt(now) ? InviteCheck.Open : InviteCheck.Expired;
+    }
 
     public bool IsShared => _members.Count > 0;
 
@@ -85,10 +120,17 @@ public sealed class TaskList : Aggregate
                     throw new DomainRejectedException("An invite link needs a longer token.");
                 }
 
+                var code = InviteCodes.Normalize(share.Code);
+                if (!InviteCodes.IsWellFormed(code))
+                {
+                    throw new DomainRejectedException("An invite needs a 6-character code.");
+                }
+
                 var ownerName = share.OwnerName.Trim();
-                return sharing.InviteToken == token && sharing.OwnerName == ownerName
+                return sharing.InviteToken == token && sharing.InviteCode == code && sharing.OwnerName == ownerName
+                    && sharing.IsInviteLiveAt(at)
                     ? []
-                    : [new TaskListShared(sharing.Id, sharing.UserId, at, token, ownerName)];
+                    : [new TaskListShared(sharing.Id, sharing.UserId, at, token, ownerName, code)];
 
             case StopSharingTaskList stop:
                 var stopping = Require(list, stop.UserId);
@@ -110,14 +152,20 @@ public sealed class TaskList : Aggregate
 
             case JoinTaskList join:
                 var joining = Live(list);
-                if (joining.InviteToken is null || joining.InviteToken != join.Token)
+                if (joining.UserId == join.UserId || joining.HasMember(join.UserId))
                 {
-                    throw new DomainRejectedException("This invite link no longer works.");
+                    return [];
                 }
 
-                return joining.UserId == join.UserId || joining.HasMember(join.UserId)
-                    ? []
-                    : [new TaskListJoined(joining.Id, joining.UserId, at, join.UserId, RequireMemberName(join.DisplayName))];
+                return joining.CheckInvite(join.Token, join.Code, at) switch
+                {
+                    InviteCheck.Open =>
+                        [new TaskListJoined(joining.Id, joining.UserId, at, join.UserId, RequireMemberName(join.DisplayName))],
+                    InviteCheck.WrongCode =>
+                        [new InviteCodeRejected(joining.Id, joining.UserId, at, joining.WrongCodes + 1)],
+                    InviteCheck.Expired => throw new DomainRejectedException("This invite has expired."),
+                    _ => throw new DomainRejectedException("This invite link no longer works.")
+                };
 
             default:
                 throw new DomainRejectedException($"A list cannot handle {command.GetType().Name}.");
@@ -147,10 +195,21 @@ public sealed class TaskList : Aggregate
                 break;
             case TaskListShared shared:
                 InviteToken = shared.Token;
+                InviteCode = shared.Code;
+                InviteExpiresAt = shared.At + InviteLife;
+                WrongCodes = 0;
                 OwnerName = shared.OwnerName;
                 break;
             case TaskListSharingStopped:
-                InviteToken = null;
+                CloseInvite();
+                break;
+            case InviteCodeRejected rejected:
+                WrongCodes = rejected.WrongCodes;
+                if (WrongCodes >= MostWrongCodes)
+                {
+                    CloseInvite();
+                }
+
                 break;
             case TaskListJoined joined:
                 _members.Add(new ListMember(joined.MemberId, joined.DisplayName, joined.At));
@@ -163,6 +222,17 @@ public sealed class TaskList : Aggregate
                 break;
         }
     }
+
+    void CloseInvite()
+    {
+        InviteToken = null;
+        InviteCode = null;
+        InviteExpiresAt = null;
+    }
+
+    static bool SameSecret(string? stored, string offered) =>
+        stored is not null &&
+        CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(stored), Encoding.UTF8.GetBytes(offered));
 
     static TaskList Live(TaskList? list)
     {

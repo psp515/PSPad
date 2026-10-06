@@ -60,8 +60,15 @@ Out:
 `TaskList` gains:
 
 - `InviteToken` — `string?`, URL-safe, ≥128 bits of randomness, generated on
-  the client. `null` = not shared by link. Members see it too and may forward
-  it; that is the "anyone with the link" model, not a leak.
+  the client. `null` = not shared by link.
+- `InviteCode` — `string?`, 6 characters from `23456789ABCDEFGHJKMNPQRSTUVWXYZ`,
+  generated on the client beside the token; shown `XXX-XXX`, compared
+  normalised (upper-cased, `-` and whitespace dropped).
+- `InviteExpiresAt` — `TaskListShared.At` + 30 minutes. A list shared before
+  `adr/0057` has no code or expiry and counts as expired.
+- `WrongCodes` — failed joins on the current invite; the fifth clears token,
+  code and expiry. Members never receive token, code, expiry or count
+  through sync (`adr/0057`).
 - `OwnerName` — the owner's display name, set by `ShareTaskList`, so members
   can show "Shared by …" without the owner's `User` document.
 - `Members[]` — `ListMember(UserId, DisplayName, JoinedAt)`. `DisplayName` is
@@ -76,11 +83,11 @@ ordinary list.
 
 | Command | Who | Offline | Effect / rejections |
 |---|---|---|---|
-| `ShareTaskList(listId, token, ownerName)` | owner | yes | Sets or rotates `InviteToken`. Rejects a blank or short token. Rotating never removes members |
+| `ShareTaskList(listId, token, code, ownerName)` | owner | yes | Sets or rotates `InviteToken` and `InviteCode`, restarts the 30-minute clock, zeroes `WrongCodes`. Rejects a blank or short token and a code that is not 6 alphabet characters. Rotating never removes members |
 | `StopSharingTaskList(listId)` | owner | yes | Clears `InviteToken`. Members stay. Emits nothing when already clear |
 | `RemoveListMember(listId, memberId)` | owner | yes | Rejects a non-member |
 | `LeaveTaskList(listId)` | member | yes | Rejects the owner and non-members |
-| `JoinTaskList(listId, token, displayName)` | signed in | **no** | Server-only, from `POST /api/lists/join`. Rejects a deleted list, a wrong or cleared token. Owner or existing member: accepted, no event |
+| `JoinTaskList(listId, token, code, displayName)` | signed in | **no** | Server-only, from `POST /api/lists/join`. Rejects a deleted list, a wrong or cleared token ("This invite link no longer works.") and an expired invite ("This invite has expired."). A wrong code with a right token commits `InviteCodeRejected` instead of rejecting, so the count survives. Owner or existing member: accepted, no event |
 
 Events: `TaskListShared`, `TaskListSharingStopped`, `ListMemberRemoved`,
 `TaskListLeft`, `TaskListJoined`.
@@ -193,7 +200,7 @@ this user would otherwise see every list as foreign and purge it:
 
 ### 3.3 Join
 
-`POST /api/lists/join {token}` — resolves the token to a list, runs
+`POST /api/lists/join {token, code}` — resolves the token to a list, runs
 `JoinTaskList` through the normal pipeline server-side, and returns the list
 and its live children. The joining device writes them into its replica at
 once.

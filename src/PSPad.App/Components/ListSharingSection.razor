@@ -122,7 +122,7 @@
         if (on)
         {
             await Sender.SendAsync(new ShareTaskList(
-                Guid.NewGuid(), State.UserId, _list.Id, InviteToken.New(), State.DisplayName));
+                Guid.NewGuid(), State.UserId, _list.Id, InviteToken.New(), InviteCode.New(), State.DisplayName));
         }
         else
         {
@@ -148,7 +148,7 @@
         }
 
         await Sender.SendAsync(new ShareTaskList(
-            Guid.NewGuid(), State.UserId, _list.Id, InviteToken.New(), State.DisplayName));
+            Guid.NewGuid(), State.UserId, _list.Id, InviteToken.New(), InviteCode.New(), State.DisplayName));
         await ReloadAsync();
     }
 

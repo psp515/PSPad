@@ -214,7 +214,7 @@ public class OfflineRoundTripTests(MongoFixture fixture)
 
         public async Task<JoinListResponse?> JoinAsync(string token)
         {
-            var response = await http.PostAsJsonAsync("/api/lists/join", new JoinListRequest(token));
+            var response = await http.PostAsJsonAsync("/api/lists/join", new JoinListRequest(token, Sharing.Code));
             return response.StatusCode == System.Net.HttpStatusCode.NotFound
                 ? null
                 : await response.EnsureSuccessStatusCode().Content.ReadFromJsonAsync<JoinListResponse>();

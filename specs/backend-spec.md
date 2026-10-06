@@ -205,7 +205,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 |---|---|---|
 | `users` | one per person | `timeZone` (IANA), `provisionedAt` |
 | `areas` | user-defined areas | `name`, `position` |
-| `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation), `inviteToken` (`adr/0054`, null = not shared), `ownerName`, `_members[]` (`userId`, `displayName`, `joinedAt`; the leading underscore keeps the BSON field name stable, like `_steps`). Documents written before `adr/0051` still carry a `position` nobody reads |
+| `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation), `inviteToken` (`adr/0054`, null = not shared), `inviteCode`, `inviteExpiresAt` (`adr/0057`; 30 minutes from the share), `wrongCodes`, `ownerName`, `_members[]` (`userId`, `displayName`, `joinedAt`; the leading underscore keeps the BSON field name stable, like `_steps`). Documents written before `adr/0051` still carry a `position` nobody reads |
 | `inboxes` | one per user | `items[]` |
 | `todotasks` | tasks with steps inline | `listId`, `previousListId` (the list it last left, null until moved), `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0056`) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
@@ -367,10 +367,12 @@ not stated there:
   client-side only (`adr/0048`) — the domain stores and moves a plain string,
   never parses it.
 - Sharing (`adr/0054`): five list commands — `ShareTaskList` (set/rotate
-  the invite token, owner-only), `StopSharingTaskList` (clear it, owner-only,
+  the invite token and 6-character code, owner-only; the invite lives 30
+  minutes, `adr/0057`), `StopSharingTaskList` (clear it, owner-only,
   members stay), `RemoveListMember` (owner-only), `LeaveTaskList`
   (member-only, rejects the owner), `JoinTaskList` (server-only, idempotent
-  for the owner or an existing member). `ListAccess` admits the owner or a
+  for the owner or an existing member; token and code compared in constant
+  time, a wrong code commits `InviteCodeRejected`, the fifth closes the invite). `ListAccess` admits the owner or a
   member to every content command on tasks, steps, reference items and
   their fields, plus `CreateTask`, `CreateReferenceItem`,
   `OrganiseInboxItem`, and `LinkTaskToGoal`; list-level commands
