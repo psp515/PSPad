@@ -100,11 +100,18 @@ public class ListDetailPanelNavigationTests : Bunit.TestContext
         var api = new CountingSnapshotsApi(throws: false);
         Services.AddSingleton<ISnapshotsApi>(api);
 
-        var panel = Render(ListPanelView.Details);
+        var panel = Render<ListDetailPanel>(parameters => parameters
+            .Add(p => p.ListId, _list.Id)
+            .Add(p => p.View, ListPanelView.Details)
+            .Add(p => p.OnClose, EventCallback.Factory.Create(this, () => { })));
         panel.WaitForAssertion(() =>
             Assert.Contains("None live", panel.Find(".pspad-list-snapshots-link").TextContent));
-        panel.Render();
-        panel.Render();
+
+        for (var round = 0; round < 2; round++)
+        {
+            panel.Render(parameters => parameters
+                .Add(p => p.OnClose, EventCallback.Factory.Create(this, () => { })));
+        }
 
         Assert.Equal(1, api.Calls);
     }
