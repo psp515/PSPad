@@ -798,3 +798,37 @@ button.pspad-heatmap-cell:focus-visible {
     height: 28px;
     display: block;
 }
+
+.pspad-snapshot-hero .pspad-snapshot-hero-chip {
+    color: inherit;
+    border-color: currentColor;
+    background: transparent;
+}
+
+.pspad-snapshot-hero .pspad-snapshot-progress {
+    background-color: color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.pspad-snapshot-hero .pspad-snapshot-progress .mud-progress-linear-bar {
+    background-color: currentColor;
+}
+
+.pspad-snapshot-description {
+    padding-left: 44px;
+}
+
+.pspad-snapshot-description .pspad-markdown-view {
+    border: 0;
+    padding: 0 !important;
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-snapshot-step {
+    padding-left: 32px;
+    min-height: 36px;
+}
+
+.pspad-snapshot-step-done {
+    margin: 0 9px;
+}

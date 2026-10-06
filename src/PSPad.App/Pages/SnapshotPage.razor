@@ -57,11 +57,11 @@
             </div>
             <MudText Typo="Typo.h4" Class="pspad-snapshot-name">@_snapshot.Name</MudText>
             <div class="d-flex flex-wrap gap-2 my-3">
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Inherit" Size="Size.Small">Copy from @_snapshot.CreatedAt.ToString("d MMM")</MudChip>
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Inherit" Size="Size.Small">Link works until @_snapshot.ExpiresAt.ToString("d MMM")</MudChip>
+                <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Class="pspad-snapshot-hero-chip ma-0">Copy from @_snapshot.CreatedAt.ToString("d MMM")</MudChip>
+                <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Class="pspad-snapshot-hero-chip ma-0">Link works until @_snapshot.ExpiresAt.ToString("d MMM")</MudChip>
             </div>
             <MudText Typo="Typo.caption">@Ticked of @Entries ticked by visitors</MudText>
-            <MudProgressLinear Color="Color.Inherit" Class="pspad-snapshot-progress mt-1" Value="@(Entries == 0 ? 0 : 100.0 * Ticked / Entries)" />
+            <MudProgressLinear Color="Color.Inherit" Rounded="true" Size="Size.Medium" Class="pspad-snapshot-progress mt-2" Value="@(Entries == 0 ? 0 : 100.0 * Ticked / Entries)" />
         </MudPaper>
 
         @if (!_offline)
@@ -74,10 +74,13 @@
         <div class="pspad-snapshot-entries pa-2">
             @if (_snapshot.Kind == "Tasks")
             {
-                <MudText Typo="Typo.overline">To do · @OpenTasks.Length</MudText>
+                @if (OpenTasks.Length > 0)
+                {
+                    <MudText Typo="Typo.overline" Class="pspad-muted d-block mt-2">To do · @OpenTasks.Length</MudText>
+                }
                 @foreach (var task in OpenTasks)
                 {
-                    <MudPaper Elevation="1" Class="pa-2 mb-2 pspad-snapshot-task">
+                    <MudPaper Elevation="1" Class="pa-3 mb-2 pspad-snapshot-task">
                         <div class="d-flex align-center gap-2">
                             <MudCheckBox T="bool" Value="@task.Marked" Disabled="@_offline"
                                          ValueChanged="@(_ => ToggleTaskAsync(task))" Color="Color.Primary" Dense="true" />
@@ -96,14 +99,28 @@
                             }
                         </div>
 
-                        <MarkdownField Value="@task.Description" ReadOnly="true" />
+                        @if (!string.IsNullOrWhiteSpace(task.Description))
+                        {
+                            <div class="pspad-snapshot-description">
+                                <MarkdownField Value="@task.Description" ReadOnly="true" />
+                            </div>
+                        }
 
                         @foreach (var step in task.Steps)
                         {
-                            <div class="d-flex align-center gap-2 pspad-snapshot-step ml-4">
-                                <MudCheckBox T="bool" Value="@step.Marked" Disabled="@_offline"
-                                             ValueChanged="@(_ => ToggleStepAsync(task, step))" Color="Color.Primary" Dense="true" />
-                                <MudText Typo="Typo.body2" Style="@(step.Done ? "text-decoration:line-through" : "")">@step.Name</MudText>
+                            <div class="d-flex align-center gap-2 pspad-snapshot-step">
+                                @if (step.Done)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
+                                             Class="pspad-snapshot-step-done" aria-label="Done by the owner" />
+                                    <MudText Typo="Typo.body2" Class="pspad-muted" Style="text-decoration:line-through">@step.Name</MudText>
+                                }
+                                else
+                                {
+                                    <MudCheckBox T="bool" Value="@step.Marked" Disabled="@_offline"
+                                                 ValueChanged="@(_ => ToggleStepAsync(task, step))" Color="Color.Primary" Dense="true" />
+                                    <MudText Typo="Typo.body2">@step.Name</MudText>
+                                }
                                 @if (step.Marked)
                                 {
                                     <MudChip T="string" Color="Color.Success" Variant="Variant.Text" Size="Size.Small">ticked</MudChip>
@@ -113,22 +130,25 @@
                     </MudPaper>
                 }
 
+                @if (DoneTasks.Length > 0)
+                {
                 <div class="pspad-snapshot-done mt-4">
-                    <MudText Typo="Typo.overline">Already done by @OwnerLabel · @DoneTasks.Length</MudText>
+                    <MudText Typo="Typo.overline" Class="pspad-muted d-block">Already done by @OwnerLabel · @DoneTasks.Length</MudText>
                     @foreach (var task in DoneTasks)
                     {
                         <MudPaper Outlined="true" Class="pa-2 mb-2 d-flex align-center gap-2">
                             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success" />
-                            <MudText Typo="Typo.body1" Style="text-decoration:line-through">@task.Name</MudText>
+                            <MudText Typo="Typo.body1" Class="pspad-muted" Style="text-decoration:line-through">@task.Name</MudText>
                         </MudPaper>
                     }
                 </div>
+                }
             }
             else
             {
                 @foreach (var item in _snapshot.Items)
                 {
-                    <MudPaper Elevation="1" Class="pa-2 mb-2 pspad-snapshot-item">
+                    <MudPaper Elevation="1" Class="pa-3 mb-2 pspad-snapshot-item">
                         <div class="d-flex align-center gap-2">
                             <MudCheckBox T="bool" Value="@item.Marked" Disabled="@_offline"
                                          ValueChanged="@(_ => ToggleItemAsync(item))" Color="Color.Primary" Dense="true" />
@@ -143,7 +163,12 @@
                             }
                         </div>
 
-                        <MarkdownField Value="@item.Description" ReadOnly="true" />
+                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                        {
+                            <div class="pspad-snapshot-description">
+                                <MarkdownField Value="@item.Description" ReadOnly="true" />
+                            </div>
+                        }
 
                         @foreach (var field in item.Fields)
                         {

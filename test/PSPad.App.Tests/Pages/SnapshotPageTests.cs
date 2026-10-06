@@ -41,6 +41,32 @@ public class SnapshotPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnEmptyDescriptionShowsNoPlaceholder()
+    {
+        Arrange(SampleTaskSnapshot());
+
+        var page = RenderPage("tok123");
+
+        Assert.DoesNotContain("No description", page.Markup);
+        Assert.Empty(page.FindAll(".pspad-snapshot-description"));
+    }
+
+    [Fact]
+    public void AStepTheOwnerFinishedHasNoCheckbox()
+    {
+        var snapshot = SampleTaskSnapshot();
+        var tasks = snapshot.Tasks.ToArray();
+        tasks[1] = tasks[1] with { Steps = [new SnapshotStepView(StepId, "Buy stamps", true, false, null)] };
+        Arrange(snapshot with { Tasks = tasks });
+
+        var page = RenderPage("tok123");
+
+        var step = page.Find(".pspad-snapshot-step");
+        Assert.NotNull(step.QuerySelector(".pspad-snapshot-step-done"));
+        Assert.Null(step.QuerySelector("input[type=checkbox]"));
+    }
+
+    [Fact]
     public void TheHeroNamesTheOwnerAndProgress()
     {
         Arrange(SampleTaskSnapshot());
