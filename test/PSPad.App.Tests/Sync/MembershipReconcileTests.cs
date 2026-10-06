@@ -211,15 +211,28 @@ public class MembershipReconcileTests
         var listId = Guid.NewGuid();
         var list = ListOwnedBy(Owner, listId);
         var replica = new InMemoryReplica();
-        var api = new ScriptedApi(joinResponse: new JoinListResponse(listId, new Dictionary<string, JsonElement[]>
+        var api = new ScriptedApi(join: new JoinOutcome.Joined(listId, new Dictionary<string, JsonElement[]>
         {
             ["tasklists"] = [Serialize(list)]
         }));
 
-        var joined = await new SyncService(api, replica, new InMemoryOutbox()).JoinAsync("token", CancellationToken.None);
+        var joined = await new SyncService(api, replica, new InMemoryOutbox())
+            .JoinAsync("token", "K7M4PX", CancellationToken.None);
 
-        Assert.Equal(listId, joined);
+        Assert.Equal(listId, Assert.IsType<JoinOutcome.Joined>(joined).ListId);
+        Assert.Equal(("token", "K7M4PX"), api.JoinedWith);
         Assert.NotNull(await replica.LoadAsync<TaskList>(listId));
+    }
+
+    [Fact]
+    public async Task AFailedJoinHandsBackItsOutcome()
+    {
+        var api = new ScriptedApi(join: new JoinOutcome.Expired());
+
+        var joined = await new SyncService(api, new InMemoryReplica(), new InMemoryOutbox())
+            .JoinAsync("token", "K7M4PX", CancellationToken.None);
+
+        Assert.IsType<JoinOutcome.Expired>(joined);
     }
 
     static TaskList ListOwnedBy(Guid owner, Guid listId)
@@ -255,7 +268,7 @@ public class MembershipReconcileTests
     sealed class ScriptedApi(
         SyncResponse? first = null,
         SyncResponse? second = null,
-        JoinListResponse? joinResponse = null,
+        JoinOutcome? join = null,
         bool throwOnFull = false) : ISyncApi
     {
         int _calls;
@@ -278,6 +291,12 @@ public class MembershipReconcileTests
             return Task.FromResult(_calls == 1 ? first : second);
         }
 
-        public Task<JoinListResponse?> JoinAsync(string token) => Task.FromResult(joinResponse);
+        public (string Token, string Code)? JoinedWith { get; private set; }
+
+        public Task<JoinOutcome> JoinAsync(string token, string code)
+        {
+            JoinedWith = (token, code);
+            return Task.FromResult(join ?? new JoinOutcome.Invalid());
+        }
     }
 }

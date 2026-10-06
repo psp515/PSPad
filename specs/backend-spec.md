@@ -451,13 +451,24 @@ a replica holds one user's whole visible world, not only what that user
 owns — and `IReplica.RemoveAsync` deletes one row; `replica.js`'s `getAll`
 reads a type's rows with the key range `bound([type], [type, []])`.
 
-`POST /api/lists/join {token}` resolves an invite token to a list, runs
-`JoinTaskList` through the normal pipeline as the caller, and on acceptance
-returns `200 JoinListResponse(ListId, Documents)` — that list and its live
-children, via the same reader `full` uses. An unknown or cleared token, a
-deleted list, or a rejected join (already a member, or the owner joining
-their own list) all return `404`. The client's `JoinAsync` writes the
-response straight into the replica.
+`POST /api/lists/join {token, code}` resolves an invite token to a list,
+checks the code with `TaskList.CheckInvite`, runs `JoinTaskList` through the
+normal pipeline as the caller, and on acceptance returns
+`200 JoinListResponse(ListId, Documents)` — that list and its live children,
+via the same reader `full` uses. The owner or an existing member gets `200`
+without a code check. A blank token or code, an unknown or cleared token, a
+deleted list, a wrong code (which still runs `JoinTaskList` so the strike is
+recorded) and an expired invite with a wrong code all return the same empty
+`404`; only a right token and right code on an expired invite return `410`.
+The endpoint carries the `"join"` rate-limit policy: 10 attempts per user
+(subject claim) per 30-minute fixed window, then `429`. The client's
+`JoinAsync` maps these to `JoinOutcome` (`Joined`, `Invalid`, `Expired`,
+`TooManyTries`) and writes a `Joined` response straight into the replica.
+
+A member's copy of a `tasklists` row — in `/api/sync` and in the join
+response — never carries `inviteToken`, `inviteCode`, `inviteExpiresAt`,
+`wrongCodes` or `closedByWrongCodes`; `SyncReader` strips them from every
+list the caller does not own.
 
 `POST /api/commands` takes a batch of command envelopes from the outbox, in
 order, and returns one result per envelope. Rejections surface to the user,
@@ -655,7 +666,7 @@ directly in `PSPad.Api`:
 |---|---|---|
 | `POST` | `/api/commands` | Execute a batch of commands. The only write endpoint |
 | `GET` | `/api/sync?since=&full=` | Delta pull, widened to lists the caller is a member of; `full` (comma-joined list ids the caller belongs to) returns those lists and their children in full regardless of `since` |
-| `POST` | `/api/lists/join` | Join a shared list by its invite token. `200 JoinListResponse(ListId, Documents)`, or `404` for an unknown/cleared token, a deleted list, or a rejected join. Not through the outbox — see §5 |
+| `POST` | `/api/lists/join` | Join a shared list by invite token and code. `200 JoinListResponse(ListId, Documents)`; one empty `404` for any bad token, wrong code or deleted list; `410` when token and code match an expired invite; `429` past 10 attempts per user per 30 minutes. Not through the outbox — see §5 |
 | `GET` | `/api/today` | Server-side Today, for a cold client; includes tasks from lists the caller is a member of, in the caller's own time zone |
 | `GET` | `/api/statistics/records?before=&limit=` | The statistics feed, newest first. `limit` clamps to 1..200, default 50 |
 | `GET` | `/api/statistics/overview?days=` | Tiles and the five chart series. `days` is 30, 90 or 365, default 30 |

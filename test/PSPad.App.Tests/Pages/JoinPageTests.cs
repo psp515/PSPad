@@ -24,7 +24,7 @@ public class JoinPageTests : Bunit.TestContext
     {
         var listId = Guid.NewGuid();
         var trigger = new RecordingSyncTrigger();
-        Arrange(new JoinListResponse(listId, new Dictionary<string, JsonElement[]>()), trigger: trigger);
+        Arrange(Joined(listId), trigger: trigger);
 
         var page = RenderPage("abc123");
 
@@ -34,9 +34,34 @@ public class JoinPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheCodeInTheFragmentIsSentWithTheToken()
+    {
+        var api = Arrange(Joined(Guid.NewGuid()));
+        Services.GetRequiredService<NavigationManager>().NavigateTo("join/abc123#code=K7M-4PX");
+
+        RenderPage("abc123");
+
+        Assert.Equal(("abc123", "K7M-4PX"), api.JoinedWith);
+    }
+
+    [Theory]
+    [MemberData(nameof(Failures))]
+    public void AFailedJoinShowsTheDeadLink(JoinOutcome outcome)
+    {
+        Arrange(outcome);
+
+        var page = RenderPage("deadtoken");
+
+        Assert.Equal("This invite link no longer works.", page.FindComponent<EmptyState>().Instance.Message);
+    }
+
+    public static TheoryData<JoinOutcome> Failures() =>
+        [new JoinOutcome.Invalid(), new JoinOutcome.Expired(), new JoinOutcome.TooManyTries()];
+
+    [Fact]
     public void ADeadLinkOffersToGoHome()
     {
-        Arrange(joinResponse: null);
+        Arrange(new JoinOutcome.Invalid());
 
         var page = RenderPage("deadtoken");
 
@@ -54,7 +79,7 @@ public class JoinPageTests : Bunit.TestContext
     {
         var listId = Guid.NewGuid();
         var connectivity = new ToggleableConnectivity(isOnline: false);
-        Arrange(new JoinListResponse(listId, new Dictionary<string, JsonElement[]>()), connectivity: connectivity);
+        Arrange(Joined(listId), connectivity: connectivity);
 
         var page = RenderPage("abc123");
 
@@ -71,7 +96,7 @@ public class JoinPageTests : Bunit.TestContext
     [Fact]
     public void ANetworkExceptionBehavesLikeOffline()
     {
-        Arrange(joinResponse: null, throwing: true);
+        Arrange(new JoinOutcome.Invalid(), throwing: true);
 
         var page = RenderPage("abc123");
 
@@ -82,14 +107,17 @@ public class JoinPageTests : Bunit.TestContext
     IRenderedComponent<JoinPage> RenderPage(string token) =>
         Render<JoinPage>(parameters => parameters.Add(p => p.Token, token));
 
-    void Arrange(
-        JoinListResponse? joinResponse,
+    static JoinOutcome Joined(Guid listId) =>
+        new JoinOutcome.Joined(listId, new Dictionary<string, JsonElement[]>());
+
+    FakeSyncApi Arrange(
+        JoinOutcome outcome,
         bool throwing = false,
         ToggleableConnectivity? connectivity = null,
         RecordingSyncTrigger? trigger = null)
     {
         var replica = AppTestHost.Arrange(this, User, Today);
-        var api = new FakeSyncApi(joinResponse, throwing);
+        var api = new FakeSyncApi(outcome, throwing);
         var outbox = new InMemoryOutbox();
         Services.AddSingleton<ISyncApi>(api);
         Services.AddSingleton<IOutbox>(outbox);
@@ -99,9 +127,11 @@ public class JoinPageTests : Bunit.TestContext
         {
             Services.AddSingleton<IConnectivity>(connectivity);
         }
+
+        return api;
     }
 
-    sealed class FakeSyncApi(JoinListResponse? response, bool throwing) : ISyncApi
+    sealed class FakeSyncApi(JoinOutcome outcome, bool throwing) : ISyncApi
     {
         public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
             Task.FromResult<IReadOnlyList<CommandResponse>>([]);
@@ -109,8 +139,13 @@ public class JoinPageTests : Bunit.TestContext
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
             Task.FromResult<SyncResponse?>(null);
 
-        public Task<JoinListResponse?> JoinAsync(string token) =>
-            throwing ? throw new HttpRequestException("Boom.") : Task.FromResult(response);
+        public (string Token, string Code)? JoinedWith { get; private set; }
+
+        public Task<JoinOutcome> JoinAsync(string token, string code)
+        {
+            JoinedWith = (token, code);
+            return throwing ? throw new HttpRequestException("Boom.") : Task.FromResult(outcome);
+        }
     }
 
     public sealed class RecordingSyncTrigger : ISyncTrigger

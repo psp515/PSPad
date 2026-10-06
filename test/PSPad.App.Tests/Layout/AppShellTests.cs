@@ -604,7 +604,7 @@ public class AppShellTests : Bunit.TestContext
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
             pulls[Math.Min(_call++, pulls.Length - 1)];
 
-        public Task<JoinListResponse?> JoinAsync(string token) => Task.FromResult<JoinListResponse?>(null);
+        public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
     }
 
     sealed class AlwaysOnline : IConnectivity
@@ -625,7 +625,7 @@ public class AppShellTests : Bunit.TestContext
 
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) => pull;
 
-        public Task<JoinListResponse?> JoinAsync(string token) => Task.FromResult<JoinListResponse?>(null);
+        public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
     }
 
     void Arrange(

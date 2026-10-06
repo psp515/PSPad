@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -40,6 +41,16 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = builder.Configuration.GetValue("Sharing:PublicRequestsPerMinute", 60),
             Window = TimeSpan.FromMinutes(1)
+        }));
+    options.AddPolicy("join", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? context.User.FindFirstValue("sub")
+            ?? context.Connection.RemoteIpAddress?.ToString()
+            ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("Sharing:JoinAttemptsPerWindow", 10),
+            Window = TimeSpan.FromMinutes(30)
         }));
 });
 

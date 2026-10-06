@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using PSPad.App.Statistics;
+using PSPad.App.Sync;
 using PSPad.Contracts;
 
 namespace PSPad.App.Api;
@@ -54,12 +55,22 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
             ? $"api/sync?since={since}"
             : $"api/sync?since={since}&full={string.Join(',', full)}");
 
-    public async Task<JoinListResponse?> JoinAsync(string token)
+    public async Task<JoinOutcome> JoinAsync(string token, string code)
     {
-        var response = await http.PostAsJsonAsync("api/lists/join", new JoinListRequest(token));
-        return response.StatusCode == HttpStatusCode.NotFound
-            ? null
-            : await response.EnsureSuccessStatusCode().Content.ReadFromJsonAsync<JoinListResponse>();
+        var response = await http.PostAsJsonAsync("api/lists/join", new JoinListRequest(token, code));
+
+        switch (response.StatusCode)
+        {
+            case HttpStatusCode.NotFound:
+                return new JoinOutcome.Invalid();
+            case HttpStatusCode.Gone:
+                return new JoinOutcome.Expired();
+            case HttpStatusCode.TooManyRequests:
+                return new JoinOutcome.TooManyTries();
+        }
+
+        var joined = await response.EnsureSuccessStatusCode().Content.ReadFromJsonAsync<JoinListResponse>();
+        return new JoinOutcome.Joined(joined!.ListId, joined.Documents);
     }
 
     public Task<StatisticsOverview?> OverviewAsync(int days) =>

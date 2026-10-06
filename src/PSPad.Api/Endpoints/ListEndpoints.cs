@@ -1,4 +1,5 @@
 using MongoDB.Driver;
+using PSPad.Abstractions;
 using PSPad.Api.Commands;
 using PSPad.Api.Identity;
 using PSPad.Api.Sync;
@@ -14,9 +15,9 @@ public static class ListEndpoints
     {
         app.MapPost("lists/join", async (
             JoinListRequest request, MongoContext context, CommandDispatcher dispatcher,
-            SyncReader reader, ICurrentUser user, CancellationToken ct) =>
+            SyncReader reader, ICurrentUser user, IClock clock, CancellationToken ct) =>
         {
-            if (string.IsNullOrWhiteSpace(request.Token))
+            if (string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.Code))
             {
                 return Results.NotFound();
             }
@@ -31,8 +32,21 @@ public static class ListEndpoints
                 return Results.NotFound();
             }
 
-            var result = await dispatcher.RunAsync(
-                new JoinTaskList(Guid.NewGuid(), user.UserId, list.Id, request.Token, request.Code ?? "", user.DisplayName), ct);
+            var alreadyIn = list.UserId == user.UserId || list.HasMember(user.UserId);
+            var check = alreadyIn ? InviteCheck.Open : list.CheckInvite(request.Token, request.Code, clock.UtcNow);
+
+            switch (check)
+            {
+                case InviteCheck.Unknown:
+                    return Results.NotFound();
+                case InviteCheck.Expired:
+                    return Results.StatusCode(StatusCodes.Status410Gone);
+                case InviteCheck.WrongCode:
+                    await dispatcher.RunAsync(Join(list, request, user), ct);
+                    return Results.NotFound();
+            }
+
+            var result = await dispatcher.RunAsync(Join(list, request, user), ct);
 
             if (!result.Accepted)
             {
@@ -41,6 +55,9 @@ public static class ListEndpoints
 
             var whole = await reader.ReadAsync(user.UserId, long.MaxValue, [list.Id], ct);
             return Results.Ok(new JoinListResponse(list.Id, whole.Documents));
-        });
+        }).RequireRateLimiting("join");
     }
+
+    static JoinTaskList Join(TaskList list, JoinListRequest request, ICurrentUser user) =>
+        new(Guid.NewGuid(), user.UserId, list.Id, request.Token, request.Code, user.DisplayName);
 }

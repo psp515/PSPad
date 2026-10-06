@@ -212,12 +212,16 @@ public class OfflineRoundTripTests(MongoFixture fixture)
                 ? $"/api/sync?since={since}"
                 : $"/api/sync?since={since}&full={string.Join(',', full)}");
 
-        public async Task<JoinListResponse?> JoinAsync(string token)
+        public async Task<JoinOutcome> JoinAsync(string token, string code)
         {
-            var response = await http.PostAsJsonAsync("/api/lists/join", new JoinListRequest(token, Sharing.Code));
-            return response.StatusCode == System.Net.HttpStatusCode.NotFound
-                ? null
-                : await response.EnsureSuccessStatusCode().Content.ReadFromJsonAsync<JoinListResponse>();
+            var response = await http.PostAsJsonAsync("/api/lists/join", new JoinListRequest(token, code));
+            if (response.StatusCode != System.Net.HttpStatusCode.OK)
+            {
+                return new JoinOutcome.Invalid();
+            }
+
+            var joined = await response.Content.ReadFromJsonAsync<JoinListResponse>();
+            return new JoinOutcome.Joined(joined!.ListId, joined.Documents);
         }
     }
 

@@ -39,7 +39,7 @@ public class SyncServiceTests
             return Task.FromResult<SyncResponse?>(Pull);
         }
 
-        public Task<JoinListResponse?> JoinAsync(string token) => Task.FromResult<JoinListResponse?>(null);
+        public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
     }
 
     [Fact]

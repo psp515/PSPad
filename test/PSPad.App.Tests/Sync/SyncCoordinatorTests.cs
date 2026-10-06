@@ -172,7 +172,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
             Task.FromResult<SyncResponse?>(pull);
 
-        public Task<JoinListResponse?> JoinAsync(string token) => Task.FromResult<JoinListResponse?>(null);
+        public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
     }
 
     sealed class FixedConnectivity(bool online) : IConnectivity
@@ -202,7 +202,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
             return pull;
         }
 
-        public Task<JoinListResponse?> JoinAsync(string token) => Task.FromResult<JoinListResponse?>(null);
+        public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
 
         public void Release() => _gate.SetResult();
     }

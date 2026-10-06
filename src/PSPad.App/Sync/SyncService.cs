@@ -190,15 +190,14 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         await replica.RemoveAsync(listId);
     }
 
-    public async Task<Guid?> JoinAsync(string token, CancellationToken ct)
+    public async Task<JoinOutcome> JoinAsync(string token, string code, CancellationToken ct)
     {
-        var joined = await api.JoinAsync(token);
-        if (joined is null)
+        var outcome = await api.JoinAsync(token, code);
+        if (outcome is JoinOutcome.Joined joined)
         {
-            return null;
+            await SaveAsync(joined.Documents);
         }
 
-        await SaveAsync(joined.Documents);
-        return joined.ListId;
+        return outcome;
     }
 }

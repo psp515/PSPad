@@ -44,20 +44,27 @@ else if (_state == JoinState.Offline)
 
         try
         {
-            var listId = await Sync.JoinAsync(Token, CancellationToken.None);
-            if (listId is null)
+            if (await Sync.JoinAsync(Token, CodeFromFragment(), CancellationToken.None) is not JoinOutcome.Joined joined)
             {
                 _state = JoinState.DeadLink;
                 return;
             }
 
             _ = SyncTrigger.SyncNowAsync();
-            Navigation.NavigateTo($"/lists/{listId}");
+            Navigation.NavigateTo($"/lists/{joined.ListId}");
         }
         catch (HttpRequestException)
         {
             _state = JoinState.Offline;
         }
+    }
+
+    string CodeFromFragment()
+    {
+        const string marker = "#code=";
+        var uri = Navigation.Uri;
+        var at = uri.IndexOf(marker, StringComparison.Ordinal);
+        return at < 0 ? "" : Uri.UnescapeDataString(uri[(at + marker.Length)..]);
     }
 
     void GoHome() => Navigation.NavigateTo("/");

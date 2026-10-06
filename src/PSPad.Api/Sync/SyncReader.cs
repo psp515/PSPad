@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using MongoDB.Driver;
 using PSPad.Abstractions;
 using PSPad.Contracts;
@@ -21,6 +22,9 @@ public sealed class SyncReader(MongoContext context)
     {
         IncludeFields = true
     };
+
+    static readonly string[] InviteSecrets =
+        ["inviteToken", "inviteCode", "inviteExpiresAt", "wrongCodes", "closedByWrongCodes"];
 
     public async Task<SyncResponse> ReadAsync(
         Guid userId, long since, IReadOnlyCollection<Guid> full, CancellationToken ct)
@@ -66,7 +70,8 @@ public sealed class SyncReader(MongoContext context)
         var areas = await ReadAsync<Area>(session, since, Owned<Area>(userId), None<Area>(), ct);
         var taskLists = await ReadAsync(session, since,
             Owned<TaskList>(userId) | Builders<TaskList>.Filter.Eq("_members.userId", userId),
-            Builders<TaskList>.Filter.In(list => list.Id, wholeLists), ct);
+            Builders<TaskList>.Filter.In(list => list.Id, wholeLists), ct,
+            list => list.UserId == userId ? Serialize(list) : WithoutInvite(Serialize(list)));
         var todoTasks = await ReadAsync(session, since,
             Owned<TodoTask>(userId) |
             Builders<TodoTask>.Filter.In(task => task.ListId, memberListIds) |
@@ -140,6 +145,17 @@ public sealed class SyncReader(MongoContext context)
 
     static JsonElement Serialize<T>(T row) where T : Aggregate =>
         JsonSerializer.SerializeToElement(row, JsonOptions);
+
+    static JsonElement WithoutInvite(JsonElement list)
+    {
+        var row = JsonNode.Parse(list.GetRawText())!.AsObject();
+        foreach (var secret in InviteSecrets)
+        {
+            row.Remove(secret);
+        }
+
+        return JsonSerializer.SerializeToElement(row, JsonOptions);
+    }
 
     // A row reached only through previousListId left the caller's lists; it carries just enough to be dropped.
     static JsonElement Stub(Aggregate row, Guid listId, Guid? previousListId) =>

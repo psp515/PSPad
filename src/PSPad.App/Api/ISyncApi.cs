@@ -1,3 +1,4 @@
+using PSPad.App.Sync;
 using PSPad.Contracts;
 
 namespace PSPad.App.Api;
@@ -8,5 +9,5 @@ public interface ISyncApi
 
     Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full);
 
-    Task<JoinListResponse?> JoinAsync(string token);
+    Task<JoinOutcome> JoinAsync(string token, string code);
 }
