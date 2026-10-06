@@ -71,4 +71,23 @@ public class ListQueryTests
 
         Assert.Null(ListQuery.NewListAreaFrom(TaskQuery.ForNewTask("https://pspad.local/", listId)));
     }
+
+    static readonly Guid ViewId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+
+    [Theory]
+    [InlineData("https://x/areas/a?list=44444444-4444-4444-4444-444444444444", ListPanelView.Details)]
+    [InlineData("https://x/areas/a?list=44444444-4444-4444-4444-444444444444&view=members", ListPanelView.Members)]
+    [InlineData("https://x/areas/a?list=44444444-4444-4444-4444-444444444444&view=snapshots", ListPanelView.Snapshots)]
+    [InlineData("https://x/areas/a?list=44444444-4444-4444-4444-444444444444&view=bogus", ListPanelView.Details)]
+    public void ViewIsReadFromTheQuery(string uri, ListPanelView expected) =>
+        Assert.Equal(expected, ListQuery.ViewFrom(uri));
+
+    [Fact]
+    public void ForAViewAddsIt() =>
+        Assert.Equal($"https://x/areas/a?list={ViewId}&view=members",
+            ListQuery.For("https://x/areas/a?list=old", ViewId, ListPanelView.Members));
+
+    [Fact]
+    public void ForDetailsLeavesItOut() =>
+        Assert.Equal($"https://x/areas/a?list={ViewId}", ListQuery.For("https://x/areas/a", ViewId, ListPanelView.Details));
 }

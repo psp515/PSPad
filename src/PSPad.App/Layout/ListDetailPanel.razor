@@ -2,6 +2,8 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.App.Api
+@using PSPad.App.Sync
 @using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
@@ -16,18 +18,24 @@
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
+@inject IClock Clock
+@inject ISnapshotsApi SnapshotsApi
+@inject IConnectivity Connectivity
 
-<DetailPanel Open="@(IsNew || _list is not null)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose"
+<DetailPanel Open="@(IsNew || _list is not null)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose" OnBack="@BackCallback"
              OnSave="@SaveCallback" SaveText="Add list" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
              OnDelete="@DeleteCallback" DeleteText="Delete list" Disabled="@Disabled">
-    <div class="px-2 pt-3 pb-1">
-        <MudTextField T="string" Class="pspad-list-name-field flex-grow-1 px-2" Value="@(_list?.Name ?? _draftName)"
-                      ValueChanged="@NameChangedAsync" Placeholder="List name" Typo="Typo.h6" Underline="false"
-                      Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@(Disabled || !IsMine)"
-                      OnKeyDown="@AddOnEnterAsync" />
-    </div>
+    @if (View == ListPanelView.Details)
+    {
+        <div class="px-2 pt-3 pb-1">
+            <MudTextField T="string" Class="pspad-list-name-field flex-grow-1 px-2" Value="@(_list?.Name ?? _draftName)"
+                          ValueChanged="@NameChangedAsync" Placeholder="List name" Typo="Typo.h6" Underline="false"
+                          Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@(Disabled || !IsMine)"
+                          OnKeyDown="@AddOnEnterAsync" />
+        </div>
 
-    <MudDivider />
+        <MudDivider />
+    }
 
     <div class="pa-4 d-flex flex-column gap-3">
         @if (_list is null)
@@ -40,36 +48,62 @@
         }
         else
         {
-            <div class="pspad-list-kind-readonly d-flex align-center gap-2">
-                <MudIcon Icon="@ListIcon.For(_list)" Size="Size.Small" Class="pspad-muted" />
-                <MudText Typo="Typo.body2">@ListIcon.LabelFor(_list)</MudText>
-            </div>
-
-            @if (IsMine)
+            @switch (View)
             {
-                <MudSelect T="Guid" Class="pspad-list-area" Label="Area" Variant="Variant.Outlined"
-                           Value="@_list.AreaId" ValueChanged="@AreaChangedAsync" Disabled="@Disabled"
-                           ToStringFunc="@AreaName" AnchorOrigin="Origin.BottomCenter">
-                    @foreach (var area in _areas)
-                    {
-                        <MudSelectItem T="Guid" Value="@area.Id">@area.Name</MudSelectItem>
-                    }
-                </MudSelect>
-            }
-            else
-            {
-                <MudSelect T="Guid?" Class="pspad-list-filed-area" Label="File under" Variant="Variant.Outlined"
-                           Value="@_filedAreaId" ValueChanged="@FileUnderAsync" Disabled="@Disabled"
-                           ToStringFunc="@FiledAreaName" AnchorOrigin="Origin.BottomCenter">
-                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">@SharedWithMe.Name</MudSelectItem>
-                    @foreach (var area in _areas)
-                    {
-                        <MudSelectItem T="Guid?" Value="@((Guid?)area.Id)">@area.Name</MudSelectItem>
-                    }
-                </MudSelect>
-            }
+                case ListPanelView.Members:
+                    <ListSharingSection List="@_list" IsMine="@IsMine" Disabled="@Disabled" />
+                    break;
+                case ListPanelView.Snapshots when IsMine:
+                    <SnapshotPublisher List="@_list" Disabled="@Disabled" />
+                    break;
+                default:
+                    <div class="pspad-list-kind-readonly d-flex align-center gap-2">
+                        <MudIcon Icon="@ListIcon.For(_list)" Size="Size.Small" Class="pspad-muted" />
+                        <MudText Typo="Typo.body2">@ListIcon.LabelFor(_list)</MudText>
+                    </div>
 
-            <ListSharingSection List="@_list" IsMine="@IsMine" Disabled="@Disabled" />
+                    @if (IsMine)
+                    {
+                        <MudSelect T="Guid" Class="pspad-list-area" Label="Area" Variant="Variant.Outlined"
+                                   Value="@_list.AreaId" ValueChanged="@AreaChangedAsync" Disabled="@Disabled"
+                                   ToStringFunc="@AreaName" AnchorOrigin="Origin.BottomCenter">
+                            @foreach (var area in _areas)
+                            {
+                                <MudSelectItem T="Guid" Value="@area.Id">@area.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else
+                    {
+                        <MudSelect T="Guid?" Class="pspad-list-filed-area" Label="File under" Variant="Variant.Outlined"
+                                   Value="@_filedAreaId" ValueChanged="@FileUnderAsync" Disabled="@Disabled"
+                                   ToStringFunc="@FiledAreaName" AnchorOrigin="Origin.BottomCenter">
+                            <MudSelectItem T="Guid?" Value="@((Guid?)null)">@SharedWithMe.Name</MudSelectItem>
+                            @foreach (var area in _areas)
+                            {
+                                <MudSelectItem T="Guid?" Value="@((Guid?)area.Id)">@area.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+
+                    <MudPaper Outlined="true">
+                        <MudList T="string" Dense="false">
+                            <MudListItem T="string" Class="pspad-list-members-link"
+                                         Icon="@Icons.Material.Outlined.Group" IconColor="Color.Primary"
+                                         Text="Members" SecondaryText="@MembersSummary"
+                                         OnClick="@(() => Go(ListPanelView.Members))" />
+                            @if (IsMine)
+                            {
+                                <MudDivider />
+                                <MudListItem T="string" Class="pspad-list-snapshots-link"
+                                             Icon="@Icons.Material.Outlined.Public" IconColor="Color.Primary"
+                                             Text="Public snapshots" SecondaryText="@_snapshotsSummary"
+                                             OnClick="@(() => Go(ListPanelView.Snapshots))" />
+                            }
+                        </MudList>
+                    </MudPaper>
+                    break;
+            }
         }
     </div>
 </DetailPanel>
@@ -78,6 +112,8 @@
     [Parameter] public Guid? NewInArea { get; set; }
 
     [Parameter] public Guid? ListId { get; set; }
+
+    [Parameter] public ListPanelView View { get; set; }
 
     [Parameter] public bool Disabled { get; set; }
 
@@ -94,11 +130,35 @@
 
     bool IsMine => _list is null || _list.UserId == State.UserId;
 
-    string Title => (_list is null ? "New list" : "List") + (_areaName.Length == 0 ? "" : $" · {_areaName}");
+    string Title => View switch
+    {
+        ListPanelView.Members => "Members",
+        ListPanelView.Snapshots => "Public snapshots",
+        _ => (_list is null ? "New list" : "List") + (_areaName.Length == 0 ? "" : $" · {_areaName}")
+    };
+
+    string _snapshotsSummary = "";
+
+    EventCallback BackCallback => _list is not null && View != ListPanelView.Details
+        ? EventCallback.Factory.Create(this, () => Navigation.NavigateTo(ListQuery.For(Navigation.Uri, _list.Id, ListPanelView.Details)))
+        : default;
+
+    string MembersSummary => _list is null ? "" : (_list.Members.Count, IsMine, _list.IsInviteLiveAt(Clock.UtcNow)) switch
+    {
+        (0, true, false) => "Only you",
+        (var count, true, true) => $"{Joined(count)} · link {MinutesLeft} min left",
+        (var count, _, _) => Joined(count)
+    };
+
+    static string Joined(int count) => count switch { 0 => "Nobody joined yet", 1 => "1 joined", _ => $"{count} joined" };
+
+    int MinutesLeft => (int)Math.Ceiling((_list!.InviteExpiresAt!.Value - Clock.UtcNow).TotalMinutes);
+
+    void Go(ListPanelView view) => Navigation.NavigateTo(ListQuery.For(Navigation.Uri, _list!.Id, view));
 
     EventCallback SaveCallback => IsNew ? EventCallback.Factory.Create(this, CreateAsync) : default;
 
-    EventCallback DeleteCallback => _list is not null && IsMine ? EventCallback.Factory.Create(this, DeleteAsync) : default;
+    EventCallback DeleteCallback => _list is not null && IsMine && View == ListPanelView.Details ? EventCallback.Factory.Create(this, DeleteAsync) : default;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -127,6 +187,22 @@
             var view = await ListViews.LoadAsync(ListView.IdFor(State.UserId, _list.Id), CancellationToken.None);
             _filedAreaId = view?.AreaId;
         }
+
+        if (_list is not null && IsMine && View == ListPanelView.Details)
+        {
+            _snapshotsSummary = await LoadSnapshotsSummaryAsync(_list.Id);
+        }
+    }
+
+    async Task<string> LoadSnapshotsSummaryAsync(Guid listId)
+    {
+        if (!Connectivity.IsOnline)
+        {
+            return "Needs a connection";
+        }
+
+        var live = (await SnapshotsApi.ForListAsync(listId)).Count;
+        return live switch { 0 => "None live", 1 => "1 live link", _ => $"{live} live links" };
     }
 
     string AreaName(Guid areaId) => _areas.FirstOrDefault(area => area.Id == areaId)?.Name ?? "";

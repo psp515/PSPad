@@ -93,7 +93,7 @@ public class ListSharingSectionTests : Bunit.TestContext
         var list = Join(Share(NewList(Owner, area.Id, "Zakupy"), "shared-token-1234567890", "Kasia"), "shared-token-1234567890", User, "Lukasz");
         AppTestHost.Arrange(this, User, Today, list);
 
-        var panel = RenderWithOverlays(list.Id);
+        var panel = RenderWithOverlays(list.Id, ListPanelView.Details);
 
         Assert.True(panel.Find(".pspad-list-name-field input").HasAttribute("disabled"));
         Assert.Empty(panel.FindAll(".pspad-panel-delete"));
@@ -107,7 +107,7 @@ public class ListSharingSectionTests : Bunit.TestContext
         var list = Join(Share(NewList(Owner, ownerArea.Id, "Zakupy"), "shared-token-1234567890", "Kasia"), "shared-token-1234567890", User, "Lukasz");
         var replica = AppTestHost.Arrange(this, User, Today, myArea, list);
 
-        var panel = RenderWithOverlays(list.Id);
+        var panel = RenderWithOverlays(list.Id, ListPanelView.Details);
         panel.Find(".pspad-list-filed-area .mud-select-input").MouseDown();
         panel.WaitForAssertion(() => Assert.Contains(panel.FindAll(".mud-list-item"),
             option => option.TextContent.Trim() == "Praca"));
@@ -118,7 +118,7 @@ public class ListSharingSectionTests : Bunit.TestContext
         Assert.Equal(myArea.Id, view.AreaId);
     }
 
-    IRenderedComponent<ContainerFragment> RenderWithOverlays(Guid listId) => Render(builder =>
+    IRenderedComponent<ContainerFragment> RenderWithOverlays(Guid listId, ListPanelView view = ListPanelView.Members) => Render(builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
         builder.CloseComponent();
@@ -126,6 +126,7 @@ public class ListSharingSectionTests : Bunit.TestContext
         builder.CloseComponent();
         builder.OpenComponent<ListDetailPanel>(2);
         builder.AddAttribute(3, nameof(ListDetailPanel.ListId), (Guid?)listId);
+        builder.AddAttribute(4, nameof(ListDetailPanel.View), view);
         builder.CloseComponent();
     });
 
