@@ -1,0 +1,30 @@
+@using QRCoder
+
+<MudPaper Outlined="true" Class="pa-2 d-inline-flex" Style="background:#fff">
+    <img class="pspad-qr" src="@_source" width="@Size" height="@Size" alt="@Label" />
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+
+    [Parameter] public int Size { get; set; } = 176;
+
+    [Parameter] public string Label { get; set; } = "QR code";
+
+    string _encoded = "";
+    string _source = "";
+
+    protected override void OnParametersSet()
+    {
+        if (Value == _encoded)
+        {
+            return;
+        }
+
+        using var generator = new QRCodeGenerator();
+        using var data = generator.CreateQrCode(Value, QRCodeGenerator.ECCLevel.M);
+        var png = new PngByteQRCode(data).GetGraphic(8);
+        _source = $"data:image/png;base64,{Convert.ToBase64String(png)}";
+        _encoded = Value;
+    }
+}
