@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using PSPad.App.Api;
 using PSPad.App.Components;
@@ -157,6 +158,63 @@ public class JoinPageTests : Bunit.TestContext
         var empty = page.FindComponent<EmptyState>();
         Assert.Equal("Joining needs a connection.", empty.Instance.Message);
     }
+
+    [Fact]
+    public void EnterInTheCodeFieldJoins()
+    {
+        var api = Arrange(Joined(Guid.NewGuid()));
+        NavigateTo("join/tok");
+        var page = RenderPage("tok");
+
+        page.Find(".pspad-join-code input").Input("k7m-4px");
+        page.Find(".pspad-join-code input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        Assert.Equal(("tok", "K7M4PX"), api.Calls.Single());
+    }
+
+    [Fact]
+    public void EnterWithAnIncompleteCodeDoesNothing()
+    {
+        var api = Arrange(Joined(Guid.NewGuid()));
+        NavigateTo("join/tok");
+        var page = RenderPage("tok");
+
+        page.Find(".pspad-join-code input").Input("k7m");
+        page.Find(".pspad-join-code input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        Assert.Empty(api.Calls);
+    }
+
+    [Fact]
+    public void JoiningReplacesTheInviteEntryInHistory()
+    {
+        var listId = Guid.NewGuid();
+        Arrange(Joined(listId));
+        NavigateTo("join/tok#code=K7M4PX");
+
+        RenderPage("tok");
+
+        var latest = Navigation.History.First();
+        Assert.EndsWith($"/lists/{listId}", latest.Uri);
+        Assert.True(latest.Options.ReplaceHistoryEntry);
+    }
+
+    [Fact]
+    public void AFailedJoinDropsTheCodeFromTheAddressWithoutRetrying()
+    {
+        var api = Arrange(new JoinOutcome.Invalid());
+        NavigateTo("join/tok#code=K7M4PX");
+
+        var page = RenderPage("tok");
+
+        Assert.Equal($"{Navigation.BaseUri}join/tok", Navigation.Uri);
+        Assert.True(Navigation.History.First().Options.ReplaceHistoryEntry);
+        Assert.Single(api.Calls);
+        Assert.NotNull(page.Find(".pspad-join-invalid"));
+    }
+
+    Bunit.TestDoubles.BunitNavigationManager Navigation =>
+        (Bunit.TestDoubles.BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
 
     void NavigateTo(string uri) => Services.GetRequiredService<NavigationManager>().NavigateTo(uri);
 

@@ -117,6 +117,27 @@ public class ListDetailPanelNavigationTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ComingBackFromSnapshotsReloadsTheSummaryOnce()
+    {
+        var api = new CountingSnapshotsApi(throws: false);
+        Services.AddSingleton<ISnapshotsApi>(api);
+
+        var panel = Render<ListDetailPanel>(parameters => parameters
+            .Add(p => p.ListId, _list.Id)
+            .Add(p => p.View, ListPanelView.Details));
+        panel.WaitForAssertion(() =>
+            Assert.Contains("None live", panel.Find(".pspad-list-snapshots-link").TextContent));
+
+        panel.Render(parameters => parameters.Add(p => p.View, ListPanelView.Snapshots));
+        var callsInSnapshots = api.Calls;
+
+        panel.Render(parameters => parameters.Add(p => p.View, ListPanelView.Details));
+        panel.Render(parameters => parameters.Add(p => p.View, ListPanelView.Details));
+
+        panel.WaitForAssertion(() => Assert.Equal(callsInSnapshots + 1, api.Calls));
+    }
+
+    [Fact]
     public void ANonOwnerAtSnapshotsGetsTheDetailsViewWithoutBack()
     {
         var owner = Guid.NewGuid();

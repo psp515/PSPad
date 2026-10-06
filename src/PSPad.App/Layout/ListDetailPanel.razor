@@ -170,6 +170,11 @@
         _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
         _areaName = IsMine ? AreaName(_list?.AreaId ?? NewInArea!.Value) : "";
 
+        if (EffectiveView != ListPanelView.Details)
+        {
+            _summaryListId = null;
+        }
+
         if (_list is not null && IsMine && EffectiveView == ListPanelView.Details && _summaryListId != _list.Id)
         {
             _summaryListId = _list.Id;

@@ -1,6 +1,8 @@
+@using PSPad.Abstractions
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.References
 @using PSPad.Module.Tasks.Tasks
+@inject IClock Clock
 
 <ThingCard Id="@List.Id" Name="@List.Name" Href="@($"/lists/{List.Id}")" Icon="@ListIcon.For(List)"
            IconTitle="@ListIcon.LabelFor(List)" Tasks="@Tasks" Today="@Today"
@@ -59,7 +61,7 @@
 
     bool IsReference => List.Kind == ListKind.Reference;
 
-    bool IsShared => List.IsShared || List.InviteToken is not null;
+    bool IsShared => List.IsShared || List.IsInviteLiveAt(Clock.UtcNow);
 
     string SharedTooltip => (List.Members.Count + 1) switch
     {

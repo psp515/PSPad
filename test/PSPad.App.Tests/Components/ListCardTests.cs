@@ -202,6 +202,28 @@ public class ListCardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnExpiredInviteWithNobodyJoinedShowsNoSharedMarker()
+    {
+        Arrange();
+        var list = SharedList("Zakupy", 0, Now.AddHours(-1));
+
+        var card = Render(list, Tasks(list.Id, 1));
+
+        Assert.Empty(card.FindComponents<MudTooltip>());
+    }
+
+    [Fact]
+    public void AnExpiredInviteWithMembersKeepsTheSharedMarker()
+    {
+        Arrange();
+        var list = SharedList("Zakupy", 1, Now.AddHours(-1));
+
+        var card = Render(list, Tasks(list.Id, 1));
+
+        Assert.Equal("Shared · 2 people", card.FindComponent<MudTooltip>().Instance.Text);
+    }
+
+    [Fact]
     public void AnUnsharedListShowsNoSharedMarker()
     {
         Arrange();
@@ -351,10 +373,14 @@ public class ListCardTests : Bunit.TestContext
         return list;
     }
 
-    static TaskList SharedList(string name, int memberCount)
+    static readonly DateTimeOffset Now = new(Today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+
+    static TaskList SharedList(string name, int memberCount) => SharedList(name, memberCount, Now);
+
+    static TaskList SharedList(string name, int memberCount, DateTimeOffset sharedAt)
     {
         var list = List(name);
-        list.Apply(new TaskListShared(list.Id, User, DateTimeOffset.UnixEpoch, "k3Jv9s2mQ0x7b1nR4tYw8eZa", "Owner"));
+        list.Apply(new TaskListShared(list.Id, User, sharedAt, "k3Jv9s2mQ0x7b1nR4tYw8eZa", "Owner", "K7M4PX"));
 
         for (var index = 0; index < memberCount; index++)
         {

@@ -50,7 +50,7 @@ else if (_state != JoinState.Joining)
                 <MudTextField T="string" @bind-Value="_input" Immediate="true" Variant="Variant.Outlined"
                               Label="Code" MaxLength="7" InputType="InputType.Text" InputMode="InputMode.text"
                               Typo="Typo.h5" Class="pspad-join-code" Style="text-align: center; letter-spacing: 0.3em; font-family: monospace"
-                              HelperText="Letters and numbers — no 0, O, 1, I or L."
+                              HelperText="Letters and numbers — no 0, O, 1, I or L." OnKeyDown="@SubmitOnEnterAsync"
                               UserAttributes="@(new Dictionary<string, object?> { ["autocomplete"] = "one-time-code" })" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="pspad-join-submit"
                            Disabled="@(!CanSubmit)" OnClick="@SubmitAsync">Join list</MudButton>
@@ -95,6 +95,14 @@ else if (_state != JoinState.Joining)
 
     Task SubmitAsync() => JoinAsync();
 
+    async Task SubmitOnEnterAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && CanSubmit && _state != JoinState.Joining)
+        {
+            await JoinAsync();
+        }
+    }
+
     async Task JoinAsync()
     {
         _state = JoinState.Joining;
@@ -111,7 +119,7 @@ else if (_state != JoinState.Joining)
             if (outcome is JoinOutcome.Joined joined)
             {
                 _ = SyncTrigger.SyncNowAsync();
-                Navigation.NavigateTo($"/lists/{joined.ListId}");
+                Navigation.NavigateTo($"/lists/{joined.ListId}", replace: true);
                 return;
             }
 
@@ -125,6 +133,17 @@ else if (_state != JoinState.Joining)
         catch (HttpRequestException)
         {
             _state = JoinState.Offline;
+        }
+
+        ForgetCodeInAddress();
+    }
+
+    void ForgetCodeInAddress()
+    {
+        var hash = Navigation.Uri.IndexOf('#');
+        if (hash >= 0)
+        {
+            Navigation.NavigateTo(Navigation.Uri[..hash], replace: true);
         }
     }
 
