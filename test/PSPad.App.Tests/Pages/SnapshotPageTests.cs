@@ -41,6 +41,44 @@ public class SnapshotPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheHeroNamesTheOwnerAndProgress()
+    {
+        Arrange(SampleTaskSnapshot());
+        var page = RenderPage("tok123");
+
+        Assert.Contains("shared by Łukasz", page.Find(".pspad-snapshot-hero").TextContent);
+        Assert.Contains("1 of 2 ticked", page.Find(".pspad-snapshot-hero").TextContent);
+    }
+
+    [Fact]
+    public void DoneTasksSitInTheirOwnSection()
+    {
+        Arrange(SampleTaskSnapshot());
+        var page = RenderPage("tok123");
+
+        Assert.Contains("Already done by Łukasz · 1", page.Find(".pspad-snapshot-done").TextContent);
+        Assert.Equal(2, page.FindAll(".pspad-snapshot-task").Count);
+    }
+
+    [Fact]
+    public void TheHeroUsesThePrimaryTheme()
+    {
+        Arrange(SampleTaskSnapshot());
+
+        Assert.Contains("mud-theme-primary", RenderPage("tok123").Find(".pspad-snapshot-hero").ClassName);
+    }
+
+    [Fact]
+    public void ABlankOwnerNameFallsBackToTheOwner()
+    {
+        Arrange(SampleTaskSnapshot() with { OwnerName = "" });
+        var page = RenderPage("tok123");
+
+        Assert.DoesNotContain("shared by", page.Find(".pspad-snapshot-hero").TextContent);
+        Assert.Contains("Already done by the owner · 1", page.Find(".pspad-snapshot-done").TextContent);
+    }
+
+    [Fact]
     public void ItRendersReferenceItemsAndFields()
     {
         Arrange(SampleReferenceSnapshot());
@@ -58,7 +96,7 @@ public class SnapshotPageTests : Bunit.TestContext
 
         var page = RenderPage("tok123");
 
-        var name = page.FindAll(".pspad-snapshot-task .mud-typography-body1")
+        var name = page.FindAll(".pspad-snapshot-done .mud-typography-body1")
             .First(element => element.TextContent.Contains("Renew the domain"));
         Assert.Contains("line-through", name.GetAttribute("style"));
     }
@@ -203,10 +241,16 @@ public class SnapshotPageTests : Bunit.TestContext
             new DateTimeOffset(2026, 9, 30, 0, 0, 0, TimeSpan.Zero),
             [
                 new SnapshotTaskView(
-                    TaskId, "Renew the domain", true, null, "None", false, "", false, null,
-                    [new SnapshotStepView(StepId, "Buy stamps", false, false, null)])
+                    Guid.NewGuid(), "Renew the domain", true, null, "None", false, "", false, null, []),
+                new SnapshotTaskView(
+                    TaskId, "Send the invoice", false, null, "None", false, "", false, null,
+                    [new SnapshotStepView(StepId, "Buy stamps", false, false, null)]),
+                new SnapshotTaskView(
+                    Guid.NewGuid(), "Water the plants", false, null, "None", false, "", true,
+                    new DateTimeOffset(2026, 9, 2, 0, 0, 0, TimeSpan.Zero), [])
             ],
-            []);
+            [],
+            "Łukasz");
 
     static SnapshotView SampleReferenceSnapshot() =>
         new(
