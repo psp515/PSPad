@@ -224,7 +224,7 @@ owner's; list-level commands (rename, delete, move, the sharing commands)
 stay owner-only through `TaskList.Require`. Every event's `UserId` is the
 aggregate's owner, `ActorId` is who actually acted. Sync widens to a membership set,
 with a `full=` backfill for a list a device does not yet hold — built in
-the next plan. An invite is a link token plus a 6-character code, live 30
+the next plan. An invite is a link token plus a 6-character code (A–Z, 0–9) carried in the link, live 30
 minutes from `TaskListShared`; five wrong codes close it and members never
 sync either secret — `adr/0057`. See `adr/0054`.
 
@@ -486,7 +486,7 @@ module, its two collections and TTL indexes, the owner's publish/revoke
 and list panel's Public snapshots section, the anonymous `/api/public`
 group, the public `/public/snapshot/{token}` page with an IndexedDB offline cache, and
 the signed-in `/snapshots` List snapshots tab are all in. `adr/0057`
-(an invite needs the link and a 6-character code, lives 30 minutes, closes
+(an invite is a link carrying a 6-character code, lives 30 minutes, closes
 after five wrong codes, and members never sync its secrets) is `Active`
 and built here too, amending `adr/0054`. Live push of a
 visitor's mark to the owner, instead of next sync, is issue #105, a

@@ -9,6 +9,6 @@ public static class InviteCode
         string.Concat(Enumerable.Range(0, InviteCodes.Length)
             .Select(_ => InviteCodes.Alphabet[RandomNumberGenerator.GetInt32(InviteCodes.Alphabet.Length)]));
 
-    public static string QrLinkFor(string baseUri, string token, string code) =>
+    public static string JoinLinkFor(string baseUri, string token, string code) =>
         $"{InviteToken.LinkFor(baseUri, token)}#code={code}";
 }

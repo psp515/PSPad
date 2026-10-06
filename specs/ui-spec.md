@@ -619,8 +619,8 @@ An invite is a link plus a 6-character code and lives 30 minutes
   `InviteCode`).
 - **Live:** chip "N min left" (re-rendered every 30 s), a
   `MudProgressLinear` and "Works until HH:mm" in the user's time zone, the
-  `QrCode` (carries link and code, `InviteCode.QrLinkFor`), the read-only
-  link field with **Copy** (the copied link carries no code), the code
+  `QrCode` of the join link, the read-only link field with **Copy** — both
+  carry the code (`InviteCode.JoinLinkFor`, `#code=` fragment) — the code
   (`InviteCodes.Format`, "K7M-4PX") in its own card with its own copy
   button, **New link** (confirmed — the old link stops, members stay) and
   **End link now** (`StopSharingTaskList`).
@@ -676,7 +676,7 @@ empty board reads "Nothing is shared with you right now." instead of "No
 lists yet."
 
 **`/join/{token}`** (`Pages/JoinPage.razor`, signed-in only) asks for the
-invite code. A `#code=` fragment (from the QR) that is well-formed fills it
+invite code. A `#code=` fragment (from the shared link or QR) that is well-formed fills it
 in and joins at once; otherwise a card reads "Enter the invite code" with a
 monospace code `MudTextField` and **Join list**, enabled once the code is
 well-formed. Outcomes: success triggers a sync and navigates to

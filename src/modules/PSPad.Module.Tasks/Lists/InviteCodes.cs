@@ -2,7 +2,7 @@ namespace PSPad.Module.Tasks.Lists;
 
 public static class InviteCodes
 {
-    public const string Alphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+    public const string Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     public const int Length = 6;
 
     public static string Normalize(string? input) =>

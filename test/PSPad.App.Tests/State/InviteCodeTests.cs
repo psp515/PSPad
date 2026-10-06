@@ -17,6 +17,6 @@ public class InviteCodeTests
     }
 
     [Fact]
-    public void TheQrLinkCarriesTheCodeInTheFragment() =>
-        Assert.Equal("https://pspad.home/join/tok#code=K7M4PX", InviteCode.QrLinkFor("https://pspad.home/", "tok", "K7M4PX"));
+    public void TheJoinLinkCarriesTheCodeInTheFragment() =>
+        Assert.Equal("https://pspad.home/join/tok#code=K7M4PX", InviteCode.JoinLinkFor("https://pspad.home/", "tok", "K7M4PX"));
 }

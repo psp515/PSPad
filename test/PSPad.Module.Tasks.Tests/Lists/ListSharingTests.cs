@@ -163,7 +163,7 @@ public class ListSharingTests
     [Fact]
     public void AMalformedCodeIsRejected() =>
         Assert.Throws<DomainRejectedException>(() =>
-            TaskList.Decide(Existing(), new ShareTaskList(Guid.NewGuid(), Owner, ListId, Token, "OOOOOO", "Ł"), Now));
+            TaskList.Decide(Existing(), new ShareTaskList(Guid.NewGuid(), Owner, ListId, Token, "K7M4P!", "Ł"), Now));
 
     [Fact]
     public void ANewLinkRestartsTheClockAndClearsWrongCodes()

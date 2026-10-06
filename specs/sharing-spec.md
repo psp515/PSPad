@@ -9,8 +9,8 @@ Two features, one spec, because both start from the same list panel and both
 end in the same drawer:
 
 1. **Member sharing (#103).** The owner makes an invite: a link plus a
-   6-character code, passed separately, alive for 30 minutes. A signed-in
-   person who opens the link and enters the code becomes a member: the list
+   6-character code carried inside the link (and its QR code), alive for 30
+   minutes. A signed-in person who opens the link becomes a member at once: the list
    syncs to them, works offline, and they edit its content as freely as the
    owner. Five wrong codes close the invite. The owner makes a new invite,
    ends it, or removes a member at any time; a member can leave.
@@ -209,7 +209,7 @@ and its live children. The joining device writes them into its replica at
 once.
 
 The client route `/join/{token}` requires sign-in (returning to the same URL
-after it), asks for the code (pre-filled from a QR's `#code=` fragment),
+after it), asks for the code (pre-filled from the link's or QR's `#code=` fragment),
 calls the endpoint, and navigates to the list. Offline it shows "Joining
 needs a connection" and a retry. A bad link or code shows "That link or
 code doesn't work."; an expired invite "This invite has expired"; a `429`

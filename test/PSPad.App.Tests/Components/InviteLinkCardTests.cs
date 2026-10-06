@@ -70,7 +70,7 @@ public class InviteLinkCardTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ALiveInviteShowsTheCodeAndAPlainLink()
+    public void TheSharedLinkCarriesTheCode()
     {
         var list = Share(NewList(User), Midnight);
         AppTestHost.Arrange(this, User, Today, list);
@@ -78,7 +78,7 @@ public class InviteLinkCardTests : Bunit.TestContext
         var card = RenderCard(list);
 
         Assert.Contains("K7M-4PX", card.Find(".pspad-invite-code").TextContent);
-        Assert.DoesNotContain("#code=", card.Find(".pspad-share-link input").GetAttribute("value"));
+        Assert.EndsWith("#code=K7M4PX", card.Find(".pspad-share-link input").GetAttribute("value"));
     }
 
     [Fact]

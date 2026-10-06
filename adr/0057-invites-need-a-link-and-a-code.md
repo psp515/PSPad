@@ -1,7 +1,7 @@
 ---
 title: Invites need a link and a code, and expire after 30 minutes
 tags: [security, domain, sync]
-date: 2026-10-05
+date: 2026-10-05 (revised 2026-10-07: link carries the code; A–Z 0–9)
 status: Active — Amends ADR-0054
 ---
 
@@ -15,11 +15,12 @@ the link is not the threat; a forwarded link is.
 
 ## Decision
 
-Every invite carries the link token and a 6-character code from a 31-symbol
-alphabet (no 0, O, 1, I, L), both chosen client-side — the sharing command
-stays offline-capable, like the token — and validated in the aggregate. The QR
-code embeds both (`#code=` fragment, so the code never reaches a server log);
-a copied link does not.
+Every invite carries the link token and a 6-character code of capital
+letters A–Z and digits 0–9, both chosen client-side — the sharing command
+stays offline-capable, like the token — and validated in the aggregate. The
+shared link and the QR code both carry the code in a `#code=` fragment, so it
+never reaches a server log and the person opening it joins without typing
+anything; the code is also shown on its own for typing in by hand.
 
 The invite lives 30 minutes from `TaskListShared`. Five wrong codes close it:
 `InviteCodeRejected` is committed rather than rejected so the count survives,
@@ -35,12 +36,17 @@ expiry and can never be joined: it answers the uniform 404, not 410.
 - **Owner approval of join requests** — more state and a pending-request UI;
   deferred.
 - **Link-only with a rate limit** — a forwarded link still works.
+- **Code passed separately from the link** (this ADR's first version) — the
+  owner chose one-step joining over the second factor; revised before merge.
 - **Longer numeric codes** — worse to read aloud and type.
 
 ## Consequences
 
-The owner has to pass the code separately from the link. Anyone holding the
-link can burn the invite with five guesses, and the owner makes a new one. A
+Because the link carries the code, a forwarded link joins anyone who opens
+it within the 30 minutes: the short life, **End link now** and removing a
+member are the guards, not the code. The code still bounds guessing at a
+bare `/join/{token}` URL. Anyone holding a bare link can burn the invite with
+five guesses, and the owner makes a new one. A
 QR scan that goes through the login redirect may lose the fragment and fall
 back to typing the code. Old `TaskListShared` events deserialise with an empty
 code and therefore never open.

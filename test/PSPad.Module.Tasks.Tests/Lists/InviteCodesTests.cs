@@ -16,9 +16,11 @@ public class InviteCodesTests
     [Theory]
     [InlineData("K7M4PX", true)]
     [InlineData("K7M4P", false)]
-    [InlineData("K7M4P0", false)]
-    [InlineData("K7M4PI", false)]
-    public void OnlySixAlphabetCharactersAreWellFormed(string code, bool expected) =>
+    [InlineData("K7M4P0", true)]
+    [InlineData("O01ILZ", true)]
+    [InlineData("K7M4P!", false)]
+    [InlineData("K7M4PÄ", false)]
+    public void OnlySixUppercaseLettersOrDigitsAreWellFormed(string code, bool expected) =>
         Assert.Equal(expected, InviteCodes.IsWellFormed(code));
 
     [Fact]
