@@ -51,7 +51,7 @@ public class PageHeadingTests : Bunit.TestContext
     }
 
     [Fact]
-    public void PhoneShowsTheStampAsTextOnly()
+    public void PhoneShowsTheStampAndAButtonOnlyForAMouse()
     {
         AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
 
@@ -60,7 +60,9 @@ public class PageHeadingTests : Bunit.TestContext
         var line = heading.Find(".pspad-sync-line");
         Assert.Contains("d-md-none", line.ClassList);
         Assert.NotEmpty(line.QuerySelectorAll(".pspad-sync-stamp"));
-        Assert.Empty(line.QuerySelectorAll(".pspad-sync-button"));
+        var button = line.QuerySelector(".pspad-fine-pointer-only .pspad-sync-button");
+        Assert.NotNull(button);
+        Assert.Single(line.QuerySelectorAll(".pspad-sync-button"));
     }
 
     [Fact]
