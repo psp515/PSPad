@@ -1,0 +1,78 @@
+@using Microsoft.JSInterop
+@using PSPad.App.Sync
+@inject ISyncTrigger Trigger
+@inject IConnectivity Connectivity
+@inject IJSRuntime Js
+@inject ILogger<PullToRefresh> Logger
+@implements IAsyncDisposable
+
+<div class="pspad-pull-indicator d-md-none" aria-hidden="true">
+    <MudIcon Icon="@Icons.Material.Filled.Sync" Color="Color.Primary" />
+</div>
+
+@code {
+    IJSObjectReference? _module;
+    IJSObjectReference? _listener;
+    DotNetObjectReference<PullToRefresh>? _reference;
+    bool _syncing;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            _module = await Js.InvokeAsync<IJSObjectReference>("import", "./js/pullrefresh.js");
+            _reference = DotNetObjectReference.Create(this);
+            _listener = await _module.InvokeAsync<IJSObjectReference>("attach", _reference);
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Pull to refresh unavailable");
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnPulled()
+    {
+        if (_syncing || !Connectivity.IsOnline)
+        {
+            return;
+        }
+
+        _syncing = true;
+        try
+        {
+            await Trigger.SyncNowAsync();
+        }
+        finally
+        {
+            _syncing = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_listener is not null)
+            {
+                await _listener.InvokeVoidAsync("dispose");
+                await _listener.DisposeAsync();
+            }
+
+            if (_module is not null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+
+        _reference?.Dispose();
+    }
+}

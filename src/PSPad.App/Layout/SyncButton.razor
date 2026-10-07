@@ -1,0 +1,44 @@
+@using PSPad.App.Sync
+@inject ISyncTrigger Trigger
+@inject IConnectivity Connectivity
+@implements IDisposable
+
+@if (AsNavRow)
+{
+    <MudNavLink Class="pspad-sync-button" Icon="@Icons.Material.Filled.Sync" Disabled="@Blocked" OnClick="@SyncAsync">
+        Sync now
+    </MudNavLink>
+}
+else
+{
+    <MudIconButton Class="@(_syncing ? "pspad-sync-button pspad-spin" : "pspad-sync-button")"
+                   Icon="@Icons.Material.Filled.Sync" Disabled="@Blocked" OnClick="@SyncAsync"
+                   aria-label="Sync now" />
+}
+
+@code {
+    [Parameter] public bool AsNavRow { get; set; }
+
+    bool _syncing;
+
+    bool Blocked => _syncing || !Connectivity.IsOnline;
+
+    protected override void OnInitialized() => Connectivity.Changed += OnConnectivityChanged;
+
+    void OnConnectivityChanged() => InvokeAsync(StateHasChanged);
+
+    async Task SyncAsync()
+    {
+        _syncing = true;
+        try
+        {
+            await Trigger.SyncNowAsync();
+        }
+        finally
+        {
+            _syncing = false;
+        }
+    }
+
+    public void Dispose() => Connectivity.Changed -= OnConnectivityChanged;
+}
