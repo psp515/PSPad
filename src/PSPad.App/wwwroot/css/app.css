@@ -832,25 +832,3 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-snapshot-step-done {
     margin: 0 9px;
 }
-
-.pspad-pull-indicator {
-  position: fixed;
-  top: calc(var(--mud-appbar-height, 56px) + 8px);
-  left: 50%;
-  z-index: 1300;
-  opacity: 0;
-  transform: translate(-50%, 0);
-  pointer-events: none;
-  background: var(--mud-palette-surface);
-  border-radius: 50%;
-  padding: 6px;
-  box-shadow: var(--mud-elevation-4);
-}
-
-.pspad-spin .mud-icon-root {
-  animation: pspad-spin 1s linear infinite;
-}
-
-@keyframes pspad-spin {
-  to { transform: rotate(360deg); }
-}
