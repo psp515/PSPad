@@ -30,7 +30,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         var (pushed, rejections) = await PushAsync();
         var pulled = await PullAsync(ct);
 
-        return new SyncOutcome(pushed, pulled, rejections);
+        return new SyncOutcome(pushed, pulled ?? 0, rejections, pulled is not null);
     }
 
     async Task<(int Pushed, IReadOnlyList<string> Rejections)> PushAsync()
@@ -68,7 +68,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
     public static string CollectionsFingerprint { get; } =
         string.Join(",", Collections.Keys.OrderBy(key => key, StringComparer.Ordinal));
 
-    async Task<int> PullAsync(CancellationToken ct)
+    async Task<int?> PullAsync(CancellationToken ct)
     {
         var storedFingerprint = await replica.CollectionsFingerprintAsync();
 
@@ -79,7 +79,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
 
         if (response is null)
         {
-            return 0;
+            return null;
         }
 
         var pulled = await SaveAsync(response.Documents);

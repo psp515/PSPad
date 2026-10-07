@@ -854,3 +854,7 @@ button.pspad-heatmap-cell:focus-visible {
 @keyframes pspad-spin {
   to { transform: rotate(360deg); }
 }
+
+.pspad-sync-line {
+  margin-top: -8px;
+}

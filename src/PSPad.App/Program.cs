@@ -106,6 +106,7 @@ builder.Services.AddScoped<IAppUpdates, BrowserAppUpdates>();
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<SyncCoordinator>();
 builder.Services.AddScoped<ISyncTrigger>(sp => sp.GetRequiredService<SyncCoordinator>());
+builder.Services.AddScoped<ISyncStatus>(sp => sp.GetRequiredService<SyncCoordinator>());
 
 var host = builder.Build();
 var bootLogger = host.Services.GetRequiredService<ILogger<Program>>();

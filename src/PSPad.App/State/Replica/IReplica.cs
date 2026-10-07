@@ -21,6 +21,10 @@ public interface IReplica
 
     Task SetCollectionsFingerprintAsync(string fingerprint);
 
+    Task<DateTimeOffset?> LastSyncedAtAsync();
+
+    Task SetLastSyncedAtAsync(DateTimeOffset at);
+
     Task<Guid?> OwnerAsync();
 
     Task SetOwnerAsync(Guid userId);

@@ -56,11 +56,23 @@ public class SyncButtonTests : Bunit.TestContext
         button.WaitForAssertion(() => Assert.False(button.Find(".pspad-sync-button").HasAttribute("disabled")));
     }
 
-    IRenderedComponent<SyncButton> RenderButton()
+    [Fact]
+    public void TheLabelledFormSaysSyncNowAndRunsOneSync()
+    {
+        var button = RenderButton(labeled: true);
+
+        Assert.Contains("Sync now", button.Find(".pspad-sync-button").TextContent);
+        button.Find(".pspad-sync-button").Click();
+
+        Assert.Equal(1, _trigger.Calls);
+    }
+
+    IRenderedComponent<SyncButton> RenderButton(bool labeled = false)
     {
         AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
         Services.AddSingleton<ISyncTrigger>(_trigger);
+        Services.AddSingleton<ISyncStatus>(_trigger);
         Services.AddSingleton<IConnectivity>(_connectivity);
-        return Render<SyncButton>();
+        return Render<SyncButton>(parameters => parameters.Add(p => p.Labeled, labeled));
     }
 }

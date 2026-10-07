@@ -51,6 +51,7 @@ public class PullToRefreshTests : Bunit.TestContext
     {
         AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
         Services.AddSingleton<ISyncTrigger>(_trigger);
+        Services.AddSingleton<ISyncStatus>(_trigger);
         Services.AddSingleton<IConnectivity>(_connectivity);
         return Render<PullToRefresh>();
     }

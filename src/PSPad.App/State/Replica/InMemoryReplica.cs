@@ -8,6 +8,7 @@ public sealed class InMemoryReplica : IReplica
     long _marker;
     Guid? _owner;
     string? _collectionsFingerprint;
+    DateTimeOffset? _lastSyncedAt;
 
     public Task<T?> LoadAsync<T>(Guid id) where T : Aggregate =>
         Task.FromResult(_documents.GetValueOrDefault(id) as T);
@@ -43,6 +44,14 @@ public sealed class InMemoryReplica : IReplica
         return Task.CompletedTask;
     }
 
+    public Task<DateTimeOffset?> LastSyncedAtAsync() => Task.FromResult(_lastSyncedAt);
+
+    public Task SetLastSyncedAtAsync(DateTimeOffset at)
+    {
+        _lastSyncedAt = at;
+        return Task.CompletedTask;
+    }
+
     public Task<Guid?> OwnerAsync() => Task.FromResult(_owner);
 
     public Task SetOwnerAsync(Guid userId)
@@ -57,6 +66,7 @@ public sealed class InMemoryReplica : IReplica
         _marker = 0;
         _owner = null;
         _collectionsFingerprint = null;
+        _lastSyncedAt = null;
         return Task.CompletedTask;
     }
 }

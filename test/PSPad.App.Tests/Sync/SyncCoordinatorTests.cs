@@ -103,6 +103,72 @@ public class SyncCoordinatorTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task ASyncThatReachesTheServerStampsTheTimeAndKeepsIt()
+    {
+        var replica = new InMemoryReplica();
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"), replica: replica);
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Equal(Noon, coordinator.LastSyncedAt);
+        Assert.Equal(Noon, await replica.LastSyncedAtAsync());
+    }
+
+    [Fact]
+    public async Task ASyncThatNeverReachedTheServerLeavesTheStampAlone()
+    {
+        var coordinator = CoordinatorFor(null);
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Null(coordinator.LastSyncedAt);
+    }
+
+    [Fact]
+    public async Task OfflineLeavesTheStampAlone()
+    {
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"), online: false);
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Null(coordinator.LastSyncedAt);
+    }
+
+    [Fact]
+    public async Task AColdStartReadsTheKeptStampBack()
+    {
+        var replica = new InMemoryReplica();
+        await replica.SetLastSyncedAtAsync(Noon.AddDays(-3));
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"), replica: replica);
+
+        await coordinator.LoadLastSyncedAtAsync();
+
+        Assert.Equal(Noon.AddDays(-3), coordinator.LastSyncedAt);
+    }
+
+    [Fact]
+    public async Task ItIsSyncingOnlyWhileARunIsInFlight()
+    {
+        Services.AddMudServices();
+        var outbox = new InMemoryOutbox();
+        var api = new GatedApi(AnAreaCalled("Dom"));
+        var replica = new InMemoryReplica();
+        var coordinator = new SyncCoordinator(
+            new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
+            Services.GetRequiredService<ISnackbar>(), replica, new StoppedClock(Noon));
+        var changes = 0;
+        coordinator.Changed += () => changes++;
+
+        var run = coordinator.SyncNowAsync();
+
+        Assert.True(coordinator.IsSyncing);
+        api.Release();
+        await run;
+        Assert.False(coordinator.IsSyncing);
+        Assert.True(changes >= 2);
+    }
+
+    [Fact]
     public async Task OverlappingCallsShareOneRunAndQueueExactlyOneFollowUpPass()
     {
         // CommandSender will call this after every command; two commands queued in quick
@@ -116,7 +182,9 @@ public class SyncCoordinatorTests : Bunit.TestContext
             new SyncService(api, new InMemoryReplica(), outbox),
             new FixedConnectivity(true),
             outbox,
-            Services.GetRequiredService<ISnackbar>());
+            Services.GetRequiredService<ISnackbar>(),
+            new InMemoryReplica(),
+            new StoppedClock(Noon));
 
         var first = coordinator.SyncNowAsync();
         var second = coordinator.SyncNowAsync();
@@ -149,28 +217,37 @@ public class SyncCoordinatorTests : Bunit.TestContext
             []);
     }
 
-    SyncCoordinator CoordinatorFor(SyncResponse pull, bool online = true)
+    SyncCoordinator CoordinatorFor(SyncResponse? pull, bool online = true, InMemoryReplica? replica = null)
     {
         Services.AddMudServices();
 
-        var replica = new InMemoryReplica();
+        replica ??= new InMemoryReplica();
         var outbox = new InMemoryOutbox();
 
         return new SyncCoordinator(
             new SyncService(new FakeApi(pull), replica, outbox),
             new FixedConnectivity(online),
             outbox,
-            Services.GetRequiredService<ISnackbar>());
+            Services.GetRequiredService<ISnackbar>(),
+            replica,
+            new StoppedClock(Noon));
     }
 
-    sealed class FakeApi(SyncResponse pull) : ISyncApi
+    static readonly DateTimeOffset Noon = new(2026, 10, 7, 12, 0, 0, TimeSpan.Zero);
+
+    sealed class StoppedClock(DateTimeOffset now) : PSPad.Abstractions.IClock
+    {
+        public DateTimeOffset UtcNow => now;
+    }
+
+    sealed class FakeApi(SyncResponse? pull) : ISyncApi
     {
         public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
             Task.FromResult<IReadOnlyList<CommandResponse>>(
                 [.. envelopes.Select(_ => new CommandResponse(Guid.NewGuid(), true, null))]);
 
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
-            Task.FromResult<SyncResponse?>(pull);
+            Task.FromResult(pull);
 
         public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
     }

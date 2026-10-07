@@ -39,6 +39,31 @@ public class PageHeadingTests : Bunit.TestContext
     }
 
     [Fact]
+    public void DesktopShowsTheStampWithARefreshButtonOnTheRight()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var heading = Render<PageHeading>(parameters => parameters.Add(p => p.Title, "Inbox"));
+
+        var block = heading.Find(".pspad-page-heading");
+        Assert.NotEmpty(block.QuerySelectorAll(".pspad-sync-stamp"));
+        Assert.NotEmpty(block.QuerySelectorAll(".pspad-sync-button"));
+    }
+
+    [Fact]
+    public void PhoneShowsTheStampAsTextOnly()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var heading = Render<PageHeading>(parameters => parameters.Add(p => p.Title, "Inbox"));
+
+        var line = heading.Find(".pspad-sync-line");
+        Assert.Contains("d-md-none", line.ClassList);
+        Assert.NotEmpty(line.QuerySelectorAll(".pspad-sync-stamp"));
+        Assert.Empty(line.QuerySelectorAll(".pspad-sync-button"));
+    }
+
+    [Fact]
     public void ABackLinkKeepsItsClassAndLabel()
     {
         AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));

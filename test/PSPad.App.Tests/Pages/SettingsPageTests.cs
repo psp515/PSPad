@@ -109,6 +109,42 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheSyncSectionSaysWhenItLastSynced()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger { LastSyncedAt = new DateTimeOffset(2026, 3, 9, 23, 58, 0, TimeSpan.Zero) };
+        Services.AddSingleton<ISyncStatus>(sync);
+
+        var page = Render<SettingsPage>();
+
+        Assert.Contains("Last synced 2 min ago", page.Markup);
+    }
+
+    [Fact]
+    public void TheSyncSectionSaysWhenNothingHasSyncedYet()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.Contains("Not synced yet", page.Markup);
+    }
+
+    [Fact]
+    public void TheSyncSectionHasASyncNowButtonThatRunsOneSync()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger();
+        Services.AddSingleton<ISyncTrigger>(sync);
+        Services.AddSingleton<ISyncStatus>(sync);
+
+        var page = Render<SettingsPage>();
+        page.Find(".pspad-sync-button").Click();
+
+        Assert.Equal(1, sync.Calls);
+    }
+
+    [Fact]
     public async Task ItShowsThePendingCommandCountFromTheOutboxRegardlessOfSyncCoordinatorState()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");

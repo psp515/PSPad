@@ -211,6 +211,10 @@ public class SyncRefreshTests : Bunit.TestContext
         public Task SetCollectionsFingerprintAsync(string fingerprint) =>
             inner.SetCollectionsFingerprintAsync(fingerprint);
 
+        public Task<DateTimeOffset?> LastSyncedAtAsync() => inner.LastSyncedAtAsync();
+
+        public Task SetLastSyncedAtAsync(DateTimeOffset at) => inner.SetLastSyncedAtAsync(at);
+
         public Task<Guid?> OwnerAsync() => inner.OwnerAsync();
 
         public Task SetOwnerAsync(Guid userId) => inner.SetOwnerAsync(userId);

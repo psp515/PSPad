@@ -73,6 +73,7 @@ public static class AppTestHost
         var syncTrigger = new NoOpSyncTrigger();
         context.Services.AddSingleton(services => new CommandSender(services, work, syncTrigger));
         context.Services.AddSingleton<ISyncTrigger>(syncTrigger);
+        context.Services.AddSingleton<ISyncStatus>(syncTrigger);
         context.Services.AddSingleton<ISnapshotCache>(new InMemorySnapshotCache());
         context.Services.AddSingleton(services =>
             new ReplicaOwnership(replica, outbox, statisticsCache, services.GetRequiredService<ISnapshotCache>()));
@@ -168,8 +169,16 @@ public static class AppTestHost
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
-    sealed class NoOpSyncTrigger : ISyncTrigger
+    sealed class NoOpSyncTrigger : ISyncTrigger, ISyncStatus
     {
+        public bool IsSyncing => false;
+
+        public DateTimeOffset? LastSyncedAt => null;
+
+#pragma warning disable CS0067
+        public event Action? Changed;
+#pragma warning restore CS0067
+
         public Task SyncNowAsync() => Task.CompletedTask;
     }
 

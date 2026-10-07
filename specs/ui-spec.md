@@ -234,17 +234,27 @@ before first paint.
 `MudAppBar`, left to right: a back `MudIconButton` (`ArrowBack`) when the
 current `PageHeading` set a `BackHref`; the page title (`Typo.h6`,
 `Color.Primary`, truncated with an ellipsis, optionally with a caption
-subtitle — a list screen shows its area's name); `ConnectionStatus`; `SyncButton` (a `Sync` icon
-button, spinning while a sync runs, disabled offline); a
+subtitle — a list screen shows its area's name); `ConnectionStatus`; a
 `MudAvatar` button that opens `AccountDrawer`. Title and subtitle come from
 `State/PageHeader.cs`, a scoped service `PageHeading` writes to on every
 parameter set, so the phone and desktop titles cannot drift.
 
-`SyncButton AsNavRow` is the desktop sidebar's "Sync now" row above Settings.
-Both call `ISyncTrigger.SyncNowAsync`. Below `md`, `Layout/PullToRefresh.razor`
-(mounted once in `AppShell`, `wwwroot/js/pullrefresh.js`) adds the pull gesture:
-dragging down 80px from the top of the page, with no panel, dialog or drawer
-open, runs the same sync; offline it does nothing.
+**Last updated.** `Components/PageHeading.razor` carries it on every screen with
+a heading. `Layout/SyncStamp.razor` is a caption — "Updated 2 min ago",
+"Updating…" while a sync runs, "Offline · updated 3 days ago" (warning colour),
+"Not synced yet" — whose `title` holds the exact local time; it re-reads every
+30 seconds. From `md` up it sits right-aligned in the heading beside
+`Layout/SyncButton.razor` (a small `Sync` `MudIconButton`, spinning while a
+sync runs, disabled offline). Below `md` it is the same text alone, in a
+right-aligned `pspad-sync-line` under the top bar, with no button. The time
+comes from `ISyncStatus.LastSyncedAt` (`SyncCoordinator`), set only when a
+sync reached the server and kept in the replica's `meta` store so a cold,
+offline start still shows it; `ClearAsync` purges it with the rest.
+Settings → Sync shows "Last synced …" and a labelled `SyncButton` ("Sync now").
+Below `md`, `Layout/PullToRefresh.razor` (mounted once in `AppShell`,
+`wwwroot/js/pullrefresh.js`) is the refresh path: dragging down 80px from the
+top of the page, with no panel, dialog or drawer open, runs the same sync;
+offline it does nothing. Both call `ISyncTrigger.SyncNowAsync`.
 
 Below `md`, `Layout/BottomNav.razor` is a `MudAppBar Bottom="true"` with
 five equal slots — Inbox, Areas, My Day, Goals, Statistics — My Day raised

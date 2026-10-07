@@ -1,44 +1,39 @@
 @using PSPad.App.Sync
 @inject ISyncTrigger Trigger
+@inject ISyncStatus Status
 @inject IConnectivity Connectivity
 @implements IDisposable
 
-@if (AsNavRow)
+@if (Labeled)
 {
-    <MudNavLink Class="pspad-sync-button" Icon="@Icons.Material.Filled.Sync" Disabled="@Blocked" OnClick="@SyncAsync">
+    <MudButton Class="pspad-sync-button" Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Sync" Disabled="@Blocked" OnClick="@Trigger.SyncNowAsync">
         Sync now
-    </MudNavLink>
+    </MudButton>
 }
 else
 {
-    <MudIconButton Class="@(_syncing ? "pspad-sync-button pspad-spin" : "pspad-sync-button")"
-                   Icon="@Icons.Material.Filled.Sync" Disabled="@Blocked" OnClick="@SyncAsync"
-                   aria-label="Sync now" />
+    <MudIconButton Class="@(Status.IsSyncing ? "pspad-sync-button pspad-spin" : "pspad-sync-button")"
+                   Icon="@Icons.Material.Filled.Sync" Color="Color.Primary" Size="Size.Small" Disabled="@Blocked"
+                   OnClick="@Trigger.SyncNowAsync" aria-label="Sync now" />
 }
 
 @code {
-    [Parameter] public bool AsNavRow { get; set; }
+    [Parameter] public bool Labeled { get; set; }
 
-    bool _syncing;
+    bool Blocked => Status.IsSyncing || !Connectivity.IsOnline;
 
-    bool Blocked => _syncing || !Connectivity.IsOnline;
-
-    protected override void OnInitialized() => Connectivity.Changed += OnConnectivityChanged;
-
-    void OnConnectivityChanged() => InvokeAsync(StateHasChanged);
-
-    async Task SyncAsync()
+    protected override void OnInitialized()
     {
-        _syncing = true;
-        try
-        {
-            await Trigger.SyncNowAsync();
-        }
-        finally
-        {
-            _syncing = false;
-        }
+        Status.Changed += OnChanged;
+        Connectivity.Changed += OnChanged;
     }
 
-    public void Dispose() => Connectivity.Changed -= OnConnectivityChanged;
+    void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Status.Changed -= OnChanged;
+        Connectivity.Changed -= OnChanged;
+    }
 }

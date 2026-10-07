@@ -20,6 +20,7 @@
 @inject LocalSignOut SignOut
 @inject NavigationManager Navigation
 @inject IClock Clock
+@inject ISyncStatus SyncStatus
 @inject IDialogService Dialogs
 @inject LocalAccountDeletion AccountDeletion
 @implements IDisposable
@@ -79,6 +80,8 @@
             <MudText Typo="Typo.body2">
                 @(_pendingCommands == 0 ? "Everything is synced." : $"{_pendingCommands} pending")
             </MudText>
+            <MudText Typo="Typo.caption" Class="d-block mb-3 pspad-muted">@LastSyncedText</MudText>
+            <SyncButton Labeled="true" />
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -106,9 +109,14 @@
     static readonly string[] TimeZoneIds =
         TimeZoneInfo.GetSystemTimeZones().Select(zone => zone.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray();
 
+    string LastSyncedText => SyncStatus.LastSyncedAt is { } at
+        ? $"Last synced {RelativeTime.Describe(at, Clock.UtcNow)}"
+        : "Not synced yet";
+
     protected override async Task OnInitializedAsync()
     {
         Sender.Sent += OnCommandSent;
+        SyncStatus.Changed += OnSyncChanged;
         await RefreshPendingAsync();
     }
 
@@ -119,6 +127,8 @@
     }
 
     void OnCommandSent() => InvokeAsync(RefreshPendingAsync);
+
+    void OnSyncChanged() => InvokeAsync(StateHasChanged);
 
     async Task SignOutAsync()
     {
@@ -143,7 +153,11 @@
             forceLoad: true);
     }
 
-    public void Dispose() => Sender.Sent -= OnCommandSent;
+    public void Dispose()
+    {
+        Sender.Sent -= OnCommandSent;
+        SyncStatus.Changed -= OnSyncChanged;
+    }
 
     public async Task ApplyTimeZoneAsync(string timeZone)
     {

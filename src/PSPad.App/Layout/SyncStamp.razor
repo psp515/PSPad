@@ -1,0 +1,57 @@
+@using System.Globalization
+@using PSPad.Abstractions
+@using PSPad.App.Sync
+@inject ISyncStatus Status
+@inject IConnectivity Connectivity
+@inject IClock Clock
+@implements IDisposable
+
+<MudText Typo="Typo.caption" Class="pspad-sync-stamp pspad-muted" Color="@(Offline ? Color.Warning : Color.Default)"
+         title="@Exact">
+    @Text
+</MudText>
+
+@code {
+    static readonly TimeSpan Tick = TimeSpan.FromSeconds(30);
+
+    Timer? _timer;
+
+    bool Offline => !Connectivity.IsOnline;
+
+    string? Exact => Status.LastSyncedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+
+    string Text
+    {
+        get
+        {
+            if (Status.IsSyncing)
+            {
+                return "Updating…";
+            }
+
+            if (Status.LastSyncedAt is not { } at)
+            {
+                return Offline ? "Offline" : "Not synced yet";
+            }
+
+            var ago = RelativeTime.Describe(at, Clock.UtcNow);
+            return Offline ? $"Offline · updated {ago}" : $"Updated {ago}";
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Status.Changed += OnChanged;
+        Connectivity.Changed += OnChanged;
+        _timer = new Timer(_ => OnChanged(), null, Tick, Tick);
+    }
+
+    void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Status.Changed -= OnChanged;
+        Connectivity.Changed -= OnChanged;
+        _timer?.Dispose();
+    }
+}
