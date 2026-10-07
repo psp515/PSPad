@@ -44,12 +44,12 @@ public class SyncReaderMarkerTests(MongoFixture fixture)
 
         var reader = new SyncReader(context);
 
-        var first = await reader.ReadAsync(userId, 0, ct);
+        var first = await reader.ReadAsync(userId, 0, [], ct);
         Assert.True(
             first.Marker >= backfilledSeq,
             $"marker {first.Marker} should cover backfilled seq {backfilledSeq}");
 
-        var second = await reader.ReadAsync(userId, first.Marker, ct);
+        var second = await reader.ReadAsync(userId, first.Marker, [], ct);
         Assert.Empty(second.Documents["todotasks"]);
     }
 }

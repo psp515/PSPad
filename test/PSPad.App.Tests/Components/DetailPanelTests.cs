@@ -135,4 +135,18 @@ public class DetailPanelTests : Bunit.TestContext
 
         Assert.All(panel.FindAll("hr.mud-divider"), divider => Assert.Contains("flex-grow-0", divider.ClassName));
     }
+
+    [Fact]
+    public void ABackHandlerShowsABackArrow()
+    {
+        var backed = false;
+        var panel = Render<DetailPanel>(parameters => parameters
+            .Add(p => p.Open, true)
+            .Add(p => p.Title, "Members")
+            .Add(p => p.OnBack, () => { backed = true; }));
+
+        panel.Find(".pspad-panel-back").Click();
+        Assert.True(backed);
+        Assert.NotEmpty(panel.FindAll(".pspad-panel-close"));
+    }
 }

@@ -1,0 +1,235 @@
+@using System.Globalization
+@using PSPad.Abstractions
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Presentation.ListViews
+@using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Lists
+@inject IDocumentStore<TaskList> Lists
+@inject IDocumentStore<Area> Areas
+@inject IDocumentStore<ListView> ListViews
+@inject AppState State
+@inject CommandSender Sender
+@inject IDialogService Dialogs
+@inject NavigationManager Navigation
+@inject IClock Clock
+
+<div class="pspad-list-members d-flex flex-column gap-3">
+    @if (IsMine)
+    {
+        <InviteLinkCard List="@_list" Disabled="@Disabled" OnChanged="@ReloadAsync" />
+    }
+    else
+    {
+        <MudPaper Outlined="true" Class="pa-4 d-flex align-center gap-3">
+            <MudAvatar Color="Color.Primary">@AvatarColor.InitialsOf(_list.OwnerName)</MudAvatar>
+            <div class="flex-grow-1">
+                <MudText Typo="Typo.caption" Class="pspad-muted d-block">Shared by</MudText>
+                <MudText Typo="Typo.subtitle1" Class="pspad-share-owner">@_list.OwnerName</MudText>
+            </div>
+            <MudChip T="string" Class="ma-0" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">You can edit</MudChip>
+        </MudPaper>
+    }
+
+    <div>
+        <MudText Typo="Typo.overline" Class="pspad-muted d-block mb-1">@($"People · {_list.Members.Count + 1}")</MudText>
+        <MudPaper Outlined="true">
+            <MudList T="string" Class="pspad-share-members">
+                <MudListItem T="string" Class="pspad-share-owner-row">
+                    <div class="d-flex align-center gap-3">
+                        <MudAvatar Color="Color.Primary" Size="Size.Small">@AvatarColor.InitialsOf(IsMine ? State.DisplayName : _list.OwnerName)</MudAvatar>
+                        <MudText Typo="Typo.body2" Class="flex-grow-1">@(IsMine ? "You" : _list.OwnerName)</MudText>
+                        <MudChip T="string" Class="ma-0" Size="Size.Small">Owner</MudChip>
+                    </div>
+                </MudListItem>
+                @foreach (var member in _list.Members)
+                {
+                    <MudListItem T="string" @key="member.UserId" Class="pspad-share-member">
+                        <div class="d-flex align-center gap-3">
+                            <MudAvatar Size="Size.Small" Style="@($"background:{AvatarColor.For(member.UserId)};color:#fff")">
+                                @AvatarColor.InitialsOf(member.DisplayName)
+                            </MudAvatar>
+                            <div class="flex-grow-1">
+                                <MudText Typo="Typo.body2">@(member.UserId == State.UserId ? "You" : member.DisplayName)</MudText>
+                                @if (IsMine)
+                                {
+                                    <MudText Typo="Typo.caption" Class="pspad-muted">@($"Joined {member.JoinedAt.ToString("d MMM", CultureInfo.InvariantCulture)}")</MudText>
+                                }
+                            </div>
+                            @if (IsMine)
+                            {
+                                <MudIconButton Class="pspad-share-remove" Icon="@Icons.Material.Outlined.PersonRemove"
+                                               aria-label="@($"Remove {member.DisplayName}")" Disabled="@Disabled"
+                                               OnClick="@(() => RemoveMemberAsync(member))" />
+                            }
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        </MudPaper>
+        @if (!IsMine)
+        {
+            <MudText Typo="Typo.caption" Class="pspad-muted d-block mt-2">@($"Only {_list.OwnerName} can invite people.")</MudText>
+        }
+    </div>
+
+    @if (IsMine)
+    {
+        @if (_list.Members.Count > 0 || _list.IsInviteLiveAt(Clock.UtcNow))
+        {
+            <MudButton Class="pspad-share-stop align-self-start" Variant="Variant.Text" Color="Color.Error"
+                       Disabled="@Disabled" OnClick="@StopSharingAsync">
+                Stop sharing · remove everyone
+            </MudButton>
+        }
+    }
+    else
+    {
+        <MudSelect T="Guid?" Class="pspad-list-filed-area" Label="Show in my area" Variant="Variant.Outlined"
+                   Value="@_filedAreaId" ValueChanged="@FileUnderAsync" Disabled="@Disabled"
+                   ToStringFunc="@FiledAreaName" AnchorOrigin="Origin.BottomCenter">
+            <MudSelectItem T="Guid?" Value="@((Guid?)null)">@SharedWithMe.Name</MudSelectItem>
+            @foreach (var area in _areas)
+            {
+                <MudSelectItem T="Guid?" Value="@((Guid?)area.Id)">@area.Name</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudButton Class="pspad-share-leave align-self-start" Variant="Variant.Text" Color="Color.Error"
+                   StartIcon="@Icons.Material.Outlined.Logout" Disabled="@Disabled" OnClick="@LeaveAsync">
+            Leave list
+        </MudButton>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TaskList List { get; set; } = null!;
+
+    [Parameter] public bool IsMine { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    TaskList? _source;
+    TaskList _list = null!;
+    IReadOnlyList<Area> _areas = [];
+    Guid? _filedAreaId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ReferenceEquals(_source, List))
+        {
+            return;
+        }
+
+        _source = List;
+        _list = List;
+
+        if (IsMine)
+        {
+            return;
+        }
+
+        var areas = await Areas.LoadAllAsync(State.UserId, CancellationToken.None);
+        _areas = [.. areas.Where(area => !area.Deleted).OrderBy(area => area.Position)];
+        var view = await ListViews.LoadAsync(ListView.IdFor(State.UserId, _list.Id), CancellationToken.None);
+        _filedAreaId = view?.AreaId;
+    }
+
+    string FiledAreaName(Guid? areaId) =>
+        areaId is null ? SharedWithMe.Name : _areas.FirstOrDefault(area => area.Id == areaId)?.Name ?? "";
+
+    async Task FileUnderAsync(Guid? areaId)
+    {
+        if (Disabled || areaId == _filedAreaId)
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new PlaceList(Guid.NewGuid(), State.UserId, _list.Id, areaId));
+        _filedAreaId = areaId;
+    }
+
+    async Task StopSharingAsync()
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (!await ConfirmAsync(
+            "Stop sharing",
+            $"The invite link stops working and everyone else loses {_list.Name}.",
+            "Stop sharing"))
+        {
+            return;
+        }
+
+        if (_list.InviteToken is not null)
+        {
+            await Sender.SendAsync(new StopSharingTaskList(Guid.NewGuid(), State.UserId, _list.Id));
+        }
+
+        foreach (var member in _list.Members.ToList())
+        {
+            await Sender.SendAsync(new RemoveListMember(Guid.NewGuid(), State.UserId, _list.Id, member.UserId));
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task RemoveMemberAsync(ListMember member)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (!await ConfirmAsync(
+            "Remove member", $"Remove {member.DisplayName} from this list?", "Remove"))
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new RemoveListMember(Guid.NewGuid(), State.UserId, _list.Id, member.UserId));
+        await ReloadAsync();
+    }
+
+    async Task LeaveAsync()
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (!await ConfirmAsync(
+            "Leave list", $"Leave {_list.Name}? It disappears from your devices.", "Leave"))
+        {
+            return;
+        }
+
+        await Sender.SendAsync(new LeaveTaskList(Guid.NewGuid(), State.UserId, _list.Id));
+        Navigation.NavigateTo(AreaLinks.For(SharedWithMe.AreaId));
+    }
+
+    async Task<bool> ConfirmAsync(string title, string message, string confirmText)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, message },
+            { dialog => dialog.ConfirmText, confirmText }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(title, parameters);
+        var result = await dialog.Result;
+        return result is { Canceled: false };
+    }
+
+    async Task ReloadAsync()
+    {
+        var reloaded = await Lists.LoadAsync(_list.Id, CancellationToken.None);
+
+        if (reloaded is not null)
+        {
+            _list = reloaded;
+        }
+    }
+}

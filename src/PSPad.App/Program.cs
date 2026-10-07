@@ -66,6 +66,7 @@ builder.Services.AddScoped<ReplicaUnitOfWork>();
 builder.Services.AddScoped<IUnitOfWork>(services => services.GetRequiredService<ReplicaUnitOfWork>());
 builder.Services.AddSingleton<IClock, BrowserClock>();
 builder.Services.AddScoped<CommandSender>();
+builder.Services.AddScoped<ISnapshotCache, SnapshotCache>();
 builder.Services.AddScoped<ReplicaOwnership>();
 builder.Services.AddTransient<IViewport, BrowserViewport>();
 builder.Services.AddTransient<IBreakpoints, BrowserBreakpoints>();
@@ -82,6 +83,10 @@ builder.Services.AddHttpClient<PSPadApiClient>(client => client.BaseAddress = ne
     .AddHttpMessageHandler<SessionAuthorizationHandler>()
     .AddHttpMessageHandler(() => new StalledRequestHandler(stalledRequestLimit));
 
+builder.Services.AddHttpClient<PublicSnapshotsClient>(client => client.BaseAddress = new Uri(apiBaseAddress))
+    .AddHttpMessageHandler<ServerReachabilityHandler>()
+    .AddHttpMessageHandler(() => new StalledRequestHandler(stalledRequestLimit));
+
 // An unreachable server is a supported state here, not a fault worth a stack trace per request.
 builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
 
@@ -95,6 +100,7 @@ builder.Services.AddScoped<PageHeader>();
 builder.Services.AddScoped<StatisticsCache>();
 builder.Services.AddScoped<IStatisticsSource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
+builder.Services.AddScoped<ISnapshotsApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();
 builder.Services.AddScoped<IAppUpdates, BrowserAppUpdates>();
 builder.Services.AddScoped<SyncService>();

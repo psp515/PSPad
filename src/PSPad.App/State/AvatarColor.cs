@@ -26,4 +26,10 @@ public static class AvatarColor
 
         return trimmed.Length == 0 ? "?" : trimmed[..1].ToUpperInvariant();
     }
+
+    public static string InitialsOf(string? name)
+    {
+        var words = (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Length == 0 ? "?" : string.Concat(words.Take(2).Select(word => char.ToUpperInvariant(word[0])));
+    }
 }

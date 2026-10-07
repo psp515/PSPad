@@ -5,4 +5,8 @@ public interface IProjectionMarker
     Task<long> ReadAsync(CancellationToken ct);
 
     Task WriteAsync(long seq, CancellationToken ct);
+
+    Task<bool> IsBehindAsync(int version, CancellationToken ct);
+
+    Task AdoptVersionAsync(int version, CancellationToken ct);
 }

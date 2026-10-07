@@ -36,6 +36,18 @@ public class AccountDrawerTests : Bunit.TestContext
         Assert.Single(drawer.FindComponents<SidebarFooter>());
     }
 
+    [Fact]
+    public void ItCarriesTheListSnapshotsRowBeforeSettings()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var drawer = RenderOpen();
+
+        Assert.NotEmpty(drawer.FindAll("a[href='/snapshots']"));
+        var markup = drawer.Markup;
+        Assert.True(markup.IndexOf("/snapshots") < markup.IndexOf("/settings"));
+    }
+
     IRenderedComponent<AccountDrawer> RenderOpen() =>
         Render<AccountDrawer>(parameters => parameters
             .Add(p => p.Open, true)

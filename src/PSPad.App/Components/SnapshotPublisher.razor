@@ -1,0 +1,316 @@
+@using PSPad.Abstractions
+@using PSPad.App.Api
+@using PSPad.App.State
+@using PSPad.App.Sync
+@using PSPad.Contracts
+@using PSPad.Module.Tasks.Lists
+@inject ISnapshotsApi Snapshots
+@inject ISyncTrigger SyncTrigger
+@inject IConnectivity Connectivity
+@inject IClock Clock
+@inject AppState State
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject Clipboard Clipboard
+@inject NavigationManager Navigation
+
+<div class="d-flex flex-column gap-3 pspad-snapshot-publisher">
+    <MudPaper Outlined="true" Class="pa-4 d-flex flex-column gap-2">
+        <MudText Typo="Typo.body2" Class="pspad-muted">
+            A frozen copy of this list anyone can open without an account. Visitors can tick; you see their ticks here.
+        </MudText>
+        <MudText Typo="Typo.overline" Class="pspad-muted">Link works for</MudText>
+        <MudToggleGroup T="int" Value="@_selectedDays" ValueChanged="@SelectDays" Color="Color.Primary"
+                        Outlined="true" Disabled="@Disabled">
+            @foreach (var preset in Presets)
+            {
+                <MudToggleItem T="int" Value="@preset.Days" Text="@preset.Label" Class="pspad-snapshot-preset" />
+            }
+            <MudToggleItem T="int" Value="0" Text="Date…" Class="pspad-snapshot-preset-date" />
+        </MudToggleGroup>
+
+        @if (_selectedDays == 0)
+        {
+            <MudDatePicker Class="pspad-snapshot-date" Date="@_date" DateChanged="@DateChangedAsync"
+                           MaxDate="@MaxDate" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+        }
+
+        <MudButton Class="pspad-snapshot-publish" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   StartIcon="@Icons.Material.Filled.Upload"
+                   Disabled="@(Disabled || !Connectivity.IsOnline || _publishing || PlannedExpiry is null)"
+                   OnClick="@PublishAsync">
+            @PublishText
+        </MudButton>
+
+        @if (!Connectivity.IsOnline)
+        {
+            <MudText Typo="Typo.caption" Class="pspad-muted pspad-snapshot-offline">
+                Publishing needs a connection.
+            </MudText>
+        }
+    </MudPaper>
+
+    @if (_unreachable)
+    {
+        <div class="pspad-snapshot-unreachable">
+            <EmptyState Icon="@Icons.Material.Outlined.CloudOff" Message="Live links need a connection." />
+        </div>
+    }
+    else if (_snapshots.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="pspad-muted">No live links. Published copies show up here.</MudText>
+    }
+    else
+    {
+        <div>
+            <MudText Typo="Typo.overline" Class="pspad-muted">Live links · @_snapshots.Count</MudText>
+            <MudPaper Outlined="true">
+                @foreach (var snapshot in Newest)
+                {
+                    var expanded = _expanded == snapshot.Id;
+                    var daysLeft = DaysLeft(snapshot);
+                    <div @key="snapshot.Id" class="pa-3 pspad-snapshot">
+                        <div class="d-flex align-center gap-3">
+                            <div class="d-flex flex-column align-center pspad-snapshot-days">
+                                <MudText Typo="Typo.h6" Color="@(daysLeft.Urgent ? Color.Warning : Color.Primary)">@daysLeft.Text</MudText>
+                                <MudText Typo="Typo.caption" Class="pspad-muted">@(daysLeft.Text == "1" ? "day left" : "days left")</MudText>
+                            </div>
+                            <div class="flex-grow-1 d-flex flex-column gap-1">
+                                <MudText Typo="Typo.body1">Published @Local(snapshot.CreatedAt).ToString("d MMM")</MudText>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    @if (snapshot.Ticks > 0)
+                                    {
+                                        <MudChip T="string" Class="pspad-snapshot-ticks" Size="Size.Small" Variant="Variant.Text"
+                                                 Color="Color.Success">@snapshot.Ticks ticked</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Class="pspad-snapshot-ticks" Size="Size.Small" Variant="Variant.Text">No ticks yet</MudChip>
+                                    }
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@snapshot.Entries entries</MudChip>
+                                </div>
+                            </div>
+                            <MudIconButton Class="pspad-snapshot-qr-toggle" Icon="@Icons.Material.Outlined.QrCode2"
+                                           Size="Size.Small" aria-label="Show QR code" aria-expanded="@(expanded ? "true" : "false")"
+                                           OnClick="@(() => ToggleExpanded(snapshot.Id))" />
+                            <MudIconButton Class="pspad-snapshot-copy" Icon="@Icons.Material.Outlined.ContentCopy"
+                                           Size="Size.Small" aria-label="Copy link"
+                                           OnClick="@(() => CopyAsync(snapshot.Token))" />
+                        </div>
+
+                        @if (expanded)
+                        {
+                            var link = SnapshotLinks.For(Navigation.BaseUri, snapshot.Token);
+                            <div class="d-flex gap-3 align-center mt-3">
+                                <QrCode Value="@link" Size="120" Label="Snapshot link QR code" />
+                                <div class="d-flex flex-column gap-1 flex-grow-1">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                               OnClick="@(() => CopyAsync(snapshot.Token))">Copy link</MudButton>
+                                    <MudButton Class="pspad-snapshot-open" Variant="Variant.Outlined" Size="Size.Small"
+                                               Href="@link" Target="_blank">Open</MudButton>
+                                    <MudButton Class="pspad-snapshot-revoke" Variant="Variant.Text" Color="Color.Error"
+                                               Size="Size.Small" Disabled="@Disabled"
+                                               OnClick="@(() => RevokeAsync(snapshot))">Revoke</MudButton>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    @if (snapshot.Id != Newest[^1].Id)
+                    {
+                        <MudDivider />
+                    }
+                }
+            </MudPaper>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TaskList List { get; set; } = null!;
+
+    [Parameter] public bool Disabled { get; set; }
+
+    static readonly (string Label, int Days)[] Presets = [("1 day", 1), ("7 days", 7), ("30 days", 30)];
+
+    Guid? _listId;
+    IReadOnlyList<PublishedSnapshotView> _snapshots = [];
+    int _selectedDays = 7;
+    Guid? _expanded;
+    DateTime? _date;
+    bool _publishing;
+    bool _unreachable;
+
+    IReadOnlyList<PublishedSnapshotView> Newest => [.. _snapshots.OrderByDescending(snapshot => snapshot.CreatedAt)];
+
+    DateTimeOffset? PlannedExpiry => _selectedDays == 0
+        ? _date is { } date ? EndOfLocalDay(DateOnly.FromDateTime(date)) : null
+        : Clock.UtcNow.AddDays(_selectedDays);
+
+    string PublishText => (_selectedDays, _date) switch
+    {
+        (0, { } date) => $"Publish until {date:d MMM}",
+        (0, null) => "Pick a date",
+        _ => $"Publish until {Local(PlannedExpiry!.Value):d MMM}"
+    };
+
+    DateTime Local(DateTimeOffset moment) => TimeZoneInfo.ConvertTime(moment, LocalToday.Zone(State.TimeZone)).DateTime;
+
+    (string Text, bool Urgent) DaysLeft(PublishedSnapshotView snapshot)
+    {
+        var days = Math.Max(1, (int)Math.Ceiling((snapshot.ExpiresAt - Clock.UtcNow).TotalDays));
+        return (days.ToString(), days <= 1);
+    }
+
+    DateTime MaxDate => Clock.UtcNow.AddDays(365).DateTime;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_listId != List.Id)
+        {
+            await LoadAsync();
+        }
+    }
+
+    async Task LoadAsync()
+    {
+        _unreachable = true;
+        _snapshots = [];
+
+        if (!Connectivity.IsOnline)
+        {
+            return;
+        }
+
+        try
+        {
+            _snapshots = await Snapshots.ForListAsync(List.Id);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            return;
+        }
+
+        _listId = List.Id;
+        _unreachable = false;
+        _expanded = Newest.Count > 0 ? Newest[0].Id : null;
+    }
+
+    void SelectDays(int days)
+    {
+        if (!Disabled)
+        {
+            _selectedDays = days;
+        }
+    }
+
+    void ToggleExpanded(Guid id) => _expanded = _expanded == id ? null : id;
+
+    void DateChangedAsync(DateTime? date) => _date = date;
+
+    async Task PublishAsync()
+    {
+        if (Disabled || !Connectivity.IsOnline || _publishing || PlannedExpiry is null)
+        {
+            return;
+        }
+
+        _publishing = true;
+        try
+        {
+            await SyncTrigger.SyncNowAsync();
+
+            var published = await TryPublishAsync(PlannedExpiry!.Value);
+
+            if (published is null)
+            {
+                Snackbar.Add("Couldn't publish the snapshot.", Severity.Warning);
+                return;
+            }
+
+            if (_unreachable)
+            {
+                await LoadAsync();
+            }
+            else
+            {
+                _snapshots = [.. _snapshots, published];
+            }
+
+            _expanded = published.Id;
+            await Clipboard.CopyAsync(SnapshotLinks.For(Navigation.BaseUri, published.Token));
+            Snackbar.Add("Snapshot published. Link copied.", Severity.Success);
+        }
+        finally
+        {
+            _publishing = false;
+        }
+    }
+
+    async Task<PublishedSnapshotView?> TryPublishAsync(DateTimeOffset expiresAt)
+    {
+        try
+        {
+            return await Snapshots.PublishAsync(List.Id, expiresAt);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            return null;
+        }
+    }
+
+    DateTimeOffset EndOfLocalDay(DateOnly day)
+    {
+        var zone = LocalToday.Zone(State.TimeZone);
+        var nextLocalMidnight = DateTime.SpecifyKind(day.AddDays(1).ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
+        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(nextLocalMidnight, zone), TimeSpan.Zero);
+    }
+
+    async Task CopyAsync(string token)
+    {
+        var copied = await Clipboard.CopyAsync(SnapshotLinks.For(Navigation.BaseUri, token));
+        Snackbar.Add(
+            copied ? "Link copied." : "Could not copy — select the link instead.",
+            copied ? Severity.Success : Severity.Warning);
+    }
+
+    async Task RevokeAsync(PublishedSnapshotView snapshot)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, "Revoke this snapshot? The link stops working." },
+            { dialog => dialog.ConfirmText, "Revoke" }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Revoke snapshot", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        if (await TryRevokeAsync(snapshot.Id))
+        {
+            _snapshots = [.. _snapshots.Where(active => active.Id != snapshot.Id)];
+            return;
+        }
+
+        Snackbar.Add("Couldn't revoke the snapshot.", Severity.Warning);
+    }
+
+    async Task<bool> TryRevokeAsync(Guid snapshotId)
+    {
+        try
+        {
+            return await Snapshots.RevokeAsync(snapshotId);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            return false;
+        }
+    }
+}

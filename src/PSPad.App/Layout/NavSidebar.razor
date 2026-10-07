@@ -20,6 +20,9 @@
         <MudNavLink Href="/statistics" Icon="@Icons.Material.Filled.History">
             Statistics
         </MudNavLink>
+        <MudNavLink Href="/snapshots" Icon="@Icons.Material.Filled.Link">
+            List snapshots
+        </MudNavLink>
     </MudNavMenu>
 
     <MudDivider Class="my-2" Style="flex-grow:0" />
@@ -37,10 +40,17 @@
         {
             @foreach (var area in Areas.OrderBy(area => area.Position))
             {
-                <MudNavLink @key="area.Id" Href="@($"/areas/{area.Id}")" Icon="@Icons.Material.Filled.Folder">
+                <MudNavLink @key="area.Id" Href="@AreaLinks.For(area.Id)" Icon="@Icons.Material.Filled.Folder">
                     @area.Name
                 </MudNavLink>
             }
+        }
+
+        @if (HasShared)
+        {
+            <MudNavLink Href="@AreaLinks.For(SharedWithMe.AreaId)" Icon="@Icons.Material.Filled.People">
+                @SharedWithMe.Name
+            </MudNavLink>
         }
 
         <MudNavLink Icon="@Icons.Material.Filled.Add" Class="pspad-new-area"
@@ -69,6 +79,8 @@
     [Parameter] public IReadOnlyList<Area> Areas { get; set; } = [];
 
     [Parameter] public bool AreasLoaded { get; set; } = true;
+
+    [Parameter] public bool HasShared { get; set; }
 
     [Parameter] public bool Disabled { get; set; }
 

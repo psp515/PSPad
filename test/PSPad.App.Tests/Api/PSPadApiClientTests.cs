@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using PSPad.App.Api;
+using PSPad.App.Sync;
 using PSPad.Contracts;
 using PSPad.TestInfrastructure;
 
@@ -72,6 +74,48 @@ public class PSPadApiClientTests
         });
 
         Assert.Null(await client.DeleteAccountAsync());
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound, typeof(JoinOutcome.Invalid))]
+    [InlineData(HttpStatusCode.Gone, typeof(JoinOutcome.Expired))]
+    [InlineData(HttpStatusCode.TooManyRequests, typeof(JoinOutcome.TooManyTries))]
+    public async Task JoinAsyncMapsAFailedStatusToItsOutcome(HttpStatusCode status, Type outcome)
+    {
+        var client = new PSPadApiClient(new HttpClient(new DeleteAccountHandler(status, ""))
+        {
+            BaseAddress = new Uri("http://localhost")
+        });
+
+        Assert.IsType(outcome, await client.JoinAsync("token", "K7M4PX"));
+    }
+
+    [Fact]
+    public async Task JoinAsyncPostsTheCodeAndReturnsTheJoinedList()
+    {
+        var listId = Guid.NewGuid();
+        var handler = new JoinHandler(new JoinListResponse(listId, new Dictionary<string, JsonElement[]>()));
+        var client = new PSPadApiClient(new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost")
+        });
+
+        var outcome = await client.JoinAsync("token", "K7M4PX");
+
+        Assert.Equal(listId, Assert.IsType<JoinOutcome.Joined>(outcome).ListId);
+        Assert.Equal(new JoinListRequest("token", "K7M4PX"), handler.Request);
+    }
+
+    sealed class JoinHandler(JoinListResponse response) : HttpMessageHandler
+    {
+        public JoinListRequest? Request { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Request = await request.Content!.ReadFromJsonAsync<JoinListRequest>(cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(response) };
+        }
     }
 
     sealed class StubHandler : HttpMessageHandler

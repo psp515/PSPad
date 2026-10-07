@@ -9,11 +9,24 @@
     {
         <div class="d-flex flex-column" style="height:100%">
             <div class="d-flex align-center gap-2 px-2 py-3">
-                <MudIconButton Class="pspad-panel-close" Icon="@Icons.Material.Filled.Close"
-                               aria-label="Close" OnClick="@OnClose" />
+                @if (OnBack.HasDelegate)
+                {
+                    <MudIconButton Class="pspad-panel-back" Icon="@Icons.Material.Filled.ArrowBack"
+                                   aria-label="Back" OnClick="@OnBack" />
+                }
+                else
+                {
+                    <MudIconButton Class="pspad-panel-close" Icon="@Icons.Material.Filled.Close"
+                                   aria-label="Close" OnClick="@OnClose" />
+                }
                 <MudText Class="pspad-panel-title" Typo="@(TitleTypo ?? (_isDesktop ? Typo.h5 : Typo.h6))">@Title</MudText>
                 <MudSpacer />
                 @HeaderActions
+                @if (OnBack.HasDelegate)
+                {
+                    <MudIconButton Class="pspad-panel-close" Icon="@Icons.Material.Filled.Close"
+                                   aria-label="Close" OnClick="@OnClose" />
+                }
             </div>
 
             @if (Header is not null)
@@ -79,6 +92,8 @@
     [Parameter] public RenderFragment? Footer { get; set; }
 
     [Parameter] public EventCallback OnClose { get; set; }
+
+    [Parameter] public EventCallback OnBack { get; set; }
 
     [Parameter] public EventCallback OnSave { get; set; }
 

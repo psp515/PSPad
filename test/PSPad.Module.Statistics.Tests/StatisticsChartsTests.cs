@@ -22,10 +22,13 @@ public class StatisticsChartsTests
         DateOnly? dueOn = null,
         Guid? goalId = null,
         DateOnly? occurrenceDay = null,
-        DateTimeOffset? at = null) =>
+        DateTimeOffset? at = null,
+        RecordRole role = RecordRole.Owner) =>
         new()
         {
-            Id = id,
+            Id = StatisticsRecord.IdFor(id, User),
+            Seq = id,
+            Role = role,
             UserId = User,
             At = at ?? Midday(day),
             Kind = kind,
@@ -225,6 +228,18 @@ public class StatisticsChartsTests
     }
 
     [Fact]
+    public void OutstandingIgnoresActorRecords()
+    {
+        var series = StatisticsCharts.Outstanding(
+        [
+            Record(1, RecordKind.Created, Today, role: RecordRole.Actor),
+            Record(2, RecordKind.Created, Today, role: RecordRole.Owner)
+        ], Today, 1, Zone, Open());
+
+        Assert.Equal(1, series[^1].Count);
+    }
+
+    [Fact]
     public void ReopeningATaskPutsItBackOnTheOutstandingLine()
     {
         var task = Guid.NewGuid();
@@ -389,6 +404,23 @@ public class StatisticsChartsTests
         Assert.Equal(goal, bars[1].GoalId);
         Assert.Equal("Fitness", bars[1].Name);
         Assert.Equal(1, bars[1].Count);
+    }
+
+    [Fact]
+    public void ByGoalCountsOnlyTheOwnersOwnRecords()
+    {
+        var goal = Guid.NewGuid();
+
+        var bars = StatisticsCharts.ByGoal(
+        [
+            Record(1, RecordKind.Completed, Today, role: RecordRole.Actor),
+            Record(2, RecordKind.Completed, Today, goalId: goal, role: RecordRole.Owner)
+        ], [Goal(goal, "Fitness")]);
+
+        var noGoal = Assert.Single(bars, bar => bar.GoalId is null);
+        Assert.Equal(0, noGoal.Count);
+        var fitness = Assert.Single(bars, bar => bar.GoalId == goal);
+        Assert.Equal(1, fitness.Count);
     }
 
     [Fact]

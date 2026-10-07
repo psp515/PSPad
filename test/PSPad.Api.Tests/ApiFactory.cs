@@ -10,17 +10,29 @@ using PSPad.TestInfrastructure;
 
 namespace PSPad.Api.Tests;
 
-public sealed class ApiFactory(MongoFixture fixture, IKeycloakAdminClient? keycloakAdminClient = null)
+public sealed class ApiFactory(
+    MongoFixture fixture,
+    IKeycloakAdminClient? keycloakAdminClient = null,
+    IReadOnlyDictionary<string, string?>? configuration = null)
     : WebApplicationFactory<Program>
 {
     protected override IHost CreateHost(IHostBuilder builder)
     {
-        builder.ConfigureAppConfiguration(configuration =>
-            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        builder.ConfigureAppConfiguration(configurationBuilder =>
+        {
+            var settings = new Dictionary<string, string?>
             {
                 ["Mongo:ConnectionString"] = fixture.ConnectionString,
                 ["Mongo:Database"] = "pspad_test"
-            }));
+            };
+
+            foreach (var (key, value) in configuration ?? new Dictionary<string, string?>())
+            {
+                settings[key] = value;
+            }
+
+            configurationBuilder.AddInMemoryCollection(settings);
+        });
 
         return base.CreateHost(builder);
     }

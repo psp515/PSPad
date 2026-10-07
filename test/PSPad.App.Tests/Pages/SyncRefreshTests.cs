@@ -34,7 +34,13 @@ public class SyncRefreshTests : Bunit.TestContext
         // The statistics screen reads the server's projected records over plain REST, not the replica.
         typeof(StatisticsPage),
         // Search renders what the typed query last matched, not a standing view of the replica.
-        typeof(SearchPage)
+        typeof(SearchPage),
+        // JoinPage joins once and navigates away; it never settles into a standing replica view.
+        typeof(JoinPage),
+        // SnapshotPage renders a frozen server copy (or its own offline cache), never the replica.
+        typeof(SnapshotPage),
+        // SnapshotsPage lists the server's visit records (or its own offline cache), never the replica.
+        typeof(SnapshotsPage)
     ];
 
     public static TheoryData<Type> ReplicaBackedPages()
@@ -193,6 +199,8 @@ public class SyncRefreshTests : Bunit.TestContext
         }
 
         public Task SaveAsync(Aggregate aggregate) => inner.SaveAsync(aggregate);
+
+        public Task RemoveAsync(Guid id) => inner.RemoveAsync(id);
 
         public Task<long> MarkerAsync() => inner.MarkerAsync();
 

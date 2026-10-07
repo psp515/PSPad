@@ -579,6 +579,171 @@ never opens the item. The empty-list and delete-confirmation
 copy read "items" instead of "tasks" for a `Reference` list
 (`DeleteWarning`).
 
+**Sharing opens from the list panel's Details view as two nav rows.**
+`ListDetailPanel` shows the name, the kind label, the owner's **Area**
+`MudSelect`, then one `MudPaper` holding a `MudList` of rows: **Members**
+(secondary text "Only you", "Nobody joined yet", "N joined", or for an
+owner with a live invite "N joined · link M min left") and — owner only —
+**Public snapshots** (secondary text "None live", "1 live link", "N live
+links", or "Needs a connection" offline or when the request fails; the
+summary loads once per list and tolerates failure). A row navigates to
+`?view=members` or `?view=snapshots` (`ListPanelView`, `ListQuery`); the
+sub-view replaces the Details body, takes the row's name as its title and
+shows a back arrow (`DetailPanel.OnBack`) returning to `?view=`-less
+Details. A non-owner asking for `?view=snapshots` falls back to Details.
+On a phone the panel is full width, so each sub-view is its own full-screen
+page.
+
+**Members sub-view** (`Components/ListMembersView.razor`) branches on
+ownership.
+
+- **Owner.** `InviteLinkCard`, then **People · N** (owner plus members): a
+  `MudList` of rows with initials avatar (`AvatarColor`), "You" for the
+  owner, an **Owner** chip, and for each member their name, join date and a
+  remove icon (`PersonRemove`, confirmed via `ConfirmDialog`). **Stop
+  sharing · remove everyone** (confirmed) shows while there are members or a
+  live invite.
+- **Member.** A "Shared by {OwnerName}" card with a "You can edit" chip, the
+  same people list without remove icons and "Only {OwnerName} can invite
+  people.", the **Show in my area** `MudSelect` (filing, see below) and
+  **Leave list** (`Color.Error`, confirmed, sends `LeaveTaskList` and
+  navigates to "Shared with me"). A member never sees the invite link or
+  code — the server does not sync them.
+
+**`InviteLinkCard`** is a `MudPaper` titled "Invite link" with a state chip.
+An invite is a link plus a 6-character code and lives 30 minutes
+(`TaskList.InviteLife`). Four states:
+
+- **None** (never shared): "Only you use this list", explanation, **Create
+  invite link** (`ShareTaskList` with a fresh `InviteToken` and
+  `InviteCode`).
+- **Live:** chip "N min left" (re-rendered every 30 s), a
+  `MudProgressLinear` and "Works until HH:mm" in the user's time zone, the
+  `QrCode` of the join link, the read-only link field with **Copy** — both
+  carry the code (`InviteCode.JoinLinkFor`, `#code=` fragment) — the code
+  (`InviteCodes.Format`, "K7M-4PX") in its own card with its own copy
+  button, **New link** (confirmed — the old link stops, members stay) and
+  **End link now** (`StopSharingTaskList`).
+- **Expired:** chip "Expired HH:mm", an info alert that nobody can join with
+  the old link and code and the people already in stay, **Create link ·
+  30 min**.
+- **Closed:** chip "Closed", a warning alert that five wrong codes closed
+  the link, **Create link · 30 min**.
+
+Every action reloads the list from the replica so the card reflects the
+fresh token and code.
+
+**`QrCode`** renders a QR PNG (QRCoder, ECC level M) as a data URI in an
+`<img class="pspad-qr">` inside a `MudPaper` with a hard-coded white
+background, so the code stays dark on white in the dark theme too — a
+scanner needs the contrast.
+
+**A member's list panel hides owner-only controls; its own filing picker
+takes their place.** `ListDetailPanel`'s kind icon/label render for owner
+and member alike — only the owner's name field, **Area** `MudSelect` and
+**Delete list** check `IsMine` (the panel's own `_list.UserId ==
+State.UserId`, not `ListPlacement`). A member's **Show in my area**
+`MudSelect` (in the Members sub-view, not on Details) takes the owner's
+**Area** one's place: the member's own live
+areas plus "Shared with me" (`null`), sending `PlaceList` on change and
+preselecting whatever `ListView` already has on file for that
+`(user, list)`. `ListPage`'s FAB Menu drops **Edit list** / **Delete list**
+for a member, keeping **Add task**/**Add item**; `AreaBoard`'s FAB Menu
+carries only the area's own actions (New list, Edit area, Delete area) —
+it has no per-list items to drop. `ListCard`'s `⋯` menu (`ThingMenu`) keeps
+**Edit** for everyone — it opens the panel, which restricts itself — and
+drops only **Delete** for a list the viewer does not own (`OnDelete` left
+unbound). `TaskDetailPanel`'s goal row shows only when the open task is
+the viewer's own (`task.UserId == me`) — a member edits a shared task but
+never its owner's goal.
+
+**A shared list carries a marker wherever it is a card.** `ListCard` shows
+a `People` icon in its actions when `List.IsShared` (members or an active
+token), with a `MudTooltip` reading "Shared · N people" (one more than
+`Members.Count`, the owner included) or "Shared · 1 person" for a list with
+no joiners yet.
+
+**"Shared with me" is a virtual area, not an `Area` document.** A
+client-side constant (`State/SharedWithMe`, id
+`0000000a-0000-0000-0000-000000000001`) for member lists nobody has filed
+elsewhere (`ListPlacement`, `PlaceList`). It shows last: a `People`-icon
+row in the desktop sidebar after the user's own areas (`NavSidebar`), the
+last chip in the phone's `AreaChips`, and the areas index falls back to it
+when the user owns no area but has a shared list. Its board
+(`/areas/{SharedWithMe.AreaId}`, `AreaBoard`) is the same `MasonryGrid` as
+any area, but carries no FAB — a member cannot create a list here — and an
+empty board reads "Nothing is shared with you right now." instead of "No
+lists yet."
+
+**`/join/{token}`** (`Pages/JoinPage.razor`, signed-in only) asks for the
+invite code. A `#code=` fragment (from the shared link or QR) that is well-formed fills it
+in and joins at once; otherwise a card reads "Enter the invite code" with a
+monospace code `MudTextField` and **Join list**, enabled once the code is
+well-formed. Outcomes: success triggers a sync and navigates to
+`/lists/{listId}`; a wrong link or code shows an error alert "That link or
+code doesn't work." (one message for both — the server answers one 404);
+an expired invite replaces the card with `EmptyState` "This invite has
+expired" and "Invites work for 30 minutes."; too many tries (429) shows a
+warning alert "Too many tries. Wait a few minutes and try again."; offline
+shows `EmptyState` "Joining needs a connection." with "Try again".
+
+**Public snapshots are the owner-only `?view=snapshots` sub-view.**
+`Components/SnapshotPublisher.razor` offers expiry presets in a
+`MudToggleGroup` (1 day / 7 days / 30 days) plus a **Date…** item that
+opens a `MudDatePicker` capped at 365 days out; **Publish
+snapshot** flushes the outbox first (`ISyncTrigger.SyncNowAsync` — a
+snapshot is built from server state) and is disabled outright while
+offline, with a caption explaining why. A published snapshot copies its
+link to the clipboard and shows a success snackbar. Below, "Live links · N"
+lists each active snapshot: days left (warning colour when urgent),
+"Published {date}", chips "N ticked" / "No ticks yet" and "N entries", a
+copy button and a QR toggle that expands the `QrCode`, **Copy link**,
+**Open** and **Revoke** (`ConfirmDialog`, "The link stops working."); none
+live reads "No live links. Published copies show up here." A custom date resolves to
+the end of that day in the user's own time zone, not UTC midnight.
+
+**`SnapshotMarkChip`** — a small outlined `MudChip`, "Marked on a
+snapshot" — renders on a task, step or reference item's row and in its
+panel whenever it carries at least one snapshot mark. The panel offers
+**Dismiss**, sending `ClearTaskSnapshotMarks` or
+`ClearReferenceItemSnapshotMarks`; completing the task itself is a
+separate, deliberate action the chip never triggers.
+
+**`/public/snapshot/{token}`** (`Pages/SnapshotPage.razor`, `PublicLayout`,
+anonymous — outside `AppShell` like `/welcome`) is themed with the app's
+palette. A slim top bar (brand mark, **Log in** or **Open PSPad** depending
+on whether a local session exists); a hero `MudPaper` on `mud-theme-primary`
+with "Public snapshot · shared by {OwnerName}" (owner omitted when blank),
+the list's name, outlined chips "Copy from {date}" and "Link works until
+{date}", and "N of M ticked by visitors" over a `MudProgressLinear`; an info
+alert explaining that a tick is seen by everyone with the link and by the
+owner. A `Tasks` snapshot shows **To do · N** (each open task a `MudPaper`
+with its own `MudCheckBox`, star, due chip, a "ticked" chip, `MarkdownField`
+`ReadOnly` description and indented steps with their own checkboxes), then
+**Already done by {owner} · N** (struck-through names, no checkboxes); a
+`Reference` snapshot lists items with their checkbox, description and fields
+(`ReferenceFieldValue`). A footer reads "A read-only copy made with PSPad."
+with a "What is PSPad?" link to `/welcome`. Ticks are optimistic, reverting
+with a snackbar ("Couldn't save that tick. Try again.") on failure, and
+disabled while offline. An unknown or expired token renders one
+`EmptyState` ("This snapshot has expired or never existed.") with a link to
+`/welcome` — the two cases are deliberately indistinguishable. Offline with
+no cached copy shows a different `EmptyState` ("Connect to the internet to
+open this snapshot."); offline with a cached copy shows the snapshot behind
+a warning `MudAlert` ("Offline — showing the copy from {date}. Ticks are
+paused.") with every checkbox disabled. A signed-in visitor's open is
+recorded (`POST /api/me/snapshot-visits`) and the snapshot cached to
+IndexedDB for that offline path.
+
+**`/snapshots`** (`Pages/SnapshotsPage.razor`, signed-in) is **List
+snapshots**: a `MudList` of every snapshot the caller has opened, newest
+first, name plus "Expires {date} · Opened {date}", each row linking to
+`/public/snapshot/{token}`. An empty list shows `EmptyState` ("Snapshots you open while
+signed in show up here."). Online it reads `/api/me/snapshot-visits`;
+offline, or on request failure, it falls back to the IndexedDB cache,
+pruning expired entries from both sources before display. A sidebar row
+(desktop, after Statistics) and an `AccountDrawer` row (phone, before
+Settings) link here.
 
 **Inbox items use the same shell.** `Layout/InboxItemPanel.razor` is
 addressed as `?inbox=new` (the Inbox FAB or its empty state) or
@@ -760,7 +925,8 @@ wrapped in a `MudMenu`, both pinned with the `pspad-fab` CSS class. Built
 directly on each page, not through a shared component — each page's FAB is
 a handful of lines specific to that page's own actions:
 
-- **Zero actions** → no FAB.
+- **Zero actions** → no FAB — "Shared with me" is this case: a member
+  cannot create a list there.
 - **One action** → a plain `MudFab`, performing the action directly
   (typically opening a dialog).
 - **Two or more actions** → one `MudFab` opening a `MudMenu` ("FAB Menu")
@@ -776,7 +942,7 @@ icon reads unambiguously on its own.
 | Area | New list, Edit area & order lists (→ area panel), Delete area | FAB Menu |
 | Goals | Add goal (→ new-goal panel) | plain `MudFab` |
 | Goal | Edit goal (→ goal panel), Delete goal | FAB Menu |
-| List | Add task (→ new-task panel) or Add item (→ new-item panel) for a `Reference` list, Edit list (→ list panel), Delete list | FAB Menu |
+| List | Add task (→ new-task panel) or Add item (→ new-item panel) for a `Reference` list, plus Edit list (→ list panel) and Delete list for the owner | FAB Menu |
 | Inbox | Capture (→ capture panel) | plain `MudFab` |
 | My Day, Settings, Statistics | none | no FAB |
 
@@ -896,10 +1062,12 @@ the example. The Consistency heatmap is not a `MudChart` — see §1.
 
 **Sidebar**, top to bottom, one navigation tree at `md`+: a
 non-interactive `AccountBadge` (avatar, display name, email — a label, not
-a control), then a nav group of **My Day / Inbox / Goals / Statistics**,
-divider, the user's areas in `Position` order plus **+ New area**, divider,
-**Settings** / **App info**, then a spacer, then a footer (connection
-status, current date/time, "PSPad · GPL v3"). There is no search field in
+a control), then a nav group of **My Day / Inbox / Goals / Statistics /
+List snapshots**,
+divider, the user's areas in `Position` order, then **Shared with me**
+(`People` icon) when the user has a member list, then **+ New area**,
+divider, **Settings** / **App info**, then a spacer, then a footer
+(connection status, current date/time, "PSPad · GPL v3"). There is no search field in
 the sidebar (temporarily unreachable from the UI, tracked as a known gap,
 not a page to recreate speculatively) and no dropdown on the account badge.
 Below `md` there is no sidebar: phones navigate through `MobileTopBar` and
@@ -914,9 +1082,13 @@ and footer moved into `AccountDrawer` (`adr/0050`).
 | `/inbox` | Inbox |
 | `/areas` | opens the last-used area on this device, else the first; empty state when there are none |
 | `/areas/{areaId}` | area screen — list cards |
+| `/areas/shared` | the same screen for `SharedWithMe.AreaId` — "Shared with me", no FAB |
+| `/join/{token}` | join a shared list by its invite token, then opens it |
 | `/lists/{listId}` | list screen |
 | `/goals` | Goals |
 | `/goals/{goalId}` | goal screen — every task of one goal |
+| `/snapshots` | List snapshots — public snapshots the caller has opened while signed in, newest first |
+| `/public/snapshot/{token}` | a public snapshot, anonymous, outside `AppShell` |
 | `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-captures bar chart, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
 | `/settings` | Settings (account + change password + sign-out; application settings: time zone, theme, accent; sync status; delete account) |

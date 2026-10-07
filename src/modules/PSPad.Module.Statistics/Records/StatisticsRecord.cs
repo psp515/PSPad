@@ -2,7 +2,9 @@ namespace PSPad.Module.Statistics;
 
 public sealed record StatisticsRecord
 {
-    public long Id { get; init; }
+    public string Id { get; init; } = "";
+    public long Seq { get; init; }
+    public RecordRole Role { get; init; }
     public Guid UserId { get; init; }
     public DateTimeOffset At { get; init; }
     public RecordKind Kind { get; init; }
@@ -13,4 +15,6 @@ public sealed record StatisticsRecord
     public DateOnly? DueOn { get; init; }
     public DateOnly? OccurrenceDay { get; init; }
     public int? CompletionNumber { get; init; }
+
+    public static string IdFor(long seq, Guid userId) => $"{seq}:{userId:N}";
 }

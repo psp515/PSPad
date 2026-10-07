@@ -2,7 +2,7 @@
 title: Statistics owns denormalized read-only records projected from the log, and domain events carry what consumers need
 tags: [architecture, persistence, analytics]
 date: 2026-09-24
-status: Active
+status: Active — amended by ADR-0055
 ---
 
 # ADR-0037: Statistics owns denormalized read-only records projected from the log, and domain events carry what consumers need

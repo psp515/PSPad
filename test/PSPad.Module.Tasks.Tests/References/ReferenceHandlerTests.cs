@@ -185,13 +185,13 @@ public class ReferenceHandlerTests
         var list = SeedReferenceList();
         var item = SeedItem(list.Id);
 
-        Assert.True((await new RenameReferenceItemHandler(_items, _work, _clock).HandleAsync(
+        Assert.True((await new RenameReferenceItemHandler(_items, _lists, _work, _clock).HandleAsync(
             new RenameReferenceItem(Guid.NewGuid(), User, item.Id, "PETG Grey"), CancellationToken.None)).Accepted);
-        Assert.True((await new SetReferenceItemDescriptionHandler(_items, _work, _clock).HandleAsync(
+        Assert.True((await new SetReferenceItemDescriptionHandler(_items, _lists, _work, _clock).HandleAsync(
             new SetReferenceItemDescription(Guid.NewGuid(), User, item.Id, "Dry 4h"), CancellationToken.None)).Accepted);
-        Assert.True((await new StarReferenceItemHandler(_items, _work, _clock).HandleAsync(
+        Assert.True((await new StarReferenceItemHandler(_items, _lists, _work, _clock).HandleAsync(
             new StarReferenceItem(Guid.NewGuid(), User, item.Id, true), CancellationToken.None)).Accepted);
-        Assert.True((await new DeleteReferenceItemHandler(_items, _work, _clock).HandleAsync(
+        Assert.True((await new DeleteReferenceItemHandler(_items, _lists, _work, _clock).HandleAsync(
             new DeleteReferenceItem(Guid.NewGuid(), User, item.Id), CancellationToken.None)).Accepted);
 
         var stored = await _items.LoadAsync(item.Id, CancellationToken.None);

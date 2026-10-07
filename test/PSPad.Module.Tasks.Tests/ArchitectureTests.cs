@@ -38,6 +38,13 @@ public class ArchitectureTests
     }
 
     [Fact]
+    public void TasksNeverReachesSharing()
+    {
+        AssemblyReferenceGuard.AssertReferencesNone(
+            typeof(TasksModuleMarker).Assembly, "PSPad.Module.Sharing");
+    }
+
+    [Fact]
     public void InfrastructureKnowsNoModule()
     {
         AssemblyReferenceGuard.AssertReferencesNone(

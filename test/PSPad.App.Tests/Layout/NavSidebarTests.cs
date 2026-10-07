@@ -23,6 +23,7 @@ public class NavSidebarTests : Bunit.TestContext
     [InlineData("Inbox")]
     [InlineData("Goals")]
     [InlineData("Statistics")]
+    [InlineData("List snapshots")]
     [InlineData("New area")]
     [InlineData("Settings")]
     [InlineData("App info")]
@@ -101,6 +102,18 @@ public class NavSidebarTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ListSnapshotsIsASidebarRowAfterStatistics()
+    {
+        Arrange();
+
+        var sidebar = Render(Areas("Dom"));
+
+        Assert.Contains("/snapshots\"", sidebar.Markup);
+        var markup = sidebar.Markup;
+        Assert.True(markup.IndexOf("/statistics\"") < markup.IndexOf("/snapshots\""));
+    }
+
+    [Fact]
     public void NewAreaIsThereEvenWithNoAreasAtAll()
     {
         Arrange();
@@ -143,6 +156,27 @@ public class NavSidebarTests : Bunit.TestContext
         sidebar.Find(".pspad-new-area .mud-nav-link").Click();
 
         Assert.Equal(0, newArea);
+    }
+
+    [Fact]
+    public void TheSidebarShowsSharedWithMeOnlyWhenSomethingIsShared()
+    {
+        Arrange();
+
+        var without = Render<NavSidebar>(parameters => parameters
+            .Add(p => p.Areas, Areas("Dom"))
+            .Add(p => p.Email, "ada@example.com")
+            .Add(p => p.UserId, User)
+            .Add(p => p.HasShared, false));
+        Assert.DoesNotContain("Shared with me", without.Markup);
+
+        var with = Render<NavSidebar>(parameters => parameters
+            .Add(p => p.Areas, Areas("Dom"))
+            .Add(p => p.Email, "ada@example.com")
+            .Add(p => p.UserId, User)
+            .Add(p => p.HasShared, true));
+        Assert.Contains("Shared with me", with.Markup);
+        Assert.Contains($"{SharedWithMe.Href}\"", with.Markup);
     }
 
     [Fact]

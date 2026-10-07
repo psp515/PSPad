@@ -74,6 +74,34 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task DismissingSnapshotMarksClearsThem()
+    {
+        var task = NewTask("Buy milk");
+        task.ApplyAll(TodoTask.Decide(
+            task, new MarkTaskFromSnapshot(Guid.NewGuid(), User, task.Id, null, Guid.NewGuid(), true),
+            DateTimeOffset.UnixEpoch));
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        Assert.Contains("pspad-snapshot-mark", panel.Markup);
+        panel.Find(".pspad-task-snapshot-dismiss").Click();
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Empty(reloaded!.SnapshotMarks);
+    }
+
+    [Fact]
+    public void WithNoSnapshotMarksThereIsNoSnapshotSection()
+    {
+        var task = NewTask("Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Empty(panel.FindAll(".pspad-task-snapshot-marks"));
+    }
+
+    [Fact]
     public async Task CompletingATaskWhileDisabledDoesNotChangeItsState()
     {
         var task = NewTask("Buy milk");
@@ -1101,6 +1129,75 @@ public class TaskDetailPanelTests : Bunit.TestContext
         OpenRow(panel, ".pspad-task-goal");
 
         Assert.Equal(["Zdrowie"], panel.FindAll(".pspad-goal-option").Select(option => option.TextContent.Trim()));
+    }
+
+    [Fact]
+    public void TheGoalRowShowsForTheOwnersOwnTask()
+    {
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        var task = NewTask("Buy milk", list.Id);
+        AppTestHost.Arrange(this, User, Today, list, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.NotEmpty(panel.FindAll(".pspad-task-goal"));
+    }
+
+    [Fact]
+    public void TheGoalRowIsHiddenForAMembersTaskInASharedList()
+    {
+        var owner = Guid.NewGuid();
+        var shared = NewMemberList(owner, User, "Errands");
+        var task = NewMemberTask(owner, User, shared.Id, "Buy milk");
+        AppTestHost.Arrange(this, User, Today, shared, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Empty(panel.FindAll(".pspad-task-goal"));
+    }
+
+    [Fact]
+    public void TheGoalRowIsHiddenForAMembersTaskEvenWhenItsListHasNotLoaded()
+    {
+        var owner = Guid.NewGuid();
+        var task = NewMemberTask(owner, User, Guid.NewGuid(), "Buy milk");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        Assert.Empty(panel.FindAll(".pspad-task-goal"));
+    }
+
+    [Fact]
+    public void TheGoalRowIsHiddenForANewTaskDraftInASharedList()
+    {
+        var owner = Guid.NewGuid();
+        var shared = NewMemberList(owner, User, "Errands");
+        AppTestHost.Arrange(this, User, Today, shared);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)shared.Id));
+
+        Assert.Empty(panel.FindAll(".pspad-task-goal"));
+    }
+
+    static TaskList NewMemberList(Guid owner, Guid member, string name)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null, new CreateTaskList(Guid.NewGuid(), owner, Guid.NewGuid(), Guid.NewGuid(), name),
+            DateTimeOffset.UnixEpoch));
+        list.Apply(new TaskListShared(list.Id, owner, DateTimeOffset.UnixEpoch, "k3Jv9s2mQ0x7b1nR4tYw8eZa", "Owner"));
+        list.Apply(new TaskListJoined(list.Id, owner, DateTimeOffset.UnixEpoch, member, "Member"));
+        return list;
+    }
+
+    static TodoTask NewMemberTask(Guid owner, Guid member, Guid listId, string name)
+    {
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(
+            null, new CreateTask(Guid.NewGuid(), member, Guid.NewGuid(), listId, name),
+            DateTimeOffset.UnixEpoch, new PSPad.Module.Tasks.Lists.ListAccess(owner, member)));
+        return task;
     }
 
     static PSPad.Module.Tasks.Goals.Goal NewGoalWith(string name, PSPad.Module.Tasks.Goals.GoalStatus status)

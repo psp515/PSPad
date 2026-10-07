@@ -6,7 +6,7 @@ namespace PSPad.Infrastructure.Mongo;
 public static class MongoIndexes
 {
     static readonly string[] AggregateCollections =
-        ["areas", "tasklists", "todotasks", "goals", "inboxes", "users", "referenceitems", "areaviews"];
+        ["areas", "tasklists", "todotasks", "goals", "inboxes", "users", "referenceitems", "areaviews", "listviews"];
 
     public static async Task EnsureAsync(MongoContext context, CancellationToken ct)
     {
@@ -26,15 +26,32 @@ public static class MongoIndexes
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("dueOn"))
         ], ct);
 
-        await context.Collection<BsonDocument>("tasklists").Indexes.CreateOneAsync(
+        await context.Collection<BsonDocument>("tasklists").Indexes.CreateManyAsync(
+        [
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("areaId")),
-            cancellationToken: ct);
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("_members.userId").Ascending("seq"))
+        ], ct);
+
+        await EnsureUniqueInviteTokenAsync(context, ct);
 
         await context.Collection<BsonDocument>("referenceitems").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("listId")),
             cancellationToken: ct);
+
+        foreach (var name in new[] { "todotasks", "referenceitems" })
+        {
+            await context.Collection<BsonDocument>(name).Indexes.CreateOneAsync(
+                new CreateIndexModel<BsonDocument>(
+                    Builders<BsonDocument>.IndexKeys.Ascending("listId").Ascending("seq")),
+                cancellationToken: ct);
+            await context.Collection<BsonDocument>(name).Indexes.CreateOneAsync(
+                new CreateIndexModel<BsonDocument>(
+                    Builders<BsonDocument>.IndexKeys.Ascending("previousListId").Ascending("seq")),
+                cancellationToken: ct);
+        }
 
         await context.Collection<BsonDocument>("events").Indexes.CreateManyAsync(
         [
@@ -47,10 +64,60 @@ public static class MongoIndexes
                 Builders<BsonDocument>.IndexKeys.Ascending("seq"))
         ], ct);
 
+        await EnsureStatisticsAsync(context, ct);
+
+        await context.Collection<BsonDocument>("processed_commands").Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("at"),
+                new CreateIndexOptions { ExpireAfter = TimeSpan.FromDays(30) }),
+            cancellationToken: ct);
+
+        await context.Collection<BsonDocument>("list_snapshots").Indexes.CreateManyAsync(
+        [
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("token"),
+                new CreateIndexOptions { Unique = true }),
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("expiresAt"),
+                new CreateIndexOptions { ExpireAfter = TimeSpan.Zero }),
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("listId"))
+        ], ct);
+
+        await context.Collection<BsonDocument>("snapshot_visits").Indexes.CreateManyAsync(
+        [
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("expiresAt"),
+                new CreateIndexOptions { ExpireAfter = TimeSpan.Zero }),
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("userId").Descending("visitedAt"))
+        ], ct);
+    }
+
+    public const string InviteTokenIndex = "inviteToken_unique";
+
+    static async Task EnsureUniqueInviteTokenAsync(MongoContext context, CancellationToken ct)
+    {
+        var lists = context.Collection<BsonDocument>("tasklists");
+        var existing = await (await lists.Indexes.ListAsync(ct)).ToListAsync(ct);
+        if (existing.Any(index => index["name"] == "inviteToken_1"))
+        {
+            await lists.Indexes.DropOneAsync("inviteToken_1", ct);
+        }
+
+        await lists.Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("inviteToken"),
+                new CreateIndexOptions<BsonDocument>
+                {
+                    Name = InviteTokenIndex,
+                    Unique = true,
+                    PartialFilterExpression = Builders<BsonDocument>.Filter.Type("inviteToken", BsonType.String)
+                }),
+            cancellationToken: ct);
+    }
+
+    public static async Task EnsureStatisticsAsync(MongoContext context, CancellationToken ct)
+    {
         await context.Collection<BsonDocument>("statistics_records").Indexes.CreateManyAsync(
         [
             new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending("userId").Descending("_id")),
+                Builders<BsonDocument>.IndexKeys.Ascending("userId").Descending("seq")),
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("kind").Ascending("at")),
             new CreateIndexModel<BsonDocument>(
@@ -64,12 +131,6 @@ public static class MongoIndexes
 
         await context.Collection<BsonDocument>("statistics_labels").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("userId")),
-            cancellationToken: ct);
-
-        await context.Collection<BsonDocument>("processed_commands").Indexes.CreateOneAsync(
-            new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending("at"),
-                new CreateIndexOptions { ExpireAfter = TimeSpan.FromDays(30) }),
             cancellationToken: ct);
     }
 }

@@ -21,11 +21,12 @@ public sealed class OrganiseInboxItemHandler(
                 ?? throw new DomainRejectedException("That item is no longer in your inbox.");
 
             var existingTask = await tasks.LoadAsync(command.TaskId, ct);
+            var access = TaskList.RequireAcceptsTasks(await lists.LoadAsync(command.ListId, ct), command.UserId);
             var taskEvents = TodoTask.Decide(
                 existingTask,
                 new CreateTask(command.CommandId, command.UserId, command.TaskId, command.ListId, item.Text),
-                clock.UtcNow);
-            TaskList.RequireAcceptsTasks(await lists.LoadAsync(command.ListId, ct), command.UserId);
+                clock.UtcNow,
+                access);
             var task = existingTask ?? new TodoTask();
             task.ApplyAll(taskEvents);
 

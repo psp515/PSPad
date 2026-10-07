@@ -11,7 +11,7 @@ public class ReplicaScriptTests
     [Fact]
     public void ItBumpsTheDatabaseVersionForTheSessionStore()
     {
-        Assert.Contains("const VERSION = 2;", Replica);
+        Assert.Contains("const VERSION = 3;", Replica);
     }
 
     [Fact]

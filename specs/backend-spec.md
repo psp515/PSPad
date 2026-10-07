@@ -20,6 +20,9 @@ read that first for the "why one modular monolith", this for the mechanics.
 PSPad.slnx
 src/
   PSPad.Api/                   Minimal API, endpoints, DI composition, Dockerfile
+                               (Snapshots/ holds the Sharing module's Mongo and
+                               command adapters, namespaced `PSPad.Api.Snapshots`
+                               — not `.Sharing`, to avoid clashing with a test helper)
   PSPad.App/                   Blazor WASM PWA, MudBlazor, IndexedDB replica + outbox, Dockerfile (nginx)
   shared/
     PSPad.Abstractions/        ICommandHandler<T>, IDocumentStore<T>, IUnitOfWork, IClock, Aggregate
@@ -30,11 +33,13 @@ src/
     PSPad.Module.Statistics/    queries over the event log
     PSPad.Module.Identity/      User, time zone, first-sign-in provisioning
     PSPad.Module.Presentation/  per-user views of shared data (AreaView: list order) — pure, WASM-safe
+    PSPad.Module.Sharing/       public snapshots — frozen list copies, server-side only (adr/0056)
 test/
   PSPad.Module.Tasks.Tests/       unit only
   PSPad.Module.Statistics.Tests/  unit only
   PSPad.Module.Identity.Tests/    unit only
   PSPad.Module.Presentation.Tests/ unit only
+  PSPad.Module.Sharing.Tests/     unit only
   PSPad.Api.Tests/                integration, Testcontainers MongoDB
   PSPad.App.Tests/                unit + bUnit
   PSPad.TestInfrastructure/       Mongo fixture, category attributes, architecture guards
@@ -51,6 +56,7 @@ References run one way only:
 | `PSPad.Module.Statistics` | `PSPad.Abstractions`, `PSPad.Contracts`, `PSPad.Module.Tasks` (event types only, for its handlers' `switch` patterns) |
 | `PSPad.Module.Identity` | `PSPad.Abstractions`, `PSPad.Contracts` |
 | `PSPad.Module.Presentation` | `PSPad.Abstractions` — and nothing else; no module references it back (`adr/0051`) |
+| `PSPad.Module.Sharing` | `PSPad.Abstractions`, `PSPad.Module.Tasks` (aggregate shapes only, to build a snapshot — `adr/0056`) |
 | `PSPad.Infrastructure` | `PSPad.Abstractions`, `PSPad.Contracts` — never a module |
 | `PSPad.Api` | everything |
 | `PSPad.App` | `PSPad.Module.Tasks`, `PSPad.Module.Presentation`, `PSPad.Abstractions`, `PSPad.Contracts` — never `PSPad.Infrastructure` |
@@ -64,9 +70,19 @@ edits and server state agree.
 Enforced by architecture guard tests, not just this document: no
 `MongoDB.*`/`Microsoft.AspNetCore.*`/`System.Net.Http` inside
 `PSPad.Module.Tasks` or `PSPad.Abstractions`; no `PSPad.Infrastructure`/
-`MongoDB.*`/`Microsoft.AspNetCore.*` inside `PSPad.Module.Statistics`; no
-module reference inside `PSPad.Infrastructure` or `PSPad.Module.Presentation`;
-no `PSPad.Module.Presentation` reference inside `PSPad.Module.Tasks`.
+`MongoDB.*`/`Microsoft.AspNetCore.*` inside `PSPad.Module.Statistics` or
+`PSPad.Module.Sharing`; no module reference inside `PSPad.Infrastructure` or
+`PSPad.Module.Presentation`; no `PSPad.Module.Presentation` or
+`PSPad.Module.Sharing` reference inside `PSPad.Module.Tasks`; no
+`PSPad.Module.Statistics`/`PSPad.Module.Presentation` reference inside
+`PSPad.Module.Sharing`.
+
+Two module-to-module edges exist, and only these two: `Statistics` →
+`Tasks` and `Sharing` → `Tasks`, both one way and both for the same reason —
+each pattern-matches on Tasks' own event or aggregate types, so a rename
+breaks the build rather than a mismatch surfacing at render time
+(`adr/0037`, `adr/0056`). `ArchitectureTests` guards both directions failing
+the build if `Tasks` ever references either back.
 
 Commands are discovered by reflection over `CommandModules.Names`
 (`PSPad.Contracts`) — `PSPad.Module.Tasks` and `PSPad.Module.Presentation` —
@@ -91,7 +107,12 @@ One shape, both sides of the wire:
 ```csharp
 public interface IAggregate { Guid Id { get; } Guid UserId { get; } int Version { get; } }
 public interface ICommand { Guid CommandId { get; } Guid UserId { get; } }
-public abstract record DomainEvent(Guid AggregateId, Guid UserId, DateTimeOffset At);
+public interface IServerOnlyCommand : ICommand;
+public abstract record DomainEvent(Guid AggregateId, Guid UserId, DateTimeOffset At)
+{
+    public Guid? ActorId { get; init; }
+    public Guid Actor => ActorId ?? UserId;
+}
 public interface ICommandHandler<in TCommand> where TCommand : ICommand
 {
     Task<CommandResult> HandleAsync(TCommand command, CancellationToken ct);
@@ -102,6 +123,38 @@ public sealed record CommandResult(bool Accepted, string? Rejection = null)
     public static CommandResult Rejected(string reason) => new(false, reason);
 }
 ```
+
+**Owner and actor** (`adr/0054`). `UserId` on every event is the
+**aggregate's owner**; `ActorId` is who actually issued the command, set
+only when it differs. `Decide`/`When` never stamp it — `MongoUnitOfWork
+.CommitAsync` compares each staged event's `UserId` against the
+authenticated caller on the way into the transaction and sets `ActorId`
+when they differ, so the Tasks module stays ignorant of sharing entirely.
+A creation event (`TaskCreated`, `ReferenceItemCreated`) takes its owner
+from the target list, so a member's `CreateTask` produces a task owned by
+the list's owner with the member as `ActorId`.
+
+**Server-only commands.** `IServerOnlyCommand` is a marker with no members;
+`CommandDispatcher.DispatchAsync` refuses one with
+`Unrecoverable: true` before it reaches a handler — `/api/commands` is a
+client-facing surface only. A server-only command still runs through
+`CommandDispatcher.RunAsync`, called directly from server code that owns
+its own trust decision instead of trusting the caller (`JoinTaskList` is
+marked this way today; the HTTP entry point that calls it is a later
+plan's work).
+
+**List access** (`adr/0054`). `ListAccess.To(list, actorId)` returns an
+`OwnerId`/`ActorId` pair for the owner or any member of `list`, and rejects
+everyone else; `TaskList.Require` (owner only) stays for list-level
+commands. Every content handler — tasks, steps, recurrence, descriptions,
+stars, priorities, due dates, completion, occurrences, reference items and
+their fields, including `LinkTaskToGoal` — loads the parent `TaskList` to
+resolve `ListAccess` (`ListAccessLoading.AccessAsync`), even one that
+previously loaded only its own aggregate. `LinkTaskToGoal` reaches
+`TodoTask.Decide` the same way as any content command; the aggregate itself
+then rejects a non-owner `ListAccess.ActorId` (goals are the owner's), so
+the owner-only gate sits in the aggregate's rule, not in which loader the
+handler calls.
 
 Aggregates keep rules pure and testable with no store: `Decide(command)`
 returns the events a command produces, or throws `DomainRejectedException`;
@@ -152,19 +205,22 @@ transactions require one. Dev, prod and tests all run the same shape.
 |---|---|---|
 | `users` | one per person | `timeZone` (IANA), `provisionedAt` |
 | `areas` | user-defined areas | `name`, `position` |
-| `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation). Documents written before `adr/0051` still carry a `position` nobody reads |
+| `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation), `inviteToken` (`adr/0054`, null = not shared), `inviteCode`, `inviteExpiresAt` (`adr/0057`; 30 minutes from the share), `wrongCodes`, `ownerName`, `_members[]` (`userId`, `displayName`, `joinedAt`; the leading underscore keeps the BSON field name stable, like `_steps`). Documents written before `adr/0051` still carry a `position` nobody reads |
 | `inboxes` | one per user | `items[]` |
-| `todotasks` | tasks with steps inline | `listId`, `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown) |
+| `todotasks` | tasks with steps inline | `listId`, `previousListId` (the list it last left, null until moved), `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0056`) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
-| `referenceitems` | items in a `Reference` list | `listId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`) |
+| `referenceitems` | items in a `Reference` list | `listId`, `previousListId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`), `snapshotMarks[]` (`snapshotId`, `markedAt` — `adr/0056`) |
 | `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
+| `listviews` | one per (user, list): that user's placement of a shared list | `_id` = `ListView.IdFor(userId, listId)`, `listId`, `areaId?` (null = "Shared with me") |
 | `events` | the domain event log and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
-| `statistics_records` | the statistics feed and every chart | `_id` = the event's `seq`, `userId`, `at`, `kind`, `taskId`, `taskName`, `listId`, `goalId`, `dueOn`, `occurrenceDay`, `completionNumber` |
+| `statistics_records` | the statistics feed and every chart | `_id` = `"{seq}:{userId}"` (`adr/0055`), `seq`, `role` (`Owner` \| `Actor`), `userId`, `at`, `kind`, `taskId`, `taskName`, `listId`, `goalId`, `dueOn`, `occurrenceDay`, `completionNumber` |
 | `statistics_inbox_records` | the Inbox-captures chart | `_id` = the event's `seq`, `userId`, `at`, `itemId` |
 | `statistics_labels` | area, list and goal names for the feed | `_id` = the aggregate's id, `userId`, `kind`, `name`, `deleted` |
-| `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq` |
+| `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq`, `projectionVersion` (`adr/0055`) |
+| `list_snapshots` | a frozen, owner-published copy of one list (`adr/0056`) | `_id` (GUID), `token` (unique, server-generated, distinct from `_id`), `userId` (owner), `listId`, `kind`, `name`, `createdAt`, `expiresAt`, `tasks[]` or `items[]` — each entry its own `id`/`name`/`done`/`marked`/`markedAt`, steps or fields nested the same way. Content is frozen at publish; only `marked`/`markedAt` change afterwards |
+| `snapshot_visits` | a signed-in visitor's own record of opening a snapshot | `_id` = `"{userId}:{snapshotId}"`, `userId`, `snapshotId`, `token`, `name`, `expiresAt`, `visitedAt` |
 
 Every aggregate document carries `_id` (GUID), `userId`, `version`
 (optimistic concurrency), `seq` (sequence of the last touching event) and
@@ -181,11 +237,23 @@ transaction; the returned value stamps both the event and the aggregate's
   one serves startup replay, which reads forward across every user ordered by
   `seq` alone and so cannot use either compound index
 - every aggregate collection: `{userId: 1, seq: 1}` (delta sync)
-- `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`
-- `tasklists`: `{userId: 1, areaId: 1}`
-- `referenceitems`: `{userId: 1, listId: 1}`
+- `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`, `{listId: 1, seq: 1}` and `{previousListId: 1, seq: 1}` (a member's delta sync)
+- `tasklists`: `{userId: 1, areaId: 1}`, `{_members.userId: 1, seq: 1}` (a
+  member's delta sync), unique partial `{inviteToken: 1}` named
+  `inviteToken_unique` (`partialFilterExpression: {inviteToken: {$type:
+  "string"}}`; join lookup, and no two lists may hold one token — a
+  duplicate-key write on commit is rejected as "That invite link is already
+  in use."; startup drops the older sparse `inviteToken_1`)
+- `referenceitems`: `{userId: 1, listId: 1}`, `{listId: 1, seq: 1}` and `{previousListId: 1, seq: 1}` (a member's delta sync)
+- `list_snapshots`: unique `{token: 1}`, TTL on `expiresAt`
+  (`expireAfterSeconds: 0`), `{userId: 1, listId: 1}` (the panel's active list)
+- `snapshot_visits`: TTL on `expiresAt`, `{userId: 1, visitedAt: -1}` (the
+  List snapshots tab). TTL deletion lags the instant, so both collections'
+  reads also check `expiresAt > now` themselves rather than trusting the
+  sweep to have already run
 - `processed_commands`: TTL index on `at`, 30 days
-- `statistics_records`: `{userId: 1, _id: -1}` (the feed page),
+- `statistics_records`: `{userId: 1, seq: -1}` (the feed page, `adr/0055`
+  replaces `{userId: 1, _id: -1}` now that `_id` is no longer the bare `seq`),
   `{userId: 1, kind: 1, at: 1}` (the charts' window),
   `{userId: 1, taskId: 1, kind: 1}` (the completion counter)
 - `statistics_inbox_records`: `{userId: 1, at: 1}` (the captures window)
@@ -298,15 +366,109 @@ not stated there:
 - `TodoTask.Description` (Markdown, `SetTaskDescription`) is rendered
   client-side only (`adr/0048`) — the domain stores and moves a plain string,
   never parses it.
+- Sharing (`adr/0054`): five list commands — `ShareTaskList` (set/rotate
+  the invite token and 6-character code, owner-only; the invite lives 30
+  minutes, `adr/0057`), `StopSharingTaskList` (clear it, owner-only,
+  members stay), `RemoveListMember` (owner-only), `LeaveTaskList`
+  (member-only, rejects the owner), `JoinTaskList` (server-only, idempotent
+  for the owner or an existing member; token and code compared in constant
+  time, a wrong code commits `InviteCodeRejected`, the fifth closes the invite). `ListAccess` admits the owner or a
+  member to every content command on tasks, steps, reference items and
+  their fields, plus `CreateTask`, `CreateReferenceItem`,
+  `OrganiseInboxItem`, and `LinkTaskToGoal`; list-level commands
+  (`RenameTaskList`, `DeleteTaskList`, `MoveTaskListToArea`, the five
+  sharing commands) stay owner-only through `TaskList.Require`.
+  `LinkTaskToGoal` goes through `ListAccess` like any content command, but
+  `TodoTask.Decide` itself rejects a non-owner actor — goals are the
+  owner's, so the gate lives in the aggregate's rule rather than in the
+  loader. Every event carries the owner as `UserId`; `ActorId` records who
+  actually acted.
+  `MoveTaskToList` and `MoveReferenceItemToList` reject a target list whose
+  owner differs from the source list's — a task or item never crosses
+  ownership by moving. Organising an Inbox item into a list the actor is a
+  member of is allowed: it becomes a task owned by the list's owner, while
+  the Inbox itself stays the actor's own aggregate.
+- Placement of a shared list is presentation too. `ListView`
+  (Presentation module) holds one user's `AreaId?` for a list they are a
+  member of, set by `PlaceList`; `null` leaves it in "Shared with me", a
+  client-side virtual area, never an `Area` document. A view naming a
+  deleted or unknown area, or no view at all, falls back to "Shared with
+  me" the same way a missing `AreaView` falls back to creation order. A
+  filed list joins that area's `AreaView.Order` through `ReorderLists` like
+  any other list. `GET /api/today` and the client's Today projection both
+  include tasks from lists the caller is a member of, same `TodayRule`, the
+  viewer's own time zone.
+- Snapshot marks (`adr/0056`): `TodoTask.SnapshotMarks` and
+  `ReferenceItem.SnapshotMarks` each hold `SnapshotMark(SnapshotId,
+  StepId?, MarkedAt)` — a note that a public-snapshot visitor ticked this
+  entry, never a state change. `MarkTaskFromSnapshot` /
+  `MarkReferenceItemFromSnapshot` are `IServerOnlyCommand`s run by
+  `PSPad.Module.Sharing` with the list owner as `UserId`; they add or
+  remove one mark, reject a deleted task or an unknown step, and emit
+  nothing when the mark is unchanged. `ClearTaskSnapshotMarks` /
+  `ClearReferenceItemSnapshotMarks` are ordinary owner-or-member commands
+  that dismiss every mark a task (steps included) or item carries. A mark
+  never completes a task, checks a step, ticks an occurrence or enters
+  `TodayRule.Plan` — it is purely a chip the owner sees; Statistics ignores
+  every one of these events, by omission from its projections' `switch`.
 
 ---
 
 ## 5. Sync
 
-`GET /api/sync?since={seq}` returns every aggregate document for the caller
-with `seq > since`, the events in that range, and the new marker. The
-client overwrites its replica with what it receives — the server is truth,
-the replica is disposable (AD-6).
+`GET /api/sync?since={seq}&full={listIds}` returns every aggregate document
+the caller can see with `seq > since` — owned, plus `tasklists` the caller
+is a member of and `todotasks`/`referenceitems` whose `listId` or
+`previousListId` (the list a moved row last left) is a list the caller is a
+member of — the events in that range (still `userId == caller` only; the
+client does not read them), and the new marker. `full` is a comma-joined
+list of ids the caller is a member of: those lists and their live children
+come back in full regardless of `since`, letting a device that just joined,
+or a second device of an already-joined user, catch up on a membership it
+has no delta history for. The response also carries `memberListIds` — the
+live lists the caller belongs to and does not own — on every call, not only
+a `full` one. The client overwrites its replica with what it receives — the
+server is truth, the replica is disposable (AD-6).
+
+**Reconciling membership.** `SyncService` saves the delta, then — only when
+the replica has a recorded owner and the response carries
+`memberListIds` — reconciles against it: a list in the replica not owned by
+the caller and missing from `memberListIds` is purged along with its tasks
+and reference items; one rule covers leaving, removal, the owner deleting
+the list, and the owner deleting their account. A list in `memberListIds`
+missing from the replica is pulled in the same pull, by asking again with
+`full=` at the just-saved marker. A device holding nothing yet for this user
+has no recorded owner, so reconciliation is skipped entirely — every list
+would otherwise look foreign. A failed full pull (`HttpRequestException`) is
+swallowed and never written to the marker; the missing list stays missing
+and the next sync retries it, instead of every delta pull wedging behind a
+flaky connection. Last, a task or reference item the caller does not own
+whose `ListId` names a list the replica does not hold is dropped — a row the
+owner moved out of a shared list, delivered through `previousListId` as a
+stub (`id`, `userId`, `listId`, `previousListId`, `version`, `deleted`,
+`seq` only — never its name, description, steps, fields, dates or marks). `IReplica.LoadAllAsync<T>()` returns every row of a type —
+a replica holds one user's whole visible world, not only what that user
+owns — and `IReplica.RemoveAsync` deletes one row; `replica.js`'s `getAll`
+reads a type's rows with the key range `bound([type], [type, []])`.
+
+`POST /api/lists/join {token, code}` resolves an invite token to a list,
+checks the code with `TaskList.CheckInvite`, runs `JoinTaskList` through the
+normal pipeline as the caller, and on acceptance returns
+`200 JoinListResponse(ListId, Documents)` — that list and its live children,
+via the same reader `full` uses. The owner or an existing member gets `200`
+without a code check. A blank token or code, an unknown or cleared token, a
+deleted list, a wrong code (which still runs `JoinTaskList` so the strike is
+recorded) and an expired invite with a wrong code all return the same empty
+`404`; only a right token and right code on an expired invite return `410`.
+The endpoint carries the `"join"` rate-limit policy: 10 attempts per user
+(subject claim) per 30-minute fixed window, then `429`. The client's
+`JoinAsync` maps these to `JoinOutcome` (`Joined`, `Invalid`, `Expired`,
+`TooManyTries`) and writes a `Joined` response straight into the replica.
+
+A member's copy of a `tasklists` row — in `/api/sync` and in the join
+response — never carries `inviteToken`, `inviteCode`, `inviteExpiresAt`,
+`wrongCodes` or `closedByWrongCodes`; `SyncReader` strips them from every
+list the caller does not own.
 
 `POST /api/commands` takes a batch of command envelopes from the outbox, in
 order, and returns one result per envelope. Rejections surface to the user,
@@ -338,7 +500,8 @@ client's current one — an already-installed client that only just updated
 to a build with a new sync collection — the next pull asks `since = 0`
 once instead of the stored marker, so documents in that new collection are
 not silently skipped forever by a marker that had already advanced past
-them (`adr/0049`). `areaviews` (`adr/0051`) is such a collection.
+them (`adr/0049`). `areaviews` (`adr/0051`) and `listviews` (`adr/0054`) are
+such collections.
 
 **App updates are offered, never forced** (`adr/0040`). The published
 service worker keeps the browser's waiting state — no `skipWaiting()` on
@@ -457,12 +620,22 @@ directly in `PSPad.Api`:
    the request began (`ChannelDomainEventDispatcher.DrainAsync`, capped at
    10 seconds, `adr/0041`). Otherwise a projection still in flight writes
    `statistics_*` documents back after the wipe.
-2. In one MongoDB transaction, enumerate every collection in the database
+2. In the same transaction, before the sweep: pull the caller out of
+   `_members` on every other owner's `tasklists` document they belong to
+   (`$pull` by `userId`), stamping each with a fresh `seq` so those owners'
+   next sync carries the departure. The caller's own lists are untouched
+   here — they are deleted outright by the sweep below, same as everything
+   else they own.
+3. In one MongoDB transaction, enumerate every collection in the database
    (`Database.ListCollectionNames()`) and run
    `DeleteMany({ userId: callerId })` against each — including `events` and
    `processed_commands`. No collection name is hardcoded, so a new aggregate
-   added later (a habit, a yearly goal) is covered with no code change here.
-3. Only once that transaction commits, call Keycloak's Admin REST API
+   added later (a habit, a yearly goal) is covered with no code change here —
+   `list_snapshots` and `snapshot_visits` (`adr/0056`) needed none either,
+   since both carry `userId` like every other collection; only
+   `tasklists._members`, a nested array rather than a document of its own,
+   needed the explicit `$pull` in step 2.
+4. Only once that transaction commits, call Keycloak's Admin REST API
    (`DELETE /admin/realms/{realm}/users/{sub}`), authenticating with the
    existing bootstrap master-realm admin credentials
    (`KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD`) — no new realm client
@@ -476,12 +649,12 @@ directly in `PSPad.Api`:
    report which parts finished, not to fail the request. A failure before
    the Mongo transaction commits is the only case that returns a non-2xx,
    and it means nothing was deleted.
-4. There is no local password to check (no local password store exists at
+5. There is no local password to check (no local password store exists at
    all — Keycloak is the only sign-in path, §6 above), so the client-side
    confirmation is a typed-email match, not a password prompt. That is a UX
    safeguard against misclicks, not the authorization boundary — the caller's
    own validated JWT `sub` is, and the handler only ever deletes that id.
-5. The caller is authenticated but the operation still requires
+6. The caller is authenticated but the operation still requires
    connectivity; it does not go through the offline session model in the
    table above.
 
@@ -492,18 +665,39 @@ directly in `PSPad.Api`:
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/api/commands` | Execute a batch of commands. The only write endpoint |
-| `GET` | `/api/sync?since=` | Delta pull |
-| `GET` | `/api/today` | Server-side Today, for a cold client |
+| `GET` | `/api/sync?since=&full=` | Delta pull, widened to lists the caller is a member of; `full` (comma-joined list ids the caller belongs to) returns those lists and their children in full regardless of `since` |
+| `POST` | `/api/lists/join` | Join a shared list by invite token and code. `200 JoinListResponse(ListId, Documents)`; one empty `404` for any bad token, wrong code or deleted list; `410` when token and code match an expired invite; `429` past 10 attempts per user per 30 minutes. Not through the outbox — see §5 |
+| `GET` | `/api/today` | Server-side Today, for a cold client; includes tasks from lists the caller is a member of, in the caller's own time zone |
 | `GET` | `/api/statistics/records?before=&limit=` | The statistics feed, newest first. `limit` clamps to 1..200, default 50 |
 | `GET` | `/api/statistics/overview?days=` | Tiles and the five chart series. `days` is 30, 90 or 365, default 30 |
 | `GET` | `/api/me` | Current user; provisions on first call, heals display name |
 | `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only) |
 | `DELETE` | `/api/account` | Delete the caller's account: every Mongo document scoped to their `userId`, then their Keycloak user. Not a command — see §6 |
+| `POST` | `/api/lists/{id}/snapshots` | Owner only. Publish a frozen copy; `{expiresAt}` → `{id, token, expiresAt}`. Online-only, like `/api/me/timezone` (`adr/0056`) |
+| `GET` | `/api/lists/{id}/snapshots` | Owner only. That list's active (unexpired) snapshots |
+| `DELETE` | `/api/snapshots/{id}` | Owner only. Revoke a snapshot |
+| `POST` | `/api/me/snapshot-visits` | Record that the caller opened a snapshot by token |
+| `GET` | `/api/me/snapshot-visits` | The caller's unexpired visits, newest first — the List snapshots tab |
+| `GET` | `/api/public/snapshots/{token}` | **Anonymous.** The frozen snapshot, or `404` for an unknown or expired token — indistinguishable by design |
+| `POST` | `/api/public/snapshots/{token}/marks` | **Anonymous.** `{entryId, stepId?, marked}` — tick or untick an entry; saved on the snapshot, then run against the owner's task through a server-only command |
 | `GET` | `/health` | Liveness, unauthenticated |
 
 Writes go through one endpoint because every write is a command and the
 outbox ships them in batches — splitting per feature would buy nothing and
-make ordering harder to honour.
+make ordering harder to honour. The two `/api/public/*` routes are the one
+exception: they sit in their own `AllowAnonymous` route group
+(`/api/public`), rate-limited by a fixed window per IP (60 requests/minute
+by default, overridable through `Sharing:PublicRequestsPerMinute` — a code
+default for tests, not a documented self-hoster setting) rather than by
+authentication, since there is no caller identity to limit by. Behind a
+reverse proxy every visitor would share the proxy's address, so the API
+relies on ASP.NET Core's built-in `ASPNETCORE_FORWARDEDHEADERS_ENABLED`
+(compose maps it from `API_BEHIND_PROXY`, default `false`): the host's
+startup filter puts `UseForwardedHeaders` (`X-Forwarded-For`,
+`X-Forwarded-Proto`, any proxy trusted, last hop only) ahead of the whole
+pipeline, `UseRateLimiter` included, so `RemoteIpAddress` is the visitor's.
+Off by default because with port 5000 open directly a caller could forge the
+header.
 
 ---
 
@@ -581,8 +775,37 @@ boot, whether or not its handler already succeeded — the deliberate cost of
 type name back to its CLR type for replay's JSON deserialization.
 
 **Records are immutable and idempotent by construction.**
-`StatisticsRecord.Id` is the source event's `seq`, so a duplicate dispatch
-or a replay upserts over the same row rather than duplicating it.
+`StatisticsRecord.Id` is `"{seq}:{userId}"` (`adr/0055`) — not the bare `seq`,
+since a shared event can produce two records, one per user it concerns — so a
+duplicate dispatch or a replay upserts over the same row rather than
+duplicating it. `StatisticsRecordView.Id` on the wire is still the `long`
+`Seq`, unchanged for the client's `before=` paging.
+
+**Two records when owner and actor differ.** `StatisticsRecordProjection`
+writes one record when `ActorId == UserId`, as before `adr/0054`. Otherwise
+it writes the owner's record (`Role: Owner`) and a second, actor-facing copy
+(`Role: Actor`): same `Seq`, `UserId` set to the actor, `GoalId` cleared,
+`CompletionNumber` recomputed against the actor's own completions of that
+task. `statistics_inbox_records` never gets an actor copy — the Inbox is
+never shared. Labels resolve by id (`ILabelStore.ByIdsAsync`), not by the
+caller's `userId`, so a member's feed can still name a list or goal that
+belongs to the owner. `StatisticsCharts.Outstanding`, its tiles
+(`NetChange` included) and `ByGoal` all restrict to `Role: Owner` records —
+a member's own "outstanding" line and net change must not move because they
+completed someone else's task, and a task's goal stays the owner's business.
+See `adr/0055`.
+
+**A versioned projection rebuilds once when its shape changes.**
+`statistics_state.projectionVersion` (absent = 1) is compared against
+`StatisticsProjection.Version` on every start
+(`IProjectionMarker.IsBehindAsync`). An older or absent version first drops
+`statistics_records`, `statistics_inbox_records` and `statistics_labels`
+(`IStatisticsReset.ClearAsync`) and recreates their indexes, and only then
+resets `lastProcessedSeq` to 0 and records the new version
+(`AdoptVersionAsync`) — so a clear that fails, or a host that dies between
+the two, leaves the old version and the next start clears again. Then the
+normal replay path (above) rebuilds every row from `events` alone. No
+migration script; the log is the source (`adr/0055`).
 
 **Record shape and enrichment.** `StatisticsRecord` (fields in §3) is built
 from its source event's payload alone — no live lookup at projection time.
@@ -596,7 +819,7 @@ the task's current name, or renders `(deleted task)` if the task is gone.
 day and un-ticking it produce two records, `OccurrenceTicked` and
 `OccurrenceUnticked` — never an update to the first. A chart that needs the
 current tick state resolves each `(TaskId, OccurrenceDay)` pair to its
-highest-`Id` record. `statistics_labels` is a separate projection
+highest-`Seq` record. `statistics_labels` is a separate projection
 (`AreaCreated`/`Renamed`/`Deleted`, `TaskListCreated`/`Renamed`/`Deleted`,
 `GoalCreated`/`Renamed`/`Deleted`) holding the current name of every area,
 list and goal without Statistics ever reading `Tasks`' own collections. Two

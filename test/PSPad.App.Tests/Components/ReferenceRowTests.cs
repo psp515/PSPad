@@ -114,6 +114,30 @@ public class ReferenceRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnItemMarkedOnASnapshotShowsTheMarkChip()
+    {
+        Arrange();
+        var item = NewItem("Bigos");
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new MarkReferenceItemFromSnapshot(Guid.NewGuid(), User, item.Id, Guid.NewGuid(), true),
+            DateTimeOffset.UnixEpoch));
+
+        var row = Render(item);
+
+        Assert.Contains("pspad-snapshot-mark", row.Markup);
+    }
+
+    [Fact]
+    public void AnItemWithoutAMarkShowsNoChip()
+    {
+        Arrange();
+
+        var row = Render(NewItem("Bigos"));
+
+        Assert.DoesNotContain("pspad-snapshot-mark", row.Markup);
+    }
+
+    [Fact]
     public void ItSharesTheRowShapeWithAOneLineName()
     {
         Arrange();

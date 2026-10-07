@@ -68,7 +68,7 @@ public class ListKindTests
     {
         var list = Create();
 
-        Assert.Same(list, TaskList.RequireAcceptsTasks(list, User));
+        Assert.Equal(ListAccess.Owner(User), TaskList.RequireAcceptsTasks(list, User));
         Assert.Throws<DomainRejectedException>(() => TaskList.RequireAcceptsReferences(list, User));
     }
 
@@ -77,7 +77,7 @@ public class ListKindTests
     {
         var list = Create(ListKind.Reference);
 
-        Assert.Same(list, TaskList.RequireAcceptsReferences(list, User));
+        Assert.Equal(ListAccess.Owner(User), TaskList.RequireAcceptsReferences(list, User));
         Assert.Throws<DomainRejectedException>(() => TaskList.RequireAcceptsTasks(list, User));
     }
 }

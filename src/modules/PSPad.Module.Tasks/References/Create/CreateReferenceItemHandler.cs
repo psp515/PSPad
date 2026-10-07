@@ -15,8 +15,8 @@ public sealed class CreateReferenceItemHandler(
 
         try
         {
-            var events = ReferenceItem.Decide(existing, command, clock.UtcNow);
-            TaskList.RequireAcceptsReferences(await lists.LoadAsync(command.ListId, ct), command.UserId);
+            var access = TaskList.RequireAcceptsReferences(await lists.LoadAsync(command.ListId, ct), command.UserId);
+            var events = ReferenceItem.Decide(existing, command, clock.UtcNow, access);
             var item = existing ?? new ReferenceItem();
             item.ApplyAll(events);
             work.Stage(item, events);

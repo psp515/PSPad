@@ -33,11 +33,13 @@ public class SyncServiceTests
             return Task.FromResult(Respond(envelopes));
         }
 
-        public Task<SyncResponse?> SyncAsync(long since)
+        public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full)
         {
             RequestedSince = since;
             return Task.FromResult<SyncResponse?>(Pull);
         }
+
+        public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
     }
 
     [Fact]

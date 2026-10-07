@@ -9,7 +9,7 @@ namespace PSPad.App.Tests.Auth;
 public class RoutablePageAuthorizationTests
 {
     static readonly Type[] PublicByDesign =
-        [typeof(Authentication), typeof(Welcome), typeof(NotFound)];
+        [typeof(Authentication), typeof(Welcome), typeof(NotFound), typeof(SnapshotPage)];
 
     static readonly Type[] Guarded = typeof(App).Assembly.GetTypes()
         .Where(type => type.GetCustomAttributes(typeof(RouteAttribute), false).Length > 0)
@@ -46,6 +46,13 @@ public class RoutablePageAuthorizationTests
     {
         // It is the screen a signed-out visitor is sent to; guarding it would loop.
         Assert.Empty(typeof(Welcome).GetCustomAttributes(typeof(AuthorizeAttribute), true));
+    }
+
+    [Fact]
+    public void TheSnapshotRouteStaysReachableWithoutASession()
+    {
+        // Anyone with the link, signed in or not, can open a shared snapshot.
+        Assert.Empty(typeof(SnapshotPage).GetCustomAttributes(typeof(AuthorizeAttribute), true));
     }
 
     [Fact]

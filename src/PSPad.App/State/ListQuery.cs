@@ -18,6 +18,20 @@ public static class ListQuery
 
     public static string For(string uri, Guid listId) => $"{QueryString.Without(uri)}?list={listId}";
 
+    public static ListPanelView ViewFrom(string uri) => QueryString.Value(uri, "view") switch
+    {
+        "members" => ListPanelView.Members,
+        "snapshots" => ListPanelView.Snapshots,
+        _ => ListPanelView.Details
+    };
+
+    public static string For(string uri, Guid listId, ListPanelView view) => view switch
+    {
+        ListPanelView.Members => $"{For(uri, listId)}&view=members",
+        ListPanelView.Snapshots => $"{For(uri, listId)}&view=snapshots",
+        _ => For(uri, listId)
+    };
+
     public static string ForNewList(string uri, Guid areaId) =>
         $"{QueryString.Without(uri)}?list={NewList}&inarea={areaId}";
 }

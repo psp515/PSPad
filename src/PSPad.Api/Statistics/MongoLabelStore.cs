@@ -24,4 +24,10 @@ public sealed class MongoLabelStore(MongoContext context) : ILabelStore
         await Labels
             .Find(Builders<StatisticsLabel>.Filter.Eq(label => label.UserId, userId))
             .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<StatisticsLabel>> ByIdsAsync(
+        IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+        await Labels
+            .Find(Builders<StatisticsLabel>.Filter.In(label => label.Id, ids))
+            .ToListAsync(ct);
 }

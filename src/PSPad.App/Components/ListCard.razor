@@ -1,6 +1,8 @@
+@using PSPad.Abstractions
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.References
 @using PSPad.Module.Tasks.Tasks
+@inject IClock Clock
 
 <ThingCard Id="@List.Id" Name="@List.Name" Href="@($"/lists/{List.Id}")" Icon="@ListIcon.For(List)"
            IconTitle="@ListIcon.LabelFor(List)" Tasks="@Tasks" Today="@Today"
@@ -8,6 +10,12 @@
            EmptyText="@(IsReference ? "No items yet." : null)"
            OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen">
     <Actions>
+        @if (IsShared)
+        {
+            <MudTooltip Text="@SharedTooltip">
+                <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Class="pspad-list-shared" />
+            </MudTooltip>
+        }
         @if (IsReference)
         {
             <MudIconButton Class="pspad-add-item" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
@@ -18,7 +26,7 @@
             <MudIconButton Class="pspad-add-task" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
                            OnClick="@OnAddTaskClick" />
         }
-        <ThingMenu Class="pspad-list-menu" OnEdit="@OnEdit" OnDelete="@OnDelete" />
+        <ThingMenu Class="pspad-list-menu" OnEdit="@OnEdit" OnDelete="@(IsMine ? OnDelete : default)" />
     </Actions>
 </ThingCard>
 
@@ -49,7 +57,17 @@
 
     [Parameter] public EventCallback OnDelete { get; set; }
 
+    [Parameter] public bool IsMine { get; set; } = true;
+
     bool IsReference => List.Kind == ListKind.Reference;
+
+    bool IsShared => List.IsShared || List.IsInviteLiveAt(Clock.UtcNow);
+
+    string SharedTooltip => (List.Members.Count + 1) switch
+    {
+        1 => "Shared · 1 person",
+        var count => $"Shared · {count} people"
+    };
 
     RenderFragment ItemRows => @<text>
         @foreach (var item in Items.Take(ThingCard.Preview))

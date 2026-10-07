@@ -1,5 +1,37 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @using PSPad.App.Components
+@using PSPad.App.Theme
+@inject ThemePreference Preference
+
+<MudThemeProvider @ref="_themeProvider" Theme="@Preference.Theme" IsDarkMode="@Preference.IsDark" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
 @Body
 <BootSplashRelease />
+
+@code {
+    MudThemeProvider? _themeProvider;
+    bool _themeReady;
+
+    protected override void OnInitialized() => Preference.Changed += OnPreferenceChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _themeProvider is null || _themeReady)
+        {
+            return;
+        }
+
+        _themeReady = true;
+        var systemPrefersDark = await _themeProvider.GetSystemDarkModeAsync();
+        await Preference.InitialiseAsync(systemPrefersDark);
+        StateHasChanged();
+    }
+
+    void OnPreferenceChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Preference.Changed -= OnPreferenceChanged;
+}

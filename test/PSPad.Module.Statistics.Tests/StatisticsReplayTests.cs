@@ -38,11 +38,13 @@ public class StatisticsReplayTests
                 new TimeoutException("the log is unreachable"));
     }
 
-    sealed class FakeMarker(long start) : IProjectionMarker
+    sealed class FakeMarker(long start, int version = StatisticsProjection.Version) : IProjectionMarker
     {
         public List<long> Written { get; } = [];
 
         public long Current { get; private set; } = start;
+
+        public int Version { get; private set; } = version;
 
         public Task<long> ReadAsync(CancellationToken ct) => Task.FromResult(Current);
 
@@ -52,6 +54,31 @@ public class StatisticsReplayTests
             Current = seq;
             return Task.CompletedTask;
         }
+
+        public Task<bool> IsBehindAsync(int version, CancellationToken ct) => Task.FromResult(Version < version);
+
+        public Task AdoptVersionAsync(int version, CancellationToken ct)
+        {
+            Current = 0;
+            Version = version;
+            return Task.CompletedTask;
+        }
+    }
+
+    sealed class FakeReset : IStatisticsReset
+    {
+        public int Cleared { get; private set; }
+
+        public Task ClearAsync(CancellationToken ct)
+        {
+            Cleared++;
+            return Task.CompletedTask;
+        }
+    }
+
+    sealed class ThrowingReset : IStatisticsReset
+    {
+        public Task ClearAsync(CancellationToken ct) => throw new InvalidOperationException("Drop failed.");
     }
 
     sealed class RecordingHandler : IDomainEventHandler
@@ -86,7 +113,11 @@ public class StatisticsReplayTests
         new(seq, "TodoTask", Guid.NewGuid(), "TaskCreated", "{ truncated", At);
 
     static StatisticsReplay Replay(IEventLog log, IProjectionMarker marker, params IDomainEventHandler[] handlers) =>
-        new(log, marker, handlers, NullLogger<StatisticsReplay>.Instance);
+        Replay(log, marker, new FakeReset(), handlers);
+
+    static StatisticsReplay Replay(
+        IEventLog log, IProjectionMarker marker, IStatisticsReset reset, params IDomainEventHandler[] handlers) =>
+        new(log, marker, reset, handlers, NullLogger<StatisticsReplay>.Instance);
 
     [Fact]
     public async Task ReplayResumesFromTheStoredMarker()
@@ -205,5 +236,56 @@ public class StatisticsReplayTests
 
         Assert.Empty(marker.Written);
         Assert.Equal(12, marker.Current);
+    }
+
+    [Fact]
+    public async Task AnOlderProjectionVersionReplaysFromZero()
+    {
+        var log = new FakeEventLog(Created(1), Created(2), Created(3));
+        var marker = new FakeMarker(100, version: 1);
+        var reset = new FakeReset();
+        var handler = new RecordingHandler();
+
+        await Replay(log, marker, reset, handler).CatchUpAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, reset.Cleared);
+        Assert.Equal([1, 2, 3], handler.Seen);
+        Assert.Equal(3, marker.Current);
+        Assert.Equal(StatisticsProjection.Version, marker.Version);
+    }
+
+    [Fact]
+    public async Task TheCurrentVersionReplaysFromTheMarker()
+    {
+        var log = new FakeEventLog(Created(1), Created(2), Created(3));
+        var marker = new FakeMarker(2, version: StatisticsProjection.Version);
+        var reset = new FakeReset();
+        var handler = new RecordingHandler();
+
+        await Replay(log, marker, reset, handler).CatchUpAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, reset.Cleared);
+        Assert.Equal([3], handler.Seen);
+    }
+
+    [Fact]
+    public async Task AFailedClearLeavesTheOldVersionSoTheNextStartClearsAgain()
+    {
+        var log = new FakeEventLog(Created(1), Created(2));
+        var marker = new FakeMarker(100, version: 1);
+        var handler = new RecordingHandler();
+
+        await Replay(log, marker, new ThrowingReset(), handler).CatchUpAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, marker.Version);
+        Assert.Equal(100, marker.Current);
+        Assert.Empty(handler.Seen);
+
+        var reset = new FakeReset();
+        await Replay(log, marker, reset, handler).CatchUpAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, reset.Cleared);
+        Assert.Equal([1, 2], handler.Seen);
+        Assert.Equal(StatisticsProjection.Version, marker.Version);
     }
 }

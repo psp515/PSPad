@@ -1,4 +1,5 @@
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Module.Tasks.Tests;
@@ -33,5 +34,16 @@ public class AggregateTests
 
         Assert.Equal("groceries", thing.Name);
         Assert.Equal(1, thing.Version);
+    }
+
+    [Fact]
+    public void AnEventWithoutAnActorWasDoneByItsOwner()
+    {
+        var owner = Guid.NewGuid();
+        var member = Guid.NewGuid();
+        DomainEvent renamed = new TaskRenamed(Guid.NewGuid(), owner, DateTimeOffset.UnixEpoch, "Books");
+
+        Assert.Equal(owner, renamed.Actor);
+        Assert.Equal(member, (renamed with { ActorId = member }).Actor);
     }
 }

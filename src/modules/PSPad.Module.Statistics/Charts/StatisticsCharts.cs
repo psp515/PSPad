@@ -47,10 +47,10 @@ public static class StatisticsCharts
     {
         var first = today.AddDays(1 - days);
         var lifecycle = records
-            .Where(record => IsLifecycle(record.Kind))
+            .Where(record => record.Role == RecordRole.Owner && IsLifecycle(record.Kind))
             .Select(record => (Record: record, Day: DayOf(record.At, zone)))
             .OrderBy(entry => entry.Day)
-            .ThenBy(entry => entry.Record.Id)
+            .ThenBy(entry => entry.Record.Seq)
             .ToList();
 
         var open = new HashSet<Guid>(openAtStart);
@@ -107,12 +107,13 @@ public static class StatisticsCharts
             names[label.Id] = label.Name;
         }
 
+        var owned = records.Where(record => record.Role == RecordRole.Owner).ToList();
         var totals = new Dictionary<Guid, int>();
         var withoutGoal = 0;
 
-        foreach (var record in records
+        foreach (var record in owned
                      .Where(record => record.Kind == RecordKind.Completed)
-                     .Concat(FinalOccurrenceTicks(records)))
+                     .Concat(FinalOccurrenceTicks(owned)))
         {
             if (record.GoalId is { } goalId)
             {
@@ -175,7 +176,7 @@ public static class StatisticsCharts
         records
             .Where(record => record.OccurrenceDay is not null && IsOccurrence(record.Kind))
             .GroupBy(record => (record.TaskId, record.OccurrenceDay))
-            .Select(group => group.MaxBy(record => record.Id)!)
+            .Select(group => group.MaxBy(record => record.Seq)!)
             .Where(record => record.Kind == RecordKind.OccurrenceTicked);
 
     static bool IsOccurrence(RecordKind kind) =>
