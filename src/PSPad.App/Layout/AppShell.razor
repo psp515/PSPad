@@ -79,6 +79,7 @@
     </MudMainContent>
 
     <BottomNav />
+    <PullToRefresh />
 
     <TaskDetailPanel TaskId="@_openTask" NewInList="@_newTaskList" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <ListDetailPanel NewInArea="@_newListArea" ListId="@_openList" View="@_listView" OnClose="@ClosePanel" Disabled="@(!_ready)" />
