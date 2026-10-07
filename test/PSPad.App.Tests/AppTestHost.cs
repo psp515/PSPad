@@ -173,6 +173,8 @@ public static class AppTestHost
     {
         public bool IsSyncing => false;
 
+        public bool LastSyncFailed => false;
+
         public DateTimeOffset? LastSyncedAt => null;
 
 #pragma warning disable CS0067

@@ -241,7 +241,8 @@ parameter set, so the phone and desktop titles cannot drift.
 
 **Last updated.** `Components/PageHeading.razor` carries it on every screen with
 a heading. `Layout/SyncStamp.razor` is a caption — "Updated 2 min ago",
-"Updating…" while a sync runs, "Offline · updated 3 days ago" (warning colour),
+"Updating…" while a sync runs, "Offline · updated 3 days ago" (warning colour), "Couldn't update · updated
+5 min ago" (error colour) when the last attempt failed,
 "Not synced yet" — whose `title` holds the exact local time; it re-reads every
 30 seconds. From `md` up it sits right-aligned in the heading beside
 `Layout/SyncButton.razor` (a small `Sync` `MudIconButton`, spinning while a

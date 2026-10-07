@@ -21,6 +21,8 @@ public sealed class SyncCoordinator(
 
     public bool IsSyncing { get; private set; }
 
+    public bool LastSyncFailed { get; private set; }
+
     public DateTimeOffset? LastSyncedAt { get; private set; }
 
     public Task Started { get; private set; } = Task.CompletedTask;
@@ -108,6 +110,8 @@ public sealed class SyncCoordinator(
                 // Screens read the replica once and keep what they got. Nothing else would tell
                 // one rendered from an empty replica -- every screen, right after a sign-in --
                 // that its data has since arrived.
+                LastSyncFailed = !outcome.ReachedServer;
+
                 if (outcome.ReachedServer)
                 {
                     LastSyncedAt = clock.UtcNow;
@@ -127,6 +131,7 @@ public sealed class SyncCoordinator(
             }
             catch (HttpRequestException)
             {
+                LastSyncFailed = true;
             }
         }
 

@@ -10,6 +10,8 @@ public sealed class GatedSyncTrigger : ISyncTrigger, ISyncStatus
 
     public bool IsSyncing { get; private set; }
 
+    public bool LastSyncFailed { get; set; }
+
     public DateTimeOffset? LastSyncedAt { get; set; }
 
     public event Action? Changed;

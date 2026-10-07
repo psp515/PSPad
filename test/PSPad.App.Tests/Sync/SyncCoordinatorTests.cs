@@ -117,11 +117,36 @@ public class SyncCoordinatorTests : Bunit.TestContext
     [Fact]
     public async Task ASyncThatNeverReachedTheServerLeavesTheStampAlone()
     {
-        var coordinator = CoordinatorFor(null);
+        var coordinator = CoordinatorFor((SyncResponse?)null);
 
         await coordinator.SyncNowAsync();
 
         Assert.Null(coordinator.LastSyncedAt);
+    }
+
+    [Fact]
+    public async Task AServerThatIsDownLeavesTheStampAlone()
+    {
+        var replica = new InMemoryReplica();
+        await replica.SetLastSyncedAtAsync(Noon.AddMinutes(-5));
+        var coordinator = CoordinatorFor(new HttpRequestException("down"), replica: replica);
+        await coordinator.LoadLastSyncedAtAsync();
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Equal(Noon.AddMinutes(-5), coordinator.LastSyncedAt);
+    }
+
+    [Fact]
+    public async Task ASyncThatFailsIsFlaggedAndTheNextGoodOneClearsIt()
+    {
+        var down = CoordinatorFor(new HttpRequestException("down"));
+        await down.SyncNowAsync();
+        Assert.True(down.LastSyncFailed);
+
+        var up = CoordinatorFor(AnAreaCalled("Dom"));
+        await up.SyncNowAsync();
+        Assert.False(up.LastSyncFailed);
     }
 
     [Fact]
@@ -217,6 +242,16 @@ public class SyncCoordinatorTests : Bunit.TestContext
             []);
     }
 
+    SyncCoordinator CoordinatorFor(HttpRequestException failure, InMemoryReplica? replica = null)
+    {
+        var local = replica ?? new InMemoryReplica();
+        var outbox = new InMemoryOutbox();
+        Services.AddMudServices();
+        return new SyncCoordinator(
+            new SyncService(new FakeApi(null, failure), local, outbox), new FixedConnectivity(true), outbox,
+            Services.GetRequiredService<ISnackbar>(), local, new StoppedClock(Noon));
+    }
+
     SyncCoordinator CoordinatorFor(SyncResponse? pull, bool online = true, InMemoryReplica? replica = null)
     {
         Services.AddMudServices();
@@ -240,14 +275,14 @@ public class SyncCoordinatorTests : Bunit.TestContext
         public DateTimeOffset UtcNow => now;
     }
 
-    sealed class FakeApi(SyncResponse? pull) : ISyncApi
+    sealed class FakeApi(SyncResponse? pull, HttpRequestException? failure = null) : ISyncApi
     {
         public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
             Task.FromResult<IReadOnlyList<CommandResponse>>(
                 [.. envelopes.Select(_ => new CommandResponse(Guid.NewGuid(), true, null))]);
 
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
-            Task.FromResult(pull);
+            failure is null ? Task.FromResult(pull) : Task.FromException<SyncResponse?>(failure);
 
         public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
     }

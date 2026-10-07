@@ -159,6 +159,24 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task ThePendingCountDropsWhenASyncDrainsTheOutbox()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger();
+        Services.AddSingleton<ISyncStatus>(sync);
+        var outbox = Services.GetRequiredService<IOutbox>();
+        await outbox.AppendAsync(Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
+        var page = Render<SettingsPage>();
+        Assert.Contains("1 pending", page.Markup);
+
+        var batch = await outbox.PeekAsync(10);
+        await outbox.RemoveThroughAsync(batch[^1].Position);
+        sync.Announce();
+
+        page.WaitForAssertion(() => Assert.Contains("Everything is synced.", page.Markup));
+    }
+
+    [Fact]
     public async Task SigningOutClearsTheLocalSessionAndTheReplica()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");

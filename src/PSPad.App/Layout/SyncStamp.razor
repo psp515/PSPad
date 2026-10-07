@@ -6,7 +6,7 @@
 @inject IClock Clock
 @implements IDisposable
 
-<MudText Typo="Typo.caption" Class="pspad-sync-stamp pspad-muted" Color="@(Offline ? Color.Warning : Color.Default)"
+<MudText Typo="Typo.caption" Class="pspad-sync-stamp pspad-muted" Color="@Tone"
          title="@Exact">
     @Text
 </MudText>
@@ -17,6 +17,10 @@
     Timer? _timer;
 
     bool Offline => !Connectivity.IsOnline;
+
+    bool Failed => Status.LastSyncFailed && !Offline && !Status.IsSyncing;
+
+    Color Tone => Failed ? Color.Error : Offline ? Color.Warning : Color.Default;
 
     string? Exact => Status.LastSyncedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
@@ -31,11 +35,13 @@
 
             if (Status.LastSyncedAt is not { } at)
             {
-                return Offline ? "Offline" : "Not synced yet";
+                return Failed ? "Couldn't update" : Offline ? "Offline" : "Not synced yet";
             }
 
             var ago = RelativeTime.Describe(at, Clock.UtcNow);
-            return Offline ? $"Offline · updated {ago}" : $"Updated {ago}";
+            return Failed ? $"Couldn't update · updated {ago}"
+                : Offline ? $"Offline · updated {ago}"
+                : $"Updated {ago}";
         }
     }
 

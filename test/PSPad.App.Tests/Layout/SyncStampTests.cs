@@ -58,6 +58,18 @@ public class SyncStampTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AFailedSyncSaysSoAndKeepsTheLastGoodTime()
+    {
+        _status.LastSyncedAt = Noon.AddMinutes(-5);
+        _status.LastSyncFailed = true;
+
+        var stamp = RenderStamp();
+
+        Assert.Equal("Couldn't update · updated 5 min ago", stamp.Find(".pspad-sync-stamp").TextContent.Trim());
+        Assert.Contains("mud-error-text", stamp.Find(".pspad-sync-stamp").ClassList);
+    }
+
+    [Fact]
     public void ItFollowsAFinishedSync()
     {
         var stamp = RenderStamp();

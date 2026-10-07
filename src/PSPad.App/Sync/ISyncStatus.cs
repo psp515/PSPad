@@ -4,6 +4,8 @@ public interface ISyncStatus
 {
     bool IsSyncing { get; }
 
+    bool LastSyncFailed { get; }
+
     DateTimeOffset? LastSyncedAt { get; }
 
     event Action? Changed;

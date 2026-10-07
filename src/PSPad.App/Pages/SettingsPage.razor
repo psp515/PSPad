@@ -128,7 +128,7 @@
 
     void OnCommandSent() => InvokeAsync(RefreshPendingAsync);
 
-    void OnSyncChanged() => InvokeAsync(StateHasChanged);
+    void OnSyncChanged() => InvokeAsync(RefreshPendingAsync);
 
     async Task SignOutAsync()
     {
