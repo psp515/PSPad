@@ -289,6 +289,8 @@ public class TodayTests : Bunit.TestContext
         var page = Render<Today>();
 
         Assert.Single(page.FindComponents<RowSkeleton>());
+        Assert.Equal("Today", page.Find(".pspad-day-label").TextContent);
+        Assert.Empty(page.FindAll(".pspad-day-today-button"));
         Assert.DoesNotContain("Nothing planned for today.", page.Markup);
     }
 
@@ -344,11 +346,27 @@ public class TodayTests : Bunit.TestContext
         var page = Render<Today>();
 
         var schedule = page.Find(".pspad-day-schedule").TextContent;
-        Assert.Contains("09:30–11:00", schedule);
+        Assert.Equal("09:30", page.Find(".pspad-schedule-start").TextContent);
+        Assert.Equal("11:00", page.Find(".pspad-schedule-end").TextContent);
         Assert.Contains("Sprint planning", schedule);
         Assert.Contains("Today, any time", page.Find(".pspad-day-anytime").TextContent);
         Assert.Contains("Mleko", page.Find(".pspad-day-anytime").TextContent);
         Assert.True(page.Markup.IndexOf("pspad-day-schedule") < page.Markup.IndexOf("pspad-day-anytime"));
+    }
+
+    [Fact]
+    public void ATaskWithoutAnEndShowsOnlyItsStart()
+    {
+        var list = NewList("Praca");
+        var task = Due(list.Id, "Standup", Today);
+        task.ApplyAll(TodoTask.Decide(task, new SetTaskTime(Guid.NewGuid(), User, task.Id,
+            TaskTime.Of(new TimeOnly(9, 30), null)), DateTimeOffset.UnixEpoch));
+        Arrange(list, task);
+
+        var page = Render<Today>();
+
+        Assert.Equal("09:30", page.Find(".pspad-schedule-start").TextContent);
+        Assert.Empty(page.FindAll(".pspad-schedule-end"));
     }
 
     [Fact]

@@ -59,7 +59,14 @@ else
                     var task = _byId[entry.TaskId];
                     var day = DayOf(entry);
                     <div @key="entry.TaskId" class="pspad-schedule-slot">
-                        <MudText Typo="Typo.body2" Color="Color.Primary" Class="pspad-schedule-time">@TimeRow.Describe(entry.Time!)</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Primary" Class="pspad-schedule-time">
+                            <span class="pspad-schedule-start">@entry.Time!.Start.ToString("HH:mm")</span>
+                            @if (entry.Time.End is { } end)
+                            {
+                                <span class="pspad-schedule-dash">–</span>
+                                <span class="pspad-schedule-end">@end.ToString("HH:mm")</span>
+                            }
+                        </MudText>
                         <MudPaper Outlined="true" Class="pspad-day-task">
                             <TaskRow Task="@task" Today="@day" ListName="@NameOf(task.ListId)" ShowTime="false"
                                      OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />
@@ -173,7 +180,11 @@ else
 
     void Open(TodoTask task) => Navigation.NavigateTo(TaskQuery.For(Navigation.Uri, task.Id));
 
-    protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
+    protected override void OnInitialized()
+    {
+        _day = DayQuery.From(Navigation.Uri, State.Today);
+        Navigation.LocationChanged += OnLocationChanged;
+    }
 
     void OnLocationChanged(object? sender, LocationChangedEventArgs args) =>
         InvokeAsync(async () =>
