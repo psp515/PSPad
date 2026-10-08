@@ -1,10 +1,13 @@
 using MudBlazor;
+using PSPad.Abstractions;
 using PSPad.App.State.Outbox;
+using PSPad.App.State.Replica;
 
 namespace PSPad.App.Sync;
 
-public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity, IOutbox outbox, ISnackbar snackbar)
-    : ISyncTrigger
+public sealed class SyncCoordinator(
+    SyncService sync, IConnectivity connectivity, IOutbox outbox, ISnackbar snackbar, IReplica replica, IClock clock)
+    : ISyncTrigger, ISyncStatus
 {
     static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(60);
 
@@ -15,6 +18,12 @@ public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity
     public int PendingCount { get; private set; }
 
     public int Revision { get; private set; }
+
+    public bool IsSyncing { get; private set; }
+
+    public bool LastSyncFailed { get; private set; }
+
+    public DateTimeOffset? LastSyncedAt { get; private set; }
 
     public Task Started { get; private set; } = Task.CompletedTask;
 
@@ -32,7 +41,14 @@ public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity
         // The shell starts the coordinator once for the signed-out redirect it renders and again
         // once signed in. Handing the second caller the first pull would hand it a task that
         // already finished with no session behind it.
+        _ = LoadLastSyncedAtAsync();
         Started = SyncNowAsync();
+    }
+
+    public async Task LoadLastSyncedAtAsync()
+    {
+        LastSyncedAt ??= await replica.LastSyncedAtAsync();
+        Changed?.Invoke();
     }
 
     async Task LoopAsync()
@@ -65,11 +81,22 @@ public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity
 
     async Task RunAsync()
     {
-        do
+        IsSyncing = true;
+        Changed?.Invoke();
+
+        try
         {
-            _rerunRequested = false;
-            await RunOnceAsync();
-        } while (_rerunRequested);
+            do
+            {
+                _rerunRequested = false;
+                await RunOnceAsync();
+            } while (_rerunRequested);
+        }
+        finally
+        {
+            IsSyncing = false;
+            Changed?.Invoke();
+        }
     }
 
     async Task RunOnceAsync()
@@ -83,6 +110,14 @@ public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity
                 // Screens read the replica once and keep what they got. Nothing else would tell
                 // one rendered from an empty replica -- every screen, right after a sign-in --
                 // that its data has since arrived.
+                LastSyncFailed = !outcome.ReachedServer;
+
+                if (outcome.ReachedServer)
+                {
+                    LastSyncedAt = clock.UtcNow;
+                    await replica.SetLastSyncedAtAsync(LastSyncedAt.Value);
+                }
+
                 if (outcome.Pulled > 0)
                 {
                     Revision++;
@@ -96,6 +131,7 @@ public sealed class SyncCoordinator(SyncService sync, IConnectivity connectivity
             }
             catch (HttpRequestException)
             {
+                LastSyncFailed = true;
             }
         }
 

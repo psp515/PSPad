@@ -234,10 +234,30 @@ before first paint.
 `MudAppBar`, left to right: a back `MudIconButton` (`ArrowBack`) when the
 current `PageHeading` set a `BackHref`; the page title (`Typo.h6`,
 `Color.Primary`, truncated with an ellipsis, optionally with a caption
-subtitle — a list screen shows its area's name); `ConnectionStatus`; a
+subtitle — a list screen shows its area's name); `ConnectionStatus` (a `CloudOff` icon with a tooltip, nothing while healthy; offline is confirmed by `/health`, `adr/0058`); `SyncButton WithStamp` (a `Sync` icon button, spinning while a sync runs, red after a
+failed one, disabled offline; its tooltip and `aria-label` carry the stamp text); a 32px
 `MudAvatar` button that opens `AccountDrawer`. Title and subtitle come from
 `State/PageHeader.cs`, a scoped service `PageHeading` writes to on every
 parameter set, so the phone and desktop titles cannot drift.
+
+**Last updated.** `Components/PageHeading.razor` carries it on every screen with
+a heading. `Layout/SyncStamp.razor` is a caption — "Updated 2 min ago",
+"Updating…" while a sync runs, "Offline · updated 3 days ago" (warning colour), "Couldn't update · updated
+5 min ago" (error colour) when the last attempt failed,
+"Not synced yet" — whose `title` holds the exact local time; it re-reads every
+30 seconds. From `md` up it sits right-aligned in the heading beside
+`Layout/SyncButton.razor` (a small `Sync` `MudIconButton`, spinning while a
+sync runs, disabled offline). Below `md` the heading draws nothing: the same text
+lives in the tooltip of the top bar's `SyncButton` (see above), and
+`SyncStampText` builds it for both. The time
+comes from `ISyncStatus.LastSyncedAt` (`SyncCoordinator`), set only when a
+sync reached the server and kept in the replica's `meta` store so a cold,
+offline start still shows it; `ClearAsync` purges it with the rest.
+Settings → Sync shows a status line ("Syncing…", "Couldn't sync." in the error colour, "N pending" or "Everything is synced."), "Last synced …" (re-read every 30 seconds) and a labelled `SyncButton` ("Sync now"). Every `SyncButton` turns `Color.Error` after a failed sync.
+Below `md`, `Layout/PullToRefresh.razor` (mounted once in `AppShell`,
+`wwwroot/js/pullrefresh.js`) is the refresh path: dragging down 80px from the
+top of the page, with no panel, dialog or drawer open, runs the same sync;
+offline it does nothing. Both call `ISyncTrigger.SyncNowAsync`.
 
 Below `md`, `Layout/BottomNav.razor` is a `MudAppBar Bottom="true"` with
 five equal slots — Inbox, Areas, My Day, Goals, Statistics — My Day raised

@@ -109,6 +109,42 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheSyncSectionSaysWhenItLastSynced()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger { LastSyncedAt = new DateTimeOffset(2026, 3, 9, 23, 58, 0, TimeSpan.Zero) };
+        Services.AddSingleton<ISyncStatus>(sync);
+
+        var page = Render<SettingsPage>();
+
+        Assert.Contains("Last synced 2 min ago", page.Markup);
+    }
+
+    [Fact]
+    public void TheSyncSectionSaysWhenNothingHasSyncedYet()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.Contains("Not synced yet", page.Markup);
+    }
+
+    [Fact]
+    public void TheSyncSectionHasASyncNowButtonThatRunsOneSync()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger();
+        Services.AddSingleton<ISyncTrigger>(sync);
+        Services.AddSingleton<ISyncStatus>(sync);
+
+        var page = Render<SettingsPage>();
+        page.Find(".pspad-sync-button").Click();
+
+        Assert.Equal(1, sync.Calls);
+    }
+
+    [Fact]
     public async Task ItShowsThePendingCommandCountFromTheOutboxRegardlessOfSyncCoordinatorState()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
@@ -120,6 +156,59 @@ public class SettingsPageTests : Bunit.TestContext
         var page = Render<SettingsPage>();
 
         Assert.Contains("2 pending", page.Markup);
+    }
+
+    [Fact]
+    public void AFailedSyncIsSaidSoInsteadOfEverythingIsSynced()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger { LastSyncFailed = true };
+        Services.AddSingleton<ISyncStatus>(sync);
+
+        var page = Render<SettingsPage>();
+
+        Assert.Contains("Couldn't sync.", page.Markup);
+        Assert.DoesNotContain("Everything is synced.", page.Markup);
+    }
+
+    [Fact]
+    public void TheSyncSectionFollowsASyncFromRunningToFailedToDone()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger();
+        Services.AddSingleton<ISyncStatus>(sync);
+        var page = Render<SettingsPage>();
+        Assert.Contains("Everything is synced.", page.Markup);
+
+        sync.Hold();
+        _ = sync.SyncNowAsync();
+        page.WaitForAssertion(() => Assert.Contains("Syncing…", page.Markup));
+
+        sync.LastSyncFailed = true;
+        sync.Release();
+        page.WaitForAssertion(() => Assert.Contains("Couldn't sync.", page.Markup));
+
+        sync.LastSyncFailed = false;
+        sync.Announce();
+        page.WaitForAssertion(() => Assert.Contains("Everything is synced.", page.Markup));
+    }
+
+    [Fact]
+    public async Task ThePendingCountDropsWhenASyncDrainsTheOutbox()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger();
+        Services.AddSingleton<ISyncStatus>(sync);
+        var outbox = Services.GetRequiredService<IOutbox>();
+        await outbox.AppendAsync(Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
+        var page = Render<SettingsPage>();
+        Assert.Contains("1 pending", page.Markup);
+
+        var batch = await outbox.PeekAsync(10);
+        await outbox.RemoveThroughAsync(batch[^1].Position);
+        sync.Announce();
+
+        page.WaitForAssertion(() => Assert.Contains("Everything is synced.", page.Markup));
     }
 
     [Fact]

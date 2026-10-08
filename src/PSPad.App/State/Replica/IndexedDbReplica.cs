@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.JSInterop;
 using PSPad.Abstractions;
 
@@ -57,6 +58,19 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
     {
         var module = await ModuleAsync();
         await module.InvokeVoidAsync("setMeta", "collectionsFingerprint", fingerprint);
+    }
+
+    public async Task<DateTimeOffset?> LastSyncedAtAsync()
+    {
+        var module = await ModuleAsync();
+        var stored = await module.InvokeAsync<OwnerRow?>("getMeta", "lastSyncedAt");
+        return stored is null ? null : DateTimeOffset.Parse(stored.Value, CultureInfo.InvariantCulture);
+    }
+
+    public async Task SetLastSyncedAtAsync(DateTimeOffset at)
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("setMeta", "lastSyncedAt", at.ToString("O", CultureInfo.InvariantCulture));
     }
 
     public async Task<Guid?> OwnerAsync()

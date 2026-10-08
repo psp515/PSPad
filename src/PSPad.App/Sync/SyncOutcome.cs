@@ -1,3 +1,4 @@
 namespace PSPad.App.Sync;
 
-public sealed record SyncOutcome(int Pushed, int Pulled, IReadOnlyList<string> Rejections);
+public sealed record SyncOutcome(
+    int Pushed, int Pulled, IReadOnlyList<string> Rejections, bool ReachedServer = true);

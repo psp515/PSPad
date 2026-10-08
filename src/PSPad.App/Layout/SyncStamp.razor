@@ -1,0 +1,42 @@
+@using System.Globalization
+@using PSPad.Abstractions
+@using PSPad.App.Sync
+@inject ISyncStatus Status
+@inject IConnectivity Connectivity
+@inject IClock Clock
+@implements IDisposable
+
+@{
+    var described = SyncStampText.Describe(Status, Connectivity.IsOnline, Clock.UtcNow);
+}
+<MudText Typo="Typo.caption" Class="@(described.Failed ? "pspad-sync-stamp" : "pspad-sync-stamp pspad-muted")" Color="@(Tone(described.Failed))" title="@Exact">
+    @described.Text
+</MudText>
+
+@code {
+    static readonly TimeSpan Tick = TimeSpan.FromSeconds(30);
+
+    Timer? _timer;
+
+    bool Offline => !Connectivity.IsOnline;
+
+    Color Tone(bool failed) => failed ? Color.Error : Offline ? Color.Warning : Color.Default;
+
+    string? Exact => Status.LastSyncedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+
+    protected override void OnInitialized()
+    {
+        Status.Changed += OnChanged;
+        Connectivity.Changed += OnChanged;
+        _timer = new Timer(_ => OnChanged(), null, Tick, Tick);
+    }
+
+    void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Status.Changed -= OnChanged;
+        Connectivity.Changed -= OnChanged;
+        _timer?.Dispose();
+    }
+}
