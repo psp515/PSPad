@@ -501,6 +501,14 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-empty-state {
     border-style: dashed !important;
     border-width: 2px !important;
+    border-color: var(--pspad-line-strong) !important;
+}
+
+.pspad-empty-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--pspad-tint);
 }
 
 .pspad-empty-state-clickable {
@@ -518,6 +526,11 @@ button.pspad-heatmap-cell:focus-visible {
     padding: 10px 12px !important;
     justify-content: flex-start !important;
     text-align: left !important;
+    border-radius: 8px !important;
+}
+
+.pspad-property-activator:hover {
+    background-color: var(--pspad-hover) !important;
 }
 
 .pspad-property-activator .mud-button-label {
@@ -969,6 +982,7 @@ button.pspad-heatmap-cell:focus-visible {
 
 :root {
     --pspad-line: rgba(0, 0, 0, .08);
+    --pspad-line-strong: rgba(0, 0, 0, .16);
     --pspad-hover: rgba(0, 0, 0, .04);
     --pspad-tint: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
     --pspad-raised: #FFFFFF;
@@ -977,6 +991,7 @@ button.pspad-heatmap-cell:focus-visible {
 
 [data-theme="dark"] {
     --pspad-line: rgba(255, 255, 255, .07);
+    --pspad-line-strong: rgba(255, 255, 255, .14);
     --pspad-hover: rgba(255, 255, 255, .04);
     --pspad-raised: #1B1B1B;
     --pspad-card-shadow: 0 1px 2px rgba(0, 0, 0, .3);
@@ -990,7 +1005,9 @@ button.pspad-heatmap-cell:focus-visible {
 }
 
 .mud-paper-outlined.pspad-day-task:hover,
-.mud-paper-outlined.pspad-task-card:hover {
+.mud-paper-outlined.pspad-task-card:hover,
+.mud-paper-outlined.pspad-goal-card:hover,
+.mud-paper-outlined.pspad-inbox-card:hover {
     border-color: color-mix(in srgb, var(--mud-palette-text-secondary) 30%, var(--pspad-line));
 }
 
@@ -1101,4 +1118,33 @@ button.pspad-heatmap-cell:focus-visible {
 
 .pspad-page-subtitle.mud-typography {
     align-self: baseline;
+}
+
+.pspad-area-chips .pspad-chip.mud-chip {
+    background-color: var(--pspad-hover);
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-area-chips .pspad-chip.mud-chip.pspad-chip-current {
+    background-color: var(--pspad-tint);
+    color: var(--mud-palette-text-primary);
+    font-weight: 500;
+}
+
+.pspad-area-chips .pspad-new-area-chip.mud-chip {
+    background-color: transparent;
+}
+
+.mud-toggle-group {
+    border-radius: 999px;
+}
+
+.mud-toggle-group > .mud-toggle-item.mud-button-root:not(.mud-icon-button) {
+    border-radius: 0;
+}
+
+.mud-toggle-group .mud-toggle-item.mud-toggle-item-selected {
+    background-color: var(--pspad-tint);
+    color: var(--mud-palette-text-primary);
+    font-weight: 500;
 }

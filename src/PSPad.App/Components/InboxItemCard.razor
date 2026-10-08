@@ -1,6 +1,6 @@
 @using PSPad.Module.Tasks.Inbox
 
-<MudPaper Outlined="true">
+<MudPaper Outlined="true" Class="pspad-inbox-card">
     <div class="pspad-inbox-item pspad-row d-flex align-center gap-2 px-1" @onclick="@(() => OnOpen.InvokeAsync(Item))">
         <span class="pspad-row-lead">
             <MudIcon Icon="@Icons.Material.Outlined.Inbox" Size="Size.Small" Class="pspad-muted" />

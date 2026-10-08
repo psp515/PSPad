@@ -27,7 +27,7 @@ public class AreaChipsTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheCurrentAreaIsFilledAndMarkedAsTheCurrentPage()
+    public void TheCurrentAreaIsTintedAndMarkedAsTheCurrentPage()
     {
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
         var home = NewArea("Home", 0);
@@ -39,8 +39,10 @@ public class AreaChipsTests : Bunit.TestContext
 
         var current = chips.Find("[aria-current='page']");
         Assert.Equal($"/areas/{work.Id}", current.GetAttribute("href"));
-        Assert.Contains("mud-chip-filled", current.ClassName);
-        Assert.DoesNotContain("mud-chip-filled", chips.Find($"a[href='/areas/{home.Id}']").ClassName);
+        Assert.Contains("pspad-chip-current", current.ClassName);
+        var other = chips.Find($"a[href='/areas/{home.Id}']");
+        Assert.DoesNotContain("pspad-chip-current", other.ClassName);
+        Assert.Null(other.GetAttribute("aria-current"));
     }
 
     [Fact]

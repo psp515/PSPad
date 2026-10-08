@@ -21,6 +21,7 @@ public class InboxItemCardTests : Bunit.TestContext
 
         var classes = card.Find(".mud-paper").ClassList;
         Assert.Contains("mud-paper-outlined", classes);
+        Assert.Contains("pspad-inbox-card", classes);
         Assert.Contains("Kupić mleko", card.Markup);
     }
 

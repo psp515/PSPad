@@ -19,6 +19,16 @@ public class EmptyStateTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItsIconSitsInATintedCircle()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var empty = Render<EmptyState>(parameters => parameters.Add(p => p.Message, "No tasks yet."));
+
+        Assert.NotNull(empty.Find(".pspad-empty-icon .mud-icon-root"));
+    }
+
+    [Fact]
     public void ClickingAnywhereOnTheCardRaisesOnCreate()
     {
         AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));

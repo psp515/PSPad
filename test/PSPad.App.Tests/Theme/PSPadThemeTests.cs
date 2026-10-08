@@ -162,6 +162,16 @@ public class PSPadThemeTests
         Assert.True(Contrast(palette.TextSecondary, raised) >= MinimumTextContrast);
     }
 
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void QuietChipsAndCountPillsReadOnTheHoverWash(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+        var wash = Mix(dark ? new MudColor("#FFFFFF") : new MudColor("#000000"), RaisedOf(palette, dark), 0.04);
+
+        Assert.True(Contrast(palette.TextSecondary, wash) >= MinimumTextContrast);
+    }
+
     [Fact]
     public void TheRaisedGroundMatchesTheStylesheet()
     {
