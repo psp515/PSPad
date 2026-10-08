@@ -264,6 +264,38 @@ public class TaskRowTests : Bunit.TestContext
         Assert.Empty(row.FindAll(".pspad-priority"));
     }
 
+    [Fact]
+    public void ATimedTaskShowsItsTimeFirst()
+    {
+        Arrange();
+
+        var row = Render(Timed(Due(Task("Standup"), Today)));
+
+        Assert.Equal("09:30–11:00", row.Find(".pspad-row-time").TextContent.Trim());
+    }
+
+    [Fact]
+    public void TheTimeCanBeHidden()
+    {
+        Arrange();
+
+        var row = Render<TaskRow>(p => p
+            .Add(r => r.Task, Timed(Due(Task("Standup"), Today)))
+            .Add(r => r.Today, Today)
+            .Add(r => r.ShowTime, false));
+
+        Assert.Empty(row.FindAll(".pspad-row-time"));
+    }
+
+    static TodoTask Timed(TodoTask task)
+    {
+        task.ApplyAll(TodoTask.Decide(
+            task,
+            new SetTaskTime(Guid.NewGuid(), User, task.Id, TaskTime.Of(new TimeOnly(9, 30), new TimeOnly(11, 0))),
+            DateTimeOffset.UnixEpoch));
+        return task;
+    }
+
     IRenderedComponent<TaskRow> Render(TodoTask task, string? listName = null) =>
         Render<TaskRow>(parameters => parameters
             .Add(p => p.Task, task)

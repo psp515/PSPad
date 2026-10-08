@@ -1,0 +1,68 @@
+@using PSPad.Module.Tasks.Tasks
+
+<div class="pspad-property-row pspad-task-time d-flex align-center px-2 py-1 gap-2">
+    <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" Class="ml-2 mr-1" />
+    <MudText Typo="Typo.body2" Class="pspad-property-label">Time</MudText>
+    <MudTimePicker Class="pspad-time-start pspad-time-input" Label="Start" Time="@AsSpan(Value?.Start)" TimeChanged="@StartChangedAsync"
+                   AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@Disabled" />
+    <span class="pspad-muted">–</span>
+    <MudTimePicker Class="pspad-time-end pspad-time-input" Label="End" Time="@(_end ?? AsSpan(Value?.End))" TimeChanged="@EndChangedAsync"
+                   AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true"
+                   Disabled="@(Disabled || Value is null)" Error="@(_error is not null)" />
+    @if (Value is not null && !Disabled)
+    {
+        <MudIconButton Class="pspad-time-clear" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                       aria-label="Clear time" OnClick="@(() => SendAsync(null))" />
+    }
+</div>
+@if (_error is not null)
+{
+    <MudText Typo="Typo.caption" Color="Color.Error" Class="pspad-time-error d-block px-4">@_error</MudText>
+}
+
+@code {
+    [Parameter] public TaskTime? Value { get; set; }
+
+    [Parameter] public EventCallback<TaskTime?> ValueChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    TimeSpan? _end;
+
+    string? _error;
+
+    public static string Describe(TaskTime time) =>
+        time.End is { } end ? $"{time.Start:HH\\:mm}–{end:HH\\:mm}" : $"{time.Start:HH\\:mm}";
+
+    public Task StartChangedAsync(TimeSpan? start) =>
+        start is { } picked
+            ? TrySendAsync(TimeOnly.FromTimeSpan(picked), Value?.End)
+            : SendAsync(null);
+
+    public Task EndChangedAsync(TimeSpan? end) =>
+        Value is { } current
+            ? TrySendAsync(current.Start, end is { } picked ? TimeOnly.FromTimeSpan(picked) : null, end)
+            : Task.CompletedTask;
+
+    async Task TrySendAsync(TimeOnly start, TimeOnly? end, TimeSpan? typedEnd = null)
+    {
+        if (end is { } finish && finish <= start)
+        {
+            _end = typedEnd;
+            _error = "End must be after start";
+            StateHasChanged();
+            return;
+        }
+
+        await SendAsync(new TaskTime(start, end));
+    }
+
+    async Task SendAsync(TaskTime? time)
+    {
+        _end = null;
+        _error = null;
+        await ValueChanged.InvokeAsync(time);
+    }
+
+    static TimeSpan? AsSpan(TimeOnly? time) => time?.ToTimeSpan();
+}

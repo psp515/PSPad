@@ -12,6 +12,10 @@
         @if (HasMeta)
         {
             <div class="pspad-row-meta">
+                @if (ShowTime && Task.Time is { } time)
+                {
+                    <MudText Typo="Typo.caption" Class="pspad-row-time" Color="Color.Primary">@TimeRow.Describe(time)</MudText>
+                }
                 @if (Task.DueOn is { } due)
                 {
                     <MudText Typo="Typo.caption" Class="pspad-due" Color="@(Overdue ? Color.Error : Color.Default)">
@@ -61,6 +65,8 @@
 
     [Parameter] public DateOnly Today { get; set; }
 
+    [Parameter] public bool ShowTime { get; set; } = true;
+
     [Parameter] public string? ListName { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
@@ -76,7 +82,7 @@
     bool HasDescription => Task.Description.Length > 0;
 
     bool HasMeta => ListName is not null || Task.Steps.Count > 0 || Task.DueOn is not null
-        || Task.IsRecurring || HasDescription || Task.Priority != Priority.None || TaskMark is not null;
+        || (ShowTime && Task.Time is not null) || Task.IsRecurring || HasDescription || Task.Priority != Priority.None || TaskMark is not null;
 
     SnapshotMark? TaskMark => Task.SnapshotMarks.FirstOrDefault(mark => mark.StepId is null);
 
