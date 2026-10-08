@@ -51,18 +51,14 @@ public class PageHeadingTests : Bunit.TestContext
     }
 
     [Fact]
-    public void PhoneShowsTheStampAndAButtonOnlyForAMouse()
+    public void PhoneDrawsNoStampLineBecauseTheTopBarCarriesTheButton()
     {
         AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
 
         var heading = Render<PageHeading>(parameters => parameters.Add(p => p.Title, "Inbox"));
 
-        var line = heading.Find(".pspad-sync-line");
-        Assert.Contains("d-md-none", line.ClassList);
-        Assert.NotEmpty(line.QuerySelectorAll(".pspad-sync-stamp"));
-        var button = line.QuerySelector(".pspad-fine-pointer-only .pspad-sync-button");
-        Assert.NotNull(button);
-        Assert.Single(line.QuerySelectorAll(".pspad-sync-button"));
+        Assert.Empty(heading.FindAll(".pspad-sync-line"));
+        Assert.Empty(heading.FindAll(".pspad-fine-pointer-only"));
     }
 
     [Fact]

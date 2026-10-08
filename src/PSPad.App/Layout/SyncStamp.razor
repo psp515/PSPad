@@ -6,9 +6,11 @@
 @inject IClock Clock
 @implements IDisposable
 
-<MudText Typo="Typo.caption" Class="pspad-sync-stamp pspad-muted" Color="@Tone"
-         title="@Exact">
-    @Text
+@{
+    var described = SyncStampText.Describe(Status, Connectivity.IsOnline, Clock.UtcNow);
+}
+<MudText Typo="Typo.caption" Class="pspad-sync-stamp pspad-muted" Color="@(Tone(described.Failed))" title="@Exact">
+    @described.Text
 </MudText>
 
 @code {
@@ -18,32 +20,9 @@
 
     bool Offline => !Connectivity.IsOnline;
 
-    bool Failed => Status.LastSyncFailed && !Offline && !Status.IsSyncing;
-
-    Color Tone => Failed ? Color.Error : Offline ? Color.Warning : Color.Default;
+    Color Tone(bool failed) => failed ? Color.Error : Offline ? Color.Warning : Color.Default;
 
     string? Exact => Status.LastSyncedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
-
-    string Text
-    {
-        get
-        {
-            if (Status.IsSyncing)
-            {
-                return "Updating…";
-            }
-
-            if (Status.LastSyncedAt is not { } at)
-            {
-                return Failed ? "Couldn't update" : Offline ? "Offline" : "Not synced yet";
-            }
-
-            var ago = RelativeTime.Describe(at, Clock.UtcNow);
-            return Failed ? $"Couldn't update · updated {ago}"
-                : Offline ? $"Offline · updated {ago}"
-                : $"Updated {ago}";
-        }
-    }
 
     protected override void OnInitialized()
     {

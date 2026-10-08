@@ -854,17 +854,3 @@ button.pspad-heatmap-cell:focus-visible {
 @keyframes pspad-spin {
   to { transform: rotate(360deg); }
 }
-
-.pspad-sync-line {
-  margin-top: -8px;
-}
-
-.pspad-fine-pointer-only {
-  display: none;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .pspad-fine-pointer-only {
-    display: inline-flex;
-  }
-}

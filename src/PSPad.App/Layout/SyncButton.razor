@@ -1,7 +1,9 @@
+@using PSPad.Abstractions
 @using PSPad.App.Sync
 @inject ISyncTrigger Trigger
 @inject ISyncStatus Status
 @inject IConnectivity Connectivity
+@inject IClock Clock
 @implements IDisposable
 
 @if (Labeled)
@@ -11,15 +13,31 @@
         Sync now
     </MudButton>
 }
+else if (WithStamp)
+{
+    var described = SyncStampText.Describe(Status, Connectivity.IsOnline, Clock.UtcNow);
+    <MudTooltip Text="@described.Text">
+        <MudIconButton Class="@ButtonClass" Icon="@Icons.Material.Filled.Sync"
+                       Color="@(described.Failed ? Color.Error : Color.Primary)" Disabled="@Blocked"
+                       OnClick="@Trigger.SyncNowAsync" aria-label="@($"Sync now. {described.Text}")" />
+    </MudTooltip>
+}
 else
 {
-    <MudIconButton Class="@(Status.IsSyncing ? "pspad-sync-button pspad-spin" : "pspad-sync-button")"
-                   Icon="@Icons.Material.Filled.Sync" Color="Color.Primary" Size="Size.Small" Disabled="@Blocked"
-                   OnClick="@Trigger.SyncNowAsync" aria-label="Sync now" />
+    <MudIconButton Class="@ButtonClass" Icon="@Icons.Material.Filled.Sync" Color="Color.Primary" Size="Size.Small"
+                   Disabled="@Blocked" OnClick="@Trigger.SyncNowAsync" aria-label="Sync now" />
 }
 
 @code {
+    static readonly TimeSpan Tick = TimeSpan.FromSeconds(30);
+
+    Timer? _timer;
+
     [Parameter] public bool Labeled { get; set; }
+
+    [Parameter] public bool WithStamp { get; set; }
+
+    string ButtonClass => Status.IsSyncing ? "pspad-sync-button pspad-spin" : "pspad-sync-button";
 
     bool Blocked => Status.IsSyncing || !Connectivity.IsOnline;
 
@@ -27,6 +45,11 @@ else
     {
         Status.Changed += OnChanged;
         Connectivity.Changed += OnChanged;
+
+        if (WithStamp)
+        {
+            _timer = new Timer(_ => OnChanged(), null, Tick, Tick);
+        }
     }
 
     void OnChanged() => InvokeAsync(StateHasChanged);
@@ -35,5 +58,6 @@ else
     {
         Status.Changed -= OnChanged;
         Connectivity.Changed -= OnChanged;
+        _timer?.Dispose();
     }
 }

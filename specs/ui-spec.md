@@ -234,7 +234,8 @@ before first paint.
 `MudAppBar`, left to right: a back `MudIconButton` (`ArrowBack`) when the
 current `PageHeading` set a `BackHref`; the page title (`Typo.h6`,
 `Color.Primary`, truncated with an ellipsis, optionally with a caption
-subtitle — a list screen shows its area's name); `ConnectionStatus`; a
+subtitle — a list screen shows its area's name); `ConnectionStatus`; `SyncButton WithStamp` (a `Sync` icon button, spinning while a sync runs, red after a
+failed one, disabled offline; its tooltip and `aria-label` carry the stamp text); a 32px
 `MudAvatar` button that opens `AccountDrawer`. Title and subtitle come from
 `State/PageHeader.cs`, a scoped service `PageHeading` writes to on every
 parameter set, so the phone and desktop titles cannot drift.
@@ -246,10 +247,9 @@ a heading. `Layout/SyncStamp.razor` is a caption — "Updated 2 min ago",
 "Not synced yet" — whose `title` holds the exact local time; it re-reads every
 30 seconds. From `md` up it sits right-aligned in the heading beside
 `Layout/SyncButton.razor` (a small `Sync` `MudIconButton`, spinning while a
-sync runs, disabled offline). Below `md` it is the same text alone, in a
-right-aligned `pspad-sync-line` under the top bar; a touch device gets no button, but a
-device with a mouse (`hover: hover` and `pointer: fine`, a narrow desktop window)
-gets the same `SyncButton` beside it, because the pull gesture is touch-only. The time
+sync runs, disabled offline). Below `md` the heading draws nothing: the same text
+lives in the tooltip of the top bar's `SyncButton` (see above), and
+`SyncStampText` builds it for both. The time
 comes from `ISyncStatus.LastSyncedAt` (`SyncCoordinator`), set only when a
 sync reached the server and kept in the replica's `meta` store so a cold,
 offline start still shows it; `ClearAsync` purges it with the rest.
