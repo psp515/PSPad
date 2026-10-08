@@ -137,6 +137,51 @@ public class PSPadThemeTests
         Assert.True(Contrast(palette.Primary, tint) >= MinimumUiContrast);
     }
 
+    [Fact]
+    public void CornersAreTwelvePixels() =>
+        Assert.Equal("12px", PSPadTheme.For(Accent.Green).LayoutProperties.DefaultBorderRadius);
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void SelectedFillsReadOnTheRefreshTint(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+        var tint = Mix(palette.Primary, RaisedOf(palette, dark), 0.12);
+
+        Assert.True(Contrast(palette.TextPrimary, tint) >= MinimumTextContrast);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void CardControlsAndMetaReadOnTheRaisedSurface(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+        var raised = RaisedOf(palette, dark);
+
+        Assert.True(Contrast(palette.ActionDefault, raised) >= MinimumUiContrast);
+        Assert.True(Contrast(palette.TextSecondary, raised) >= MinimumTextContrast);
+    }
+
+    [Fact]
+    public void TheRaisedGroundMatchesTheStylesheet()
+    {
+        var css = File.ReadAllText(StylesheetPath());
+
+        Assert.Contains($"--pspad-raised: {PSPadTheme.LightRaised}", css);
+        Assert.Contains($"--pspad-raised: {PSPadTheme.DarkRaised}", css);
+    }
+
+    static string StylesheetPath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (!File.Exists(Path.Combine(directory.FullName, "src", "PSPad.App", "wwwroot", "css", "app.css")))
+            directory = directory.Parent!;
+
+        return Path.Combine(directory.FullName, "src", "PSPad.App", "wwwroot", "css", "app.css");
+    }
+
+    static MudColor RaisedOf(Palette palette, bool dark) => new(dark ? PSPadTheme.DarkRaised : PSPadTheme.LightRaised);
+
     static MudColor Mix(MudColor over, MudColor ground, double share) => new(
         (byte)Math.Round(share * over.R + (1 - share) * ground.R),
         (byte)Math.Round(share * over.G + (1 - share) * ground.G),
