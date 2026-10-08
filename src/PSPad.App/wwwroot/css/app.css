@@ -190,6 +190,10 @@ button.pspad-heatmap-cell:focus-visible {
     padding-bottom: 96px;
 }
 
+@media (min-width: 960px) {
+    .mud-main-content { padding-top: 0 !important; }
+}
+
 .pspad-bottom-nav {
     height: 72px;
 }

@@ -59,7 +59,7 @@
     <AccountDrawer @bind-Open="_accountOpen" Email="@_email" DisplayName="@_displayName" UserId="@State.UserId" />
 
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.False" Class="my-4 pspad-content">
+        <MudContainer MaxWidth="MaxWidth.False" Class="mt-4 mt-md-2 mb-4 pspad-content">
             @if (_ready)
             {
                 <CascadingValue Value="@Coordinator.Revision" Name="SyncRevision">

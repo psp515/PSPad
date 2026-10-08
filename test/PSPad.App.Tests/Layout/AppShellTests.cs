@@ -34,6 +34,18 @@ public class AppShellTests : Bunit.TestContext
     static readonly Guid User = Guid.NewGuid();
 
     [Fact]
+    public void OnTheDesktopThePageStartsHigher()
+    {
+        Arrange();
+
+        var shell = Render<AppShell>();
+
+        var content = shell.Find(".pspad-content");
+        Assert.Contains("mt-md-2", content.ClassName);
+        Assert.DoesNotContain("my-4", content.ClassName);
+    }
+
+    [Fact]
     public void OnlyTheDesktopCarriesTheSidebar()
     {
         Arrange();
