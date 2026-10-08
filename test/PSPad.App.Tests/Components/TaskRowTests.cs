@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using MudBlazor.Services;
 using PSPad.App.Components;
 using PSPad.Module.Tasks.Recurrence;
@@ -252,6 +253,43 @@ public class TaskRowTests : Bunit.TestContext
         var row = Render(Task("Buy milk"));
 
         Assert.DoesNotContain("pspad-snapshot-mark", row.Markup);
+    }
+
+    [Fact]
+    public void TheCheckboxIsRound()
+    {
+        Arrange();
+
+        var box = Render(Task("Buy milk")).FindComponent<MudCheckBox<bool>>().Instance;
+
+        Assert.Equal(Icons.Material.Filled.RadioButtonUnchecked, box.UncheckedIcon);
+        Assert.Equal(Icons.Material.Filled.CheckCircle, box.CheckedIcon);
+        Assert.Equal(Color.Primary, box.Color);
+        Assert.Equal(Color.Default, box.UncheckedColor);
+    }
+
+    [Fact]
+    public void AnUnstarredStarIsQuiet()
+    {
+        Arrange();
+
+        var star = Render(Task("Buy milk")).FindComponent<MudIconButton>().Instance;
+
+        Assert.Equal(Color.Default, star.Color);
+        Assert.Contains("pspad-muted", star.Class);
+    }
+
+    [Fact]
+    public void AStarredStarIsPrimary()
+    {
+        Arrange();
+        var task = Task("Buy milk");
+        task.ApplyAll(TodoTask.Decide(task, new StarTask(Guid.NewGuid(), User, task.Id, true), DateTimeOffset.UnixEpoch));
+
+        var star = Render(task).FindComponent<MudIconButton>().Instance;
+
+        Assert.Equal(Color.Primary, star.Color);
+        Assert.DoesNotContain("pspad-muted", star.Class);
     }
 
     [Fact]

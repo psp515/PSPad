@@ -199,6 +199,31 @@ public class ReferenceRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnUnstarredStarIsQuiet()
+    {
+        Arrange();
+
+        var star = Render(NewItem("Bigos")).FindComponent<MudIconButton>().Instance;
+
+        Assert.Equal(Color.Default, star.Color);
+        Assert.Contains("pspad-muted", star.Class);
+    }
+
+    [Fact]
+    public void AStarredStarIsPrimary()
+    {
+        Arrange();
+        var item = NewItem("Bigos");
+        item.ApplyAll(ReferenceItem.Decide(
+            item, new StarReferenceItem(Guid.NewGuid(), User, item.Id, true), DateTimeOffset.UnixEpoch));
+
+        var star = Render(item).FindComponent<MudIconButton>().Instance;
+
+        Assert.Equal(Color.Primary, star.Color);
+        Assert.DoesNotContain("pspad-muted", star.Class);
+    }
+
+    [Fact]
     public void ClickingTheRowRaisesOnOpen()
     {
         Arrange();

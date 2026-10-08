@@ -556,6 +556,11 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-row {
     height: 60px;
     box-sizing: border-box;
+    border-radius: 8px;
+}
+
+.pspad-row:hover {
+    background-color: var(--pspad-hover);
 }
 
 .pspad-row .mud-checkbox {
@@ -594,6 +599,7 @@ button.pspad-heatmap-cell:focus-visible {
     height: 20px;
     overflow: hidden;
     white-space: nowrap;
+    font-size: 0.75rem;
     color: var(--mud-palette-text-secondary);
 }
 

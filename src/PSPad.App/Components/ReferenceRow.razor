@@ -50,7 +50,8 @@
         }
     </div>
 
-    <MudIconButton Class="pspad-row-star" Size="Size.Small" Color="Color.Primary"
+    <MudIconButton Class="@(Item.Starred ? "pspad-row-star" : "pspad-row-star pspad-muted")" Size="Size.Small"
+                   Color="@(Item.Starred ? Color.Primary : Color.Default)"
                    Icon="@(Item.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
                    aria-label="@(Item.Starred ? "Unstar" : "Star")"
                    OnClick="@(() => OnStar.InvokeAsync(Item))" />

@@ -3,7 +3,8 @@
 
 <div class="pspad-row d-flex align-center gap-2 px-1 @(Overdue ? "pspad-overdue overdue" : "")">
     <MudCheckBox T="bool" Value="@Done" ValueChanged="@(_ => OnToggle.InvokeAsync(Task))"
-                 Color="Color.Primary" Dense="true" />
+                 Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
+                 UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" />
 
     <div class="pspad-row-body pspad-task-name" @onclick="@(() => OnOpen.InvokeAsync(Task))">
         <MudText Typo="Typo.body2" Class="pspad-row-name" title="@Task.Name"
@@ -18,7 +19,7 @@
                 }
                 @if (Task.DueOn is { } due)
                 {
-                    <MudText Typo="Typo.caption" Class="pspad-due" Color="@(Overdue ? Color.Error : Color.Default)">
+                    <MudText Typo="Typo.caption" Class="pspad-due" Color="@(Overdue ? Color.Error : Color.Inherit)">
                         @(Task.IsRecurring ? $"Until {due:d MMM}" : due.ToString("d MMM"))
                     </MudText>
                 }
@@ -54,7 +55,8 @@
         }
     </div>
 
-    <MudIconButton Class="pspad-row-star" Size="Size.Small" Color="Color.Primary"
+    <MudIconButton Class="@(Task.Starred ? "pspad-row-star" : "pspad-row-star pspad-muted")" Size="Size.Small"
+                   Color="@(Task.Starred ? Color.Primary : Color.Default)"
                    Icon="@(Task.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
                    aria-label="@(Task.Starred ? "Unstar" : "Star")"
                    OnClick="@(() => OnStar.InvokeAsync(Task))" />
