@@ -51,7 +51,7 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        Assert.Contains("Oddać książki", page.Find(".pspad-day-today").TextContent);
+        Assert.Contains("Oddać książki", page.Find(".pspad-day-anytime").TextContent);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        var upcoming = page.Find(".pspad-day-upcoming");
+        var upcoming = page.Find(".pspad-day-comingup");
         Assert.Contains("Later", upcoming.TextContent);
         Assert.DoesNotContain("Now", upcoming.TextContent);
     }
@@ -110,9 +110,9 @@ public class TodayTests : Bunit.TestContext
         Assert.Contains("Starred", starred);
         Assert.Contains("Important", starred);
         Assert.Contains("Important later", starred);
-        Assert.DoesNotContain("Important", page.Find(".pspad-day-today").TextContent);
-        Assert.Empty(page.FindAll(".pspad-day-upcoming"));
-        Assert.True(page.Markup.IndexOf("pspad-day-today") < page.Markup.IndexOf("pspad-day-starred"));
+        Assert.DoesNotContain("Important", page.Find(".pspad-day-anytime").TextContent);
+        Assert.Empty(page.FindAll(".pspad-day-comingup"));
+        Assert.True(page.Markup.IndexOf("pspad-day-anytime") < page.Markup.IndexOf("pspad-day-starred"));
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        Assert.Empty(page.FindAll(".pspad-day-upcoming"));
+        Assert.Empty(page.FindAll(".pspad-day-comingup"));
     }
 
     [Fact]
@@ -149,9 +149,8 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        var upcoming = page.Find(".pspad-day-upcoming");
-        Assert.Contains("Upcoming (2)", upcoming.TextContent);
-        Assert.Contains("Tue, 15 Sep", upcoming.TextContent);
+        var upcoming = page.Find(".pspad-day-comingup");
+                Assert.Contains("Tue, 15 Sep", upcoming.TextContent);
         Assert.Contains("Dentist", upcoming.TextContent);
         Assert.Contains("Tomorrowish", upcoming.TextContent);
         Assert.DoesNotContain("Next month", page.Markup);
@@ -165,8 +164,8 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        Assert.Contains("Read a book", page.Find(".pspad-day-today").TextContent);
-        Assert.Contains("Read a book", page.Find(".pspad-day-upcoming").TextContent);
+        Assert.Contains("Read a book", page.Find(".pspad-day-anytime").TextContent);
+        Assert.Contains("Read a book", page.Find(".pspad-day-comingup").TextContent);
     }
 
     [Fact]
@@ -177,86 +176,11 @@ public class TodayTests : Bunit.TestContext
         var replica = Arrange(list, task);
 
         var page = Render<Today>();
-        page.Find(".pspad-day-upcoming input.mud-checkbox-input").Change(true);
+        page.Find(".pspad-day-comingup input.mud-checkbox-input").Change(true);
 
         var stored = await replica.LoadAsync<TodoTask>(task.Id);
         Assert.Contains(Today.AddDays(1), stored!.CompletedDays);
         Assert.DoesNotContain(Today, stored.CompletedDays);
-    }
-
-    [Fact]
-    public void GoalsInProgressSitBeforeCompleted()
-    {
-        var list = NewList("Zakupy");
-        var done = Due(list.Id, "Masło", Today);
-        done.ApplyAll(TodoTask.Decide(
-            done, new CompleteTask(Guid.NewGuid(), User, done.Id),
-            new DateTimeOffset(Today.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero)));
-        Arrange(
-            list, done, Due(list.Id, "Later", Today.AddDays(1)),
-            NewGoal("Run a marathon", GoalStatus.InProgress, Today.AddDays(5)));
-
-        var page = Render<Today>();
-
-        var markup = page.Markup;
-        var goals = markup.IndexOf("Goals in progress");
-        Assert.True(goals < markup.IndexOf("Completed (1)"));
-        Assert.Contains("Run a marathon", page.Find(".pspad-day-goals").TextContent);
-    }
-
-    [Fact]
-    public void OnlyGoalsInProgressAreListedSoonestFirst()
-    {
-        Arrange(
-            NewGoal("Undated", GoalStatus.InProgress),
-            NewGoal("Later", GoalStatus.InProgress, Today.AddDays(20)),
-            NewGoal("Sooner", GoalStatus.InProgress, Today.AddDays(2)),
-            NewGoal("Done", GoalStatus.Achieved),
-            NewGoal("Dropped", GoalStatus.NotAchieved));
-
-        var page = Render<Today>();
-
-        Assert.Equal(
-            ["Sooner", "Later", "Undated"],
-            page.FindAll(".pspad-day-goals .pspad-goal-summary-name").Select(name => name.TextContent));
-    }
-
-    [Fact]
-    public void TheGoalsSectionIsAbsentWhenNoGoalIsInProgress()
-    {
-        Arrange(NewGoal("Done", GoalStatus.Achieved));
-
-        var page = Render<Today>();
-
-        Assert.DoesNotContain("Goals in progress", page.Markup);
-    }
-
-    [Fact]
-    public void AGoalCountsItsLinkedTasks()
-    {
-        var list = NewList("Zakupy");
-        var goal = NewGoal("Run a marathon", GoalStatus.InProgress);
-        var linked = Due(list.Id, "Train", Today);
-        linked.ApplyAll(TodoTask.Decide(
-            linked, new LinkTaskToGoal(Guid.NewGuid(), User, linked.Id, goal.Id), DateTimeOffset.UnixEpoch));
-        Arrange(list, goal, linked);
-
-        var page = Render<Today>();
-
-        Assert.Contains("0 of 1 task done", page.Find(".pspad-day-goals").TextContent);
-    }
-
-    [Fact]
-    public void ClickingAGoalOpensItsPage()
-    {
-        var goal = NewGoal("Run a marathon", GoalStatus.InProgress);
-        Arrange(goal);
-
-        var page = Render<Today>();
-        page.Find(".pspad-goal-summary").Click();
-
-        var navigation = Services.GetRequiredService<NavigationManager>();
-        Assert.EndsWith($"/goals/{goal.Id}", navigation.Uri);
     }
 
     [Fact]
@@ -365,7 +289,7 @@ public class TodayTests : Bunit.TestContext
         var page = Render<Today>();
 
         Assert.Single(page.FindComponents<RowSkeleton>());
-        Assert.DoesNotContain("Nothing due today", page.Markup);
+        Assert.DoesNotContain("Nothing planned for today.", page.Markup);
     }
 
     [Fact]
@@ -376,7 +300,7 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        Assert.DoesNotContain("Nothing due today", page.Markup);
+        Assert.DoesNotContain("Nothing planned for today.", page.Markup);
     }
 
     [Fact]
@@ -398,6 +322,104 @@ public class TodayTests : Bunit.TestContext
         await counts.RefreshAsync();
 
         Assert.Equal(0, counts.Today);
+    }
+
+    [Fact]
+    public void GoalsAreNotOnMyDay()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, NewGoal("Run a marathon", GoalStatus.InProgress), Due(list.Id, "Mleko", Today));
+
+        var page = Render<Today>();
+
+        Assert.DoesNotContain("Run a marathon", page.Markup);
+    }
+
+    [Fact]
+    public void TimedTasksAreScheduledBeforeAnyTime()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Timed(Due(list.Id, "Sprint planning", Today), 9, 30, 11, 0), Due(list.Id, "Mleko", Today));
+
+        var page = Render<Today>();
+
+        var schedule = page.Find(".pspad-day-schedule").TextContent;
+        Assert.Contains("09:30–11:00", schedule);
+        Assert.Contains("Sprint planning", schedule);
+        Assert.Contains("Today, any time", page.Find(".pspad-day-anytime").TextContent);
+        Assert.Contains("Mleko", page.Find(".pspad-day-anytime").TextContent);
+        Assert.True(page.Markup.IndexOf("pspad-day-schedule") < page.Markup.IndexOf("pspad-day-anytime"));
+    }
+
+    [Fact]
+    public void TheDayComesFromTheQuery()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Later", Today.AddDays(1)), Due(list.Id, "Now", Today));
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"/?day={Today.AddDays(1):yyyy-MM-dd}");
+
+        var page = Render<Today>();
+
+        Assert.Contains("Tomorrow, any time", page.Find(".pspad-day-anytime").TextContent);
+        Assert.Contains("Later", page.Markup);
+        Assert.DoesNotContain("Now", page.Markup);
+        Assert.Empty(page.FindAll(".pspad-day-comingup"));
+    }
+
+    [Fact]
+    public void TheNextArrowMovesToTomorrow()
+    {
+        Arrange(NewList("Zakupy"));
+        var page = Render<Today>();
+
+        page.Find(".pspad-day-next").Click();
+
+        Assert.EndsWith($"?day={Today.AddDays(1):yyyy-MM-dd}", Services.GetRequiredService<NavigationManager>().Uri);
+    }
+
+    [Fact]
+    public void APastDayShowsOnlyCompletedOpen()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Missed", Today.AddDays(-1)));
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"/?day={Today.AddDays(-1):yyyy-MM-dd}");
+
+        var page = Render<Today>();
+
+        Assert.Contains("Nothing completed on", page.Find(".pspad-day-completed").TextContent);
+        Assert.DoesNotContain("Missed", page.Markup);
+    }
+
+    [Fact]
+    public void ClickingATaskKeepsTheDay()
+    {
+        var list = NewList("Zakupy");
+        var task = Due(list.Id, "Later", Today.AddDays(1));
+        Arrange(list, task);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/?day={Today.AddDays(1):yyyy-MM-dd}");
+
+        var page = Render<Today>();
+        page.Find(".pspad-task-name").Click();
+
+        Assert.Contains($"day={Today.AddDays(1):yyyy-MM-dd}&task={task.Id}", navigation.Uri);
+    }
+
+    [Fact]
+    public void NothingPlannedSaysSoForTheDay()
+    {
+        Arrange(NewList("Zakupy"));
+
+        var page = Render<Today>();
+
+        Assert.Contains("Nothing planned for today.", page.Find(".pspad-day-anytime").TextContent);
+    }
+
+    static TodoTask Timed(TodoTask task, int sh, int sm, int eh, int em)
+    {
+        task.ApplyAll(TodoTask.Decide(task, new SetTaskTime(Guid.NewGuid(), User, task.Id,
+            TaskTime.Of(new TimeOnly(sh, sm), new TimeOnly(eh, em))), DateTimeOffset.UnixEpoch));
+        return task;
     }
 
     InMemoryReplica Arrange(params Aggregate[] documents) =>

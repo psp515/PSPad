@@ -858,3 +858,11 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-row-time {
     font-weight: 500;
 }
+
+.pspad-schedule { max-width: 760px; }
+.pspad-schedule-slot { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: center; }
+.pspad-schedule-time { font-weight: 500; font-variant-numeric: tabular-nums; }
+@media (max-width: 959.98px) {
+    .pspad-schedule-slot { grid-template-columns: 64px minmax(0, 1fr); gap: 8px; }
+    .pspad-day-bar { justify-content: center !important; }
+}
