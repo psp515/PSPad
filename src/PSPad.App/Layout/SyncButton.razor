@@ -8,7 +8,7 @@
 
 @if (Labeled)
 {
-    <MudButton Class="pspad-sync-button" Variant="Variant.Outlined" Color="Color.Primary"
+    <MudButton Class="pspad-sync-button" Variant="Variant.Outlined" Color="@Tone"
                StartIcon="@Icons.Material.Filled.Sync" Disabled="@Blocked" OnClick="@Trigger.SyncNowAsync">
         Sync now
     </MudButton>
@@ -18,13 +18,13 @@ else if (WithStamp)
     var described = SyncStampText.Describe(Status, Connectivity.IsOnline, Clock.UtcNow);
     <MudTooltip Text="@described.Text">
         <MudIconButton Class="@ButtonClass" Icon="@Icons.Material.Filled.Sync"
-                       Color="@(described.Failed ? Color.Error : Color.Primary)" Disabled="@Blocked"
+                       Color="@Tone" Disabled="@Blocked"
                        OnClick="@Trigger.SyncNowAsync" aria-label="@($"Sync now. {described.Text}")" />
     </MudTooltip>
 }
 else
 {
-    <MudIconButton Class="@ButtonClass" Icon="@Icons.Material.Filled.Sync" Color="Color.Primary" Size="Size.Small"
+    <MudIconButton Class="@ButtonClass" Icon="@Icons.Material.Filled.Sync" Color="@Tone" Size="Size.Small"
                    Disabled="@Blocked" OnClick="@Trigger.SyncNowAsync" aria-label="Sync now" />
 }
 
@@ -38,6 +38,10 @@ else
     [Parameter] public bool WithStamp { get; set; }
 
     string ButtonClass => Status.IsSyncing ? "pspad-sync-button pspad-spin" : "pspad-sync-button";
+
+    bool Failed => Status.LastSyncFailed && Connectivity.IsOnline && !Status.IsSyncing;
+
+    Color Tone => Failed ? Color.Error : Color.Primary;
 
     bool Blocked => Status.IsSyncing || !Connectivity.IsOnline;
 

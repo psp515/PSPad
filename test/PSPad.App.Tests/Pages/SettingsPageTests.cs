@@ -159,6 +159,41 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AFailedSyncIsSaidSoInsteadOfEverythingIsSynced()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger { LastSyncFailed = true };
+        Services.AddSingleton<ISyncStatus>(sync);
+
+        var page = Render<SettingsPage>();
+
+        Assert.Contains("Couldn't sync.", page.Markup);
+        Assert.DoesNotContain("Everything is synced.", page.Markup);
+    }
+
+    [Fact]
+    public void TheSyncSectionFollowsASyncFromRunningToFailedToDone()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger();
+        Services.AddSingleton<ISyncStatus>(sync);
+        var page = Render<SettingsPage>();
+        Assert.Contains("Everything is synced.", page.Markup);
+
+        sync.Hold();
+        _ = sync.SyncNowAsync();
+        page.WaitForAssertion(() => Assert.Contains("Syncing…", page.Markup));
+
+        sync.LastSyncFailed = true;
+        sync.Release();
+        page.WaitForAssertion(() => Assert.Contains("Couldn't sync.", page.Markup));
+
+        sync.LastSyncFailed = false;
+        sync.Announce();
+        page.WaitForAssertion(() => Assert.Contains("Everything is synced.", page.Markup));
+    }
+
+    [Fact]
     public async Task ThePendingCountDropsWhenASyncDrainsTheOutbox()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");

@@ -253,7 +253,7 @@ lives in the tooltip of the top bar's `SyncButton` (see above), and
 comes from `ISyncStatus.LastSyncedAt` (`SyncCoordinator`), set only when a
 sync reached the server and kept in the replica's `meta` store so a cold,
 offline start still shows it; `ClearAsync` purges it with the rest.
-Settings → Sync shows "Last synced …" and a labelled `SyncButton` ("Sync now").
+Settings → Sync shows a status line ("Syncing…", "Couldn't sync." in the error colour, "N pending" or "Everything is synced."), "Last synced …" (re-read every 30 seconds) and a labelled `SyncButton` ("Sync now"). Every `SyncButton` turns `Color.Error` after a failed sync.
 Below `md`, `Layout/PullToRefresh.razor` (mounted once in `AppShell`,
 `wwwroot/js/pullrefresh.js`) is the refresh path: dragging down 80px from the
 top of the page, with no panel, dialog or drawer open, runs the same sync;

@@ -67,6 +67,38 @@ public class SyncButtonTests : Bunit.TestContext
         Assert.Equal(1, _trigger.Calls);
     }
 
+    [Fact]
+    public void AFailedSyncTurnsTheIconButtonRed()
+    {
+        _trigger.LastSyncFailed = true;
+
+        var button = RenderButton();
+
+        Assert.Contains("mud-error-text", button.Find(".pspad-sync-button").ClassList);
+    }
+
+    [Fact]
+    public void AFailedSyncTurnsTheLabelledButtonRed()
+    {
+        _trigger.LastSyncFailed = true;
+
+        var button = RenderButton(labeled: true);
+
+        Assert.Contains("mud-button-outlined-error", button.Find(".pspad-sync-button").ClassList);
+    }
+
+    [Fact]
+    public void ItTurnsRedWhenASyncFailsWhileOpen()
+    {
+        var button = RenderButton();
+
+        _trigger.LastSyncFailed = true;
+        _trigger.Announce();
+
+        button.WaitForAssertion(() =>
+            Assert.Contains("mud-error-text", button.Find(".pspad-sync-button").ClassList));
+    }
+
     IRenderedComponent<SyncButton> RenderButton(bool labeled = false)
     {
         AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));

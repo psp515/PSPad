@@ -67,6 +67,7 @@ public class SyncStampTests : Bunit.TestContext
 
         Assert.Equal("Couldn't update · updated 5 min ago", stamp.Find(".pspad-sync-stamp").TextContent.Trim());
         Assert.Contains("mud-error-text", stamp.Find(".pspad-sync-stamp").ClassList);
+        Assert.DoesNotContain("pspad-muted", stamp.Find(".pspad-sync-stamp").ClassList);
     }
 
     [Fact]

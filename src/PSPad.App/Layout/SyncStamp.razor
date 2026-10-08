@@ -9,7 +9,7 @@
 @{
     var described = SyncStampText.Describe(Status, Connectivity.IsOnline, Clock.UtcNow);
 }
-<MudText Typo="Typo.caption" Class="pspad-sync-stamp pspad-muted" Color="@(Tone(described.Failed))" title="@Exact">
+<MudText Typo="Typo.caption" Class="@(described.Failed ? "pspad-sync-stamp" : "pspad-sync-stamp pspad-muted")" Color="@(Tone(described.Failed))" title="@Exact">
     @described.Text
 </MudText>
 

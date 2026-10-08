@@ -77,9 +77,7 @@
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4">
             <MudText Typo="Typo.subtitle2" Class="mb-3">Sync</MudText>
-            <MudText Typo="Typo.body2">
-                @(_pendingCommands == 0 ? "Everything is synced." : $"{_pendingCommands} pending")
-            </MudText>
+            <MudText Typo="Typo.body2" Color="@(Failed ? Color.Error : Color.Default)">@SyncLine</MudText>
             <MudText Typo="Typo.caption" Class="d-block mb-3 pspad-muted">@LastSyncedText</MudText>
             <SyncButton Labeled="true" />
         </MudPaper>
@@ -109,6 +107,18 @@
     static readonly string[] TimeZoneIds =
         TimeZoneInfo.GetSystemTimeZones().Select(zone => zone.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray();
 
+    static readonly TimeSpan Tick = TimeSpan.FromSeconds(30);
+
+    Timer? _timer;
+
+    bool Failed => SyncStatus.LastSyncFailed && Connectivity.IsOnline && !SyncStatus.IsSyncing;
+
+    string SyncLine =>
+        SyncStatus.IsSyncing ? "Syncing…"
+        : Failed ? (_pendingCommands == 0 ? "Couldn't sync." : $"Couldn't sync. {_pendingCommands} pending")
+        : _pendingCommands == 0 ? "Everything is synced."
+        : $"{_pendingCommands} pending";
+
     string LastSyncedText => SyncStatus.LastSyncedAt is { } at
         ? $"Last synced {RelativeTime.Describe(at, Clock.UtcNow)}"
         : "Not synced yet";
@@ -117,6 +127,7 @@
     {
         Sender.Sent += OnCommandSent;
         SyncStatus.Changed += OnSyncChanged;
+        _timer = new Timer(_ => InvokeAsync(StateHasChanged), null, Tick, Tick);
         await RefreshPendingAsync();
     }
 
@@ -157,6 +168,7 @@
     {
         Sender.Sent -= OnCommandSent;
         SyncStatus.Changed -= OnSyncChanged;
+        _timer?.Dispose();
     }
 
     public async Task ApplyTimeZoneAsync(string timeZone)
