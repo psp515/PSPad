@@ -212,7 +212,7 @@ public class TodayTests : Bunit.TestContext
         var page = Render<Today>();
 
         Assert.DoesNotContain("Overdue", page.Markup);
-        Assert.Single(page.FindAll(".mud-paper"));
+        Assert.Single(page.FindAll(".mud-paper:not(.pspad-week-strip)"));
     }
 
     [Fact]
@@ -289,8 +289,8 @@ public class TodayTests : Bunit.TestContext
         var page = Render<Today>();
 
         Assert.Single(page.FindComponents<RowSkeleton>());
-        Assert.Equal("Today", page.Find(".pspad-day-label").TextContent);
-        Assert.Empty(page.FindAll(".pspad-day-today-button"));
+        Assert.StartsWith("Today", page.Find(".pspad-week-label").TextContent.Trim());
+        Assert.Empty(page.FindAll(".pspad-week-today"));
         Assert.DoesNotContain("Nothing planned for today.", page.Markup);
     }
 
@@ -386,14 +386,54 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheNextArrowMovesToTomorrow()
+    public void TheNextArrowMovesAWeekAhead()
     {
         Arrange(NewList("Zakupy"));
         var page = Render<Today>();
 
-        page.Find(".pspad-day-next").Click();
+        page.Find(".pspad-week-next").Click();
 
-        Assert.EndsWith($"?day={Today.AddDays(1):yyyy-MM-dd}", Services.GetRequiredService<NavigationManager>().Uri);
+        Assert.EndsWith($"?day={Today.AddDays(7):yyyy-MM-dd}", Services.GetRequiredService<NavigationManager>().Uri);
+    }
+
+    [Fact]
+    public void TheWeekStripHeadsTheDay()
+    {
+        Arrange(NewList("Zakupy"));
+
+        var page = Render<Today>();
+
+        var strip = page.FindComponent<WeekStrip>();
+        Assert.Equal(Today, strip.Instance.Day);
+        Assert.Equal(7, page.FindAll(".pspad-week-day").Count);
+    }
+
+    [Fact]
+    public void ADayWithSomethingPlannedGetsADot()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Overdue", Today.AddDays(-3)), Due(list.Id, "Later", Today.AddDays(1)));
+
+        var page = Render<Today>();
+
+        Assert.Equal(new HashSet<DateOnly> { Today, Today.AddDays(1) }, page.FindComponent<WeekStrip>().Instance.Busy);
+        var dotted = page.FindAll(".pspad-week-day")
+            .Where(day => day.QuerySelector(".pspad-week-dot") is not null)
+            .Select(day => day.GetAttribute("aria-label"));
+        Assert.Equal([$"{Today:ddd, d MMM}", $"{Today.AddDays(1):ddd, d MMM}"], dotted);
+    }
+
+    [Fact]
+    public void AnOvernightTimeIsMarkedOnTheSchedule()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Timed(Due(list.Id, "Night shift", Today), 22, 0, 1, 0));
+
+        var page = Render<Today>();
+
+        Assert.Equal("22:00", page.Find(".pspad-schedule-start").TextContent);
+        Assert.Equal("01:00", page.Find(".pspad-schedule-end").TextContent);
+        Assert.Equal("(+1)", page.Find(".pspad-schedule-nextday").TextContent.Trim());
     }
 
     [Fact]

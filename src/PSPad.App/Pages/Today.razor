@@ -17,8 +17,8 @@
 
 <PageHeading Title="My Day" />
 
-<div class="pspad-day-bar d-flex justify-end mb-4">
-    <DayPicker Day="@_day" Today="@State.Today" DayChanged="@GoToAsync" />
+<div class="pspad-day-bar mb-4">
+    <WeekStrip Day="@_day" Today="@State.Today" DayChanged="@GoToAsync" Busy="@_busy" />
 </div>
 
 @if (!_loaded)
@@ -60,7 +60,7 @@ else
                     var day = DayOf(entry);
                     <div @key="entry.TaskId" class="pspad-schedule-slot">
                         <MudText Typo="Typo.body2" Color="Color.Primary" Class="pspad-schedule-time">
-                            <span class="pspad-schedule-start">@TimeRow.Format(entry.Time!.Start)</span>@if (entry.Time.End is { } end){<span class="pspad-schedule-dash">–</span><span class="pspad-schedule-end">@TimeRow.Format(end)</span>}
+                            <span class="pspad-schedule-start">@TimeRow.Format(entry.Time!.Start)</span>@if (entry.Time.End is { } end){<span class="pspad-schedule-dash">–</span><span class="pspad-schedule-end">@TimeRow.Format(end)</span>}@if (entry.Time.Overnight){<span class="pspad-schedule-nextday pspad-muted">@TimeRow.NextDay</span>}
                         </MudText>
                         <MudPaper Outlined="true" Class="pspad-day-task">
                             <TaskRow Task="@task" Today="@day" ListName="@NameOf(task.ListId)" ShowTime="false"
@@ -121,6 +121,7 @@ else
     bool _loaded;
     DayPlan _plan = new([], [], [], [], [], []);
     DateOnly _day;
+    IReadOnlySet<DateOnly> _busy = new HashSet<DateOnly>();
     IReadOnlyDictionary<Guid, TodoTask> _byId = new Dictionary<Guid, TodoTask>();
     IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
 
@@ -147,7 +148,11 @@ else
         _listNames = lists.Where(list => !list.Deleted).ToDictionary(list => list.Id, list => list.Name);
         _byId = tasks.ToDictionary(task => task.Id);
         _day = DayQuery.From(Navigation.Uri, State.Today);
-        _plan = TodayRule.Plan(tasks, _day, State.Today, LocalToday.Zone(State.TimeZone));
+        var zone = LocalToday.Zone(State.TimeZone);
+        _plan = TodayRule.Plan(tasks, _day, State.Today, zone);
+        _busy = WeekStrip.WeekOf(_day)
+            .Where(day => IsBusy(TodayRule.Plan(tasks, day, State.Today, zone), day))
+            .ToHashSet();
 
         _loaded = true;
     }
@@ -166,6 +171,9 @@ else
                 </MudItem>
             }
         </MudGrid>;
+
+    bool IsBusy(DayPlan plan, DateOnly day) =>
+        plan.Scheduled.Count > 0 || plan.AnyTime.Count > 0 || (day == State.Today && plan.Overdue.Count > 0);
 
     DateOnly DayOf(TodayEntry entry) => entry.Recurring ? entry.DueOn ?? _day : _day;
 

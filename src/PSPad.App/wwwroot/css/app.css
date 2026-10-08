@@ -869,14 +869,74 @@ button.pspad-heatmap-cell:focus-visible {
 }
 
 .pspad-schedule { max-width: 760px; }
-.pspad-schedule-slot { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: center; }
+.pspad-schedule-slot { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 12px; align-items: center; }
 .pspad-schedule-time { font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pspad-schedule-nextday { margin-left: 4px; font-weight: 400; }
 @media (max-width: 959.98px) {
     .pspad-schedule-slot { grid-template-columns: 52px minmax(0, 1fr); gap: 8px; }
     .pspad-schedule-time { display: flex; flex-direction: column; line-height: 1.3; white-space: normal; }
     .pspad-schedule-dash { display: none; }
     .pspad-schedule-end { opacity: 0.7; }
-    .pspad-day-bar { justify-content: center !important; }
+    .pspad-schedule-nextday { margin-left: 0; font-size: 0.75rem; }
+}
+
+.pspad-week-strip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "row head actions";
+    align-items: center;
+    gap: 16px;
+    padding: 8px 12px;
+}
+.pspad-week-month { grid-area: month; display: none; }
+.pspad-week-row { grid-area: row; min-width: 0; }
+.pspad-week-head { grid-area: head; display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap; }
+.pspad-week-actions { grid-area: actions; justify-content: flex-end; }
+.pspad-week-days { justify-content: space-around; min-width: 0; touch-action: pan-y; }
+.pspad-week-day.mud-button-root {
+    min-width: 0;
+    padding: 4px 2px;
+    border-radius: 12px;
+    text-transform: none;
+}
+.pspad-week-day .mud-button-label { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pspad-week-initial { font-size: 0.75rem; line-height: 1.2; color: var(--mud-palette-text-secondary); }
+.pspad-week-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    box-sizing: border-box;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+.pspad-week-day-today .pspad-week-circle { border-color: var(--mud-palette-primary); color: var(--mud-palette-primary); }
+.pspad-week-day-picked .pspad-week-circle {
+    background-color: var(--mud-palette-primary);
+    border-color: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}
+.pspad-week-dot, .pspad-week-dot-space { width: 5px; height: 5px; border-radius: 50%; }
+.pspad-week-dot { background-color: var(--mud-palette-primary); }
+@media (max-width: 959.98px) {
+    .pspad-day-bar { margin: -16px -16px 16px; }
+    .pspad-week-strip.mud-paper {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "month actions" "row row";
+        gap: 4px;
+        padding: 4px 4px 8px 16px;
+        border-radius: 0;
+        border-width: 0 0 1px 0;
+    }
+    .pspad-week-month { display: block; }
+    .pspad-week-head { display: none; }
+    .pspad-week-row { margin-left: -12px; }
+}
+@media (min-width: 600px) and (max-width: 959.98px) {
+    .pspad-day-bar { margin-left: -24px; margin-right: -24px; }
 }
 
 .pspad-nav { padding: 12px; box-sizing: border-box; }

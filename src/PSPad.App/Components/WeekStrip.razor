@@ -1,0 +1,125 @@
+@using System.Globalization
+
+<MudPaper Outlined="true" Class="pspad-week-strip">
+    <MudText Typo="Typo.subtitle2" Class="pspad-week-month">@Day.ToString("MMMM yyyy", Invariant)</MudText>
+
+    <div class="pspad-week-row d-flex align-center">
+        <MudIconButton Class="pspad-week-prev" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous week"
+                       OnClick="@(() => DayChanged.InvokeAsync(Day.AddDays(-7)))" />
+        <div class="pspad-week-days d-flex flex-grow-1" @ontouchstart="@TouchStarted" @ontouchend="@TouchEndedAsync">
+            @foreach (var day in Week)
+            {
+                <MudButton @key="day" Class="@DayClass(day)" Variant="Variant.Text" aria-label="@day.ToString("ddd, d MMM", Invariant)"
+                           aria-current="@(day == Today ? "date" : null)" OnClick="@(() => DayChanged.InvokeAsync(day))">
+                    <span class="pspad-week-initial">@day.ToString("ddd", Invariant)[..1]</span>
+                    <span class="pspad-week-circle">@day.Day</span>
+                    @if (Busy.Contains(day))
+                    {
+                        <span class="pspad-week-dot"></span>
+                    }
+                    else
+                    {
+                        <span class="pspad-week-dot-space"></span>
+                    }
+                </MudButton>
+            }
+        </div>
+        <MudIconButton Class="pspad-week-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next week"
+                       OnClick="@(() => DayChanged.InvokeAsync(Day.AddDays(7)))" />
+    </div>
+
+    <div class="pspad-week-head">
+        <MudText Typo="Typo.subtitle1" Class="pspad-week-label">@Label</MudText>
+        <MudText Typo="Typo.caption" Class="pspad-week-meta pspad-muted">@Meta</MudText>
+    </div>
+
+    <div class="pspad-week-actions d-flex align-center gap-1">
+        @if (Day != Today)
+        {
+            <MudButton Class="pspad-week-today" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       OnClick="@(() => DayChanged.InvokeAsync(Today))">Today</MudButton>
+        }
+        <MudIconButton Class="pspad-week-pick" Icon="@Icons.Material.Outlined.CalendarMonth" aria-label="Pick a date"
+                       OnClick="@(() => _picking = true)" />
+    </div>
+</MudPaper>
+
+<MudDialog @bind-Visible="_picking" Class="pspad-day-dialog" ContentClass="pa-0" Options="@Options">
+    <DialogContent>
+        <MudDatePicker PickerVariant="PickerVariant.Static" Elevation="0" ShowToolbar="false" Date="@Day.ToDateTime(TimeOnly.MinValue)"
+                       DateChanged="@PickedAsync" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton Class="pspad-day-dialog-today" Color="Color.Primary" OnClick="@(() => PickedAsync(Today.ToDateTime(TimeOnly.MinValue)))">Today</MudButton>
+        <MudButton Color="Color.Primary" OnClick="@(() => _picking = false)">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter, EditorRequired] public DateOnly Day { get; set; }
+
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback<DateOnly> DayChanged { get; set; }
+
+    [Parameter] public IReadOnlySet<DateOnly> Busy { get; set; } = new HashSet<DateOnly>();
+
+    public const double SwipeThreshold = 48;
+
+    static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
+
+    static readonly DialogOptions Options = new() { CloseOnEscapeKey = true, BackdropClick = true, NoHeader = true, MaxWidth = MaxWidth.ExtraSmall };
+
+    bool _picking;
+
+    (double X, double Y)? _touch;
+
+    public static DateOnly MondayOf(DateOnly day) => day.AddDays(-(((int)day.DayOfWeek + 6) % 7));
+
+    public static IEnumerable<DateOnly> WeekOf(DateOnly day) =>
+        Enumerable.Range(0, 7).Select(offset => MondayOf(day).AddDays(offset));
+
+    public static int SwipeDirection(double dx, double dy) =>
+        Math.Abs(dx) >= SwipeThreshold && Math.Abs(dx) > Math.Abs(dy) ? (dx < 0 ? 1 : -1) : 0;
+
+    IEnumerable<DateOnly> Week => WeekOf(Day);
+
+    bool IsRelative => Math.Abs(Day.DayNumber - Today.DayNumber) <= 1;
+
+    string Label => IsRelative
+        ? $"{DueDateRow.Describe(Day, Today)} · {Day.ToString("ddd, d MMM", Invariant)}"
+        : DueDateRow.Describe(Day, Today);
+
+    string Meta => $"Week {ISOWeek.GetWeekOfYear(Day.ToDateTime(TimeOnly.MinValue))} · {Day.ToString("MMMM yyyy", Invariant)}";
+
+    string DayClass(DateOnly day) =>
+        $"pspad-week-day{(day == Today ? " pspad-week-day-today" : "")}{(day == Day ? " pspad-week-day-picked" : "")}";
+
+    void TouchStarted(TouchEventArgs args) =>
+        _touch = args.Touches.Length > 0 ? (args.Touches[0].ClientX, args.Touches[0].ClientY) : null;
+
+    async Task TouchEndedAsync(TouchEventArgs args)
+    {
+        if (_touch is not { } start || args.ChangedTouches.Length == 0)
+        {
+            return;
+        }
+
+        _touch = null;
+        var end = args.ChangedTouches[0];
+        var direction = SwipeDirection(end.ClientX - start.X, end.ClientY - start.Y);
+        if (direction != 0)
+        {
+            await DayChanged.InvokeAsync(Day.AddDays(7 * direction));
+        }
+    }
+
+    async Task PickedAsync(DateTime? picked)
+    {
+        _picking = false;
+        if (picked is { } date)
+        {
+            await DayChanged.InvokeAsync(DateOnly.FromDateTime(date));
+        }
+    }
+}
