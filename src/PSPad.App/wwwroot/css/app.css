@@ -1066,3 +1066,39 @@ button.pspad-heatmap-cell:focus-visible {
     font-size: 12.5px;
     text-transform: none;
 }
+
+.pspad-section-heading.mud-typography {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .2px;
+    line-height: 1.4;
+    margin-bottom: 8px;
+}
+
+.pspad-section-hint {
+    font-weight: 400;
+    margin-left: 6px;
+}
+
+.pspad-section-count {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background-color: var(--pspad-hover);
+    color: var(--mud-palette-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.pspad-panel-section-title.mud-typography {
+    margin-bottom: 4px;
+}
+
+.pspad-page-title.mud-typography {
+    font-weight: 500;
+}
+
+.pspad-page-subtitle.mud-typography {
+    align-self: baseline;
+}

@@ -30,7 +30,7 @@
 <MudGrid Spacing="4">
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4 pspad-account-card">
-            <MudText Typo="Typo.subtitle2" Class="mb-3">Account</MudText>
+            <SectionHeading Title="Account" />
             <div class="d-flex align-center gap-3 mb-3">
                 <MudAvatar Style="@($"background:{AvatarColor.For(State.UserId)};color:#FFFFFF")" Size="Size.Large">
                     @AvatarColor.InitialOf(State.DisplayName.Length > 0 ? State.DisplayName : State.Email)
@@ -54,7 +54,7 @@
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4 pspad-application-settings">
-            <MudText Typo="Typo.subtitle2" Class="mb-3">Application settings</MudText>
+            <SectionHeading Title="Application settings" />
             <MudAutocomplete T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
                              SearchFunc="@SearchTimeZonesAsync" Label="Time zone"
                              Variant="Variant.Outlined" Margin="Margin.Dense" ResetValueOnEmptyText="false" />
@@ -76,7 +76,7 @@
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4">
-            <MudText Typo="Typo.subtitle2" Class="mb-3">Sync</MudText>
+            <SectionHeading Title="Sync" />
             <MudText Typo="Typo.body2" Color="@(Failed ? Color.Error : Color.Default)">@SyncLine</MudText>
             <MudText Typo="Typo.caption" Class="d-block mb-3 pspad-muted">@LastSyncedText</MudText>
             <SyncButton Labeled="true" />
@@ -84,7 +84,7 @@
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4">
-            <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-3">Danger zone</MudText>
+            <SectionHeading Title="Danger zone" Color="Color.Error" />
             <MudText Typo="Typo.body2" Class="mb-3">
                 Permanently deletes your account and everything in it.
             </MudText>

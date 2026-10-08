@@ -38,6 +38,19 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheHeadingSubtitleCountsListsAndOpenTasks()
+    {
+        var area = NewArea("Dom");
+        var zakupy = NewList(area.Id, "Zakupy", 0);
+        var ogrod = NewList(area.Id, "Ogród", 1);
+        Arrange(area, zakupy, ogrod, NewTask(zakupy.Id, "Mleko"), NewTask(zakupy.Id, "Chleb"), NewTask(ogrod.Id, "Trawa"));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal("2 lists · 3 open", page.Find(".pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
     public void ItListsOnlyTheListsOfThatArea()
     {
         var mine = NewArea("Dom");

@@ -28,7 +28,7 @@
 else if (_day < State.Today)
 {
     <section class="pspad-day-completed mb-4">
-        <MudText Typo="Typo.subtitle2" Class="mb-2">@($"Completed ({_plan.Completed.Count})")</MudText>
+        <SectionHeading Title="Completed" Count="@_plan.Completed.Count" />
         @if (_plan.Completed.Count > 0)
         {
             @Rows(_plan.Completed)
@@ -44,7 +44,7 @@ else
     @if (_plan.Overdue.Count > 0)
     {
         <section class="pspad-day-overdue mb-4">
-            <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-2">Overdue</MudText>
+            <SectionHeading Title="Overdue" Color="Color.Error" />
             @Rows(_plan.Overdue)
         </section>
     }
@@ -52,7 +52,7 @@ else
     @if (_plan.Scheduled.Count > 0)
     {
         <section class="pspad-day-schedule mb-4">
-            <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-2">Schedule</MudText>
+            <SectionHeading Title="Schedule" Color="Color.Primary" />
             <MudStack Spacing="2" Class="pspad-schedule">
                 @foreach (var entry in _plan.Scheduled)
                 {
@@ -75,7 +75,7 @@ else
     @if (_plan.AnyTime.Count > 0 || (_plan.Scheduled.Count == 0 && _plan.Overdue.Count == 0))
     {
         <section class="pspad-day-anytime mb-4">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">@($"{DueDateRow.Describe(_day, State.Today)}, any time")</MudText>
+            <SectionHeading Title="@($"{DueDateRow.Describe(_day, State.Today)}, any time")" />
             @if (_plan.AnyTime.Count > 0)
             {
                 @Rows(_plan.AnyTime)
@@ -90,7 +90,7 @@ else
     @if (_plan.Starred.Count > 0)
     {
         <section class="pspad-day-starred mb-4">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">Starred <span class="pspad-muted">· when you have time</span></MudText>
+            <SectionHeading Title="Starred" Hint="· when you have time" />
             @Rows(_plan.Starred)
         </section>
     }
@@ -98,7 +98,7 @@ else
     @if (_plan.ComingUp.Count > 0)
     {
         <section class="pspad-day-comingup mb-4">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">Coming up</MudText>
+            <SectionHeading Title="Coming up" />
             @foreach (var group in _plan.ComingUp.GroupBy(entry => entry.DueOn!.Value))
             {
                 <MudText Typo="Typo.caption" Class="pspad-muted d-block pt-2 pb-1">@DueDateRow.Describe(group.Key, State.Today)</MudText>

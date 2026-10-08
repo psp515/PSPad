@@ -1,6 +1,6 @@
-<MudDivider />
+<MudDivider Style="border-color: var(--pspad-line)" />
 <section class="@($"pspad-panel-section px-3 pt-2 pb-3 {Class}")">
-    <MudText Typo="Typo.overline" Class="pspad-panel-section-title pspad-muted d-block mb-1">@Title</MudText>
+    <SectionHeading Title="@Title" Class="pspad-panel-section-title" />
     @ChildContent
 </section>
 

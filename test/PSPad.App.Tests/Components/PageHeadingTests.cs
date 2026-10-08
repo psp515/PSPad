@@ -90,4 +90,36 @@ public class PageHeadingTests : Bunit.TestContext
         Assert.Equal("", header.Title);
         Assert.Null(header.BackHref);
     }
+
+    [Fact]
+    public void TheTitleIsNotInThePrimaryColour()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var heading = Render<PageHeading>(parameters => parameters.Add(p => p.Title, "Inbox"));
+
+        Assert.DoesNotContain("mud-primary-text", heading.Find(".pspad-page-heading h5").ClassList);
+    }
+
+    [Fact]
+    public void TheSubtitleSitsBesideTheTitle()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var heading = Render<PageHeading>(parameters => parameters
+            .Add(p => p.Title, "Dom")
+            .Add(p => p.Subtitle, "3 lists · 7 open"));
+
+        Assert.Equal("3 lists · 7 open", heading.Find(".pspad-page-heading .pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
+    public void NoSubtitleMeansNoSubtitleElement()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var heading = Render<PageHeading>(parameters => parameters.Add(p => p.Title, "Inbox"));
+
+        Assert.Empty(heading.FindAll(".pspad-page-subtitle"));
+    }
 }

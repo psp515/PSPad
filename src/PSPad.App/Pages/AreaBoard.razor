@@ -38,7 +38,7 @@ else if (_isShared || _area is not null)
         <AreaChips Areas="@_areas" Current="@AreaId" HasShared="@_hasShared" />
     </div>
 
-    <PageHeading Title="@(_isShared ? SharedWithMe.Name : _area!.Name)" />
+    <PageHeading Title="@(_isShared ? SharedWithMe.Name : _area!.Name)" Subtitle="@Summary" />
 
     @if (_lists.Count == 0)
     {
@@ -170,6 +170,9 @@ else
             await Remembered.RememberAsync(AreaId);
         }
     }
+
+    string Summary =>
+        $"{_lists.Count} {(_lists.Count == 1 ? "list" : "lists")} · {_tasks.Count(task => task.CompletedAt is null && _lists.Any(list => list.Id == task.ListId))} open";
 
     IReadOnlyList<TodoTask> TasksOf(Guid listId) => [.. _tasks.Where(task => task.ListId == listId)];
 

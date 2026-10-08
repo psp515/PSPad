@@ -343,7 +343,7 @@ public class GoalsPageTests : Bunit.TestContext
         var summary = page.Find(".pspad-goals-achieved .pspad-goal-summary");
         Assert.Contains("Run a marathon", summary.TextContent);
         Assert.Contains("0 of 1 task done", summary.TextContent);
-        Assert.Contains("1", page.Find(".pspad-goals-achieved .pspad-goals-section-count").TextContent);
+        Assert.Contains("1", page.Find(".pspad-goals-achieved .pspad-section-count").TextContent);
         Assert.Empty(page.FindAll(".pspad-goals-not-achieved"));
         Assert.Empty(page.FindAll(".mud-expand-panel"));
     }

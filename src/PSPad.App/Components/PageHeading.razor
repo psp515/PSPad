@@ -10,7 +10,11 @@
                            Href="@BackHref" aria-label="@BackLabel" />
         }
         @Adornment
-        <MudText Typo="Typo.h5" Color="Color.Primary">@Title</MudText>
+        <MudText Typo="Typo.h5" Class="pspad-page-title">@Title</MudText>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <MudText Typo="Typo.body2" Class="pspad-page-subtitle pspad-muted ml-2">@Subtitle</MudText>
+        }
         <MudSpacer />
         <SyncStamp />
         <SyncButton />

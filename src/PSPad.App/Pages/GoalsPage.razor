@@ -55,13 +55,7 @@ else
     IReadOnlyList<Goal> _notAchieved = [];
 
     RenderFragment SectionHeader(string title, int count) =>
-        @<div class="mb-3">
-            <div class="d-flex align-baseline gap-2 pb-1">
-                <MudText Typo="Typo.h6" Class="pspad-goals-section-title">@title</MudText>
-                <MudText Typo="Typo.body2" Class="pspad-goals-section-count pspad-muted">@count</MudText>
-            </div>
-            <MudDivider />
-        </div>;
+        @<SectionHeading Title="@title" Count="@count" />;
 
     RenderFragment Section(string title, IReadOnlyList<Goal> goals, string css) => __builder =>
     {

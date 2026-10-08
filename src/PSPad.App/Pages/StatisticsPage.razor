@@ -79,7 +79,7 @@
             <MudGrid Spacing="4" Class="mb-4">
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">Completions per day</MudText>
+                        <SectionHeading Title="Completions per day" />
                         <MudChart ChartType="ChartType.StackedBar" ChartSeries="@completionsSeries"
                                   ChartLabels="@completionsLabels" ChartOptions="@completionsOptions"
                                   Width="100%" Height="260px" />
@@ -87,7 +87,7 @@
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">Tasks opened per day</MudText>
+                        <SectionHeading Title="Tasks opened per day" />
                         <MudChart ChartType="ChartType.Line" ChartSeries="@openedSeries"
                                   ChartLabels="@openedLabels" ChartOptions="@openedOptions"
                                   Width="100%" Height="260px" />
@@ -95,7 +95,7 @@
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">Open tasks outstanding</MudText>
+                        <SectionHeading Title="Open tasks outstanding" />
                         <MudChart ChartType="ChartType.Line" ChartSeries="@outstandingSeries"
                                   ChartLabels="@outstandingLabels" ChartOptions="@outstandingOptions"
                                   Width="100%" Height="260px" />
@@ -103,7 +103,7 @@
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.subtitle2" Class="mb-3">Where the work went</MudText>
+                        <SectionHeading Title="Where the work went" />
                         <MudStack Spacing="3">
                             @foreach (var goal in overview.ByGoal)
                             {
@@ -124,13 +124,13 @@
             <MudGrid Spacing="4" Class="mb-4">
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">Consistency</MudText>
+                        <SectionHeading Title="Consistency" />
                         <ConsistencyHeatmap Days="@overview.Heatmap" Today="@State.Today" />
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">Captured into the Inbox each week</MudText>
+                        <SectionHeading Title="Captured into the Inbox each week" />
                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
                             Each bar is one week; its height is how many items you captured into the Inbox
                             that week, whatever became of them afterwards.

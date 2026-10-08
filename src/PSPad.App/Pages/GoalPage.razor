@@ -70,7 +70,7 @@ else if (_goal is not null)
             <MudGrid Spacing="4">
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pspad-goal-progress pa-3">
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">Progress</MudText>
+                        <SectionHeading Title="Progress" />
                         <MudChart ChartType="ChartType.Line" ChartSeries="@ProgressSeries" ChartLabels="@ProgressLabels"
                                   ChartOptions="@ProgressOptions" Width="100%" Height="260px" />
                         @if (_hasRecurring)
