@@ -8,6 +8,7 @@ using PSPad.App.State.Replica;
 using PSPad.App.Tests;
 using PSPad.App.Theme;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Inbox;
 using PSPad.App.Sync;
 using PSPad.TestInfrastructure;
 
@@ -260,13 +261,39 @@ public class NavSidebarTests : Bunit.TestContext
         Assert.Contains("M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z", newArea.InnerHtml);
     }
 
+    [Fact]
+    public async Task CountsSitApartFromTheLabel()
+    {
+        var replica = Arrange();
+        await replica.SaveAsync(InboxWith("milk", "bread", "eggs"));
+        await Services.GetRequiredService<SidebarCounts>().RefreshAsync();
+
+        var nav = Render(Areas("Dom"));
+
+        var inbox = nav.FindAll(".mud-nav-link").First(link => link.TextContent.Contains("Inbox"));
+        Assert.Equal("3", inbox.QuerySelector(".pspad-nav-count")!.TextContent.Trim());
+        Assert.DoesNotContain("(3)", inbox.TextContent);
+        var myDay = nav.FindAll(".mud-nav-link").First(link => link.TextContent.Contains("My Day"));
+        Assert.Null(myDay.QuerySelector(".pspad-nav-count"));
+    }
+
+    [Fact]
+    public void AreasHaveACaption()
+    {
+        Arrange();
+
+        var nav = Render(Areas("Dom"));
+
+        Assert.Equal("Areas", nav.Find(".pspad-nav-caption").TextContent.Trim());
+    }
+
     IRenderedComponent<NavSidebar> Render(IReadOnlyList<Area> areas) =>
         Render<NavSidebar>(parameters => parameters
             .Add(p => p.Areas, areas)
             .Add(p => p.Email, "ada@example.com")
             .Add(p => p.UserId, User));
 
-    void Arrange()
+    InMemoryReplica Arrange()
     {
         var today = new DateOnly(2026, 9, 12);
         var replica = AppTestHost.Arrange(this, User, today);
@@ -275,6 +302,21 @@ public class NavSidebarTests : Bunit.TestContext
             new ReplicaDocumentStore<Module.Tasks.Tasks.TodoTask>(replica),
             new ReplicaDocumentStore<Module.Tasks.Inbox.Inbox>(replica),
             new AppState { UserId = User, Today = today }));
+        return replica;
+    }
+
+    static Inbox InboxWith(params string[] texts)
+    {
+        var inbox = new Inbox();
+        var inboxId = Guid.NewGuid();
+        inbox.ApplyAll(Inbox.Decide(null, new CreateInbox(Guid.NewGuid(), User, inboxId), DateTimeOffset.UnixEpoch));
+        foreach (var text in texts)
+        {
+            inbox.ApplyAll(Inbox.Decide(inbox,
+                new CaptureToInbox(Guid.NewGuid(), User, inboxId, Guid.NewGuid(), text), DateTimeOffset.UnixEpoch));
+        }
+
+        return inbox;
     }
 
     static Area[] Areas(params string[] names) =>

@@ -4,23 +4,23 @@
 @inject SidebarCounts Counts
 @implements IDisposable
 
-<div class="d-flex flex-column" style="height:100%">
+<div class="d-flex flex-column pspad-nav" style="height:100%">
     <AccountBadge Email="@Email" DisplayName="@DisplayName" UserId="@UserId" />
 
     <MudNavMenu>
-        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.WbSunny">
-            @($"My Day{Badge(Counts.Today)}")
+        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.WbSunny">
+            My Day@(Count(Counts.Today))
         </MudNavLink>
-        <MudNavLink Href="/inbox" Icon="@Icons.Material.Filled.Inbox">
-            @($"Inbox{Badge(Counts.Inbox)}")
+        <MudNavLink Href="/inbox" Icon="@Icons.Material.Outlined.Inbox">
+            Inbox@(Count(Counts.Inbox))
         </MudNavLink>
-        <MudNavLink Href="/goals" Icon="@Icons.Material.Filled.Flag">
+        <MudNavLink Href="/goals" Icon="@Icons.Material.Outlined.Flag">
             Goals
         </MudNavLink>
-        <MudNavLink Href="/statistics" Icon="@Icons.Material.Filled.History">
+        <MudNavLink Href="/statistics" Icon="@Icons.Material.Outlined.History">
             Statistics
         </MudNavLink>
-        <MudNavLink Href="/snapshots" Icon="@Icons.Material.Filled.Link">
+        <MudNavLink Href="/snapshots" Icon="@Icons.Material.Outlined.Link">
             List snapshots
         </MudNavLink>
     </MudNavMenu>
@@ -28,6 +28,7 @@
     <MudDivider Class="my-2" Style="flex-grow:0" />
 
     <MudNavMenu>
+        <MudText Typo="Typo.caption" Class="pspad-nav-caption pspad-muted px-4 pt-2 pb-1 d-block">Areas</MudText>
         @if (!AreasLoaded)
         {
             <div role="status" aria-busy="true">
@@ -40,7 +41,7 @@
         {
             @foreach (var area in Areas.OrderBy(area => area.Position))
             {
-                <MudNavLink @key="area.Id" Href="@AreaLinks.For(area.Id)" Icon="@Icons.Material.Filled.Folder">
+                <MudNavLink @key="area.Id" Href="@AreaLinks.For(area.Id)" Icon="@Icons.Material.Outlined.Folder">
                     @area.Name
                 </MudNavLink>
             }
@@ -48,12 +49,12 @@
 
         @if (HasShared)
         {
-            <MudNavLink Href="@AreaLinks.For(SharedWithMe.AreaId)" Icon="@Icons.Material.Filled.People">
+            <MudNavLink Href="@AreaLinks.For(SharedWithMe.AreaId)" Icon="@Icons.Material.Outlined.People">
                 @SharedWithMe.Name
             </MudNavLink>
         }
 
-        <MudNavLink Icon="@Icons.Material.Filled.Add" Class="pspad-new-area"
+        <MudNavLink Icon="@Icons.Material.Outlined.Add" Class="pspad-new-area"
                     Disabled="@Disabled" OnClick="@OnNewAreaClick">
             New area
         </MudNavLink>
@@ -62,10 +63,10 @@
     <MudDivider Class="my-2" Style="flex-grow:0" />
 
     <MudNavMenu>
-        <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">
+        <MudNavLink Href="/settings" Icon="@Icons.Material.Outlined.Settings">
             Settings
         </MudNavLink>
-        <MudNavLink Href="/app-info" Icon="@Icons.Material.Filled.Info">
+        <MudNavLink Href="/app-info" Icon="@Icons.Material.Outlined.Info">
             App info
         </MudNavLink>
     </MudNavMenu>
@@ -96,7 +97,7 @@
 
     void OnCountsChanged() => InvokeAsync(StateHasChanged);
 
-    static string Badge(int count) => count == 0 ? "" : $"  ({count})";
+    static RenderFragment Count(int count) => count == 0 ? (_ => { }) : @<span class="pspad-nav-count">@count</span>;
 
     Task OnNewAreaClick() => Disabled ? Task.CompletedTask : OnNewArea.InvokeAsync();
 

@@ -869,3 +869,14 @@ button.pspad-heatmap-cell:focus-visible {
     .pspad-schedule-end { opacity: 0.7; }
     .pspad-day-bar { justify-content: center !important; }
 }
+
+.pspad-nav { padding: 12px; box-sizing: border-box; }
+.pspad-nav .mud-nav-link { border-radius: 8px; margin-bottom: 2px; }
+.pspad-nav .mud-nav-link.active {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+    color: var(--mud-palette-primary);
+    font-weight: 500;
+}
+.pspad-nav .mud-nav-link-text { display: flex; align-items: center; width: 100%; }
+.pspad-nav-count { margin-left: auto; font-size: 0.75rem; color: var(--mud-palette-text-secondary); }
+.pspad-nav .mud-nav-link.active .pspad-nav-count { color: inherit; }
