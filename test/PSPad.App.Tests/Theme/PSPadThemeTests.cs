@@ -126,6 +126,23 @@ public class PSPadThemeTests
         Assert.InRange(Math.Abs(primary.H - picked.H), 0, 2);
     }
 
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void TheActiveSidebarLinkReadsOnItsTint(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+        var tint = Mix(palette.Primary, palette.DrawerBackground, 0.12);
+
+        Assert.True(Contrast(palette.TextPrimary, tint) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.Primary, tint) >= MinimumUiContrast);
+    }
+
+    static MudColor Mix(MudColor over, MudColor ground, double share) => new(
+        (byte)Math.Round(share * over.R + (1 - share) * ground.R),
+        (byte)Math.Round(share * over.G + (1 - share) * ground.G),
+        (byte)Math.Round(share * over.B + (1 - share) * ground.B),
+        (byte)255);
+
     static Palette PaletteOf(string accent, bool dark)
     {
         var theme = Enum.TryParse<Accent>(accent, out var preset) ? PSPadTheme.For(preset) : PSPadTheme.ForCustom(accent);
