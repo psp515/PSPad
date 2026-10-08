@@ -92,13 +92,26 @@ public class PageHeadingTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheTitleIsThePagesOnlyTopLevelHeading()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var heading = Render<PageHeading>(parameters => parameters.Add(p => p.Title, "Inbox"));
+
+        var title = heading.Find(".pspad-page-heading .pspad-page-title");
+        Assert.Equal("H1", title.TagName);
+        Assert.Contains("mud-typography-h5", title.ClassList);
+        Assert.Equal("Inbox", title.TextContent);
+    }
+
+    [Fact]
     public void TheTitleIsNotInThePrimaryColour()
     {
         AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
 
         var heading = Render<PageHeading>(parameters => parameters.Add(p => p.Title, "Inbox"));
 
-        Assert.DoesNotContain("mud-primary-text", heading.Find(".pspad-page-heading h5").ClassList);
+        Assert.DoesNotContain("mud-primary-text", heading.Find(".pspad-page-heading h1").ClassList);
     }
 
     [Fact]

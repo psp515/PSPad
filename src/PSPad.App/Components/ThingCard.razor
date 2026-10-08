@@ -13,7 +13,7 @@
             <MudLink Class="@TitleClass" Href="@Href" Typo="Typo.subtitle2" Color="Color.Inherit" Underline="Underline.None">@Name</MudLink>
             @Subtitle
         </div>
-        <span class="pspad-open-count flex-shrink-0" aria-label="@($"{Count} open")">@Count.ToString(CultureInfo.InvariantCulture)</span>
+        <span class="pspad-open-count flex-shrink-0">@Count.ToString(CultureInfo.InvariantCulture)<span class="pspad-sr-only"> open</span></span>
         @Actions
     </div>
 

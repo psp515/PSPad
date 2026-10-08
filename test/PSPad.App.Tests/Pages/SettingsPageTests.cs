@@ -314,6 +314,26 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task SwitchingTheThemeRetagsTheDocumentSoTheCardTokensFollow()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+        await page.InvokeAsync(() => page.Instance.SelectThemeAsync(ThemeMode.Dark));
+        var afterDark = LastDocumentTheme();
+        await page.InvokeAsync(() => page.Instance.SelectThemeAsync(ThemeMode.Light));
+
+        Assert.Equal("dark", afterDark);
+        Assert.Equal("light", LastDocumentTheme());
+    }
+
+    string? LastDocumentTheme() =>
+        JSInterop.Invocations
+            .Where(invocation => invocation.Identifier == "document.documentElement.setAttribute")
+            .Select(invocation => invocation.Arguments[1] as string)
+            .LastOrDefault();
+
+    [Fact]
     public void TimeZoneThemeAndAccentShareOneApplicationSettingsCard()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");

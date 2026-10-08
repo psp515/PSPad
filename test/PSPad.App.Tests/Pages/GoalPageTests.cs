@@ -29,7 +29,7 @@ public class GoalPageTests : Bunit.TestContext
 
         var page = RenderPage(goal.Id);
 
-        Assert.Contains("Eat healthier", page.Find("h5").TextContent);
+        Assert.Contains("Eat healthier", page.Find("h1").TextContent);
         Assert.Equal(7, page.FindComponents<TaskRow>().Count);
     }
 

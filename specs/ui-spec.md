@@ -302,8 +302,8 @@ message — a screen must never show an empty state it has not verified.
 **Title pattern.** A page's title is `<PageHeading Title="…" />`
 (`Components/PageHeading.razor`), with `BackHref`, `BackLabel`, `BackClass`,
 `Subtitle` and `Adornment` as needed, rendered both in the loading and
-loaded branches so nothing jumps on load. It draws the old `h5` markup
-(`MudText Typo.h5`, `TextPrimary`, weight 500, `pspad-page-title`, `mb-4`; with
+loaded branches so nothing jumps on load. It draws the title as the page's
+one `h1` (`MudText Typo.h5 HtmlTag="h1"`, `TextPrimary`, weight 500, `pspad-page-title`, `mb-4`; with
 the back `MudIconButton` when `BackHref` is set — a screen nested under another, such as a list under
 its area, links back to the parent screen) inside `d-none d-md-flex` on
 desktop, and feeds the phone top bar (`MobileTopBar`, via `PageHeader`) the
@@ -437,8 +437,8 @@ header's 30px icon tile (radius 9px, `--pspad-tint`, primary icon) is the
 collapse toggle: a button with `aria-expanded` and `aria-label` "Collapse
 {name}" / "Expand {name}" (no chevron). The name stays the link to the
 list, `TextPrimary`, 14.5px, medium. The count is a muted pill
-(`--pspad-hover`, `TextSecondary`, 11px) holding the number alone, with
-`aria-label` "N open". The `+` and `⋯` actions are 28px, radius 8px,
+(`--pspad-hover`, `TextSecondary`, 11px) showing the number alone, followed
+by a visually hidden " open" (`pspad-sr-only`), so it reads "N open". The `+` and `⋯` actions are 28px, radius 8px,
 `TextSecondary`. There is no divider under the header or above **Show all
 N**, a primary text link at 12.5px. The card's body sits in a
 `MudCollapse`, so collapsing and expanding animate its height and the
@@ -1127,7 +1127,11 @@ change and the `MudThemeProvider` takes `ThemePreference.Theme`.
 3:1 for lines and drawer icons. A new preset that fails these does not ship.
 
 **Surface tokens.** `wwwroot/css/app.css` defines CSS custom properties on
-`:root`, overridden under the dark class:
+`:root`, overridden under `[data-theme="dark"]` on `<html>`. `index.html` sets
+`data-theme` before Blazor boots so the first paint is right;
+`ThemePreference` resets it to the effective mode on every initialise
+(including an OS flip in System mode) and every mode change, so the tokens
+follow a switch without a reload:
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
@@ -1156,17 +1160,27 @@ awkward custom accent, light and dark, in `PSPadThemeTests`:
 **Surfaces.** Every `MudPaper Outlined="true"` is `--pspad-raised` with a
 `1px solid var(--pspad-line)` border, 12px radius and `--pspad-card-shadow`.
 Clickable cards (`pspad-day-task`, `pspad-task-card`, `pspad-goal-card`,
-`pspad-inbox-card`) take a stronger border on hover. `MudExpansionPanels`
-(a list's Completed, the Statistics feed) is one rounded card with a soft
-border and no hard rules; `MudDivider` inside cards and panels uses
-`--pspad-line`. Outlined inputs are 10px radius; `MudButton` (not icon
-buttons) and `MudChip` are pills (`999px`).
+`pspad-inbox-card`) take a stronger border on hover and on keyboard focus
+(`:focus-visible`, or a focused control inside); `.pspad-row` likewise takes
+`--pspad-hover` on hover and on keyboard focus within. Inside a `MudDrawer`
+outlined papers and expansion panels sit on `--mud-palette-surface` with no
+shadow, so they do not look sunken below the drawer. `MudExpansionPanels`
+(a list's Completed, a goal's Completed, Today's Completed, the Statistics
+feed) is one rounded card with a soft border and no hard rules; `MudDivider`
+inside cards and panels uses `--pspad-line`. Outlined inputs are 10px radius;
+`MudButton` (not icon buttons) and `MudChip` are pills (`999px`), except the
+`WeekStrip` day buttons (12px) and the card's "Show all" text link. More
+specific rules outrank the card look: the phone `WeekStrip` stays edge to
+edge (no radius, bottom border only, no shadow) and `GoalSummaryCard` keeps
+its hover and focus wash. The card icon tile deepens its tint to 20% on hover
+and shows a 2px primary outline on keyboard focus.
 
 **Chips and toggles.** `AreaChips` are pill chips without outline: the
 current area `--pspad-tint` with `TextPrimary` and medium weight, the rest
 `--pspad-hover` with `TextSecondary`, "New area" a text-style primary chip.
-`MudToggleGroup` (One-time / Repeating, priorities) is a pill whose selected
-item is `--pspad-tint` with `TextPrimary`.
+`MudToggleGroup` (list kind, task kind One-time / Repeating, Statistics days,
+snapshot days) is a pill whose selected item is `--pspad-tint` with
+`TextPrimary`.
 
 **Panel rows and empty states.** The `PropertyRow` activator has an 8px
 radius and `--pspad-hover` on hover. `EmptyState` puts its icon in a 48px
@@ -1199,7 +1213,7 @@ typing.
 
 | Typo | Use |
 |---|---|
-| `Typo.h5` | page title, `TextPrimary`, weight 500, with a muted subtitle beside it |
+| `Typo.h5` as `h1` | page title, `TextPrimary`, weight 500, with a muted subtitle beside it |
 | `Typo.h6` as `SectionHeading` | section heading: 13px, weight 600, `h2`, count as a muted pill |
 | `Typo.subtitle2` | card header link (list name, goal name), 14.5px medium |
 | `Typo.body1` / `Typo.body2` | primary row/card content |

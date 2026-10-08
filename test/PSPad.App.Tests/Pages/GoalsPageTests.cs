@@ -214,7 +214,7 @@ public class GoalsPageTests : Bunit.TestContext
         var card = page.FindComponents<GoalCard>().Single();
 
         Assert.DoesNotContain("Read a book", card.Markup);
-        Assert.Equal("1 open", card.Find(".pspad-open-count").GetAttribute("aria-label"));
+        Assert.Equal("1 open", card.Find(".pspad-open-count").TextContent);
     }
 
     [Fact]
