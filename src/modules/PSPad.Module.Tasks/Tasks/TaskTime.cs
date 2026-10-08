@@ -1,9 +1,13 @@
+using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 
 namespace PSPad.Module.Tasks.Tasks;
 
 public sealed record TaskTime(TimeOnly Start, TimeOnly? End)
 {
+    [JsonIgnore]
+    public bool Overnight => End < Start;
+
     public static TaskTime Of(TimeOnly start, TimeOnly? end)
     {
         var time = new TaskTime(start, end);
@@ -13,9 +17,9 @@ public sealed record TaskTime(TimeOnly Start, TimeOnly? End)
 
     public void Validate()
     {
-        if (End is { } end && end <= Start)
+        if (End == Start)
         {
-            throw new DomainRejectedException("A task must end after it starts.");
+            throw new DomainRejectedException("A task can't end when it starts.");
         }
     }
 }

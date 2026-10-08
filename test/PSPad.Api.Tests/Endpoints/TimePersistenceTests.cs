@@ -36,21 +36,44 @@ public class TimePersistenceTests(MongoFixture fixture)
     }
 
     [Fact]
-    public async Task AnEndBeforeTheStartIsRejected()
+    public async Task AnEndEqualToTheStartIsRejected()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         await using var factory = new ApiFactory(fixture);
         var client = factory.ClientFor(Guid.NewGuid().ToString());
         var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
         var listId = await SeedList(client, user);
-        var taskId = await SeedTask(client, user, listId, "Backwards");
+        var taskId = await SeedTask(client, user, listId, "Instant");
 
-        await Send(client, new SetTaskTime(Guid.NewGuid(), user, taskId, new TaskTime(new TimeOnly(11, 0), new TimeOnly(9, 0))));
+        await Send(client, new SetTaskTime(Guid.NewGuid(), user, taskId, new TaskTime(new TimeOnly(11, 0), new TimeOnly(11, 0))));
 
         var loaded = await Persistence.TestContext.For(fixture).Collection<TodoTask>()
             .Find(Builders<TodoTask>.Filter.Eq(task => task.Id, taskId))
             .SingleAsync(ct);
         Assert.Null(loaded.Time);
+    }
+
+    [Fact]
+    public async Task AnOvernightTimeRoundTrips()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var listId = await SeedList(client, user);
+        var taskId = await SeedTask(client, user, listId, "Night shift");
+
+        await Send(client, new SetTaskTime(Guid.NewGuid(), user, taskId, new TaskTime(new TimeOnly(22, 0), new TimeOnly(1, 0))));
+
+        var loaded = await Persistence.TestContext.For(fixture).Collection<TodoTask>()
+            .Find(Builders<TodoTask>.Filter.Eq(task => task.Id, taskId))
+            .SingleAsync(ct);
+        Assert.Equal(new TaskTime(new TimeOnly(22, 0), new TimeOnly(1, 0)), loaded.Time);
+
+        var sync = await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
+        var synced = sync!.Documents["todotasks"].Single(row => row.GetProperty("id").GetGuid() == taskId);
+        Assert.Equal("01:00:00", synced.GetProperty("time").GetProperty("end").GetString());
+        Assert.False(synced.GetProperty("time").TryGetProperty("overnight", out _));
     }
 
     static async Task<Guid> SeedList(HttpClient client, Guid user)

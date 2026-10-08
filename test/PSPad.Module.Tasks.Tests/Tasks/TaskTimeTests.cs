@@ -43,20 +43,35 @@ public class TaskTimeTests
         Assert.Empty(TodoTask.Decide(task, Set(task, new TaskTime(NineThirty, Eleven)), Now));
     }
 
-    [Theory]
-    [InlineData(11, 0, 9, 30)]
-    [InlineData(9, 30, 9, 30)]
-    public void AnEndThatIsNotAfterTheStartIsRejected(int startHour, int startMinute, int endHour, int endMinute)
+    [Fact]
+    public void AnEndEqualToTheStartIsRejected()
     {
-        var start = new TimeOnly(startHour, startMinute);
-        var end = new TimeOnly(endHour, endMinute);
         var task = TodoTaskTests.Existing();
 
-        var rejection = Assert.Throws<DomainRejectedException>(() => TaskTime.Of(start, end));
-        Assert.Equal("A task must end after it starts.", rejection.Message);
+        var rejection = Assert.Throws<DomainRejectedException>(() => TaskTime.Of(NineThirty, NineThirty));
+        Assert.Equal("A task can't end when it starts.", rejection.Message);
         Assert.Throws<DomainRejectedException>(() =>
-            TodoTask.Decide(task, Set(task, new TaskTime(start, end)), Now));
+            TodoTask.Decide(task, Set(task, new TaskTime(NineThirty, NineThirty)), Now));
     }
+
+    [Fact]
+    public void AnEndBeforeTheStartRunsOvernight()
+    {
+        var task = TodoTaskTests.Existing();
+        var overnight = TaskTime.Of(new TimeOnly(22, 0), new TimeOnly(1, 0));
+
+        task.ApplyAll(TodoTask.Decide(task, Set(task, overnight), Now));
+
+        Assert.Equal(overnight, task.Time);
+        Assert.True(overnight.Overnight);
+    }
+
+    [Theory]
+    [InlineData(9, 30, 11, 0)]
+    [InlineData(9, 30, -1, 0)]
+    public void ATimeWithinTheDayIsNotOvernight(int startHour, int startMinute, int endHour, int endMinute) =>
+        Assert.False(new TaskTime(new TimeOnly(startHour, startMinute),
+            endHour < 0 ? null : new TimeOnly(endHour, endMinute)).Overnight);
 
     [Fact]
     public void AMissingTaskIsRejected()
