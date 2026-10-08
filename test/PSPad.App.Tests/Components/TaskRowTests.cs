@@ -275,6 +275,21 @@ public class TaskRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnOvernightTimeShowsItEndsTheNextDay()
+    {
+        Arrange();
+        var task = Due(Task("Night shift"), Today);
+        task.ApplyAll(TodoTask.Decide(
+            task,
+            new SetTaskTime(Guid.NewGuid(), User, task.Id, TaskTime.Of(new TimeOnly(22, 0), new TimeOnly(1, 0))),
+            DateTimeOffset.UnixEpoch));
+
+        var row = Render(task);
+
+        Assert.Equal("22:00–01:00 (+1)", row.Find(".pspad-row-time").TextContent.Trim());
+    }
+
+    [Fact]
     public void AnUndatedTasksTimeIsNotShown()
     {
         Arrange();

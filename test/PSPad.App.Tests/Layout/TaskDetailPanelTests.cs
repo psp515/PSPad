@@ -175,7 +175,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
 
-        Assert.Contains("360px", panel.Find(".mud-drawer").GetAttribute("style"));
+        Assert.Contains("420px", panel.Find(".mud-drawer").GetAttribute("style"));
     }
 
     [Fact]

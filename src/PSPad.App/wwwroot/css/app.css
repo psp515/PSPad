@@ -536,6 +536,15 @@ button.pspad-heatmap-cell:focus-visible {
     overflow-wrap: anywhere;
 }
 
+.pspad-time-body { padding: 4px 12px; gap: 0; min-width: 0; }
+.pspad-time-icon { flex: 0 0 auto; display: block; }
+.pspad-time-dash { margin: 0 6px; }
+.pspad-time-input { flex: 0 1 84px; min-width: 64px; }
+.pspad-task-time .mud-input-control { margin-top: 0 !important; margin-bottom: 0 !important; }
+.pspad-time-input input { text-align: center; }
+.pspad-time-clear-placeholder { flex: 0 0 30px; width: 30px; height: 30px; }
+.pspad-time-note { padding: 0 42px 4px 44px; }
+
 .pspad-muted {
     color: var(--mud-palette-text-secondary) !important;
 }
