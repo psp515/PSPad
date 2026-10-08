@@ -234,7 +234,7 @@ before first paint.
 `MudAppBar`, left to right: a back `MudIconButton` (`ArrowBack`) when the
 current `PageHeading` set a `BackHref`; the page title (`Typo.h6`,
 `Color.Primary`, truncated with an ellipsis, optionally with a caption
-subtitle — a list screen shows its area's name); `ConnectionStatus`; `SyncButton WithStamp` (a `Sync` icon button, spinning while a sync runs, red after a
+subtitle — a list screen shows its area's name); `ConnectionStatus` (a `CloudOff` icon with a tooltip, nothing while healthy; offline is confirmed by `/health`, `adr/0058`); `SyncButton WithStamp` (a `Sync` icon button, spinning while a sync runs, red after a
 failed one, disabled offline; its tooltip and `aria-label` carry the stamp text); a 32px
 `MudAvatar` button that opens `AccountDrawer`. Title and subtitle come from
 `State/PageHeader.cs`, a scoped service `PageHeading` writes to on every

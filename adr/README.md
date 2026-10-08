@@ -72,6 +72,7 @@ the old one's status line to point at the new number.
 | [0055](0055-statistics-records-per-owner-and-actor.md) | Statistics writes one record for the owner and one for the actor, versioned for a clean rebuild | Active (amends [0037](0037-statistics-owns-denormalised-records.md)) | 2026-10-01 | architecture, persistence, analytics, sync, identity |
 | [0056](0056-public-snapshots-are-frozen-copies.md) | Public snapshots are frozen copies, served from a new Sharing module | Active | 2026-10-01 | architecture, modularity, domain, persistence, security |
 | [0057](0057-invites-need-a-link-and-a-code.md) | Invites need a link and a code, and expire after 30 minutes | Active (amends [0054](0054-lists-are-shared-by-membership.md)) | 2026-10-05 | security, domain, sync |
+| [0058](0058-offline-is-confirmed-by-the-server.md) | Offline is confirmed by the server, not by the browser's flag alone | Active (amends [0044](0044-the-boot-never-waits-on-the-network.md)) | 2026-10-08 | sync, ui |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
