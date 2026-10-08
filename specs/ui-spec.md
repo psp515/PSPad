@@ -33,7 +33,10 @@ substitute for a component that already exists.
 | Vertical/horizontal flex spacing | `MudStack`, or `d-flex`/`gap-*` utility classes | inline `style` margins |
 | A chart | `MudChart` | a third-party charting library |
 | A calendar-style heatmap (consistency) | a custom `pspad-heatmap` CSS grid | `MudChart`'s `ChartType.HeatMap` |
-| A section that opens on click (the record feed) | `MudExpansionPanels` + `MudExpansionPanel` | a hand-rolled show/hide flag |
+| A section that opens on click (the record feed, a list's Completed) | `MudExpansionPanels` + `MudExpansionPanel` | a hand-rolled show/hide flag |
+| A section heading (My Day, Settings, Statistics, Goals, Goal, panel subsections) | `Components/SectionHeading.razor` (`h2`, `pspad-section-heading`; `Title`, `Count`, `Hint`, `Color`) | a `MudText Typo.subtitle2` or an overline |
+| A card's collapse control | the header's icon tile in `ThingCard`, a `MudIconButton` with `aria-expanded` | a separate chevron or `ExpandMore` button |
+| A task checkbox | `MudCheckBox` with `UncheckedIcon` `RadioButtonUnchecked` and `CheckedIcon` `CheckCircle` (round) | the square default |
 
 Before adding a new `pspad-*` class, check this table first. If nothing
 fits, the class is legitimate — but it means the styling is specific to
@@ -300,12 +303,14 @@ message — a screen must never show an empty state it has not verified.
 (`Components/PageHeading.razor`), with `BackHref`, `BackLabel`, `BackClass`,
 `Subtitle` and `Adornment` as needed, rendered both in the loading and
 loaded branches so nothing jumps on load. It draws the old `h5` markup
-(`MudText Typo.h5 Color.Primary mb-4`, with the back `MudIconButton` when
-`BackHref` is set — a screen nested under another, such as a list under
+(`MudText Typo.h5`, `TextPrimary`, weight 500, `pspad-page-title`, `mb-4`; with
+the back `MudIconButton` when `BackHref` is set — a screen nested under another, such as a list under
 its area, links back to the parent screen) inside `d-none d-md-flex` on
 desktop, and feeds the phone top bar (`MobileTopBar`, via `PageHeader`) the
-same title, subtitle and back link below `md`. One component means the two
-cannot drift. A page's loading branch renders `<PageHeading Title="" />`
+same title, subtitle and back link below `md`. On desktop `Subtitle` shows
+muted beside the title on its baseline (`pspad-page-subtitle`); the Area
+board passes "{n} lists · {m} open". One component means the two cannot
+drift. A page's loading branch renders `<PageHeading Title="" />`
 so the top bar never keeps the previous screen's title.
 
 **My Day** shows one day. `PageHeading Title="My Day"` (title … sync stamp
@@ -366,7 +371,7 @@ Sections, top to bottom, each hidden when empty:
    Oct, any time" (`DueDateRow.Describe`): the untimed tasks in the card
    grid. When Schedule and this section are both empty (and Overdue on
    today) it stays with "Nothing planned for today." / "…for Fri, 9 Oct."
-4. **Starred** — with a muted "· when you have time"; card grid.
+4. **Starred** — `SectionHeading` with `Hint` "· when you have time"; card grid.
 5. **Coming up** — today only; card grid grouped under a muted caption per
    day (`DueDateRow.Describe`), shown open.
 6. **Completed (N)** — a collapsed `MudExpansionPanel` on today and future
@@ -424,20 +429,36 @@ it from the `GoalProgress` weeks.
 **Shared row/card components, never duplicated per screen.** One
 `TaskRow` renders in My Day, list cards, the list screen and search
 results. One `ListCard`, one `GoalCard`, one `InboxItemCard`. `ListCard` and
-`GoalCard` are thin wrappers over one `ThingCard` — collapse arrow, title
+`GoalCard` are thin wrappers over one `ThingCard` — icon tile, title
 link, open count, `⋯` menu, at most five open `TaskRow`s and a
-**Show all (N)** link to the thing's own screen — and differ only in their
+**Show all N** link to the thing's own screen — and differ only in their
 header extras and row caption: a goal card's rows name their list. The
-card's body sits in a `MudCollapse`, so collapsing and expanding animate
-its height and the cards below slide with it. A single component per
+header's 30px icon tile (radius 9px, `--pspad-tint`, primary icon) is the
+collapse toggle: a button with `aria-expanded` and `aria-label` "Collapse
+{name}" / "Expand {name}" (no chevron). The name stays the link to the
+list, `TextPrimary`, 14.5px, medium. The count is a muted pill
+(`--pspad-hover`, `TextSecondary`, 11px) holding the number alone, with
+`aria-label` "N open". The `+` and `⋯` actions are 28px, radius 8px,
+`TextSecondary`. There is no divider under the header or above **Show all
+N**, a primary text link at 12.5px. The card's body sits in a
+`MudCollapse`, so collapsing and expanding animate its height and the
+cards below slide with it. A single component per
 concept means a rule like never-overdue-for-recurring-tasks cannot drift
 between the screens that display it.
 
 **One row shape.** `TaskRow`, `ReferenceRow` and `InboxItemCard` share it,
 so every row and card is the same height wherever it appears — My Day, the
-list and goal screens, the Inbox and area-board cards (`pspad-row`, 60px):
-- A 40px leading slot: the task's checkbox, or a muted icon (bookmark for a
-  reference item, inbox tray for an Inbox item) so names line up.
+list and goal screens, the Inbox and area-board cards (`pspad-row`, 60px).
+Rows carry no dividers: spacing separates them, and a row inside a card has
+an 8px radius and `--pspad-hover` on hover. The name is `TextPrimary`, 14px;
+the second line 11.5–12px `TextSecondary` (the time keeps primary and medium
+weight, an overdue date keeps the error colour); the star is
+`TextSecondary` unstarred, primary filled when starred. `ReferenceRow` gets
+the same row, star and meta treatment.
+- A 40px leading slot: the task's round checkbox (`RadioButtonUnchecked` in
+  `ActionDefault`, `CheckCircle` in primary when checked), or a muted icon
+  (bookmark for a reference item, inbox tray for an Inbox item) so names
+  line up.
 - The name on one line, cut with an ellipsis, the full name as its `title`.
 - A second line only when there is something to show; without one the name
   centres vertically in the same fixed height. It never wraps: what does
@@ -621,8 +642,8 @@ by due date, undated last. A card shows "Due …" on its own line under the
 name, in `Color.Error` once the date has passed. A card's `⋯` menu offers
 the two closing statuses.
 - **Sections:** Achieved and Not achieved goals get their own always-visible
-  sections below. Each section heading is a `Typo.h6` title with a muted
-  count and a `MudDivider` under it, with no icons. An "In progress" heading
+  sections below. Each section heading is a `SectionHeading` with a count
+  pill and no icons. An "In progress" heading
   appears once any goal is closed.
 - **Summaries:** closed goals render as `GoalSummaryCard`, not `GoalCard`.
   It is an outlined paper with a status-coloured left accent (success or
@@ -942,8 +963,9 @@ still closes, since the item exists. The draft resets when the target list chang
 the panel closes.
 
 **Panel subsections share `PanelSection`.** `Components/PanelSection.razor`
-is a `MudDivider` followed by a muted `Typo.overline` title
-(`pspad-panel-section-title`) over its content, with `px-3` padding. It
+is a `MudDivider` (`--pspad-line`) followed by a `SectionHeading`
+(`pspad-panel-section-title`, the same caption style as page sections, not
+overline or uppercase) over its content, with `px-3` padding. It
 heads "Description" in both panels and "Labels" in the reference panel.
 
 **Descriptions are a shared `MarkdownField`, on tasks and reference items
@@ -1104,6 +1126,53 @@ change and the `MudThemeProvider` takes `ThemePreference.Theme`.
 (primary on every ground, text on a filled accent, drawer and appbar text),
 3:1 for lines and drawer icons. A new preset that fails these does not ship.
 
+**Surface tokens.** `wwwroot/css/app.css` defines CSS custom properties on
+`:root`, overridden under the dark class:
+
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--pspad-line` | `rgba(0,0,0,.08)` | `rgba(255,255,255,.07)` | card and panel edges, dividers |
+| `--pspad-line-strong` | `rgba(0,0,0,.16)` | `rgba(255,255,255,.14)` | 2× `--pspad-line`; the empty state's dashed border |
+| `--pspad-hover` | `rgba(0,0,0,.04)` | `rgba(255,255,255,.04)` | row hover, count pills, inactive chips |
+| `--pspad-tint` | primary at 12% over transparent | same | selected and active fills, icon tiles (the sidebar's active link) |
+| `--pspad-raised` | `#FFFFFF` | `#1B1B1B` | card surface |
+| `--pspad-card-shadow` | `0 1px 2px rgba(0,0,0,.06)` | `0 1px 2px rgba(0,0,0,.3)` | card elevation |
+
+`PSPadTheme.LightRaised` and `DarkRaised` hold the raised values in C# so the
+contrast tests can use them; a test keeps them in sync with `app.css`.
+`LayoutProperties.DefaultBorderRadius` is 12px.
+
+**Decorative lines are exempt from the 3:1 rule.** `LinesDefault`,
+`TableLines` and the divider colour keep their 3:1 line: inputs, checkboxes
+and toggles must stay identifiable. `--pspad-line` is only for card edges,
+panel edges and dividers, which are told apart by surface and spacing, so it
+is exempt. Text and icons keep 4.5:1 / 3:1, asserted for every preset and
+awkward custom accent, light and dark, in `PSPadThemeTests`:
+- selected chip or toggle text, `TextPrimary` on `--pspad-tint`: 4.5:1;
+- round checkbox outline, `ActionDefault` on `--pspad-raised`: 3:1;
+- unstarred star, `TextSecondary` on `--pspad-raised`: 3:1;
+- muted meta text, `TextSecondary` on `--pspad-raised`: 4.5:1.
+
+**Surfaces.** Every `MudPaper Outlined="true"` is `--pspad-raised` with a
+`1px solid var(--pspad-line)` border, 12px radius and `--pspad-card-shadow`.
+Clickable cards (`pspad-day-task`, `pspad-task-card`, `pspad-goal-card`,
+`pspad-inbox-card`) take a stronger border on hover. `MudExpansionPanels`
+(a list's Completed, the Statistics feed) is one rounded card with a soft
+border and no hard rules; `MudDivider` inside cards and panels uses
+`--pspad-line`. Outlined inputs are 10px radius; `MudButton` (not icon
+buttons) and `MudChip` are pills (`999px`).
+
+**Chips and toggles.** `AreaChips` are pill chips without outline: the
+current area `--pspad-tint` with `TextPrimary` and medium weight, the rest
+`--pspad-hover` with `TextSecondary`, "New area" a text-style primary chip.
+`MudToggleGroup` (One-time / Repeating, priorities) is a pill whose selected
+item is `--pspad-tint` with `TextPrimary`.
+
+**Panel rows and empty states.** The `PropertyRow` activator has an 8px
+radius and `--pspad-hover` on hover. `EmptyState` puts its icon in a 48px
+circle of `--pspad-tint`; the dashed border uses `--pspad-line-strong` so it
+still reads as a target.
+
 Theme mode (**System / Light / Dark**) and accent are per device, held in
 `localStorage` (`pspad.theme`, `pspad.accent`, `pspad.accent.custom`) via
 `ThemePreference` — never on the `User` aggregate. A custom colour is kept
@@ -1130,8 +1199,9 @@ typing.
 
 | Typo | Use |
 |---|---|
-| `Typo.h5` | page title, `Color.Primary` |
-| `Typo.subtitle2` | card/section header (list name, goal name) |
+| `Typo.h5` | page title, `TextPrimary`, weight 500, with a muted subtitle beside it |
+| `Typo.h6` as `SectionHeading` | section heading: 13px, weight 600, `h2`, count as a muted pill |
+| `Typo.subtitle2` | card header link (list name, goal name), 14.5px medium |
 | `Typo.body1` / `Typo.body2` | primary row/card content |
 | `Typo.caption` | metadata (due date, counts, timestamps) |
 
