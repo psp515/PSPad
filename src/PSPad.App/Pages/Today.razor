@@ -31,13 +31,13 @@ else
         </section>
     }
 
-    @if (_plan.Today.Count > 0 || _plan.Overdue.Count == 0)
+    @if (_plan.Scheduled.Count > 0 || _plan.AnyTime.Count > 0 || _plan.Overdue.Count == 0)
     {
         <section class="pspad-day-today mb-4">
             <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-2">Today</MudText>
-            @if (_plan.Today.Count > 0)
+            @if (_plan.Scheduled.Count > 0 || _plan.AnyTime.Count > 0)
             {
-                @Rows(_plan.Today)
+                @Rows([.. _plan.Scheduled, .. _plan.AnyTime])
             }
             else
             {
@@ -53,14 +53,6 @@ else
         <section class="pspad-day-starred mb-4">
             <MudText Typo="Typo.subtitle2" Class="mb-2">Starred</MudText>
             @Rows(_plan.Starred)
-        </section>
-    }
-
-    @if (_plan.Tomorrow.Count > 0)
-    {
-        <section class="pspad-day-tomorrow mb-4">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">Tomorrow</MudText>
-            @Rows(_plan.Tomorrow)
         </section>
     }
 
@@ -80,7 +72,7 @@ else
         </section>
     }
 
-    @if (_plan.Completed.Count > 0 || _plan.Upcoming.Count > 0)
+    @if (_plan.Completed.Count > 0 || _plan.ComingUp.Count > 0)
     {
         <MudExpansionPanels Elevation="0" MultiExpansion="true">
             @if (_plan.Completed.Count > 0)
@@ -89,10 +81,10 @@ else
                     @Rows(_plan.Completed)
                 </MudExpansionPanel>
             }
-            @if (_plan.Upcoming.Count > 0)
+            @if (_plan.ComingUp.Count > 0)
             {
-                <MudExpansionPanel Class="pspad-day-upcoming" Text="@($"Upcoming ({_plan.Upcoming.Count})")">
-                    @foreach (var day in _plan.Upcoming.GroupBy(entry => entry.DueOn!.Value))
+                <MudExpansionPanel Class="pspad-day-upcoming" Text="@($"Upcoming ({_plan.ComingUp.Count})")">
+                    @foreach (var day in _plan.ComingUp.GroupBy(entry => entry.DueOn!.Value))
                     {
                         <MudText Typo="Typo.caption" Class="pspad-muted d-block px-3 pt-3">@DueDateRow.Describe(day.Key, State.Today)</MudText>
                         @Rows([.. day])
@@ -135,7 +127,7 @@ else
         _listNames = lists.Where(list => !list.Deleted).ToDictionary(list => list.Id, list => list.Name);
         _tasks = tasks;
         _byId = tasks.ToDictionary(task => task.Id);
-        _plan = TodayRule.Plan(tasks, State.Today, LocalToday.Zone(State.TimeZone));
+        _plan = TodayRule.Plan(tasks, State.Today, State.Today, LocalToday.Zone(State.TimeZone));
         _goals =
         [
             .. goals

@@ -1,3 +1,5 @@
+using PSPad.Module.Tasks.Tasks;
+
 namespace PSPad.Module.Tasks.Today;
 
 public sealed record TodayEntry(
@@ -8,4 +10,5 @@ public sealed record TodayEntry(
     DateOnly? DueOn,
     bool Recurring,
     bool Starred,
-    int Priority);
+    int Priority,
+    TaskTime? Time);

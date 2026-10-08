@@ -80,17 +80,16 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ATaskDueTomorrowHasItsOwnSection()
+    public void ATaskDueTomorrowIsComingUp()
     {
         var list = NewList("Zakupy");
         Arrange(list, Due(list.Id, "Later", Today.AddDays(1)), Due(list.Id, "Now", Today));
 
         var page = Render<Today>();
 
-        var tomorrow = page.Find(".pspad-day-tomorrow");
-        Assert.Contains("Tomorrow", tomorrow.TextContent);
-        Assert.Contains("Later", tomorrow.TextContent);
-        Assert.DoesNotContain("Now", tomorrow.TextContent);
+        var upcoming = page.Find(".pspad-day-upcoming");
+        Assert.Contains("Later", upcoming.TextContent);
+        Assert.DoesNotContain("Now", upcoming.TextContent);
     }
 
     [Fact]
@@ -112,7 +111,7 @@ public class TodayTests : Bunit.TestContext
         Assert.Contains("Important", starred);
         Assert.Contains("Important later", starred);
         Assert.DoesNotContain("Important", page.Find(".pspad-day-today").TextContent);
-        Assert.Empty(page.FindAll(".pspad-day-tomorrow"));
+        Assert.Empty(page.FindAll(".pspad-day-upcoming"));
         Assert.True(page.Markup.IndexOf("pspad-day-today") < page.Markup.IndexOf("pspad-day-starred"));
     }
 
@@ -128,14 +127,14 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheTomorrowSectionIsAbsentWhenNothingIsDueTomorrow()
+    public void TheUpcomingSectionIsAbsentWhenNothingIsComingUp()
     {
         var list = NewList("Zakupy");
         Arrange(list, Due(list.Id, "Now", Today));
 
         var page = Render<Today>();
 
-        Assert.Empty(page.FindAll(".pspad-day-tomorrow"));
+        Assert.Empty(page.FindAll(".pspad-day-upcoming"));
     }
 
     [Fact]
@@ -151,10 +150,10 @@ public class TodayTests : Bunit.TestContext
         var page = Render<Today>();
 
         var upcoming = page.Find(".pspad-day-upcoming");
-        Assert.Contains("Upcoming (1)", upcoming.TextContent);
+        Assert.Contains("Upcoming (2)", upcoming.TextContent);
         Assert.Contains("Tue, 15 Sep", upcoming.TextContent);
         Assert.Contains("Dentist", upcoming.TextContent);
-        Assert.DoesNotContain("Tomorrowish", upcoming.TextContent);
+        Assert.Contains("Tomorrowish", upcoming.TextContent);
         Assert.DoesNotContain("Next month", page.Markup);
     }
 
@@ -166,8 +165,8 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        Assert.Contains("Read a book", page.Find(".pspad-day-tomorrow").TextContent);
-        Assert.Empty(page.FindAll(".pspad-day-upcoming"));
+        Assert.Contains("Read a book", page.Find(".pspad-day-today").TextContent);
+        Assert.Contains("Read a book", page.Find(".pspad-day-upcoming").TextContent);
     }
 
     [Fact]
@@ -178,7 +177,7 @@ public class TodayTests : Bunit.TestContext
         var replica = Arrange(list, task);
 
         var page = Render<Today>();
-        page.Find(".pspad-day-tomorrow input.mud-checkbox-input").Change(true);
+        page.Find(".pspad-day-upcoming input.mud-checkbox-input").Change(true);
 
         var stored = await replica.LoadAsync<TodoTask>(task.Id);
         Assert.Contains(Today.AddDays(1), stored!.CompletedDays);
@@ -186,7 +185,7 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
-    public void GoalsInProgressSitBetweenTomorrowAndCompleted()
+    public void GoalsInProgressSitBeforeCompleted()
     {
         var list = NewList("Zakupy");
         var done = Due(list.Id, "Masło", Today);
@@ -201,7 +200,6 @@ public class TodayTests : Bunit.TestContext
 
         var markup = page.Markup;
         var goals = markup.IndexOf("Goals in progress");
-        Assert.True(goals > markup.IndexOf("Later"));
         Assert.True(goals < markup.IndexOf("Completed (1)"));
         Assert.Contains("Run a marathon", page.Find(".pspad-day-goals").TextContent);
     }

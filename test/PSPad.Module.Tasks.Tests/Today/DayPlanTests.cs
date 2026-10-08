@@ -22,34 +22,33 @@ public class DayPlanTests
         var tomorrow = Due(Today.AddDays(1));
         var upcoming = Due(Today.AddDays(2));
 
-        var plan = TodayRule.Plan([upcoming, tomorrow, today, overdue], Today, Utc);
+        var plan = TodayRule.Plan([upcoming, tomorrow, today, overdue], Today, Today, Utc);
 
         Assert.Equal(overdue.Id, Assert.Single(plan.Overdue).TaskId);
-        Assert.Equal(today.Id, Assert.Single(plan.Today).TaskId);
-        Assert.Equal(tomorrow.Id, Assert.Single(plan.Tomorrow).TaskId);
-        Assert.Equal(upcoming.Id, Assert.Single(plan.Upcoming).TaskId);
+        Assert.Equal(today.Id, Assert.Single(plan.AnyTime).TaskId);
+        Assert.Equal([tomorrow.Id, upcoming.Id], plan.ComingUp.Select(entry => entry.TaskId));
     }
 
     [Fact]
-    public void UpcomingReachesOneWeekAheadAndNoFurther()
+    public void ComingUpReachesOneWeekAheadAndNoFurther()
     {
         var lastDay = Due(Today.AddDays(7));
         var beyond = Due(Today.AddDays(8));
 
-        var plan = TodayRule.Plan([lastDay, beyond], Today, Utc);
+        var plan = TodayRule.Plan([lastDay, beyond], Today, Today, Utc);
 
-        Assert.Equal(lastDay.Id, Assert.Single(plan.Upcoming).TaskId);
+        Assert.Equal(lastDay.Id, Assert.Single(plan.ComingUp).TaskId);
     }
 
     [Fact]
-    public void UpcomingIsOrderedByDate()
+    public void ComingUpIsOrderedByDate()
     {
         var later = Due(Today.AddDays(5));
         var sooner = Due(Today.AddDays(3));
 
-        var plan = TodayRule.Plan([later, sooner], Today, Utc);
+        var plan = TodayRule.Plan([later, sooner], Today, Today, Utc);
 
-        Assert.Equal([sooner.Id, later.Id], plan.Upcoming.Select(entry => entry.TaskId));
+        Assert.Equal([sooner.Id, later.Id], plan.ComingUp.Select(entry => entry.TaskId));
     }
 
     [Fact]
@@ -61,9 +60,9 @@ public class DayPlanTests
         task.ApplyAll(TodoTask.Decide(
             task, new SetStepDueDate(Guid.NewGuid(), User, task.Id, stepId, Today.AddDays(1)), Now));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Equal(task.Id, Assert.Single(plan.Tomorrow).TaskId);
+        Assert.Equal(task.Id, Assert.Single(plan.ComingUp).TaskId);
     }
 
     [Fact]
@@ -73,12 +72,11 @@ public class DayPlanTests
         var tomorrow = Starred(Due(Today.AddDays(1)));
         var nextMonth = Starred(Due(Today.AddDays(30)));
 
-        var plan = TodayRule.Plan([nextMonth, tomorrow, undated], Today, Utc);
+        var plan = TodayRule.Plan([nextMonth, tomorrow, undated], Today, Today, Utc);
 
         Assert.Equal([undated.Id, tomorrow.Id, nextMonth.Id], plan.Starred.Select(entry => entry.TaskId));
-        Assert.Empty(plan.Today);
-        Assert.Empty(plan.Tomorrow);
-        Assert.Empty(plan.Upcoming);
+        Assert.Empty(plan.AnyTime);
+        Assert.Empty(plan.ComingUp);
     }
 
     [Fact]
@@ -87,10 +85,10 @@ public class DayPlanTests
         var today = Starred(Due(Today));
         var overdue = Starred(Due(Today.AddDays(-1)));
 
-        var plan = TodayRule.Plan([today, overdue], Today, Utc);
+        var plan = TodayRule.Plan([today, overdue], Today, Today, Utc);
 
         Assert.Empty(plan.Starred);
-        Assert.Single(plan.Today);
+        Assert.Single(plan.AnyTime);
         Assert.Single(plan.Overdue);
     }
 
@@ -101,7 +99,7 @@ public class DayPlanTests
         done.ApplyAll(TodoTask.Decide(done, new CompleteTask(Guid.NewGuid(), User, done.Id), Now));
         var recurring = Starred(Recurring(RecurrenceRule.Weekly(Today.AddDays(-7), DayOfWeek.Monday)));
 
-        var plan = TodayRule.Plan([done, recurring], Today, Utc);
+        var plan = TodayRule.Plan([done, recurring], Today, Today, Utc);
 
         Assert.Empty(plan.Starred);
     }
@@ -115,12 +113,11 @@ public class DayPlanTests
     [Fact]
     public void AnUndatedTaskIsInNoSection()
     {
-        var plan = TodayRule.Plan([TodoTaskTests.Existing()], Today, Utc);
+        var plan = TodayRule.Plan([TodoTaskTests.Existing()], Today, Today, Utc);
 
         Assert.Empty(plan.Overdue);
-        Assert.Empty(plan.Today);
-        Assert.Empty(plan.Tomorrow);
-        Assert.Empty(plan.Upcoming);
+        Assert.Empty(plan.AnyTime);
+        Assert.Empty(plan.ComingUp);
     }
 
     [Fact]
@@ -128,12 +125,11 @@ public class DayPlanTests
     {
         var task = Recurring(RecurrenceRule.Daily(Today.AddDays(-5)));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Single(plan.Today);
-        var next = Assert.Single(plan.Tomorrow);
+        Assert.Single(plan.AnyTime);
+        var next = Assert.Single(plan.ComingUp);
         Assert.Equal(Today.AddDays(1), next.DueOn);
-        Assert.Empty(plan.Upcoming);
         Assert.Empty(plan.Overdue);
     }
 
@@ -142,12 +138,11 @@ public class DayPlanTests
     {
         var task = Recurring(RecurrenceRule.Weekly(Today.AddDays(-7), DayOfWeek.Wednesday));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        var entry = Assert.Single(plan.Upcoming);
+        var entry = Assert.Single(plan.ComingUp);
         Assert.Equal(new DateOnly(2026, 9, 16), entry.DueOn);
         Assert.True(entry.Recurring);
-        Assert.Empty(plan.Tomorrow);
     }
 
     [Fact]
@@ -157,10 +152,10 @@ public class DayPlanTests
         task.ApplyAll(TodoTask.Decide(
             task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, Today, true), Now));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Empty(plan.Today);
-        Assert.Single(plan.Tomorrow);
+        Assert.Empty(plan.AnyTime);
+        Assert.Single(plan.ComingUp);
     }
 
     [Fact]
@@ -168,12 +163,11 @@ public class DayPlanTests
     {
         var task = Ending(Recurring(RecurrenceRule.Daily(Today.AddDays(-5))), Today.AddDays(-1));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
         Assert.Empty(plan.Overdue);
-        Assert.Empty(plan.Today);
-        Assert.Empty(plan.Tomorrow);
-        Assert.Empty(plan.Upcoming);
+        Assert.Empty(plan.AnyTime);
+        Assert.Empty(plan.ComingUp);
     }
 
     [Fact]
@@ -181,12 +175,11 @@ public class DayPlanTests
     {
         var task = Ending(Recurring(RecurrenceRule.Daily(Today.AddDays(-5))), Today);
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Single(plan.Today);
+        Assert.Single(plan.AnyTime);
         Assert.Empty(plan.Overdue);
-        Assert.Empty(plan.Tomorrow);
-        Assert.Empty(plan.Upcoming);
+        Assert.Empty(plan.ComingUp);
     }
 
     [Fact]
@@ -194,11 +187,10 @@ public class DayPlanTests
     {
         var task = Recurring(RecurrenceRule.Daily(Today).EveryNth(3));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Single(plan.Today);
-        Assert.Empty(plan.Tomorrow);
-        Assert.Equal(Today.AddDays(3), Assert.Single(plan.Upcoming).DueOn);
+        Assert.Single(plan.AnyTime);
+        Assert.Equal(Today.AddDays(3), Assert.Single(plan.ComingUp).DueOn);
     }
 
     [Fact]
@@ -206,9 +198,9 @@ public class DayPlanTests
     {
         var task = Ending(Recurring(RecurrenceRule.Daily(Today).EveryNth(3)), Today.AddDays(2));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Empty(plan.Upcoming);
+        Assert.Empty(plan.ComingUp);
     }
 
     [Fact]
@@ -217,7 +209,7 @@ public class DayPlanTests
         var task = Starred(Ending(
             Recurring(RecurrenceRule.Weekly(Today.AddDays(-7), DayOfWeek.Monday)), Today.AddDays(30)));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
         Assert.Empty(plan.Starred);
         Assert.Empty(plan.Overdue);
@@ -229,9 +221,9 @@ public class DayPlanTests
         var task = Due(Today.AddDays(1));
         task.ApplyAll(TodoTask.Decide(task, new CompleteTask(Guid.NewGuid(), User, task.Id), Now));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Empty(plan.Tomorrow);
+        Assert.Empty(plan.ComingUp);
     }
 
     [Fact]
@@ -243,7 +235,7 @@ public class DayPlanTests
         yesterday.ApplyAll(TodoTask.Decide(
             yesterday, new CompleteTask(Guid.NewGuid(), User, yesterday.Id), Now.AddDays(-1)));
 
-        var plan = TodayRule.Plan([task, yesterday], Today, Utc);
+        var plan = TodayRule.Plan([task, yesterday], Today, Today, Utc);
 
         Assert.Equal(task.Id, Assert.Single(plan.Completed).TaskId);
     }
@@ -257,7 +249,7 @@ public class DayPlanTests
             task, new CompleteTask(Guid.NewGuid(), User, task.Id),
             new DateTimeOffset(2026, 9, 11, 20, 0, 0, TimeSpan.Zero)));
 
-        var plan = TodayRule.Plan([task], Today, zone);
+        var plan = TodayRule.Plan([task], Today, Today, zone);
 
         Assert.Single(plan.Completed);
     }
@@ -269,7 +261,7 @@ public class DayPlanTests
         task.ApplyAll(TodoTask.Decide(
             task, new CompleteOccurrence(Guid.NewGuid(), User, task.Id, Today, true), Now));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
         Assert.Equal(task.Id, Assert.Single(plan.Completed).TaskId);
     }
@@ -280,9 +272,9 @@ public class DayPlanTests
         var task = Due(Today.AddDays(1));
         task.ApplyAll(TodoTask.Decide(task, new DeleteTask(Guid.NewGuid(), User, task.Id), Now));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Empty(plan.Tomorrow);
+        Assert.Empty(plan.ComingUp);
     }
 
     [Fact]
@@ -290,11 +282,11 @@ public class DayPlanTests
     {
         var tasks = new[] { Due(Today.AddDays(-2)), Due(Today), Due(Today.AddDays(1)) };
 
-        var plan = TodayRule.Plan(tasks, Today, Utc);
+        var plan = TodayRule.Plan(tasks, Today, Today, Utc);
 
         Assert.Equal(
             TodayRule.Select(tasks, Today).Select(entry => entry.TaskId),
-            plan.Overdue.Concat(plan.Today).Select(entry => entry.TaskId));
+            plan.Overdue.Concat(plan.AnyTime).Select(entry => entry.TaskId));
     }
 
     static TodoTask Due(DateOnly day)

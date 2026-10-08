@@ -15,14 +15,14 @@ public class LeadTimePlanTests
     static readonly TimeZoneInfo Utc = TimeZoneInfo.Utc;
 
     [Fact]
-    public void WithoutALeadTimeUpcomingStillReachesOneWeek()
+    public void WithoutALeadTimeComingUpStillReachesOneWeek()
     {
         var inside = Due(Today.AddDays(7));
         var beyond = Due(Today.AddDays(8));
 
-        var plan = TodayRule.Plan([inside, beyond], Today, Utc);
+        var plan = TodayRule.Plan([inside, beyond], Today, Today, Utc);
 
-        Assert.Equal(inside.Id, Assert.Single(plan.Upcoming).TaskId);
+        Assert.Equal(inside.Id, Assert.Single(plan.ComingUp).TaskId);
     }
 
     [Fact]
@@ -30,10 +30,9 @@ public class LeadTimePlanTests
     {
         var task = Lead(Due(Today.AddDays(3)), LeadTime.Of(1, LeadUnit.Days));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Empty(plan.Upcoming);
-        Assert.Empty(plan.Tomorrow);
+        Assert.Empty(plan.ComingUp);
     }
 
     [Fact]
@@ -41,9 +40,9 @@ public class LeadTimePlanTests
     {
         var task = Lead(Due(Today.AddDays(1)), LeadTime.Of(1, LeadUnit.Days));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Equal(task.Id, Assert.Single(plan.Tomorrow).TaskId);
+        Assert.Equal(task.Id, Assert.Single(plan.ComingUp).TaskId);
     }
 
     [Fact]
@@ -51,9 +50,9 @@ public class LeadTimePlanTests
     {
         var task = Lead(Due(Today.AddDays(20)), LeadTime.Of(1, LeadUnit.Months));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        var entry = Assert.Single(plan.Upcoming);
+        var entry = Assert.Single(plan.ComingUp);
         Assert.Equal(Today.AddDays(20), entry.DueOn);
     }
 
@@ -62,11 +61,11 @@ public class LeadTimePlanTests
     {
         var task = Lead(Due(Today.AddDays(5)), LeadTime.Of(2, LeadUnit.Weeks));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Empty(plan.Today);
+        Assert.Empty(plan.AnyTime);
         Assert.Empty(plan.Overdue);
-        Assert.Single(plan.Upcoming);
+        Assert.Single(plan.ComingUp);
     }
 
     [Fact]
@@ -74,7 +73,7 @@ public class LeadTimePlanTests
     {
         var task = Lead(Due(Today.AddDays(-1)), LeadTime.Of(1, LeadUnit.Days));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
         Assert.Single(plan.Overdue);
     }
@@ -85,9 +84,9 @@ public class LeadTimePlanTests
         var task = Lead(
             Recurring(RecurrenceRule.Yearly(new DateOnly(2025, 10, 12))), LeadTime.Of(1, LeadUnit.Months));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        var entry = Assert.Single(plan.Upcoming);
+        var entry = Assert.Single(plan.ComingUp);
         Assert.Equal(new DateOnly(2026, 10, 12), entry.DueOn);
         Assert.True(entry.Recurring);
     }
@@ -98,10 +97,9 @@ public class LeadTimePlanTests
         var task = Lead(
             Recurring(RecurrenceRule.Yearly(new DateOnly(2025, 10, 22))), LeadTime.Of(1, LeadUnit.Months));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Empty(plan.Upcoming);
-        Assert.Empty(plan.Tomorrow);
+        Assert.Empty(plan.ComingUp);
     }
 
     [Fact]
@@ -109,10 +107,9 @@ public class LeadTimePlanTests
     {
         var task = Lead(Recurring(RecurrenceRule.Daily(Today)), LeadTime.Of(1, LeadUnit.Days));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Equal(Today.AddDays(1), Assert.Single(plan.Tomorrow).DueOn);
-        Assert.Empty(plan.Upcoming);
+        Assert.Equal(Today.AddDays(1), Assert.Single(plan.ComingUp).DueOn);
     }
 
     [Fact]
@@ -121,22 +118,20 @@ public class LeadTimePlanTests
         var task = Lead(
             Recurring(RecurrenceRule.Weekly(Today, Today.AddDays(4).DayOfWeek)), LeadTime.Of(1, LeadUnit.Days));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Empty(plan.Tomorrow);
-        Assert.Empty(plan.Upcoming);
+        Assert.Empty(plan.ComingUp);
     }
 
     [Fact]
-    public void ADailyRepeatWithTomorrowTickedAndAThreeDayLeadShowsTheDayAfterInUpcoming()
+    public void ADailyRepeatWithTomorrowTickedAndAThreeDayLeadShowsTheDayAfterInComingUp()
     {
         var task = Lead(Recurring(RecurrenceRule.Daily(Today)), LeadTime.Of(3, LeadUnit.Days));
         TickOccurrence(task, Today.AddDays(1));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Empty(plan.Tomorrow);
-        Assert.Equal(Today.AddDays(2), Assert.Single(plan.Upcoming).DueOn);
+        Assert.Equal(Today.AddDays(2), Assert.Single(plan.ComingUp).DueOn);
     }
 
     [Fact]
@@ -145,10 +140,9 @@ public class LeadTimePlanTests
         var task = Lead(Recurring(RecurrenceRule.Daily(Today)), LeadTime.Of(1, LeadUnit.Days));
         TickOccurrence(task, Today.AddDays(1));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Empty(plan.Tomorrow);
-        Assert.Empty(plan.Upcoming);
+        Assert.Empty(plan.ComingUp);
     }
 
     [Fact]
@@ -157,9 +151,9 @@ public class LeadTimePlanTests
         var task = WithStepDue(Today.AddDays(20));
         Lead(task, LeadTime.Of(1, LeadUnit.Months));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Equal(Today.AddDays(20), Assert.Single(plan.Upcoming).DueOn);
+        Assert.Equal(Today.AddDays(20), Assert.Single(plan.ComingUp).DueOn);
     }
 
     [Fact]
@@ -167,10 +161,9 @@ public class LeadTimePlanTests
     {
         var task = WithStepDue(Today.AddDays(20));
 
-        var plan = TodayRule.Plan([task], Today, Utc);
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
 
-        Assert.Empty(plan.Upcoming);
-        Assert.Empty(plan.Tomorrow);
+        Assert.Empty(plan.ComingUp);
     }
 
     static void TickOccurrence(TodoTask task, DateOnly day) =>
