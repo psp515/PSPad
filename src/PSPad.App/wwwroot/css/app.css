@@ -1027,3 +1027,42 @@ button.pspad-heatmap-cell:focus-visible {
 .mud-chip {
     border-radius: 999px;
 }
+
+.pspad-card-header .pspad-card-tile.mud-icon-button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 9px;
+    background-color: var(--pspad-tint);
+    color: var(--mud-palette-primary);
+}
+
+.pspad-card-header .mud-icon-button:not(.pspad-card-tile),
+.pspad-card-header .mud-menu .mud-icon-button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 8px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-card-header .mud-link {
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+}
+
+.pspad-open-count {
+    padding: 1px 8px;
+    border-radius: 999px;
+    background-color: var(--pspad-hover);
+    color: var(--mud-palette-text-secondary);
+    font-size: 11px;
+    line-height: 16px;
+    white-space: nowrap;
+}
+
+.pspad-show-all.mud-button-root {
+    font-size: 12.5px;
+    text-transform: none;
+}

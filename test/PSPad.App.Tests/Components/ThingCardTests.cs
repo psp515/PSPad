@@ -34,7 +34,7 @@ public class ThingCardTests : Bunit.TestContext
         var card = Render(Tasks(7));
         var showAll = card.Find(".pspad-show-all");
 
-        Assert.Equal("Show all (7)", showAll.TextContent.Trim());
+        Assert.Equal("Show all 7", showAll.TextContent.Trim());
         Assert.Equal("/things/1", showAll.GetAttribute("href"));
     }
 
@@ -60,14 +60,51 @@ public class ThingCardTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheCountIsFormattedByTheCaller()
+    public void TheCountIsAPillWithTheNumberAndAnAccessibleLabel()
     {
         Arrange();
 
-        var card = Render<ThingCard>(parameters => Base(parameters, Tasks(3))
-            .Add(p => p.CountText, count => $"{count} open"));
+        var count = Render(Tasks(7)).Find(".pspad-open-count");
 
-        Assert.Equal("3 open", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("7", count.TextContent.Trim());
+        Assert.Equal("7 open", count.GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public void TheIconTileIsTheCollapseToggleAndThereIsNoChevron()
+    {
+        var collapse = Arrange();
+
+        var card = Render(Tasks(3));
+        var tile = card.Find("button.pspad-card-tile");
+
+        Assert.Single(card.FindAll("button"), button => button.ClassList.Contains("pspad-card-tile"));
+        Assert.Equal("true", tile.GetAttribute("aria-expanded"));
+        Assert.Equal("Collapse Thing", tile.GetAttribute("aria-label"));
+        tile.Click();
+        Assert.True(collapse.IsCollapsed(Id));
+        tile = card.Find("button.pspad-card-tile");
+        Assert.Equal("false", tile.GetAttribute("aria-expanded"));
+        Assert.Equal("Expand Thing", tile.GetAttribute("aria-label"));
+        Assert.False(card.FindComponent<MudCollapse>().Instance.Expanded);
+    }
+
+    [Fact]
+    public void WithoutAnIconTheTileShowsTheDefaultListIcon()
+    {
+        Arrange();
+
+        var tile = Render(Tasks(1)).Find("button.pspad-card-tile");
+
+        Assert.Contains(IconPaths.DistinctivePath(Icons.Material.Outlined.List), tile.InnerHtml);
+    }
+
+    [Fact]
+    public void TheCardHasNoDividers()
+    {
+        Arrange();
+
+        Assert.Empty(Render(Tasks(7)).FindComponents<MudDivider>());
     }
 
     [Fact]
@@ -141,7 +178,7 @@ public class ThingCardTests : Bunit.TestContext
         Assert.Empty(card.FindComponents<TaskRow>());
         card.Find(".pspad-custom-row");
         Assert.Equal("9", card.Find(".pspad-open-count").TextContent);
-        Assert.Equal("Show all (9)", card.Find(".pspad-show-all").TextContent.Trim());
+        Assert.Equal("Show all 9", card.Find(".pspad-show-all").TextContent.Trim());
     }
 
     [Fact]

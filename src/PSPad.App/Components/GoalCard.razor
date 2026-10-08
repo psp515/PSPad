@@ -3,7 +3,7 @@
 @using PSPad.Module.Tasks.Tasks
 
 <ThingCard Id="@Goal.Id" Name="@Goal.Name" Href="@($"/goals/{Goal.Id}")" TitleClass="pspad-goal-name"
-           CountText="@(count => $"{count} open")" EmptyText="No open tasks."
+           EmptyText="No open tasks."
            Tasks="@Tasks" Today="@Today" ListNameOf="@NameOf"
            OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen">
     <Subtitle>

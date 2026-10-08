@@ -95,7 +95,7 @@ public class GoalsPageTests : Bunit.TestContext
 
         Assert.Equal(5, card.FindComponents<TaskRow>().Count);
         var showAll = card.Find(".pspad-show-all");
-        Assert.Equal("Show all (7)", showAll.TextContent.Trim());
+        Assert.Equal("Show all 7", showAll.TextContent.Trim());
         Assert.Equal($"/goals/{goal.Id}", showAll.GetAttribute("href"));
     }
 
@@ -214,7 +214,7 @@ public class GoalsPageTests : Bunit.TestContext
         var card = page.FindComponents<GoalCard>().Single();
 
         Assert.DoesNotContain("Read a book", card.Markup);
-        Assert.Contains("1 open", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("1 open", card.Find(".pspad-open-count").GetAttribute("aria-label"));
     }
 
     [Fact]
