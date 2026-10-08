@@ -193,8 +193,8 @@ order is column by column (`adr/0051`). The empty state stays a single
 card in a plain `MudGrid`.
 
 Applied on: `GoalsPage` (goal cards, active and
-achieved separately), `Today` (overdue, today, starred, tomorrow, goals in progress,
-completed and upcoming each as their own grid), `InboxPage`, `ListPage` (open and completed separately),
+achieved separately), `Today` (overdue, any time, starred, coming up
+and completed each as their own grid; the schedule is a single column), `InboxPage`, `ListPage` (open and completed separately),
 `SettingsPage` (Account, Application settings, Sync, Danger zone each their
 own card), and both skeleton components (`RowSkeleton`, `CardSkeleton`).
 
@@ -302,19 +302,52 @@ same title, subtitle and back link below `md`. One component means the two
 cannot drift. A page's loading branch renders `<PageHeading Title="" />`
 so the top bar never keeps the previous screen's title.
 
-**My Day sections.** Top to bottom: **Overdue** (`Color.Error` heading),
-**Today**, **Starred**, **Tomorrow**, **Goals in progress**, then one `MudExpansionPanels`
-holding **Completed (N)** and **Upcoming (N)**, both collapsed by default.
-Every section hides when empty, except Today, which says "Nothing due
-today." when Overdue is empty too. Each task is its own outlined
-`MudPaper` card in a `MudItem`, sized to its content like the goal cards,
-never rows inside one shared paper. Upcoming groups its rows under a muted
-caption per day (`DueDateRow.Describe`). Membership comes from
-`TodayRule.Plan`, never from the page. Upcoming's reach is per task: its
-lead time, one week by default (`adr/0053`). A recurring row ahead of today
-ticks the occurrence on its own day, not today's. Goals in progress are
-`GoalSummaryCard`s ordered by due date, undated last, and open the goal
-screen `/goals/{id}`.
+**My Day** shows one day. `PageHeading Title="My Day"`, then a `DayPicker`:
+a ‹ icon button, a date button, a › icon button. The date button reads
+`DueDateRow.Describe` ("Today", "Tomorrow", "Yesterday", else "Fri, 9 Oct"),
+with the muted date after the three relative ones (`· Thu, 8 Oct`), and
+opens a `MudDialog` (the `DueDateRow` pattern, every width) holding a static
+`MudDatePicker`, whose actions are **Today** and **Cancel**; picking a day
+closes it. On desktop a text **Today** button appears beside the arrows when
+the day is not today; the phone top bar has no Today button — the dialog's
+Today action is the way back. Below `md` the picker is centred in its own
+row under `MobileTopBar`.
+
+The day lives in the URL as `/?day=yyyy-MM-dd`; `/` is today and a
+malformed `day` falls back to today. Arrows and the picker navigate with
+`replace: false`, so Back steps through visited days. `TaskQuery.For` and
+`Without` keep `day` (opening a task gives `?day=…&task=…`, closing the
+panel keeps the day); `ForNewTask` does not.
+
+Sections, top to bottom, each hidden when empty:
+
+1. **Overdue** (`Color.Error` heading) — today only.
+2. **Schedule** (`Color.Primary` heading) — tasks with a time, one column,
+   max 760px: a time gutter, then the `TaskRow` card. Desktop gutter 96px,
+   `09:30–11:00` on one line; below `md` 52px, start over end. Overlapping
+   tasks simply follow each other. `TaskRow` there hides its own time.
+3. **{Day}, any time** — "Today, any time", "Tomorrow, any time", "Fri, 9
+   Oct, any time" (`DueDateRow.Describe`): the untimed tasks in the card
+   grid. When Schedule and this section are both empty (and Overdue on
+   today) it stays with "Nothing planned for today." / "…for Fri, 9 Oct."
+4. **Starred** — with a muted "· when you have time"; card grid.
+5. **Coming up** — today only; card grid grouped under a muted caption per
+   day (`DueDateRow.Describe`), shown open.
+6. **Completed (N)** — a collapsed `MudExpansionPanel` on today and future
+   days. On a past day it is the only section, a plain open section with
+   "Nothing completed on Wed, 7 Oct." when empty.
+
+Each task is its own outlined `MudPaper` card in a `MudItem`, sized to its
+content, never rows inside one shared paper. Membership comes from
+`TodayRule.Plan`, never from the page. Coming up's reach is per task: its
+lead time, one week by default (`adr/0053`). The goals summary is not on
+the page (`GoalSummaryCard` stays for the goal screens).
+
+Ticking: a recurring row ticks the occurrence on the day shown (a Coming up
+row, its own day). A one-time row completes now, so a future task ticked
+from its day lands in today's Completed. The page re-plans on
+`SyncRevision` and on day change; the sidebar's My Day count stays today's
+`Select`.
 
 **Goal screen.** `/goals/{goalId}` mirrors the list screen: back arrow to
 `/goals`, the goal's name as title with a small outlined status `MudChip`
@@ -375,7 +408,9 @@ list and goal screens, the Inbox and area-board cards (`pspad-row`, 60px):
   not fit is clipped.
 - Only the star on the right (none on an Inbox card).
 
-A task's second line runs, in this order: due date (red when overdue,
+A task's second line runs, in this order: the time (`09:30–11:00`, or
+`09:30` without an end; `Color.Primary`, medium weight; hidden in My Day's
+Schedule, whose gutter shows it), due date (red when overdue,
 "Until 12 Oct" on a repeat), step progress (checklist icon and `0/4`), the
 repeat icon, the description icon, the priority dot, then the list name
 where the screen passes one (My Day, goal screen and goal cards). Each
@@ -476,6 +511,13 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      shows its last seven occurrences as chips under the row, then a muted
      tally caption: "Not done yet", "Done N times", or "Done N times · M in
      a row" (`RepeatTally`).
+   - **Time** (`TimeRow`, `pspad-task-time`, under Due/Until; shown when
+     Due/Until is set or the task repeats, like Remind me) — two 24-hour
+     outlined, dense `MudTimePicker`s, **Start** and **End**; End is disabled
+     until Start has a value, and a ✕ clears both. End at or before Start
+     shows "End must be after start" under the row and sends nothing. Edit
+     mode sends `SetTaskTime` on each valid change; Add keeps it in
+     `TaskDraft.Time`, sent after `SetTaskDueDate`.
    - **Remind me** (`LeadTimeRow`, `pspad-task-lead`, after Due/Until;
      on a one-time task only once it has a due date, since it counts back
      from one) —
@@ -484,8 +526,8 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      colour; a set value ("3 days before") carries a ✕. In Add the draft's
      lead time is sent as `SetTaskLeadTime` after the due date. The menu and
      the Custom dialog both open with a muted caption (`pspad-lead-hint`)
-     saying the value sets how early the task shows in Upcoming and that it
-     still moves to Today on its due date.
+     reading "How early the task shows in Coming up on My Day. On its due date
+     it moves to Today as usual."
    - **Priority** — the four fixed levels with coloured dots.
    - **Goal** — the user's goals.
    - **List** (outside Add) — lists grouped under area headings; picking
@@ -1093,6 +1135,16 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 Below `md` there is no sidebar: phones navigate through `MobileTopBar` and
 `BottomNav` instead, with the sidebar's account badge, Settings, App info
 and footer moved into `AccountDrawer` (`adr/0050`).
+
+At `md`+ the sidebar is still `MudNavMenu`/`MudNavLink`, styled through a
+`pspad-nav` class: 12px padding inside the drawer, links with an 8px radius
+and 2px gap, outlined icons (`Icons.Material.Outlined.*`), counts as a
+right-aligned muted number (not in the label) and a muted "Areas" caption
+above the areas group. The active link is tinted with the primary at 12%
+(`color-mix` on `--mud-palette-primary`, so every accent and dark mode
+follow) at medium weight; its text uses `--mud-palette-text-primary` and
+only its icon is primary, to hold the 4.5:1 contrast rule on the tint
+(`PSPadThemeTests.TheActiveSidebarLinkReadsOnItsTint`).
 
 **Routes:**
 

@@ -281,7 +281,7 @@ not stated there:
 - `RecurrenceKind.Yearly` fires on `StartsOn`'s month and day, clamped to the month's length (29 Feb → 28 Feb in non-leap years), in every Nth year counted from `StartsOn`'s year (`adr/0053`).
 - A repeating task's `DueOn` is its inclusive end ("Until"). Repeat and due
   date combine in either order. `TodoTask.OccursOn(day)` = rule occurs and
-  `day <= DueOn`; Today, Upcoming, occurrence chips and `CompleteOccurrence`
+  `day <= DueOn`; Today, My Day's sections, occurrence chips and `CompleteOccurrence`
   all use it, never `RecurrenceRule.OccursOn` alone. A tick after the end is
   rejected as a day the task does not repeat on; an untick of a day already
   in `completedDays` is always accepted, even after the end or interval
@@ -295,17 +295,34 @@ not stated there:
 - `RepeatTally.Of(task, today)` derives the done count (`completedDays`)
   and the streak: done occurrences walking back from today, today's pending
   occurrence not breaking it.
-- `TodoTask.LeadTime` (optional; 1–99 days, weeks or months; `SetTaskLeadTime`) is the task's look-ahead for Tomorrow and Upcoming; with none it is 7 days. `LeadTime.Shows(day, today)` — `day > today` and `FirstShownFor(day) <= today`. It never moves a task into Today or Overdue (`adr/0053`).
-- `TodayRule.Plan(tasks, today, zone)` splits the day into Overdue and
-  Today (exactly `Select`'s entries), Starred, Tomorrow, Upcoming (the day after
-  tomorrow onwards, as far as each task's look-ahead reaches) and Completed (completed on `today` in the
-  user's zone, or today's ticked occurrence). A task's date is its
-  earliest trigger — due date or next unchecked step. A recurring task
-  shows at most once beyond today, as its next unticked occurrence within
-  its look-ahead; it is never overdue.
-- Starred holds open, starred, one-off tasks not overdue or due today
-  (undated first, then by date); they are left out of Tomorrow and
-  Upcoming. The star never enters `Select` (`adr/0035`).
+- `TodoTask.LeadTime` (optional; 1–99 days, weeks or months; `SetTaskLeadTime`) is the task's look-ahead for Coming up on My Day; with none it is 7 days. `LeadTime.Shows(day, today)` — `day > today` and `FirstShownFor(day) <= today`. It never moves a task into Today or Overdue (`adr/0053`).
+- `TodoTask.Time` (`TaskTime(Start, End?)`; `SetTaskTime`, `TaskTimeSet`) is an
+  optional expected start and end, a wall clock in the user's stored zone
+  like `DueOn`. `End` must be after `Start` (`TaskTime.Of` and `Decide`
+  reject it with "A task must end after it starts."). `null` clears; no
+  event when unchanged; same `ListAccess` grant as `SetTaskLeadTime`. A
+  repeating task's time is every occurrence's time. Removing a one-time
+  task's due date keeps the time, but an undated task is on no day, so it
+  is ignored until a date returns. Documents without the field read `null`.
+  `TodayEntry.Time` carries it (additive to `GET /api/today`).
+- `TodayRule.Plan(tasks, day, today, zone)` plans the day on screen (`day`;
+  `today` is the user's today) as Overdue, Scheduled, AnyTime, Starred,
+  ComingUp and Completed. A task's date is its earliest trigger — due date
+  or next unchecked step. "Due on `day`" means a one-time open task whose
+  trigger is `day`, or a recurring task that `OccursOn(day)` with `day`
+  unticked; Scheduled holds those with a `Time` (by start, then name),
+  AnyTime those without. By day kind: on a past day only Completed
+  (completed that day in the user's zone, or that day's ticked
+  occurrence) is filled. On today, Overdue and the due entries are exactly
+  `Select`'s, so the Today rule does not move; Starred and ComingUp
+  (each one-time task at its trigger, each recurring task at its next
+  unticked occurrence, only while `LeadTime.Shows`) fill too. On a future day
+  Overdue and ComingUp are empty and lead time is ignored — the user asked
+  for that day — while Scheduled, AnyTime and Starred are filled. A
+  recurring task is never overdue. Overdue entries keep their `Time`.
+- Starred holds open, starred, one-off tasks not overdue or due by the day
+  shown (undated first, then by date); they are left out of Coming up. The
+  star never enters `Select` (`adr/0035`).
 - The rule is tested in three places on purpose: the module (unit), the
   API's Today query (integration), and the client projection (bUnit). A
   change that breaks it should turn three suites red, not one.

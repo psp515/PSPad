@@ -36,7 +36,6 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Recurrence lead time, yearly repeats | `specs/recurrence-lead-time-design.md` |
 | Phone navigation | `specs/mobile-navigation-design.md` |
 | GitHub integration | `specs/github-integration-design.md` |
-| My Day by day, task times (in progress) | `specs/my-day-design.md` |
 | Why a decision was made | `adr/README.md` index → the `Active` record |
 
 Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither silently.
