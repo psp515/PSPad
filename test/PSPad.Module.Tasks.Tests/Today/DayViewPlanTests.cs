@@ -125,6 +125,21 @@ public class DayViewPlanTests
         Assert.Empty(onTomorrow.ComingUp);
     }
 
+    [Fact]
+    public void AnUndatedTasksTimeIsIgnoredWhenAStepBringsItToToday()
+    {
+        var task = Timed(Due(Today), 9, 30);
+        var step = Guid.NewGuid();
+        task.ApplyAll(TodoTask.Decide(task, new AddStep(Guid.NewGuid(), User, task.Id, step, "Call"), Now));
+        task.ApplyAll(TodoTask.Decide(task, new SetStepDueDate(Guid.NewGuid(), User, task.Id, step, Today), Now));
+        task.ApplyAll(TodoTask.Decide(task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, null), Now));
+
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
+
+        Assert.Empty(plan.Scheduled);
+        Assert.Null(Assert.Single(plan.AnyTime).Time);
+    }
+
     static TodoTask Due(DateOnly day)
     {
         var task = TodoTaskTests.Existing();

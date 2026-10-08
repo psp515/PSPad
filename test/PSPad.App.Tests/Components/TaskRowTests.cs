@@ -275,6 +275,19 @@ public class TaskRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnUndatedTasksTimeIsNotShown()
+    {
+        Arrange();
+        var task = Timed(Due(Task("Standup"), Today));
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, null), DateTimeOffset.UnixEpoch));
+
+        var row = Render(task);
+
+        Assert.Empty(row.FindAll(".pspad-row-time"));
+    }
+
+    [Fact]
     public void TheTimeCanBeHidden()
     {
         Arrange();

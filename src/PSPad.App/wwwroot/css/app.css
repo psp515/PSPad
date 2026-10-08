@@ -861,10 +861,10 @@ button.pspad-heatmap-cell:focus-visible {
 
 .pspad-schedule { max-width: 760px; }
 .pspad-schedule-slot { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: center; }
-.pspad-schedule-time { font-weight: 500; font-variant-numeric: tabular-nums; }
+.pspad-schedule-time { font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
 @media (max-width: 959.98px) {
     .pspad-schedule-slot { grid-template-columns: 52px minmax(0, 1fr); gap: 8px; }
-    .pspad-schedule-time { display: flex; flex-direction: column; line-height: 1.3; }
+    .pspad-schedule-time { display: flex; flex-direction: column; line-height: 1.3; white-space: normal; }
     .pspad-schedule-dash { display: none; }
     .pspad-schedule-end { opacity: 0.7; }
     .pspad-day-bar { justify-content: center !important; }

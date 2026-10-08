@@ -52,6 +52,18 @@ public class TimeRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task AStaleErrorIsForgottenWhenTheValueChanges()
+    {
+        var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(14, 0), null)));
+        await row.InvokeAsync(() => row.Instance.EndChangedAsync(new TimeSpan(13, 0, 0)));
+        Assert.NotEmpty(row.FindAll(".pspad-time-error"));
+
+        row.Render(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(14, 0), new TimeOnly(15, 0))));
+
+        Assert.Empty(row.FindAll(".pspad-time-error"));
+    }
+
+    [Fact]
     public void ClearingRemovesBoth()
     {
         TaskTime? sent = new(new TimeOnly(9, 0), null);

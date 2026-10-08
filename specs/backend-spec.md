@@ -318,7 +318,8 @@ not stated there:
   (each one-time task at its trigger, each recurring task at its next
   unticked occurrence, only while `LeadTime.Shows`) fill too. On a future day
   Overdue and ComingUp are empty and lead time is ignored — the user asked
-  for that day — while Scheduled, AnyTime and Starred are filled. A
+  for that day — while Scheduled, AnyTime, Starred and Completed (ticked occurrences) are
+  filled. A
   recurring task is never overdue. Overdue entries keep their `Time`.
 - Starred holds open, starred, one-off tasks not overdue or due by the day
   shown (undated first, then by date); they are left out of Coming up. The

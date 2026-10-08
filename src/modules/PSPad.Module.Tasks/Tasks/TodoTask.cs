@@ -66,6 +66,9 @@ public sealed class TodoTask : Aggregate
 
     public bool IsRecurring => Recurrence is not null;
 
+    [JsonIgnore]
+    public TaskTime? EffectiveTime => IsRecurring || DueOn is not null ? Time : null;
+
     public bool OccursOn(DateOnly day) =>
         Recurrence is not null && Recurrence.OccursOn(day) && (DueOn is null || day <= DueOn);
 

@@ -348,6 +348,7 @@ public class TodayTests : Bunit.TestContext
         var schedule = page.Find(".pspad-day-schedule").TextContent;
         Assert.Equal("09:30", page.Find(".pspad-schedule-start").TextContent);
         Assert.Equal("11:00", page.Find(".pspad-schedule-end").TextContent);
+        Assert.Equal("09:30–11:00", page.Find(".pspad-schedule-time").TextContent.Trim());
         Assert.Contains("Sprint planning", schedule);
         Assert.Contains("Today, any time", page.Find(".pspad-day-anytime").TextContent);
         Assert.Contains("Mleko", page.Find(".pspad-day-anytime").TextContent);

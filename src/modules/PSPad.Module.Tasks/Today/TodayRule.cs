@@ -164,5 +164,5 @@ public static class TodayRule
 
     static TodayEntry Entry(TodoTask task, bool overdue, DateOnly? dueOn) =>
         new(task.Id, task.ListId, task.Name, overdue, dueOn, task.IsRecurring,
-            task.Starred, (int)task.Priority, task.Time);
+            task.Starred, (int)task.Priority, task.EffectiveTime);
 }

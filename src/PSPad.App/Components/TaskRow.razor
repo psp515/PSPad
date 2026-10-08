@@ -12,7 +12,7 @@
         @if (HasMeta)
         {
             <div class="pspad-row-meta">
-                @if (ShowTime && Task.Time is { } time)
+                @if (ShowTime && Task.EffectiveTime is { } time)
                 {
                     <MudText Typo="Typo.caption" Class="pspad-row-time" Color="Color.Primary">@TimeRow.Describe(time)</MudText>
                 }
@@ -82,7 +82,7 @@
     bool HasDescription => Task.Description.Length > 0;
 
     bool HasMeta => ListName is not null || Task.Steps.Count > 0 || Task.DueOn is not null
-        || (ShowTime && Task.Time is not null) || Task.IsRecurring || HasDescription || Task.Priority != Priority.None || TaskMark is not null;
+        || (ShowTime && Task.EffectiveTime is not null) || Task.IsRecurring || HasDescription || Task.Priority != Priority.None || TaskMark is not null;
 
     SnapshotMark? TaskMark => Task.SnapshotMarks.FirstOrDefault(mark => mark.StepId is null);
 

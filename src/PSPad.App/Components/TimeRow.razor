@@ -1,3 +1,4 @@
+@using System.Globalization
 @using PSPad.Module.Tasks.Tasks
 
 <div class="pspad-property-row pspad-task-time d-flex align-center px-2 py-1 gap-2">
@@ -27,12 +28,26 @@
 
     [Parameter] public bool Disabled { get; set; }
 
+    TaskTime? _shown;
+
     TimeSpan? _end;
 
     string? _error;
 
+    protected override void OnParametersSet()
+    {
+        if (_shown != Value)
+        {
+            _shown = Value;
+            _end = null;
+            _error = null;
+        }
+    }
+
+    public static string Format(TimeOnly time) => time.ToString("HH:mm", CultureInfo.InvariantCulture);
+
     public static string Describe(TaskTime time) =>
-        time.End is { } end ? $"{time.Start:HH\\:mm}–{end:HH\\:mm}" : $"{time.Start:HH\\:mm}";
+        time.End is { } end ? $"{Format(time.Start)}–{Format(end)}" : Format(time.Start);
 
     public Task StartChangedAsync(TimeSpan? start) =>
         start is { } picked
