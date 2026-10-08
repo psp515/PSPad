@@ -220,6 +220,12 @@ bar never covers the last row either. Below `md`, every scrolling element
 (`scrollbar-width: none`, `::-webkit-scrollbar { display: none }`) while
 still scrolling.
 
+**Top spacing.** The container's top margin is 16px below `md` and 8px from
+`md` up (`mt-4 mt-md-2`). `MudMainContent` reserves top padding for the
+phone app bar; from `md` up, where that bar is hidden, `app.css` removes it
+(`.mud-main-content { padding-top: 0 }` in a `min-width: 960px` query), so
+desktop pages start at the top.
+
 **Sidebar breakpoint.** The sidebar is permanent at `md`+ (≥960px). Below
 `md` there is no navigation drawer at all: navigation is `MobileTopBar`
 plus `BottomNav` plus `AccountDrawer` (`adr/0050`,
@@ -302,19 +308,41 @@ same title, subtitle and back link below `md`. One component means the two
 cannot drift. A page's loading branch renders `<PageHeading Title="" />`
 so the top bar never keeps the previous screen's title.
 
-**My Day** shows one day. `PageHeading Title="My Day"`, then a `DayPicker`:
-a ‹ icon button, a date button, a › icon button. The date button reads
-`DueDateRow.Describe` ("Today", "Tomorrow", "Yesterday", else "Fri, 9 Oct"),
-with the muted date after the three relative ones (`· Thu, 8 Oct`), and
-opens a `MudDialog` (the `DueDateRow` pattern, every width) holding a static
+**My Day** shows one day. `PageHeading Title="My Day"` (title … sync stamp
+and sync button, nothing else), then a `WeekStrip` (`Components/WeekStrip.razor`;
+`Day`, `Today`, `DayChanged`, `Busy`) showing the Monday–Sunday week that
+holds the day: a ‹ (`pspad-week-prev`, "Previous week") and › (`pspad-week-next`,
+"Next week") moving the day by ±7 days, and seven `MudButton`s
+(`pspad-week-day`, `aria-label` "Thu, 8 Oct"), each a column of the weekday
+initial, a 34px circle with the day number and a 5px dot when the day is in
+`Busy`. Today's button carries `pspad-week-day-today` and
+`aria-current="date"`, its circle a primary ring; the picked day carries
+`pspad-week-day-picked`, its circle filled primary with contrast text. A
+swipe on the days turns the week: `WeekStrip.SwipeDirection(dx, dy)` gives
+next (swipe left) or previous (swipe right) when the horizontal travel is
+at least 48px and more than the vertical. A **Today** button
+(`pspad-week-today`, outlined, primary) shows only when the day is not today,
+on every width, and a calendar icon button (`pspad-week-pick`, "Pick a
+date") opens a `MudDialog` (the `DueDateRow` pattern) holding a static
 `MudDatePicker`, whose actions are **Today** and **Cancel**; picking a day
-closes it. On desktop a text **Today** button appears beside the arrows when
-the day is not today; the phone top bar has no Today button — the dialog's
-Today action is the way back. Below `md` the picker is centred in its own
-row under `MobileTopBar`.
+closes it.
+
+On desktop the strip is an outlined `MudPaper` across the content width
+under the heading: the arrows and days, then at its right
+`DueDateRow.Describe` of the day ("Today · Thu, 8 Oct" for Today, Tomorrow
+and Yesterday, else just "Fri, 16 Oct") over a muted "Week 41 · October
+2026" (ISO week, invariant culture), then Today and the calendar button.
+Below `md` it is a bar directly under `MobileTopBar`, full width with no
+side margins and a bottom border only: a header row with the picked day's
+"October 2026" and the Today/calendar buttons, the days below it.
+
+`Busy` is computed on the page from the already loaded tasks: each day of
+the visible week whose `TodayRule.Plan` has a Scheduled or any-time entry,
+or Overdue when the day is today. Past days are never busy, since their
+plan holds only Completed.
 
 The day lives in the URL as `/?day=yyyy-MM-dd`; `/` is today and a
-malformed `day` falls back to today. Arrows and the picker navigate with
+malformed `day` falls back to today. Arrows, days, swipes and the picker navigate with
 `replace: false`, so Back steps through visited days. `TaskQuery.For` and
 `Without` keep `day` (opening a task gives `?day=…&task=…`, closing the
 panel keeps the day); `ForNewTask` does not.
@@ -323,8 +351,11 @@ Sections, top to bottom, each hidden when empty:
 
 1. **Overdue** (`Color.Error` heading) — today only.
 2. **Schedule** (`Color.Primary` heading) — tasks with a time, one column,
-   max 760px: a time gutter, then the `TaskRow` card. Desktop gutter 96px,
-   `09:30–11:00` on one line; below `md` 52px, start over end. Overlapping
+   max 760px: a time gutter, then the `TaskRow` card. Desktop gutter 132px,
+   `09:30–11:00` on one line (`nowrap`); below `md` 52px, start over end.
+   An overnight time (end before start) adds a muted `(+1)`
+   (`pspad-schedule-nextday`) after the end on desktop, under it in a smaller
+   size below `md`; the task stays on its start day, ordered by start. Overlapping
    tasks simply follow each other. `TaskRow` there hides its own time.
 3. **{Day}, any time** — "Today, any time", "Tomorrow, any time", "Fri, 9
    Oct, any time" (`DueDateRow.Describe`): the untimed tasks in the card
@@ -408,8 +439,8 @@ list and goal screens, the Inbox and area-board cards (`pspad-row`, 60px):
   not fit is clipped.
 - Only the star on the right (none on an Inbox card).
 
-A task's second line runs, in this order: the time (`09:30–11:00`, or
-`09:30` without an end; `Color.Primary`, medium weight; hidden in My Day's
+A task's second line runs, in this order: the time (`TimeRow.Describe`:
+`09:30–11:00`, `09:30` without an end, `22:00–01:00 (+1)` overnight; `Color.Primary`, medium weight; hidden in My Day's
 Schedule, whose gutter shows it), due date (red when overdue,
 "Until 12 Oct" on a repeat), step progress (checklist icon and `0/4`), the
 repeat icon, the description icon, the priority dot, then the list name
@@ -441,7 +472,7 @@ same panel in its new-task mode, addressed as `?task=new&list={listId}`
 (`TaskQuery.ForNewTask`) — never an inline field or a dialog.
 
 **Detail panels share one shell.** `Components/DetailPanel.razor` is the
-only right-anchored detail drawer: 360px from `md` up, full width below it.
+only right-anchored detail drawer: 420px from `md` up, full width below it.
 Below `md` the drawer's height and top follow `window.visualViewport`
 (the `--pspad-visible-height`/`--pspad-visible-top` variables set in
 `index.html`, with `interactive-widget=resizes-content` on the viewport
@@ -512,10 +543,16 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      tally caption: "Not done yet", "Done N times", or "Done N times · M in
      a row" (`RepeatTally`).
    - **Time** (`TimeRow`, `pspad-task-time`, under Due/Until; shown when
-     Due/Until is set or the task repeats, like Remind me) — two 24-hour
-     outlined, dense `MudTimePicker`s, **Start** and **End**; End is disabled
-     until Start has a value, and a ✕ clears both. End at or before Start
-     shows "End must be after start" under the row and sends nothing. Edit
+     Due/Until is set or the task repeats, like Remind me) — inline: the
+     clock icon and "Time" label centred with two 24-hour outlined, dense
+     `MudTimePicker`s, **Start** and **End** (placeholders, no adornment
+     icon, centred text); End is disabled until Start has a value. A ✕
+     (`pspad-property-clear`, `Size.Small`, the shared `PropertyRow` clear)
+     clears both and lines up with Due's ✕; with no time an empty
+     placeholder of its width keeps the column. End equal to Start shows
+     "End must differ from start" under the row and sends nothing; an End
+     before Start is sent and shows a muted "Ends the next day (+1)" under
+     the row. Edit
      mode sends `SetTaskTime` on each valid change; Add keeps it in
      `TaskDraft.Time`, sent after `SetTaskDueDate`.
    - **Remind me** (`LeadTimeRow`, `pspad-task-lead`, after Due/Until;

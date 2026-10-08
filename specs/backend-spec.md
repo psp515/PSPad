@@ -298,8 +298,11 @@ not stated there:
 - `TodoTask.LeadTime` (optional; 1–99 days, weeks or months; `SetTaskLeadTime`) is the task's look-ahead for Coming up on My Day; with none it is 7 days. `LeadTime.Shows(day, today)` — `day > today` and `FirstShownFor(day) <= today`. It never moves a task into Today or Overdue (`adr/0053`).
 - `TodoTask.Time` (`TaskTime(Start, End?)`; `SetTaskTime`, `TaskTimeSet`) is an
   optional expected start and end, a wall clock in the user's stored zone
-  like `DueOn`. `End` must be after `Start` (`TaskTime.Of` and `Decide`
-  reject it with "A task must end after it starts."). `null` clears; no
+  like `DueOn`. `End` must differ from `Start` (`TaskTime.Of` and `Decide`
+  reject an equal one with "A task can't end when it starts."); an `End`
+  before `Start` runs overnight into the next day (`TaskTime.Overnight`,
+  derived, not serialized). The task stays on its start day and Schedule
+  orders by `Start` only. `null` clears; no
   event when unchanged; same `ListAccess` grant as `SetTaskLeadTime`. A
   repeating task's time is every occurrence's time. Removing a one-time
   task's due date keeps the time, but an undated task is on no day, so it
