@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -416,11 +417,12 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        Assert.Equal(new HashSet<DateOnly> { Today, Today.AddDays(1) }, page.FindComponent<WeekStrip>().Instance.Busy);
+        var expected = WeekStrip.WeekOf(Today).Where(day => day == Today || day == Today.AddDays(1)).ToArray();
+        Assert.Equal(expected.ToHashSet(), page.FindComponent<WeekStrip>().Instance.Busy);
         var dotted = page.FindAll(".pspad-week-day")
             .Where(day => day.QuerySelector(".pspad-week-dot") is not null)
             .Select(day => day.GetAttribute("aria-label"));
-        Assert.Equal([$"{Today:ddd, d MMM}", $"{Today.AddDays(1):ddd, d MMM}"], dotted);
+        Assert.Equal(expected.Select(day => day.ToString("ddd, d MMM", CultureInfo.InvariantCulture)), dotted);
     }
 
     [Fact]

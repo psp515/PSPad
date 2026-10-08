@@ -111,6 +111,15 @@ public class TimeRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheFieldsAreNamed()
+    {
+        var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0))));
+
+        Assert.Equal("Start", row.Find(".pspad-time-start input").GetAttribute("aria-label"));
+        Assert.Equal("End", row.Find(".pspad-time-end input").GetAttribute("aria-label"));
+    }
+
+    [Fact]
     public void ThePickersCarryNoAdornmentIcon()
     {
         var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0))));

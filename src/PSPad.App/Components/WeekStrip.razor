@@ -4,7 +4,7 @@
     <MudText Typo="Typo.subtitle2" Class="pspad-week-month">@Day.ToString("MMMM yyyy", Invariant)</MudText>
 
     <div class="pspad-week-row d-flex align-center">
-        <MudIconButton Class="pspad-week-prev" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous week"
+        <MudIconButton Class="pspad-week-prev" Size="Size.Small" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous week"
                        OnClick="@(() => DayChanged.InvokeAsync(Day.AddDays(-7)))" />
         <div class="pspad-week-days d-flex flex-grow-1" @ontouchstart="@TouchStarted" @ontouchend="@TouchEndedAsync">
             @foreach (var day in Week)
@@ -24,7 +24,7 @@
                 </MudButton>
             }
         </div>
-        <MudIconButton Class="pspad-week-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next week"
+        <MudIconButton Class="pspad-week-next" Size="Size.Small" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next week"
                        OnClick="@(() => DayChanged.InvokeAsync(Day.AddDays(7)))" />
     </div>
 
@@ -88,7 +88,7 @@
 
     string Label => IsRelative
         ? $"{DueDateRow.Describe(Day, Today)} · {Day.ToString("ddd, d MMM", Invariant)}"
-        : DueDateRow.Describe(Day, Today);
+        : Day.ToString(Day.Year == Today.Year ? "ddd, d MMM" : "ddd, d MMM yyyy", Invariant);
 
     string Meta => $"Week {ISOWeek.GetWeekOfYear(Day.ToDateTime(TimeOnly.MinValue))} · {Day.ToString("MMMM yyyy", Invariant)}";
 

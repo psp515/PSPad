@@ -311,10 +311,11 @@ so the top bar never keeps the previous screen's title.
 **My Day** shows one day. `PageHeading Title="My Day"` (title … sync stamp
 and sync button, nothing else), then a `WeekStrip` (`Components/WeekStrip.razor`;
 `Day`, `Today`, `DayChanged`, `Busy`) showing the Monday–Sunday week that
-holds the day: a ‹ (`pspad-week-prev`, "Previous week") and › (`pspad-week-next`,
+holds the day: a small ‹ (`pspad-week-prev`, "Previous week") and › (`pspad-week-next`,
 "Next week") moving the day by ±7 days, and seven `MudButton`s
 (`pspad-week-day`, `aria-label` "Thu, 8 Oct"), each a column of the weekday
-initial, a 34px circle with the day number and a 5px dot when the day is in
+initial, a circle with the day number (34px; 32px below `md`, so seven
+days and both arrows fit a 360px phone) and a 5px dot when the day is in
 `Busy`. Today's button carries `pspad-week-day-today` and
 `aria-current="date"`, its circle a primary ring; the picked day carries
 `pspad-week-day-picked`, its circle filled primary with contrast text. A
@@ -331,7 +332,11 @@ On desktop the strip is an outlined `MudPaper` across the content width
 under the heading: the arrows and days, then at its right
 `DueDateRow.Describe` of the day ("Today · Thu, 8 Oct" for Today, Tomorrow
 and Yesterday, else just "Fri, 16 Oct") over a muted "Week 41 · October
-2026" (ISO week, invariant culture), then Today and the calendar button.
+2026" (ISO week), then Today and the calendar button. Between 960 and
+1100px the label block is hidden so the strip never overflows; the picked
+circle still names the day. Everything the strip renders (labels, month,
+aria-labels, weekday initials) is formatted in the invariant culture; only
+the words Today, Tomorrow and Yesterday come from `DueDateRow.Describe`.
 Below `md` it is a bar directly under `MobileTopBar`, full width with no
 side margins and a bottom border only: a header row with the picked day's
 "October 2026" and the Today/calendar buttons, the days below it.

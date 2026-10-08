@@ -5,11 +5,11 @@
     <div class="pspad-time-body d-flex align-center flex-grow-1">
         <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" Class="pspad-time-icon mr-3" />
         <MudText Typo="Typo.body2" Class="pspad-property-label">Time</MudText>
-        <MudTimePicker Class="pspad-time-start pspad-time-input" Placeholder="Start" Time="@AsSpan(Value?.Start)" TimeChanged="@StartChangedAsync"
+        <MudTimePicker Class="pspad-time-start pspad-time-input" Placeholder="Start" aria-label="Start" Time="@AsSpan(Value?.Start)" TimeChanged="@StartChangedAsync"
                        AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@Disabled"
                        Adornment="Adornment.None" />
         <span class="pspad-muted pspad-time-dash">–</span>
-        <MudTimePicker Class="pspad-time-end pspad-time-input" Placeholder="End" Time="@(_end ?? AsSpan(Value?.End))" TimeChanged="@EndChangedAsync"
+        <MudTimePicker Class="pspad-time-end pspad-time-input" Placeholder="End" aria-label="End" Time="@(_end ?? AsSpan(Value?.End))" TimeChanged="@EndChangedAsync"
                        AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true"
                        Disabled="@(Disabled || Value is null)" Error="@(_error is not null)" Adornment="Adornment.None" />
     </div>

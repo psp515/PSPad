@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
@@ -125,6 +126,40 @@ public class WeekStripTests : Bunit.TestContext
 
         Assert.Equal("Mon, 2 Nov", strip.Find(".pspad-week-label").TextContent.Trim());
         Assert.Equal("Week 45 · November 2026", strip.Find(".pspad-week-meta").TextContent.Trim());
+    }
+
+    [Fact]
+    public void AWeekAcrossTheNewYearBelongsToItsIsoWeek()
+    {
+        var strip = Strip(new DateOnly(2027, 1, 3), Thursday);
+
+        Assert.Equal("Mon, 28 Dec", strip.FindAll(".pspad-week-day")[0].GetAttribute("aria-label"));
+        Assert.Equal("Week 53 · January 2027", strip.Find(".pspad-week-meta").TextContent.Trim());
+    }
+
+    [Theory]
+    [InlineData(2026, 10, 9, "Tomorrow · Fri, 9 Oct")]
+    [InlineData(2026, 11, 2, "Mon, 2 Nov")]
+    [InlineData(2027, 1, 4, "Mon, 4 Jan 2027")]
+    public void EverythingTheStripSaysIsInOneCulture(int year, int month, int day, string label)
+    {
+        var current = CultureInfo.CurrentCulture;
+        var currentUi = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = new CultureInfo("pl-PL");
+        try
+        {
+            var strip = Strip(new DateOnly(year, month, day), Thursday);
+
+            Assert.Equal(label, strip.Find(".pspad-week-label").TextContent.Trim());
+            Assert.StartsWith("Mon, ", strip.FindAll(".pspad-week-day")[0].GetAttribute("aria-label"));
+            Assert.Equal("M", strip.FindAll(".pspad-week-initial")[0].TextContent.Trim());
+            Assert.DoesNotContain("październik", strip.Markup, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = current;
+            CultureInfo.CurrentUICulture = currentUi;
+        }
     }
 
     [Fact]

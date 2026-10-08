@@ -893,10 +893,10 @@ button.pspad-heatmap-cell:focus-visible {
     padding: 8px 12px;
 }
 .pspad-week-month { grid-area: month; display: none; }
-.pspad-week-row { grid-area: row; min-width: 0; }
+.pspad-week-row { grid-area: row; min-width: 0; overflow: hidden; }
 .pspad-week-head { grid-area: head; display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap; }
 .pspad-week-actions { grid-area: actions; justify-content: flex-end; }
-.pspad-week-days { justify-content: space-around; min-width: 0; touch-action: pan-y; }
+.pspad-week-days { justify-content: space-around; min-width: 0; overflow: hidden; touch-action: pan-y; }
 .pspad-week-day.mud-button-root {
     min-width: 0;
     padding: 4px 2px;
@@ -925,6 +925,10 @@ button.pspad-heatmap-cell:focus-visible {
 }
 .pspad-week-dot, .pspad-week-dot-space { width: 5px; height: 5px; border-radius: 50%; }
 .pspad-week-dot { background-color: var(--mud-palette-primary); }
+@media (min-width: 960px) and (max-width: 1099.98px) {
+    .pspad-week-strip { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "row actions"; }
+    .pspad-week-head { display: none; }
+}
 @media (max-width: 959.98px) {
     .pspad-day-bar { margin: -16px -16px 16px; }
     .pspad-week-strip.mud-paper {
@@ -938,6 +942,8 @@ button.pspad-heatmap-cell:focus-visible {
     .pspad-week-month { display: block; }
     .pspad-week-head { display: none; }
     .pspad-week-row { margin-left: -12px; }
+    .pspad-week-day.mud-button-root { padding: 2px 1px; }
+    .pspad-week-circle { width: 32px; height: 32px; }
 }
 @media (min-width: 600px) and (max-width: 959.98px) {
     .pspad-day-bar { margin-left: -24px; margin-right: -24px; }
