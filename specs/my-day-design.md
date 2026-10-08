@@ -131,15 +131,16 @@ By where `day` sits:
 
 Canvas artboards: Desktop, Phone today / future / past.
 
-**Header.** `PageHeading Title="My Day"`, then at the right: ‹ icon button,
-a date button, › icon button. The date button reads "Today", "Tomorrow" or
-"Yesterday", else `ddd d MMM`, followed by the muted date (`· Thu 8 Oct`),
-and opens a `MudDatePicker` (picker variant `Dialog` below `md`, `Inline`
-popover at `md`+) whose actions are **Today** and **Cancel**. Picking a day
-closes it. On desktop a text **Today** button appears beside the arrows when
-the day is not today; the phone top bar gets no Today button — the
-picker's Today action is the way back. Below `md` the arrows and date sit in
-a full-width bar under `MobileTopBar`, the date as a tonal pill.
+**Header.** `PageHeading Title="My Day"`, then a `DayPicker`: ‹ icon button,
+a date button, › icon button. The date button reads `DueDateRow.Describe`
+("Today", "Tomorrow", "Yesterday", else "Fri, 9 Oct"), with the muted date
+after the three relative ones (`· Thu, 8 Oct`), and opens a static
+`MudDatePicker` in a `MudDialog` (the `DueDateRow` pattern, every width)
+whose actions are **Today** and **Cancel**. Picking a day closes it. On
+desktop a text **Today** button appears beside the arrows when the day is
+not today; the phone top bar gets no Today button — the picker's Today
+action is the way back. Below `md` the picker is centred in its own row
+under `MobileTopBar`.
 
 **URL.** `/?day=yyyy-MM-dd`; `/` is today. A malformed `day` falls back to
 today. Opening a task keeps `day` (`?day=…&task=…`), and closing the panel
@@ -154,15 +155,15 @@ steps through visited days.
    start over end, 52px) then the `TaskRow` card. Overlapping tasks simply
    follow each other.
 3. **{Day}, any time** — "Today, any time", "Tomorrow, any time",
-   "Fri 9 Oct, any time": the untimed tasks in the card grid. When Schedule
+   "Fri, 9 Oct, any time": the untimed tasks in the card grid. When Schedule
    and this section are both empty (and Overdue on today), this section
-   stays with "Nothing planned for today." / "…for Fri 9 Oct."
+   stays with "Nothing planned for today." / "…for Fri, 9 Oct."
 4. **Starred** — heading with a muted "· when you have time"; card grid.
 5. **Coming up** — today only, card grid grouped under a muted caption per
    day (`DueDateRow.Describe`), shown open, not collapsed.
 6. **Completed (N)** — a collapsed `MudExpansionPanel` on today and future
    days; on a past day it is the only section, shown open as a plain
-   section with "Nothing completed on Wed 7 Oct." when empty.
+   section with "Nothing completed on Wed, 7 Oct." when empty.
 
 **Goals in progress** is removed; `GoalSummaryCard` stays for the goals
 screens.
