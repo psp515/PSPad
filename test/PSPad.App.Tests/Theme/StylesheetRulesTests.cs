@@ -99,8 +99,8 @@ public partial class StylesheetRulesTests
     {
         var tile = Declarations(".pspad-page-icon");
 
-        Assert.Contains("width: 44px", tile);
-        Assert.Contains("height: 44px", tile);
+        Assert.Contains("width: 40px", tile);
+        Assert.Contains("height: 40px", tile);
         Assert.Contains("border-radius: 12px", tile);
         Assert.Contains("background-color: var(--pspad-tint)", tile);
     }
@@ -116,16 +116,26 @@ public partial class StylesheetRulesTests
     }
 
     [Fact]
-    public void TheDesktopTitleIsTwentyFourPixelsSemiBoldWithTheSubtitleUnderIt()
+    public void TheDesktopTitleIsTwentyPixelsSemiBoldWithTheSubtitleTwoPixelsUnderIt()
     {
         var title = Declarations(".pspad-page-title.mud-typography");
         var subtitle = Declarations(".pspad-page-subtitle.mud-typography");
 
-        Assert.Contains("font-size: 24px", title);
+        Assert.Contains("font-size: 20px", title);
         Assert.Contains("font-weight: 600", title);
-        Assert.Contains("font-size: 13px", subtitle);
-        Assert.Contains("margin-top: 3px", subtitle);
+        Assert.Contains("line-height: 1.15", title);
+        Assert.Contains("font-size: 12.5px", subtitle);
+        Assert.Contains("margin-top: 2px", subtitle);
         Assert.DoesNotContain("align-self", subtitle);
+    }
+
+    [Fact]
+    public void TheDesktopHeadingRowIsAsTallAsTheAccountBadgeRowWithFourteenPixelGaps()
+    {
+        var row = Declarations(".pspad-page-heading");
+
+        Assert.Contains("min-height: 48px", row);
+        Assert.Contains("gap: 14px", row);
     }
 
     [Fact]

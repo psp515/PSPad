@@ -39,6 +39,20 @@ public class PageHeadingTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheDesktopRowCentresItsItemsAndLeavesTwentyPixelsAboveThePage()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var heading = Render<PageHeading>(parameters => parameters.Add(p => p.Title, "Inbox"));
+
+        var row = heading.Find(".pspad-page-heading").ClassList;
+        Assert.Contains("align-center", row);
+        Assert.Contains("mb-5", row);
+        Assert.DoesNotContain("mb-4", row);
+        Assert.DoesNotContain("gap-3", row);
+    }
+
+    [Fact]
     public void DesktopShowsTheStampWithARefreshButtonOnTheRight()
     {
         AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
