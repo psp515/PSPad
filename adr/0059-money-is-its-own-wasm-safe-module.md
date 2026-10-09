@@ -2,7 +2,7 @@
 title: Money is its own WASM-safe module, with budgets as containers and rates frozen on every amount
 tags: [architecture, modularity, domain, offline, sync, integrations]
 date: 2026-10-09
-status: Proposed
+status: Active
 ---
 
 # ADR-0059: Money is its own WASM-safe module, with budgets as containers and rates frozen on every amount

@@ -358,9 +358,11 @@ Every test class is tagged `[UnitTest]` or `[IntegrationTest]` (`specs/testing-s
 
 Each slice ships green on its own:
 
-1. Module skeleton, `Budget`, categories, `MoneyPreferences`, sync and wipe,
+1. Module skeleton, `Budget`, `AddCategory`, `MoneyPreferences`, sync and wipe,
    navigation changes, `/budgets`, Settings tab, default currency.
-2. `MoneyEntry`, Month tab, `EntryPanel`, `RateSuggestion`, NBP endpoint.
+   `RenameCategory`, `MergeCategory` and `RemoveCategory` moved to slice 2:
+   they cascade into entries and are untestable before entries exist.
+2. `MoneyEntry`, rename, merge and remove-category with their cascades, Month tab, `EntryPanel`, `RateSuggestion`, NBP endpoint.
 3. `BalanceSnapshot`, Balance tab, `HoldingPanel`.
 4. Summary tab and charts.
 5. Docs: `features.astro`, the landing page, and the `install.astro`

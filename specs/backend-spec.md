@@ -33,6 +33,7 @@ src/
     PSPad.Module.Statistics/    queries over the event log
     PSPad.Module.Identity/      User, time zone, first-sign-in provisioning
     PSPad.Module.Presentation/  per-user views of shared data (AreaView: list order) — pure, WASM-safe
+    PSPad.Module.Money/         budgets, categories, money preferences — pure, WASM-safe (adr/0059)
     PSPad.Module.Sharing/       public snapshots — frozen list copies, server-side only (adr/0056)
 test/
   PSPad.Module.Tasks.Tests/       unit only
@@ -40,6 +41,7 @@ test/
   PSPad.Module.Identity.Tests/    unit only
   PSPad.Module.Presentation.Tests/ unit only
   PSPad.Module.Sharing.Tests/     unit only
+  PSPad.Module.Money.Tests/       unit only
   PSPad.Api.Tests/                integration, Testcontainers MongoDB
   PSPad.App.Tests/                unit + bUnit
   PSPad.TestInfrastructure/       Mongo fixture, category attributes, architecture guards
@@ -56,10 +58,11 @@ References run one way only:
 | `PSPad.Module.Statistics` | `PSPad.Abstractions`, `PSPad.Contracts`, `PSPad.Module.Tasks` (event types only, for its handlers' `switch` patterns) |
 | `PSPad.Module.Identity` | `PSPad.Abstractions`, `PSPad.Contracts` |
 | `PSPad.Module.Presentation` | `PSPad.Abstractions` — and nothing else; no module references it back (`adr/0051`) |
+| `PSPad.Module.Money` | `PSPad.Abstractions` — and nothing else; only `Api` and `App` reference it (`adr/0059`) |
 | `PSPad.Module.Sharing` | `PSPad.Abstractions`, `PSPad.Module.Tasks` (aggregate shapes only, to build a snapshot — `adr/0056`) |
 | `PSPad.Infrastructure` | `PSPad.Abstractions`, `PSPad.Contracts` — never a module |
 | `PSPad.Api` | everything |
-| `PSPad.App` | `PSPad.Module.Tasks`, `PSPad.Module.Presentation`, `PSPad.Abstractions`, `PSPad.Contracts` — never `PSPad.Infrastructure` |
+| `PSPad.App` | `PSPad.Module.Tasks`, `PSPad.Module.Presentation`, `PSPad.Module.Money`, `PSPad.Abstractions`, `PSPad.Contracts` — never `PSPad.Infrastructure` |
 
 `PSPad.Infrastructure` stores documents generically by `T`, so it never
 needs to know a module exists. `PSPad.App` references `PSPad.Module.Tasks`
@@ -69,7 +72,7 @@ edits and server state agree.
 
 Enforced by architecture guard tests, not just this document: no
 `MongoDB.*`/`Microsoft.AspNetCore.*`/`System.Net.Http` inside
-`PSPad.Module.Tasks` or `PSPad.Abstractions`; no `PSPad.Infrastructure`/
+`PSPad.Module.Tasks` or `PSPad.Abstractions`; no `MongoDB.*`/`Microsoft.AspNetCore.*`/`System.Net.Http` inside `PSPad.Module.Money`; no `PSPad.Infrastructure`/
 `MongoDB.*`/`Microsoft.AspNetCore.*` inside `PSPad.Module.Statistics` or
 `PSPad.Module.Sharing`; no module reference inside `PSPad.Infrastructure` or
 `PSPad.Module.Presentation`; no `PSPad.Module.Presentation` or
@@ -77,7 +80,7 @@ Enforced by architecture guard tests, not just this document: no
 `PSPad.Module.Statistics`/`PSPad.Module.Presentation` reference inside
 `PSPad.Module.Sharing`.
 
-Two module-to-module edges exist, and only these two: `Statistics` →
+Two module-to-module edges exist, and only these two (Money has none): `Statistics` →
 `Tasks` and `Sharing` → `Tasks`, both one way and both for the same reason —
 each pattern-matches on Tasks' own event or aggregate types, so a rename
 breaks the build rather than a mismatch surfacing at render time
@@ -85,7 +88,7 @@ breaks the build rather than a mismatch surfacing at render time
 the build if `Tasks` ever references either back.
 
 Commands are discovered by reflection over `CommandModules.Names`
-(`PSPad.Contracts`) — `PSPad.Module.Tasks` and `PSPad.Module.Presentation` —
+(`PSPad.Contracts`) — `PSPad.Module.Tasks`, `PSPad.Module.Presentation` and `PSPad.Module.Money` —
 by `CommandCatalogue` and by both hosts' handler registration. A new
 command-carrying module is added there, once.
 
