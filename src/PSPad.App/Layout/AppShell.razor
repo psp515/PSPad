@@ -34,7 +34,7 @@
 @inject IClock Clock
 @inject ServerReachability Reachability
 @inject IConnectivity Connectivity
-@inject ISnackbar Snackbar
+@inject StatusBelts Belts
 @inject IAppUpdates Updates
 @inject ILogger<AppShell> Logger
 @implements IDisposable
@@ -59,6 +59,7 @@
     <AccountDrawer @bind-Open="_accountOpen" Email="@_email" DisplayName="@_displayName" UserId="@State.UserId" />
 
     <MudMainContent>
+        <StatusBeltStack />
         <MudContainer MaxWidth="MaxWidth.False" Class="mt-4 mt-md-0 pt-md-6 mb-4 pspad-content">
             @if (_ready)
             {
@@ -351,9 +352,17 @@
 
     void OnReachabilityChanged() => InvokeAsync(() =>
     {
-        if (!Reachability.IsReachable)
+        if (Reachability.IsReachable)
         {
-            Snackbar.Add("Can't reach the server. Working from local data.", Severity.Warning);
+            Belts.Clear(BeltKind.Offline);
+        }
+        else
+        {
+            Belts.Show(
+                BeltKind.Offline,
+                "Can’t reach the server — working from local data. Changes sync when you’re back.",
+                "Retry",
+                Coordinator.SyncNowAsync);
         }
 
         StateHasChanged();
@@ -361,19 +370,8 @@
 
     void OnUpdateAvailable() => InvokeAsync(OfferUpdate);
 
-    void OfferUpdate() => Snackbar.Add(
-        "A new version of PSPad is available.",
-        Severity.Info,
-        options =>
-        {
-            options.Action = "Reload";
-            options.RequireInteraction = true;
-            options.ShowCloseIcon = true;
-            options.OnClick = _ => Updates.ApplyAsync();
-        },
-        UpdateSnackbarKey);
-
-    const string UpdateSnackbarKey = "pspad-update";
+    void OfferUpdate() =>
+        Belts.Show(BeltKind.Update, "A new version of PSPad is ready.", "Reload", Updates.ApplyAsync);
 
     void OnCommandSent() => InvokeAsync(ReloadAreasAndCountsAsync);
 

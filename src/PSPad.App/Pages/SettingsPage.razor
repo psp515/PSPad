@@ -75,10 +75,21 @@
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
-        <MudPaper Outlined="true" Class="pa-4">
+        <MudPaper Outlined="true" Class="pa-4" id="sync">
             <SectionHeading Title="Sync" />
             <MudText Typo="Typo.body2" Color="@(Failed ? Color.Error : Color.Default)">@SyncLine</MudText>
             <MudText Typo="Typo.caption" Class="d-block mb-3 pspad-muted">@LastSyncedText</MudText>
+            @if (SyncStatus.LastRejections.Count > 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Error">Couldn’t be saved</MudText>
+                <MudList T="string" Dense="true" ReadOnly="true" Class="pspad-sync-rejections mb-3">
+                    @foreach (var rejection in SyncStatus.LastRejections)
+                    {
+                        <MudListItem T="string" Class="pspad-sync-rejection" Icon="@Icons.Material.Outlined.ErrorOutline"
+                                     IconColor="Color.Error" Text="@rejection" />
+                    }
+                </MudList>
+            }
             <SyncButton Labeled="true" />
         </MudPaper>
     </MudItem>

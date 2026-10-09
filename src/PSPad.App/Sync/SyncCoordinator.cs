@@ -1,12 +1,19 @@
-using MudBlazor;
+using Microsoft.AspNetCore.Components;
 using PSPad.Abstractions;
+using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 
 namespace PSPad.App.Sync;
 
 public sealed class SyncCoordinator(
-    SyncService sync, IConnectivity connectivity, IOutbox outbox, ISnackbar snackbar, IReplica replica, IClock clock)
+    SyncService sync,
+    IConnectivity connectivity,
+    IOutbox outbox,
+    StatusBelts belts,
+    NavigationManager navigation,
+    IReplica replica,
+    IClock clock)
     : ISyncTrigger, ISyncStatus
 {
     static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(60);
@@ -26,6 +33,11 @@ public sealed class SyncCoordinator(
     public DateTimeOffset? LastSyncedAt { get; private set; }
 
     public Task Started { get; private set; } = Task.CompletedTask;
+
+    public IReadOnlyList<string> LastRejections { get; private set; } = [];
+
+    public static string RejectedText(int count) =>
+        count == 1 ? "1 change couldn’t be saved." : $"{count} changes couldn’t be saved.";
 
     public event Action? Changed;
 
@@ -123,10 +135,9 @@ public sealed class SyncCoordinator(
                     Revision++;
                 }
 
-                foreach (var rejection in outcome.Rejections)
+                if (outcome.Rejections.Count > 0)
                 {
-                    // A rejection the user never sees is the same as a lost edit.
-                    snackbar.Add(rejection, Severity.Warning);
+                    SurfaceRejections(outcome.Rejections);
                 }
             }
             catch (HttpRequestException)
@@ -137,5 +148,24 @@ public sealed class SyncCoordinator(
 
         PendingCount = await outbox.CountAsync();
         Changed?.Invoke();
+    }
+
+    // A rejection the user never sees is the same as a lost edit. A domain rejection stays queued
+    // and comes back every sync, so only a different set reopens a belt the user dismissed.
+    void SurfaceRejections(IReadOnlyList<string> rejections)
+    {
+        if (!rejections.SequenceEqual(LastRejections))
+        {
+            belts.Clear(BeltKind.Rejected);
+        }
+
+        LastRejections = [.. rejections];
+        belts.Show(BeltKind.Rejected, RejectedText(rejections.Count), "Details", OpenDetailsAsync);
+    }
+
+    Task OpenDetailsAsync()
+    {
+        navigation.NavigateTo("settings#sync");
+        return Task.CompletedTask;
     }
 }

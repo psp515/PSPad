@@ -212,6 +212,54 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheSyncCardIsTheDetailsAnchor()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.Contains("Sync", page.Find("#sync").TextContent);
+    }
+
+    [Fact]
+    public void TheSyncCardListsTheChangesTheLastSyncCouldNotSave()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger { LastRejections = ["That list no longer exists.", "Too late."] };
+        Services.AddSingleton<ISyncStatus>(sync);
+
+        var page = Render<SettingsPage>();
+
+        var rejected = page.FindAll("#sync .pspad-sync-rejection").Select(item => item.TextContent.Trim());
+        Assert.Equal(["That list no longer exists.", "Too late."], rejected);
+    }
+
+    [Fact]
+    public void WithNothingRejectedTheSyncCardListsNothing()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.Empty(page.FindAll(".pspad-sync-rejections"));
+    }
+
+    [Fact]
+    public void RejectionsArrivingLaterShowUp()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger();
+        Services.AddSingleton<ISyncStatus>(sync);
+        var page = Render<SettingsPage>();
+
+        sync.LastRejections = ["That list no longer exists."];
+        sync.Announce();
+
+        page.WaitForAssertion(() =>
+            Assert.Equal("That list no longer exists.", page.Find(".pspad-sync-rejection").TextContent.Trim()));
+    }
+
+    [Fact]
     public async Task SigningOutClearsTheLocalSessionAndTheReplica()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");

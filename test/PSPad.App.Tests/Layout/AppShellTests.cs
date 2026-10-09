@@ -710,38 +710,82 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
-    public void LosingTheServerWarnsTheUserOnceRatherThanOnlyTheConsole()
+    public void LosingTheServerRaisesTheOfflineBeltOnceAndNoSnackbar()
     {
         Arrange();
         var reachability = Services.GetRequiredService<ServerReachability>();
-        var snackbar = Services.GetRequiredService<ISnackbar>();
+        var belts = Services.GetRequiredService<StatusBelts>();
+        var shell = Render<AppShell>();
 
-        Render<AppShell>();
+        shell.InvokeAsync(() => reachability.Failed(browserIsOnline: true));
+        shell.InvokeAsync(() => reachability.Failed(browserIsOnline: true));
 
-        reachability.Failed(browserIsOnline: true);
-        reachability.Failed(browserIsOnline: true);
-
-        var shown = snackbar.ShownSnackbars.ToList();
-        Assert.Single(shown);
-        Assert.Contains("server", shown[0].Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(Severity.Warning, shown[0].Severity);
+        var belt = Assert.Single(belts.Visible);
+        Assert.Equal(BeltKind.Offline, belt.Kind);
+        Assert.Equal(
+            "Can’t reach the server — working from local data. Changes sync when you’re back.", belt.Text);
+        Assert.Equal("Retry", belt.ActionText);
+        Assert.Empty(Services.GetRequiredService<ISnackbar>().ShownSnackbars);
+        shell.WaitForAssertion(() => Assert.Contains("Can’t reach the server", shell.Find(".pspad-belt").TextContent));
     }
 
     [Fact]
-    public async Task ANewVersionOffersAReloadThatActivatesIt()
+    public void RetryRunsASync()
+    {
+        Arrange();
+        var reachability = Services.GetRequiredService<ServerReachability>();
+        var connectivity = (SpyConnectivity)Services.GetRequiredService<IConnectivity>();
+        var shell = Render<AppShell>();
+        shell.InvokeAsync(() => reachability.Failed(browserIsOnline: true));
+        var readsBefore = connectivity.IsOnlineReads;
+
+        shell.WaitForElement(".pspad-belt-action").Click();
+
+        Assert.True(connectivity.IsOnlineReads > readsBefore);
+    }
+
+    [Fact]
+    public void TheServerAnsweringAgainTakesTheOfflineBeltAway()
+    {
+        Arrange();
+        var reachability = Services.GetRequiredService<ServerReachability>();
+        var belts = Services.GetRequiredService<StatusBelts>();
+        var shell = Render<AppShell>();
+        shell.InvokeAsync(() => reachability.Failed(browserIsOnline: true));
+
+        shell.InvokeAsync(reachability.Succeeded);
+
+        Assert.Empty(belts.Visible);
+        shell.WaitForAssertion(() => Assert.Empty(shell.FindAll(".pspad-belt")));
+    }
+
+    [Fact]
+    public void TheBeltsSitAboveThePageInFlow()
+    {
+        Arrange();
+        var shell = Render<AppShell>();
+
+        shell.InvokeAsync(() => Services.GetRequiredService<ServerReachability>().Failed(browserIsOnline: true));
+
+        shell.WaitForAssertion(() => Assert.NotNull(shell.Find(".mud-main-content > .pspad-belts + .pspad-content")));
+    }
+
+    [Fact]
+    public async Task ANewVersionOffersAReloadBeltThatActivatesIt()
     {
         Arrange();
         var updates = (AppTestHost.FakeAppUpdates)Services.GetRequiredService<IAppUpdates>();
-        var snackbar = Services.GetRequiredService<ISnackbar>();
+        var belts = Services.GetRequiredService<StatusBelts>();
         var shell = Render<AppShell>();
 
         await shell.InvokeAsync(updates.Announce);
 
-        var shown = Assert.Single(snackbar.ShownSnackbars);
-        Assert.Contains("new version", shown.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(Severity.Info, shown.Severity);
+        var belt = Assert.Single(belts.Visible);
+        Assert.Equal(BeltKind.Update, belt.Kind);
+        Assert.Equal("A new version of PSPad is ready.", belt.Text);
+        Assert.Empty(Services.GetRequiredService<ISnackbar>().ShownSnackbars);
 
-        var reload = shell.WaitForElement(".mud-snackbar-content-action button");
+        var reload = shell.WaitForElement(".pspad-belt-action");
         Assert.Equal("Reload", reload.TextContent.Trim());
         reload.Click();
 
@@ -754,13 +798,13 @@ public class AppShellTests : Bunit.TestContext
         Arrange();
         var updates = (AppTestHost.FakeAppUpdates)Services.GetRequiredService<IAppUpdates>();
         updates.Announce();
-        var snackbar = Services.GetRequiredService<ISnackbar>();
+        var belts = Services.GetRequiredService<StatusBelts>();
 
         Render<AppShell>();
         await DisposeComponentsAsync();
         Render<AppShell>();
 
-        Assert.Single(snackbar.ShownSnackbars);
+        Assert.Equal(BeltKind.Update, Assert.Single(belts.Visible).Kind);
     }
 
     sealed class SpyConnectivity : IConnectivity

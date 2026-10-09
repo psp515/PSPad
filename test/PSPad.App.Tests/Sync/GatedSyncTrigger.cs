@@ -14,6 +14,8 @@ public sealed class GatedSyncTrigger : ISyncTrigger, ISyncStatus
 
     public DateTimeOffset? LastSyncedAt { get; set; }
 
+    public IReadOnlyList<string> LastRejections { get; set; } = [];
+
     public event Action? Changed;
 
     public void Hold() => _gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
