@@ -8,6 +8,7 @@
     <ProjectReference Include="..\modules\PSPad.Module.Statistics\PSPad.Module.Statistics.csproj" />
     <ProjectReference Include="..\modules\PSPad.Module.Identity\PSPad.Module.Identity.csproj" />
     <ProjectReference Include="..\modules\PSPad.Module.Presentation\PSPad.Module.Presentation.csproj" />
+    <ProjectReference Include="..\modules\PSPad.Module.Money\PSPad.Module.Money.csproj" />
     <ProjectReference Include="..\modules\PSPad.Module.Sharing\PSPad.Module.Sharing.csproj" />
   </ItemGroup>
 
