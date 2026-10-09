@@ -1,8 +1,10 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
 using PSPad.App.Api;
+using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Sync;
@@ -16,6 +18,134 @@ namespace PSPad.App.Tests.Sync;
 public class SyncCoordinatorTests : Bunit.TestContext
 {
     static readonly Guid User = Guid.NewGuid();
+
+    readonly StatusBelts _belts = new();
+    readonly InMemoryOutbox _rejectingOutbox = new();
+    RejectingApi _rejecting = new();
+
+    NavigationManager Navigation => Services.GetRequiredService<NavigationManager>();
+
+    [Fact]
+    public async Task ARejectedChangeRaisesTheRejectedBeltAndKeepsItsMessage()
+    {
+        var coordinator = await CoordinatorRejecting("That list no longer exists.");
+
+        await coordinator.SyncNowAsync();
+
+        var belt = Assert.Single(_belts.Visible);
+        Assert.Equal(BeltKind.Rejected, belt.Kind);
+        Assert.Equal("1 change couldn’t be saved.", belt.Text);
+        Assert.Equal("Details", belt.ActionText);
+        Assert.Equal(["That list no longer exists."], coordinator.LastRejections);
+    }
+
+    [Theory]
+    [InlineData(1, "1 change couldn’t be saved.")]
+    [InlineData(2, "2 changes couldn’t be saved.")]
+    public void TheBeltCountsTheRejectedChanges(int count, string text) =>
+        Assert.Equal(text, SyncCoordinator.RejectedText(count));
+
+    [Fact]
+    public async Task DetailsOpensTheSyncCardInSettings()
+    {
+        var coordinator = await CoordinatorRejecting("That list no longer exists.");
+        await coordinator.SyncNowAsync();
+
+        await Assert.Single(_belts.Visible).Action!();
+
+        Assert.EndsWith("/settings#sync", Navigation.Uri);
+    }
+
+    [Fact]
+    public async Task TheSameRejectionComingBackStaysDismissed()
+    {
+        var coordinator = await CoordinatorRejecting("That list no longer exists.");
+        await coordinator.SyncNowAsync();
+        _belts.Dismiss(BeltKind.Rejected);
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Empty(_belts.Visible);
+    }
+
+    [Fact]
+    public async Task ANewlyRejectedCommandReopensADismissedBeltEvenWithTheSameReason()
+    {
+        var coordinator = await CoordinatorRejecting("That list no longer exists.");
+        await coordinator.SyncNowAsync();
+        _belts.Dismiss(BeltKind.Rejected);
+        _rejecting.Reasons = [];
+        await coordinator.SyncNowAsync();
+
+        _rejecting.Reasons = ["That list no longer exists."];
+        await QueueACommandAsync();
+        await coordinator.SyncNowAsync();
+
+        Assert.Equal(BeltKind.Rejected, Assert.Single(_belts.Visible).Kind);
+    }
+
+    [Fact]
+    public async Task ACommandRejectedAgainWithANewReasonStaysDismissedButSettingsGetsTheReason()
+    {
+        var coordinator = await CoordinatorRejecting("First.");
+        await coordinator.SyncNowAsync();
+        _belts.Dismiss(BeltKind.Rejected);
+        _rejecting.Reasons = ["Second."];
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Empty(_belts.Visible);
+        Assert.Equal(["Second."], coordinator.LastRejections);
+    }
+
+    [Fact]
+    public async Task ACleanSyncKeepsTheLastRejectionsForSettings()
+    {
+        var coordinator = await CoordinatorRejecting("That list no longer exists.");
+        await coordinator.SyncNowAsync();
+        _rejecting.Reasons = [];
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Equal(["That list no longer exists."], coordinator.LastRejections);
+    }
+
+    [Fact]
+    public async Task NothingRejectedRaisesNoBelt()
+    {
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"));
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Empty(_belts.Visible);
+        Assert.Empty(coordinator.LastRejections);
+    }
+
+    [Fact]
+    public async Task ARejectionNoLongerPopsASnackbar()
+    {
+        var coordinator = await CoordinatorRejecting("That list no longer exists.");
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Empty(Services.GetRequiredService<ISnackbar>().ShownSnackbars);
+    }
+
+    async Task<SyncCoordinator> CoordinatorRejecting(params string[] reasons)
+    {
+        Services.AddMudServices();
+        _rejecting = new RejectingApi { Reasons = reasons };
+        await QueueACommandAsync();
+
+        var replica = new InMemoryReplica();
+        return new SyncCoordinator(
+            new SyncService(_rejecting, replica, _rejectingOutbox), new FixedConnectivity(true), _rejectingOutbox,
+            _belts, Navigation, replica, new StoppedClock(Noon));
+    }
+
+    Task QueueACommandAsync() =>
+        _rejectingOutbox.AppendAsync(
+            Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
 
     [Fact]
     public async Task ThePulledRevisionAdvancesWhenSyncBringsDocumentsDown()
@@ -180,7 +310,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var replica = new InMemoryReplica();
         var coordinator = new SyncCoordinator(
             new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
-            Services.GetRequiredService<ISnackbar>(), replica, new StoppedClock(Noon));
+            _belts, Navigation, replica, new StoppedClock(Noon));
         var changes = 0;
         coordinator.Changed += () => changes++;
 
@@ -207,7 +337,8 @@ public class SyncCoordinatorTests : Bunit.TestContext
             new SyncService(api, new InMemoryReplica(), outbox),
             new FixedConnectivity(true),
             outbox,
-            Services.GetRequiredService<ISnackbar>(),
+            _belts,
+            Navigation,
             new InMemoryReplica(),
             new StoppedClock(Noon));
 
@@ -249,7 +380,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         Services.AddMudServices();
         return new SyncCoordinator(
             new SyncService(new FakeApi(null, failure), local, outbox), new FixedConnectivity(true), outbox,
-            Services.GetRequiredService<ISnackbar>(), local, new StoppedClock(Noon));
+            _belts, Navigation, local, new StoppedClock(Noon));
     }
 
     SyncCoordinator CoordinatorFor(SyncResponse? pull, bool online = true, InMemoryReplica? replica = null)
@@ -263,7 +394,8 @@ public class SyncCoordinatorTests : Bunit.TestContext
             new SyncService(new FakeApi(pull), replica, outbox),
             new FixedConnectivity(online),
             outbox,
-            Services.GetRequiredService<ISnackbar>(),
+            _belts,
+            Navigation,
             replica,
             new StoppedClock(Noon));
     }
@@ -283,6 +415,22 @@ public class SyncCoordinatorTests : Bunit.TestContext
 
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
             failure is null ? Task.FromResult(pull) : Task.FromException<SyncResponse?>(failure);
+
+        public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
+    }
+
+    sealed class RejectingApi : ISyncApi
+    {
+        public string[] Reasons { get; set; } = [];
+
+        public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
+            Task.FromResult<IReadOnlyList<CommandResponse>>(
+                [.. envelopes.Select(_ => Reasons.Length == 0
+                    ? new CommandResponse(Guid.NewGuid(), true, null)
+                    : new CommandResponse(Guid.NewGuid(), false, Reasons[0]))]);
+
+        public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
+            Task.FromResult<SyncResponse?>(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), []));
 
         public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
     }

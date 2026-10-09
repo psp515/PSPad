@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
+using PSPad.App.State;
 using PSPad.App.Pages;
 using PSPad.App.State.Dispatch;
 using PSPad.App.State.Replica;
@@ -45,7 +46,35 @@ public class ListPageTests : Bunit.TestContext
 
         Assert.Contains(
             IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.LibraryBooks),
-            page.Find(".pspad-list-icon").InnerHtml);
+            page.Find(".pspad-page-heading .pspad-page-icon").InnerHtml);
+        Assert.Equal(MudBlazor.Icons.Material.Outlined.LibraryBooks, Services.GetRequiredService<PageHeader>().Icon);
+    }
+
+    [Fact]
+    public void TheHeadingAnnouncesTheListsKind()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        var kind = page.Find(".pspad-page-heading h1 .pspad-sr-only");
+        Assert.Equal(ListIcon.LabelFor(list), kind.TextContent.Trim());
+    }
+
+    [Theory]
+    [InlineData(0, "Dom · no open tasks")]
+    [InlineData(1, "Dom · 1 open task")]
+    [InlineData(2, "Dom · 2 open tasks")]
+    public void TheSubtitleNamesTheAreaAndCountsOpenTasks(int open, string expected)
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        Arrange([area, list, .. Enumerable.Range(0, open).Select(index => NewTask(list.Id, $"Task {index}"))]);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Equal(expected, page.Find(".pspad-page-subtitle").TextContent.Trim());
     }
 
     [Fact]
@@ -686,6 +715,16 @@ public class ListPageTests : Bunit.TestContext
     }
 
     static TaskList NewList(string name) => NewList(name, ListKind.Tasks);
+
+    static TaskList NewList(Guid areaId, string name)
+    {
+        var list = new TaskList();
+        list.ApplyAll(TaskList.Decide(
+            null,
+            new CreateTaskList(Guid.NewGuid(), User, Guid.NewGuid(), areaId, name, ListKind.Tasks),
+            DateTimeOffset.UnixEpoch));
+        return list;
+    }
 
     static TaskList NewList(string name, ListKind kind)
     {

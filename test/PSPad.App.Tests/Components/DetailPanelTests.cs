@@ -99,7 +99,7 @@ public class DetailPanelTests : Bunit.TestContext
     {
         var panel = Render<DetailPanel>(parameters => parameters.Add(p => p.Open, true));
 
-        Assert.Contains("360px", panel.Find(".mud-drawer").GetAttribute("style"));
+        Assert.Contains("420px", panel.Find(".mud-drawer").GetAttribute("style"));
     }
 
     [Fact]

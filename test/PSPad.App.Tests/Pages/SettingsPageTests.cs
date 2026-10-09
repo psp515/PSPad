@@ -60,6 +60,24 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItsHeaderCarriesAnIconTileAndASubtitleLikeTheAreaScreen()
+    {
+        Arrange(displayName: "Ada Lovelace", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        page.WaitForAssertion(() =>
+        {
+            var tile = page.Find(".pspad-page-heading .pspad-page-icon");
+            Assert.Contains(IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.Settings), tile.InnerHtml);
+            Assert.Equal("Account, appearance and sync", page.Find(".pspad-page-heading .pspad-page-subtitle").TextContent.Trim());
+            var header = Services.GetRequiredService<PageHeader>();
+            Assert.Equal(MudBlazor.Icons.Material.Outlined.Settings, header.Icon);
+            Assert.Equal("Account, appearance and sync", header.Subtitle);
+        });
+    }
+
+    [Fact]
     public async Task ChoosingATimeZoneSendsItAndRefreshesToday()
     {
         var state = Arrange(displayName: "Ada", email: "ada@example.com");
@@ -212,6 +230,54 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheSyncCardIsTheDetailsAnchor()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.Contains("Sync", page.Find("#sync").TextContent);
+    }
+
+    [Fact]
+    public void TheSyncCardListsTheChangesTheLastSyncCouldNotSave()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger { LastRejections = ["That list no longer exists.", "Too late."] };
+        Services.AddSingleton<ISyncStatus>(sync);
+
+        var page = Render<SettingsPage>();
+
+        var rejected = page.FindAll("#sync .pspad-sync-rejection").Select(item => item.TextContent.Trim());
+        Assert.Equal(["That list no longer exists.", "Too late."], rejected);
+    }
+
+    [Fact]
+    public void WithNothingRejectedTheSyncCardListsNothing()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        Assert.Empty(page.FindAll(".pspad-sync-rejections"));
+    }
+
+    [Fact]
+    public void RejectionsArrivingLaterShowUp()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger();
+        Services.AddSingleton<ISyncStatus>(sync);
+        var page = Render<SettingsPage>();
+
+        sync.LastRejections = ["That list no longer exists."];
+        sync.Announce();
+
+        page.WaitForAssertion(() =>
+            Assert.Equal("That list no longer exists.", page.Find(".pspad-sync-rejection").TextContent.Trim()));
+    }
+
+    [Fact]
     public async Task SigningOutClearsTheLocalSessionAndTheReplica()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
@@ -312,6 +378,26 @@ public class SettingsPageTests : Bunit.TestContext
 
         Assert.Equal(ThemeMode.Dark, Services.GetRequiredService<ThemePreference>().Mode);
     }
+
+    [Fact]
+    public async Task SwitchingTheThemeRetagsTheDocumentSoTheCardTokensFollow()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+        await page.InvokeAsync(() => page.Instance.SelectThemeAsync(ThemeMode.Dark));
+        var afterDark = LastDocumentTheme();
+        await page.InvokeAsync(() => page.Instance.SelectThemeAsync(ThemeMode.Light));
+
+        Assert.Equal("dark", afterDark);
+        Assert.Equal("light", LastDocumentTheme());
+    }
+
+    string? LastDocumentTheme() =>
+        JSInterop.Invocations
+            .Where(invocation => invocation.Identifier == "document.documentElement.setAttribute")
+            .Select(invocation => invocation.Arguments[1] as string)
+            .LastOrDefault();
 
     [Fact]
     public void TimeZoneThemeAndAccentShareOneApplicationSettingsCard()

@@ -93,6 +93,10 @@ public class PSPadThemeTests
         Assert.Equal(reference.Success.ToString(), palette.Success.ToString());
         Assert.Equal(reference.Error.ToString(), palette.Error.ToString());
         Assert.Equal(reference.Warning.ToString(), palette.Warning.ToString());
+        Assert.Equal(reference.Info.ToString(), palette.Info.ToString());
+        Assert.Equal(reference.TextPrimary.ToString(), palette.TextPrimary.ToString());
+        Assert.Equal(reference.TextSecondary.ToString(), palette.TextSecondary.ToString());
+        Assert.Equal(reference.Background.ToString(), palette.Background.ToString());
     }
 
     [Fact]
@@ -125,6 +129,151 @@ public class PSPadThemeTests
         Assert.NotEqual(picked.Value, primary.Value);
         Assert.InRange(Math.Abs(primary.H - picked.H), 0, 2);
     }
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void TheActiveSidebarLinkReadsOnItsTint(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+        var tint = Mix(palette.Primary, palette.DrawerBackground, 0.12);
+
+        Assert.True(Contrast(palette.TextPrimary, tint) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.Primary, tint) >= MinimumUiContrast);
+    }
+
+    [Fact]
+    public void CornersAreTwelvePixels() =>
+        Assert.Equal("12px", PSPadTheme.For(Accent.Green).LayoutProperties.DefaultBorderRadius);
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void SelectedFillsReadOnTheRefreshTint(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+        var tint = Mix(palette.Primary, RaisedOf(palette, dark), 0.12);
+
+        Assert.True(Contrast(palette.TextPrimary, tint) >= MinimumTextContrast);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void CardControlsAndMetaReadOnTheRaisedSurface(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+        var raised = RaisedOf(palette, dark);
+
+        Assert.True(Contrast(palette.ActionDefault, raised) >= MinimumUiContrast);
+        Assert.True(Contrast(palette.TextSecondary, raised) >= MinimumTextContrast);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryPalette))]
+    public void QuietChipsAndCountPillsReadOnTheHoverWash(string accent, bool dark)
+    {
+        var palette = PaletteOf(accent, dark);
+        var wash = Mix(dark ? new MudColor("#FFFFFF") : new MudColor("#000000"), RaisedOf(palette, dark), 0.04);
+
+        Assert.True(Contrast(palette.TextSecondary, wash) >= MinimumTextContrast);
+    }
+
+    const double BeltTintShare = 0.14;
+    const double BeltInkShare = 0.6;
+
+    public static TheoryData<bool, Severity> EveryGroundAndBelt()
+    {
+        var data = new TheoryData<bool, Severity>();
+        foreach (var dark in new[] { false, true })
+        {
+            foreach (var severity in new[] { Severity.Info, Severity.Warning, Severity.Error })
+            {
+                data.Add(dark, severity);
+            }
+        }
+
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryGroundAndBelt))]
+    public void AStatusBeltReadsOnItsTint(bool dark, Severity severity)
+    {
+        var palette = PaletteOf(nameof(Accent.Green), dark);
+        var tone = ToneOf(palette, severity);
+        var tint = Mix(tone, palette.Background, BeltTintShare);
+        var ink = Mix(tone, palette.TextPrimary, BeltInkShare);
+
+        Assert.True(Contrast(palette.TextPrimary, tint) >= MinimumTextContrast);
+        Assert.True(Contrast(ink, tint) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.TextSecondary, tint) >= MinimumUiContrast);
+    }
+
+    [Fact]
+    public void TheBeltTintAndInkMatchTheStylesheet()
+    {
+        var css = File.ReadAllText(StylesheetPath());
+
+        Assert.Contains("color-mix(in srgb, var(--pspad-belt-tone) 14%, var(--mud-palette-background))", css);
+        Assert.Contains("color-mix(in srgb, var(--pspad-belt-tone) 60%, var(--mud-palette-text-primary))", css);
+        Assert.Contains("--pspad-belt-tone: var(--mud-palette-info)", css);
+        Assert.Contains("--pspad-belt-tone: var(--mud-palette-warning)", css);
+        Assert.Contains("--pspad-belt-tone: var(--mud-palette-error)", css);
+    }
+
+    static MudColor ToneOf(Palette palette, Severity severity) => severity switch
+    {
+        Severity.Info => palette.Info,
+        Severity.Warning => palette.Warning,
+        _ => palette.Error
+    };
+
+    const string LightMessageGround = "#FFFFFF";
+    const string DarkMessageGround = "#2C2C2C";
+
+    [Theory]
+    [MemberData(nameof(EveryGroundAndBelt))]
+    public void ASmallMessageReadsOnItsGround(bool dark, Severity severity)
+    {
+        var palette = PaletteOf(nameof(Accent.Green), dark);
+        var ground = new MudColor(dark ? DarkMessageGround : LightMessageGround);
+
+        Assert.True(Contrast(palette.TextPrimary, ground) >= MinimumTextContrast);
+        Assert.True(Contrast(ToneOf(palette, severity), ground) >= MinimumUiContrast);
+    }
+
+    [Fact]
+    public void TheMessageGroundMatchesTheStylesheet()
+    {
+        var css = File.ReadAllText(StylesheetPath());
+
+        Assert.Contains($"--pspad-message-ground: {LightMessageGround}", css);
+        Assert.Contains($"--pspad-message-ground: {DarkMessageGround}", css);
+    }
+
+    [Fact]
+    public void TheRaisedGroundMatchesTheStylesheet()
+    {
+        var css = File.ReadAllText(StylesheetPath());
+
+        Assert.Contains($"--pspad-raised: {PSPadTheme.LightRaised}", css);
+        Assert.Contains($"--pspad-raised: {PSPadTheme.DarkRaised}", css);
+    }
+
+    static string StylesheetPath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (!File.Exists(Path.Combine(directory.FullName, "src", "PSPad.App", "wwwroot", "css", "app.css")))
+            directory = directory.Parent!;
+
+        return Path.Combine(directory.FullName, "src", "PSPad.App", "wwwroot", "css", "app.css");
+    }
+
+    static MudColor RaisedOf(Palette palette, bool dark) => new(dark ? PSPadTheme.DarkRaised : PSPadTheme.LightRaised);
+
+    static MudColor Mix(MudColor over, MudColor ground, double share) => new(
+        (byte)Math.Round(share * over.R + (1 - share) * ground.R),
+        (byte)Math.Round(share * over.G + (1 - share) * ground.G),
+        (byte)Math.Round(share * over.B + (1 - share) * ground.B),
+        (byte)255);
 
     static Palette PaletteOf(string accent, bool dark)
     {

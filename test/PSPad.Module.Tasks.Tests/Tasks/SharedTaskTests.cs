@@ -50,6 +50,15 @@ public class SharedTaskTests
     }
 
     [Fact]
+    public void AMemberSetsTheTimeOfTheOwnersTask()
+    {
+        var events = TodoTask.Decide(
+            OwnedTask(), new SetTaskTime(Guid.NewGuid(), Member, TaskId, TaskTime.Of(new TimeOnly(9, 0), null)), Now, Access);
+
+        Assert.Equal(Owner, Assert.IsType<TaskTimeSet>(Assert.Single(events)).UserId);
+    }
+
+    [Fact]
     public void WithoutAccessAMemberIsStillAStranger() =>
         Assert.Throws<DomainRejectedException>(() =>
             TodoTask.Decide(OwnedTask(), new RenameTask(Guid.NewGuid(), Member, TaskId, "X"), Now));

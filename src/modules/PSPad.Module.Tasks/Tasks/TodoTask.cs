@@ -42,6 +42,9 @@ public sealed class TodoTask : Aggregate
     public LeadTime? LeadTime { get; private set; }
 
     [JsonInclude]
+    public TaskTime? Time { get; private set; }
+
+    [JsonInclude]
     public string Description { get; private set; } = "";
 
     [JsonInclude]
@@ -62,6 +65,9 @@ public sealed class TodoTask : Aggregate
     public IReadOnlySet<DateOnly> CompletedDays => _completedDays;
 
     public bool IsRecurring => Recurrence is not null;
+
+    [JsonIgnore]
+    public TaskTime? EffectiveTime => IsRecurring || DueOn is not null ? Time : null;
 
     public bool OccursOn(DateOnly day) =>
         Recurrence is not null && Recurrence.OccursOn(day) && (DueOn is null || day <= DueOn);
@@ -218,6 +224,13 @@ public sealed class TodoTask : Aggregate
                     ? []
                     : [new TaskLeadTimeSet(leading.Id, grant.OwnerId, at, lead.LeadTime)];
 
+            case SetTaskTime time:
+                var timing = Require(task, grant);
+                time.Time?.Validate();
+                return timing.Time == time.Time
+                    ? []
+                    : [new TaskTimeSet(timing.Id, grant.OwnerId, at, time.Time)];
+
             case SetTaskDescription describe:
                 var describing = Require(task, grant);
                 var description = (describe.Description ?? "").TrimEnd();
@@ -350,6 +363,9 @@ public sealed class TodoTask : Aggregate
                 break;
             case TaskLeadTimeSet lead:
                 LeadTime = lead.LeadTime;
+                break;
+            case TaskTimeSet timeSet:
+                Time = timeSet.Time;
                 break;
             case TaskDescriptionSet described:
                 Description = described.Description;

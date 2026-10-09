@@ -15,6 +15,17 @@ public class GoalSummaryCardTests : Bunit.TestContext
     static readonly DateOnly Today = new(2026, 9, 12);
 
     [Fact]
+    public void ItCarriesTheClickableCardClass()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var card = Render<GoalSummaryCard>(parameters => parameters
+            .Add(p => p.Goal, NewGoal("Read more", GoalStatus.InProgress)));
+
+        Assert.Contains("pspad-goal-card", card.Find(".mud-paper").ClassList);
+    }
+
+    [Fact]
     public void AnAchievedGoalSumsUpItsTasks()
     {
         AppTestHost.Arrange(this, User, Today);

@@ -2,6 +2,8 @@
 
 Status: Built. Decision of record:
 [ADR-0053](../adr/0053-yearly-repeats-and-lead-time.md). Issue #100.
+Since #112 Tomorrow and Upcoming are one **Coming up** section on today's
+My Day (`ui-spec.md`).
 
 Three asks from one issue:
 

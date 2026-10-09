@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using MudBlazor.Services;
 using PSPad.App.Components;
 using PSPad.Module.Tasks.Recurrence;
@@ -245,6 +246,37 @@ public class TaskRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void MarksFromSeveralSnapshotsShowOneCompactChip()
+    {
+        Arrange();
+        var task = Task("Buy milk");
+        Add(task, "Go to the shop");
+        Marked(task);
+        Marked(task);
+        MarkedStep(task, task.Steps.Single().Id);
+
+        var row = Render(task);
+
+        var chip = Assert.Single(row.FindAll(".pspad-snapshot-mark"));
+        Assert.Contains("pspad-snapshot-mark-compact", chip.ClassName);
+        Assert.Equal("Marked on a snapshot", chip.GetAttribute("aria-label"));
+        Assert.DoesNotContain("Marked on a snapshot", chip.TextContent);
+    }
+
+    [Fact]
+    public void AMarkOnlyOnAStepStillShowsTheChip()
+    {
+        Arrange();
+        var task = Task("Buy milk");
+        Add(task, "Go to the shop");
+        MarkedStep(task, task.Steps.Single().Id);
+
+        var row = Render(task);
+
+        Assert.Single(row.FindAll(".pspad-row-meta .pspad-snapshot-mark"));
+    }
+
+    [Fact]
     public void ATaskWithoutASnapshotMarkShowsNoMarkChip()
     {
         Arrange();
@@ -255,6 +287,43 @@ public class TaskRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheCheckboxIsRound()
+    {
+        Arrange();
+
+        var box = Render(Task("Buy milk")).FindComponent<MudCheckBox<bool>>().Instance;
+
+        Assert.Equal(Icons.Material.Filled.RadioButtonUnchecked, box.UncheckedIcon);
+        Assert.Equal(Icons.Material.Filled.CheckCircle, box.CheckedIcon);
+        Assert.Equal(Color.Primary, box.Color);
+        Assert.Equal(Color.Default, box.UncheckedColor);
+    }
+
+    [Fact]
+    public void AnUnstarredStarIsQuiet()
+    {
+        Arrange();
+
+        var star = Render(Task("Buy milk")).FindComponent<MudIconButton>().Instance;
+
+        Assert.Equal(Color.Default, star.Color);
+        Assert.Contains("pspad-muted", star.Class);
+    }
+
+    [Fact]
+    public void AStarredStarIsPrimary()
+    {
+        Arrange();
+        var task = Task("Buy milk");
+        task.ApplyAll(TodoTask.Decide(task, new StarTask(Guid.NewGuid(), User, task.Id, true), DateTimeOffset.UnixEpoch));
+
+        var star = Render(task).FindComponent<MudIconButton>().Instance;
+
+        Assert.Equal(Color.Primary, star.Color);
+        Assert.DoesNotContain("pspad-muted", star.Class);
+    }
+
+    [Fact]
     public void ATaskWithoutPriorityShowsNoDot()
     {
         Arrange();
@@ -262,6 +331,66 @@ public class TaskRowTests : Bunit.TestContext
         var row = Render(Task("Plain"));
 
         Assert.Empty(row.FindAll(".pspad-priority"));
+    }
+
+    [Fact]
+    public void ATimedTaskShowsItsTimeFirst()
+    {
+        Arrange();
+
+        var row = Render(Timed(Due(Task("Standup"), Today)));
+
+        Assert.Equal("09:30–11:00", row.Find(".pspad-row-time").TextContent.Trim());
+    }
+
+    [Fact]
+    public void AnOvernightTimeShowsItEndsTheNextDay()
+    {
+        Arrange();
+        var task = Due(Task("Night shift"), Today);
+        task.ApplyAll(TodoTask.Decide(
+            task,
+            new SetTaskTime(Guid.NewGuid(), User, task.Id, TaskTime.Of(new TimeOnly(22, 0), new TimeOnly(1, 0))),
+            DateTimeOffset.UnixEpoch));
+
+        var row = Render(task);
+
+        Assert.Equal("22:00–01:00 (+1)", row.Find(".pspad-row-time").TextContent.Trim());
+    }
+
+    [Fact]
+    public void AnUndatedTasksTimeIsNotShown()
+    {
+        Arrange();
+        var task = Timed(Due(Task("Standup"), Today));
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, null), DateTimeOffset.UnixEpoch));
+
+        var row = Render(task);
+
+        Assert.Empty(row.FindAll(".pspad-row-time"));
+    }
+
+    [Fact]
+    public void TheTimeCanBeHidden()
+    {
+        Arrange();
+
+        var row = Render<TaskRow>(p => p
+            .Add(r => r.Task, Timed(Due(Task("Standup"), Today)))
+            .Add(r => r.Today, Today)
+            .Add(r => r.ShowTime, false));
+
+        Assert.Empty(row.FindAll(".pspad-row-time"));
+    }
+
+    static TodoTask Timed(TodoTask task)
+    {
+        task.ApplyAll(TodoTask.Decide(
+            task,
+            new SetTaskTime(Guid.NewGuid(), User, task.Id, TaskTime.Of(new TimeOnly(9, 30), new TimeOnly(11, 0))),
+            DateTimeOffset.UnixEpoch));
+        return task;
     }
 
     IRenderedComponent<TaskRow> Render(TodoTask task, string? listName = null) =>
@@ -342,6 +471,11 @@ public class TaskRowTests : Bunit.TestContext
             DateTimeOffset.UnixEpoch));
         return task;
     }
+
+    static void MarkedStep(TodoTask task, Guid stepId) =>
+        task.ApplyAll(TodoTask.Decide(
+            task, new MarkTaskFromSnapshot(Guid.NewGuid(), User, task.Id, stepId, Guid.NewGuid(), true),
+            DateTimeOffset.UnixEpoch));
 
     static TodoTask StepDue(TodoTask task, DateOnly due)
     {

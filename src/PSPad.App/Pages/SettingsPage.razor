@@ -25,12 +25,12 @@
 @inject LocalAccountDeletion AccountDeletion
 @implements IDisposable
 
-<PageHeading Title="Settings" />
+<PageHeading Title="Settings" Subtitle="Account, appearance and sync" Icon="@Icons.Material.Outlined.Settings" />
 
 <MudGrid Spacing="4">
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4 pspad-account-card">
-            <MudText Typo="Typo.subtitle2" Class="mb-3">Account</MudText>
+            <SectionHeading Title="Account" />
             <div class="d-flex align-center gap-3 mb-3">
                 <MudAvatar Style="@($"background:{AvatarColor.For(State.UserId)};color:#FFFFFF")" Size="Size.Large">
                     @AvatarColor.InitialOf(State.DisplayName.Length > 0 ? State.DisplayName : State.Email)
@@ -54,7 +54,7 @@
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4 pspad-application-settings">
-            <MudText Typo="Typo.subtitle2" Class="mb-3">Application settings</MudText>
+            <SectionHeading Title="Application settings" />
             <MudAutocomplete T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
                              SearchFunc="@SearchTimeZonesAsync" Label="Time zone"
                              Variant="Variant.Outlined" Margin="Margin.Dense" ResetValueOnEmptyText="false" />
@@ -75,16 +75,27 @@
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
-        <MudPaper Outlined="true" Class="pa-4">
-            <MudText Typo="Typo.subtitle2" Class="mb-3">Sync</MudText>
+        <MudPaper Outlined="true" Class="pa-4" id="sync">
+            <SectionHeading Title="Sync" />
             <MudText Typo="Typo.body2" Color="@(Failed ? Color.Error : Color.Default)">@SyncLine</MudText>
             <MudText Typo="Typo.caption" Class="d-block mb-3 pspad-muted">@LastSyncedText</MudText>
+            @if (SyncStatus.LastRejections.Count > 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Error">Couldn’t be saved</MudText>
+                <MudList T="string" Dense="true" ReadOnly="true" Class="pspad-sync-rejections mb-3">
+                    @foreach (var rejection in SyncStatus.LastRejections)
+                    {
+                        <MudListItem T="string" Class="pspad-sync-rejection" Icon="@Icons.Material.Outlined.ErrorOutline"
+                                     IconColor="Color.Error" Text="@rejection" />
+                    }
+                </MudList>
+            }
             <SyncButton Labeled="true" />
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4">
-            <MudText Typo="Typo.subtitle2" Color="Color.Error" Class="mb-3">Danger zone</MudText>
+            <SectionHeading Title="Danger zone" Color="Color.Error" />
             <MudText Typo="Typo.body2" Class="mb-3">
                 Permanently deletes your account and everything in it.
             </MudText>

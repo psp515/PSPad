@@ -4,28 +4,35 @@
 @inject CardCollapseState Collapse
 
 <MudPaper Elevation="0" Outlined="true">
-    <div class="d-flex align-center gap-2 px-3 py-2">
-        <MudIconButton Size="Size.Small"
-                       Icon="@(Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)"
-                       OnClick="@(() => Collapse.ToggleAsync(Id))" />
-        @if (Icon is not null)
-        {
-            <MudIcon Icon="@Icon" Title="@IconTitle" Size="Size.Small" Class="pspad-list-icon" />
-        }
+    <div class="pspad-card-header d-flex align-center gap-2 px-3 py-2">
+        <MudIconButton Class="pspad-card-tile pspad-list-icon" Size="Size.Small"
+                       Icon="@(Icon ?? Icons.Material.Outlined.List)" Color="Color.Primary"
+                       OnClick="@(() => Collapse.ToggleAsync(Id))"
+                       UserAttributes="@TileAttributes" />
         <div class="d-flex flex-column flex-grow-1" style="min-width:0">
-            <MudLink Class="@TitleClass" Href="@Href" Typo="Typo.subtitle2" Underline="Underline.None">@Name</MudLink>
+            <MudLink Class="@TitleClass" Href="@Href" Typo="Typo.subtitle2" Color="Color.Inherit" Underline="Underline.None">@Name</MudLink>
             @Subtitle
         </div>
-        <MudText Typo="Typo.caption" Class="pspad-open-count flex-shrink-0" Style="white-space:nowrap">@CountText(Count)</MudText>
+        <span class="pspad-open-count flex-shrink-0">@Count.ToString(CultureInfo.InvariantCulture)<span class="pspad-sr-only"> open</span></span>
         @Actions
     </div>
 
     <MudCollapse Expanded="@(!Collapsed)">
-        <MudDivider />
-
         @if (Count == 0 && EmptyText is not null)
         {
             <MudText Typo="Typo.body2" Class="pa-3">@EmptyText</MudText>
+        }
+        else if (Count == 0 && Rows is null)
+        {
+            <div class="pspad-card-empty pspad-muted d-flex align-center px-3 py-2">
+                <MudText Typo="Typo.body2" Color="Color.Inherit">No open tasks</MudText>
+                @if (OnAdd.HasDelegate)
+                {
+                    <span class="pspad-card-empty-separator mx-1" aria-hidden="true">·</span>
+                    <MudButton Class="pspad-card-empty-add" Variant="Variant.Text" Color="Color.Primary"
+                               Size="Size.Small" OnClick="@OnAdd" aria-label="@($"Add a task to {Name}")">Add one</MudButton>
+                }
+            </div>
         }
         else if (Rows is not null)
         {
@@ -43,9 +50,8 @@
 
         @if (Count > Preview)
         {
-            <MudDivider />
             <MudButton Class="pspad-show-all ma-1" Href="@Href" Variant="Variant.Text" Color="Color.Primary">
-                @($"Show all ({Count})")
+                @($"Show all {Count}")
             </MudButton>
         }
     </MudCollapse>
@@ -74,8 +80,6 @@
 
     [Parameter] public int? RowCount { get; set; }
 
-    [Parameter] public Func<int, string> CountText { get; set; } = count => count.ToString(CultureInfo.InvariantCulture);
-
     [Parameter] public string? EmptyText { get; set; }
 
     [Parameter] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
@@ -89,6 +93,22 @@
     [Parameter] public EventCallback<TodoTask> OnStar { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
+
+    [Parameter] public EventCallback OnAdd { get; set; }
+
+    Dictionary<string, object> TileAttributes
+    {
+        get
+        {
+            var attributes = new Dictionary<string, object>
+            {
+                ["aria-expanded"] = Collapsed ? "false" : "true",
+                ["aria-label"] = $"{(Collapsed ? "Expand" : "Collapse")} {Name}"
+            };
+            if (IconTitle is not null) attributes["title"] = IconTitle;
+            return attributes;
+        }
+    }
 
     bool Collapsed => Collapse.IsCollapsed(Id);
 

@@ -3,7 +3,8 @@
 
 <div class="pspad-row d-flex align-center gap-2 px-1 @(Overdue ? "pspad-overdue overdue" : "")">
     <MudCheckBox T="bool" Value="@Done" ValueChanged="@(_ => OnToggle.InvokeAsync(Task))"
-                 Color="Color.Primary" Dense="true" />
+                 Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
+                 UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" />
 
     <div class="pspad-row-body pspad-task-name" @onclick="@(() => OnOpen.InvokeAsync(Task))">
         <MudText Typo="Typo.body2" Class="pspad-row-name" title="@Task.Name"
@@ -12,9 +13,13 @@
         @if (HasMeta)
         {
             <div class="pspad-row-meta">
+                @if (ShowTime && Task.EffectiveTime is { } time)
+                {
+                    <MudText Typo="Typo.caption" Class="pspad-row-time" Color="Color.Primary">@TimeRow.Describe(time)</MudText>
+                }
                 @if (Task.DueOn is { } due)
                 {
-                    <MudText Typo="Typo.caption" Class="pspad-due" Color="@(Overdue ? Color.Error : Color.Default)">
+                    <MudText Typo="Typo.caption" Class="pspad-due" Color="@(Overdue ? Color.Error : Color.Inherit)">
                         @(Task.IsRecurring ? $"Until {due:d MMM}" : due.ToString("d MMM"))
                     </MudText>
                 }
@@ -38,9 +43,9 @@
                     <MudIcon Class="pspad-priority" Icon="@Icons.Material.Filled.Circle" Color="@PriorityColour"
                              Title="@($"{Task.Priority} priority")" />
                 }
-                @if (TaskMark is not null)
+                @if (Task.SnapshotMarks.Count > 0)
                 {
-                    <SnapshotMarkChip />
+                    <SnapshotMarkChip Compact="true" />
                 }
                 @if (ListName is not null)
                 {
@@ -50,7 +55,8 @@
         }
     </div>
 
-    <MudIconButton Class="pspad-row-star" Size="Size.Small" Color="Color.Primary"
+    <MudIconButton Class="@(Task.Starred ? "pspad-row-star" : "pspad-row-star pspad-muted")" Size="Size.Small"
+                   Color="@(Task.Starred ? Color.Primary : Color.Default)"
                    Icon="@(Task.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
                    aria-label="@(Task.Starred ? "Unstar" : "Star")"
                    OnClick="@(() => OnStar.InvokeAsync(Task))" />
@@ -60,6 +66,8 @@
     [Parameter, EditorRequired] public TodoTask Task { get; set; } = null!;
 
     [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public bool ShowTime { get; set; } = true;
 
     [Parameter] public string? ListName { get; set; }
 
@@ -76,9 +84,8 @@
     bool HasDescription => Task.Description.Length > 0;
 
     bool HasMeta => ListName is not null || Task.Steps.Count > 0 || Task.DueOn is not null
-        || Task.IsRecurring || HasDescription || Task.Priority != Priority.None || TaskMark is not null;
+        || (ShowTime && Task.EffectiveTime is not null) || Task.IsRecurring || HasDescription || Task.Priority != Priority.None || Task.SnapshotMarks.Count > 0;
 
-    SnapshotMark? TaskMark => Task.SnapshotMarks.FirstOrDefault(mark => mark.StepId is null);
 
     Color PriorityColour => Task.Priority switch
     {

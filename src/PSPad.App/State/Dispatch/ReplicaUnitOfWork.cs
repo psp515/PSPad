@@ -34,5 +34,11 @@ public sealed class ReplicaUnitOfWork(IReplica replica, IOutbox outbox) : IUnitO
         _pending.Clear();
     }
 
+    public void Discard()
+    {
+        _staged.Clear();
+        _pending.Clear();
+    }
+
     public Task<bool> IsProcessedAsync(Guid commandId, CancellationToken ct) => Task.FromResult(false);
 }

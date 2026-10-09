@@ -25,7 +25,7 @@
 }
 else if (_goal is not null)
 {
-    <PageHeading Title="@_goal.Name" Subtitle="@GoalStatusText.Of(_goal.Status)" BackHref="/goals"
+    <PageHeading Title="@_goal.Name" Subtitle="@GoalStatusText.Of(_goal.Status)" Icon="@Icons.Material.Outlined.Flag" BackHref="/goals"
                  BackLabel="Back to goals" BackClass="pspad-back-to-goals" />
     <div class="d-flex align-center gap-2 mb-4">
         <MudChip T="string" Class="pspad-goal-status ma-0" Size="Size.Small" Variant="Variant.Outlined"
@@ -70,7 +70,7 @@ else if (_goal is not null)
             <MudGrid Spacing="4">
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pspad-goal-progress pa-3">
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">Progress</MudText>
+                        <SectionHeading Title="Progress" />
                         <MudChart ChartType="ChartType.Line" ChartSeries="@ProgressSeries" ChartLabels="@ProgressLabels"
                                   ChartOptions="@ProgressOptions" Width="100%" Height="260px" />
                         @if (_hasRecurring)

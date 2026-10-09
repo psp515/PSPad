@@ -38,6 +38,98 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheHeadingSubtitleCountsListsAndOpenTasks()
+    {
+        var area = NewArea("Dom");
+        var zakupy = NewList(area.Id, "Zakupy", 0);
+        var ogrod = NewList(area.Id, "Ogród", 1);
+        Arrange(area, zakupy, ogrod, NewTask(zakupy.Id, "Mleko"), NewTask(zakupy.Id, "Chleb"), NewTask(ogrod.Id, "Trawa"));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal("2 lists · 3 open tasks", page.Find(".pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
+    public void OneListWithOneOpenTaskIsSingular()
+    {
+        var area = NewArea("Dom");
+        var zakupy = NewList(area.Id, "Zakupy", 0);
+        Arrange(area, zakupy, NewTask(zakupy.Id, "Mleko"), Done(NewTask(zakupy.Id, "Chleb")));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal("1 list · 1 open task", page.Find(".pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
+    public void AnAreaWithNothingOpenSaysSo()
+    {
+        var area = NewArea("Dom");
+        Arrange(area, NewList(area.Id, "Zakupy", 0));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal("1 list · no open tasks", page.Find(".pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
+    public void AnAreaOfReferenceListsCountsTheirItemsLeavingOutDeletedOnes()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        var items = Items(recipes.Id, 3);
+        items[0].ApplyAll(ReferenceItem.Decide(
+            items[0], new DeleteReferenceItem(Guid.NewGuid(), User, items[0].Id), DateTimeOffset.UnixEpoch));
+        Arrange([area, recipes, .. items]);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal("1 reference list · 2 items", page.Find(".pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
+    public void AnAreaOfBothKindsCountsAllListsOpenTasksAndItems()
+    {
+        var area = NewArea("Dom");
+        var shopping = NewList(area.Id, "Zakupy", 0);
+        var recipes = NewList(area.Id, "Przepisy", 1, ListKind.Reference);
+        Arrange([area, shopping, recipes, NewTask(shopping.Id, "Mleko"), .. Items(recipes.Id, 4)]);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal("2 lists · 1 open task · 4 items", page.Find(".pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
+    public void TheHeadingShowsAFolderIcon()
+    {
+        var area = NewArea("Dom");
+        Arrange(area, NewList(area.Id, "Zakupy", 0));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal(Icons.Material.Outlined.Folder, Services.GetRequiredService<PageHeader>().Icon);
+        Assert.Contains(IconPaths.DistinctivePath(Icons.Material.Outlined.Folder), page.Find(".pspad-page-heading .pspad-page-icon").InnerHtml);
+    }
+
+    [Fact]
+    public void TheSharedBoardShowsAPeopleIcon()
+    {
+        Arrange(NewMemberList(Guid.NewGuid(), User, "Errands"));
+
+        Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, SharedWithMe.AreaId));
+
+        Assert.Equal(Icons.Material.Outlined.People, Services.GetRequiredService<PageHeader>().Icon);
+    }
+
+    static TodoTask Done(TodoTask task)
+    {
+        task.ApplyAll(TodoTask.Decide(task, new CompleteTask(Guid.NewGuid(), User, task.Id), DateTimeOffset.UnixEpoch));
+        return task;
+    }
+
+    [Fact]
     public void ItListsOnlyTheListsOfThatArea()
     {
         var mine = NewArea("Dom");
@@ -225,7 +317,7 @@ public class AreaBoardTests : Bunit.TestContext
         var card = page.FindComponent<PSPad.App.Components.ListCard>();
 
         Assert.Equal(5, card.FindComponents<PSPad.App.Components.ReferenceRow>().Count);
-        Assert.Equal("7", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("7 open", card.Find(".pspad-open-count").TextContent);
     }
 
     [Fact]

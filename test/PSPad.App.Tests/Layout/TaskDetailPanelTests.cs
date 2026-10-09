@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.Abstractions;
+using PSPad.App.Components;
 using PSPad.App.Layout;
 using PSPad.App.State.Viewport;
 using PSPad.Module.Tasks.Areas;
@@ -174,7 +175,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
 
-        Assert.Contains("360px", panel.Find(".mud-drawer").GetAttribute("style"));
+        Assert.Contains("420px", panel.Find(".mud-drawer").GetAttribute("style"));
     }
 
     [Fact]
@@ -973,6 +974,50 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheTimeRowShowsOnlyWithADueDateOrARepeat()
+    {
+        var undated = NewTask("Someday");
+        AppTestHost.Arrange(this, User, Today, undated);
+
+        var panel = RenderWithOverlays(taskId: undated.Id);
+
+        Assert.Empty(panel.FindAll(".pspad-task-time"));
+    }
+
+    [Fact]
+    public async Task SettingAStartTimeSendsIt()
+    {
+        var task = Due(NewTask("Sprint planning"), Today);
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        var row = panel.FindComponent<TimeRow>();
+        await panel.InvokeAsync(() => row.Instance.StartChangedAsync(new TimeSpan(9, 30, 0)));
+
+        var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(new TimeOnly(9, 30), reloaded!.Time!.Start);
+    }
+
+    [Fact]
+    public async Task ANewTaskKeepsItsTimeAfterCreating()
+    {
+        var list = NewList(Guid.NewGuid(), "Work");
+        var replica = AppTestHost.Arrange(this, User, Today, list);
+
+        var panel = RenderWithOverlays(newInList: list.Id);
+        panel.Find(".pspad-task-name-field input").Input("Standup");
+        var due = panel.FindComponent<DueDateRow>();
+        await panel.InvokeAsync(() => due.Instance.ValueChanged.InvokeAsync(Today));
+        panel.WaitForAssertion(() => panel.FindComponent<TimeRow>());
+        var row = panel.FindComponent<TimeRow>();
+        await panel.InvokeAsync(() => row.Instance.StartChangedAsync(new TimeSpan(9, 30, 0)));
+        panel.Find(".pspad-panel-save").Click();
+
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal(new TimeOnly(9, 30), created.Time!.Start);
+    }
+
+    [Fact]
     public async Task PickingALeadTimeSetsIt()
     {
         var task = Due(NewTask("Renew passport"), Today.AddDays(30));
@@ -988,7 +1033,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheLeadTimeMenuExplainsItShowsTheTaskInUpcoming()
+    public void TheLeadTimeMenuExplainsItShowsTheTaskInComingUp()
     {
         var task = Due(NewTask("Renew passport"), Today.AddDays(30));
         AppTestHost.Arrange(this, User, Today, task);
@@ -996,11 +1041,11 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var panel = RenderWithOverlays(taskId: task.Id);
         OpenRow(panel, ".pspad-task-lead");
 
-        Assert.Contains("Upcoming", panel.Find(".pspad-lead-hint").TextContent);
+        Assert.Contains("Coming up", panel.Find(".pspad-lead-hint").TextContent);
     }
 
     [Fact]
-    public void TheCustomLeadTimeDialogExplainsItShowsTheTaskInUpcoming()
+    public void TheCustomLeadTimeDialogExplainsItShowsTheTaskInComingUp()
     {
         var task = Due(NewTask("Renew passport"), Today.AddDays(30));
         AppTestHost.Arrange(this, User, Today, task);
@@ -1010,7 +1055,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         panel.Find(".pspad-lead-custom").Click();
 
         var dialog = panel.WaitForElement(".pspad-lead-dialog");
-        Assert.Contains("Upcoming", dialog.QuerySelector(".pspad-lead-hint")!.TextContent);
+        Assert.Contains("Coming up", dialog.QuerySelector(".pspad-lead-hint")!.TextContent);
     }
 
     [Fact]

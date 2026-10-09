@@ -5,6 +5,9 @@ namespace PSPad.App.Theme;
 
 public static class PSPadTheme
 {
+    public const string LightRaised = "#FFFFFF";
+    public const string DarkRaised = "#1B1B1B";
+
     sealed record Shades(string Light, string LightSecondary, string Dark, string DarkSecondary);
 
     static readonly Dictionary<Accent, Shades> AccentShades = new()
@@ -96,7 +99,7 @@ public static class PSPadTheme
         },
         LayoutProperties = new LayoutProperties
         {
-            DefaultBorderRadius = "8px",
+            DefaultBorderRadius = "12px",
             DrawerWidthLeft = "260px"
         }
     };

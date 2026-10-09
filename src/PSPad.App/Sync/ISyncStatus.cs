@@ -8,5 +8,7 @@ public interface ISyncStatus
 
     DateTimeOffset? LastSyncedAt { get; }
 
+    IReadOnlyList<string> LastRejections { get; }
+
     event Action? Changed;
 }

@@ -12,7 +12,13 @@ public static class TaskQuery
             ? listId
             : null;
 
-    public static string ForNewTask(string uri, Guid listId) => $"{Without(uri)}?task={NewTask}&list={listId}";
+    public static string ForNewTask(string uri, Guid listId) => $"{QueryString.Without(uri)}?task={NewTask}&list={listId}";
 
-    public static string Without(string uri) => QueryString.Without(uri);
+    public static string For(string uri, Guid taskId)
+    {
+        var kept = DayQuery.Keep(uri);
+        return $"{kept}{(kept.Contains('?') ? '&' : '?')}task={taskId}";
+    }
+
+    public static string Without(string uri) => DayQuery.Keep(uri);
 }

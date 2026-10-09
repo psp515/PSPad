@@ -11,6 +11,8 @@ public class ThemePreferenceTests
     {
         public Dictionary<string, string> Storage { get; } = [];
 
+        public List<string> DocumentThemes { get; } = [];
+
         public string? Stored
         {
             get => Storage.GetValueOrDefault("pspad.theme");
@@ -19,6 +21,12 @@ public class ThemePreferenceTests
 
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
         {
+            if (identifier == "document.documentElement.setAttribute")
+            {
+                DocumentThemes.Add((string)args![1]!);
+                return ValueTask.FromResult(default(TValue)!);
+            }
+
             var key = (string)args![0]!;
 
             if (identifier == "localStorage.setItem")
@@ -107,6 +115,46 @@ public class ThemePreferenceTests
 
         Assert.Equal(nameof(ThemeMode.Dark), js.Stored);
         Assert.Equal(1, raised);
+    }
+
+    [Theory]
+    [InlineData(true, "dark")]
+    [InlineData(false, "light")]
+    public async Task InitialisingTagsTheDocumentWithTheEffectiveTheme(bool systemPrefersDark, string expected)
+    {
+        var js = new FakeJsRuntime();
+        var preference = new ThemePreference(js);
+
+        await preference.InitialiseAsync(systemPrefersDark);
+
+        Assert.Equal(expected, js.DocumentThemes.Last());
+    }
+
+    [Fact]
+    public async Task ASystemFlipInSystemModeRetagsTheDocument()
+    {
+        var js = new FakeJsRuntime();
+        var preference = new ThemePreference(js);
+        await preference.InitialiseAsync(systemPrefersDark: false);
+
+        await preference.InitialiseAsync(systemPrefersDark: true);
+
+        Assert.Equal("dark", js.DocumentThemes.Last());
+    }
+
+    [Theory]
+    [InlineData(ThemeMode.Dark, false, "dark")]
+    [InlineData(ThemeMode.Light, true, "light")]
+    [InlineData(ThemeMode.System, true, "dark")]
+    public async Task SettingAModeRetagsTheDocument(ThemeMode mode, bool systemPrefersDark, string expected)
+    {
+        var js = new FakeJsRuntime { Stored = mode == ThemeMode.Dark ? nameof(ThemeMode.Light) : nameof(ThemeMode.Dark) };
+        var preference = new ThemePreference(js);
+        await preference.InitialiseAsync(systemPrefersDark);
+
+        await preference.SetAsync(mode);
+
+        Assert.Equal(expected, js.DocumentThemes.Last());
     }
 
     [Fact]

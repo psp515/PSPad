@@ -1,0 +1,109 @@
+@using System.Globalization
+@using PSPad.Module.Tasks.Tasks
+
+<div class="pspad-property-row pspad-task-time d-flex align-start">
+    <div class="pspad-time-head d-flex align-center flex-shrink-0">
+        <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" Class="pspad-time-icon mr-3" />
+        <MudText Typo="Typo.body2" Class="pspad-property-label">Time</MudText>
+    </div>
+    <div class="pspad-time-lines d-flex flex-column flex-grow-1">
+        <div class="pspad-time-line d-flex align-center">
+            <span class="pspad-time-line-label">From</span>
+            <MudTimePicker Class="pspad-time-start pspad-time-input" Placeholder="Start" aria-label="Start" Time="@AsSpan(Value?.Start)" TimeChanged="@StartChangedAsync"
+                           AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@Disabled"
+                           Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="Pick start time" />
+            @if (Value is not null && !Disabled)
+            {
+                <MudIconButton Class="pspad-property-clear pspad-time-clear" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                               aria-label="Clear time" OnClick="@(() => SendAsync(null))" />
+            }
+            else
+            {
+                <span class="pspad-time-clear-placeholder" aria-hidden="true"></span>
+            }
+        </div>
+        @if (Value is not null)
+        {
+            <div class="pspad-time-line pspad-time-line-end d-flex align-center">
+                <span class="pspad-time-line-label">To</span>
+                <MudTimePicker Class="pspad-time-end pspad-time-input" Placeholder="End" aria-label="End" Time="@(_end ?? AsSpan(Value?.End))" TimeChanged="@EndChangedAsync"
+                               AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true"
+                               Disabled="@Disabled" Error="@(_error is not null)"
+                               Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="Pick end time" />
+            </div>
+        }
+    </div>
+</div>
+@if (_error is not null)
+{
+    <MudText Typo="Typo.caption" Color="Color.Error" Class="pspad-time-error pspad-time-note d-block">@_error</MudText>
+}
+else if (Value is { Overnight: true })
+{
+    <MudText Typo="Typo.caption" Class="pspad-time-hint pspad-time-note pspad-muted d-block">Ends the next day (+1)</MudText>
+}
+
+@code {
+    [Parameter] public TaskTime? Value { get; set; }
+
+    [Parameter] public EventCallback<TaskTime?> ValueChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    TaskTime? _shown;
+
+    TimeSpan? _end;
+
+    string? _error;
+
+    protected override void OnParametersSet()
+    {
+        if (_shown != Value)
+        {
+            _shown = Value;
+            _end = null;
+            _error = null;
+        }
+    }
+
+    public static string Format(TimeOnly time) => time.ToString("HH:mm", CultureInfo.InvariantCulture);
+
+    public const string NextDay = "(+1)";
+
+    public static string Describe(TaskTime time) =>
+        time.End is { } end
+            ? $"{Format(time.Start)}–{Format(end)}{(time.Overnight ? $" {NextDay}" : "")}"
+            : Format(time.Start);
+
+    public Task StartChangedAsync(TimeSpan? start) =>
+        start is { } picked
+            ? TrySendAsync(TimeOnly.FromTimeSpan(picked), Value?.End)
+            : SendAsync(null);
+
+    public Task EndChangedAsync(TimeSpan? end) =>
+        Value is { } current
+            ? TrySendAsync(current.Start, end is { } picked ? TimeOnly.FromTimeSpan(picked) : null, end)
+            : Task.CompletedTask;
+
+    async Task TrySendAsync(TimeOnly start, TimeOnly? end, TimeSpan? typedEnd = null)
+    {
+        if (end == start)
+        {
+            _end = typedEnd;
+            _error = "End must differ from start";
+            StateHasChanged();
+            return;
+        }
+
+        await SendAsync(new TaskTime(start, end));
+    }
+
+    async Task SendAsync(TaskTime? time)
+    {
+        _end = null;
+        _error = null;
+        await ValueChanged.InvokeAsync(time);
+    }
+
+    static TimeSpan? AsSpan(TimeOnly? time) => time?.ToTimeSpan();
+}

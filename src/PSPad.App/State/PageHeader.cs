@@ -10,11 +10,13 @@ public sealed class PageHeader
 
     public string? BackLabel { get; private set; }
 
+    public string? Icon { get; private set; }
+
     public event Action? Changed;
 
-    public void Set(string title, string? subtitle, string? backHref, string? backLabel = null)
+    public void Set(string title, string? subtitle, string? backHref, string? backLabel = null, string? icon = null)
     {
-        if (title == Title && subtitle == Subtitle && backHref == BackHref && backLabel == BackLabel)
+        if (title == Title && subtitle == Subtitle && backHref == BackHref && backLabel == BackLabel && icon == Icon)
         {
             return;
         }
@@ -23,6 +25,7 @@ public sealed class PageHeader
         Subtitle = subtitle;
         BackHref = backHref;
         BackLabel = backLabel;
+        Icon = icon;
         Changed?.Invoke();
     }
 }

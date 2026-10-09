@@ -1,7 +1,7 @@
 @using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Tasks
 
-<MudPaper Elevation="0" Outlined="true" Class="@($"pspad-goal-summary pspad-goal-summary-{Kind} pa-4 d-flex gap-3")"
+<MudPaper Elevation="0" Outlined="true" Class="@($"pspad-goal-card pspad-goal-summary pspad-goal-summary-{Kind} pa-4 d-flex gap-3")"
           role="button" tabindex="0" aria-label="@Goal.Name" @onclick="@OnOpen" @onkeydown="@OpenOnKeyAsync">
     <MudIcon Icon="@StatusIcon" Color="@StatusColor" Class="flex-shrink-0" />
     <div class="d-flex flex-column flex-grow-1" style="min-width:0">

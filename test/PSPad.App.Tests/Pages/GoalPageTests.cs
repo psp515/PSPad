@@ -29,8 +29,19 @@ public class GoalPageTests : Bunit.TestContext
 
         var page = RenderPage(goal.Id);
 
-        Assert.Contains("Eat healthier", page.Find("h5").TextContent);
+        Assert.Contains("Eat healthier", page.Find("h1").TextContent);
         Assert.Equal(7, page.FindComponents<TaskRow>().Count);
+    }
+
+    [Fact]
+    public void TheHeadingShowsAFlagIcon()
+    {
+        var goal = NewGoal("Eat healthier");
+        Arrange(goal);
+
+        var page = RenderPage(goal.Id);
+
+        Assert.Contains(IconPaths.DistinctivePath(Icons.Material.Outlined.Flag), page.Find(".pspad-page-heading .pspad-page-icon").InnerHtml);
     }
 
     [Fact]

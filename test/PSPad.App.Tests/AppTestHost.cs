@@ -59,6 +59,7 @@ public static class AppTestHost
         context.Services.AddPSPadCommands();
         context.Services.AddSingleton(new AppState { UserId = userId, Today = today });
         context.Services.AddSingleton(new PageHeader());
+        context.Services.AddSingleton(new StatusBelts());
         context.Services.AddSingleton(new ThemePreference(context.JSInterop.JSRuntime));
 
         var collapse = new CardCollapseState(context.JSInterop.JSRuntime);
@@ -176,6 +177,8 @@ public static class AppTestHost
         public bool LastSyncFailed => false;
 
         public DateTimeOffset? LastSyncedAt => null;
+
+        public IReadOnlyList<string> LastRejections => [];
 
 #pragma warning disable CS0067
         public event Action? Changed;

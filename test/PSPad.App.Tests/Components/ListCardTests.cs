@@ -72,7 +72,7 @@ public class ListCardTests : Bunit.TestContext
         var card = Render(list, [ended, .. Tasks(list.Id, 2)]);
 
         Assert.Equal(2, card.FindComponents<TaskRow>().Count);
-        Assert.Equal("2", card.Find(".pspad-open-count").TextContent.Trim());
+        Assert.Equal("2 open", card.Find(".pspad-open-count").TextContent);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class ListCardTests : Bunit.TestContext
 
         var card = Render(list, Tasks(list.Id, 17));
 
-        Assert.Equal("17", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("17 open", card.Find(".pspad-open-count").TextContent);
     }
 
     [Fact]
@@ -128,6 +128,23 @@ public class ListCardTests : Bunit.TestContext
         Assert.Contains("mud-paper-outlined", classes);
         Assert.DoesNotContain(classes, className => className.StartsWith("mud-elevation-", StringComparison.Ordinal)
             && className != "mud-elevation-0");
+    }
+
+    [Fact]
+    public void AnEmptyTaskListsAddOneRaisesOnAddTaskClick()
+    {
+        Arrange();
+        var list = List("Remont");
+        var clicked = 0;
+
+        var card = Render<ListCard>(parameters => parameters
+            .Add(p => p.List, list)
+            .Add(p => p.Today, Today)
+            .Add(p => p.OnAddTaskClick, EventCallback.Factory.Create(this, () => clicked++)));
+
+        card.Find(".pspad-card-empty-add").Click();
+
+        Assert.Equal(1, clicked);
     }
 
     [Fact]
@@ -258,7 +275,7 @@ public class ListCardTests : Bunit.TestContext
             .Add(p => p.Today, Today));
 
         Assert.Equal(5, card.FindComponents<ReferenceRow>().Count);
-        Assert.Equal("7", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("7 open", card.Find(".pspad-open-count").TextContent);
     }
 
     [Fact]

@@ -1,4 +1,25 @@
-<MudChip T="string" Class="pspad-snapshot-mark" Size="Size.Small" Variant="Variant.Outlined"
-         Color="Color.Success" Icon="@Icons.Material.Outlined.CheckCircleOutline">
-    Marked on a snapshot
-</MudChip>
+@if (Compact)
+{
+    <MudChip T="string" Class="pspad-snapshot-mark pspad-snapshot-mark-compact" Size="Size.Small" Variant="Variant.Text"
+             Color="Color.Success" Icon="@Icons.Material.Outlined.CheckCircleOutline" UserAttributes="@CompactAttributes" />
+}
+else
+{
+    <MudChip T="string" Class="pspad-snapshot-mark" Size="Size.Small" Variant="Variant.Outlined"
+             Color="Color.Success" Icon="@Icons.Material.Outlined.CheckCircleOutline">
+        @Label
+    </MudChip>
+}
+
+@code {
+    const string Label = "Marked on a snapshot";
+
+    static readonly Dictionary<string, object> CompactAttributes = new()
+    {
+        ["aria-label"] = Label,
+        ["title"] = Label,
+        ["role"] = "img"
+    };
+
+    [Parameter] public bool Compact { get; set; }
+}

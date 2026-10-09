@@ -39,6 +39,7 @@ public sealed class ThemePreference(IJSRuntime js)
         var accent = Enum.TryParse<Accent>(await ReadAsync(AccentKey), out var stored) ? stored : Accent.Green;
         Apply(accent == Accent.Custom && CustomColor is null ? Accent.Green : accent);
 
+        await TagDocumentAsync();
         Changed?.Invoke();
     }
 
@@ -47,6 +48,7 @@ public sealed class ThemePreference(IJSRuntime js)
         Mode = mode;
 
         await js.InvokeAsync<string>("localStorage.setItem", StorageKey, Mode.ToString());
+        await TagDocumentAsync();
         Changed?.Invoke();
     }
 
@@ -77,6 +79,17 @@ public sealed class ThemePreference(IJSRuntime js)
     {
         Accent = accent;
         Theme = accent == Accent.Custom ? PSPadTheme.ForCustom(CustomColor!) : PSPadTheme.For(accent);
+    }
+
+    async Task TagDocumentAsync()
+    {
+        try
+        {
+            await js.InvokeVoidAsync("document.documentElement.setAttribute", "data-theme", IsDark ? "dark" : "light");
+        }
+        catch (JSException)
+        {
+        }
     }
 
     async Task<string?> ReadAsync(string key)

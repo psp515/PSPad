@@ -33,7 +33,10 @@ substitute for a component that already exists.
 | Vertical/horizontal flex spacing | `MudStack`, or `d-flex`/`gap-*` utility classes | inline `style` margins |
 | A chart | `MudChart` | a third-party charting library |
 | A calendar-style heatmap (consistency) | a custom `pspad-heatmap` CSS grid | `MudChart`'s `ChartType.HeatMap` |
-| A section that opens on click (the record feed) | `MudExpansionPanels` + `MudExpansionPanel` | a hand-rolled show/hide flag |
+| A section that opens on click (the record feed, a list's Completed) | `MudExpansionPanels` + `MudExpansionPanel` | a hand-rolled show/hide flag |
+| A section heading (My Day, Settings, Statistics, Goals, Goal, panel subsections) | `Components/SectionHeading.razor` (`h2`, `pspad-section-heading`; `Title`, `Count`, `Hint`, `Color`) | a `MudText Typo.subtitle2` or an overline |
+| A card's collapse control | the header's icon tile in `ThingCard`, a `MudIconButton` with `aria-expanded` | a separate chevron or `ExpandMore` button |
+| A task checkbox | `MudCheckBox` with `UncheckedIcon` `RadioButtonUnchecked` and `CheckedIcon` `CheckCircle` (round) | the square default |
 
 Before adding a new `pspad-*` class, check this table first. If nothing
 fits, the class is legitimate — but it means the styling is specific to
@@ -193,8 +196,8 @@ order is column by column (`adr/0051`). The empty state stays a single
 card in a plain `MudGrid`.
 
 Applied on: `GoalsPage` (goal cards, active and
-achieved separately), `Today` (overdue, today, starred, tomorrow, goals in progress,
-completed and upcoming each as their own grid), `InboxPage`, `ListPage` (open and completed separately),
+achieved separately), `Today` (overdue, any time, starred, coming up
+and completed each as their own grid; the schedule is a single column), `InboxPage`, `ListPage` (open and completed separately),
 `SettingsPage` (Account, Application settings, Sync, Danger zone each their
 own card), and both skeleton components (`RowSkeleton`, `CardSkeleton`).
 
@@ -220,6 +223,20 @@ bar never covers the last row either. Below `md`, every scrolling element
 (`scrollbar-width: none`, `::-webkit-scrollbar { display: none }`) while
 still scrolling.
 
+**Top spacing.** The container's top margin is 16px below `md`; from `md`
+up it has no top margin and a 24px top padding instead (`mt-4 mt-md-0
+pt-md-6`). `MudMainContent` reserves top padding for the phone app bar;
+from `md` up, where that bar is hidden, `app.css` removes it
+(`.mud-main-content { padding-top: 0 !important; display: flow-root }` in a
+`min-width: 960px` query). Desktop page and sidebar both start at y=0: a
+top margin on the page's first child must never escape the main area —
+with no padding above it, it collapses through `.mud-main-content`,
+`.mud-layout` and `body`, pushing the body down and leaving a strip of
+canvas at the top of the window. The `flow-root` keeps such margins inside
+the main area, and `.mud-drawer.mud-drawer-persistent.mud-drawer-pos-left
+{ top: 0 }` pins the sidebar, which MudBlazor otherwise leaves at its
+static position (it sets no `top` on a persistent left drawer).
+
 **Sidebar breakpoint.** The sidebar is permanent at `md`+ (≥960px). Below
 `md` there is no navigation drawer at all: navigation is `MobileTopBar`
 plus `BottomNav` plus `AccountDrawer` (`adr/0050`,
@@ -230,13 +247,19 @@ before the first callback, flashing the wrong navigation on load. Both
 branches live in the DOM at all times, separated only by CSS resolved
 before first paint.
 
-**Mobile app bar.** Below `md`, `Layout/MobileTopBar.razor` is a dense
-`MudAppBar`, left to right: a back `MudIconButton` (`ArrowBack`) when the
-current `PageHeading` set a `BackHref`; the page title (`Typo.h6`,
-`Color.Primary`, truncated with an ellipsis, optionally with a caption
-subtitle — a list screen shows its area's name); `ConnectionStatus` (a `CloudOff` icon with a tooltip, nothing while healthy; offline is confirmed by `/health`, `adr/0058`); `SyncButton WithStamp` (a `Sync` icon button, spinning while a sync runs, red after a
-failed one, disabled offline; its tooltip and `aria-label` carry the stamp text); a 32px
-`MudAvatar` button that opens `AccountDrawer`. Title and subtitle come from
+**Mobile app bar.** Below `md`, `Layout/MobileTopBar.razor` is a
+`MudAppBar` (`pspad-top-bar`, not `Dense`) `--pspad-top-bar-height` (64px) tall on the surface colour with a
+`--pspad-line` bottom border, 16px side padding (4px on the left when a back
+button shows) and a 12px gap; `MudMainContent`'s top padding follows the
+same token, and the pull-to-refresh indicator sits 10px under the bar. Left to right: a back `MudIconButton` (`ArrowBack`) when the
+current `PageHeading` set a `BackHref`; the page icon tile when the page has
+one (`PageIcon`, 36px, radius 10px); the page title (18px, weight 600,
+`TextPrimary`, one line with an ellipsis) over an optional subtitle (12.5px,
+`TextSecondary`, one line with an ellipsis — a list screen shows its area's
+name and open-task count); `ConnectionStatus` (a `CloudOff` icon with a tooltip, nothing while healthy; offline is confirmed by `/health`, `adr/0058`); `SyncButton WithStamp` (a `Sync` icon button, spinning while a sync runs, red after a
+failed one, disabled offline; its tooltip and `aria-label` carry the stamp text); a 36px
+`MudAvatar` in a 44px button that opens `AccountDrawer`. Every icon button in
+the bar is 44px. Title, subtitle and icon come from
 `State/PageHeader.cs`, a scoped service `PageHeading` writes to on every
 parameter set, so the phone and desktop titles cannot drift.
 
@@ -253,7 +276,7 @@ lives in the tooltip of the top bar's `SyncButton` (see above), and
 comes from `ISyncStatus.LastSyncedAt` (`SyncCoordinator`), set only when a
 sync reached the server and kept in the replica's `meta` store so a cold,
 offline start still shows it; `ClearAsync` purges it with the rest.
-Settings → Sync shows a status line ("Syncing…", "Couldn't sync." in the error colour, "N pending" or "Everything is synced."), "Last synced …" (re-read every 30 seconds) and a labelled `SyncButton` ("Sync now"). Every `SyncButton` turns `Color.Error` after a failed sync.
+Settings → Sync (`id="sync"`) shows a status line ("Syncing…", "Couldn't sync." in the error colour, "N pending" or "Everything is synced."), "Last synced …" (re-read every 30 seconds), the messages of the last rejected changes when there are any, and a labelled `SyncButton` ("Sync now"). Every `SyncButton` turns `Color.Error` after a failed sync.
 Below `md`, `Layout/PullToRefresh.razor` (mounted once in `AppShell`,
 `wwwroot/js/pullrefresh.js`) is the refresh path: dragging down 80px from the
 top of the page, with no panel, dialog or drawer open, runs the same sync;
@@ -274,12 +297,46 @@ Below `md`, the avatar in `MobileTopBar` opens `Layout/AccountDrawer.razor`
 v3"), the same footer component the permanent sidebar uses. Navigating
 closes the drawer.
 
-**New version prompt.** When a deployed build's service worker has installed
-and is waiting, `AppShell` shows one `Severity.Info` snackbar — "A new version
-of PSPad is available." — with a `Reload` action and a close icon. It needs
-interaction and never times out. Reload activates the waiting worker and
-reloads the page; closing it leaves the old version running until every tab
-closes (`adr/0040`).
+**Status belts.** The app's own state — a new version ready, the server
+unreachable, changes the server rejected — shows as a belt, never a toast.
+`State/StatusBelts.cs` (scoped) holds at most one belt per
+`BeltKind { Update, Offline, Rejected }`, newest first; `Show` replaces a
+kind's belt and moves it to the top, `Dismiss` hides it until `Clear` says
+that state ended, after which the next `Show` appears again.
+`Layout/StatusBeltStack.razor` renders them in `MudMainContent` before the
+page container, in flow, so they push the page down and never cover it: a
+`MudAlert` (`Variant.Text`, `Dense`, `role="status"`, the severity's icon)
+holding the text (13.5px), an optional text action (13px, 600) and a
+`Dismiss` ✕ icon button. Ground is the severity colour mixed 14% into the
+page background, text is `TextPrimary`, icon and action are the severity
+mixed 60% into `TextPrimary`, the ✕ is `TextSecondary` (`PSPadThemeTests`
+checks text and action ≥ 4.5:1 and the ✕ ≥ 3:1, light and dark; status
+colours, text and background do not follow the accent). Desktop (md+): 24px inset like the content, 8px
+between belts, radius 10px, 12px above the page heading. Phone: directly
+under `MobileTopBar`, edge to edge, no radius, a `--pspad-line` bottom
+border.
+
+| Kind | Severity | Text | Action | Ends |
+|------|----------|------|--------|------|
+| Update | Info | "A new version of PSPad is ready." | Reload — activates the waiting service worker and reloads (`adr/0040`) | never; ✕ leaves the old version running until every tab closes |
+| Offline | Warning | "Can’t reach the server — working from local data. Changes sync when you’re back." | Retry — `SyncNowAsync` | `ServerReachability` reachable again clears it |
+| Rejected | Error | "1 change couldn’t be saved." / "N changes couldn’t be saved." | Details — `/settings#sync` | never by itself; every newly rejected command (by command id) reopens it, even after a dismiss and even with the same reason; a domain rejection still queued and rejected again on the next sync stays dismissed |
+
+`AppShell` raises Update and Offline; `SyncCoordinator` raises Rejected and
+keeps the messages of the last sync that had rejections in `ISyncStatus.LastRejections` (a clean sync keeps them), which the
+Settings Sync card (`id="sync"`) lists under "Couldn’t be saved".
+`PublicLayout` shows neither state, so it has no stack.
+
+**Small messages.** One action's outcome ("Couldn't star the item.",
+"Copied", "Snapshot published. Link copied.") stays an `ISnackbar` message,
+configured once in `Program.cs` through `Theme/SmallMessages.cs` so both
+layouts share it: one at a time (`MaxDisplayedSnackbars = 1`,
+`NewestOnTop`, `PreventDuplicates`), 4 s, a close icon, 150 ms in and out,
+`Variant.Text` on an opaque `--pspad-message-ground` (white light, `#2C2C2C`
+dark), `TextPrimary` 13px, radius 10px, the icon in the severity colour.
+`BottomCenter`: on phones 16px above the 72px bottom nav, on desktop moved
+to the bottom left of the content (past the open sidebar). App state never
+goes through a snackbar.
 
 ---
 
@@ -292,29 +349,122 @@ message — a screen must never show an empty state it has not verified.
 
 **Title pattern.** A page's title is `<PageHeading Title="…" />`
 (`Components/PageHeading.razor`), with `BackHref`, `BackLabel`, `BackClass`,
-`Subtitle` and `Adornment` as needed, rendered both in the loading and
-loaded branches so nothing jumps on load. It draws the old `h5` markup
-(`MudText Typo.h5 Color.Primary mb-4`, with the back `MudIconButton` when
-`BackHref` is set — a screen nested under another, such as a list under
-its area, links back to the parent screen) inside `d-none d-md-flex` on
-desktop, and feeds the phone top bar (`MobileTopBar`, via `PageHeader`) the
-same title, subtitle and back link below `md`. One component means the two
-cannot drift. A page's loading branch renders `<PageHeading Title="" />`
+`Subtitle` and `Icon` as needed, rendered both in the loading and
+loaded branches so nothing jumps on load. Desktop row, `align-items: center`:
+[back] [icon tile] [title over subtitle] … sync stamp and Sync button, on
+the page background (no band), 14px gaps. The desktop row lines up with
+the sidebar's `AccountBadge`: the badge's avatar row starts 28px from the
+top (the nav's 12px padding plus the badge's 16px) and is 40px high, so
+its centre is at 48px. The heading row starts 24px into the page (the
+container's `pt-md-6`), is 48px high (`.pspad-page-heading { min-height:
+48px }`) with its items centred — the 40px tile spans the avatar's 28–68px
+and, with a subtitle, the title's centre meets the account name's (~38px).
+The page content starts 20px under the row (`mb-5`). The
+title is the page's one `h1` (`MudText Typo.h5 HtmlTag="h1"`, 20px,
+line-height 1.15, `TextPrimary`, weight 600, `pspad-page-title`); the back `MudIconButton`
+shows when `BackHref` is set — a screen nested under another, such as a list
+under its area, links back to the parent screen. `Icon` (a MudBlazor icon
+path) renders in `Components/PageIcon.razor`: a `pspad-page-icon` tile, 40px,
+radius 12px, `--pspad-tint`, primary icon, `aria-hidden`. The title and
+`Subtitle` (`pspad-page-subtitle`, 12.5px, `TextSecondary`, 2px under the
+title) stack in one column (`pspad-page-heading-text`). It sits inside
+`d-none d-md-flex` on desktop and feeds the phone top bar (`MobileTopBar`,
+via `PageHeader`) the same title, subtitle, icon and back link below `md`.
+The Area board passes `Icons.Material.Outlined.Folder` (Shared with me:
+`People`) and an `AreaSummary` subtitle (below); the list screen passes its
+`ListIcon.For(list)` with `IconLabel` `ListIcon.LabelFor(list)` (a
+visually hidden `pspad-sr-only` span in the `h1`, since the tile is
+`aria-hidden`) and "{area} · {m} open task(s)" (a reference list: the
+area alone); the goal screen passes `Flag`; Settings passes `Settings` with the subtitle "Account, appearance and sync"; other screens have no icon.
+Counts are singular for one, plural otherwise, and zero open tasks reads
+"no open tasks" (`OpenTaskCount`): "1 list · no open tasks", "1 list · 1
+open task", "2 lists · 2 open tasks". Open tasks are the ones a card counts:
+not deleted, not completed, not ended. One component means the two cannot
+drift. The area subtitle (`AreaSummary`) depends on the list kinds: task
+lists only, "{n} list(s) · {m} open task(s)" ("· no open tasks" at zero);
+reference lists only, "{n} reference list(s) · {k} item(s)" ("· no items"
+at zero); both, "{n} lists · {m} open task(s) · {k} item(s)" with n every
+list, a zero part left out, except "no open tasks" stays when there are no
+items either ("2 lists · 4 items", "2 lists · no open tasks"). Items are the
+reference lists' items that are not deleted. A page's loading branch renders `<PageHeading Title="" />`
 so the top bar never keeps the previous screen's title.
 
-**My Day sections.** Top to bottom: **Overdue** (`Color.Error` heading),
-**Today**, **Starred**, **Tomorrow**, **Goals in progress**, then one `MudExpansionPanels`
-holding **Completed (N)** and **Upcoming (N)**, both collapsed by default.
-Every section hides when empty, except Today, which says "Nothing due
-today." when Overdue is empty too. Each task is its own outlined
-`MudPaper` card in a `MudItem`, sized to its content like the goal cards,
-never rows inside one shared paper. Upcoming groups its rows under a muted
-caption per day (`DueDateRow.Describe`). Membership comes from
-`TodayRule.Plan`, never from the page. Upcoming's reach is per task: its
-lead time, one week by default (`adr/0053`). A recurring row ahead of today
-ticks the occurrence on its own day, not today's. Goals in progress are
-`GoalSummaryCard`s ordered by due date, undated last, and open the goal
-screen `/goals/{id}`.
+**My Day** shows one day. `PageHeading Title="My Day"` (title … sync stamp
+and sync button, nothing else), then a `WeekStrip` (`Components/WeekStrip.razor`;
+`Day`, `Today`, `DayChanged`, `Busy`) showing the Monday–Sunday week that
+holds the day: a small ‹ (`pspad-week-prev`, "Previous week") and › (`pspad-week-next`,
+"Next week") moving the day by ±7 days, and seven `MudButton`s
+(`pspad-week-day`, `aria-label` "Thu, 8 Oct"), each a column of the weekday
+initial, a circle with the day number (34px; 32px below `md`, so seven
+days and both arrows fit a 360px phone) and a 5px dot when the day is in
+`Busy`. Today's button carries `pspad-week-day-today` and
+`aria-current="date"`, its circle a primary ring; the picked day carries
+`pspad-week-day-picked`, its circle filled primary with contrast text. A
+swipe on the days turns the week: `WeekStrip.SwipeDirection(dx, dy)` gives
+next (swipe left) or previous (swipe right) when the horizontal travel is
+at least 48px and more than the vertical. A **Today** button
+(`pspad-week-today`, outlined, primary) shows only when the day is not today,
+on every width, and a calendar icon button (`pspad-week-pick`, "Pick a
+date") opens a `MudDialog` (the `DueDateRow` pattern) holding a static
+`MudDatePicker`, whose actions are **Today** and **Cancel**; picking a day
+closes it.
+
+On desktop the strip is an outlined `MudPaper` across the content width
+under the heading: the arrows and days, then at its right
+`DueDateRow.Describe` of the day ("Today · Thu, 8 Oct" for Today, Tomorrow
+and Yesterday, else just "Fri, 16 Oct") over a muted "Week 41 · October
+2026" (ISO week), then Today and the calendar button. Between 960 and
+1100px the label block is hidden so the strip never overflows; the picked
+circle still names the day. Everything the strip renders (labels, month,
+aria-labels, weekday initials) is formatted in the invariant culture; only
+the words Today, Tomorrow and Yesterday come from `DueDateRow.Describe`.
+Below `md` it is a bar directly under `MobileTopBar`, full width with no
+side margins and a bottom border only: a header row with the picked day's
+"October 2026" and the Today/calendar buttons, the days below it.
+
+`Busy` is computed on the page from the already loaded tasks: each day of
+the visible week whose `TodayRule.Plan` has a Scheduled or any-time entry,
+or Overdue when the day is today. Past days are never busy, since their
+plan holds only Completed.
+
+The day lives in the URL as `/?day=yyyy-MM-dd`; `/` is today and a
+malformed `day` falls back to today. Arrows, days, swipes and the picker navigate with
+`replace: false`, so Back steps through visited days. `TaskQuery.For` and
+`Without` keep `day` (opening a task gives `?day=…&task=…`, closing the
+panel keeps the day); `ForNewTask` does not.
+
+Sections, top to bottom, each hidden when empty:
+
+1. **Overdue** (`Color.Error` heading) — today only.
+2. **Schedule** (`Color.Primary` heading) — tasks with a time, one column,
+   max 760px: a time gutter, then the `TaskRow` card. Desktop gutter 132px,
+   `09:30–11:00` on one line (`nowrap`); below `md` 52px, start over end.
+   An overnight time (end before start) adds a muted `(+1)`
+   (`pspad-schedule-nextday`) after the end on desktop, under it in a smaller
+   size below `md`; the task stays on its start day, ordered by start. Overlapping
+   tasks simply follow each other. `TaskRow` there hides its own time.
+3. **{Day}, any time** — "Today, any time", "Tomorrow, any time", "Fri, 9
+   Oct, any time" (`DueDateRow.Describe`): the untimed tasks in the card
+   grid. When Schedule and this section are both empty (and Overdue on
+   today) it stays with "Nothing planned for today." / "…for Fri, 9 Oct."
+4. **Starred** — `SectionHeading` with `Hint` "· when you have time"; card grid.
+5. **Coming up** — today only; card grid grouped under a muted caption per
+   day (`DueDateRow.Describe`), shown open.
+6. **Completed (N)** — a collapsed `MudExpansionPanel` on today and future
+   days. On a past day it is the only section, a plain open section with
+   "Nothing completed on Wed, 7 Oct." when empty.
+
+Each task is its own outlined `MudPaper` card in a `MudItem`, sized to its
+content, never rows inside one shared paper. Membership comes from
+`TodayRule.Plan`, never from the page. Coming up's reach is per task: its
+lead time, one week by default (`adr/0053`). The goals summary is not on
+the page (`GoalSummaryCard` stays for the goal screens).
+
+Ticking: a recurring row ticks the occurrence on the day shown (a Coming up
+row, its own day). A one-time row completes now, so a future task ticked
+from its day lands in today's Completed. The page re-plans on
+`SyncRevision` and on day change; the sidebar's My Day count stays today's
+`Select`.
 
 **Goal screen.** `/goals/{goalId}` mirrors the list screen: back arrow to
 `/goals`, the goal's name as title with a small outlined status `MudChip`
@@ -355,27 +505,52 @@ it from the `GoalProgress` weeks.
 **Shared row/card components, never duplicated per screen.** One
 `TaskRow` renders in My Day, list cards, the list screen and search
 results. One `ListCard`, one `GoalCard`, one `InboxItemCard`. `ListCard` and
-`GoalCard` are thin wrappers over one `ThingCard` — collapse arrow, title
+`GoalCard` are thin wrappers over one `ThingCard` — icon tile, title
 link, open count, `⋯` menu, at most five open `TaskRow`s and a
-**Show all (N)** link to the thing's own screen — and differ only in their
+**Show all N** link to the thing's own screen — and differ only in their
 header extras and row caption: a goal card's rows name their list. The
-card's body sits in a `MudCollapse`, so collapsing and expanding animate
-its height and the cards below slide with it. A single component per
+header's 30px icon tile (radius 9px, `--pspad-tint`, primary icon) is the
+collapse toggle: a button with `aria-expanded` and `aria-label` "Collapse
+{name}" / "Expand {name}" (no chevron). The name stays the link to the
+list, `TextPrimary`, 14.5px, medium. The count is a muted pill
+(`--pspad-hover`, `TextSecondary`, 11px) showing the number alone, followed
+by a visually hidden " open" (`pspad-sr-only`), so it reads "N open". The `+` and `⋯` actions are 28px, radius 8px,
+`TextSecondary`. There is no divider under the header or above **Show all
+N**, a primary text link at 12.5px. The card's body sits in a
+`MudCollapse`, so collapsing and expanding animate its height and the
+cards below slide with it. A task card with no open tasks and no
+`EmptyText` shows a muted row (`pspad-card-empty`): "No open tasks · " and
+an **Add one** text button (`pspad-card-empty-add`, `aria-label` "Add a task
+to {name}") raising `OnAdd`; the " · " is its own `aria-hidden` span drawn
+only with `OnAdd` —
+`ListCard` passes its header `+` callback, `OnAddTaskClick`. With no `OnAdd`
+the row reads "No open tasks" alone; a card with `EmptyText` (a goal card,
+an empty reference list) shows that text instead. A single component per
 concept means a rule like never-overdue-for-recurring-tasks cannot drift
 between the screens that display it.
 
 **One row shape.** `TaskRow`, `ReferenceRow` and `InboxItemCard` share it,
 so every row and card is the same height wherever it appears — My Day, the
-list and goal screens, the Inbox and area-board cards (`pspad-row`, 60px):
-- A 40px leading slot: the task's checkbox, or a muted icon (bookmark for a
-  reference item, inbox tray for an Inbox item) so names line up.
+list and goal screens, the Inbox and area-board cards (`pspad-row`, 60px).
+Rows carry no dividers: spacing separates them, and a row inside a card has
+an 8px radius and `--pspad-hover` on hover. The name is `TextPrimary`, 14px;
+the second line 11.5–12px `TextSecondary` (the time keeps primary and medium
+weight, an overdue date keeps the error colour); the star is
+`TextSecondary` unstarred, primary filled when starred. `ReferenceRow` gets
+the same row, star and meta treatment.
+- A 40px leading slot: the task's round checkbox (`RadioButtonUnchecked` in
+  `ActionDefault`, `CheckCircle` in primary when checked), or a muted icon
+  (bookmark for a reference item, inbox tray for an Inbox item) so names
+  line up.
 - The name on one line, cut with an ellipsis, the full name as its `title`.
 - A second line only when there is something to show; without one the name
   centres vertically in the same fixed height. It never wraps: what does
   not fit is clipped.
 - Only the star on the right (none on an Inbox card).
 
-A task's second line runs, in this order: due date (red when overdue,
+A task's second line runs, in this order: the time (`TimeRow.Describe`:
+`09:30–11:00`, `09:30` without an end, `22:00–01:00 (+1)` overnight; `Color.Primary`, medium weight; hidden in My Day's
+Schedule, whose gutter shows it), due date (red when overdue,
 "Until 12 Oct" on a repeat), step progress (checklist icon and `0/4`), the
 repeat icon, the description icon, the priority dot, then the list name
 where the screen passes one (My Day, goal screen and goal cards). Each
@@ -406,7 +581,7 @@ same panel in its new-task mode, addressed as `?task=new&list={listId}`
 (`TaskQuery.ForNewTask`) — never an inline field or a dialog.
 
 **Detail panels share one shell.** `Components/DetailPanel.razor` is the
-only right-anchored detail drawer: 360px from `md` up, full width below it.
+only right-anchored detail drawer: 420px from `md` up, full width below it.
 Below `md` the drawer's height and top follow `window.visualViewport`
 (the `--pspad-visible-height`/`--pspad-visible-top` variables set in
 `index.html`, with `interactive-widget=resizes-content` on the viewport
@@ -476,6 +651,27 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      shows its last seven occurrences as chips under the row, then a muted
      tally caption: "Not done yet", "Done N times", or "Done N times · M in
      a row" (`RepeatTally`).
+   - **Time** (`TimeRow`, `pspad-task-time`, under Due/Until; shown when
+     Due/Until is set or the task repeats, like Remind me) — the clock icon
+     and "Time" label on the left (`pspad-time-head`), and on the right two
+     stacked rows (`pspad-time-line`): **From** and **To** labels (12.5px,
+     `TextSecondary`, 40px wide) each followed by a 24-hour outlined, dense,
+     typeable `MudTimePicker` filling the rest of the row, `aria-label`
+     Start / End (`pspad-time-start`, `pspad-time-end`), ending in a
+     `Schedule` adornment icon that opens the picker (MudBlazor 9.9 has no
+     open-on-click for an editable picker, so the icon is the click target
+     and the field stays for typing). The From row sits on the Time line,
+     its field starting in the value column like Due's "Tomorrow"; the To row
+     appears under it, same column and width, only once Start has a value. A ✕ (`pspad-property-clear`, `Size.Small`, the shared
+     `PropertyRow` clear) on the From row clears both and lines up with
+     Due's ✕; with no time an empty placeholder of its width keeps the
+     column, and the To row keeps the same right inset. The layout is the
+     same at every width — no stacking on phones. End equal to Start shows
+     "End must differ from start" under the row and sends nothing; an End
+     before Start is sent and shows a muted "Ends the next day (+1)" under
+     the row. Edit
+     mode sends `SetTaskTime` on each valid change; Add keeps it in
+     `TaskDraft.Time`, sent after `SetTaskDueDate`.
    - **Remind me** (`LeadTimeRow`, `pspad-task-lead`, after Due/Until;
      on a one-time task only once it has a due date, since it counts back
      from one) —
@@ -484,8 +680,8 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      colour; a set value ("3 days before") carries a ✕. In Add the draft's
      lead time is sent as `SetTaskLeadTime` after the due date. The menu and
      the Custom dialog both open with a muted caption (`pspad-lead-hint`)
-     saying the value sets how early the task shows in Upcoming and that it
-     still moves to Today on its due date.
+     reading "How early the task shows in Coming up on My Day. On its due date
+     it moves to Today as usual."
    - **Priority** — the four fixed levels with coloured dots.
    - **Goal** — the user's goals.
    - **List** (outside Add) — lists grouped under area headings; picking
@@ -537,8 +733,8 @@ by due date, undated last. A card shows "Due …" on its own line under the
 name, in `Color.Error` once the date has passed. A card's `⋯` menu offers
 the two closing statuses.
 - **Sections:** Achieved and Not achieved goals get their own always-visible
-  sections below. Each section heading is a `Typo.h6` title with a muted
-  count and a `MudDivider` under it, with no icons. An "In progress" heading
+  sections below. Each section heading is a `SectionHeading` with a count
+  pill and no icons. An "In progress" heading
   appears once any goal is closed.
 - **Summaries:** closed goals render as `GoalSummaryCard`, not `GoalCard`.
   It is an outlined paper with a status-coloured left accent (success or
@@ -723,8 +919,12 @@ live reads "No live links. Published copies show up here." A custom date resolve
 the end of that day in the user's own time zone, not UTC midnight.
 
 **`SnapshotMarkChip`** — a small outlined `MudChip`, "Marked on a
-snapshot" — renders on a task, step or reference item's row and in its
-panel whenever it carries at least one snapshot mark. The panel offers
+snapshot" — renders in a task, step or reference item's panel whenever it
+carries at least one snapshot mark. On a task or reference item's row it is
+`Compact`: one icon-only chip (`pspad-snapshot-mark-compact`, 20px high,
+`aria-label`/`title` "Marked on a snapshot") shown once however many marks
+the task or any of its steps carries. The public snapshot page's logo box is
+`pspad-snapshot-brand`, never the chip's class. The panel offers
 **Dismiss**, sending `ClearTaskSnapshotMarks` or
 `ClearReferenceItemSnapshotMarks`; completing the task itself is a
 separate, deliberate action the chip never triggers.
@@ -858,8 +1058,9 @@ still closes, since the item exists. The draft resets when the target list chang
 the panel closes.
 
 **Panel subsections share `PanelSection`.** `Components/PanelSection.razor`
-is a `MudDivider` followed by a muted `Typo.overline` title
-(`pspad-panel-section-title`) over its content, with `px-3` padding. It
+is a `MudDivider` (`--pspad-line`) followed by a `SectionHeading`
+(`pspad-panel-section-title`, the same caption style as page sections, not
+overline or uppercase) over its content, with `px-3` padding. It
 heads "Description" in both panels and "Labels" in the reference panel.
 
 **Descriptions are a shared `MarkdownField`, on tasks and reference items
@@ -1020,6 +1221,67 @@ change and the `MudThemeProvider` takes `ThemePreference.Theme`.
 (primary on every ground, text on a filled accent, drawer and appbar text),
 3:1 for lines and drawer icons. A new preset that fails these does not ship.
 
+**Surface tokens.** `wwwroot/css/app.css` defines CSS custom properties on
+`:root`, overridden under `[data-theme="dark"]` on `<html>`. `index.html` sets
+`data-theme` before Blazor boots so the first paint is right;
+`ThemePreference` resets it to the effective mode on every initialise
+(including an OS flip in System mode) and every mode change, so the tokens
+follow a switch without a reload:
+
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--pspad-line` | `rgba(0,0,0,.08)` | `rgba(255,255,255,.07)` | card and panel edges, dividers |
+| `--pspad-line-strong` | `rgba(0,0,0,.16)` | `rgba(255,255,255,.14)` | 2× `--pspad-line`; the empty state's dashed border |
+| `--pspad-hover` | `rgba(0,0,0,.04)` | `rgba(255,255,255,.04)` | row hover, count pills, inactive chips |
+| `--pspad-tint` | primary at 12% over transparent | same | selected and active fills, icon tiles (the sidebar's active link) |
+| `--pspad-raised` | `#FFFFFF` | `#1B1B1B` | card surface |
+| `--pspad-card-shadow` | `0 1px 2px rgba(0,0,0,.06)` | `0 1px 2px rgba(0,0,0,.3)` | card elevation |
+
+`PSPadTheme.LightRaised` and `DarkRaised` hold the raised values in C# so the
+contrast tests can use them; a test keeps them in sync with `app.css`.
+`LayoutProperties.DefaultBorderRadius` is 12px.
+
+**Decorative lines are exempt from the 3:1 rule.** `LinesDefault`,
+`TableLines` and the divider colour keep their 3:1 line: inputs, checkboxes
+and toggles must stay identifiable. `--pspad-line` is only for card edges,
+panel edges and dividers, which are told apart by surface and spacing, so it
+is exempt. Text and icons keep 4.5:1 / 3:1, asserted for every preset and
+awkward custom accent, light and dark, in `PSPadThemeTests`:
+- selected chip or toggle text, `TextPrimary` on `--pspad-tint`: 4.5:1;
+- round checkbox outline, `ActionDefault` on `--pspad-raised`: 3:1;
+- unstarred star, `TextSecondary` on `--pspad-raised`: 3:1;
+- muted meta text, `TextSecondary` on `--pspad-raised`: 4.5:1.
+
+**Surfaces.** Every `MudPaper Outlined="true"` is `--pspad-raised` with a
+`1px solid var(--pspad-line)` border, 12px radius and `--pspad-card-shadow`.
+Clickable cards (`pspad-day-task`, `pspad-task-card`, `pspad-goal-card`,
+`pspad-inbox-card`) take a stronger border on hover and on keyboard focus
+(`:focus-visible`, or a focused control inside); `.pspad-row` likewise takes
+`--pspad-hover` on hover and on keyboard focus within. Inside a `MudDrawer`
+outlined papers and expansion panels sit on `--mud-palette-surface` with no
+shadow, so they do not look sunken below the drawer. `MudExpansionPanels`
+(a list's Completed, a goal's Completed, Today's Completed, the Statistics
+feed) is one rounded card with a soft border and no hard rules; `MudDivider`
+inside cards and panels uses `--pspad-line`. Outlined inputs are 10px radius;
+`MudButton` (not icon buttons) and `MudChip` are pills (`999px`), except the
+`WeekStrip` day buttons (12px) and the card's "Show all" text link. More
+specific rules outrank the card look: the phone `WeekStrip` stays edge to
+edge (no radius, bottom border only, no shadow) and `GoalSummaryCard` keeps
+its hover and focus wash. The card icon tile deepens its tint to 20% on hover
+and shows a 2px primary outline on keyboard focus.
+
+**Chips and toggles.** `AreaChips` are pill chips without outline: the
+current area `--pspad-tint` with `TextPrimary` and medium weight, the rest
+`--pspad-hover` with `TextSecondary`, "New area" a text-style primary chip.
+`MudToggleGroup` (list kind, task kind One-time / Repeating, Statistics days,
+snapshot days) is a pill whose selected item is `--pspad-tint` with
+`TextPrimary`.
+
+**Panel rows and empty states.** The `PropertyRow` activator has an 8px
+radius and `--pspad-hover` on hover. `EmptyState` puts its icon in a 48px
+circle of `--pspad-tint`; the dashed border uses `--pspad-line-strong` so it
+still reads as a target.
+
 Theme mode (**System / Light / Dark**) and accent are per device, held in
 `localStorage` (`pspad.theme`, `pspad.accent`, `pspad.accent.custom`) via
 `ThemePreference` — never on the `User` aggregate. A custom colour is kept
@@ -1046,8 +1308,9 @@ typing.
 
 | Typo | Use |
 |---|---|
-| `Typo.h5` | page title, `Color.Primary` |
-| `Typo.subtitle2` | card/section header (list name, goal name) |
+| `Typo.h5` as `h1` | page title, 20px, `TextPrimary`, weight 600, with a muted 12.5px subtitle under it |
+| `Typo.h6` as `SectionHeading` | section heading: 13px, weight 600, `h2`, count as a muted pill |
+| `Typo.subtitle2` | card header link (list name, goal name), 14.5px medium |
 | `Typo.body1` / `Typo.body2` | primary row/card content |
 | `Typo.caption` | metadata (due date, counts, timestamps) |
 
@@ -1093,6 +1356,16 @@ not a page to recreate speculatively) and no dropdown on the account badge.
 Below `md` there is no sidebar: phones navigate through `MobileTopBar` and
 `BottomNav` instead, with the sidebar's account badge, Settings, App info
 and footer moved into `AccountDrawer` (`adr/0050`).
+
+At `md`+ the sidebar is still `MudNavMenu`/`MudNavLink`, styled through a
+`pspad-nav` class: 12px padding inside the drawer, links with an 8px radius
+and 2px gap, outlined icons (`Icons.Material.Outlined.*`), counts as a
+right-aligned muted number (not in the label) and a muted "Areas" caption
+above the areas group. The active link is tinted with the primary at 12%
+(`color-mix` on `--mud-palette-primary`, so every accent and dark mode
+follow) at medium weight; its text uses `--mud-palette-text-primary` and
+only its icon is primary, to hold the 4.5:1 contrast rule on the tint
+(`PSPadThemeTests.TheActiveSidebarLinkReadsOnItsTint`).
 
 **Routes:**
 

@@ -27,18 +27,18 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
 
     public async Task<SyncOutcome> SyncAsync(CancellationToken ct)
     {
-        var (pushed, rejections) = await PushAsync();
+        var (pushed, rejections, rejectedCommands) = await PushAsync();
         var pulled = await PullAsync(ct);
 
-        return new SyncOutcome(pushed, pulled ?? 0, rejections, pulled is not null);
+        return new SyncOutcome(pushed, pulled ?? 0, rejections, rejectedCommands, pulled is not null);
     }
 
-    async Task<(int Pushed, IReadOnlyList<string> Rejections)> PushAsync()
+    async Task<(int Pushed, IReadOnlyList<string> Rejections, IReadOnlyList<Guid> RejectedCommands)> PushAsync()
     {
         var batch = await outbox.PeekAsync(BatchSize);
         if (batch.Count == 0)
         {
-            return (0, []);
+            return (0, [], []);
         }
 
         var responses = await api.SendAsync(batch.Select(entry => entry.Envelope).ToArray());
@@ -61,8 +61,12 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
             await outbox.RemoveThroughAsync(batch[removeThrough].Position);
         }
 
-        var rejections = rejected?.Rejection is { } reason ? new[] { reason } : Array.Empty<string>();
-        return (accepted, rejections);
+        if (rejected?.Rejection is not { } reason)
+        {
+            return (accepted, [], []);
+        }
+
+        return (accepted, [reason], [batch[accepted].CommandId]);
     }
 
     public static string CollectionsFingerprint { get; } =

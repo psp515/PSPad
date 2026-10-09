@@ -38,7 +38,8 @@ else if (_isShared || _area is not null)
         <AreaChips Areas="@_areas" Current="@AreaId" HasShared="@_hasShared" />
     </div>
 
-    <PageHeading Title="@(_isShared ? SharedWithMe.Name : _area!.Name)" />
+    <PageHeading Title="@(_isShared ? SharedWithMe.Name : _area!.Name)" Subtitle="@Summary"
+                 Icon="@(_isShared ? Icons.Material.Outlined.People : Icons.Material.Outlined.Folder)" />
 
     @if (_lists.Count == 0)
     {
@@ -170,6 +171,21 @@ else
             await Remembered.RememberAsync(AreaId);
         }
     }
+
+    string Summary
+    {
+        get
+        {
+            var referenceLists = _lists.Count(list => list.Kind == ListKind.Reference);
+            return AreaSummary.Describe(_lists.Count - referenceLists, referenceLists, OpenTasks, Items);
+        }
+    }
+
+    int Items => _items.Count(item =>
+        !item.Deleted && _lists.Any(list => list.Id == item.ListId && list.Kind == ListKind.Reference));
+
+    int OpenTasks => _tasks.Count(task =>
+        !task.Deleted && task.CompletedAt is null && !task.EndedBy(State.Today) && _lists.Any(list => list.Id == task.ListId));
 
     IReadOnlyList<TodoTask> TasksOf(Guid listId) => [.. _tasks.Where(task => task.ListId == listId)];
 

@@ -22,7 +22,7 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-builder.Services.AddMudServices();
+builder.Services.AddMudServices(config => SmallMessages.Configure(config.SnackbarConfiguration));
 
 builder.Services.AddOidcAuthentication(options =>
 {
@@ -97,6 +97,7 @@ builder.Services.AddScoped<LastArea>();
 builder.Services.AddScoped<ReplicaSearch>();
 builder.Services.AddScoped<SidebarCounts>();
 builder.Services.AddScoped<PageHeader>();
+builder.Services.AddScoped<StatusBelts>();
 builder.Services.AddScoped<StatisticsCache>();
 builder.Services.AddScoped<IStatisticsSource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());

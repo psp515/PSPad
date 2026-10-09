@@ -71,6 +71,7 @@
 
             @if (Repeats || DueOn is not null)
             {
+                <TimeRow Value="@Time" ValueChanged="@TimeAsync" Disabled="@Disabled" />
                 <LeadTimeRow Value="@LeadTime" ValueChanged="@LeadTimeAsync" Disabled="@Disabled" />
             }
 
@@ -181,6 +182,8 @@
 
     RecurrenceRule? Recurrence => _task is null ? _draft.Recurrence : _task.Recurrence;
 
+    TaskTime? Time => _task is null ? _draft.Time : _task.Time;
+
     LeadTime? LeadTime => _task is null ? _draft.LeadTime : _task.LeadTime;
 
     bool Repeats => Recurrence is not null;
@@ -280,6 +283,11 @@
         if (_draft.DueOn is { } due)
         {
             await Sender.SendAsync(new SetTaskDueDate(Guid.NewGuid(), State.UserId, taskId, due));
+        }
+
+        if (_draft.Time is { } time)
+        {
+            await Sender.SendAsync(new SetTaskTime(Guid.NewGuid(), State.UserId, taskId, time));
         }
 
         if (_draft.LeadTime is { } lead)
@@ -435,6 +443,23 @@
         await ReloadAsync();
     }
 
+    async Task TimeAsync(TaskTime? time)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_task is null)
+        {
+            _draft.Time = time;
+            return;
+        }
+
+        await Sender.SendAsync(new SetTaskTime(Guid.NewGuid(), State.UserId, _task.Id, time));
+        await ReloadAsync();
+    }
+
     async Task LeadTimeAsync(LeadTime? lead)
     {
         if (Disabled)
@@ -570,6 +595,8 @@
         public DateOnly? DueOn { get; set; }
 
         public RecurrenceRule? Recurrence { get; set; }
+
+        public TaskTime? Time { get; set; }
 
         public LeadTime? LeadTime { get; set; }
 
