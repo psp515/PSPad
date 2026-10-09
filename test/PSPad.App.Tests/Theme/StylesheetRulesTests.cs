@@ -210,6 +210,48 @@ public partial class StylesheetRulesTests
     public void EachTimePickerFillsTheRestOfItsRow() =>
         Assert.Contains("flex: 1 1 auto", Declarations(".pspad-time-line .pspad-time-input"));
 
+    [Fact]
+    public void StatusBeltsStackInFlowSoTheyPushThePageDown()
+    {
+        var stack = Declarations(".pspad-belts");
+
+        Assert.Contains("display: flex", stack);
+        Assert.Contains("flex-direction: column", stack);
+        Assert.DoesNotContain("position: fixed", stack);
+        Assert.DoesNotContain("position: absolute", stack);
+    }
+
+    [Fact]
+    public void OnTheDesktopBeltsAreRoundedAndSpacedAboveTheHeading()
+    {
+        var stack = DeclarationsInMedia("min-width: 960px", ".pspad-belts");
+        var belt = DeclarationsInMedia("min-width: 960px", ".pspad-belt.mud-alert");
+        var below = DeclarationsInMedia("min-width: 960px", ".pspad-belts + .pspad-content");
+
+        Assert.Contains("gap: 8px", stack);
+        Assert.Contains("padding: 24px 24px 0", stack);
+        Assert.Contains("border-radius: 10px", belt);
+        Assert.Contains("padding-top: 12px !important", below);
+    }
+
+    [Fact]
+    public void OnAPhoneBeltsRunEdgeToEdgeUnderTheTopBar()
+    {
+        var belt = DeclarationsInMedia("max-width: 959.98px", ".pspad-belt.mud-alert");
+
+        Assert.Contains("border-radius: 0", belt);
+        Assert.Contains("border-bottom: 1px solid var(--pspad-line)", belt);
+    }
+
+    [Fact]
+    public void ABeltWritesInBodyTextOnItsTint()
+    {
+        var belt = Declarations(".pspad-belt.mud-alert");
+
+        Assert.Contains("color: var(--mud-palette-text-primary)", belt);
+        Assert.Contains("background-color: color-mix(in srgb, var(--pspad-belt-tone) 14%, var(--mud-palette-background))", belt);
+    }
+
     static string Declarations(string selector) =>
         string.Join("\n", Rule().Matches(Css)
             .Where(rule => SelectorsOf(rule).Contains(selector))

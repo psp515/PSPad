@@ -1,0 +1,39 @@
+@using PSPad.App.State
+@inject StatusBelts Belts
+@implements IDisposable
+
+@if (Belts.Visible.Count > 0)
+{
+    <div class="pspad-belts">
+        @foreach (var belt in Belts.Visible)
+        {
+            <MudAlert @key="belt.Kind" Severity="@SeverityOf(belt.Kind)" Variant="Variant.Text" Dense="true"
+                      Class="@($"pspad-belt pspad-belt-{SeverityOf(belt.Kind).ToString().ToLowerInvariant()}")"
+                      role="status">
+                <span class="pspad-belt-text">@belt.Text</span>
+                @if (belt is { ActionText: { } actionText, Action: { } action })
+                {
+                    <MudButton Class="pspad-belt-action" Variant="Variant.Text" Size="Size.Small"
+                               OnClick="@action">@actionText</MudButton>
+                }
+                <MudIconButton Class="pspad-belt-dismiss" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                               aria-label="Dismiss" OnClick="@(() => Belts.Dismiss(belt.Kind))" />
+            </MudAlert>
+        }
+    </div>
+}
+
+@code {
+    static Severity SeverityOf(BeltKind kind) => kind switch
+    {
+        BeltKind.Update => Severity.Info,
+        BeltKind.Offline => Severity.Warning,
+        _ => Severity.Error
+    };
+
+    protected override void OnInitialized() => Belts.Changed += OnChanged;
+
+    void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Belts.Changed -= OnChanged;
+}

@@ -313,6 +313,93 @@ button.pspad-heatmap-cell:focus-visible {
     border-radius: 10px;
 }
 
+.pspad-belts {
+    display: flex;
+    flex-direction: column;
+}
+
+.pspad-belt-info { --pspad-belt-tone: var(--mud-palette-info); }
+.pspad-belt-warning { --pspad-belt-tone: var(--mud-palette-warning); }
+.pspad-belt-error { --pspad-belt-tone: var(--mud-palette-error); }
+
+.pspad-belt.mud-alert {
+    min-height: 48px;
+    align-items: center;
+    padding: 6px 6px 6px 14px;
+    color: var(--mud-palette-text-primary);
+    background-color: color-mix(in srgb, var(--pspad-belt-tone) 14%, var(--mud-palette-background));
+}
+
+.pspad-belt.mud-alert .mud-alert-position {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+}
+
+.pspad-belt.mud-alert .mud-alert-icon {
+    margin-right: 12px;
+    padding: 0;
+    color: color-mix(in srgb, var(--pspad-belt-tone) 60%, var(--mud-palette-text-primary));
+}
+
+.pspad-belt.mud-alert .mud-alert-icon .mud-icon-root {
+    font-size: 18px;
+}
+
+.pspad-belt.mud-alert .mud-alert-message {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    padding: 0;
+}
+
+.pspad-belt-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13.5px;
+    line-height: 1.3;
+}
+
+.pspad-belt .pspad-belt-action.mud-button-root {
+    flex: none;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: none;
+    color: color-mix(in srgb, var(--pspad-belt-tone) 60%, var(--mud-palette-text-primary));
+}
+
+.pspad-belt .pspad-belt-dismiss.mud-icon-button {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    color: var(--mud-palette-text-secondary);
+}
+
+@media (max-width: 959.98px) {
+    .pspad-belt.mud-alert {
+        border-radius: 0;
+        border-bottom: 1px solid var(--pspad-line);
+    }
+}
+
+@media (min-width: 960px) {
+    .pspad-belts {
+        gap: 8px;
+        padding: 24px 24px 0;
+    }
+
+    .pspad-belt.mud-alert {
+        min-height: 44px;
+        border-radius: 10px;
+    }
+
+    .pspad-belts + .pspad-content {
+        padding-top: 12px !important;
+    }
+}
+
 .pspad-top-title {
     display: flex;
     flex-direction: column;

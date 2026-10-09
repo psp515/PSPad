@@ -172,6 +172,58 @@ public class PSPadThemeTests
         Assert.True(Contrast(palette.TextSecondary, wash) >= MinimumTextContrast);
     }
 
+    const double BeltTintShare = 0.14;
+    const double BeltInkShare = 0.6;
+
+    public static TheoryData<string, bool, Severity> EveryPaletteAndBelt()
+    {
+        var data = new TheoryData<string, bool, Severity>();
+        foreach (var accent in PSPadTheme.Presets.Select(preset => preset.ToString()).Concat(AwkwardCustomColours))
+        {
+            foreach (var dark in new[] { false, true })
+            {
+                foreach (var severity in new[] { Severity.Info, Severity.Warning, Severity.Error })
+                {
+                    data.Add(accent, dark, severity);
+                }
+            }
+        }
+
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryPaletteAndBelt))]
+    public void AStatusBeltReadsOnItsTint(string accent, bool dark, Severity severity)
+    {
+        var palette = PaletteOf(accent, dark);
+        var tone = ToneOf(palette, severity);
+        var tint = Mix(tone, palette.Background, BeltTintShare);
+        var ink = Mix(tone, palette.TextPrimary, BeltInkShare);
+
+        Assert.True(Contrast(palette.TextPrimary, tint) >= MinimumTextContrast);
+        Assert.True(Contrast(ink, tint) >= MinimumTextContrast);
+    }
+
+    [Fact]
+    public void TheBeltTintAndInkMatchTheStylesheet()
+    {
+        var css = File.ReadAllText(StylesheetPath());
+
+        Assert.Contains("color-mix(in srgb, var(--pspad-belt-tone) 14%, var(--mud-palette-background))", css);
+        Assert.Contains("color-mix(in srgb, var(--pspad-belt-tone) 60%, var(--mud-palette-text-primary))", css);
+        Assert.Contains("--pspad-belt-tone: var(--mud-palette-info)", css);
+        Assert.Contains("--pspad-belt-tone: var(--mud-palette-warning)", css);
+        Assert.Contains("--pspad-belt-tone: var(--mud-palette-error)", css);
+    }
+
+    static MudColor ToneOf(Palette palette, Severity severity) => severity switch
+    {
+        Severity.Info => palette.Info,
+        Severity.Warning => palette.Warning,
+        _ => palette.Error
+    };
+
     [Fact]
     public void TheRaisedGroundMatchesTheStylesheet()
     {
