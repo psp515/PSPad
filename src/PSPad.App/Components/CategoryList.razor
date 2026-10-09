@@ -1,0 +1,52 @@
+<MudPaper Outlined="true" Class="@($"pa-4 pspad-category-list {Class}")">
+    <div class="d-flex align-center mb-2">
+        <MudText Typo="Typo.subtitle2" Class="flex-grow-1">@Title</MudText>
+        @if (!ReadOnly)
+        {
+            <MudButton Class="pspad-category-add" StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Text"
+                       Color="Color.Primary" OnClick="@(() => _adding = true)">Add</MudButton>
+        }
+    </div>
+    <MudList T="string" Dense="true">
+        @foreach (var name in Names)
+        {
+            <MudListItem T="string" @key="name" Text="@name" />
+        }
+    </MudList>
+    @if (_adding && !ReadOnly)
+    {
+        <MudTextField T="string" @bind-Value="_draft" Immediate="true" AutoFocus="true" Placeholder="New category"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="pspad-category-input mt-2"
+                      OnKeyDown="@KeyDownAsync" />
+    }
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired] public IReadOnlyList<string> Names { get; set; } = [];
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+
+    [Parameter] public EventCallback<string> OnAdd { get; set; }
+
+    bool _adding;
+    string _draft = "";
+
+    async Task KeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            _adding = false;
+            _draft = "";
+        }
+        else if (args.Key == "Enter" && !string.IsNullOrWhiteSpace(_draft))
+        {
+            await OnAdd.InvokeAsync(_draft);
+            _draft = "";
+            _adding = false;
+        }
+    }
+}
