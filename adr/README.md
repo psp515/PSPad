@@ -73,6 +73,8 @@ the old one's status line to point at the new number.
 | [0056](0056-public-snapshots-are-frozen-copies.md) | Public snapshots are frozen copies, served from a new Sharing module | Active | 2026-10-01 | architecture, modularity, domain, persistence, security |
 | [0057](0057-invites-need-a-link-and-a-code.md) | Invites need a link and a code, and expire after 30 minutes | Active (amends [0054](0054-lists-are-shared-by-membership.md)) | 2026-10-05 | security, domain, sync |
 | [0058](0058-offline-is-confirmed-by-the-server.md) | Offline is confirmed by the server, not by the browser's flag alone | Active (amends [0044](0044-the-boot-never-waits-on-the-network.md)) | 2026-10-08 | sync, ui |
+| [0059](0059-money-is-its-own-wasm-safe-module.md) | Money is its own WASM-safe module, with budgets as containers and rates frozen on every amount | Proposed | 2026-10-09 | architecture, modularity, domain, offline, sync, integrations |
+| [0060](0060-budgets-take-the-statistics-slot-and-sidebar-groups-collapse.md) | Budgets take Statistics' bottom-bar slot, and the sidebar's Budgets and Areas collapse | Proposed (amends [0050](0050-phones-navigate-from-a-bottom-bar.md), [0014](0014-one-navigation-tree-at-every-width.md), [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md)) | 2026-10-09 | ui, navigation, mobile |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
