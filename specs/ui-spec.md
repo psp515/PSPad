@@ -375,7 +375,7 @@ The Area board passes `Icons.Material.Outlined.Folder` (Shared with me:
 `ListIcon.For(list)` with `IconLabel` `ListIcon.LabelFor(list)` (a
 visually hidden `pspad-sr-only` span in the `h1`, since the tile is
 `aria-hidden`) and "{area} · {m} open task(s)" (a reference list: the
-area alone); the goal screen passes `Flag`; other screens have no icon.
+area alone); the goal screen passes `Flag`; Settings passes `Settings` with the subtitle "Account, appearance and sync"; other screens have no icon.
 Counts are singular for one, plural otherwise, and zero open tasks reads
 "no open tasks" (`OpenTaskCount`): "1 list · no open tasks", "1 list · 1
 open task", "2 lists · 2 open tasks". Open tasks are the ones a card counts:

@@ -60,6 +60,24 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItsHeaderCarriesAnIconTileAndASubtitleLikeTheAreaScreen()
+    {
+        Arrange(displayName: "Ada Lovelace", email: "ada@example.com");
+
+        var page = Render<SettingsPage>();
+
+        page.WaitForAssertion(() =>
+        {
+            var tile = page.Find(".pspad-page-heading .pspad-page-icon");
+            Assert.Contains(IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.Settings), tile.InnerHtml);
+            Assert.Equal("Account, appearance and sync", page.Find(".pspad-page-heading .pspad-page-subtitle").TextContent.Trim());
+            var header = Services.GetRequiredService<PageHeader>();
+            Assert.Equal(MudBlazor.Icons.Material.Outlined.Settings, header.Icon);
+            Assert.Equal("Account, appearance and sync", header.Subtitle);
+        });
+    }
+
+    [Fact]
     public async Task ChoosingATimeZoneSendsItAndRefreshesToday()
     {
         var state = Arrange(displayName: "Ada", email: "ada@example.com");
