@@ -918,8 +918,12 @@ live reads "No live links. Published copies show up here." A custom date resolve
 the end of that day in the user's own time zone, not UTC midnight.
 
 **`SnapshotMarkChip`** — a small outlined `MudChip`, "Marked on a
-snapshot" — renders on a task, step or reference item's row and in its
-panel whenever it carries at least one snapshot mark. The panel offers
+snapshot" — renders in a task, step or reference item's panel whenever it
+carries at least one snapshot mark. On a task or reference item's row it is
+`Compact`: one icon-only chip (`pspad-snapshot-mark-compact`, 20px high,
+`aria-label`/`title` "Marked on a snapshot") shown once however many marks
+the task or any of its steps carries. The public snapshot page's logo box is
+`pspad-snapshot-brand`, never the chip's class. The panel offers
 **Dismiss**, sending `ClearTaskSnapshotMarks` or
 `ClearReferenceItemSnapshotMarks`; completing the task itself is a
 separate, deliberate action the chip never triggers.

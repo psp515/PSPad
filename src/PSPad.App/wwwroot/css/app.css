@@ -840,6 +840,18 @@ button.pspad-heatmap-cell:focus-visible {
     font-size: 1rem;
 }
 
+.pspad-row-meta .pspad-snapshot-mark-compact.mud-chip {
+    height: 20px;
+    min-width: 0;
+    margin: 0;
+    padding: 0 4px;
+}
+
+.pspad-row-meta .pspad-snapshot-mark-compact .mud-chip-icon {
+    margin: 0;
+    font-size: 1rem;
+}
+
 .pspad-row-meta .pspad-priority {
     font-size: 0.625rem;
 }
@@ -1040,8 +1052,8 @@ button.pspad-heatmap-cell:focus-visible {
     letter-spacing: 0.12em;
 }
 
-.pspad-snapshot-mark,
-.pspad-snapshot-mark svg {
+.pspad-snapshot-brand,
+.pspad-snapshot-brand svg {
     width: 28px;
     height: 28px;
     display: block;

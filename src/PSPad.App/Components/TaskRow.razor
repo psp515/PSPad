@@ -43,9 +43,9 @@
                     <MudIcon Class="pspad-priority" Icon="@Icons.Material.Filled.Circle" Color="@PriorityColour"
                              Title="@($"{Task.Priority} priority")" />
                 }
-                @if (TaskMark is not null)
+                @if (Task.SnapshotMarks.Count > 0)
                 {
-                    <SnapshotMarkChip />
+                    <SnapshotMarkChip Compact="true" />
                 }
                 @if (ListName is not null)
                 {
@@ -84,9 +84,8 @@
     bool HasDescription => Task.Description.Length > 0;
 
     bool HasMeta => ListName is not null || Task.Steps.Count > 0 || Task.DueOn is not null
-        || (ShowTime && Task.EffectiveTime is not null) || Task.IsRecurring || HasDescription || Task.Priority != Priority.None || TaskMark is not null;
+        || (ShowTime && Task.EffectiveTime is not null) || Task.IsRecurring || HasDescription || Task.Priority != Priority.None || Task.SnapshotMarks.Count > 0;
 
-    SnapshotMark? TaskMark => Task.SnapshotMarks.FirstOrDefault(mark => mark.StepId is null);
 
     Color PriorityColour => Task.Priority switch
     {

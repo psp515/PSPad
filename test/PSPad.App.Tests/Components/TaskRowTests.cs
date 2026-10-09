@@ -246,6 +246,37 @@ public class TaskRowTests : Bunit.TestContext
     }
 
     [Fact]
+    public void MarksFromSeveralSnapshotsShowOneCompactChip()
+    {
+        Arrange();
+        var task = Task("Buy milk");
+        Add(task, "Go to the shop");
+        Marked(task);
+        Marked(task);
+        MarkedStep(task, task.Steps.Single().Id);
+
+        var row = Render(task);
+
+        var chip = Assert.Single(row.FindAll(".pspad-snapshot-mark"));
+        Assert.Contains("pspad-snapshot-mark-compact", chip.ClassName);
+        Assert.Equal("Marked on a snapshot", chip.GetAttribute("aria-label"));
+        Assert.DoesNotContain("Marked on a snapshot", chip.TextContent);
+    }
+
+    [Fact]
+    public void AMarkOnlyOnAStepStillShowsTheChip()
+    {
+        Arrange();
+        var task = Task("Buy milk");
+        Add(task, "Go to the shop");
+        MarkedStep(task, task.Steps.Single().Id);
+
+        var row = Render(task);
+
+        Assert.Single(row.FindAll(".pspad-row-meta .pspad-snapshot-mark"));
+    }
+
+    [Fact]
     public void ATaskWithoutASnapshotMarkShowsNoMarkChip()
     {
         Arrange();
@@ -440,6 +471,11 @@ public class TaskRowTests : Bunit.TestContext
             DateTimeOffset.UnixEpoch));
         return task;
     }
+
+    static void MarkedStep(TodoTask task, Guid stepId) =>
+        task.ApplyAll(TodoTask.Decide(
+            task, new MarkTaskFromSnapshot(Guid.NewGuid(), User, task.Id, stepId, Guid.NewGuid(), true),
+            DateTimeOffset.UnixEpoch));
 
     static TodoTask StepDue(TodoTask task, DateOnly due)
     {
