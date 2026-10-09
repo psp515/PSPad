@@ -224,6 +224,29 @@ public class PSPadThemeTests
         _ => palette.Error
     };
 
+    const string LightMessageGround = "#FFFFFF";
+    const string DarkMessageGround = "#2C2C2C";
+
+    [Theory]
+    [MemberData(nameof(EveryPaletteAndBelt))]
+    public void ASmallMessageReadsOnItsGround(string accent, bool dark, Severity severity)
+    {
+        var palette = PaletteOf(accent, dark);
+        var ground = new MudColor(dark ? DarkMessageGround : LightMessageGround);
+
+        Assert.True(Contrast(palette.TextPrimary, ground) >= MinimumTextContrast);
+        Assert.True(Contrast(ToneOf(palette, severity), ground) >= MinimumUiContrast);
+    }
+
+    [Fact]
+    public void TheMessageGroundMatchesTheStylesheet()
+    {
+        var css = File.ReadAllText(StylesheetPath());
+
+        Assert.Contains($"--pspad-message-ground: {LightMessageGround}", css);
+        Assert.Contains($"--pspad-message-ground: {DarkMessageGround}", css);
+    }
+
     [Fact]
     public void TheRaisedGroundMatchesTheStylesheet()
     {

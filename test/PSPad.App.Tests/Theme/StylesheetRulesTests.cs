@@ -252,6 +252,35 @@ public partial class StylesheetRulesTests
         Assert.Contains("background-color: color-mix(in srgb, var(--pspad-belt-tone) 14%, var(--mud-palette-background))", belt);
     }
 
+    [Fact]
+    public void OnAPhoneAMessageSitsAboveTheBottomNav() =>
+        Assert.Contains(
+            "bottom: calc(72px + 16px)",
+            DeclarationsInMedia("max-width: 959.98px", ".mud-snackbar-location-bottom-center"));
+
+    [Fact]
+    public void OnTheDesktopAMessageMovesToTheLeftOfTheContent()
+    {
+        var location = DeclarationsInMedia("min-width: 960px", ".mud-snackbar-location-bottom-center");
+        var besideTheSidebar = DeclarationsInMedia(
+            "min-width: 960px", "body:has(.mud-drawer-persistent.mud-drawer--open) .mud-snackbar-location-bottom-center");
+
+        Assert.Contains("left: 24px", location);
+        Assert.Contains("transform: none", location);
+        Assert.Contains("left: calc(var(--mud-drawer-width-left) + 24px)", besideTheSidebar);
+    }
+
+    [Fact]
+    public void AMessageIsCompact()
+    {
+        var message = Declarations(".mud-snackbar.mud-snackbar-surface");
+
+        Assert.Contains("background-color: var(--pspad-message-ground)", message);
+        Assert.Contains("color: var(--mud-palette-text-primary)", message);
+        Assert.Contains("border-radius: 10px", message);
+        Assert.Contains("font-size: 13px", message);
+    }
+
     static string Declarations(string selector) =>
         string.Join("\n", Rule().Matches(Css)
             .Where(rule => SelectorsOf(rule).Contains(selector))
