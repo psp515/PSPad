@@ -22,13 +22,16 @@
                 <span class="pspad-time-clear-placeholder" aria-hidden="true"></span>
             }
         </div>
-        <div class="pspad-time-line pspad-time-line-end d-flex align-center">
-            <span class="pspad-time-line-label">To</span>
-            <MudTimePicker Class="pspad-time-end pspad-time-input" Placeholder="End" aria-label="End" Time="@(_end ?? AsSpan(Value?.End))" TimeChanged="@EndChangedAsync"
-                           AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true"
-                           Disabled="@(Disabled || Value is null)" Error="@(_error is not null)"
-                           Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="Pick end time" />
-        </div>
+        @if (Value is not null)
+        {
+            <div class="pspad-time-line pspad-time-line-end d-flex align-center">
+                <span class="pspad-time-line-label">To</span>
+                <MudTimePicker Class="pspad-time-end pspad-time-input" Placeholder="End" aria-label="End" Time="@(_end ?? AsSpan(Value?.End))" TimeChanged="@EndChangedAsync"
+                               AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true"
+                               Disabled="@Disabled" Error="@(_error is not null)"
+                               Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="Pick end time" />
+            </div>
+        }
     </div>
 </div>
 @if (_error is not null)

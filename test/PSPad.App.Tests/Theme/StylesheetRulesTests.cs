@@ -166,15 +166,8 @@ public partial class StylesheetRulesTests
         Assert.Contains("top: calc(var(--pspad-top-bar-height) + 10px)", Declarations(".pspad-pull-indicator"));
 
     [Fact]
-    public void BelowSmallTheTimeLabelSitsAboveFullWidthPickers()
-    {
-        var media = Regex.Match(Css, @"@media \(max-width: 599\.98px\) \{(?<body>(?:[^{}]*\{[^{}]*\})*[^{}]*)\}");
-        var inMedia = string.Join("\n", Rule().Matches(media.Groups["body"].Value)
-            .Where(rule => SelectorsOf(rule).Contains(".pspad-task-time"))
-            .Select(rule => rule.Groups["body"].Value));
-
-        Assert.Contains("flex-direction: column", inMedia);
-    }
+    public void TheTimeRowStaysOnOneLineWithItsLabelAtEveryWidth() =>
+        Assert.DoesNotMatch(@"\.pspad-task-time\s*\{[^}]*flex-direction:\s*column", Css);
 
     [Fact]
     public void ThePhoneTopBarTitleIsEighteenPixelsInTheTextColour()

@@ -660,12 +660,13 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      Start / End (`pspad-time-start`, `pspad-time-end`), ending in a
      `Schedule` adornment icon that opens the picker (MudBlazor 9.9 has no
      open-on-click for an editable picker, so the icon is the click target
-     and the field stays for typing); End is disabled until Start has a
-     value. A ✕ (`pspad-property-clear`, `Size.Small`, the shared
+     and the field stays for typing). The From row sits on the Time line,
+     its field starting in the value column like Due's "Tomorrow"; the To row
+     appears under it, same column and width, only once Start has a value. A ✕ (`pspad-property-clear`, `Size.Small`, the shared
      `PropertyRow` clear) on the From row clears both and lines up with
      Due's ✕; with no time an empty placeholder of its width keeps the
-     column, and the To row keeps the same right inset. Below `sm` (600px)
-     the head sits above the From/To rows so the pickers get the full width. End equal to Start shows
+     column, and the To row keeps the same right inset. The layout is the
+     same at every width — no stacking on phones. End equal to Start shows
      "End must differ from start" under the row and sends nothing; an End
      before Start is sent and shows a muted "Ends the next day (+1)" under
      the row. Edit

@@ -17,11 +17,26 @@ public class TimeRowTests : Bunit.TestContext
     }
 
     [Fact]
-    public void EndWaitsForAStart()
+    public void WithoutAStartOnlyFromIsShown()
     {
         var row = Render<TimeRow>(p => p.Add(r => r.Value, (TaskTime?)null));
 
-        Assert.True(row.Find(".pspad-time-end input").HasAttribute("disabled"));
+        Assert.Single(row.FindAll(".pspad-time-lines > .pspad-time-line"));
+        Assert.NotNull(row.Find(".pspad-time-start"));
+        Assert.Empty(row.FindAll(".pspad-time-end"));
+    }
+
+    [Fact]
+    public void SettingAStartBringsToInUnderFrom()
+    {
+        var row = Render<TimeRow>(p => p.Add(r => r.Value, (TaskTime?)null));
+
+        row.Render(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(12, 0), null)));
+
+        var lines = row.FindAll(".pspad-time-lines > .pspad-time-line");
+        Assert.Equal(2, lines.Count);
+        Assert.NotNull(lines[1].QuerySelector(".pspad-time-end"));
+        Assert.False(row.Find(".pspad-time-end input").HasAttribute("disabled"));
     }
 
     [Fact]

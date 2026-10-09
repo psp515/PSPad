@@ -771,11 +771,6 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-time-line-end { padding-right: 38px; }
 .pspad-time-note { padding: 0 38px 4px 192px; }
 
-@media (max-width: 599.98px) {
-    .pspad-task-time { flex-direction: column; align-items: stretch !important; }
-    .pspad-time-lines { padding: 0 0 4px 12px; }
-    .pspad-time-note { padding: 0 38px 4px 60px; }
-}
 
 .pspad-muted {
     color: var(--mud-palette-text-secondary) !important;
