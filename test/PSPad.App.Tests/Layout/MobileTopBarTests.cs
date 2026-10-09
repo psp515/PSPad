@@ -22,6 +22,16 @@ public class MobileTopBarTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItIsNotDenseSoTheStylesheetSetsItsHeight()
+    {
+        Arrange();
+
+        var bar = RenderBar();
+
+        Assert.DoesNotContain("mud-appbar-dense", bar.Find(".mud-appbar").ClassList);
+    }
+
+    [Fact]
     public void ItShowsTheTitleAndFollowsChanges()
     {
         Arrange();

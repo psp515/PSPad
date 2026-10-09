@@ -3,7 +3,7 @@
 @inject PageHeader Header
 @implements IDisposable
 
-<MudAppBar Elevation="0" Dense="true" Gutters="false" Class="d-md-none pspad-top-bar">
+<MudAppBar Elevation="0" Gutters="false" Class="d-md-none pspad-top-bar">
     @if (Header.BackHref is not null)
     {
         <MudIconButton Class="pspad-top-back" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary"

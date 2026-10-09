@@ -130,9 +130,12 @@ public class ThingCardTests : Bunit.TestContext
             .Add(p => p.OnAdd, EventCallback.Factory.Create(this, () => added++)));
 
         var empty = card.Find(".pspad-card-empty");
-        Assert.Equal("No open tasks · Add one", Squash(empty.TextContent));
+        Assert.Equal("No open tasks · Add one", string.Join(" ", empty.Children.Select(part => Squash(part.TextContent))));
         Assert.Contains("pspad-muted", empty.ClassList);
-        empty.QuerySelector(".pspad-card-empty-add")!.Click();
+        var add = empty.QuerySelector(".pspad-card-empty-add")!;
+        Assert.Equal("Add a task to Thing", add.GetAttribute("aria-label"));
+        Assert.Equal("·", empty.QuerySelector(".pspad-card-empty-separator")!.TextContent.Trim());
+        add.Click();
         Assert.Equal(1, added);
     }
 
@@ -143,8 +146,9 @@ public class ThingCardTests : Bunit.TestContext
 
         var card = Render(Array.Empty<TodoTask>());
 
-        Assert.Equal("No open tasks", Squash(card.Find(".pspad-card-empty").TextContent));
+        Assert.Equal("No open tasks", card.Find(".pspad-card-empty").TextContent.Trim());
         Assert.Empty(card.FindAll(".pspad-card-empty-add"));
+        Assert.Empty(card.FindAll(".pspad-card-empty-separator"));
     }
 
     [Fact]

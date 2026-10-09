@@ -50,6 +50,18 @@ public class ListPageTests : Bunit.TestContext
         Assert.Equal(MudBlazor.Icons.Material.Outlined.LibraryBooks, Services.GetRequiredService<PageHeader>().Icon);
     }
 
+    [Fact]
+    public void TheHeadingAnnouncesTheListsKind()
+    {
+        var list = NewList("Przepisy", ListKind.Reference);
+        Arrange(list);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        var kind = page.Find(".pspad-page-heading h1 .pspad-sr-only");
+        Assert.Equal(ListIcon.LabelFor(list), kind.TextContent.Trim());
+    }
+
     [Theory]
     [InlineData(0, "Dom · no open tasks")]
     [InlineData(1, "Dom · 1 open task")]

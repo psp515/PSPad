@@ -267,23 +267,27 @@ button.pspad-heatmap-cell:focus-visible {
     box-shadow: 0 0 0 4px var(--mud-palette-primary-hover), var(--mud-elevation-6);
 }
 
+:root {
+    --pspad-top-bar-height: 64px;
+}
+
 .pspad-top-bar.mud-appbar {
     background-color: var(--mud-palette-surface);
     border-bottom: 1px solid var(--pspad-line);
 }
 
-.pspad-top-bar .mud-toolbar-appbar {
-    height: 64px;
+.pspad-top-bar.mud-appbar .mud-toolbar-appbar {
+    height: var(--pspad-top-bar-height);
     padding: 0 16px;
     gap: 12px;
 }
 
-.pspad-top-bar .mud-toolbar-appbar:has(.pspad-top-back) {
+.pspad-top-bar.mud-appbar .mud-toolbar-appbar:has(.pspad-top-back) {
     padding-left: 4px;
 }
 
 .pspad-top-bar ~ .mud-main-content {
-    padding-top: 64px;
+    padding-top: var(--pspad-top-bar-height);
 }
 
 .pspad-top-bar .mud-icon-button {
@@ -633,6 +637,12 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-time-line-end { padding-right: 38px; }
 .pspad-time-note { padding: 0 38px 4px 192px; }
 
+@media (max-width: 599.98px) {
+    .pspad-task-time { flex-direction: column; align-items: stretch !important; }
+    .pspad-time-lines { padding: 0 0 4px 12px; }
+    .pspad-time-note { padding: 0 38px 4px 60px; }
+}
+
 .pspad-muted {
     color: var(--mud-palette-text-secondary) !important;
 }
@@ -939,7 +949,7 @@ button.pspad-heatmap-cell:focus-visible {
 
 .pspad-pull-indicator {
   position: fixed;
-  top: calc(var(--mud-appbar-height, 56px) + 8px);
+  top: calc(var(--pspad-top-bar-height) + 10px);
   left: 50%;
   z-index: 1300;
   opacity: 0;

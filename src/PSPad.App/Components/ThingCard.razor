@@ -25,11 +25,12 @@
         else if (Count == 0 && Rows is null)
         {
             <div class="pspad-card-empty pspad-muted d-flex align-center px-3 py-2">
-                <MudText Typo="Typo.body2" Color="Color.Inherit">@(OnAdd.HasDelegate ? "No open tasks · " : "No open tasks")</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Inherit">No open tasks</MudText>
                 @if (OnAdd.HasDelegate)
                 {
+                    <span class="pspad-card-empty-separator mx-1" aria-hidden="true">·</span>
                     <MudButton Class="pspad-card-empty-add" Variant="Variant.Text" Color="Color.Primary"
-                               Size="Size.Small" OnClick="@OnAdd">Add one</MudButton>
+                               Size="Size.Small" OnClick="@OnAdd" aria-label="@($"Add a task to {Name}")">Add one</MudButton>
                 }
             </div>
         }

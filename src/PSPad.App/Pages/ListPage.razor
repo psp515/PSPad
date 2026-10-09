@@ -31,7 +31,7 @@
 }
 else if (_list is not null)
 {
-    <PageHeading Title="@_list.Name" Subtitle="@Summary" Icon="@ListIcon.For(_list)" BackHref="@AreaLinks.For(_areaId)"
+    <PageHeading Title="@_list.Name" Subtitle="@Summary" Icon="@ListIcon.For(_list)" IconLabel="@ListIcon.LabelFor(_list)" BackHref="@AreaLinks.For(_areaId)"
                  BackLabel="Back to area" BackClass="pspad-back-to-area" />
 
     @if (_list.Kind == ListKind.Reference)

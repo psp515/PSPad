@@ -14,7 +14,7 @@
             <PageIcon Icon="@Icon" />
         }
         <div class="pspad-page-heading-text d-flex flex-column" style="min-width:0">
-            <MudText Typo="Typo.h5" HtmlTag="h1" Class="pspad-page-title">@Title</MudText>
+            <MudText Typo="Typo.h5" HtmlTag="h1" Class="pspad-page-title">@Title@if (IconLabel is not null){<span class="pspad-sr-only"> @IconLabel</span>}</MudText>
             @if (!string.IsNullOrEmpty(Subtitle))
             {
                 <MudText Typo="Typo.body2" Class="pspad-page-subtitle pspad-muted">@Subtitle</MudText>
@@ -38,6 +38,8 @@
     [Parameter] public string? BackClass { get; set; }
 
     [Parameter] public string? Icon { get; set; }
+
+    [Parameter] public string? IconLabel { get; set; }
 
     protected override void OnParametersSet() => Header.Set(Title, Subtitle, BackHref, BackLabel, Icon);
 }

@@ -240,10 +240,10 @@ branches live in the DOM at all times, separated only by CSS resolved
 before first paint.
 
 **Mobile app bar.** Below `md`, `Layout/MobileTopBar.razor` is a
-`MudAppBar` (`pspad-top-bar`) 64px tall on the surface colour with a
+`MudAppBar` (`pspad-top-bar`, not `Dense`) `--pspad-top-bar-height` (64px) tall on the surface colour with a
 `--pspad-line` bottom border, 16px side padding (4px on the left when a back
 button shows) and a 12px gap; `MudMainContent`'s top padding follows the
-64px height. Left to right: a back `MudIconButton` (`ArrowBack`) when the
+same token, and the pull-to-refresh indicator sits 10px under the bar. Left to right: a back `MudIconButton` (`ArrowBack`) when the
 current `PageHeading` set a `BackHref`; the page icon tile when the page has
 one (`PageIcon`, 36px, radius 10px); the page title (18px, weight 600,
 `TextPrimary`, one line with an ellipsis) over an optional subtitle (12.5px,
@@ -322,7 +322,9 @@ title) stack in one column (`pspad-page-heading-text`). It sits inside
 via `PageHeader`) the same title, subtitle, icon and back link below `md`.
 The Area board passes `Icons.Material.Outlined.Folder` (Shared with me:
 `People`) and "{n} list(s) · {m} open task(s)"; the list screen passes its
-`ListIcon.For(list)` and "{area} · {m} open task(s)" (a reference list: the
+`ListIcon.For(list)` with `IconLabel` `ListIcon.LabelFor(list)` (a
+visually hidden `pspad-sr-only` span in the `h1`, since the tile is
+`aria-hidden`) and "{area} · {m} open task(s)" (a reference list: the
 area alone); the goal screen passes `Flag`; other screens have no icon.
 Counts are singular for one, plural otherwise, and zero open tasks reads
 "no open tasks" (`OpenTaskCount`): "1 list · no open tasks", "1 list · 1
@@ -462,7 +464,9 @@ N**, a primary text link at 12.5px. The card's body sits in a
 `MudCollapse`, so collapsing and expanding animate its height and the
 cards below slide with it. A task card with no open tasks and no
 `EmptyText` shows a muted row (`pspad-card-empty`): "No open tasks · " and
-an **Add one** text button (`pspad-card-empty-add`) raising `OnAdd` —
+an **Add one** text button (`pspad-card-empty-add`, `aria-label` "Add a task
+to {name}") raising `OnAdd`; the " · " is its own `aria-hidden` span drawn
+only with `OnAdd` —
 `ListCard` passes its header `+` callback, `OnAddTaskClick`. With no `OnAdd`
 the row reads "No open tasks" alone; a card with `EmptyText` (a goal card,
 an empty reference list) shows that text instead. A single component per
@@ -604,7 +608,8 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      value. A ✕ (`pspad-property-clear`, `Size.Small`, the shared
      `PropertyRow` clear) on the From row clears both and lines up with
      Due's ✕; with no time an empty placeholder of its width keeps the
-     column, and the To row keeps the same right inset. End equal to Start shows
+     column, and the To row keeps the same right inset. Below `sm` (600px)
+     the head sits above the From/To rows so the pickers get the full width. End equal to Start shows
      "End must differ from start" under the row and sends nothing; an End
      before Start is sent and shows a muted "Ends the next day (+1)" under
      the row. Edit

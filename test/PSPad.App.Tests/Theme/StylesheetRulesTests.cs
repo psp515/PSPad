@@ -119,19 +119,39 @@ public partial class StylesheetRulesTests
     public void ThePhoneTopBarIsSixtyFourPixelsOnTheSurfaceWithAHairline()
     {
         var bar = Declarations(".pspad-top-bar.mud-appbar");
-        var toolbar = Declarations(".pspad-top-bar .mud-toolbar-appbar");
+        var toolbar = Declarations(".pspad-top-bar.mud-appbar .mud-toolbar-appbar");
 
+        Assert.Contains("--pspad-top-bar-height: 64px", Declarations(":root"));
         Assert.Contains("background-color: var(--mud-palette-surface)", bar);
         Assert.Contains("border-bottom: 1px solid var(--pspad-line)", bar);
-        Assert.Contains("height: 64px", toolbar);
+        Assert.Contains("height: var(--pspad-top-bar-height)", toolbar);
         Assert.Contains("padding: 0 16px", toolbar);
         Assert.Contains("gap: 12px", toolbar);
-        Assert.Contains("padding-left: 4px", Declarations(".pspad-top-bar .mud-toolbar-appbar:has(.pspad-top-back)"));
+        Assert.Contains("padding-left: 4px", Declarations(".pspad-top-bar.mud-appbar .mud-toolbar-appbar:has(.pspad-top-back)"));
     }
 
     [Fact]
+    public void TheTopBarHeightRuleOutranksMudBlazorsAppBarHeights() =>
+        Assert.Empty(Declarations(".pspad-top-bar .mud-toolbar-appbar"));
+
+    [Fact]
     public void PhoneContentStartsUnderTheTallerTopBar() =>
-        Assert.Contains("padding-top: 64px", Declarations(".pspad-top-bar ~ .mud-main-content"));
+        Assert.Contains("padding-top: var(--pspad-top-bar-height)", Declarations(".pspad-top-bar ~ .mud-main-content"));
+
+    [Fact]
+    public void ThePullIndicatorSitsJustUnderTheTopBar() =>
+        Assert.Contains("top: calc(var(--pspad-top-bar-height) + 10px)", Declarations(".pspad-pull-indicator"));
+
+    [Fact]
+    public void BelowSmallTheTimeLabelSitsAboveFullWidthPickers()
+    {
+        var media = Regex.Match(Css, @"@media \(max-width: 599\.98px\) \{(?<body>(?:[^{}]*\{[^{}]*\})*[^{}]*)\}");
+        var inMedia = string.Join("\n", Rule().Matches(media.Groups["body"].Value)
+            .Where(rule => SelectorsOf(rule).Contains(".pspad-task-time"))
+            .Select(rule => rule.Groups["body"].Value));
+
+        Assert.Contains("flex-direction: column", inMedia);
+    }
 
     [Fact]
     public void ThePhoneTopBarTitleIsEighteenPixelsInTheTextColour()
