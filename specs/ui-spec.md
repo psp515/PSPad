@@ -239,13 +239,19 @@ before the first callback, flashing the wrong navigation on load. Both
 branches live in the DOM at all times, separated only by CSS resolved
 before first paint.
 
-**Mobile app bar.** Below `md`, `Layout/MobileTopBar.razor` is a dense
-`MudAppBar`, left to right: a back `MudIconButton` (`ArrowBack`) when the
-current `PageHeading` set a `BackHref`; the page title (`Typo.h6`,
-`Color.Primary`, truncated with an ellipsis, optionally with a caption
-subtitle — a list screen shows its area's name); `ConnectionStatus` (a `CloudOff` icon with a tooltip, nothing while healthy; offline is confirmed by `/health`, `adr/0058`); `SyncButton WithStamp` (a `Sync` icon button, spinning while a sync runs, red after a
-failed one, disabled offline; its tooltip and `aria-label` carry the stamp text); a 32px
-`MudAvatar` button that opens `AccountDrawer`. Title and subtitle come from
+**Mobile app bar.** Below `md`, `Layout/MobileTopBar.razor` is a
+`MudAppBar` (`pspad-top-bar`) 64px tall on the surface colour with a
+`--pspad-line` bottom border, 16px side padding (4px on the left when a back
+button shows) and a 12px gap; `MudMainContent`'s top padding follows the
+64px height. Left to right: a back `MudIconButton` (`ArrowBack`) when the
+current `PageHeading` set a `BackHref`; the page icon tile when the page has
+one (`PageIcon`, 36px, radius 10px); the page title (18px, weight 600,
+`TextPrimary`, one line with an ellipsis) over an optional subtitle (12.5px,
+`TextSecondary`, one line with an ellipsis — a list screen shows its area's
+name and open-task count); `ConnectionStatus` (a `CloudOff` icon with a tooltip, nothing while healthy; offline is confirmed by `/health`, `adr/0058`); `SyncButton WithStamp` (a `Sync` icon button, spinning while a sync runs, red after a
+failed one, disabled offline; its tooltip and `aria-label` carry the stamp text); a 36px
+`MudAvatar` in a 44px button that opens `AccountDrawer`. Every icon button in
+the bar is 44px. Title, subtitle and icon come from
 `State/PageHeader.cs`, a scoped service `PageHeading` writes to on every
 parameter set, so the phone and desktop titles cannot drift.
 
@@ -301,15 +307,27 @@ message — a screen must never show an empty state it has not verified.
 
 **Title pattern.** A page's title is `<PageHeading Title="…" />`
 (`Components/PageHeading.razor`), with `BackHref`, `BackLabel`, `BackClass`,
-`Subtitle` and `Adornment` as needed, rendered both in the loading and
-loaded branches so nothing jumps on load. It draws the title as the page's
-one `h1` (`MudText Typo.h5 HtmlTag="h1"`, `TextPrimary`, weight 500, `pspad-page-title`, `mb-4`; with
-the back `MudIconButton` when `BackHref` is set — a screen nested under another, such as a list under
-its area, links back to the parent screen) inside `d-none d-md-flex` on
-desktop, and feeds the phone top bar (`MobileTopBar`, via `PageHeader`) the
-same title, subtitle and back link below `md`. On desktop `Subtitle` shows
-muted beside the title on its baseline (`pspad-page-subtitle`); the Area
-board passes "{n} lists · {m} open". One component means the two cannot
+`Subtitle` and `Icon` as needed, rendered both in the loading and
+loaded branches so nothing jumps on load. Desktop row, `align-items: center`:
+[back] [icon tile] [title over subtitle] … sync stamp and Sync button. The
+title is the page's one `h1` (`MudText Typo.h5 HtmlTag="h1"`, 24px,
+`TextPrimary`, weight 600, `pspad-page-title`); the back `MudIconButton`
+shows when `BackHref` is set — a screen nested under another, such as a list
+under its area, links back to the parent screen. `Icon` (a MudBlazor icon
+path) renders in `Components/PageIcon.razor`: a `pspad-page-icon` tile, 44px,
+radius 12px, `--pspad-tint`, primary icon, `aria-hidden`. The title and
+`Subtitle` (`pspad-page-subtitle`, 13px, `TextSecondary`, 3px under the
+title) stack in one column (`pspad-page-heading-text`). It sits inside
+`d-none d-md-flex` on desktop and feeds the phone top bar (`MobileTopBar`,
+via `PageHeader`) the same title, subtitle, icon and back link below `md`.
+The Area board passes `Icons.Material.Outlined.Folder` (Shared with me:
+`People`) and "{n} list(s) · {m} open task(s)"; the list screen passes its
+`ListIcon.For(list)` and "{area} · {m} open task(s)" (a reference list: the
+area alone); the goal screen passes `Flag`; other screens have no icon.
+Counts are singular for one, plural otherwise, and zero open tasks reads
+"no open tasks" (`OpenTaskCount`): "1 list · no open tasks", "1 list · 1
+open task", "2 lists · 2 open tasks". Open tasks are the ones a card counts:
+not deleted, not completed, not ended. One component means the two cannot
 drift. A page's loading branch renders `<PageHeading Title="" />`
 so the top bar never keeps the previous screen's title.
 
@@ -442,7 +460,12 @@ by a visually hidden " open" (`pspad-sr-only`), so it reads "N open". The `+` an
 `TextSecondary`. There is no divider under the header or above **Show all
 N**, a primary text link at 12.5px. The card's body sits in a
 `MudCollapse`, so collapsing and expanding animate its height and the
-cards below slide with it. A single component per
+cards below slide with it. A task card with no open tasks and no
+`EmptyText` shows a muted row (`pspad-card-empty`): "No open tasks · " and
+an **Add one** text button (`pspad-card-empty-add`) raising `OnAdd` —
+`ListCard` passes its header `+` callback, `OnAddTaskClick`. With no `OnAdd`
+the row reads "No open tasks" alone; a card with `EmptyText` (a goal card,
+an empty reference list) shows that text instead. A single component per
 concept means a rule like never-overdue-for-recurring-tasks cannot drift
 between the screens that display it.
 
@@ -569,13 +592,19 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      tally caption: "Not done yet", "Done N times", or "Done N times · M in
      a row" (`RepeatTally`).
    - **Time** (`TimeRow`, `pspad-task-time`, under Due/Until; shown when
-     Due/Until is set or the task repeats, like Remind me) — inline: the
-     clock icon and "Time" label centred with two 24-hour outlined, dense
-     `MudTimePicker`s, **Start** and **End** (placeholders, no adornment
-     icon, centred text); End is disabled until Start has a value. A ✕
-     (`pspad-property-clear`, `Size.Small`, the shared `PropertyRow` clear)
-     clears both and lines up with Due's ✕; with no time an empty
-     placeholder of its width keeps the column. End equal to Start shows
+     Due/Until is set or the task repeats, like Remind me) — the clock icon
+     and "Time" label on the left (`pspad-time-head`), and on the right two
+     stacked rows (`pspad-time-line`): **From** and **To** labels (12.5px,
+     `TextSecondary`, 40px wide) each followed by a 24-hour outlined, dense,
+     typeable `MudTimePicker` filling the rest of the row, `aria-label`
+     Start / End (`pspad-time-start`, `pspad-time-end`), ending in a
+     `Schedule` adornment icon that opens the picker (MudBlazor 9.9 has no
+     open-on-click for an editable picker, so the icon is the click target
+     and the field stays for typing); End is disabled until Start has a
+     value. A ✕ (`pspad-property-clear`, `Size.Small`, the shared
+     `PropertyRow` clear) on the From row clears both and lines up with
+     Due's ✕; with no time an empty placeholder of its width keeps the
+     column, and the To row keeps the same right inset. End equal to Start shows
      "End must differ from start" under the row and sends nothing; an End
      before Start is sent and shows a muted "Ends the next day (+1)" under
      the row. Edit
@@ -1213,7 +1242,7 @@ typing.
 
 | Typo | Use |
 |---|---|
-| `Typo.h5` as `h1` | page title, `TextPrimary`, weight 500, with a muted subtitle beside it |
+| `Typo.h5` as `h1` | page title, 24px, `TextPrimary`, weight 600, with a muted 13px subtitle under it |
 | `Typo.h6` as `SectionHeading` | section heading: 13px, weight 600, `h2`, count as a muted pill |
 | `Typo.subtitle2` | card header link (list name, goal name), 14.5px medium |
 | `Typo.body1` / `Typo.body2` | primary row/card content |
