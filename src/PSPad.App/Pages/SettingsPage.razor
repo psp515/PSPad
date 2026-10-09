@@ -61,6 +61,11 @@
             <MudAutocomplete T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
                              SearchFunc="@SearchTimeZonesAsync" Label="Time zone"
                              Variant="Variant.Outlined" Margin="Margin.Dense" ResetValueOnEmptyText="false" />
+            <MudText Typo="Typo.caption">The time zone is saved on the server, so it needs a connection.</MudText>
+            @if (_rejected)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">That change did not go through.</MudText>
+            }
             <MudSelect T="string" Class="pspad-default-currency mt-3" Label="Default currency"
                        Variant="Variant.Outlined" Margin="Margin.Dense"
                        Value="@_defaultCurrency" ValueChanged="@ApplyDefaultCurrencyAsync">
@@ -69,11 +74,6 @@
                     <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
                 }
             </MudSelect>
-            <MudText Typo="Typo.caption">The time zone is saved on the server, so it needs a connection.</MudText>
-            @if (_rejected)
-            {
-                <MudText Typo="Typo.caption" Color="Color.Error">That change did not go through.</MudText>
-            }
             <MudSelect T="ThemeMode" Value="@Preference.Mode" ValueChanged="@SelectThemeAsync" Label="Theme"
                        Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-4">
                 @foreach (var mode in Enum.GetValues<ThemeMode>())
@@ -163,8 +163,13 @@
 
     async Task ApplyDefaultCurrencyAsync(string currency)
     {
+        var previous = _defaultCurrency;
         _defaultCurrency = currency;
-        await Sender.SendAsync(new SetDefaultCurrency(Guid.NewGuid(), State.UserId, currency));
+        var result = await Sender.SendAsync(new SetDefaultCurrency(Guid.NewGuid(), State.UserId, currency));
+        if (!result.Accepted)
+        {
+            _defaultCurrency = previous;
+        }
     }
 
     async Task RefreshPendingAsync()

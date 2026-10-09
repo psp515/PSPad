@@ -70,6 +70,20 @@ public class SettingsPageTests : Bunit.TestContext
 
         var entry = Assert.Single(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
         Assert.Equal(nameof(SetDefaultCurrency), entry.Envelope.Type);
+        Assert.Equal("EUR", entry.Envelope.Payload.GetProperty("Currency").GetString());
+    }
+
+    [Fact]
+    public async Task ARejectedCurrencyLeavesTheSelectOnTheOldValue()
+    {
+        Arrange(displayName: "Ada Lovelace", email: "ada@example.com");
+        var page = Render<SettingsPage>();
+
+        var select = page.FindComponents<MudSelect<string>>().Single(c => c.Instance.Class!.Contains("pspad-default-currency"));
+        await page.InvokeAsync(() => select.Instance.ValueChanged.InvokeAsync("XXX"));
+
+        Assert.Equal("PLN", page.Find(".pspad-default-currency input").GetAttribute("value"));
+        Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
     }
 
     [Fact]
