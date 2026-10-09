@@ -7,6 +7,8 @@ using PSPad.Api.Tests.Persistence;
 using PSPad.Api.Tests.Sync;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Money.Budgets;
+using PSPad.Module.Money.Preferences;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
@@ -79,6 +81,33 @@ public class AccountEndpointTests(MongoFixture fixture)
         (await client.DeleteAsync("/api/account", ct)).EnsureSuccessStatusCode();
 
         Assert.Equal(0, await views.Find(Builders<BsonDocument>.Filter.Eq("userId", userId)).CountDocumentsAsync(ct));
+    }
+
+    [Fact]
+    public async Task DeletingTheAccountRemovesItsBudgetsAndPreferences()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture, new FakeKeycloakAdminClient(succeeds: true));
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var userId = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+
+        await client.PostAsJsonAsync("/api/commands", new[]
+        {
+            new CommandEnvelope(nameof(CreateBudget), JsonSerializer.SerializeToElement(
+                new CreateBudget(Guid.NewGuid(), userId, Guid.NewGuid(), "Personal"))),
+            new CommandEnvelope(nameof(SetDefaultCurrency), JsonSerializer.SerializeToElement(
+                new SetDefaultCurrency(Guid.NewGuid(), userId, "EUR")))
+        }, ct);
+
+        var context = Persistence.TestContext.For(fixture);
+        var owned = Builders<BsonDocument>.Filter.Eq("userId", userId);
+        Assert.Equal(1, await context.Collection<BsonDocument>("budgets").Find(owned).CountDocumentsAsync(ct));
+        Assert.Equal(1, await context.Collection<BsonDocument>("moneypreferences").Find(owned).CountDocumentsAsync(ct));
+
+        (await client.DeleteAsync("/api/account", ct)).EnsureSuccessStatusCode();
+
+        Assert.Equal(0, await context.Collection<BsonDocument>("budgets").Find(owned).CountDocumentsAsync(ct));
+        Assert.Equal(0, await context.Collection<BsonDocument>("moneypreferences").Find(owned).CountDocumentsAsync(ct));
     }
 
     [Fact]
