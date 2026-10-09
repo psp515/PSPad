@@ -54,6 +54,7 @@ public static class AppTestHost
         context.Services.AddSingleton<IDocumentStore<Goal>>(new ReplicaDocumentStore<Goal>(replica));
         context.Services.AddSingleton<IDocumentStore<Inbox>>(new ReplicaDocumentStore<Inbox>(replica));
         context.Services.AddSingleton<IDocumentStore<Module.Money.Budgets.Budget>>(new ReplicaDocumentStore<Module.Money.Budgets.Budget>(replica));
+        context.Services.AddSingleton<IDocumentStore<Module.Money.Preferences.MoneyPreferences>>(new ReplicaDocumentStore<Module.Money.Preferences.MoneyPreferences>(replica));
         context.Services.AddSingleton<IDocumentStore<ReferenceItem>>(new ReplicaDocumentStore<ReferenceItem>(replica));
         context.Services.AddSingleton<IDocumentStore<AreaView>>(new ReplicaDocumentStore<AreaView>(replica));
         context.Services.AddSingleton<IDocumentStore<ListView>>(new ReplicaDocumentStore<ListView>(replica));
