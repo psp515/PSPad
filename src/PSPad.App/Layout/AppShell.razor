@@ -10,6 +10,7 @@
 @using PSPad.App.Theme
 @using PSPad.App.Updates
 @using PSPad.Contracts
+@using PSPad.Module.Money.Budgets
 @using PSPad.Module.Presentation.AreaViews
 @using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
@@ -25,6 +26,7 @@
 @inject CommandSender Sender
 @inject ReplicaOwnership Ownership
 @inject IDocumentStore<Area> AreaStore
+@inject IDocumentStore<Budget> BudgetStore
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<AreaView> AreaViewStore
 @inject IDocumentStore<ListView> ListViewStore
@@ -52,7 +54,7 @@
 
     <MudDrawer Variant="DrawerVariant.Persistent" Open="@_isDesktop" Elevation="1"
                ClipMode="DrawerClipMode.Never" Class="d-none d-md-flex">
-        <NavSidebar Areas="@_areas" AreasLoaded="@_ready" HasShared="@_hasShared" Email="@_email" DisplayName="@_displayName"
+        <NavSidebar Areas="@_areas" Budgets="@_budgets" AreasLoaded="@_ready" HasShared="@_hasShared" Email="@_email" DisplayName="@_displayName"
                     UserId="@State.UserId" Disabled="@(!_ready)"
                     OnNewArea="@NewArea" />
     </MudDrawer>
@@ -101,6 +103,7 @@
     string _email = "";
     string _displayName = "";
     IReadOnlyList<Area> _areas = [];
+    IReadOnlyList<Budget> _budgets = [];
     bool _hasShared;
     Guid? _openTask;
     Guid? _newTaskList;
@@ -316,6 +319,7 @@
     {
         var loaded = await AreaStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _areas = [.. loaded.Where(area => !area.Deleted)];
+        _budgets = [.. await BudgetStore.LoadAllAsync(State.UserId, CancellationToken.None)];
 
         var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
         var areaViews = await AreaViewStore.LoadAllAsync(State.UserId, CancellationToken.None);
