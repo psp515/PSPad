@@ -22,7 +22,9 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         ["inboxes"] = typeof(Module.Tasks.Inbox.Inbox),
         ["referenceitems"] = typeof(Module.Tasks.References.ReferenceItem),
         ["areaviews"] = typeof(Module.Presentation.AreaViews.AreaView),
-        ["listviews"] = typeof(Module.Presentation.ListViews.ListView)
+        ["listviews"] = typeof(Module.Presentation.ListViews.ListView),
+        ["budgets"] = typeof(Module.Money.Budgets.Budget),
+        ["moneypreferences"] = typeof(Module.Money.Preferences.MoneyPreferences)
     };
 
     public async Task<SyncOutcome> SyncAsync(CancellationToken ct)
