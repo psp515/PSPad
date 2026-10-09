@@ -1,0 +1,100 @@
+@page "/budgets"
+@attribute [Authorize]
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Money.Budgets
+@inject IDocumentStore<Budget> BudgetStore
+@inject AppState State
+@inject CommandSender Sender
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageHeading Title="Budgets" Subtitle="@Subtitle" Icon="@Icons.Material.Outlined.AccountBalanceWallet" />
+
+<div class="d-flex justify-end mb-3">
+    <MudSwitch T="bool" @bind-Value="_showArchived" Color="Color.Primary" Class="pspad-show-archived"
+               Label="Show archived" />
+</div>
+
+@if (!_loaded)
+{
+    <CardSkeleton Count="2" />
+}
+else if (_budgets.Count == 0)
+{
+    <MudGrid Spacing="4">
+        <MudItem xs="12" sm="6" lg="4">
+            <EmptyState Icon="@Icons.Material.Outlined.AccountBalanceWallet" Message="No budgets yet."
+                        CreateText="Create budget" OnCreate="@AddBudget" />
+        </MudItem>
+    </MudGrid>
+}
+else
+{
+    <MudGrid Spacing="4">
+        @foreach (var budget in Visible)
+        {
+            <MudItem @key="budget.Id" xs="12" sm="6" lg="4">
+                <BudgetCard Budget="@budget" />
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+<MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@AddBudget"
+        UserAttributes="@FabAttributes" />
+
+@code {
+    static readonly Dictionary<string, object> FabAttributes = new() { ["aria-label"] = "New budget" };
+
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
+    bool _loaded;
+    bool _showArchived;
+    int _rendered = -1;
+    IReadOnlyList<Budget> _budgets = [];
+
+    IEnumerable<Budget> Visible => _budgets.Where(budget => _showArchived || !budget.IsArchived);
+
+    string Subtitle
+    {
+        get
+        {
+            var archived = _budgets.Count(budget => budget.IsArchived);
+            var active = _budgets.Count - archived;
+            return $"{active} {(active == 1 ? "budget" : "budgets")} · {archived} archived · totals in PLN";
+        }
+    }
+
+    protected override void OnInitialized() => Sender.Sent += OnCommandSent;
+
+    void OnCommandSent() => InvokeAsync(async () =>
+    {
+        await ReloadAsync();
+        StateHasChanged();
+    });
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_rendered == SyncRevision)
+        {
+            return;
+        }
+
+        _rendered = SyncRevision;
+        await ReloadAsync();
+    }
+
+    async Task ReloadAsync()
+    {
+        var budgets = await BudgetStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _budgets = [.. budgets.OrderBy(budget => budget.CreatedAt)];
+        _loaded = true;
+    }
+
+    void AddBudget() => Navigation.NavigateTo(BudgetQuery.ForNew(Navigation.Uri));
+
+    public void Dispose() => Sender.Sent -= OnCommandSent;
+}
