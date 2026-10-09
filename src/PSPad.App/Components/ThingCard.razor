@@ -22,6 +22,17 @@
         {
             <MudText Typo="Typo.body2" Class="pa-3">@EmptyText</MudText>
         }
+        else if (Count == 0 && Rows is null)
+        {
+            <div class="pspad-card-empty pspad-muted d-flex align-center px-3 py-2">
+                <MudText Typo="Typo.body2" Color="Color.Inherit">@(OnAdd.HasDelegate ? "No open tasks · " : "No open tasks")</MudText>
+                @if (OnAdd.HasDelegate)
+                {
+                    <MudButton Class="pspad-card-empty-add" Variant="Variant.Text" Color="Color.Primary"
+                               Size="Size.Small" OnClick="@OnAdd">Add one</MudButton>
+                }
+            </div>
+        }
         else if (Rows is not null)
         {
             @Rows
@@ -81,6 +92,8 @@
     [Parameter] public EventCallback<TodoTask> OnStar { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
+
+    [Parameter] public EventCallback OnAdd { get; set; }
 
     Dictionary<string, object> TileAttributes
     {

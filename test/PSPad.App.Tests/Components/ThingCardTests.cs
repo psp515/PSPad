@@ -121,6 +121,57 @@ public class ThingCardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnEmptyTaskCardOffersToAddOne()
+    {
+        Arrange();
+        var added = 0;
+
+        var card = Render<ThingCard>(parameters => Base(parameters, [])
+            .Add(p => p.OnAdd, EventCallback.Factory.Create(this, () => added++)));
+
+        var empty = card.Find(".pspad-card-empty");
+        Assert.Equal("No open tasks · Add one", Squash(empty.TextContent));
+        Assert.Contains("pspad-muted", empty.ClassList);
+        empty.QuerySelector(".pspad-card-empty-add")!.Click();
+        Assert.Equal(1, added);
+    }
+
+    [Fact]
+    public void WithoutOnAddAnEmptyTaskCardOnlySaysSo()
+    {
+        Arrange();
+
+        var card = Render(Array.Empty<TodoTask>());
+
+        Assert.Equal("No open tasks", Squash(card.Find(".pspad-card-empty").TextContent));
+        Assert.Empty(card.FindAll(".pspad-card-empty-add"));
+    }
+
+    [Fact]
+    public void ACardWithOpenTasksHasNoEmptyRow()
+    {
+        Arrange();
+
+        var card = Render<ThingCard>(parameters => Base(parameters, Tasks(1))
+            .Add(p => p.OnAdd, EventCallback.Factory.Create(this, () => { })));
+
+        Assert.Empty(card.FindAll(".pspad-card-empty"));
+    }
+
+    [Fact]
+    public void AnEmptyTextReplacesTheEmptyRow()
+    {
+        Arrange();
+
+        var card = Render<ThingCard>(parameters => Base(parameters, []).Add(p => p.EmptyText, "No items yet."));
+
+        Assert.Empty(card.FindAll(".pspad-card-empty"));
+        Assert.Contains("No items yet.", card.Markup);
+    }
+
+    static string Squash(string text) => string.Join(" ", text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    [Fact]
     public void RowCaptionsComeFromTheCallersFunctions()
     {
         Arrange();

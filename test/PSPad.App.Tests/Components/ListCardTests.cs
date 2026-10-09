@@ -131,6 +131,23 @@ public class ListCardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnEmptyTaskListsAddOneRaisesOnAddTaskClick()
+    {
+        Arrange();
+        var list = List("Remont");
+        var clicked = 0;
+
+        var card = Render<ListCard>(parameters => parameters
+            .Add(p => p.List, list)
+            .Add(p => p.Today, Today)
+            .Add(p => p.OnAddTaskClick, EventCallback.Factory.Create(this, () => clicked++)));
+
+        card.Find(".pspad-card-empty-add").Click();
+
+        Assert.Equal(1, clicked);
+    }
+
+    [Fact]
     public void TheHeaderCarriesAnAddTaskIconThatRaisesOnAddTaskClick()
     {
         Arrange();

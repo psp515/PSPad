@@ -8,7 +8,7 @@
            IconTitle="@ListIcon.LabelFor(List)" Tasks="@Tasks" Today="@Today"
            Rows="@(IsReference ? ItemRows : null)" RowCount="@(IsReference ? Items.Count : (int?)null)"
            EmptyText="@(IsReference ? "No items yet." : null)"
-           OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen">
+           OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" OnAdd="@(IsReference ? default : OnAddTaskClick)">
     <Actions>
         @if (IsShared)
         {
