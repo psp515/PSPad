@@ -9,8 +9,11 @@
 @using PSPad.App.State.Outbox
 @using PSPad.App.Sync
 @using PSPad.App.Theme
+@using PSPad.Module.Money.Preferences
+@using PSPad.Module.Money.Values
 @using PSPad.Module.Tasks.Today
 @inject IConfiguration Configuration
+@inject IDocumentStore<MoneyPreferences> PreferencesStore
 @inject IConnectivity Connectivity
 @inject PSPadApiClient Api
 @inject AppState State
@@ -58,6 +61,14 @@
             <MudAutocomplete T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
                              SearchFunc="@SearchTimeZonesAsync" Label="Time zone"
                              Variant="Variant.Outlined" Margin="Margin.Dense" ResetValueOnEmptyText="false" />
+            <MudSelect T="string" Class="pspad-default-currency mt-3" Label="Default currency"
+                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                       Value="@_defaultCurrency" ValueChanged="@ApplyDefaultCurrencyAsync">
+                @foreach (var currency in Currencies.All)
+                {
+                    <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
+                }
+            </MudSelect>
             <MudText Typo="Typo.caption">The time zone is saved on the server, so it needs a connection.</MudText>
             @if (_rejected)
             {
@@ -113,6 +124,7 @@
 
 @code {
     bool _rejected;
+    string _defaultCurrency = Currencies.Pln;
     int _pendingCommands;
 
     static readonly string[] TimeZoneIds =
@@ -140,6 +152,19 @@
         SyncStatus.Changed += OnSyncChanged;
         _timer = new Timer(_ => InvokeAsync(StateHasChanged), null, Tick, Tick);
         await RefreshPendingAsync();
+        await LoadDefaultCurrencyAsync();
+    }
+
+    async Task LoadDefaultCurrencyAsync()
+    {
+        var preferences = await PreferencesStore.LoadAsync(MoneyPreferences.IdFor(State.UserId), CancellationToken.None);
+        _defaultCurrency = preferences?.DefaultCurrency ?? Currencies.Pln;
+    }
+
+    async Task ApplyDefaultCurrencyAsync(string currency)
+    {
+        _defaultCurrency = currency;
+        await Sender.SendAsync(new SetDefaultCurrency(Guid.NewGuid(), State.UserId, currency));
     }
 
     async Task RefreshPendingAsync()
