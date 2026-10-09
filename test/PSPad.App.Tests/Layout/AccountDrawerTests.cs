@@ -54,4 +54,15 @@ public class AccountDrawerTests : Bunit.TestContext
             .Add(p => p.Email, "ada@example.com")
             .Add(p => p.DisplayName, "Ada Lovelace")
             .Add(p => p.UserId, Guid.NewGuid()));
+
+    [Fact]
+    public void StatisticsIsTheFirstRow()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var drawer = RenderOpen();
+
+        var first = drawer.FindAll(".mud-nav-link").First();
+        Assert.Equal("/statistics", first.GetAttribute("href"));
+    }
 }
