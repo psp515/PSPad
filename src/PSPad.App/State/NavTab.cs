@@ -7,5 +7,5 @@ public enum NavTab
     Areas,
     MyDay,
     Goals,
-    Statistics
+    Budgets
 }

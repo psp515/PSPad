@@ -13,7 +13,7 @@ public static class ActiveTab
             "inbox" => NavTab.Inbox,
             "areas" or "lists" => NavTab.Areas,
             "goals" => NavTab.Goals,
-            "statistics" => NavTab.Statistics,
+            "budgets" => NavTab.Budgets,
             _ => NavTab.None
         };
     }
