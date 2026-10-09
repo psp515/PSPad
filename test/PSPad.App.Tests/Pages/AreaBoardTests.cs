@@ -74,6 +74,34 @@ public class AreaBoardTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnAreaOfReferenceListsCountsTheirItemsLeavingOutDeletedOnes()
+    {
+        var area = NewArea("Dom");
+        var recipes = NewList(area.Id, "Przepisy", 0, ListKind.Reference);
+        var items = Items(recipes.Id, 3);
+        items[0].ApplyAll(ReferenceItem.Decide(
+            items[0], new DeleteReferenceItem(Guid.NewGuid(), User, items[0].Id), DateTimeOffset.UnixEpoch));
+        Arrange([area, recipes, .. items]);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal("1 reference list · 2 items", page.Find(".pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
+    public void AnAreaOfBothKindsCountsAllListsOpenTasksAndItems()
+    {
+        var area = NewArea("Dom");
+        var shopping = NewList(area.Id, "Zakupy", 0);
+        var recipes = NewList(area.Id, "Przepisy", 1, ListKind.Reference);
+        Arrange([area, shopping, recipes, NewTask(shopping.Id, "Mleko"), .. Items(recipes.Id, 4)]);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal("2 lists · 1 open task · 4 items", page.Find(".pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
     public void TheHeadingShowsAFolderIcon()
     {
         var area = NewArea("Dom");

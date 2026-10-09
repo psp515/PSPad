@@ -172,8 +172,17 @@ else
         }
     }
 
-    string Summary =>
-        $"{_lists.Count} {(_lists.Count == 1 ? "list" : "lists")} · {OpenTaskCount.Describe(OpenTasks)}";
+    string Summary
+    {
+        get
+        {
+            var referenceLists = _lists.Count(list => list.Kind == ListKind.Reference);
+            return AreaSummary.Describe(_lists.Count - referenceLists, referenceLists, OpenTasks, Items);
+        }
+    }
+
+    int Items => _items.Count(item =>
+        !item.Deleted && _lists.Any(list => list.Id == item.ListId && list.Kind == ListKind.Reference));
 
     int OpenTasks => _tasks.Count(task =>
         !task.Deleted && task.CompletedAt is null && !task.EndedBy(State.Today) && _lists.Any(list => list.Id == task.ListId));
