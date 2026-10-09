@@ -153,6 +153,20 @@ public partial class StylesheetRulesTests
         Assert.Contains("height: 44px", buttons);
     }
 
+    [Fact]
+    public void TheFromAndToLabelsAreSmallAndFixedWidth()
+    {
+        var label = Declarations(".pspad-time-line-label");
+
+        Assert.Contains("font-size: 12.5px", label);
+        Assert.Contains("flex: 0 0 40px", label);
+        Assert.Contains("color: var(--mud-palette-text-secondary)", label);
+    }
+
+    [Fact]
+    public void EachTimePickerFillsTheRestOfItsRow() =>
+        Assert.Contains("flex: 1 1 auto", Declarations(".pspad-time-line .pspad-time-input"));
+
     static string Declarations(string selector) =>
         string.Join("\n", Rule().Matches(Css)
             .Where(rule => SelectorsOf(rule).Contains(selector))

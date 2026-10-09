@@ -119,12 +119,67 @@ public class TimeRowTests : Bunit.TestContext
         Assert.Equal("End", row.Find(".pspad-time-end input").GetAttribute("aria-label"));
     }
 
-    [Fact]
-    public void ThePickersCarryNoAdornmentIcon()
+    [Theory]
+    [InlineData(".pspad-time-start")]
+    [InlineData(".pspad-time-end")]
+    public void EachPickerEndsInAClockIcon(string picker)
     {
         var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0))));
 
-        Assert.Empty(row.FindAll(".pspad-time-input .mud-input-adornment"));
+        var adornment = row.Find($"{picker} .mud-input-adornment-end");
+        Assert.Contains(IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.Schedule), adornment.InnerHtml);
+    }
+
+    [Fact]
+    public void ThePickersStayTypeable()
+    {
+        var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0))));
+
+        Assert.False(row.Find(".pspad-time-start input").HasAttribute("readonly"));
+        Assert.False(row.Find(".pspad-time-end input").HasAttribute("readonly"));
+    }
+
+    [Fact]
+    public void TheClockIconOpensThePicker()
+    {
+        var host = Render(builder =>
+        {
+            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<TimeRow>(1);
+            builder.AddAttribute(2, nameof(TimeRow.Value), (TaskTime?)new TaskTime(new TimeOnly(9, 0), null));
+            builder.CloseComponent();
+        });
+        Assert.Empty(host.FindAll(".mud-picker-content"));
+
+        host.Find(".pspad-time-start .mud-input-adornment-end button").Click();
+
+        host.WaitForAssertion(() => Assert.NotEmpty(host.FindAll(".mud-picker-content")));
+    }
+
+    [Fact]
+    public void FromAndToSitOnTwoRowsBesideTheTimeLabel()
+    {
+        var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0))));
+
+        Assert.Equal("Time", row.Find(".pspad-time-head .pspad-property-label").TextContent);
+        Assert.NotNull(row.Find(".pspad-time-head .pspad-time-icon"));
+        var lines = row.FindAll(".pspad-time-lines > .pspad-time-line");
+        Assert.Equal(2, lines.Count);
+        Assert.Equal("From", lines[0].QuerySelector(".pspad-time-line-label")!.TextContent);
+        Assert.NotNull(lines[0].QuerySelector(".pspad-time-start"));
+        Assert.Equal("To", lines[1].QuerySelector(".pspad-time-line-label")!.TextContent);
+        Assert.NotNull(lines[1].QuerySelector(".pspad-time-end"));
+    }
+
+    [Fact]
+    public void TheClearButtonSitsOnTheFromRow()
+    {
+        var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), null)));
+
+        var lines = row.FindAll(".pspad-time-line");
+        Assert.NotNull(lines[0].QuerySelector(".pspad-time-clear"));
+        Assert.Null(lines[1].QuerySelector(".pspad-time-clear"));
     }
 
     [Fact]

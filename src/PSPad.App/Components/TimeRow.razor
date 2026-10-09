@@ -1,27 +1,35 @@
 @using System.Globalization
 @using PSPad.Module.Tasks.Tasks
 
-<div class="pspad-property-row pspad-task-time d-flex align-center">
-    <div class="pspad-time-body d-flex align-center flex-grow-1">
+<div class="pspad-property-row pspad-task-time d-flex align-start">
+    <div class="pspad-time-head d-flex align-center flex-shrink-0">
         <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" Class="pspad-time-icon mr-3" />
         <MudText Typo="Typo.body2" Class="pspad-property-label">Time</MudText>
-        <MudTimePicker Class="pspad-time-start pspad-time-input" Placeholder="Start" aria-label="Start" Time="@AsSpan(Value?.Start)" TimeChanged="@StartChangedAsync"
-                       AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@Disabled"
-                       Adornment="Adornment.None" />
-        <span class="pspad-muted pspad-time-dash">–</span>
-        <MudTimePicker Class="pspad-time-end pspad-time-input" Placeholder="End" aria-label="End" Time="@(_end ?? AsSpan(Value?.End))" TimeChanged="@EndChangedAsync"
-                       AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true"
-                       Disabled="@(Disabled || Value is null)" Error="@(_error is not null)" Adornment="Adornment.None" />
     </div>
-    @if (Value is not null && !Disabled)
-    {
-        <MudIconButton Class="pspad-property-clear pspad-time-clear" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                       aria-label="Clear time" OnClick="@(() => SendAsync(null))" />
-    }
-    else
-    {
-        <span class="pspad-time-clear-placeholder" aria-hidden="true"></span>
-    }
+    <div class="pspad-time-lines d-flex flex-column flex-grow-1">
+        <div class="pspad-time-line d-flex align-center">
+            <span class="pspad-time-line-label">From</span>
+            <MudTimePicker Class="pspad-time-start pspad-time-input" Placeholder="Start" aria-label="Start" Time="@AsSpan(Value?.Start)" TimeChanged="@StartChangedAsync"
+                           AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@Disabled"
+                           Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="Pick start time" />
+            @if (Value is not null && !Disabled)
+            {
+                <MudIconButton Class="pspad-property-clear pspad-time-clear" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                               aria-label="Clear time" OnClick="@(() => SendAsync(null))" />
+            }
+            else
+            {
+                <span class="pspad-time-clear-placeholder" aria-hidden="true"></span>
+            }
+        </div>
+        <div class="pspad-time-line pspad-time-line-end d-flex align-center">
+            <span class="pspad-time-line-label">To</span>
+            <MudTimePicker Class="pspad-time-end pspad-time-input" Placeholder="End" aria-label="End" Time="@(_end ?? AsSpan(Value?.End))" TimeChanged="@EndChangedAsync"
+                           AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true"
+                           Disabled="@(Disabled || Value is null)" Error="@(_error is not null)"
+                           Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="Pick end time" />
+        </div>
+    </div>
 </div>
 @if (_error is not null)
 {
