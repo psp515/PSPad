@@ -1,10 +1,10 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
-using Microsoft.AspNetCore.Components;
-using PSPad.App.State;
 using PSPad.App.Api;
+using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Sync;
@@ -19,7 +19,9 @@ public class SyncCoordinatorTests : Bunit.TestContext
 {
     static readonly Guid User = Guid.NewGuid();
 
-    readonly StatusBelts Belts = new();
+    readonly StatusBelts _belts = new();
+    readonly InMemoryOutbox _rejectingOutbox = new();
+    RejectingApi _rejecting = new();
 
     NavigationManager Navigation => Services.GetRequiredService<NavigationManager>();
 
@@ -30,7 +32,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
 
         await coordinator.SyncNowAsync();
 
-        var belt = Assert.Single(Belts.Visible);
+        var belt = Assert.Single(_belts.Visible);
         Assert.Equal(BeltKind.Rejected, belt.Kind);
         Assert.Equal("1 change couldn’t be saved.", belt.Text);
         Assert.Equal("Details", belt.ActionText);
@@ -49,7 +51,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var coordinator = await CoordinatorRejecting("That list no longer exists.");
         await coordinator.SyncNowAsync();
 
-        await Assert.Single(Belts.Visible).Action!();
+        await Assert.Single(_belts.Visible).Action!();
 
         Assert.EndsWith("/settings#sync", Navigation.Uri);
     }
@@ -59,24 +61,40 @@ public class SyncCoordinatorTests : Bunit.TestContext
     {
         var coordinator = await CoordinatorRejecting("That list no longer exists.");
         await coordinator.SyncNowAsync();
-        Belts.Dismiss(BeltKind.Rejected);
+        _belts.Dismiss(BeltKind.Rejected);
 
         await coordinator.SyncNowAsync();
 
-        Assert.Empty(Belts.Visible);
+        Assert.Empty(_belts.Visible);
     }
 
     [Fact]
-    public async Task ADifferentRejectionShowsTheBeltAgainAfterADismiss()
+    public async Task ANewlyRejectedCommandReopensADismissedBeltEvenWithTheSameReason()
+    {
+        var coordinator = await CoordinatorRejecting("That list no longer exists.");
+        await coordinator.SyncNowAsync();
+        _belts.Dismiss(BeltKind.Rejected);
+        _rejecting.Reasons = [];
+        await coordinator.SyncNowAsync();
+
+        _rejecting.Reasons = ["That list no longer exists."];
+        await QueueACommandAsync();
+        await coordinator.SyncNowAsync();
+
+        Assert.Equal(BeltKind.Rejected, Assert.Single(_belts.Visible).Kind);
+    }
+
+    [Fact]
+    public async Task ACommandRejectedAgainWithANewReasonStaysDismissedButSettingsGetsTheReason()
     {
         var coordinator = await CoordinatorRejecting("First.");
         await coordinator.SyncNowAsync();
-        Belts.Dismiss(BeltKind.Rejected);
+        _belts.Dismiss(BeltKind.Rejected);
         _rejecting.Reasons = ["Second."];
 
         await coordinator.SyncNowAsync();
 
-        Assert.Equal("1 change couldn’t be saved.", Assert.Single(Belts.Visible).Text);
+        Assert.Empty(_belts.Visible);
         Assert.Equal(["Second."], coordinator.LastRejections);
     }
 
@@ -99,7 +117,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
 
         await coordinator.SyncNowAsync();
 
-        Assert.Empty(Belts.Visible);
+        Assert.Empty(_belts.Visible);
         Assert.Empty(coordinator.LastRejections);
     }
 
@@ -113,20 +131,21 @@ public class SyncCoordinatorTests : Bunit.TestContext
         Assert.Empty(Services.GetRequiredService<ISnackbar>().ShownSnackbars);
     }
 
-    RejectingApi _rejecting = new();
-
     async Task<SyncCoordinator> CoordinatorRejecting(params string[] reasons)
     {
         Services.AddMudServices();
         _rejecting = new RejectingApi { Reasons = reasons };
-        var outbox = new InMemoryOutbox();
-        await outbox.AppendAsync(Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
+        await QueueACommandAsync();
 
         var replica = new InMemoryReplica();
         return new SyncCoordinator(
-            new SyncService(_rejecting, replica, outbox), new FixedConnectivity(true), outbox, Belts, Navigation, replica,
-            new StoppedClock(Noon));
+            new SyncService(_rejecting, replica, _rejectingOutbox), new FixedConnectivity(true), _rejectingOutbox,
+            _belts, Navigation, replica, new StoppedClock(Noon));
     }
+
+    Task QueueACommandAsync() =>
+        _rejectingOutbox.AppendAsync(
+            Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
 
     [Fact]
     public async Task ThePulledRevisionAdvancesWhenSyncBringsDocumentsDown()
@@ -291,7 +310,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var replica = new InMemoryReplica();
         var coordinator = new SyncCoordinator(
             new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
-            Belts, Navigation, replica, new StoppedClock(Noon));
+            _belts, Navigation, replica, new StoppedClock(Noon));
         var changes = 0;
         coordinator.Changed += () => changes++;
 
@@ -318,7 +337,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
             new SyncService(api, new InMemoryReplica(), outbox),
             new FixedConnectivity(true),
             outbox,
-            Belts,
+            _belts,
             Navigation,
             new InMemoryReplica(),
             new StoppedClock(Noon));
@@ -361,7 +380,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         Services.AddMudServices();
         return new SyncCoordinator(
             new SyncService(new FakeApi(null, failure), local, outbox), new FixedConnectivity(true), outbox,
-            Belts, Navigation, local, new StoppedClock(Noon));
+            _belts, Navigation, local, new StoppedClock(Noon));
     }
 
     SyncCoordinator CoordinatorFor(SyncResponse? pull, bool online = true, InMemoryReplica? replica = null)
@@ -375,7 +394,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
             new SyncService(new FakeApi(pull), replica, outbox),
             new FixedConnectivity(online),
             outbox,
-            Belts,
+            _belts,
             Navigation,
             replica,
             new StoppedClock(Noon));

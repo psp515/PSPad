@@ -91,6 +91,27 @@ public class SyncServiceTests
     }
 
     [Fact]
+    public async Task TheOutcomeNamesTheRejectedCommand()
+    {
+        var outbox = new InMemoryOutbox();
+        var rejected = Guid.NewGuid();
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope());
+        await outbox.AppendAsync(rejected, Envelope());
+        var api = new FakeApi
+        {
+            Respond = envelopes =>
+            [
+                new CommandResponse(Guid.NewGuid(), true, null),
+                new CommandResponse(Guid.NewGuid(), false, "That list no longer exists.")
+            ]
+        };
+
+        var outcome = await ServiceFor(api, outbox).SyncAsync(CancellationToken.None);
+
+        Assert.Equal(rejected, Assert.Single(outcome.RejectedCommands));
+    }
+
+    [Fact]
     public async Task AnUnrecoverableRejectionIsDroppedInsteadOfWedgingTheOutbox()
     {
         var outbox = new InMemoryOutbox();

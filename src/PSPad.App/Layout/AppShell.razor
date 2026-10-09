@@ -16,6 +16,7 @@
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Today
 @inject SyncCoordinator Coordinator
+@inject ISyncTrigger Trigger
 @inject AppState State
 @inject PSPadApiClient Api
 @inject ThemePreference Preference
@@ -362,7 +363,7 @@
                 BeltKind.Offline,
                 "Can’t reach the server — working from local data. Changes sync when you’re back.",
                 "Retry",
-                Coordinator.SyncNowAsync);
+                Trigger.SyncNowAsync);
         }
 
         StateHasChanged();

@@ -21,6 +21,7 @@ public sealed class SyncCoordinator(
     bool _started;
     Task? _inFlight;
     bool _rerunRequested;
+    readonly HashSet<Guid> _surfacedCommands = [];
 
     public int PendingCount { get; private set; }
 
@@ -135,9 +136,10 @@ public sealed class SyncCoordinator(
                     Revision++;
                 }
 
+                // A rejection the user never sees is the same as a lost edit.
                 if (outcome.Rejections.Count > 0)
                 {
-                    SurfaceRejections(outcome.Rejections);
+                    SurfaceRejections(outcome);
                 }
             }
             catch (HttpRequestException)
@@ -150,17 +152,17 @@ public sealed class SyncCoordinator(
         Changed?.Invoke();
     }
 
-    // A rejection the user never sees is the same as a lost edit. A domain rejection stays queued
-    // and comes back every sync, so only a different set reopens a belt the user dismissed.
-    void SurfaceRejections(IReadOnlyList<string> rejections)
+    void SurfaceRejections(SyncOutcome outcome)
     {
-        if (!rejections.SequenceEqual(LastRejections))
+        var newlyRejected = outcome.RejectedCommands.Where(_surfacedCommands.Add).ToList();
+
+        if (newlyRejected.Count > 0)
         {
             belts.Clear(BeltKind.Rejected);
         }
 
-        LastRejections = [.. rejections];
-        belts.Show(BeltKind.Rejected, RejectedText(rejections.Count), "Details", OpenDetailsAsync);
+        LastRejections = [.. outcome.Rejections];
+        belts.Show(BeltKind.Rejected, RejectedText(outcome.Rejections.Count), "Details", OpenDetailsAsync);
     }
 
     Task OpenDetailsAsync()

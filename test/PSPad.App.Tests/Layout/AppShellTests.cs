@@ -733,15 +733,15 @@ public class AppShellTests : Bunit.TestContext
     public void RetryRunsASync()
     {
         Arrange();
+        var trigger = new GatedSyncTrigger();
+        Services.AddSingleton<ISyncTrigger>(trigger);
         var reachability = Services.GetRequiredService<ServerReachability>();
-        var connectivity = (SpyConnectivity)Services.GetRequiredService<IConnectivity>();
         var shell = Render<AppShell>();
         shell.InvokeAsync(() => reachability.Failed(browserIsOnline: true));
-        var readsBefore = connectivity.IsOnlineReads;
 
         shell.WaitForElement(".pspad-belt-action").Click();
 
-        Assert.True(connectivity.IsOnlineReads > readsBefore);
+        Assert.Equal(1, trigger.Calls);
     }
 
     [Fact]

@@ -93,6 +93,10 @@ public class PSPadThemeTests
         Assert.Equal(reference.Success.ToString(), palette.Success.ToString());
         Assert.Equal(reference.Error.ToString(), palette.Error.ToString());
         Assert.Equal(reference.Warning.ToString(), palette.Warning.ToString());
+        Assert.Equal(reference.Info.ToString(), palette.Info.ToString());
+        Assert.Equal(reference.TextPrimary.ToString(), palette.TextPrimary.ToString());
+        Assert.Equal(reference.TextSecondary.ToString(), palette.TextSecondary.ToString());
+        Assert.Equal(reference.Background.ToString(), palette.Background.ToString());
     }
 
     [Fact]
@@ -175,17 +179,14 @@ public class PSPadThemeTests
     const double BeltTintShare = 0.14;
     const double BeltInkShare = 0.6;
 
-    public static TheoryData<string, bool, Severity> EveryPaletteAndBelt()
+    public static TheoryData<bool, Severity> EveryGroundAndBelt()
     {
-        var data = new TheoryData<string, bool, Severity>();
-        foreach (var accent in PSPadTheme.Presets.Select(preset => preset.ToString()).Concat(AwkwardCustomColours))
+        var data = new TheoryData<bool, Severity>();
+        foreach (var dark in new[] { false, true })
         {
-            foreach (var dark in new[] { false, true })
+            foreach (var severity in new[] { Severity.Info, Severity.Warning, Severity.Error })
             {
-                foreach (var severity in new[] { Severity.Info, Severity.Warning, Severity.Error })
-                {
-                    data.Add(accent, dark, severity);
-                }
+                data.Add(dark, severity);
             }
         }
 
@@ -193,16 +194,17 @@ public class PSPadThemeTests
     }
 
     [Theory]
-    [MemberData(nameof(EveryPaletteAndBelt))]
-    public void AStatusBeltReadsOnItsTint(string accent, bool dark, Severity severity)
+    [MemberData(nameof(EveryGroundAndBelt))]
+    public void AStatusBeltReadsOnItsTint(bool dark, Severity severity)
     {
-        var palette = PaletteOf(accent, dark);
+        var palette = PaletteOf(nameof(Accent.Green), dark);
         var tone = ToneOf(palette, severity);
         var tint = Mix(tone, palette.Background, BeltTintShare);
         var ink = Mix(tone, palette.TextPrimary, BeltInkShare);
 
         Assert.True(Contrast(palette.TextPrimary, tint) >= MinimumTextContrast);
         Assert.True(Contrast(ink, tint) >= MinimumTextContrast);
+        Assert.True(Contrast(palette.TextSecondary, tint) >= MinimumUiContrast);
     }
 
     [Fact]
@@ -228,10 +230,10 @@ public class PSPadThemeTests
     const string DarkMessageGround = "#2C2C2C";
 
     [Theory]
-    [MemberData(nameof(EveryPaletteAndBelt))]
-    public void ASmallMessageReadsOnItsGround(string accent, bool dark, Severity severity)
+    [MemberData(nameof(EveryGroundAndBelt))]
+    public void ASmallMessageReadsOnItsGround(bool dark, Severity severity)
     {
-        var palette = PaletteOf(accent, dark);
+        var palette = PaletteOf(nameof(Accent.Green), dark);
         var ground = new MudColor(dark ? DarkMessageGround : LightMessageGround);
 
         Assert.True(Contrast(palette.TextPrimary, ground) >= MinimumTextContrast);

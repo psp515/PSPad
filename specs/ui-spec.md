@@ -309,8 +309,9 @@ page container, in flow, so they push the page down and never cover it: a
 holding the text (13.5px), an optional text action (13px, 600) and a
 `Dismiss` ✕ icon button. Ground is the severity colour mixed 14% into the
 page background, text is `TextPrimary`, icon and action are the severity
-mixed 60% into `TextPrimary` (`PSPadThemeTests` checks ≥ 4.5:1 for every
-palette, light and dark). Desktop (md+): 24px inset like the content, 8px
+mixed 60% into `TextPrimary`, the ✕ is `TextSecondary` (`PSPadThemeTests`
+checks text and action ≥ 4.5:1 and the ✕ ≥ 3:1, light and dark; status
+colours, text and background do not follow the accent). Desktop (md+): 24px inset like the content, 8px
 between belts, radius 10px, 12px above the page heading. Phone: directly
 under `MobileTopBar`, edge to edge, no radius, a `--pspad-line` bottom
 border.
@@ -319,10 +320,10 @@ border.
 |------|----------|------|--------|------|
 | Update | Info | "A new version of PSPad is ready." | Reload — activates the waiting service worker and reloads (`adr/0040`) | never; ✕ leaves the old version running until every tab closes |
 | Offline | Warning | "Can’t reach the server — working from local data. Changes sync when you’re back." | Retry — `SyncNowAsync` | `ServerReachability` reachable again clears it |
-| Rejected | Error | "1 change couldn’t be saved." / "N changes couldn’t be saved." | Details — `/settings#sync` | a different set of rejections replaces it (and reopens a dismissed belt); the same domain rejection coming back every sync stays dismissed |
+| Rejected | Error | "1 change couldn’t be saved." / "N changes couldn’t be saved." | Details — `/settings#sync` | never by itself; every newly rejected command (by command id) reopens it, even after a dismiss and even with the same reason; a domain rejection still queued and rejected again on the next sync stays dismissed |
 
 `AppShell` raises Update and Offline; `SyncCoordinator` raises Rejected and
-keeps that sync's messages in `ISyncStatus.LastRejections`, which the
+keeps the messages of the last sync that had rejections in `ISyncStatus.LastRejections` (a clean sync keeps them), which the
 Settings Sync card (`id="sync"`) lists under "Couldn’t be saved".
 `PublicLayout` shows neither state, so it has no stack.
 
