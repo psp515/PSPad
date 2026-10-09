@@ -493,7 +493,8 @@ list the caller does not own.
 
 `POST /api/commands` takes a batch of command envelopes from the outbox, in
 order, and returns one result per envelope. Rejections surface to the user,
-never dropped silently (AD-5). Conflicts resolve last-write-wins per
+never dropped silently (AD-5): `SyncCoordinator` raises the Rejected status
+belt and keeps the messages for Settings → Sync (`specs/ui-spec.md` §2). Conflicts resolve last-write-wins per
 aggregate; the loser gets a rejection carrying a reason. The outbox ships
 in order and stops on the first rejection, so a failed command can't be
 overtaken by one that depended on it.

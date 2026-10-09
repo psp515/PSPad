@@ -276,7 +276,7 @@ lives in the tooltip of the top bar's `SyncButton` (see above), and
 comes from `ISyncStatus.LastSyncedAt` (`SyncCoordinator`), set only when a
 sync reached the server and kept in the replica's `meta` store so a cold,
 offline start still shows it; `ClearAsync` purges it with the rest.
-Settings → Sync shows a status line ("Syncing…", "Couldn't sync." in the error colour, "N pending" or "Everything is synced."), "Last synced …" (re-read every 30 seconds) and a labelled `SyncButton` ("Sync now"). Every `SyncButton` turns `Color.Error` after a failed sync.
+Settings → Sync (`id="sync"`) shows a status line ("Syncing…", "Couldn't sync." in the error colour, "N pending" or "Everything is synced."), "Last synced …" (re-read every 30 seconds), the messages of the last rejected changes when there are any, and a labelled `SyncButton` ("Sync now"). Every `SyncButton` turns `Color.Error` after a failed sync.
 Below `md`, `Layout/PullToRefresh.razor` (mounted once in `AppShell`,
 `wwwroot/js/pullrefresh.js`) is the refresh path: dragging down 80px from the
 top of the page, with no panel, dialog or drawer open, runs the same sync;
@@ -297,12 +297,45 @@ Below `md`, the avatar in `MobileTopBar` opens `Layout/AccountDrawer.razor`
 v3"), the same footer component the permanent sidebar uses. Navigating
 closes the drawer.
 
-**New version prompt.** When a deployed build's service worker has installed
-and is waiting, `AppShell` shows one `Severity.Info` snackbar — "A new version
-of PSPad is available." — with a `Reload` action and a close icon. It needs
-interaction and never times out. Reload activates the waiting worker and
-reloads the page; closing it leaves the old version running until every tab
-closes (`adr/0040`).
+**Status belts.** The app's own state — a new version ready, the server
+unreachable, changes the server rejected — shows as a belt, never a toast.
+`State/StatusBelts.cs` (scoped) holds at most one belt per
+`BeltKind { Update, Offline, Rejected }`, newest first; `Show` replaces a
+kind's belt and moves it to the top, `Dismiss` hides it until `Clear` says
+that state ended, after which the next `Show` appears again.
+`Layout/StatusBeltStack.razor` renders them in `MudMainContent` before the
+page container, in flow, so they push the page down and never cover it: a
+`MudAlert` (`Variant.Text`, `Dense`, `role="status"`, the severity's icon)
+holding the text (13.5px), an optional text action (13px, 600) and a
+`Dismiss` ✕ icon button. Ground is the severity colour mixed 14% into the
+page background, text is `TextPrimary`, icon and action are the severity
+mixed 60% into `TextPrimary` (`PSPadThemeTests` checks ≥ 4.5:1 for every
+palette, light and dark). Desktop (md+): 24px inset like the content, 8px
+between belts, radius 10px, 12px above the page heading. Phone: directly
+under `MobileTopBar`, edge to edge, no radius, a `--pspad-line` bottom
+border.
+
+| Kind | Severity | Text | Action | Ends |
+|------|----------|------|--------|------|
+| Update | Info | "A new version of PSPad is ready." | Reload — activates the waiting service worker and reloads (`adr/0040`) | never; ✕ leaves the old version running until every tab closes |
+| Offline | Warning | "Can’t reach the server — working from local data. Changes sync when you’re back." | Retry — `SyncNowAsync` | `ServerReachability` reachable again clears it |
+| Rejected | Error | "1 change couldn’t be saved." / "N changes couldn’t be saved." | Details — `/settings#sync` | a different set of rejections replaces it (and reopens a dismissed belt); the same domain rejection coming back every sync stays dismissed |
+
+`AppShell` raises Update and Offline; `SyncCoordinator` raises Rejected and
+keeps that sync's messages in `ISyncStatus.LastRejections`, which the
+Settings Sync card (`id="sync"`) lists under "Couldn’t be saved".
+`PublicLayout` shows neither state, so it has no stack.
+
+**Small messages.** One action's outcome ("Couldn't star the item.",
+"Copied", "Snapshot published. Link copied.") stays an `ISnackbar` message,
+configured once in `Program.cs` through `Theme/SmallMessages.cs` so both
+layouts share it: one at a time (`MaxDisplayedSnackbars = 1`,
+`NewestOnTop`, `PreventDuplicates`), 4 s, a close icon, 150 ms in and out,
+`Variant.Text` on an opaque `--pspad-message-ground` (white light, `#2C2C2C`
+dark), `TextPrimary` 13px, radius 10px, the icon in the severity colour.
+`BottomCenter`: on phones 16px above the 72px bottom nav, on desktop moved
+to the bottom left of the content (past the open sidebar). App state never
+goes through a snackbar.
 
 ---
 
