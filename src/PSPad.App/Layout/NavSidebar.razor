@@ -1,5 +1,6 @@
 @using PSPad.App.Components
 @using PSPad.App.State
+@using PSPad.Module.Money.Budgets
 @using PSPad.Module.Tasks.Areas
 @inject SidebarCounts Counts
 @implements IDisposable
@@ -28,36 +29,55 @@
     <MudDivider Class="my-2" Style="flex-grow:0" />
 
     <MudNavMenu>
-        <MudText Typo="Typo.caption" Class="pspad-nav-caption pspad-muted px-4 pt-2 pb-1 d-block">Areas</MudText>
-        @if (!AreasLoaded)
+        @GroupHeader(NavGroupState.Budgets, "Budgets", BudgetLinks.Index, ActiveBudgets.Count)
+        @if (Groups.IsExpanded(NavGroupState.Budgets))
         {
-            <div role="status" aria-busy="true">
-                <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
-                <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
-                <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
-            </div>
-        }
-        else
-        {
-            @foreach (var area in Areas.OrderBy(area => area.Position))
+            @foreach (var budget in ActiveBudgets)
             {
-                <MudNavLink @key="area.Id" Href="@AreaLinks.For(area.Id)" Icon="@Icons.Material.Outlined.Folder">
-                    @area.Name
+                <MudNavLink @key="budget.Id" Href="@BudgetLinks.For(budget.Id)"
+                            Icon="@Icons.Material.Outlined.AccountBalanceWallet">
+                    @budget.Name
                 </MudNavLink>
             }
         }
+    </MudNavMenu>
 
-        @if (HasShared)
+    <MudDivider Class="my-2" Style="flex-grow:0" />
+
+    <MudNavMenu>
+        @GroupHeader(NavGroupState.Areas, "Areas", null, Areas.Count)
+        @if (Groups.IsExpanded(NavGroupState.Areas))
         {
-            <MudNavLink Href="@AreaLinks.For(SharedWithMe.AreaId)" Icon="@Icons.Material.Outlined.People">
-                @SharedWithMe.Name
+            @if (!AreasLoaded)
+            {
+                <div role="status" aria-busy="true">
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" Class="mx-3 my-2" />
+                </div>
+            }
+            else
+            {
+                @foreach (var area in Areas.OrderBy(area => area.Position))
+                {
+                    <MudNavLink @key="area.Id" Href="@AreaLinks.For(area.Id)" Icon="@Icons.Material.Outlined.Folder">
+                        @area.Name
+                    </MudNavLink>
+                }
+            }
+
+            @if (HasShared)
+            {
+                <MudNavLink Href="@AreaLinks.For(SharedWithMe.AreaId)" Icon="@Icons.Material.Outlined.People">
+                    @SharedWithMe.Name
+                </MudNavLink>
+            }
+
+            <MudNavLink Icon="@Icons.Material.Outlined.Add" Class="pspad-new-area"
+                        Disabled="@Disabled" OnClick="@OnNewAreaClick">
+                New area
             </MudNavLink>
         }
-
-        <MudNavLink Icon="@Icons.Material.Outlined.Add" Class="pspad-new-area"
-                    Disabled="@Disabled" OnClick="@OnNewAreaClick">
-            New area
-        </MudNavLink>
     </MudNavMenu>
 
     <MudDivider Class="my-2" Style="flex-grow:0" />
@@ -93,7 +113,41 @@
 
     [Parameter] public EventCallback OnNewArea { get; set; }
 
-    protected override void OnInitialized() => Counts.Changed += OnCountsChanged;
+    [Parameter] public IReadOnlyList<Budget> Budgets { get; set; } = [];
+
+    [Inject] NavGroupState Groups { get; set; } = default!;
+
+    IReadOnlyList<Budget> ActiveBudgets =>
+        [.. Budgets.Where(budget => !budget.IsArchived).OrderBy(budget => budget.CreatedAt)];
+
+    protected override void OnInitialized()
+    {
+        Counts.Changed += OnCountsChanged;
+        Groups.Changed += OnCountsChanged;
+    }
+
+    protected override Task OnInitializedAsync() => Groups.LoadAsync();
+
+    RenderFragment GroupHeader(string group, string label, string? href, int count) =>
+        @<div class="d-flex align-center px-4 pt-2 pb-1 pspad-nav-group">
+            @if (href is null)
+            {
+                <MudText Typo="Typo.caption" Class="pspad-nav-caption pspad-muted flex-grow-1">
+                    @(Groups.IsExpanded(group) ? label : $"{label} · {count}")
+                </MudText>
+            }
+            else
+            {
+                <MudLink Href="@href" Typo="Typo.caption" Class="pspad-nav-caption flex-grow-1">
+                    @(Groups.IsExpanded(group) ? label : $"{label} · {count}")
+                </MudLink>
+            }
+            <MudIconButton Size="Size.Small"
+                           Icon="@(Groups.IsExpanded(group) ? Icons.Material.Outlined.ExpandMore : Icons.Material.Outlined.ChevronRight)"
+                           aria-label="@($"{(Groups.IsExpanded(group) ? "Collapse" : "Expand")} {label.ToLowerInvariant()}")"
+                           aria-expanded="@(Groups.IsExpanded(group) ? "true" : "false")"
+                           OnClick="@(() => Groups.SetAsync(group, !Groups.IsExpanded(group)))" />
+        </div>;
 
     void OnCountsChanged() => InvokeAsync(StateHasChanged);
 
@@ -101,5 +155,9 @@
 
     Task OnNewAreaClick() => Disabled ? Task.CompletedTask : OnNewArea.InvokeAsync();
 
-    public void Dispose() => Counts.Changed -= OnCountsChanged;
+    public void Dispose()
+    {
+        Counts.Changed -= OnCountsChanged;
+        Groups.Changed -= OnCountsChanged;
+    }
 }
