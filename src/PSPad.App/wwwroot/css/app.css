@@ -190,8 +190,15 @@ button.pspad-heatmap-cell:focus-visible {
     padding-bottom: 96px;
 }
 
+.mud-drawer.mud-drawer-persistent.mud-drawer-pos-left {
+    top: 0;
+}
+
 @media (min-width: 960px) {
-    .mud-main-content { padding-top: 0 !important; }
+    .mud-main-content {
+        padding-top: 0 !important;
+        display: flow-root;
+    }
 }
 
 .pspad-bottom-nav {

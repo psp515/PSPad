@@ -82,6 +82,19 @@ public partial class StylesheetRulesTests
     }
 
     [Fact]
+    public void ThePersistentSidebarIsPinnedToTheTopInsteadOfItsStaticPosition() =>
+        Assert.Contains("top: 0", Declarations(".mud-drawer.mud-drawer-persistent.mud-drawer-pos-left"));
+
+    [Fact]
+    public void OnTheDesktopTheMainAreaContainsItsChildrensMargins()
+    {
+        var main = DeclarationsInMedia("min-width: 960px", ".mud-main-content");
+
+        Assert.Contains("padding-top: 0 !important", main);
+        Assert.Contains("display: flow-root", main);
+    }
+
+    [Fact]
     public void ThePageIconIsATintedTile()
     {
         var tile = Declarations(".pspad-page-icon");
@@ -189,6 +202,12 @@ public partial class StylesheetRulesTests
 
     static string Declarations(string selector) =>
         string.Join("\n", Rule().Matches(Css)
+            .Where(rule => SelectorsOf(rule).Contains(selector))
+            .Select(rule => rule.Groups["body"].Value.Trim()));
+
+    static string DeclarationsInMedia(string condition, string selector) =>
+        string.Join("\n", Regex.Matches(Css, @"@media \(" + Regex.Escape(condition) + @"\) \{(?<body>(?:[^{}]*\{[^{}]*\})*[^{}]*)\}")
+            .SelectMany(media => Rule().Matches(media.Groups["body"].Value))
             .Where(rule => SelectorsOf(rule).Contains(selector))
             .Select(rule => rule.Groups["body"].Value.Trim()));
 

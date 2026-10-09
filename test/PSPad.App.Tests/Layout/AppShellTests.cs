@@ -34,15 +34,17 @@ public class AppShellTests : Bunit.TestContext
     static readonly Guid User = Guid.NewGuid();
 
     [Fact]
-    public void OnTheDesktopThePageStartsHigher()
+    public void OnTheDesktopThePageInsetIsPaddingSoNoMarginCollapsesAboveTheShell()
     {
         Arrange();
 
         var shell = Render<AppShell>();
 
-        var content = shell.Find(".pspad-content");
-        Assert.Contains("mt-md-2", content.ClassName);
-        Assert.DoesNotContain("my-4", content.ClassName);
+        var content = shell.Find(".pspad-content").ClassList;
+        Assert.Contains("mt-md-0", content);
+        Assert.Contains("pt-md-6", content);
+        Assert.DoesNotContain("mt-md-2", content);
+        Assert.DoesNotContain("my-4", content);
     }
 
     [Fact]
