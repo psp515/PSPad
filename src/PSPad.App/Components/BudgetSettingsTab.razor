@@ -1,0 +1,48 @@
+@using PSPad.Module.Money.Budgets
+
+<MudGrid Spacing="4" Class="@Class">
+    <MudItem xs="12" md="6">
+        <CategoryList Title="Expense categories" Names="@Budget.ExpenseCategories" ReadOnly="@Budget.IsArchived"
+                      Class="pspad-category-list-expense"
+                      OnAdd="@(name => OnAddCategory.InvokeAsync((CategoryKind.Expense, name)))" />
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <div class="d-flex flex-column gap-4">
+            <CategoryList Title="Income categories" Names="@Budget.IncomeCategories" ReadOnly="@Budget.IsArchived"
+                          Class="pspad-category-list-income"
+                          OnAdd="@(name => OnAddCategory.InvokeAsync((CategoryKind.Income, name)))" />
+            <MudPaper Outlined="true" Class="pa-4 pspad-budget-card-settings">
+                <MudText Typo="Typo.subtitle2" Class="mb-3">Budget</MudText>
+                @if (Budget.IsArchived)
+                {
+                    <MudButton Class="pspad-restore-budget" Variant="Variant.Outlined" Color="Color.Primary"
+                               OnClick="@OnRestore">Restore budget</MudButton>
+                }
+                else
+                {
+                    <MudButton Class="pspad-rename-budget" Variant="Variant.Text" Color="Color.Primary"
+                               OnClick="@OnRename">Rename</MudButton>
+                    <MudText Typo="Typo.body2" Class="pspad-muted mt-3">
+                        Archiving makes it read-only and hides it from Budgets. Restore it any time.
+                    </MudText>
+                    <MudButton Class="pspad-archive-budget mt-2" Variant="Variant.Outlined" Color="Color.Error"
+                               OnClick="@OnArchive">Archive budget</MudButton>
+                }
+            </MudPaper>
+        </div>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public string Class { get; set; } = "";
+
+    [Parameter, EditorRequired] public Budget Budget { get; set; } = default!;
+
+    [Parameter] public EventCallback<(CategoryKind Kind, string Name)> OnAddCategory { get; set; }
+
+    [Parameter] public EventCallback OnRename { get; set; }
+
+    [Parameter] public EventCallback OnArchive { get; set; }
+
+    [Parameter] public EventCallback OnRestore { get; set; }
+}

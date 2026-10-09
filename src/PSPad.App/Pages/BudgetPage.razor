@@ -1,0 +1,91 @@
+@page "/budgets/{BudgetId:guid}"
+@page "/budgets/{BudgetId:guid}/{Tab}"
+@attribute [Authorize]
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Money.Budgets
+@inject IDocumentStore<Budget> BudgetStore
+@inject AppState State
+@inject CommandSender Sender
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@if (!_loaded)
+{
+    <CardSkeleton Count="2" />
+}
+else if (_budget is null)
+{
+    <PageHeading Title="Budget" Icon="@Icons.Material.Outlined.AccountBalanceWallet" BackHref="@BudgetLinks.Index" />
+    <MudAlert Severity="Severity.Warning">That budget does not exist.</MudAlert>
+}
+else
+{
+    <PageHeading Title="@_budget.Name" Subtitle="@Subtitle" Icon="@Icons.Material.Outlined.AccountBalanceWallet" />
+
+    @if (_budget.IsArchived)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4 pspad-archived-banner">This budget is archived. It is read-only.</MudAlert>
+    }
+
+    <MudTabs Elevation="0" ApplyEffectsToContainer="true" Class="pspad-budget-tabs">
+        <MudTabPanel Text="Settings">
+            <BudgetSettingsTab Class="pt-4" Budget="@_budget" OnAddCategory="@AddCategoryAsync"
+                               OnRename="@(() => Navigation.NavigateTo(BudgetQuery.For(Navigation.Uri, _budget.Id)))"
+                               OnArchive="@ArchiveAsync" OnRestore="@RestoreAsync" />
+        </MudTabPanel>
+    </MudTabs>
+}
+
+@code {
+    [Parameter] public Guid BudgetId { get; set; }
+
+    [Parameter] public string? Tab { get; set; }
+
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
+    bool _loaded;
+    int _rendered = -1;
+    Guid _renderedId;
+    Budget? _budget;
+
+    string Subtitle => $"{_budget!.ExpenseCategories.Count} expense · {_budget.IncomeCategories.Count} income categories";
+
+    protected override void OnInitialized() => Sender.Sent += OnCommandSent;
+
+    void OnCommandSent() => InvokeAsync(async () =>
+    {
+        await ReloadAsync();
+        StateHasChanged();
+    });
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_rendered == SyncRevision && _renderedId == BudgetId)
+        {
+            return;
+        }
+
+        _rendered = SyncRevision;
+        _renderedId = BudgetId;
+        await ReloadAsync();
+    }
+
+    async Task ReloadAsync()
+    {
+        var budget = await BudgetStore.LoadAsync(BudgetId, CancellationToken.None);
+        _budget = budget is null || budget.UserId != State.UserId ? null : budget;
+        _loaded = true;
+    }
+
+    Task AddCategoryAsync((CategoryKind Kind, string Name) category) =>
+        Sender.SendAsync(new AddCategory(Guid.NewGuid(), State.UserId, BudgetId, category.Kind, category.Name));
+
+    Task ArchiveAsync() => Sender.SendAsync(new ArchiveBudget(Guid.NewGuid(), State.UserId, BudgetId));
+
+    Task RestoreAsync() => Sender.SendAsync(new RestoreBudget(Guid.NewGuid(), State.UserId, BudgetId));
+
+    public void Dispose() => Sender.Sent -= OnCommandSent;
+}
