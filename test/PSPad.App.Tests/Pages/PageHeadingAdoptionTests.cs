@@ -46,7 +46,7 @@ public class PageHeadingAdoptionTests : Bunit.TestContext
         {
             var header = Services.GetRequiredService<PageHeader>();
             Assert.Equal("Shopping", header.Title);
-            Assert.Equal("Home", header.Subtitle);
+            Assert.Equal("Home · no open tasks", header.Subtitle);
             Assert.Equal($"/areas/{area.Id}", header.BackHref);
         });
     }

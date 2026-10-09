@@ -47,7 +47,58 @@ public class AreaBoardTests : Bunit.TestContext
 
         var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
 
-        Assert.Equal("2 lists · 3 open", page.Find(".pspad-page-subtitle").TextContent.Trim());
+        Assert.Equal("2 lists · 3 open tasks", page.Find(".pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
+    public void OneListWithOneOpenTaskIsSingular()
+    {
+        var area = NewArea("Dom");
+        var zakupy = NewList(area.Id, "Zakupy", 0);
+        Arrange(area, zakupy, NewTask(zakupy.Id, "Mleko"), Done(NewTask(zakupy.Id, "Chleb")));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal("1 list · 1 open task", page.Find(".pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
+    public void AnAreaWithNothingOpenSaysSo()
+    {
+        var area = NewArea("Dom");
+        Arrange(area, NewList(area.Id, "Zakupy", 0));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal("1 list · no open tasks", page.Find(".pspad-page-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
+    public void TheHeadingShowsAFolderIcon()
+    {
+        var area = NewArea("Dom");
+        Arrange(area, NewList(area.Id, "Zakupy", 0));
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Equal(Icons.Material.Outlined.Folder, Services.GetRequiredService<PageHeader>().Icon);
+        Assert.Contains(IconPaths.DistinctivePath(Icons.Material.Outlined.Folder), page.Find(".pspad-page-heading .pspad-page-icon").InnerHtml);
+    }
+
+    [Fact]
+    public void TheSharedBoardShowsAPeopleIcon()
+    {
+        Arrange(NewMemberList(Guid.NewGuid(), User, "Errands"));
+
+        Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, SharedWithMe.AreaId));
+
+        Assert.Equal(Icons.Material.Outlined.People, Services.GetRequiredService<PageHeader>().Icon);
+    }
+
+    static TodoTask Done(TodoTask task)
+    {
+        task.ApplyAll(TodoTask.Decide(task, new CompleteTask(Guid.NewGuid(), User, task.Id), DateTimeOffset.UnixEpoch));
+        return task;
     }
 
     [Fact]

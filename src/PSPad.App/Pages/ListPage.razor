@@ -31,12 +31,8 @@
 }
 else if (_list is not null)
 {
-    <PageHeading Title="@_list.Name" Subtitle="@_areaName" BackHref="@AreaLinks.For(_areaId)"
-                 BackLabel="Back to area" BackClass="pspad-back-to-area">
-        <Adornment>
-            <MudIcon Icon="@ListIcon.For(_list)" Title="@ListIcon.LabelFor(_list)" Color="Color.Primary" Class="pspad-list-icon" />
-        </Adornment>
-    </PageHeading>
+    <PageHeading Title="@_list.Name" Subtitle="@Summary" Icon="@ListIcon.For(_list)" BackHref="@AreaLinks.For(_areaId)"
+                 BackLabel="Back to area" BackClass="pspad-back-to-area" />
 
     @if (_list.Kind == ListKind.Reference)
     {
@@ -204,6 +200,10 @@ else
 
         _loaded = true;
     }
+
+    string Summary => _list is { Kind: ListKind.Reference }
+        ? _areaName ?? ""
+        : string.Join(" · ", new[] { _areaName, OpenTaskCount.Describe(_open.Count) }.Where(part => !string.IsNullOrEmpty(part)));
 
     bool IsDone(TodoTask task) => task.CompletedAt is not null || task.EndedBy(State.Today);
 

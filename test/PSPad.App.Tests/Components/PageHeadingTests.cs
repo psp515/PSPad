@@ -115,15 +115,74 @@ public class PageHeadingTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheSubtitleSitsBesideTheTitle()
+    public void TheSubtitleSitsUnderTheTitleInOneColumn()
     {
         AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
 
         var heading = Render<PageHeading>(parameters => parameters
             .Add(p => p.Title, "Dom")
-            .Add(p => p.Subtitle, "3 lists · 7 open"));
+            .Add(p => p.Subtitle, "3 lists · 7 open tasks"));
 
-        Assert.Equal("3 lists · 7 open", heading.Find(".pspad-page-heading .pspad-page-subtitle").TextContent.Trim());
+        var text = heading.Find(".pspad-page-heading .pspad-page-heading-text");
+        Assert.Contains("flex-column", text.ClassList);
+        Assert.Equal("H1", text.Children[0].TagName);
+        Assert.Contains("pspad-page-subtitle", text.Children[1].ClassList);
+        Assert.Equal("3 lists · 7 open tasks", text.Children[1].TextContent.Trim());
+    }
+
+    [Fact]
+    public void TheRowCentresItsPartsVertically()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var heading = Render<PageHeading>(parameters => parameters.Add(p => p.Title, "Dom"));
+
+        Assert.Contains("align-center", heading.Find(".pspad-page-heading").ClassList);
+    }
+
+    [Fact]
+    public void AnIconSitsInADecorativeTileBeforeTheTitle()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var heading = Render<PageHeading>(parameters => parameters
+            .Add(p => p.Title, "Dom")
+            .Add(p => p.Icon, MudBlazor.Icons.Material.Outlined.Folder)
+            .Add(p => p.BackHref, "/areas")
+            .Add(p => p.BackClass, "pspad-back"));
+
+        var block = heading.Find(".pspad-page-heading");
+        var tile = block.QuerySelector(".pspad-page-icon")!;
+        Assert.Equal("true", tile.GetAttribute("aria-hidden"));
+        Assert.Contains(IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.Folder), tile.InnerHtml);
+        Assert.Contains("mud-primary-text", tile.QuerySelector("svg")!.ClassList);
+        var order = block.Children.Select(child => child.ClassList.Contains("pspad-back") ? "back"
+            : child.ClassList.Contains("pspad-page-icon") ? "icon"
+            : child.ClassList.Contains("pspad-page-heading-text") ? "text" : null)
+            .Where(part => part is not null).ToList();
+        Assert.Equal(["back", "icon", "text"], order);
+    }
+
+    [Fact]
+    public void NoIconMeansNoTile()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        var heading = Render<PageHeading>(parameters => parameters.Add(p => p.Title, "Inbox"));
+
+        Assert.Empty(heading.FindAll(".pspad-page-icon"));
+    }
+
+    [Fact]
+    public void ItHandsTheIconToTheShell()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));
+
+        Render<PageHeading>(parameters => parameters
+            .Add(p => p.Title, "Dom")
+            .Add(p => p.Icon, MudBlazor.Icons.Material.Outlined.Folder));
+
+        Assert.Equal(MudBlazor.Icons.Material.Outlined.Folder, Services.GetRequiredService<PageHeader>().Icon);
     }
 
     [Fact]

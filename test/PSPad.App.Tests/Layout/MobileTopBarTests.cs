@@ -122,13 +122,71 @@ public class MobileTopBarTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheAvatarIsLargerThanTheSmallPreset()
+    public void TheAvatarIsThirtySixPixels()
     {
         Arrange();
 
         var bar = RenderBar();
 
-        Assert.Contains("width:32px", bar.Find(".pspad-avatar-button .mud-avatar").GetAttribute("style"));
+        var style = bar.Find(".pspad-avatar-button .mud-avatar").GetAttribute("style");
+        Assert.Contains("width:36px", style);
+        Assert.Contains("height:36px", style);
+    }
+
+    [Fact]
+    public void ThePageIconSitsInATileBeforeTheTitle()
+    {
+        Arrange();
+        var header = Services.GetRequiredService<PageHeader>();
+        var bar = RenderBar();
+
+        header.Set("Dom", "2 lists · 2 open tasks", null, null, MudBlazor.Icons.Material.Outlined.Folder);
+
+        bar.WaitForAssertion(() =>
+        {
+            var tile = bar.Find(".pspad-top-bar .pspad-page-icon");
+            Assert.Equal("true", tile.GetAttribute("aria-hidden"));
+            Assert.Contains(IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.Folder), tile.InnerHtml);
+            Assert.Equal("pspad-top-title", tile.NextElementSibling!.ClassName);
+        });
+    }
+
+    [Fact]
+    public void NoIconMeansNoTile()
+    {
+        Arrange();
+        Services.GetRequiredService<PageHeader>().Set("Inbox", null, null);
+
+        var bar = RenderBar();
+
+        Assert.Empty(bar.FindAll(".pspad-page-icon"));
+    }
+
+    [Fact]
+    public void TheTitleIsNotInThePrimaryColour()
+    {
+        Arrange();
+        Services.GetRequiredService<PageHeader>().Set("Inbox", null, null);
+
+        var bar = RenderBar();
+
+        var title = bar.Find(".pspad-top-heading");
+        Assert.Equal("Inbox", title.TextContent);
+        Assert.DoesNotContain("mud-primary-text", title.ClassList);
+    }
+
+    [Fact]
+    public void TheSubtitleSitsUnderTheTitleOnOneLine()
+    {
+        Arrange();
+        Services.GetRequiredService<PageHeader>().Set("Dom", "1 list · no open tasks", null);
+
+        var bar = RenderBar();
+
+        var subtitle = bar.Find(".pspad-top-title .pspad-top-subtitle");
+        Assert.Equal("1 list · no open tasks", subtitle.TextContent);
+        Assert.Contains("pspad-ellipsis", subtitle.ClassList);
+        Assert.Contains("pspad-ellipsis", bar.Find(".pspad-top-heading").ClassList);
     }
 
     void Arrange() => AppTestHost.Arrange(this, Guid.NewGuid(), new DateOnly(2026, 9, 12));

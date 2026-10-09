@@ -34,6 +34,17 @@ public class GoalPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheHeadingShowsAFlagIcon()
+    {
+        var goal = NewGoal("Eat healthier");
+        Arrange(goal);
+
+        var page = RenderPage(goal.Id);
+
+        Assert.Contains(IconPaths.DistinctivePath(Icons.Material.Outlined.Flag), page.Find(".pspad-page-heading .pspad-page-icon").InnerHtml);
+    }
+
+    [Fact]
     public void TasksOfOtherGoalsAreNotThere()
     {
         var goal = NewGoal("Eat healthier");
