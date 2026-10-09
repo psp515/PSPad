@@ -2,7 +2,7 @@
 title: Budgets take Statistics' bottom-bar slot, and the sidebar's Budgets and Areas collapse
 tags: [ui, navigation, mobile]
 date: 2026-10-09
-status: Proposed
+status: Active
 ---
 
 # ADR-0060: Budgets take Statistics' bottom-bar slot, and the sidebar's Budgets and Areas collapse
