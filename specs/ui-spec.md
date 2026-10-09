@@ -223,11 +223,19 @@ bar never covers the last row either. Below `md`, every scrolling element
 (`scrollbar-width: none`, `::-webkit-scrollbar { display: none }`) while
 still scrolling.
 
-**Top spacing.** The container's top margin is 16px below `md` and 8px from
-`md` up (`mt-4 mt-md-2`). `MudMainContent` reserves top padding for the
-phone app bar; from `md` up, where that bar is hidden, `app.css` removes it
-(`.mud-main-content { padding-top: 0 }` in a `min-width: 960px` query), so
-desktop pages start at the top.
+**Top spacing.** The container's top margin is 16px below `md`; from `md`
+up it has no top margin and a 24px top padding instead (`mt-4 mt-md-0
+pt-md-6`). `MudMainContent` reserves top padding for the phone app bar;
+from `md` up, where that bar is hidden, `app.css` removes it
+(`.mud-main-content { padding-top: 0 !important; display: flow-root }` in a
+`min-width: 960px` query). Desktop page and sidebar both start at y=0: a
+top margin on the page's first child must never escape the main area —
+with no padding above it, it collapses through `.mud-main-content`,
+`.mud-layout` and `body`, pushing the body down and leaving a strip of
+canvas at the top of the window. The `flow-root` keeps such margins inside
+the main area, and `.mud-drawer.mud-drawer-persistent.mud-drawer-pos-left
+{ top: 0 }` pins the sidebar, which MudBlazor otherwise leaves at its
+static position (it sets no `top` on a persistent left drawer).
 
 **Sidebar breakpoint.** The sidebar is permanent at `md`+ (≥960px). Below
 `md` there is no navigation drawer at all: navigation is `MobileTopBar`
@@ -309,19 +317,27 @@ message — a screen must never show an empty state it has not verified.
 (`Components/PageHeading.razor`), with `BackHref`, `BackLabel`, `BackClass`,
 `Subtitle` and `Icon` as needed, rendered both in the loading and
 loaded branches so nothing jumps on load. Desktop row, `align-items: center`:
-[back] [icon tile] [title over subtitle] … sync stamp and Sync button. The
-title is the page's one `h1` (`MudText Typo.h5 HtmlTag="h1"`, 24px,
-`TextPrimary`, weight 600, `pspad-page-title`); the back `MudIconButton`
+[back] [icon tile] [title over subtitle] … sync stamp and Sync button, on
+the page background (no band), 14px gaps. The desktop row lines up with
+the sidebar's `AccountBadge`: the badge's avatar row starts 28px from the
+top (the nav's 12px padding plus the badge's 16px) and is 40px high, so
+its centre is at 48px. The heading row starts 24px into the page (the
+container's `pt-md-6`), is 48px high (`.pspad-page-heading { min-height:
+48px }`) with its items centred — the 40px tile spans the avatar's 28–68px
+and, with a subtitle, the title's centre meets the account name's (~38px).
+The page content starts 20px under the row (`mb-5`). The
+title is the page's one `h1` (`MudText Typo.h5 HtmlTag="h1"`, 20px,
+line-height 1.15, `TextPrimary`, weight 600, `pspad-page-title`); the back `MudIconButton`
 shows when `BackHref` is set — a screen nested under another, such as a list
 under its area, links back to the parent screen. `Icon` (a MudBlazor icon
-path) renders in `Components/PageIcon.razor`: a `pspad-page-icon` tile, 44px,
+path) renders in `Components/PageIcon.razor`: a `pspad-page-icon` tile, 40px,
 radius 12px, `--pspad-tint`, primary icon, `aria-hidden`. The title and
-`Subtitle` (`pspad-page-subtitle`, 13px, `TextSecondary`, 3px under the
+`Subtitle` (`pspad-page-subtitle`, 12.5px, `TextSecondary`, 2px under the
 title) stack in one column (`pspad-page-heading-text`). It sits inside
 `d-none d-md-flex` on desktop and feeds the phone top bar (`MobileTopBar`,
 via `PageHeader`) the same title, subtitle, icon and back link below `md`.
 The Area board passes `Icons.Material.Outlined.Folder` (Shared with me:
-`People`) and "{n} list(s) · {m} open task(s)"; the list screen passes its
+`People`) and an `AreaSummary` subtitle (below); the list screen passes its
 `ListIcon.For(list)` with `IconLabel` `ListIcon.LabelFor(list)` (a
 visually hidden `pspad-sr-only` span in the `h1`, since the tile is
 `aria-hidden`) and "{area} · {m} open task(s)" (a reference list: the
@@ -330,7 +346,13 @@ Counts are singular for one, plural otherwise, and zero open tasks reads
 "no open tasks" (`OpenTaskCount`): "1 list · no open tasks", "1 list · 1
 open task", "2 lists · 2 open tasks". Open tasks are the ones a card counts:
 not deleted, not completed, not ended. One component means the two cannot
-drift. A page's loading branch renders `<PageHeading Title="" />`
+drift. The area subtitle (`AreaSummary`) depends on the list kinds: task
+lists only, "{n} list(s) · {m} open task(s)" ("· no open tasks" at zero);
+reference lists only, "{n} reference list(s) · {k} item(s)" ("· no items"
+at zero); both, "{n} lists · {m} open task(s) · {k} item(s)" with n every
+list, a zero part left out, except "no open tasks" stays when there are no
+items either ("2 lists · 4 items", "2 lists · no open tasks"). Items are the
+reference lists' items that are not deleted. A page's loading branch renders `<PageHeading Title="" />`
 so the top bar never keeps the previous screen's title.
 
 **My Day** shows one day. `PageHeading Title="My Day"` (title … sync stamp
@@ -1247,7 +1269,7 @@ typing.
 
 | Typo | Use |
 |---|---|
-| `Typo.h5` as `h1` | page title, 24px, `TextPrimary`, weight 600, with a muted 13px subtitle under it |
+| `Typo.h5` as `h1` | page title, 20px, `TextPrimary`, weight 600, with a muted 12.5px subtitle under it |
 | `Typo.h6` as `SectionHeading` | section heading: 13px, weight 600, `h2`, count as a muted pill |
 | `Typo.subtitle2` | card header link (list name, goal name), 14.5px medium |
 | `Typo.body1` / `Typo.body2` | primary row/card content |
