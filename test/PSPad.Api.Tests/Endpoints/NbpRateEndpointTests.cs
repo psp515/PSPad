@@ -71,6 +71,20 @@ public class NbpRateEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task ADateBeyondTomorrowGives404WithoutCallingNbp()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var nbp = new StubNbpHandler(_ => StubNbpHandler.Rates(("2026-10-09", 1m)));
+        await using var factory = FactoryWith(nbp);
+
+        var response = await factory.ClientFor(Guid.NewGuid().ToString())
+            .GetAsync("/api/money/nbp-rate?currency=EUR&date=2999-01-01", ct);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Empty(nbp.Requests);
+    }
+
+    [Fact]
     public async Task ATimeoutGives502()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
