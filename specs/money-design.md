@@ -216,7 +216,8 @@ zone, never machine-local (the AGENTS.md §2 invariant).
   `moneypreferences` join delta sync by `seq` (AD-6), filtered by `UserId`.
   They are added to `SyncReader`, to `SyncService`'s collection map and to
   `MongoIndexes`. Existing replicas pull them from zero once (`adr/0049`).
-  The client gets IndexedDB stores for each.
+  The client needs no new store: the replica keeps every collection in its one
+  generic `documents` store, indexed by type and user.
 - **Commands** go through `/api/commands` and the outbox. Money's handlers are
   registered in both hosts. Rejections surface the usual way (AD-5,
   `adr/0021`).
