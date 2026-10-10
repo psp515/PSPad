@@ -11,6 +11,7 @@ namespace PSPad.Api.Rates;
 public sealed class NbpRateClient(HttpClient http, IMemoryCache cache, IClock clock)
 {
     const int LookbackDays = 7;
+    static readonly DateOnly FirstPublishedDate = new(2002, 1, 2);
 
     public async Task<NbpRateView?> RateAsync(string currency, DateOnly date, CancellationToken ct)
     {
@@ -22,6 +23,11 @@ public sealed class NbpRateClient(HttpClient http, IMemoryCache cache, IClock cl
         }
 
         if (!Currencies.All.Contains(code))
+        {
+            return null;
+        }
+
+        if (date < FirstPublishedDate)
         {
             return null;
         }
@@ -60,10 +66,16 @@ public sealed class NbpRateClient(HttpClient http, IMemoryCache cache, IClock cl
             }
 
             var series = await response.Content.ReadFromJsonAsync<NbpSeries>(ct);
-            var latest = series?.Rates.Where(rate => rate.EffectiveDate <= date).MaxBy(rate => rate.EffectiveDate);
+
+            if (series?.Rates is null)
+            {
+                throw new NbpUnavailableException("NBP answered without rates.");
+            }
+
+            var latest = series.Rates.Where(rate => rate.EffectiveDate <= date).MaxBy(rate => rate.EffectiveDate);
             return latest is null ? null : new NbpRateView(code, latest.Mid, latest.EffectiveDate);
         }
-        catch (Exception exception) when (exception is HttpRequestException or JsonException
+        catch (Exception exception) when (exception is HttpRequestException or JsonException or NotSupportedException
             || (exception is TaskCanceledException && !ct.IsCancellationRequested))
         {
             throw new NbpUnavailableException("NBP could not be reached.", exception);

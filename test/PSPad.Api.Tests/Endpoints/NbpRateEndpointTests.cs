@@ -94,6 +94,44 @@ public class NbpRateEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task ANonJsonBodyGives502()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = FactoryWith(new StubNbpHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("<html/>", System.Text.Encoding.UTF8, "text/html") }));
+
+        var response = await factory.ClientFor(Guid.NewGuid().ToString()).GetAsync(Friday, ct);
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task JsonWithoutRatesGives502()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = FactoryWith(new StubNbpHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) }));
+
+        var response = await factory.ClientFor(Guid.NewGuid().ToString()).GetAsync(Friday, ct);
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ADateBeforeNbpPublishedRatesGives404WithoutCallingNbp()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var nbp = new StubNbpHandler(_ => StubNbpHandler.Rates(("2026-10-09", 1m)));
+        await using var factory = FactoryWith(nbp);
+
+        var response = await factory.ClientFor(Guid.NewGuid().ToString())
+            .GetAsync("/api/money/nbp-rate?currency=EUR&date=0001-01-03", ct);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Empty(nbp.Requests);
+    }
+
+    [Fact]
     public async Task ASecondLookupIsServedFromTheCache()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
