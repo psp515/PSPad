@@ -35,7 +35,7 @@
         </MudAutocomplete>
         <div class="d-flex gap-3">
             <MudNumericField T="decimal?" Class="pspad-entry-amount-field flex-grow-1" Label="Amount" Variant="Variant.Outlined"
-                             Margin="Margin.Dense" @bind-Value="_amount" Immediate="true" HideSpinButtons="true" Disabled="@ReadOnly" />
+                             Margin="Margin.Dense" @bind-Value="_amount" Immediate="true" HideSpinButtons="true" Max="@Money.MaxAmount" Disabled="@ReadOnly" />
             <MudSelect T="string" Class="pspad-entry-currency-field" Label="Currency" Variant="Variant.Outlined"
                        Margin="Margin.Dense" Value="@_currency" ValueChanged="@Suggest" Disabled="@ReadOnly">
                 @foreach (var currency in Currencies.All)
@@ -49,7 +49,7 @@
             <div class="d-flex align-center gap-2 pspad-entry-rate">
                 <MudNumericField T="decimal?" Class="pspad-entry-rate-field flex-grow-1" Label="Rate to PLN"
                                  Variant="Variant.Outlined" Margin="Margin.Dense" Value="@_rate" ValueChanged="@RateTyped"
-                                 Immediate="true" HideSpinButtons="true" Disabled="@ReadOnly" />
+                                 Immediate="true" HideSpinButtons="true" Max="@Money.MaxRate" Disabled="@ReadOnly" />
                 <MudButton Class="pspad-entry-nbp" Variant="Variant.Outlined" Color="Color.Primary"
                            Disabled="@(ReadOnly || _fetching || !Connectivity.IsOnline)" OnClick="@FetchNbpRateAsync">NBP</MudButton>
             </div>

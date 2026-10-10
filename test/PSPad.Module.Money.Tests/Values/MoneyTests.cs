@@ -40,6 +40,24 @@ public class MoneyTests
         Assert.Equal("An amount has to be more than zero.",
             Assert.Throws<DomainRejectedException>(() => Money.Require(new Money(amount, "PLN", 1m, Day), Day)).Message);
 
+    [Fact]
+    public void AnAmountAtTheCapIsAccepted() =>
+        Assert.Equal(Money.MaxAmount, Money.Require(new Money(Money.MaxAmount, "PLN", 1m, Day), Day).Amount);
+
+    [Fact]
+    public void AnAmountAboveTheCapIsRejected() =>
+        Assert.Equal("An amount can be at most 1 000 000 000.",
+            Assert.Throws<DomainRejectedException>(() => Money.Require(new Money(Money.MaxAmount + 0.01m, "PLN", 1m, Day), Day)).Message);
+
+    [Fact]
+    public void ARateAtTheCapIsAccepted() =>
+        Assert.Equal(Money.MaxRate, Money.Require(new Money(10m, "EUR", Money.MaxRate, Day), Day).RateToPln);
+
+    [Fact]
+    public void ARateAboveTheCapIsRejected() =>
+        Assert.Equal("A rate can be at most 10 000.",
+            Assert.Throws<DomainRejectedException>(() => Money.Require(new Money(10m, "EUR", Money.MaxRate + 0.01m, Day), Day)).Message);
+
     [Theory]
     [InlineData(0)]
     [InlineData(-4)]
