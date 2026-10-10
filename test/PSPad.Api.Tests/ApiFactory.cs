@@ -13,7 +13,8 @@ namespace PSPad.Api.Tests;
 public sealed class ApiFactory(
     MongoFixture fixture,
     IKeycloakAdminClient? keycloakAdminClient = null,
-    IReadOnlyDictionary<string, string?>? configuration = null)
+    IReadOnlyDictionary<string, string?>? configuration = null,
+    Action<IServiceCollection>? testServices = null)
     : WebApplicationFactory<Program>
 {
     protected override IHost CreateHost(IHostBuilder builder)
@@ -48,6 +49,8 @@ public sealed class ApiFactory(
             {
                 services.AddSingleton(keycloakAdminClient);
             }
+
+            testServices?.Invoke(services);
         });
 
     public HttpClient ClientFor(
