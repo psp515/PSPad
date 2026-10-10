@@ -4,7 +4,10 @@ using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Sync;
 using PSPad.Contracts;
+using PSPad.Module.Money;
 using PSPad.Module.Money.Budgets;
+using PSPad.Module.Money.Entries;
+using PSPad.Module.Money.Preferences;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
@@ -208,6 +211,53 @@ public class SyncServiceTests
     {
         Assert.Contains("budgets", SyncService.CollectionsFingerprint);
         Assert.Contains("moneypreferences", SyncService.CollectionsFingerprint);
+        Assert.Contains("moneyentries", SyncService.CollectionsFingerprint);
+    }
+
+    [Fact]
+    public async Task APulledMoneyEntryLandsInTheReplicaWithItsMoney()
+    {
+        var replica = new InMemoryReplica();
+        var budget = new Budget();
+        budget.ApplyAll(Budget.Decide(null, new CreateBudget(Guid.NewGuid(), User, Guid.NewGuid(), "Personal"),
+            DateTimeOffset.UnixEpoch));
+        var day = new DateOnly(2026, 10, 9);
+        var entry = new MoneyEntry();
+        entry.ApplyAll(MoneyEntry.Decide(null, budget, new RecordExpense(Guid.NewGuid(), User, Guid.NewGuid(), budget.Id,
+            "Lego", "Hobby", new Money(12.5m, "EUR", 4.2512m, day), day, null), DateTimeOffset.UnixEpoch));
+        var row = JsonSerializer.SerializeToElement(entry,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true });
+        var api = new FakeApi
+        {
+            Pull = new(5, new Dictionary<string, JsonElement[]> { ["moneyentries"] = [row] }, [])
+        };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        var stored = await replica.LoadAsync<MoneyEntry>(entry.Id);
+        Assert.Equal(new Money(12.5m, "EUR", 4.2512m, day), stored!.Money);
+        Assert.Equal(53.14m, stored.Money.InPln);
+        Assert.Equal("Hobby", stored.Category);
+    }
+
+    [Fact]
+    public async Task APulledDefaultCurrencyLandsInTheReplica()
+    {
+        var replica = new InMemoryReplica();
+        var preferences = new MoneyPreferences();
+        preferences.ApplyAll(MoneyPreferences.Decide(null, new SetDefaultCurrency(Guid.NewGuid(), User, "EUR"),
+            DateTimeOffset.UnixEpoch));
+        var row = JsonSerializer.SerializeToElement(preferences,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true });
+        var api = new FakeApi
+        {
+            Pull = new(5, new Dictionary<string, JsonElement[]> { ["moneypreferences"] = [row] }, [])
+        };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        var stored = await replica.LoadAsync<MoneyPreferences>(MoneyPreferences.IdFor(User));
+        Assert.Equal("EUR", stored!.DefaultCurrency);
     }
 
     [Fact]

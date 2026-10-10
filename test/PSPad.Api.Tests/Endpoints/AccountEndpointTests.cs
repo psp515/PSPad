@@ -7,7 +7,9 @@ using PSPad.Api.Tests.Persistence;
 using PSPad.Api.Tests.Sync;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Money;
 using PSPad.Module.Money.Budgets;
+using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Preferences;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
@@ -84,33 +86,35 @@ public class AccountEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
-    public async Task DeletingTheAccountRemovesItsBudgetsAndPreferences()
+    public async Task DeletingTheAccountRemovesItsMoneyDocuments()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         await using var factory = new ApiFactory(fixture, new FakeKeycloakAdminClient(succeeds: true));
         var client = factory.ClientFor(Guid.NewGuid().ToString());
-        var userId = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var userId = await Sharing.SignInAsync(client, ct);
+        var budgetId = Guid.NewGuid();
+        var day = new DateOnly(2026, 10, 9);
 
-        var response = await client.PostAsJsonAsync("/api/commands", new[]
-        {
-            new CommandEnvelope(nameof(CreateBudget), JsonSerializer.SerializeToElement(
-                new CreateBudget(Guid.NewGuid(), userId, Guid.NewGuid(), "Personal"))),
-            new CommandEnvelope(nameof(SetDefaultCurrency), JsonSerializer.SerializeToElement(
-                new SetDefaultCurrency(Guid.NewGuid(), userId, "EUR")))
-        }, ct);
-        response.EnsureSuccessStatusCode();
-        var results = await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct);
-        Assert.All(results!, result => Assert.True(result.Accepted, result.Rejection));
+        await Sharing.SendAsync(client, ct,
+            new CreateBudget(Guid.NewGuid(), userId, budgetId, "Personal"),
+            new SetDefaultCurrency(Guid.NewGuid(), userId, "EUR"),
+            new RecordExpense(Guid.NewGuid(), userId, Guid.NewGuid(), budgetId, "Rolls", "Food",
+                new Money(3m, "PLN", 1m, day), day, null));
 
         var context = Persistence.TestContext.For(fixture);
         var owned = Builders<BsonDocument>.Filter.Eq("userId", userId);
-        Assert.Equal(1, await context.Collection<BsonDocument>("budgets").Find(owned).CountDocumentsAsync(ct));
-        Assert.Equal(1, await context.Collection<BsonDocument>("moneypreferences").Find(owned).CountDocumentsAsync(ct));
+        string[] collections = ["budgets", "moneypreferences", "moneyentries"];
+        foreach (var name in collections)
+        {
+            Assert.Equal(1, await context.Collection<BsonDocument>(name).Find(owned).CountDocumentsAsync(ct));
+        }
 
         (await client.DeleteAsync("/api/account", ct)).EnsureSuccessStatusCode();
 
-        Assert.Equal(0, await context.Collection<BsonDocument>("budgets").Find(owned).CountDocumentsAsync(ct));
-        Assert.Equal(0, await context.Collection<BsonDocument>("moneypreferences").Find(owned).CountDocumentsAsync(ct));
+        foreach (var name in collections)
+        {
+            Assert.Equal(0, await context.Collection<BsonDocument>(name).Find(owned).CountDocumentsAsync(ct));
+        }
     }
 
     [Fact]
