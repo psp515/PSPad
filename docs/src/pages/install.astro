@@ -24,6 +24,11 @@ const entries = parseEnvExample(readRepoFile('docker/.env.example'))
       <li>Docker with Compose v2 (<code>docker compose version</code> prints v2.x).</li>
       <li>About 2 GB of disk.</li>
       <li>Beyond <code>localhost</code>: a reverse proxy for TLS. The stack serves plain HTTP only.</li>
+      <li>
+        Optional: outbound HTTPS from the API container to <code>api.nbp.pl</code>. Only the
+        NBP button in a budget's entry panel uses it, to fetch an exchange rate; without it
+        that button fails and everything else works. No env var or port is involved.
+      </li>
     </ul>
 
     <Step n={1} title="Clone the repository">
