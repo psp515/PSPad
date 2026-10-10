@@ -1,4 +1,5 @@
 using Bunit;
+using PSPad.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.App.Api;
@@ -253,6 +254,92 @@ public class EntryPanelTests : Bunit.TestContext
         Assert.Contains("Groceries", panel.Markup);
         Assert.Empty(panel.FindAll(".pspad-panel-save"));
         Assert.Empty(panel.FindAll(".pspad-panel-delete"));
+    }
+
+    static Budget ForeignBudget()
+    {
+        var budget = new Budget();
+        budget.ApplyAll(Budget.Decide(null, new CreateBudget(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Foreign"),
+            DateTimeOffset.UnixEpoch));
+        return budget;
+    }
+
+    [Fact]
+    public async Task TwoRapidSavesSendOneCommand()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var gate = new GatedHandler();
+        Services.AddSingleton<ICommandHandler<RecordExpense>>(gate);
+        var panel = NewExpense(budget);
+        await FillAsync(panel, "Groceries", "Food", 42.5m);
+        var save = panel.Find(".pspad-panel-save");
+
+        var first = panel.InvokeAsync(() => save.Click());
+        await gate.Started.Task;
+        await panel.InvokeAsync(() => save.Click());
+        gate.Release.SetResult();
+        await first;
+        await Task.Delay(100, Xunit.TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, gate.Calls);
+    }
+
+    sealed class GatedHandler : ICommandHandler<RecordExpense>
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int Calls { get; private set; }
+
+        public async Task<CommandResult> HandleAsync(RecordExpense command, CancellationToken ct)
+        {
+            Calls++;
+            Started.TrySetResult();
+            await Release.Task;
+            return CommandResult.Ok();
+        }
+    }
+
+    [Fact]
+    public async Task SwitchingFromANewExpenseToANewIncomeStartsAFreshDraft()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var panel = NewExpense(budget);
+        await FillAsync(panel, "Groceries", "Food", 42.5m);
+
+        panel.Render(parameters => parameters.Add(p => p.NewKind, CategoryKind.Income));
+
+        Assert.Contains("New income", panel.Find(".pspad-panel-title").TextContent);
+        Assert.Equal("", panel.Find(".pspad-entry-category-field input").GetAttribute("value") ?? "");
+    }
+
+    [Fact]
+    public void AForeignEntryLeavesThePanelClosed()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        var foreign = ForeignBudget();
+        var entry = MoneyEntries.Expense(foreign, "Secret", "Food", 10m, Today);
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, foreign, entry);
+
+        var panel = Render<EntryPanel>(parameters => parameters.Add(p => p.EntryId, (Guid?)entry.Id));
+
+        Assert.DoesNotContain("Secret", panel.Markup);
+        Assert.Empty(panel.FindAll(".pspad-panel-save"));
+    }
+
+    [Fact]
+    public void AForeignBudgetLeavesTheNewPanelClosed()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        var foreign = ForeignBudget();
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, foreign);
+
+        var panel = NewExpense(foreign);
+
+        Assert.Empty(panel.FindAll(".pspad-panel-save"));
     }
 
     [Fact]
