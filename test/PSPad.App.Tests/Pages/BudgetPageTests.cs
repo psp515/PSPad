@@ -1,12 +1,15 @@
+using AngleSharp.Dom;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using PSPad.Abstractions;
 using PSPad.App.Pages;
 using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.Module.Money.Budgets;
+using PSPad.Module.Money.Entries;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Pages;
@@ -274,5 +277,180 @@ public class BudgetPageTests : Bunit.TestContext
 
         page.WaitForAssertion(() => page.Find(".pspad-category-list"));
         Assert.Empty(page.FindAll(".pspad-fab"));
+    }
+
+    IRenderedComponent<BudgetPage> Settings(Budget budget)
+    {
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "settings"));
+        page.WaitForAssertion(() => page.Find(".pspad-category-list"));
+        return page;
+    }
+
+    static IElement Row(IRenderedComponent<BudgetPage> page, string list, string name) =>
+        page.FindAll($".pspad-category-list-{list} .pspad-category-row")
+            .Single(row => row.QuerySelector(".pspad-category-name")?.TextContent.Trim() == name);
+
+    Task<T> SentAsync<T>() => AppTestHost.SentAsync<T>(this);
+
+    [Fact]
+    public async Task RenamingACategorySendsRenameCategoryAndRelabelsItsEntries()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        var rolls = MoneyEntries.Expense(budget, "Rolls", "Food", 3m, Today);
+        var replica = AppTestHost.Arrange(this, budget.UserId, Today, budget, rolls);
+        var page = Settings(budget);
+
+        Row(page, "expense", "Food").QuerySelector(".pspad-category-rename")!.Click();
+        page.Find(".pspad-category-list-expense .pspad-category-rename-input input").Input("Groceries");
+        page.Find(".pspad-category-list-expense .pspad-category-rename-input input").KeyDown("Enter");
+
+        var sent = await SentAsync<RenameCategory>();
+        Assert.Equal((CategoryKind.Expense, "Food", "Groceries"), (sent.Kind, sent.From, sent.To));
+        Assert.Equal("Groceries", (await replica.LoadAsync<MoneyEntry>(rolls.Id))!.Category);
+        page.WaitForAssertion(() => Row(page, "expense", "Groceries"));
+    }
+
+    [Fact]
+    public async Task RenamingOntoAnotherCategoryKeepsTheInputAndSaysWhy()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Settings(budget);
+
+        Row(page, "expense", "Home").QuerySelector(".pspad-category-rename")!.Click();
+        page.Find(".pspad-category-list-expense .pspad-category-rename-input input").Input("food");
+        page.Find(".pspad-category-list-expense .pspad-category-rename-input input").KeyDown("Enter");
+
+        Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
+        Assert.Contains(Services.GetRequiredService<ISnackbar>().ShownSnackbars,
+            snackbar => snackbar.Message == "That category already exists. Merge them instead.");
+        Assert.Equal("food", page.Find(".pspad-category-list-expense .pspad-category-rename-input input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task MergingACategorySendsMergeCategory()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Settings(budget);
+
+        Row(page, "expense", "Bike").QuerySelector(".pspad-category-merge")!.Click();
+        var target = page.FindComponents<MudSelect<string>>().Single(select => select.Instance.Class!.Contains("pspad-category-merge-target"));
+        await page.InvokeAsync(() => target.Instance.ValueChanged.InvokeAsync("Car"));
+
+        var sent = await SentAsync<MergeCategory>();
+        Assert.Equal(("Bike", "Car"), (sent.From, sent.Into));
+        page.WaitForAssertion(() => Assert.DoesNotContain(page.FindAll(".pspad-category-list-expense .pspad-category-name"),
+            name => name.TextContent.Trim() == "Bike"));
+    }
+
+    [Fact]
+    public async Task RemovingAnUnusedCategorySendsRemoveCategory()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Settings(budget);
+
+        Row(page, "income", "Other").QuerySelector(".pspad-category-remove")!.Click();
+
+        var sent = await SentAsync<RemoveCategory>();
+        Assert.Equal((CategoryKind.Income, "Other"), (sent.Kind, sent.Name));
+        page.WaitForAssertion(() => Assert.Equal(4, page.FindAll(".pspad-category-list-income .pspad-category-row").Count));
+    }
+
+    [Fact]
+    public void AUsedCategoryShowsItsCountAndCannotBeRemoved()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            MoneyEntries.Expense(budget, "Rolls", "Food", 3m, Today),
+            MoneyEntries.Expense(budget, "Milk", "Food", 4m, Today),
+            MoneyEntries.Expense(budget, "Lamp", "Home", 40m, Today));
+        var page = Settings(budget);
+
+        Assert.Contains("2 entries", Row(page, "expense", "Food").TextContent);
+        Assert.Contains("1 entry", Row(page, "expense", "Home").TextContent);
+        Assert.True(Row(page, "expense", "Food").QuerySelector(".pspad-category-remove")!.HasAttribute("disabled"));
+        Assert.False(Row(page, "expense", "Car").QuerySelector(".pspad-category-remove")!.HasAttribute("disabled"));
+        Assert.Null(Row(page, "expense", "Car").QuerySelector(".pspad-category-usage"));
+    }
+
+    [Fact]
+    public void AnArchivedBudgetHidesCategoryActions()
+    {
+        var budget = BudgetsPageTests.Named("Old", archived: true);
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var page = Settings(budget);
+
+        Assert.Empty(page.FindAll(".pspad-category-rename"));
+        Assert.Empty(page.FindAll(".pspad-category-merge"));
+        Assert.Empty(page.FindAll(".pspad-category-remove"));
+    }
+
+    [Fact]
+    public async Task ArchivingSendsArchiveBudget()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Settings(budget);
+
+        page.Find(".pspad-archive-budget").Click();
+
+        Assert.Equal(budget.Id, (await SentAsync<ArchiveBudget>()).BudgetId);
+    }
+
+    [Fact]
+    public async Task RestoringSendsRestoreBudget()
+    {
+        var budget = BudgetsPageTests.Named("Old", archived: true);
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Settings(budget);
+
+        page.Find(".pspad-restore-budget").Click();
+
+        Assert.Equal(budget.Id, (await SentAsync<RestoreBudget>()).BudgetId);
+    }
+
+    [Fact]
+    public void ARejectedArchiveSaysWhy()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        Services.AddSingleton<ICommandHandler<ArchiveBudget>>(new RejectingHandler<ArchiveBudget>("Not now."));
+        var page = Settings(budget);
+
+        page.Find(".pspad-archive-budget").Click();
+
+        Assert.Contains(Services.GetRequiredService<ISnackbar>().ShownSnackbars, snackbar => snackbar.Message == "Not now.");
+    }
+
+    [Fact]
+    public void AnUnknownTabRendersTheMonthTab()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "nonsense"));
+
+        page.WaitForAssertion(() => Assert.Equal("October 2026", Text(page, ".pspad-month-title")));
+        Assert.Empty(page.FindAll(".pspad-category-list"));
+    }
+
+    [Fact]
+    public void TheCategoryBarIsLabelledAndTheMonthButtonsHaveNames()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            MoneyEntries.Expense(budget, "Groceries", "Food", 100m, Today));
+
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id));
+
+        page.WaitForAssertion(() => page.Find(".pspad-category-bar-track"));
+        var bar = page.Find(".pspad-category-bar-track");
+        Assert.Equal("img", bar.GetAttribute("role"));
+        Assert.False(string.IsNullOrWhiteSpace(bar.GetAttribute("aria-label")));
+        Assert.Equal("Previous month", page.Find(".pspad-month-previous").GetAttribute("aria-label"));
+        Assert.Equal("Next month", page.Find(".pspad-month-next").GetAttribute("aria-label"));
     }
 }

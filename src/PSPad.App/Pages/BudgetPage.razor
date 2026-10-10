@@ -42,7 +42,9 @@ else
                             OnMonthChanged="@ShowMonth" OnOpen="@OpenEntry" />
         </MudTabPanel>
         <MudTabPanel Text="Settings">
-            <BudgetSettingsTab Class="pt-4" Budget="@_budget" OnAddCategory="@AddCategoryAsync"
+            <BudgetSettingsTab Class="pt-4" Budget="@_budget" Entries="@_entries" OnAddCategory="@AddCategoryAsync"
+                               OnRenameCategory="@RenameCategoryAsync" OnMergeCategory="@MergeCategoryAsync"
+                               OnRemoveCategory="@RemoveCategoryAsync"
                                OnRename="@(() => Navigation.NavigateTo(BudgetQuery.For(Navigation.Uri, _budget.Id)))"
                                OnArchive="@ArchiveAsync" OnRestore="@RestoreAsync" />
         </MudTabPanel>
@@ -137,6 +139,18 @@ else
     async Task<bool> AddCategoryAsync((CategoryKind Kind, string Name) category) =>
         Surface(await Sender.SendAsync(new AddCategory(Guid.NewGuid(), State.UserId, BudgetId, category.Kind, category.Name)),
             "Couldn't add the category.");
+
+    async Task<bool> RenameCategoryAsync((CategoryKind Kind, string From, string To) change) =>
+        Surface(await Sender.SendAsync(new RenameCategory(Guid.NewGuid(), State.UserId, BudgetId, change.Kind, change.From, change.To)),
+            "Couldn't rename the category.");
+
+    async Task<bool> MergeCategoryAsync((CategoryKind Kind, string From, string Into) change) =>
+        Surface(await Sender.SendAsync(new MergeCategory(Guid.NewGuid(), State.UserId, BudgetId, change.Kind, change.From, change.Into)),
+            "Couldn't merge the categories.");
+
+    async Task<bool> RemoveCategoryAsync((CategoryKind Kind, string Name) category) =>
+        Surface(await Sender.SendAsync(new RemoveCategory(Guid.NewGuid(), State.UserId, BudgetId, category.Kind, category.Name)),
+            "Couldn't remove the category.");
 
     async Task ArchiveAsync() =>
         Surface(await Sender.SendAsync(new ArchiveBudget(Guid.NewGuid(), State.UserId, BudgetId)),
