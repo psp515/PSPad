@@ -1,4 +1,5 @@
 @using PSPad.Abstractions
+@using PSPad.Contracts
 @using PSPad.App.Api
 @using PSPad.App.Components
 @using PSPad.App.State
@@ -20,7 +21,7 @@
 @inject ISnackbar Snackbar
 
 <DetailPanel Open="@(_budget is not null)" Title="@Title" TitleTypo="Typo.body2" Class="pspad-entry-panel"
-             OnClose="@OnClose" OnSave="@SaveCallback" CanSave="@CanSave" OnDelete="@DeleteCallback" Disabled="@Disabled">
+             OnClose="@OnClose" OnSave="@SaveCallback" CanSave="@CanSave" OnDelete="@DeleteCallback" Disabled="@(Disabled || _saving)">
     <div class="d-flex flex-column gap-3 pa-4">
         <MudTextField T="string" Class="pspad-entry-name-field" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense"
                       MaxLength="120" @bind-Value="_name" Immediate="true" AutoFocus="@IsNew" Disabled="@ReadOnly" />
@@ -88,6 +89,8 @@
     DateTime? _date;
     string? _note;
     bool _fetching;
+    bool _saving;
+    CategoryKind _loadedKind;
 
     bool IsNew => _entry is null;
 
@@ -122,7 +125,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_loadedOnce && _loadedEntry == EntryId && _loadedBudget == NewInBudget)
+        if (_loadedOnce && _loadedEntry == EntryId && _loadedBudget == NewInBudget && _loadedKind == NewKind)
         {
             return;
         }
@@ -130,6 +133,7 @@
         _loadedOnce = true;
         _loadedEntry = EntryId;
         _loadedBudget = NewInBudget;
+        _loadedKind = NewKind;
         await LoadAsync();
     }
 
@@ -211,8 +215,16 @@
         }
 
         _fetching = true;
-        var rate = await Nbp.RateAsync(_currency, DateOnly.FromDateTime(_date.Value));
-        _fetching = false;
+        NbpRateView? rate;
+
+        try
+        {
+            rate = await Nbp.RateAsync(_currency, DateOnly.FromDateTime(_date.Value));
+        }
+        finally
+        {
+            _fetching = false;
+        }
 
         if (rate is null)
         {
@@ -226,7 +238,7 @@
 
     async Task SaveAsync()
     {
-        if (Disabled || !CanSave || _budget is null)
+        if (Disabled || _saving || !CanSave || _budget is null)
         {
             return;
         }
@@ -237,13 +249,23 @@
         var category = _category.Trim();
         var note = string.IsNullOrWhiteSpace(_note) ? null : _note.Trim();
 
-        var result = _entry is not null
-            ? await Sender.SendAsync(new EditEntry(Guid.NewGuid(), State.UserId, _entry.Id, name, category, money, date, note))
-            : Kind == CategoryKind.Expense
-                ? await Sender.SendAsync(new RecordExpense(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _budget.Id, name,
-                    category, money, date, note))
-                : await Sender.SendAsync(new RecordIncome(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _budget.Id, name,
-                    category, money, date, note));
+        _saving = true;
+        CommandResult result;
+
+        try
+        {
+            result = _entry is not null
+                ? await Sender.SendAsync(new EditEntry(Guid.NewGuid(), State.UserId, _entry.Id, name, category, money, date, note))
+                : Kind == CategoryKind.Expense
+                    ? await Sender.SendAsync(new RecordExpense(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _budget.Id, name,
+                        category, money, date, note))
+                    : await Sender.SendAsync(new RecordIncome(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _budget.Id, name,
+                        category, money, date, note));
+        }
+        finally
+        {
+            _saving = false;
+        }
 
         if (!result.Accepted)
         {
@@ -256,12 +278,22 @@
 
     async Task DeleteAsync()
     {
-        if (Disabled || _entry is null)
+        if (Disabled || _saving || _entry is null)
         {
             return;
         }
 
-        var result = await Sender.SendAsync(new DeleteEntry(Guid.NewGuid(), State.UserId, _entry.Id));
+        _saving = true;
+        CommandResult result;
+
+        try
+        {
+            result = await Sender.SendAsync(new DeleteEntry(Guid.NewGuid(), State.UserId, _entry.Id));
+        }
+        finally
+        {
+            _saving = false;
+        }
 
         if (!result.Accepted)
         {
