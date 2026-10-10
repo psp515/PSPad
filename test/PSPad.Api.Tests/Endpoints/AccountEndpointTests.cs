@@ -91,13 +91,16 @@ public class AccountEndpointTests(MongoFixture fixture)
         var client = factory.ClientFor(Guid.NewGuid().ToString());
         var userId = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
 
-        await client.PostAsJsonAsync("/api/commands", new[]
+        var response = await client.PostAsJsonAsync("/api/commands", new[]
         {
             new CommandEnvelope(nameof(CreateBudget), JsonSerializer.SerializeToElement(
                 new CreateBudget(Guid.NewGuid(), userId, Guid.NewGuid(), "Personal"))),
             new CommandEnvelope(nameof(SetDefaultCurrency), JsonSerializer.SerializeToElement(
                 new SetDefaultCurrency(Guid.NewGuid(), userId, "EUR")))
         }, ct);
+        response.EnsureSuccessStatusCode();
+        var results = await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct);
+        Assert.All(results!, result => Assert.True(result.Accepted, result.Rejection));
 
         var context = Persistence.TestContext.For(fixture);
         var owned = Builders<BsonDocument>.Filter.Eq("userId", userId);

@@ -7,13 +7,14 @@
 @inject AppState State
 @inject CommandSender Sender
 @inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 
 <DetailPanel Open="@(IsNew || _budget is not null)" Title="@(IsNew ? "New budget" : "Budget")" TitleTypo="Typo.body2"
              OnClose="@OnClose" OnSave="@SaveCallback" SaveText="Add budget"
              CanSave="@(!string.IsNullOrWhiteSpace(_draftName))" Disabled="@Disabled">
     <div class="px-2 pt-3 pb-1">
         <MudTextField T="string" Class="pspad-budget-name-field flex-grow-1 px-2" Placeholder="Budget name"
-                      Typo="Typo.h6" Underline="false" Value="@(_budget?.Name ?? _draftName)"
+                      Typo="Typo.h6" Underline="false" MaxLength="80" Value="@(_budget?.Name ?? _draftName)"
                       ValueChanged="@NameChangedAsync" Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@Disabled"
                       OnKeyDown="@AddOnEnterAsync" />
     </div>
@@ -67,7 +68,13 @@
             return;
         }
 
-        await Sender.SendAsync(new RenameBudget(Guid.NewGuid(), State.UserId, _budget.Id, name.Trim()));
+        var result = await Sender.SendAsync(new RenameBudget(Guid.NewGuid(), State.UserId, _budget.Id, name.Trim()));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't rename the budget.", Severity.Warning);
+        }
+
         await ReloadAsync();
     }
 
@@ -89,7 +96,13 @@
         }
 
         var budgetId = Guid.NewGuid();
-        await Sender.SendAsync(new CreateBudget(Guid.NewGuid(), State.UserId, budgetId, name));
+        var result = await Sender.SendAsync(new CreateBudget(Guid.NewGuid(), State.UserId, budgetId, name));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't add the budget.", Severity.Warning);
+            return;
+        }
 
         _draftName = "";
         Navigation.NavigateTo(BudgetLinks.For(budgetId));

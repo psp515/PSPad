@@ -15,7 +15,7 @@
     </MudList>
     @if (_adding && !ReadOnly)
     {
-        <MudTextField T="string" @bind-Value="_draft" Immediate="true" AutoFocus="true" Placeholder="New category"
+        <MudTextField T="string" @bind-Value="_draft" Immediate="true" AutoFocus="true" Placeholder="New category" MaxLength="40"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="pspad-category-input mt-2"
                       OnKeyDown="@KeyDownAsync" />
     }
@@ -30,7 +30,7 @@
 
     [Parameter] public string Class { get; set; } = "";
 
-    [Parameter] public EventCallback<string> OnAdd { get; set; }
+    [Parameter] public Func<string, Task<bool>> OnAdd { get; set; } = _ => Task.FromResult(true);
 
     bool _adding;
     string _draft = "";
@@ -44,9 +44,11 @@
         }
         else if (args.Key == "Enter" && !string.IsNullOrWhiteSpace(_draft))
         {
-            await OnAdd.InvokeAsync(_draft);
-            _draft = "";
-            _adding = false;
+            if (await OnAdd(_draft))
+            {
+                _draft = "";
+                _adding = false;
+            }
         }
     }
 }
