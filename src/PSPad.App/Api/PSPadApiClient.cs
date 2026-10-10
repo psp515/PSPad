@@ -1,12 +1,14 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using PSPad.App.Statistics;
 using PSPad.App.Sync;
 using PSPad.Contracts;
 
 namespace PSPad.App.Api;
 
-public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ISnapshotsApi
+public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ISnapshotsApi, INbpRates
 {
     public Task<MeResponse?> MeAsync() => GetAsync<MeResponse>("api/me");
 
@@ -109,6 +111,21 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
 
     public async Task<IReadOnlyList<SnapshotVisitView>> VisitsAsync() =>
         await GetAsync<SnapshotVisitView[]>("api/me/snapshot-visits") ?? [];
+
+    public async Task<NbpRateView?> RateAsync(string currency, DateOnly date)
+    {
+        try
+        {
+            var response = await http.GetAsync(
+                $"api/money/nbp-rate?currency={Uri.EscapeDataString(currency)}&date={date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
+
+            return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<NbpRateView>() : null;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return null;
+        }
+    }
 
     Task<T?> GetAsync<T>(string uri) => http.GetFromJsonAsync<T>(uri);
 }
