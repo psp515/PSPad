@@ -24,7 +24,8 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         ["areaviews"] = typeof(Module.Presentation.AreaViews.AreaView),
         ["listviews"] = typeof(Module.Presentation.ListViews.ListView),
         ["budgets"] = typeof(Module.Money.Budgets.Budget),
-        ["moneypreferences"] = typeof(Module.Money.Preferences.MoneyPreferences)
+        ["moneypreferences"] = typeof(Module.Money.Preferences.MoneyPreferences),
+        ["moneyentries"] = typeof(Module.Money.Entries.MoneyEntry)
     };
 
     public async Task<SyncOutcome> SyncAsync(CancellationToken ct)

@@ -1,0 +1,46 @@
+@using System.Globalization
+@using PSPad.App.State
+@using PSPad.Module.Money.Reading
+
+<div class="@($"pspad-category-bar {Class}")">
+    <div class="d-flex pspad-category-bar-track" role="img" aria-label="@Description">
+        @for (var index = 0; index < Totals.Count; index++)
+        {
+            var total = Totals[index];
+            <div @key="total.Category" class="pspad-category-bar-segment"
+                 style="@($"width:{Share(total)}%;background:{Swatch(index)}")"></div>
+        }
+    </div>
+    <div class="d-flex flex-wrap gap-3 mt-2">
+        @for (var index = 0; index < Totals.Count; index++)
+        {
+            var total = Totals[index];
+            <div @key="total.Category" class="d-flex align-center gap-1 pspad-category-legend">
+                <span class="pspad-category-swatch" style="@($"background:{Swatch(index)}")"></span>
+                <MudText Typo="Typo.caption">@total.Category · @MoneyText.Pln(total.Pln)</MudText>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    static readonly string[] Palette =
+    [
+        "var(--mud-palette-primary)", "var(--mud-palette-secondary)", "var(--mud-palette-tertiary)",
+        "var(--mud-palette-info)", "var(--mud-palette-success)", "var(--mud-palette-warning)",
+        "var(--mud-palette-error)", "var(--mud-palette-dark)"
+    ];
+
+    [Parameter, EditorRequired] public IReadOnlyList<CategoryTotal> Totals { get; set; } = [];
+
+    [Parameter] public string Class { get; set; } = "";
+
+    decimal Sum => Totals.Sum(total => total.Pln);
+
+    string Description => string.Join(", ", Totals.Select(total => $"{total.Category} {MoneyText.Pln(total.Pln)}"));
+
+    string Share(CategoryTotal total) =>
+        (Sum == 0 ? 0 : total.Pln / Sum * 100).ToString("0.##", CultureInfo.InvariantCulture);
+
+    static string Swatch(int index) => Palette[index % Palette.Length];
+}

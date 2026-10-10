@@ -30,4 +30,37 @@ public class CategoryNameTests
         Assert.Equal(1, CategoryName.IndexIn(names, "eating out"));
         Assert.Equal(-1, CategoryName.IndexIn(names, "Hobby"));
     }
+
+    [Fact]
+    public void ANameOfExactly40CharactersIsAllowed() =>
+        Assert.Equal(new string('a', 40), CategoryName.Normalize(new string('a', 40)));
+
+    [Fact]
+    public void LookupTrimsTheName()
+    {
+        string[] names = ["Home", "Food"];
+
+        Assert.Equal(1, CategoryName.IndexIn(names, "  food "));
+    }
+
+    [Fact]
+    public void ResolvingAKnownNameKeepsTheStoredSpelling()
+    {
+        string[] names = ["Home", "Eating Out"];
+
+        Assert.Equal("Eating Out", CategoryName.Resolve(names, " eating OUT "));
+    }
+
+    [Fact]
+    public void ResolvingANewNameNormalisesIt()
+    {
+        string[] names = ["Home"];
+
+        Assert.Equal("Hobby", CategoryName.Resolve(names, "  Hobby "));
+    }
+
+    [Fact]
+    public void ResolvingABlankNameIsRejected() =>
+        Assert.Equal("A category needs a name.",
+            Assert.Throws<DomainRejectedException>(() => CategoryName.Resolve(["Home"], "  ")).Message);
 }

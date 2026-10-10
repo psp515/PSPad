@@ -70,6 +70,37 @@ public sealed class Budget : Aggregate
                     ? []
                     : [new CategoryAdded(adding.Id, adding.UserId, at, add.Kind, category)];
 
+            case RenameCategory renameCategory:
+                var renamingCategory = BudgetAccess.Writable(BudgetAccess.To(budget, renameCategory.UserId));
+                var renameList = renamingCategory.CategoriesOf(renameCategory.Kind);
+                var source = RequireCategory(renameList, renameCategory.From);
+                var target = CategoryName.Normalize(renameCategory.To);
+                var clash = CategoryName.IndexIn(renameList, target);
+                if (clash >= 0 && clash != source)
+                {
+                    throw new DomainRejectedException("That category already exists. Merge them instead.");
+                }
+
+                return renameList[source] == target
+                    ? []
+                    : [new CategoryRenamed(renamingCategory.Id, renamingCategory.UserId, at, renameCategory.Kind,
+                        renameList[source], target)];
+
+            case MergeCategory mergeCategory:
+                var merging = BudgetAccess.Writable(BudgetAccess.To(budget, mergeCategory.UserId));
+                var mergeList = merging.CategoriesOf(mergeCategory.Kind);
+                var mergeFrom = RequireCategory(mergeList, mergeCategory.From);
+                var mergeInto = RequireCategory(mergeList, mergeCategory.Into);
+                return mergeFrom == mergeInto
+                    ? throw new DomainRejectedException("A category cannot be merged into itself.")
+                    : [new CategoriesMerged(merging.Id, merging.UserId, at, mergeCategory.Kind, mergeList[mergeFrom], mergeList[mergeInto])];
+
+            case RemoveCategory removeCategory:
+                var removing = BudgetAccess.Writable(BudgetAccess.To(budget, removeCategory.UserId));
+                var removeList = removing.CategoriesOf(removeCategory.Kind);
+                return [new CategoryRemoved(removing.Id, removing.UserId, at, removeCategory.Kind,
+                    removeList[RequireCategory(removeList, removeCategory.Name)])];
+
             default:
                 throw new DomainRejectedException($"A budget cannot handle {command.GetType().Name}.");
         }
@@ -97,9 +128,29 @@ public sealed class Budget : Aggregate
                 ArchivedAt = null;
                 break;
             case CategoryAdded added:
-                (added.Kind == CategoryKind.Expense ? _expenseCategories : _incomeCategories).Add(added.Name);
+                ListOf(added.Kind).Add(added.Name);
+                break;
+            case CategoryRenamed renamed:
+                var renamedList = ListOf(renamed.Kind);
+                renamedList[CategoryName.IndexIn(renamedList, renamed.From)] = renamed.To;
+                break;
+            case CategoriesMerged merged:
+                var mergedList = ListOf(merged.Kind);
+                mergedList.RemoveAt(CategoryName.IndexIn(mergedList, merged.From));
+                break;
+            case CategoryRemoved removed:
+                var removedList = ListOf(removed.Kind);
+                removedList.RemoveAt(CategoryName.IndexIn(removedList, removed.Name));
                 break;
         }
+    }
+
+    List<string> ListOf(CategoryKind kind) => kind == CategoryKind.Expense ? _expenseCategories : _incomeCategories;
+
+    static int RequireCategory(IReadOnlyList<string> names, string name)
+    {
+        var index = CategoryName.IndexIn(names, name);
+        return index < 0 ? throw new DomainRejectedException("That category does not exist.") : index;
     }
 
     static string RequireName(string name)

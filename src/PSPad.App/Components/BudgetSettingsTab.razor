@@ -1,16 +1,23 @@
 @using PSPad.Module.Money.Budgets
+@using PSPad.Module.Money.Entries
 
 <MudGrid Spacing="4" Class="@Class">
     <MudItem xs="12" md="6">
         <CategoryList Title="Expense categories" Names="@Budget.ExpenseCategories" ReadOnly="@Budget.IsArchived"
-                      Class="pspad-category-list-expense"
-                      OnAdd="@(name => OnAddCategory((CategoryKind.Expense, name)))" />
+                      Class="pspad-category-list-expense" Usage="@UsageOf(CategoryKind.Expense)"
+                      OnAdd="@(name => OnAddCategory((CategoryKind.Expense, name)))"
+                      OnRename="@(change => OnRenameCategory((CategoryKind.Expense, change.From, change.To)))"
+                      OnMerge="@(change => OnMergeCategory((CategoryKind.Expense, change.From, change.Into)))"
+                      OnRemove="@(name => OnRemoveCategory((CategoryKind.Expense, name)))" />
     </MudItem>
     <MudItem xs="12" md="6">
         <div class="d-flex flex-column gap-4">
             <CategoryList Title="Income categories" Names="@Budget.IncomeCategories" ReadOnly="@Budget.IsArchived"
-                          Class="pspad-category-list-income"
-                          OnAdd="@(name => OnAddCategory((CategoryKind.Income, name)))" />
+                          Class="pspad-category-list-income" Usage="@UsageOf(CategoryKind.Income)"
+                          OnAdd="@(name => OnAddCategory((CategoryKind.Income, name)))"
+                          OnRename="@(change => OnRenameCategory((CategoryKind.Income, change.From, change.To)))"
+                          OnMerge="@(change => OnMergeCategory((CategoryKind.Income, change.From, change.Into)))"
+                          OnRemove="@(name => OnRemoveCategory((CategoryKind.Income, name)))" />
             <MudPaper Outlined="true" Class="pa-4 pspad-budget-card-settings">
                 <MudText Typo="Typo.subtitle2" Class="mb-3">Budget</MudText>
                 @if (Budget.IsArchived)
@@ -38,11 +45,27 @@
 
     [Parameter, EditorRequired] public Budget Budget { get; set; } = default!;
 
+    [Parameter] public IReadOnlyList<MoneyEntry> Entries { get; set; } = [];
+
     [Parameter] public Func<(CategoryKind Kind, string Name), Task<bool>> OnAddCategory { get; set; } = _ => Task.FromResult(true);
+
+    [Parameter] public Func<(CategoryKind Kind, string From, string To), Task<bool>> OnRenameCategory { get; set; } =
+        _ => Task.FromResult(true);
+
+    [Parameter] public Func<(CategoryKind Kind, string From, string Into), Task<bool>> OnMergeCategory { get; set; } =
+        _ => Task.FromResult(true);
+
+    [Parameter] public Func<(CategoryKind Kind, string Name), Task<bool>> OnRemoveCategory { get; set; } =
+        _ => Task.FromResult(true);
 
     [Parameter] public EventCallback OnRename { get; set; }
 
     [Parameter] public EventCallback OnArchive { get; set; }
 
     [Parameter] public EventCallback OnRestore { get; set; }
+
+    IReadOnlyDictionary<string, int> UsageOf(CategoryKind kind) =>
+        Entries.Where(entry => entry.Kind == kind && !entry.Deleted)
+            .GroupBy(entry => entry.Category, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
 }

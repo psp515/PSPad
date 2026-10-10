@@ -1,0 +1,63 @@
+@using PSPad.App.State
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Reading
+@using PSPad.Module.Money.Values
+
+<div class="@Class">
+    <div class="d-flex align-center justify-center gap-2 mb-4 pspad-month-switcher">
+        <MudIconButton Class="pspad-month-previous" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous month"
+                       OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Previous()))" />
+        <MudText Typo="Typo.h6" Class="pspad-month-title">@MoneyText.MonthTitle(Month)</MudText>
+        <MudIconButton Class="pspad-month-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next month"
+                       OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Next()))" />
+    </div>
+
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="4">
+            <MoneyTile Class="pspad-month-income" Label="Income" Text="@MoneyText.Pln(Totals.Income)" />
+        </MudItem>
+        <MudItem xs="4">
+            <MoneyTile Class="pspad-month-expenses" Label="Expenses" Text="@MoneyText.Pln(Totals.Expenses)" />
+        </MudItem>
+        <MudItem xs="4">
+            <MoneyTile Class="pspad-month-net" Label="Net" Text="@MoneyText.SignedPln(Totals.Net)" Negative="@(Totals.Net < 0)" />
+        </MudItem>
+    </MudGrid>
+
+    @if (Totals.ExpensesByCategory.Count > 0)
+    {
+        <CategoryBar Class="mb-4" Totals="@Totals.ExpensesByCategory" />
+    }
+
+    @if (Totals.Days.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="pspad-muted pspad-month-empty">No entries in @MoneyText.MonthTitle(Month).</MudText>
+    }
+    else
+    {
+        @foreach (var day in Totals.Days)
+        {
+            <MudPaper @key="day.Date" Outlined="true" Class="mb-3 pspad-entry-day">
+                <MudText Typo="Typo.subtitle2" Class="px-4 pt-3">@MoneyText.Day(day.Date)</MudText>
+                <MudList T="MoneyEntry" Dense="true">
+                    @foreach (var entry in day.Entries)
+                    {
+                        <EntryRow @key="entry.Id" Entry="@entry" OnOpen="@OnOpen" />
+                    }
+                </MudList>
+            </MudPaper>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public YearMonth Month { get; set; }
+
+    [Parameter, EditorRequired] public MonthTotals Totals { get; set; } = default!;
+
+    [Parameter] public EventCallback<YearMonth> OnMonthChanged { get; set; }
+
+    [Parameter] public EventCallback<MoneyEntry> OnOpen { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+}

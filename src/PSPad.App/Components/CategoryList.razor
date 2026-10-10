@@ -10,7 +10,50 @@
     <MudList T="string" Dense="true">
         @foreach (var name in Names)
         {
-            <MudListItem T="string" @key="name" Text="@name" />
+            var used = UsageOf(name);
+            <MudListItem T="string" @key="name" Class="pspad-category-row">
+                @if (_renaming == name)
+                {
+                    <MudTextField T="string" @bind-Value="_renameDraft" Immediate="true" AutoFocus="true" MaxLength="40"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="pspad-category-rename-input"
+                                  OnKeyDown="@(args => RenameKeyDownAsync(args, name))" />
+                }
+                else if (_merging == name)
+                {
+                    <div class="d-flex align-center gap-2">
+                        <MudSelect T="string" Class="pspad-category-merge-target flex-grow-1" Label="@($"Merge {name} into")"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   ValueChanged="@(into => MergeAsync(name, into))">
+                            @foreach (var other in Names.Where(other => other != name))
+                            {
+                                <MudSelectItem T="string" Value="@other">@other</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudButton Class="pspad-category-merge-cancel" Variant="Variant.Text" OnClick="@StopEditing">Cancel</MudButton>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex align-center gap-1">
+                        <MudText Typo="Typo.body2" Class="flex-grow-1 pspad-category-name">@name</MudText>
+                        @if (used > 0)
+                        {
+                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-category-usage">@(used == 1 ? "1 entry" : $"{used} entries")</MudText>
+                        }
+                        @if (!ReadOnly)
+                        {
+                            <MudIconButton Class="pspad-category-rename" Size="Size.Small" Icon="@Icons.Material.Outlined.Edit"
+                                           aria-label="@($"Rename {name}")" OnClick="@(() => StartRenaming(name))" />
+                            <MudIconButton Class="pspad-category-merge" Size="Size.Small" Icon="@Icons.Material.Outlined.MergeType"
+                                           aria-label="@($"Merge {name}")" Disabled="@(Names.Count < 2)"
+                                           OnClick="@(() => StartMerging(name))" />
+                            <MudIconButton Class="pspad-category-remove" Size="Size.Small" Icon="@Icons.Material.Outlined.Delete"
+                                           aria-label="@($"Remove {name}")" Disabled="@(used > 0 || _busy)"
+                                           OnClick="@(() => RemoveAsync(name))" />
+                        }
+                    </div>
+                }
+            </MudListItem>
         }
     </MudList>
     @if (_adding && !ReadOnly)
@@ -30,10 +73,91 @@
 
     [Parameter] public string Class { get; set; } = "";
 
+    [Parameter] public IReadOnlyDictionary<string, int> Usage { get; set; } = new Dictionary<string, int>();
+
     [Parameter] public Func<string, Task<bool>> OnAdd { get; set; } = _ => Task.FromResult(true);
 
+    [Parameter] public Func<(string From, string To), Task<bool>> OnRename { get; set; } = _ => Task.FromResult(true);
+
+    [Parameter] public Func<(string From, string Into), Task<bool>> OnMerge { get; set; } = _ => Task.FromResult(true);
+
+    [Parameter] public Func<string, Task<bool>> OnRemove { get; set; } = _ => Task.FromResult(true);
+
     bool _adding;
+    bool _busy;
     string _draft = "";
+    string? _renaming;
+    string _renameDraft = "";
+    string? _merging;
+
+    int UsageOf(string name) => Usage.TryGetValue(name, out var count) ? count : 0;
+
+    void StartRenaming(string name)
+    {
+        _merging = null;
+        _renaming = name;
+        _renameDraft = name;
+    }
+
+    void StartMerging(string name)
+    {
+        _renaming = null;
+        _merging = name;
+    }
+
+    void StopEditing()
+    {
+        _renaming = null;
+        _merging = null;
+        _renameDraft = "";
+    }
+
+    async Task RenameKeyDownAsync(KeyboardEventArgs args, string name)
+    {
+        if (args.Key == "Escape")
+        {
+            StopEditing();
+            return;
+        }
+
+        if (args.Key != "Enter" || string.IsNullOrWhiteSpace(_renameDraft))
+        {
+            return;
+        }
+
+        if (_renameDraft.Trim() == name || await GuardedAsync(() => OnRename((name, _renameDraft))))
+        {
+            StopEditing();
+        }
+    }
+
+    async Task MergeAsync(string name, string into)
+    {
+        if (await GuardedAsync(() => OnMerge((name, into))))
+        {
+            StopEditing();
+        }
+    }
+
+    Task RemoveAsync(string name) => GuardedAsync(() => OnRemove(name));
+
+    async Task<bool> GuardedAsync(Func<Task<bool>> action)
+    {
+        if (_busy)
+        {
+            return false;
+        }
+
+        _busy = true;
+        try
+        {
+            return await action();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
 
     async Task KeyDownAsync(KeyboardEventArgs args)
     {
@@ -44,7 +168,7 @@
         }
         else if (args.Key == "Enter" && !string.IsNullOrWhiteSpace(_draft))
         {
-            if (await OnAdd(_draft))
+            if (await GuardedAsync(() => OnAdd(_draft)))
             {
                 _draft = "";
                 _adding = false;
