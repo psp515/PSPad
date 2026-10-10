@@ -257,4 +257,35 @@ public class MoneyEntryTests
     public void AnUnknownCommandIsRejected() =>
         Assert.Equal("A money entry cannot handle CreateBudget.",
             Rejection(null, ABudget(), new CreateBudget(Guid.NewGuid(), Owner, Guid.NewGuid(), "x")));
+
+    [Fact]
+    public void AStrangerCannotEditAnEntry()
+    {
+        var budget = ABudget();
+        var entry = AnExpense(budget);
+
+        Assert.Equal("That budget does not exist.",
+            Rejection(entry, budget, Edit(entry, name: "Other") with { UserId = Stranger }));
+    }
+
+    [Fact]
+    public void AStrangerCannotDeleteAnEntry()
+    {
+        var budget = ABudget();
+        var entry = AnExpense(budget);
+
+        Assert.Equal("That budget does not exist.",
+            Rejection(entry, budget, new DeleteEntry(Guid.NewGuid(), Stranger, entry.Id)));
+    }
+
+    [Fact]
+    public void EditingAnIncomeResolvesAgainstTheIncomeCategories()
+    {
+        var budget = ABudget();
+        var entry = AnIncome(budget, "Salary");
+
+        entry.ApplyAll(MoneyEntry.Decide(entry, budget, Edit(entry, category: "freelance"), Now));
+
+        Assert.Equal("Freelance", entry.Category);
+    }
 }
