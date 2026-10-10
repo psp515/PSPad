@@ -6,7 +6,11 @@
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Money.Budgets
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Reading
+@using PSPad.Module.Money.Values
 @inject IDocumentStore<Budget> BudgetStore
+@inject IDocumentStore<MoneyEntry> EntryStore
 @inject AppState State
 @inject CommandSender Sender
 @inject NavigationManager Navigation
@@ -31,16 +35,41 @@ else
         <MudAlert Severity="Severity.Info" Class="mb-4 pspad-archived-banner">This budget is archived. It is read-only.</MudAlert>
     }
 
-    <MudTabs Elevation="0" ApplyEffectsToContainer="true" Class="pspad-budget-tabs">
+    <MudTabs Elevation="0" ApplyEffectsToContainer="true" Class="pspad-budget-tabs"
+             ActivePanelIndex="@TabIndex" ActivePanelIndexChanged="@SelectTab">
+        <MudTabPanel Text="Month">
+            <BudgetMonthTab Class="pt-4" Month="@_month" Totals="@MonthTotals.For(_entries, _month)"
+                            OnMonthChanged="@ShowMonth" OnOpen="@OpenEntry" />
+        </MudTabPanel>
         <MudTabPanel Text="Settings">
             <BudgetSettingsTab Class="pt-4" Budget="@_budget" OnAddCategory="@AddCategoryAsync"
                                OnRename="@(() => Navigation.NavigateTo(BudgetQuery.For(Navigation.Uri, _budget.Id)))"
                                OnArchive="@ArchiveAsync" OnRestore="@RestoreAsync" />
         </MudTabPanel>
     </MudTabs>
+
+    @if (TabIndex == MonthTab && !_budget.IsArchived)
+    {
+        <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
+            <MudTooltip Text="Add expense">
+                <MudFabMenuItem OnClick="@(() => AddEntry(CategoryKind.Expense))" StartIcon="@Icons.Material.Filled.Remove"
+                                Color="Color.Primary" Size="Size.Small" UserAttributes="@AddExpenseAttributes" />
+            </MudTooltip>
+            <MudTooltip Text="Add income">
+                <MudFabMenuItem OnClick="@(() => AddEntry(CategoryKind.Income))" StartIcon="@Icons.Material.Filled.Add"
+                                Color="Color.Primary" Size="Size.Small" UserAttributes="@AddIncomeAttributes" />
+            </MudTooltip>
+        </MudFabMenu>
+    }
 }
 
 @code {
+    const int MonthTab = 0;
+    static readonly string[] Tabs = ["month", "settings"];
+    static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Add entry" };
+    static readonly Dictionary<string, object> AddExpenseAttributes = new() { ["aria-label"] = "Add expense" };
+    static readonly Dictionary<string, object> AddIncomeAttributes = new() { ["aria-label"] = "Add income" };
+
     [Parameter] public Guid BudgetId { get; set; }
 
     [Parameter] public string? Tab { get; set; }
@@ -51,10 +80,18 @@ else
     int _rendered = -1;
     Guid _renderedId;
     Budget? _budget;
+    IReadOnlyList<MoneyEntry> _entries = [];
+    YearMonth _month;
+
+    int TabIndex => Math.Max(MonthTab, Array.IndexOf(Tabs, Tab?.ToLowerInvariant() ?? ""));
 
     string Subtitle => $"{_budget!.ExpenseCategories.Count} expense · {_budget.IncomeCategories.Count} income categories";
 
-    protected override void OnInitialized() => Sender.Sent += OnCommandSent;
+    protected override void OnInitialized()
+    {
+        _month = YearMonth.Of(State.Today);
+        Sender.Sent += OnCommandSent;
+    }
 
     void OnCommandSent() => InvokeAsync(async () =>
     {
@@ -78,8 +115,24 @@ else
     {
         var budget = await BudgetStore.LoadAsync(BudgetId, CancellationToken.None);
         _budget = budget is null || budget.UserId != State.UserId ? null : budget;
+        var entries = await EntryStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _entries = [.. entries.Where(entry => entry.BudgetId == BudgetId && !entry.Deleted)];
         _loaded = true;
     }
+
+    void SelectTab(int index)
+    {
+        if (index != TabIndex)
+        {
+            Navigation.NavigateTo(BudgetLinks.ForTab(BudgetId, Tabs[index]));
+        }
+    }
+
+    void ShowMonth(YearMonth month) => _month = month;
+
+    void OpenEntry(MoneyEntry entry) => Navigation.NavigateTo(EntryQuery.For(Navigation.Uri, entry.Id));
+
+    void AddEntry(CategoryKind kind) => Navigation.NavigateTo(EntryQuery.ForNew(Navigation.Uri, BudgetId, kind));
 
     async Task<bool> AddCategoryAsync((CategoryKind Kind, string Name) category) =>
         Surface(await Sender.SendAsync(new AddCategory(Guid.NewGuid(), State.UserId, BudgetId, category.Kind, category.Name)),
