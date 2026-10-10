@@ -39,13 +39,15 @@ like Tasks (AD-3, AD-4). No module references it except `PSPad.Api` and
 Folders follow the one-type-per-file, grouped-by-operation rule:
 
 ```
-Budgets/        Budget.cs, BudgetAccess.cs, Create/, Rename/, Archive/, Restore/
-Categories/     Category.cs, CategoryKind.cs, Add/, Rename/, Remove/, Merge/
+Budgets/        Budget.cs, BudgetAccess.cs, CategoryKind.cs, CategoryName.cs,
+                Create/, Rename/, Archive/, Restore/, AddCategory/
+                (categories live inside the Budget aggregate; slice 2 adds
+                RenameCategory/, MergeCategory/, RemoveCategory/)
 Entries/        MoneyEntry.cs, EntryKind.cs, RecordExpense/, RecordIncome/, Edit/, Delete/
 Balance/        BalanceSnapshot.cs, Holding.cs, HoldingType.cs, StartMonth/,
                 AddHolding/, EditHolding/, RemoveHolding/, DeleteMonth/
 Preferences/    MoneyPreferences.cs, SetDefaultCurrency/
-Values/         Money.cs, Currencies.cs, YearMonth.cs
+Values/         Currencies.cs (Money.cs and YearMonth.cs arrive in later slices)
 Reading/        RateSuggestion.cs, MonthTotals.cs, MoneySummary.cs
 ```
 
@@ -243,7 +245,7 @@ subtitle. No app bar.
 
 **`/budgets` (`Pages/Budgets.razor`)**
 - The header subtitle reads "N budgets · M archived · totals in PLN".
-- A "Show archived" switch, off by default and remembered per device. Archived
+- A "Show archived" switch, off on each visit (not remembered). Archived
   cards are dimmed and open read-only.
 - Each card shows the current month's income, expenses and net, an
   expense/income bar, and the latest net worth (or "Start {month}").
@@ -302,8 +304,8 @@ Month (default), Balance, Summary and Settings. The tab lives in the URL.
     shows as "N entries".
   - A Budget card: rename, and Archive (or Restore when archived).
 
-**Archived budget.** All write actions are hidden and a banner says "This
-budget is archived" with a Restore button.
+**Archived budget.** All write actions are hidden and a banner says the
+budget is archived and read-only; Restore lives in the Settings tab's Budget card.
 
 **App Settings.** A new "Default currency" select, next to the time zone.
 

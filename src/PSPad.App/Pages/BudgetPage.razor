@@ -10,6 +10,7 @@
 @inject AppState State
 @inject CommandSender Sender
 @inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 @implements IDisposable
 
 @if (!_loaded)
@@ -80,12 +81,27 @@ else
         _loaded = true;
     }
 
-    Task AddCategoryAsync((CategoryKind Kind, string Name) category) =>
-        Sender.SendAsync(new AddCategory(Guid.NewGuid(), State.UserId, BudgetId, category.Kind, category.Name));
+    async Task<bool> AddCategoryAsync((CategoryKind Kind, string Name) category) =>
+        Surface(await Sender.SendAsync(new AddCategory(Guid.NewGuid(), State.UserId, BudgetId, category.Kind, category.Name)),
+            "Couldn't add the category.");
 
-    Task ArchiveAsync() => Sender.SendAsync(new ArchiveBudget(Guid.NewGuid(), State.UserId, BudgetId));
+    async Task ArchiveAsync() =>
+        Surface(await Sender.SendAsync(new ArchiveBudget(Guid.NewGuid(), State.UserId, BudgetId)),
+            "Couldn't archive the budget.");
 
-    Task RestoreAsync() => Sender.SendAsync(new RestoreBudget(Guid.NewGuid(), State.UserId, BudgetId));
+    async Task RestoreAsync() =>
+        Surface(await Sender.SendAsync(new RestoreBudget(Guid.NewGuid(), State.UserId, BudgetId)),
+            "Couldn't restore the budget.");
+
+    bool Surface(CommandResult result, string fallback)
+    {
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? fallback, Severity.Warning);
+        }
+
+        return result.Accepted;
+    }
 
     public void Dispose() => Sender.Sent -= OnCommandSent;
 }

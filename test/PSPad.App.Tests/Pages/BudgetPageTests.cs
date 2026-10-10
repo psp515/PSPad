@@ -1,5 +1,7 @@
 using Bunit;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using PSPad.App.Pages;
 using PSPad.App.State.Outbox;
 using PSPad.Module.Money.Budgets;
@@ -41,6 +43,9 @@ public class BudgetPageTests : Bunit.TestContext
         var outbox = Services.GetRequiredService<IOutbox>();
         var entry = Assert.Single(await outbox.PeekAsync(10));
         Assert.Equal(nameof(AddCategory), entry.Envelope.Type);
+        var payload = entry.Envelope.Payload.Deserialize<AddCategory>(new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+        Assert.Equal(CategoryKind.Expense, payload.Kind);
+        Assert.Equal("Hobby", payload.Name);
     }
 
     [Fact]
@@ -62,6 +67,49 @@ public class BudgetPageTests : Bunit.TestContext
         AppTestHost.Arrange(this, Guid.NewGuid(), Today);
 
         var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, Guid.NewGuid()));
+
+        page.WaitForAssertion(() => Assert.Contains("That budget does not exist.", page.Markup));
+    }
+
+    [Fact]
+    public async Task ARejectedCategoryKeepsTheInputOpenWithItsTextAndShowsTheRejection()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id));
+        page.WaitForAssertion(() => Assert.Contains("Eating Out", page.Markup));
+        var tooLong = new string('c', 41);
+
+        page.Find(".pspad-category-list-expense .pspad-category-add").Click();
+        page.Find(".pspad-category-list-expense .pspad-category-input input").Input(tooLong);
+        page.Find(".pspad-category-list-expense .pspad-category-input input").KeyDown("Enter");
+
+        Assert.Equal(tooLong, page.Find(".pspad-category-list-expense .pspad-category-input input").GetAttribute("value"));
+        Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
+        Assert.Contains(Services.GetRequiredService<ISnackbar>().ShownSnackbars,
+            snackbar => snackbar.Message?.Contains("A category name is at most 40 characters.") == true);
+    }
+
+    [Fact]
+    public void TheCategoryInputCapsAtFortyCharacters()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id));
+        page.WaitForAssertion(() => Assert.Contains("Eating Out", page.Markup));
+
+        page.Find(".pspad-category-list-expense .pspad-category-add").Click();
+
+        Assert.Equal("40", page.Find(".pspad-category-list-expense .pspad-category-input input").GetAttribute("maxlength"));
+    }
+
+    [Fact]
+    public void ABudgetOwnedByAnotherUserDoesNotExist()
+    {
+        var budget = BudgetsPageTests.Named("Theirs");
+        AppTestHost.Arrange(this, Guid.NewGuid(), Today, budget);
+
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id));
 
         page.WaitForAssertion(() => Assert.Contains("That budget does not exist.", page.Markup));
     }

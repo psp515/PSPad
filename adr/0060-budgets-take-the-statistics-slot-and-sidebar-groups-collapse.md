@@ -24,9 +24,10 @@ We will:
   Statistics moves into `AccountDrawer`, as the first row above Settings and
   App info. `NavTab` maps `/budgets…` to the Budgets slot.
 - **Desktop sidebar:**
-  - Add a Budgets group after the main rows, as a `MudNavGroup`. Its header
-    links to `/budgets`, its chevron toggles it, and its children are the
-    active (unarchived) budgets in creation order.
+  - Add a Budgets group after the main rows, as a custom header row: a link
+    to `/budgets` plus a chevron toggle button, followed by the active
+    (unarchived) budgets in creation order. A `MudNavGroup` header cannot be
+    both a link and a toggle.
   - Turn the existing Areas section into a collapsible group of the same
     kind.
   - Remember each group's expanded state per device in `localStorage`. Both
@@ -41,6 +42,7 @@ layout) for these two sections only.
 - **Budgets in the account drawer, Statistics keeps its slot.** The
   maintainer uses budgets daily and checks Statistics rarely, so the slot
   goes to the screen that is used more often.
+- **`MudNavGroup`.** Its header cannot be both a link and a toggle.
 - **A sixth bottom-bar slot.** Below about 360 px wide, labels get truncated,
   and `adr/0050` chose five equal slots on purpose.
 - **Never list budgets in the sidebar, only reach them through `/budgets`.**
