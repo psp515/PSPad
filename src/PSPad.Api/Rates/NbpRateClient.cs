@@ -27,7 +27,9 @@ public sealed class NbpRateClient(HttpClient http, IMemoryCache cache, IClock cl
             return null;
         }
 
-        if (date < FirstPublishedDate)
+        var today = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+
+        if (date < FirstPublishedDate || date > today.AddDays(1))
         {
             return null;
         }
@@ -43,7 +45,7 @@ public sealed class NbpRateClient(HttpClient http, IMemoryCache cache, IClock cl
 
         if (rate is not null)
         {
-            cache.Set(key, rate, NbpCacheLifetime.For(date, DateOnly.FromDateTime(clock.UtcNow.UtcDateTime)));
+            cache.Set(key, rate, NbpCacheLifetime.For(date, today));
         }
 
         return rate;
