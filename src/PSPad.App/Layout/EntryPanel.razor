@@ -1,0 +1,274 @@
+@using PSPad.Abstractions
+@using PSPad.App.Api
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.App.Sync
+@using PSPad.Module.Money
+@using PSPad.Module.Money.Budgets
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Preferences
+@using PSPad.Module.Money.Reading
+@using PSPad.Module.Money.Values
+@inject IDocumentStore<Budget> Budgets
+@inject IDocumentStore<MoneyEntry> Entries
+@inject IDocumentStore<MoneyPreferences> Preferences
+@inject INbpRates Nbp
+@inject IConnectivity Connectivity
+@inject AppState State
+@inject CommandSender Sender
+@inject ISnackbar Snackbar
+
+<DetailPanel Open="@(_budget is not null)" Title="@Title" TitleTypo="Typo.body2" Class="pspad-entry-panel"
+             OnClose="@OnClose" OnSave="@SaveCallback" CanSave="@CanSave" OnDelete="@DeleteCallback" Disabled="@Disabled">
+    <div class="d-flex flex-column gap-3 pa-4">
+        <MudTextField T="string" Class="pspad-entry-name-field" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      MaxLength="120" @bind-Value="_name" Immediate="true" AutoFocus="@IsNew" Disabled="@ReadOnly" />
+        <MudAutocomplete T="string" Class="pspad-entry-category-field" Label="Category" Variant="Variant.Outlined"
+                         Margin="Margin.Dense" Value="@_category" ValueChanged="@CategoryChanged"
+                         SearchFunc="@SearchCategoriesAsync" CoerceValue="true" DebounceInterval="0"
+                         ResetValueOnEmptyText="false" Disabled="@ReadOnly">
+            <ItemTemplate Context="choice">
+                @(CategoryChoices.IsNew(Categories, choice) ? $"Create category \"{choice}\"" : choice)
+            </ItemTemplate>
+        </MudAutocomplete>
+        <div class="d-flex gap-3">
+            <MudNumericField T="decimal?" Class="pspad-entry-amount-field flex-grow-1" Label="Amount" Variant="Variant.Outlined"
+                             Margin="Margin.Dense" @bind-Value="_amount" Immediate="true" HideSpinButtons="true" Disabled="@ReadOnly" />
+            <MudSelect T="string" Class="pspad-entry-currency-field" Label="Currency" Variant="Variant.Outlined"
+                       Margin="Margin.Dense" Value="@_currency" ValueChanged="@Suggest" Disabled="@ReadOnly">
+                @foreach (var currency in Currencies.All)
+                {
+                    <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+        @if (_currency != Currencies.Pln)
+        {
+            <div class="d-flex align-center gap-2 pspad-entry-rate">
+                <MudNumericField T="decimal?" Class="pspad-entry-rate-field flex-grow-1" Label="Rate to PLN"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense" Value="@_rate" ValueChanged="@RateTyped"
+                                 Immediate="true" HideSpinButtons="true" Disabled="@ReadOnly" />
+                <MudButton Class="pspad-entry-nbp" Variant="Variant.Outlined" Color="Color.Primary"
+                           Disabled="@(ReadOnly || _fetching || !Connectivity.IsOnline)" OnClick="@FetchNbpRateAsync">NBP</MudButton>
+            </div>
+        }
+        <MudTextField T="string" Class="pspad-entry-pln" Label="In PLN" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Value="@InPlnText" ReadOnly="true" />
+        <MudDatePicker Class="pspad-entry-date-field" Label="Date" Variant="Variant.Outlined" Margin="Margin.Dense"
+                       Date="@_date" DateChanged="@DateChanged" Disabled="@ReadOnly" />
+        <MudTextField T="string" Class="pspad-entry-note-field" Label="Note" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Lines="3" @bind-Value="_note" Disabled="@ReadOnly" />
+    </div>
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? EntryId { get; set; }
+
+    [Parameter] public Guid? NewInBudget { get; set; }
+
+    [Parameter] public CategoryKind NewKind { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    Budget? _budget;
+    MoneyEntry? _entry;
+    IReadOnlyList<MoneyEntry> _budgetEntries = [];
+    Guid? _loadedEntry;
+    Guid? _loadedBudget;
+    bool _loadedOnce;
+    string _name = "";
+    string _category = "";
+    decimal? _amount;
+    string _currency = Currencies.Pln;
+    decimal? _rate;
+    DateOnly? _rateDate;
+    DateTime? _date;
+    string? _note;
+    bool _fetching;
+
+    bool IsNew => _entry is null;
+
+    CategoryKind Kind => _entry?.Kind ?? NewKind;
+
+    bool ReadOnly => _budget?.IsArchived == true;
+
+    IReadOnlyList<string> Categories => _budget?.CategoriesOf(Kind) ?? [];
+
+    string Title => (IsNew, Kind) switch
+    {
+        (true, CategoryKind.Expense) => "New expense",
+        (true, _) => "New income",
+        (false, CategoryKind.Expense) => "Expense",
+        _ => "Income"
+    };
+
+    bool IsPln => _currency == Currencies.Pln;
+
+    decimal Rate => IsPln ? 1m : _rate.GetValueOrDefault();
+
+    bool CanSave => !ReadOnly && !string.IsNullOrWhiteSpace(_name) && !string.IsNullOrWhiteSpace(_category)
+        && _amount.GetValueOrDefault() > 0 && _date is not null && Rate > 0;
+
+    string InPlnText => _amount.GetValueOrDefault() > 0 && Rate > 0
+        ? MoneyText.Pln(new Money(_amount.GetValueOrDefault(), _currency, Rate, State.Today).InPln)
+        : "";
+
+    EventCallback SaveCallback => ReadOnly ? default : EventCallback.Factory.Create(this, SaveAsync);
+
+    EventCallback DeleteCallback => ReadOnly || IsNew ? default : EventCallback.Factory.Create(this, DeleteAsync);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedOnce && _loadedEntry == EntryId && _loadedBudget == NewInBudget)
+        {
+            return;
+        }
+
+        _loadedOnce = true;
+        _loadedEntry = EntryId;
+        _loadedBudget = NewInBudget;
+        await LoadAsync();
+    }
+
+    async Task LoadAsync()
+    {
+        var entry = EntryId is null ? null : await Entries.LoadAsync(EntryId.Value, CancellationToken.None);
+        _entry = entry is { Deleted: false } ? entry : null;
+        var budgetId = _entry?.BudgetId ?? (EntryId is null ? NewInBudget : null);
+        var budget = budgetId is null ? null : await Budgets.LoadAsync(budgetId.Value, CancellationToken.None);
+        _budget = budget is null || budget.UserId != State.UserId ? null : budget;
+
+        if (_budget is null)
+        {
+            return;
+        }
+
+        var all = await Entries.LoadAllAsync(State.UserId, CancellationToken.None);
+        _budgetEntries = [.. all.Where(candidate => candidate.BudgetId == _budget.Id && !candidate.Deleted)];
+
+        if (_entry is not null)
+        {
+            Fill(_entry);
+        }
+        else
+        {
+            await StartNewAsync();
+        }
+    }
+
+    void Fill(MoneyEntry entry)
+    {
+        _name = entry.Name;
+        _category = entry.Category;
+        _amount = entry.Money.Amount;
+        _currency = entry.Money.Currency;
+        _rate = entry.Money.RateToPln;
+        _rateDate = entry.Money.RateDate;
+        _date = entry.Date.ToDateTime(TimeOnly.MinValue);
+        _note = entry.Note;
+    }
+
+    async Task StartNewAsync()
+    {
+        var preferences = await Preferences.LoadAsync(MoneyPreferences.IdFor(State.UserId), CancellationToken.None);
+        _name = "";
+        _category = "";
+        _amount = null;
+        _note = null;
+        _date = State.Today.ToDateTime(TimeOnly.MinValue);
+        Suggest(preferences?.DefaultCurrency ?? Currencies.Pln);
+    }
+
+    void Suggest(string currency)
+    {
+        _currency = currency;
+        var suggestion = RateSuggestion.For(currency, _budgetEntries);
+        _rate = suggestion?.RateToPln;
+        _rateDate = suggestion?.RateDate;
+    }
+
+    void CategoryChanged(string? category) => _category = category ?? "";
+
+    void RateTyped(decimal? rate)
+    {
+        _rate = rate;
+        _rateDate = null;
+    }
+
+    void DateChanged(DateTime? date) => _date = date;
+
+    Task<IEnumerable<string>> SearchCategoriesAsync(string? text, CancellationToken ct) =>
+        Task.FromResult<IEnumerable<string>>(CategoryChoices.Search(Categories, text));
+
+    async Task FetchNbpRateAsync()
+    {
+        if (_date is null || IsPln || !Connectivity.IsOnline)
+        {
+            return;
+        }
+
+        _fetching = true;
+        var rate = await Nbp.RateAsync(_currency, DateOnly.FromDateTime(_date.Value));
+        _fetching = false;
+
+        if (rate is null)
+        {
+            Snackbar.Add("Couldn't get the NBP rate. Type the rate instead.", Severity.Warning);
+            return;
+        }
+
+        _rate = rate.Rate;
+        _rateDate = rate.EffectiveDate;
+    }
+
+    async Task SaveAsync()
+    {
+        if (Disabled || !CanSave || _budget is null)
+        {
+            return;
+        }
+
+        var date = DateOnly.FromDateTime(_date!.Value);
+        var money = new Money(_amount.GetValueOrDefault(), _currency, Rate, _rateDate ?? date);
+        var name = _name.Trim();
+        var category = _category.Trim();
+        var note = string.IsNullOrWhiteSpace(_note) ? null : _note.Trim();
+
+        var result = _entry is not null
+            ? await Sender.SendAsync(new EditEntry(Guid.NewGuid(), State.UserId, _entry.Id, name, category, money, date, note))
+            : Kind == CategoryKind.Expense
+                ? await Sender.SendAsync(new RecordExpense(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _budget.Id, name,
+                    category, money, date, note))
+                : await Sender.SendAsync(new RecordIncome(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _budget.Id, name,
+                    category, money, date, note));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't save the entry.", Severity.Warning);
+            return;
+        }
+
+        await OnClose.InvokeAsync();
+    }
+
+    async Task DeleteAsync()
+    {
+        if (Disabled || _entry is null)
+        {
+            return;
+        }
+
+        var result = await Sender.SendAsync(new DeleteEntry(Guid.NewGuid(), State.UserId, _entry.Id));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't delete the entry.", Severity.Warning);
+            return;
+        }
+
+        await OnClose.InvokeAsync();
+    }
+}
