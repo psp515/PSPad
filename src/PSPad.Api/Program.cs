@@ -6,6 +6,7 @@ using PSPad.Abstractions;
 using PSPad.Api.Commands;
 using PSPad.Api.Endpoints;
 using PSPad.Api.Identity;
+using PSPad.Api.Rates;
 using PSPad.Api.Snapshots;
 using PSPad.Api.Statistics;
 using PSPad.Api.Sync;
@@ -90,6 +91,12 @@ builder.Services.AddScoped<IListContent, MongoListContent>();
 builder.Services.AddScoped<IServerCommands, DispatcherServerCommands>();
 builder.Services.AddScoped<SnapshotPublishing>();
 builder.Services.AddScoped<SnapshotMarking>();
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<NbpRateClient>(client =>
+{
+    client.BaseAddress = new Uri("https://api.nbp.pl/");
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
 
 var app = builder.Build();
 
@@ -109,6 +116,7 @@ api.MapMeEndpoints();
 api.MapAccountEndpoints();
 api.MapStatisticsEndpoints();
 api.MapSnapshotEndpoints();
+api.MapMoneyEndpoints();
 
 var open = app.MapGroup("/api/public").AllowAnonymous().RequireRateLimiting("public");
 open.MapPublicSnapshotEndpoints();
