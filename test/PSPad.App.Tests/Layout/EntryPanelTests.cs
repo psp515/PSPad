@@ -157,6 +157,43 @@ public class EntryPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task AnNbpRateForAnotherCurrencyThanNowIsDropped()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        Nbp.Gate = new TaskCompletionSource<NbpRateView?>();
+        var panel = NewExpense(budget);
+        await FillAsync(panel, "Train", "Car", 10m);
+        await PickCurrencyAsync(panel, "EUR");
+        panel.Find(".pspad-entry-nbp").Click();
+
+        await PickCurrencyAsync(panel, "USD");
+        await panel.InvokeAsync(() => Nbp.Gate.SetResult(new NbpRateView("EUR", 4.2512m, new DateOnly(2026, 10, 8))));
+
+        panel.WaitForAssertion(() => Assert.False(panel.Find(".pspad-entry-nbp").HasAttribute("disabled")));
+        Assert.True(panel.Find(".pspad-panel-save").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task AnNbpRateForAnotherDateThanNowIsDropped()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        Nbp.Gate = new TaskCompletionSource<NbpRateView?>();
+        var panel = NewExpense(budget);
+        await FillAsync(panel, "Train", "Car", 10m);
+        await PickCurrencyAsync(panel, "EUR");
+        panel.Find(".pspad-entry-nbp").Click();
+
+        await panel.InvokeAsync(() => panel.FindComponent<MudDatePicker>().Instance.DateChanged
+            .InvokeAsync(Today.AddDays(-3).ToDateTime(TimeOnly.MinValue)));
+        await panel.InvokeAsync(() => Nbp.Gate.SetResult(new NbpRateView("EUR", 4.2512m, new DateOnly(2026, 10, 8))));
+
+        panel.WaitForAssertion(() => Assert.False(panel.Find(".pspad-entry-nbp").HasAttribute("disabled")));
+        Assert.True(panel.Find(".pspad-panel-save").HasAttribute("disabled"));
+    }
+
+    [Fact]
     public async Task ANbpFailureKeepsTheRateAndSaysSo()
     {
         var budget = BudgetsPageTests.Named("Personal");
