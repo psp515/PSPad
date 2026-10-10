@@ -1,0 +1,30 @@
+@using PSPad.App.State
+@using PSPad.Module.Money
+@using PSPad.Module.Money.Budgets
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Values
+
+<MudListItem T="MoneyEntry" Class="pspad-entry-row" OnClick="@(() => OnOpen.InvokeAsync(Entry))">
+    <div class="d-flex align-center gap-3">
+        <div class="flex-grow-1">
+            <MudText Typo="Typo.body1" Class="pspad-entry-name">@Entry.Name</MudText>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0 pspad-entry-category">@Entry.Category</MudChip>
+        </div>
+        <div class="text-right">
+            <MudText Typo="Typo.body1" Class="pspad-entry-amount"
+                     Color="@(Entry.Kind == CategoryKind.Income ? Color.Success : Color.Default)">
+                @MoneyText.Signed(Entry.Kind, Entry.Money.Amount, Entry.Money.Currency)
+            </MudText>
+            @if (Entry.Money.Currency != Currencies.Pln)
+            {
+                <MudText Typo="Typo.caption" Class="pspad-muted pspad-entry-pln">@MoneyText.Signed(Entry.Kind, Entry.Money.InPln, Currencies.Pln) @@ @MoneyText.Rate(Entry.Money.RateToPln)</MudText>
+            }
+        </div>
+    </div>
+</MudListItem>
+
+@code {
+    [Parameter, EditorRequired] public MoneyEntry Entry { get; set; } = default!;
+
+    [Parameter] public EventCallback<MoneyEntry> OnOpen { get; set; }
+}
