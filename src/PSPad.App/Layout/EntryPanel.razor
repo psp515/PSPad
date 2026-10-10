@@ -214,16 +214,23 @@
             return;
         }
 
+        var currency = _currency;
+        var asked = _date.Value;
         _fetching = true;
         NbpRateView? rate;
 
         try
         {
-            rate = await Nbp.RateAsync(_currency, DateOnly.FromDateTime(_date.Value));
+            rate = await Nbp.RateAsync(currency, DateOnly.FromDateTime(asked));
         }
         finally
         {
             _fetching = false;
+        }
+
+        if (_currency != currency || _date != asked)
+        {
+            return;
         }
 
         if (rate is null)

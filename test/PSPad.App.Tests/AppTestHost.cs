@@ -117,12 +117,14 @@ public static class AppTestHost
     {
         public NbpRateView? Next { get; set; }
 
+        public TaskCompletionSource<NbpRateView?>? Gate { get; set; }
+
         public List<(string Currency, DateOnly Date)> Asked { get; } = [];
 
         public Task<NbpRateView?> RateAsync(string currency, DateOnly date)
         {
             Asked.Add((currency, date));
-            return Task.FromResult(Next);
+            return Gate?.Task ?? Task.FromResult(Next);
         }
     }
 
