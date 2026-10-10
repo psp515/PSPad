@@ -22,9 +22,13 @@ public sealed class MongoContext
     public IMongoCollection<TDocument> Collection<TDocument>(string name) =>
         Database.GetCollection<TDocument>(name);
 
-    public static string NameOf(Type aggregate)
+    public static string NameOf(Type aggregate) => Pluralise(aggregate.Name.ToLowerInvariant());
+
+    public static string Pluralise(string name) => name switch
     {
-        var name = aggregate.Name.ToLowerInvariant();
-        return name.EndsWith('x') ? name + "es" : name + "s";
-    }
+        _ when name.EndsWith('s') => name,
+        _ when name.EndsWith('x') => name + "es",
+        _ when name.EndsWith('y') && name.Length > 1 && !"aeiou".Contains(name[^2]) => name[..^1] + "ies",
+        _ => name + "s"
+    };
 }

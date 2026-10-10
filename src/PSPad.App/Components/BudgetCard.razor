@@ -1,0 +1,17 @@
+@using PSPad.App.State
+@using PSPad.Module.Money.Budgets
+
+<MudCard Outlined="true" Class="@($"pspad-budget-card {(Budget.IsArchived ? "pspad-archived" : "")}")">
+    <MudCardContent>
+        <MudLink Href="@BudgetLinks.For(Budget.Id)" Typo="Typo.h6" Class="pspad-budget-card-name">@Budget.Name</MudLink>
+        @if (Budget.IsArchived)
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Archived</MudChip>
+        }
+        <MudText Typo="Typo.body2" Class="pspad-muted mt-2">No entries yet</MudText>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public Budget Budget { get; set; } = default!;
+}

@@ -15,7 +15,7 @@ In:
 
 - A top bar on phones: back arrow (nested screens only), screen title,
   `ConnectionStatus`, avatar.
-- A bottom bar on phones: Inbox, Areas, My Day, Goals, Statistics. My Day is
+- A bottom bar on phones: Inbox, Areas, My Day, Goals, Budgets. My Day is
   the raised centre button.
 - A right-hand account drawer on phones, opened from the avatar.
 - Area chips at the top of the area screen on phones.
@@ -87,7 +87,7 @@ screen also passes its status text as the subtitle.
 | Areas | `/areas` | |
 | My Day | `/` | raised `MudFab`, `Color.Primary`, always filled |
 | Goals | `/goals` | |
-| Statistics | `/statistics` | |
+| Budgets | `/budgets` | |
 
 The four side slots are `MudButton`s: icon over label, the same Material icons
 as `NavSidebar`. The active slot gets a `Color.Primary` icon, a bold label and
@@ -102,8 +102,8 @@ The active slot comes from `State/NavTab.cs`, a pure function of the path:
 | `/inbox` | Inbox |
 | `/areas`, `/areas/{id}`, `/lists/{id}` | Areas |
 | `/goals`, `/goals/{id}` | Goals |
-| `/statistics` | Statistics |
-| anything else (`/settings`, `/app-info`, `/search`) | none |
+| `/budgets`, `/budgets/{id}` | Budgets |
+| anything else (`/statistics`, `/snapshots`, `/settings`, `/app-info`, `/search`) | none |
 
 Query strings (detail panels) never change the tab.
 
@@ -114,7 +114,7 @@ bottom:
 
 1. `AccountBadge`
 2. Divider
-3. Settings and App info as `MudNavLink`s
+3. Statistics, List snapshots, Settings and App info as `MudNavLink`s
 4. Spacer
 5. `SidebarFooter`
 
