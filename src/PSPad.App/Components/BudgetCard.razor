@@ -1,5 +1,7 @@
 @using PSPad.App.State
 @using PSPad.Module.Money.Budgets
+@using PSPad.Module.Money.Reading
+@using PSPad.Module.Money.Values
 
 <MudCard Outlined="true" Class="@($"pspad-budget-card {(Budget.IsArchived ? "pspad-archived" : "")}")">
     <MudCardContent>
@@ -8,10 +10,42 @@
         {
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Archived</MudChip>
         }
-        <MudText Typo="Typo.body2" Class="pspad-muted mt-2">No entries yet</MudText>
+        @if (Totals.Days.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="pspad-muted mt-2 pspad-budget-card-empty">No entries in @MoneyText.MonthTitle(Month)</MudText>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-4 mt-3">
+                <div>
+                    <MudText Typo="Typo.caption" Class="pspad-muted">Income</MudText>
+                    <MudText Typo="Typo.body1" Class="pspad-budget-card-income">@MoneyText.Pln(Totals.Income)</MudText>
+                </div>
+                <div>
+                    <MudText Typo="Typo.caption" Class="pspad-muted">Expenses</MudText>
+                    <MudText Typo="Typo.body1" Class="pspad-budget-card-expenses">@MoneyText.Pln(Totals.Expenses)</MudText>
+                </div>
+                <div>
+                    <MudText Typo="Typo.caption" Class="pspad-muted">Net</MudText>
+                    <MudText Typo="Typo.body1" Class="pspad-budget-card-net"
+                             Color="@(Totals.Net < 0 ? Color.Error : Color.Default)">@MoneyText.SignedPln(Totals.Net)</MudText>
+                </div>
+            </div>
+            <MudProgressLinear Class="mt-3 pspad-budget-card-bar" Rounded="true" Size="Size.Medium" Value="@SpentShare"
+                               Color="@(Totals.Expenses > Totals.Income ? Color.Error : Color.Primary)"
+                               aria-label="Expenses against income" />
+        }
     </MudCardContent>
 </MudCard>
 
 @code {
     [Parameter, EditorRequired] public Budget Budget { get; set; } = default!;
+
+    [Parameter, EditorRequired] public YearMonth Month { get; set; }
+
+    [Parameter, EditorRequired] public MonthTotals Totals { get; set; } = default!;
+
+    double SpentShare => Totals.Income == 0
+        ? Totals.Expenses > 0 ? 100 : 0
+        : Math.Min(100, (double)(Totals.Expenses / Totals.Income * 100));
 }
