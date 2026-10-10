@@ -24,6 +24,7 @@ public static class MongoConventions
         BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
         BsonSerializer.RegisterSerializer(new DateOnlySerializer());
         BsonSerializer.RegisterSerializer(new TimeOnlySerializer());
+        BsonSerializer.RegisterSerializer(new DecimalSerializer(BsonType.Decimal128));
 
         ConventionRegistry.Register(
             "pspad",

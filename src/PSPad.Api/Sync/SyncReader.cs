@@ -6,6 +6,7 @@ using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Identity;
 using PSPad.Module.Money.Budgets;
+using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Preferences;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Presentation.ListViews;
@@ -98,6 +99,8 @@ public sealed class SyncReader(MongoContext context)
         var budgets = await ReadAsync<Budget>(session, since, Owned<Budget>(userId), None<Budget>(), ct);
         var moneyPreferences = await ReadAsync<MoneyPreferences>(
             session, since, Owned<MoneyPreferences>(userId), None<MoneyPreferences>(), ct);
+        var moneyEntries = await ReadAsync<MoneyEntry>(
+            session, since, Owned<MoneyEntry>(userId), None<MoneyEntry>(), ct);
 
         var documents = new Dictionary<string, JsonElement[]>
         {
@@ -111,14 +114,15 @@ public sealed class SyncReader(MongoContext context)
             ["areaviews"] = areaViews.Rows,
             ["listviews"] = listViews.Rows,
             ["budgets"] = budgets.Rows,
-            ["moneypreferences"] = moneyPreferences.Rows
+            ["moneypreferences"] = moneyPreferences.Rows,
+            ["moneyentries"] = moneyEntries.Rows
         };
 
         var highestDocumentSeq = new[]
         {
             areas.HighestSeq, taskLists.HighestSeq, todoTasks.HighestSeq,
             goals.HighestSeq, inboxes.HighestSeq, users.HighestSeq, referenceItems.HighestSeq,
-            areaViews.HighestSeq, listViews.HighestSeq, budgets.HighestSeq, moneyPreferences.HighestSeq
+            areaViews.HighestSeq, listViews.HighestSeq, budgets.HighestSeq, moneyPreferences.HighestSeq, moneyEntries.HighestSeq
         }.Max();
 
         var highestEventSeq = events.Count > 0
