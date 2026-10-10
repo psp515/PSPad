@@ -37,7 +37,7 @@ public class RateSuggestionTests
         var first = AnExpense(budget, money: Eur(4.20m, 5), at: Now);
         var second = AnIncome(budget, money: Eur(4.25m, 5), at: Now.AddMinutes(5));
 
-        Assert.Equal(4.25m, RateSuggestion.For("EUR", [second, first])!.RateToPln);
+        Assert.Equal(4.25m, RateSuggestion.For("EUR", [first, second])!.RateToPln);
     }
 
     [Fact]
