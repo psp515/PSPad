@@ -35,6 +35,9 @@ public sealed class MoneyEntry : Aggregate
     public bool Uses(CategoryKind kind, string category) =>
         !Deleted && Kind == kind && string.Equals(Category, category.Trim(), StringComparison.OrdinalIgnoreCase);
 
+    public static IReadOnlyList<DomainEvent> Relabel(MoneyEntry entry, string category, DateTimeOffset at) =>
+        entry.Category == category ? [] : [new MoneyEntryRecategorised(entry.Id, entry.UserId, at, category)];
+
     public static IReadOnlyList<DomainEvent> Decide(MoneyEntry? entry, Budget? budget, ICommand command, DateTimeOffset at)
     {
         switch (command)
@@ -93,6 +96,9 @@ public sealed class MoneyEntry : Aggregate
                 Money = edited.Money;
                 Date = edited.Date;
                 Note = edited.Note;
+                break;
+            case MoneyEntryRecategorised recategorised:
+                Category = recategorised.Category;
                 break;
             case MoneyEntryDeleted:
                 Deleted = true;
