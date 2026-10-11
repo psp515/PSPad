@@ -389,8 +389,9 @@ Month (default), Balance, Summary and Settings. The tab lives in the URL.
     a gap month draws as 0). Category ranking is a `MudProgressLinear` per
     category with its name and amount, as Statistics' "Where the work went"
     does (MudBlazor 9.9 has no horizontal bar chart).
-  - Each chart has a visually hidden table fallback for screen readers, as
-    Statistics does; a gap reads "—". Without expenses the two category
+  - Each of the three charts has a visually hidden table fallback for
+    screen readers, as Statistics does; a gap reads "—". The ranking has no
+    table: its bars are `aria-hidden` and its text is visible. Without expenses the two category
     cards say "No expenses in this range."; without any balance in the range
     the net worth card says "No balances in this range.".
 - **Settings**

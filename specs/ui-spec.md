@@ -1394,8 +1394,10 @@ Last year / Custom presets (a `MudDateRangePicker` for Custom; the range is
 not in the URL), Income / Expenses / Saved / Savings rate / Net worth tiles,
 and `BudgetSummaryCharts`: cumulative income vs expenses (line), expenses by
 month (stacked bar, top 4 categories + Other), net worth by holding type
-(stacked bar) and a `MudProgressLinear` category ranking, each chart with a
-`mud-sr-only` table like Statistics. No FAB; works offline.
+(stacked bar) and a `MudProgressLinear` category ranking. Each of the three
+charts has a `mud-sr-only` table like Statistics; the ranking has none (its
+bars are `aria-hidden`, the names and amounts are visible text). No FAB;
+works offline.
 
 **Routes:**
 
