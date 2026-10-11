@@ -273,4 +273,22 @@ public class BudgetSummaryTests : Bunit.TestContext
         Assert.Contains("This budget is archived", page.Markup);
         Assert.Empty(page.FindAll(".pspad-fab"));
     }
+
+    [Fact]
+    public void TheChartsFollowTheChosenRange()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            MoneyEntries.Expense(budget, "Party", "Food", 70m, new DateOnly(2025, 12, 31)));
+        var page = SummaryTab(budget);
+        Assert.Equal(10, page.FindAll(".pspad-summary-cumulative table.mud-sr-only tbody tr").Count);
+
+        Preset(page, "Last year").Click();
+
+        page.WaitForAssertion(() =>
+            Assert.Equal(12, page.FindAll(".pspad-summary-cumulative table.mud-sr-only tbody tr").Count));
+        var december = page.FindAll(".pspad-summary-cumulative table.mud-sr-only tbody tr")[11];
+        Assert.Equal(["December 2025", "0.00 PLN", "70.00 PLN"],
+            december.QuerySelectorAll("td").Select(cell => cell.TextContent.Trim()));
+    }
 }

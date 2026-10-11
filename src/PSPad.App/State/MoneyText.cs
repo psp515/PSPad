@@ -44,4 +44,24 @@ public static class MoneyText
             ? $"{Minus}{(-whole).ToString(CultureInfo.InvariantCulture)}%"
             : $"{whole.ToString(CultureInfo.InvariantCulture)}%";
     }
+
+    public static string[] MonthAxis(IReadOnlyList<YearMonth> months)
+    {
+        if (months.Count == 0)
+        {
+            return [];
+        }
+
+        var oneYear = months[0].Year == months[^1].Year;
+        var format = oneYear ? "MMM" : "MMM yyyy";
+        var step = oneYear ? 1 : (int)Math.Ceiling(months.Count / 6d);
+        var labels = new string[months.Count];
+
+        for (var index = 0; index < months.Count; index++)
+        {
+            labels[index] = index % step == 0 ? months[index].FirstDay.ToString(format, CultureInfo.InvariantCulture) : "";
+        }
+
+        return labels;
+    }
 }

@@ -53,4 +53,22 @@ public class MoneyTextTests
     [Fact]
     public void ARangeReadsFromDayToDay() =>
         Assert.Equal("1 Jan 2026 – 9 Oct 2026", MoneyText.Range(new DateOnly(2026, 1, 1), new DateOnly(2026, 10, 9)));
+
+    [Fact]
+    public void MonthsOfOneYearAreLabelledByName() =>
+        Assert.Equal(["Jan", "Feb", "Mar"],
+            MoneyText.MonthAxis([new YearMonth(2026, 1), new YearMonth(2026, 2), new YearMonth(2026, 3)]));
+
+    [Fact]
+    public void MonthsAcrossAYearEndCarryTheYearAndAreThinned()
+    {
+        var months = Enumerable.Range(0, 12).Select(offset => YearMonth.Of(new DateOnly(2025, 11, 1).AddMonths(offset))).ToArray();
+
+        Assert.Equal(
+            ["Nov 2025", "", "Jan 2026", "", "Mar 2026", "", "May 2026", "", "Jul 2026", "", "Sep 2026", ""],
+            MoneyText.MonthAxis(months));
+    }
+
+    [Fact]
+    public void NoMonthsHaveNoLabels() => Assert.Empty(MoneyText.MonthAxis([]));
 }
