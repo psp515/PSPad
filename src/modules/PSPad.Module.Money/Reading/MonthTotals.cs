@@ -14,12 +14,7 @@ public sealed record MonthTotals(
         var inMonth = entries.Where(entry => !entry.Deleted && month.Contains(entry.Date)).ToArray();
         var expenses = inMonth.Where(entry => entry.Kind == CategoryKind.Expense).ToArray();
 
-        var byCategory = expenses
-            .GroupBy(entry => entry.Category, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new CategoryTotal(group.First().Category, group.Sum(entry => entry.Money.InPln)))
-            .OrderByDescending(total => total.Pln)
-            .ThenBy(total => total.Category, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var byCategory = CategoryTotal.RankingOf(expenses);
 
         var days = inMonth
             .GroupBy(entry => entry.Date)
