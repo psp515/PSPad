@@ -25,7 +25,8 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         ["listviews"] = typeof(Module.Presentation.ListViews.ListView),
         ["budgets"] = typeof(Module.Money.Budgets.Budget),
         ["moneypreferences"] = typeof(Module.Money.Preferences.MoneyPreferences),
-        ["moneyentries"] = typeof(Module.Money.Entries.MoneyEntry)
+        ["moneyentries"] = typeof(Module.Money.Entries.MoneyEntry),
+        ["balancesnapshots"] = typeof(Module.Money.Balance.BalanceSnapshot)
     };
 
     public async Task<SyncOutcome> SyncAsync(CancellationToken ct)

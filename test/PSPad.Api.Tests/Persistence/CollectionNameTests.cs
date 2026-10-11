@@ -1,4 +1,5 @@
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Preferences;
@@ -26,6 +27,7 @@ public class CollectionNameTests
         Assert.Equal("budgets", MongoContext.NameOf(typeof(Budget)));
         Assert.Equal("moneypreferences", MongoContext.NameOf(typeof(MoneyPreferences)));
         Assert.Equal("moneyentries", MongoContext.NameOf(typeof(MoneyEntry)));
+        Assert.Equal("balancesnapshots", MongoContext.NameOf(typeof(BalanceSnapshot)));
     }
 
     [Theory]

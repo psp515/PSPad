@@ -5,9 +5,11 @@ using PSPad.App.State.Replica;
 using PSPad.App.Sync;
 using PSPad.Contracts;
 using PSPad.Module.Money;
+using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Preferences;
+using PSPad.Module.Money.Values;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
@@ -212,6 +214,7 @@ public class SyncServiceTests
         Assert.Contains("budgets", SyncService.CollectionsFingerprint);
         Assert.Contains("moneypreferences", SyncService.CollectionsFingerprint);
         Assert.Contains("moneyentries", SyncService.CollectionsFingerprint);
+        Assert.Contains("balancesnapshots", SyncService.CollectionsFingerprint);
     }
 
     [Fact]
@@ -303,4 +306,33 @@ public class SyncServiceTests
     static CommandEnvelope Envelope() =>
         new(nameof(CreateArea), JsonSerializer.SerializeToElement(
             new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), "Home", 0)));
+
+    [Fact]
+    public async Task APulledBalanceLandsInTheReplicaWithItsMonthAndHoldings()
+    {
+        var replica = new InMemoryReplica();
+        var budget = new Budget();
+        budget.ApplyAll(Budget.Decide(null, new CreateBudget(Guid.NewGuid(), User, Guid.NewGuid(), "Personal"),
+            DateTimeOffset.UnixEpoch));
+        var october = new YearMonth(2026, 10);
+        var holding = new Holding(Guid.NewGuid(), "Konto", HoldingType.Savings, new Money(10m, "EUR", 4.25m, october.LastDay));
+        var snapshot = new BalanceSnapshot();
+        snapshot.ApplyAll(BalanceSnapshot.Decide(null, budget,
+            new StartBalanceMonth(Guid.NewGuid(), User, budget.Id, october), DateTimeOffset.UnixEpoch));
+        snapshot.ApplyAll(BalanceSnapshot.Decide(snapshot, budget, new AddHolding(Guid.NewGuid(), User, budget.Id, october,
+            holding.HoldingId, holding.Name, holding.Type, holding.Money), DateTimeOffset.UnixEpoch));
+        var row = JsonSerializer.SerializeToElement(snapshot,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true });
+        var api = new FakeApi
+        {
+            Pull = new(5, new Dictionary<string, JsonElement[]> { ["balancesnapshots"] = [row] }, [])
+        };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        var stored = await replica.LoadAsync<BalanceSnapshot>(snapshot.Id);
+        Assert.Equal(october, stored!.Month);
+        Assert.Equal(holding, Assert.Single(stored.Holdings));
+        Assert.Equal(42.50m, stored.Holdings[0].Money.InPln);
+    }
 }
