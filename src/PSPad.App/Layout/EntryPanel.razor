@@ -31,7 +31,7 @@
                 @(CategoryChoices.IsNew(Categories, choice) ? $"Create category \"{choice}\"" : choice)
             </ItemTemplate>
         </MudAutocomplete>
-        <RateFields CssPrefix="pspad-entry" @bind-Amount="_amount" Currency="@_currency" CurrencyChanged="@Suggest"
+        <RateFields @key="@((_loadedEntry, _loadedBudget, _loadedKind))" CssPrefix="pspad-entry" @bind-Amount="_amount" Currency="@_currency" CurrencyChanged="@Suggest"
                     Rate="@_rate" RateTyped="@RateTyped" NbpDate="@EntryDate" NbpFetched="@ApplyNbpRate"
                     ReadOnly="@ReadOnly" />
         <MudDatePicker Class="pspad-entry-date-field" Label="Date" Variant="Variant.Outlined" Margin="Margin.Dense"

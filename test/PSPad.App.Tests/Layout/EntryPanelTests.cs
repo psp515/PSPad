@@ -246,6 +246,25 @@ public class EntryPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task ALateNbpAnswerForAnotherEntryIsDropped()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        var hotel = MoneyEntries.Expense(budget, "Hotel", "Home", 10m, new DateOnly(2026, 10, 5), "EUR", 4.30m);
+        var taxi = MoneyEntries.Expense(budget, "Taxi", "Car", 10m, new DateOnly(2026, 10, 5), "EUR", 4.10m);
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, hotel, taxi);
+        Nbp.Gate = new TaskCompletionSource<NbpRateView?>();
+        var panel = Render<EntryPanel>(parameters => parameters.Add(p => p.EntryId, (Guid?)hotel.Id));
+        panel.Find(".pspad-entry-nbp").Click();
+
+        panel.Render(parameters => parameters.Add(p => p.EntryId, (Guid?)taxi.Id));
+        panel.WaitForAssertion(() =>
+            Assert.Equal("Taxi", panel.Find(".pspad-entry-name-field input").GetAttribute("value")));
+        await panel.InvokeAsync(() => Nbp.Gate.SetResult(new NbpRateView("EUR", 4.2512m, new DateOnly(2026, 10, 8))));
+
+        Assert.Equal("41.00 PLN", panel.Find(".pspad-entry-pln input").GetAttribute("value"));
+    }
+
+    [Fact]
     public async Task ANbpFailureKeepsTheRateAndSaysSo()
     {
         var budget = BudgetsPageTests.Named("Personal");
