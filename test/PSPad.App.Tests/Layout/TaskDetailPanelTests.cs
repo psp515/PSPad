@@ -343,6 +343,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         panel.Find(".pspad-task-star").Click();
         panel.Find(".pspad-panel-save").Click();
 
+        panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));
         var tasks = await replica.LoadAllAsync<TodoTask>(User);
         var created = Assert.Single(tasks);
         Assert.Equal(listId, created.ListId);
@@ -653,6 +654,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         panel.FindAll(".pspad-priority-option")[(int)Priority.Medium].Click();
         panel.Find(".pspad-panel-save").Click();
 
+        panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));
         var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
         Assert.Equal(Today.AddDays(2), created.DueOn);
         Assert.Equal(Priority.Medium, created.Priority);
@@ -687,6 +689,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         panel.FindAll(".pspad-due-quick")[2].Click();
         panel.Find(".pspad-panel-save").Click();
 
+        panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));
         var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
         Assert.Equal(RecurrenceKind.Daily, created.Recurrence!.Kind);
         Assert.Equal(Today, created.Recurrence.StartsOn);
@@ -827,6 +830,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         panel.Find(".pspad-repeat-save").Click();
         panel.Find(".pspad-panel-save").Click();
 
+        panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));
         var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
         Assert.Equal(Today.AddDays(5), created.Recurrence!.StartsOn);
         Assert.Null(created.DueOn);
@@ -1014,6 +1018,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         await panel.InvokeAsync(() => row.Instance.StartChangedAsync(new TimeSpan(9, 30, 0)));
         panel.Find(".pspad-panel-save").Click();
 
+        panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));
         var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
         Assert.Equal(new TimeOnly(9, 30), created.Time!.Start);
     }
@@ -1108,6 +1113,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         panel.FindAll(".pspad-lead-option")[4].Click();
         panel.Find(".pspad-panel-save").Click();
 
+        panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));
         var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
         Assert.Equal(RecurrenceKind.Yearly, created.Recurrence!.Kind);
         Assert.Equal(Today, created.Recurrence.StartsOn);
