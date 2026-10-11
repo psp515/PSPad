@@ -28,4 +28,20 @@ public static class MoneyText
         month.FirstDay.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
 
     public static string Day(DateOnly date) => date.ToString("dddd, d MMMM", CultureInfo.InvariantCulture);
+
+    public static string Range(DateOnly from, DateOnly to) =>
+        $"{from.ToString("d MMM yyyy", CultureInfo.InvariantCulture)} – {to.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}";
+
+    public static string Percent(decimal? share)
+    {
+        if (share is not { } value)
+        {
+            return "—";
+        }
+
+        var whole = (long)Math.Round(value * 100, 0, MidpointRounding.AwayFromZero);
+        return whole < 0
+            ? $"{Minus}{(-whole).ToString(CultureInfo.InvariantCulture)}%"
+            : $"{whole.ToString(CultureInfo.InvariantCulture)}%";
+    }
 }

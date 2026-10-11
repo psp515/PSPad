@@ -1,3 +1,4 @@
+using System.Globalization;
 using PSPad.App.State;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Values;
@@ -36,4 +37,20 @@ public class MoneyTextTests
 
     [Fact]
     public void ADayReadsAsWeekdayAndDate() => Assert.Equal("Friday, 9 October", MoneyText.Day(new DateOnly(2026, 10, 9)));
+
+    [Theory]
+    [InlineData("0.25", "25%")]
+    [InlineData("0.857", "86%")]
+    [InlineData("0", "0%")]
+    [InlineData("-0.125", "−13%")]
+    [InlineData("-0.004", "0%")]
+    public void ASavingsRateIsAWholePercent(string share, string expected) =>
+        Assert.Equal(expected, MoneyText.Percent(decimal.Parse(share, CultureInfo.InvariantCulture)));
+
+    [Fact]
+    public void NoSavingsRateIsADash() => Assert.Equal("—", MoneyText.Percent(null));
+
+    [Fact]
+    public void ARangeReadsFromDayToDay() =>
+        Assert.Equal("1 Jan 2026 – 9 Oct 2026", MoneyText.Range(new DateOnly(2026, 1, 1), new DateOnly(2026, 10, 9)));
 }
