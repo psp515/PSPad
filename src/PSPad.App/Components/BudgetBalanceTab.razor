@@ -110,9 +110,19 @@
 
     decimal? AtToday => Snapshot is not null && Connectivity.IsOnline ? BalanceTotals.AtRates(Snapshot, _todayRates) : null;
 
-    protected override void OnInitialized() => Connectivity.Changed += OnConnectivityChanged;
+    protected override void OnInitialized()
+    {
+        Connectivity.Changed += OnConnectivityChanged;
+        Connectivity.CameOnline += OnCameOnline;
+    }
 
     void OnConnectivityChanged() => InvokeAsync(StateHasChanged);
+
+    void OnCameOnline() => InvokeAsync(async () =>
+    {
+        await LookUpAsync();
+        StateHasChanged();
+    });
 
     string ChangeLabel => Totals.Previous is null
         ? "vs previous month"
@@ -126,7 +136,9 @@
             ? MoneyText.SignedPln(value - holding.Money.InPln)
             : "—";
 
-    protected override async Task OnParametersSetAsync()
+    protected override Task OnParametersSetAsync() => LookUpAsync();
+
+    async Task LookUpAsync()
     {
         if (Snapshot is null || !Connectivity.IsOnline)
         {
@@ -170,5 +182,6 @@
     {
         _disposed = true;
         Connectivity.Changed -= OnConnectivityChanged;
+        Connectivity.CameOnline -= OnCameOnline;
     }
 }

@@ -125,6 +125,35 @@ public static class AppTestHost
 #pragma warning restore CS0067
     }
 
+    public sealed class SwitchableConnectivity : IConnectivity
+    {
+        Action? _cameOnline;
+        Action? _changed;
+
+        public bool IsOnline { get; private set; }
+
+        public int Subscribers => (_cameOnline?.GetInvocationList().Length ?? 0) + (_changed?.GetInvocationList().Length ?? 0);
+
+        public event Action? CameOnline
+        {
+            add => _cameOnline += value;
+            remove => _cameOnline -= value;
+        }
+
+        public event Action? Changed
+        {
+            add => _changed += value;
+            remove => _changed -= value;
+        }
+
+        public void GoOnline()
+        {
+            IsOnline = true;
+            _cameOnline?.Invoke();
+            _changed?.Invoke();
+        }
+    }
+
     public sealed class FakeNbpRates : INbpRates
     {
         public NbpRateView? Next { get; set; }

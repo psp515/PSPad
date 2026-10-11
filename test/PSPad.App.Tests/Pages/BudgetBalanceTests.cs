@@ -93,6 +93,40 @@ public class BudgetBalanceTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ComingOnlineAsksForTheRatesAnOfflineVisitSkipped()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, EuroAndZloty(budget));
+        var connectivity = new AppTestHost.SwitchableConnectivity();
+        Services.AddSingleton<IConnectivity>(connectivity);
+        Nbp.ByCurrency["EUR"] = new NbpRateView("EUR", 4.40m, Today);
+        var page = BalanceTab(budget);
+        page.WaitForAssertion(() => page.Find(".pspad-balance-net-worth"));
+        Assert.Empty(Nbp.Asked);
+
+        page.InvokeAsync(connectivity.GoOnline);
+
+        page.WaitForAssertion(() => Assert.Equal("166.00 PLN", Text(page, ".pspad-balance-at-nbp .pspad-money-tile-value")));
+        Assert.Equal([("EUR", Today)], Nbp.Asked);
+    }
+
+    [Fact]
+    public void LeavingThePageUnsubscribesFromConnectivity()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, EuroAndZloty(budget));
+        var connectivity = new AppTestHost.SwitchableConnectivity();
+        Services.AddSingleton<IConnectivity>(connectivity);
+        var page = BalanceTab(budget);
+        page.WaitForAssertion(() => page.Find(".pspad-balance-net-worth"));
+        var before = connectivity.Subscribers;
+
+        page.FindAll(".mud-tab").Single(tab => tab.TextContent.Contains("Settings")).Click();
+
+        page.WaitForAssertion(() => Assert.True(connectivity.Subscribers < before));
+    }
+
+    [Fact]
     public void AFailedLookupHidesTheNbpTilesAndIsNotRetriedDuringTheVisit()
     {
         var budget = BudgetsPageTests.Named("Personal");
