@@ -1,10 +1,25 @@
 using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace PSPad.Module.Money.Values;
 
+[JsonConverter(typeof(YearMonthJsonConverter))]
 public readonly record struct YearMonth(int Year, int Month) : IComparable<YearMonth>
 {
     public static YearMonth Of(DateOnly date) => new(date.Year, date.Month);
+
+    public static YearMonth Parse(string text)
+    {
+        if (text.Length == 7 && text[4] == '-' &&
+            int.TryParse(text.AsSpan(0, 4), NumberStyles.None, CultureInfo.InvariantCulture, out var year) &&
+            int.TryParse(text.AsSpan(5, 2), NumberStyles.None, CultureInfo.InvariantCulture, out var month) &&
+            year >= 1 && month is >= 1 and <= 12)
+        {
+            return new YearMonth(year, month);
+        }
+
+        throw new FormatException($"{text} is not a yyyy-MM month.");
+    }
 
     public DateOnly FirstDay => new(Year, Month, 1);
 
