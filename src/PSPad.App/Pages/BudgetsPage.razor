@@ -4,12 +4,14 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Money.Balance
 @using PSPad.Module.Money.Budgets
 @using PSPad.Module.Money.Entries
 @using PSPad.Module.Money.Reading
 @using PSPad.Module.Money.Values
 @inject IDocumentStore<Budget> BudgetStore
 @inject IDocumentStore<MoneyEntry> EntryStore
+@inject IDocumentStore<BalanceSnapshot> SnapshotStore
 @inject AppState State
 @inject CommandSender Sender
 @inject NavigationManager Navigation
@@ -41,7 +43,7 @@ else
         @foreach (var budget in Visible)
         {
             <MudItem @key="budget.Id" xs="12" sm="6" lg="4">
-                <BudgetCard Budget="@budget" Month="@ThisMonth" Totals="@TotalsFor(budget)" />
+                <BudgetCard Budget="@budget" Month="@ThisMonth" Totals="@TotalsFor(budget)" Latest="@LatestFor(budget)" />
             </MudItem>
         }
     </MudGrid>
@@ -60,11 +62,15 @@ else
     int _rendered = -1;
     IReadOnlyList<Budget> _budgets = [];
     IReadOnlyList<MoneyEntry> _entries = [];
+    IReadOnlyList<BalanceSnapshot> _snapshots = [];
 
     YearMonth ThisMonth => YearMonth.Of(State.Today);
 
     MonthTotals TotalsFor(Budget budget) =>
         MonthTotals.For(_entries.Where(entry => entry.BudgetId == budget.Id), ThisMonth);
+
+    BalanceSnapshot? LatestFor(Budget budget) =>
+        BalanceTotals.Latest(_snapshots.Where(snapshot => snapshot.BudgetId == budget.Id), ThisMonth);
 
     IEnumerable<Budget> Visible => _budgets.Where(budget => _showArchived || !budget.IsArchived);
 
@@ -102,6 +108,7 @@ else
         var budgets = await BudgetStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _budgets = [.. budgets.OrderBy(budget => budget.CreatedAt)];
         _entries = [.. await EntryStore.LoadAllAsync(State.UserId, CancellationToken.None)];
+        _snapshots = [.. await SnapshotStore.LoadAllAsync(State.UserId, CancellationToken.None)];
         _loaded = true;
     }
 

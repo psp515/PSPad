@@ -1,6 +1,7 @@
 using Bunit;
 using PSPad.App.Pages;
 using PSPad.Module.Money.Budgets;
+using PSPad.Module.Money.Values;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Pages;
@@ -81,6 +82,76 @@ public class BudgetsPageTests : Bunit.TestContext
         var page = Render<BudgetsPage>();
 
         page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll($"a[href='/budgets/{budget.Id}']")));
+    }
+
+    [Fact]
+    public void ACardShowsTheLatestNetWorthUpToThisMonth()
+    {
+        var budget = Named("Personal");
+        AppTestHost.Arrange(this, User, Today, budget,
+            Balances.Started(budget, new YearMonth(2026, 9), Balances.AHolding("Wallet", 100m),
+                Balances.AHolding("Konto", 10m, "EUR", 4.3m)),
+            Balances.Started(budget, new YearMonth(2026, 11), Balances.AHolding("Wallet", 999m)));
+
+        var page = Render<BudgetsPage>();
+
+        page.WaitForAssertion(() => Assert.Equal("143.00 PLN", page.Find(".pspad-budget-card-net-worth").TextContent.Trim()));
+        Assert.Contains("Net worth · September 2026", page.Find(".pspad-budget-card-balance").TextContent);
+        Assert.Empty(page.FindAll(".pspad-budget-card-start"));
+    }
+
+    [Fact]
+    public void ACardWithoutABalanceOffersToStartThisMonth()
+    {
+        var budget = Named("Personal");
+        AppTestHost.Arrange(this, User, Today, budget);
+
+        var page = Render<BudgetsPage>();
+
+        page.WaitForAssertion(() => page.Find(".pspad-budget-card-start"));
+        var start = page.Find(".pspad-budget-card-start");
+        Assert.Equal("Start October 2026", start.TextContent.Trim());
+        Assert.Equal($"/budgets/{budget.Id}/balance", start.GetAttribute("href"));
+        Assert.Empty(page.FindAll(".pspad-budget-card-net-worth"));
+    }
+
+    [Fact]
+    public void ADeletedBalanceDoesNotCount()
+    {
+        var budget = Named("Personal");
+        AppTestHost.Arrange(this, User, Today, budget,
+            Balances.Deleted(Balances.Started(budget, new YearMonth(2026, 10), Balances.AHolding("Wallet", 100m)), budget));
+
+        var page = Render<BudgetsPage>();
+
+        page.WaitForAssertion(() => page.Find(".pspad-budget-card-start"));
+        Assert.Empty(page.FindAll(".pspad-budget-card-net-worth"));
+    }
+
+    [Fact]
+    public void ACardCountsOnlyItsOwnBudgetsBalance()
+    {
+        var mine = Named("Mine");
+        var other = Named("Other");
+        AppTestHost.Arrange(this, User, Today, mine, other,
+            Balances.Started(other, new YearMonth(2026, 10), Balances.AHolding("Theirs", 5m)));
+
+        var page = Render<BudgetsPage>();
+
+        page.WaitForAssertion(() => Assert.Equal("5.00 PLN", Assert.Single(page.FindAll(".pspad-budget-card-net-worth")).TextContent.Trim()));
+        Assert.Single(page.FindAll(".pspad-budget-card-start"));
+    }
+
+    [Fact]
+    public void AnArchivedCardWithoutABalanceSaysSo()
+    {
+        AppTestHost.Arrange(this, User, Today, Named("Old", archived: true));
+        var page = Render<BudgetsPage>();
+
+        page.Find(".pspad-show-archived input").Change(true);
+
+        page.WaitForAssertion(() => Assert.Equal("No balance yet", page.Find(".pspad-budget-card-no-balance").TextContent.Trim()));
+        Assert.Empty(page.FindAll(".pspad-budget-card-start"));
     }
 
     internal static Budget Named(string name, bool archived = false)
