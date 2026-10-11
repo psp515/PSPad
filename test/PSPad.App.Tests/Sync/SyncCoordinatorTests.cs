@@ -184,6 +184,19 @@ public class SyncCoordinatorTests : Bunit.TestContext
     }
 
     [Fact]
+    public void InvalidatingAdvancesTheRevisionAndAnnouncesIt()
+    {
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"), online: false);
+        var changes = 0;
+        coordinator.Changed += () => changes++;
+
+        coordinator.Invalidate();
+
+        Assert.Equal(1, coordinator.Revision);
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
     public async Task EverySyncThatLandsAdvancesItAgain()
     {
         var coordinator = CoordinatorFor(AnAreaCalled("Dom"));

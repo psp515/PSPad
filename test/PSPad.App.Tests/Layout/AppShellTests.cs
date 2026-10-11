@@ -465,6 +465,41 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task TodayRollsOverWhenMidnightPassesWhileTheAppStaysOpen()
+    {
+        Arrange();
+        var clock = new MovableClock(new DateTimeOffset(2026, 9, 12, 23, 30, 0, TimeSpan.Zero));
+        Services.AddSingleton<IClock>(clock);
+        Render<AppShell>();
+        var coordinator = Services.GetRequiredService<SyncCoordinator>();
+        var revision = coordinator.Revision;
+
+        clock.UtcNow = new DateTimeOffset(2026, 9, 13, 0, 5, 0, TimeSpan.Zero);
+        await coordinator.SyncNowAsync();
+
+        Assert.Equal(new DateOnly(2026, 9, 13), Services.GetRequiredService<AppState>().Today);
+        Assert.True(coordinator.Revision > revision);
+    }
+
+    [Fact]
+    public async Task TheSameDayLeavesTheRevisionAlone()
+    {
+        Arrange();
+        Render<AppShell>();
+        var coordinator = Services.GetRequiredService<SyncCoordinator>();
+        var revision = coordinator.Revision;
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Equal(revision, coordinator.Revision);
+    }
+
+    sealed class MovableClock(DateTimeOffset now) : IClock
+    {
+        public DateTimeOffset UtcNow { get; set; } = now;
+    }
+
+    [Fact]
     public void ItStaysReadyOnATimeZoneTheRuntimeDoesNotCarry()
     {
         var store = new InMemoryLocalSessionStore(new LocalSession(
