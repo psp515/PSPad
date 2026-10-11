@@ -1433,8 +1433,8 @@ button.pspad-heatmap-cell:focus-visible {
 }
 
 @media (max-width: 599.98px) {
-  .pspad-summary-presets {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    border-radius: 16px;
-  }
+    .pspad-summary-presets {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        border-radius: 16px;
+    }
 }
