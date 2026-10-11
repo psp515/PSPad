@@ -1373,15 +1373,22 @@ only its icon is primary, to hold the 4.5:1 contrast rule on the tint
 **Budgets** (`adr/0059`, `adr/0060`; full design `specs/money-design.md` §6).
 `/budgets` lists budget cards with a "Show archived" switch, an empty state and
 a New budget FAB; `BudgetPanel` creates and renames (`?budget=new|{id}`). Cards
-show the current month's income, expenses and net in PLN.
-`/budgets/{id}/{tab}` holds `MudTabs` whose tab lives in the URL: Month
+show the current month's income, expenses and net in PLN, and the latest net
+worth or a "Start {month}" link to the Balance tab.
+`/budgets/{id}/{tab}` holds `MudTabs` whose tab lives in the URL (`month`, `balance`, `settings`): Month
 (default; month switcher, Income/Expenses/Net tiles, a stacked category bar,
 entries by day, FAB menu Add expense / Add income) and Settings (category
 lists with add, rename, merge and remove — remove disabled while a category has
 entries — and Archive/Restore). `EntryPanel` opens from `?entry={id}`,
 `?expense={budgetId}` or `?income={budgetId}`; its rate field is hidden for PLN
 and its NBP button is disabled offline. Settings holds the default currency
-select. Balance and Summary arrive in later slices.
+select. Balance (`BudgetBalanceTab`): the shared month switcher, a "{Month} has no
+balance yet" banner with a Start button, Net worth / At NBP today / Currency
+difference / vs-previous tiles (the NBP pair online only), a `MudTable` of
+holdings, an Add holding FAB and a "Month actions" menu with Delete month.
+`HoldingPanel` opens from `?balance={snapshotId}&holding={id|new}`: name, a
+Cash/Savings/Investment `MudToggleGroup`, amount, currency, rate with NBP,
+In PLN, Remove. Summary arrives in a later slice.
 
 **Routes:**
 
