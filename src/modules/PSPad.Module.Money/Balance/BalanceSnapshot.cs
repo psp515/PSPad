@@ -55,6 +55,11 @@ public sealed class BalanceSnapshot : Aggregate
         {
             case StartBalanceMonth start:
                 var starting = Writable(budget, start.UserId);
+                if (snapshot is not null && snapshot.BudgetId != starting.Id)
+                {
+                    throw new DomainRejectedException("That budget does not exist.");
+                }
+
                 if (snapshot is { Deleted: false })
                 {
                     return [];

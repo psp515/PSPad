@@ -300,6 +300,30 @@ public class BalanceSnapshotTests
     }
 
     [Fact]
+    public void StartingAMonthOverAnotherBudgetsSnapshotIsRejected()
+    {
+        var budget = ABudget();
+        var other = ABudget();
+
+        Assert.Equal("That budget does not exist.",
+            Rejection(ASnapshot(other, October), budget, Start(budget, October)));
+        Assert.Equal("That budget does not exist.",
+            Rejection(DeleteSnapshot(ASnapshot(other, October), other), budget, Start(budget, October)));
+    }
+
+    [Fact]
+    public void DeletingAnotherBudgetsSnapshotIsRejected()
+    {
+        var budget = ABudget();
+        var other = ABudget();
+        var delete = new DeleteBalanceMonth(Guid.NewGuid(), Owner, budget.Id, October);
+
+        Assert.Equal("That month has no balance yet.", Rejection(ASnapshot(other, October), budget, delete));
+        Assert.Equal("That month has no balance yet.",
+            Rejection(DeleteSnapshot(ASnapshot(other, October), other), budget, delete));
+    }
+
+    [Fact]
     public void DeletingSoftDeletesAndIsANoOpTheSecondTime()
     {
         var budget = ABudget();
