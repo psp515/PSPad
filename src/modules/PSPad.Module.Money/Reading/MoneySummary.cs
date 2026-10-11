@@ -63,14 +63,16 @@ public sealed record MoneySummary(
 
     static CumulativeMonth[] CumulativeOf(IReadOnlyList<YearMonth> months, MoneyEntry[] incomes, MoneyEntry[] expenses)
     {
+        var incomePerMonth = PerMonth(months, incomes);
+        var spentPerMonth = PerMonth(months, expenses);
         var cumulative = new CumulativeMonth[months.Count];
         var income = 0m;
         var spent = 0m;
 
         for (var index = 0; index < months.Count; index++)
         {
-            income += PlnIn(incomes, months[index]);
-            spent += PlnIn(expenses, months[index]);
+            income += incomePerMonth[index];
+            spent += spentPerMonth[index];
             cumulative[index] = new CumulativeMonth(months[index], income, spent);
         }
 
@@ -83,20 +85,36 @@ public sealed record MoneySummary(
         var restNeedsOther = ranking.Length > TopCategories && !top.Contains(Other, StringComparer.OrdinalIgnoreCase);
         string[] names = restNeedsOther ? [.. top, Other] : top;
 
-        return
-        [
-            .. names.Select(name => new CategorySeries(name,
-            [
-                .. months.Select(month => PlnIn(expenses.Where(entry => Same(SeriesOf(entry.Category, top), name)), month))
-            ]))
-        ];
+        var topSlots = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (var slot = 0; slot < top.Length; slot++)
+        {
+            topSlots[top[slot]] = slot;
+        }
+
+        var otherSlot = Array.FindIndex(names, name => Same(name, Other));
+        var totals = names.Select(_ => new decimal[months.Count]).ToArray();
+
+        foreach (var entry in expenses)
+        {
+            var slot = topSlots.TryGetValue(entry.Category, out var found) ? found : otherSlot;
+            totals[slot][MonthIndex(months[0], entry.Date)] += entry.Money.InPln;
+        }
+
+        return [.. names.Select((name, slot) => new CategorySeries(name, totals[slot]))];
     }
 
-    static string SeriesOf(string category, string[] top) =>
-        top.FirstOrDefault(name => Same(name, category)) ?? Other;
+    static decimal[] PerMonth(IReadOnlyList<YearMonth> months, IEnumerable<MoneyEntry> entries)
+    {
+        var totals = new decimal[months.Count];
+        foreach (var entry in entries)
+        {
+            totals[MonthIndex(months[0], entry.Date)] += entry.Money.InPln;
+        }
+
+        return totals;
+    }
 
     static bool Same(string left, string right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
 
-    static decimal PlnIn(IEnumerable<MoneyEntry> entries, YearMonth month) =>
-        entries.Where(entry => month.Contains(entry.Date)).Sum(entry => entry.Money.InPln);
+    static int MonthIndex(YearMonth first, DateOnly date) => (date.Year - first.Year) * 12 + date.Month - first.Month;
 }

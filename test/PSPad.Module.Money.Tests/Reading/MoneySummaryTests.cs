@@ -221,6 +221,25 @@ public class MoneySummaryTests
     }
 
     [Fact]
+    public void ALowercaseOtherInTheTopFourTakesTheRest()
+    {
+        var budget = ABudget();
+
+        var summary = MoneySummary.For(
+        [
+            AnExpense(budget, "other", 500m, On(1, 3)),
+            AnExpense(budget, "Home", 400m, On(1, 3)),
+            AnExpense(budget, "Food", 300m, On(1, 3)),
+            AnExpense(budget, "Car", 200m, On(1, 3)),
+            AnExpense(budget, "PC", 100m, On(1, 3)),
+            AnExpense(budget, "Bike", 10m, On(1, 3))
+        ], [], YearStart, On(1, 31));
+
+        Assert.Equal(["other", "Home", "Food", "Car"], summary.ExpensesByMonth.Select(series => series.Category));
+        Assert.Equal([610m], PerMonth(summary, "other"));
+    }
+
+    [Fact]
     public void TheRankingListsEveryCategoryLargestFirstWithoutOther()
     {
         var summary = MoneySummary.For(SixCategories(ABudget()), [], YearStart, On(2, 28));
