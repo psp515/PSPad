@@ -206,8 +206,7 @@ documents.
 - It returns `RateSuggestion(RateToPln, RateDate?)`. Slice 2 ships
   `For(currency, entries)`; slice 3 adds the `snapshots` overload. The entry
   panel keeps a suggested rate's `RateDate`; an NBP rate carries NBP's
-  `effectiveDate`; a typed rate takes the entry's date. Ties go to the entry
-  with the latest `RecordedAt`.
+  `effectiveDate`; a typed rate takes the entry's date.
 - PLN → `1`.
 - Otherwise, the `RateToPln` with the latest `RateDate` across the budget's
   live entries and holdings in that currency; ties go to the newest
@@ -318,7 +317,8 @@ Month (default), Balance, Summary and Settings. The tab lives in the URL.
   - amount
   - currency, preselected from `MoneyPreferences`
   - rate to PLN, prefilled by `RateSuggestion`, with an NBP button for the
-    entry date; hidden for PLN
+    entry date; hidden for PLN. Amount, currency, rate and NBP are the shared
+    `RateFields`, which restart for each entry that opens.
   - a read-only "In PLN" value
   - date, defaulting to today in the user's time zone
   - note
@@ -340,7 +340,8 @@ Month (default), Balance, Summary and Settings. The tab lives in the URL.
   - Holdings table (`MudTable`): name and type chip, amount and currency,
     rate, PLN, and "Today" (the difference at today's NBP rate; "—" for PLN
     or a missing rate).
-  - FAB: Add holding, only when the month has a snapshot. Tapping a row
+  - FAB: Add holding, only when the month has a snapshot and the budget isn't
+    archived. Tapping a row
     opens `HoldingPanel` (`?balance={snapshotId}&holding={holdingId|new}`).
   - Overflow menu ("Month actions"): Delete month, only when the month has a
     snapshot and the budget isn't archived. No confirmation; starting the

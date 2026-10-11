@@ -131,8 +131,8 @@ base for every total (`adr/0059`, `specs/money-design.md`).
 **Owns.** `Budget` (categories inside, archived and never deleted),
 `MoneyEntry`, `BalanceSnapshot` (holdings inside), `MoneyPreferences`; the
 `Money` value with its frozen rate, `RateSuggestion`, `MonthTotals`,
-`BalanceTotals` and `MoneySummary`. Collections `budgets`, `moneyentries`, `balancesnapshots` and
-`moneypreferences`.
+`BalanceTotals` and `MoneySummary`. Collections `budgets`, `moneyentries`,
+`balancesnapshots` and `moneypreferences`.
 
 **Must not.** Reference anything but `PSPad.Abstractions` (it is WASM-safe,
 like Tasks). Call NBP or any network: the NBP lookup lives in `PSPad.Api`.
