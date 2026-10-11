@@ -163,6 +163,21 @@ public class BudgetSummaryTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ARateThatRoundsToZeroIsNotRed()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            MoneyEntries.Income(budget, "Pay", "Salary", 1000m, On(3, 1)),
+            MoneyEntries.Expense(budget, "Rent", "Home", 1004m, On(3, 2)));
+
+        var page = SummaryTab(budget);
+
+        Assert.Equal("0%", Tile(page, "rate"));
+        Assert.DoesNotContain("mud-error-text", page.Find(".pspad-summary-rate .pspad-money-tile-value").ClassList);
+        Assert.Contains("mud-error-text", page.Find(".pspad-summary-saved .pspad-money-tile-value").ClassList);
+    }
+
+    [Fact]
     public void TheLastTwelveMonthsStartOnTheFirstOfTheMonthElevenMonthsBack()
     {
         var budget = BudgetsPageTests.Named("Personal");

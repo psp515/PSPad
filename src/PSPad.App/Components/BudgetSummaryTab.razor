@@ -34,7 +34,7 @@
         </MudItem>
         <MudItem xs="6" sm="4">
             <MoneyTile Class="pspad-summary-rate" Label="Savings rate" Text="@MoneyText.Percent(_summary.SavingsRate)"
-                       Negative="@(_summary.SavingsRate < 0)" />
+                       Negative="@MoneyText.PercentIsNegative(_summary.SavingsRate)" />
         </MudItem>
         <MudItem xs="12" sm="8">
             <MoneyTile Class="pspad-summary-net-worth" Label="@NetWorthLabel" Text="@NetWorthText" />

@@ -39,11 +39,15 @@ public static class MoneyText
             return "—";
         }
 
-        var whole = (long)Math.Round(value * 100, 0, MidpointRounding.AwayFromZero);
+        var whole = WholePercent(value);
         return whole < 0
             ? $"{Minus}{(-whole).ToString(CultureInfo.InvariantCulture)}%"
             : $"{whole.ToString(CultureInfo.InvariantCulture)}%";
     }
+
+    public static bool PercentIsNegative(decimal? share) => share is { } value && WholePercent(value) < 0;
+
+    static long WholePercent(decimal share) => (long)Math.Round(share * 100, 0, MidpointRounding.AwayFromZero);
 
     public static string[] MonthAxis(IReadOnlyList<YearMonth> months)
     {
