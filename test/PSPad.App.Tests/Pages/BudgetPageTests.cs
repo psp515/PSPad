@@ -165,8 +165,11 @@ public class BudgetPageTests : Bunit.TestContext
         var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id));
         page.WaitForAssertion(() => page.Find(".pspad-month-title"));
 
+        Assert.Equal(["Month", "Balance", "Settings"], page.FindAll(".mud-tab").Select(tab => tab.TextContent.Trim()));
         page.FindAll(".mud-tab")[1].Click();
+        Assert.EndsWith($"/budgets/{budget.Id}/balance", navigation.Uri);
 
+        page.FindAll(".mud-tab")[2].Click();
         Assert.EndsWith($"/budgets/{budget.Id}/settings", navigation.Uri);
     }
 

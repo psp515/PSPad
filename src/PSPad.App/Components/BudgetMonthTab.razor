@@ -4,13 +4,7 @@
 @using PSPad.Module.Money.Values
 
 <div class="@Class">
-    <div class="d-flex align-center justify-center gap-2 mb-4 pspad-month-switcher">
-        <MudIconButton Class="pspad-month-previous" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous month"
-                       OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Previous()))" />
-        <MudText Typo="Typo.h6" Class="pspad-month-title">@MoneyText.MonthTitle(Month)</MudText>
-        <MudIconButton Class="pspad-month-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next month"
-                       OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Next()))" />
-    </div>
+    <MonthSwitcher Class="mb-4" Month="@Month" OnMonthChanged="@OnMonthChanged" />
 
     <MudGrid Spacing="3" Class="mb-4">
         <MudItem xs="4">
