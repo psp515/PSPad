@@ -2,7 +2,10 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using PSPad.App.Api;
 using PSPad.App.Pages;
+using PSPad.App.Sync;
+using PSPad.Contracts;
 using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Values;
@@ -34,6 +37,107 @@ public class BudgetBalanceTests : Bunit.TestContext
         builder.AddAttribute(3, nameof(BudgetPage.Tab), "balance");
         builder.CloseComponent();
     };
+
+    AppTestHost.FakeNbpRates Nbp => (AppTestHost.FakeNbpRates)Services.GetRequiredService<INbpRates>();
+
+    static BalanceSnapshot EuroAndZloty(Budget budget) => Balances.Started(budget, October,
+        Balances.AHolding("Konto", 10m, "EUR", 4.30m, HoldingType.Savings),
+        Balances.AHolding("Broker", 5m, "EUR", 4.20m, HoldingType.Investment),
+        Balances.AHolding("Wallet", 100m));
+
+    [Fact]
+    public void TheNbpTilesValueHoldingsAtTodaysRateAskingOncePerCurrency()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, EuroAndZloty(budget));
+        Nbp.ByCurrency["EUR"] = new NbpRateView("EUR", 4.40m, new DateOnly(2026, 10, 8));
+
+        var page = BalanceTab(budget);
+
+        page.WaitForAssertion(() => Assert.Equal("166.00 PLN", Text(page, ".pspad-balance-at-nbp .pspad-money-tile-value")));
+        Assert.Equal("164.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-tile-value"));
+        Assert.Equal("+2.00 PLN", Text(page, ".pspad-balance-currency .pspad-money-tile-value"));
+        Assert.Equal(["+1.00 PLN", "+1.00 PLN", "—"],
+            page.FindAll(".pspad-holding-today").Select(cell => cell.TextContent.Trim()));
+        Assert.Equal([("EUR", Today)], Nbp.Asked);
+    }
+
+    [Fact]
+    public void ALowerRateTodayShowsANegativeDifference()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            Balances.Started(budget, October, Balances.AHolding("Konto", 10m, "EUR", 4.30m)));
+        Nbp.ByCurrency["EUR"] = new NbpRateView("EUR", 4.20m, Today);
+
+        var page = BalanceTab(budget);
+
+        page.WaitForAssertion(() => Assert.Equal("−1.00 PLN", Text(page, ".pspad-balance-currency .pspad-money-tile-value")));
+        Assert.Equal("−1.00 PLN", Text(page, ".pspad-holding-today"));
+    }
+
+    [Fact]
+    public void OfflineTheNbpTilesAreHiddenAndNothingIsAsked()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, EuroAndZloty(budget));
+        Services.AddSingleton<IConnectivity>(new AppTestHost.Offline());
+
+        var page = BalanceTab(budget);
+
+        page.WaitForAssertion(() => page.Find(".pspad-balance-net-worth"));
+        Assert.Empty(page.FindAll(".pspad-balance-at-nbp"));
+        Assert.Empty(page.FindAll(".pspad-balance-currency"));
+        Assert.Equal(["—", "—", "—"], page.FindAll(".pspad-holding-today").Select(cell => cell.TextContent.Trim()));
+        Assert.Empty(Nbp.Asked);
+    }
+
+    [Fact]
+    public void AFailedLookupHidesTheNbpTilesAndIsNotRetriedDuringTheVisit()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, EuroAndZloty(budget));
+
+        var page = BalanceTab(budget);
+        page.WaitForAssertion(() => page.Find(".pspad-balance-net-worth"));
+        page.Find(".pspad-month-previous").Click();
+        page.Find(".pspad-month-next").Click();
+
+        page.WaitForAssertion(() => page.Find(".pspad-balance-net-worth"));
+        Assert.Empty(page.FindAll(".pspad-balance-at-nbp"));
+        Assert.Equal([("EUR", Today)], Nbp.Asked);
+        Assert.DoesNotContain(Services.GetRequiredService<ISnackbar>().ShownSnackbars,
+            snackbar => snackbar.Message?.Contains("NBP") == true);
+    }
+
+    [Fact]
+    public void APlnOnlyBalanceShowsTheNbpTilesWithoutAsking()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            Balances.Started(budget, October, Balances.AHolding("Wallet", 100m)));
+
+        var page = BalanceTab(budget);
+
+        page.WaitForAssertion(() => Assert.Equal("100.00 PLN", Text(page, ".pspad-balance-at-nbp .pspad-money-tile-value")));
+        Assert.Equal("0.00 PLN", Text(page, ".pspad-balance-currency .pspad-money-tile-value"));
+        Assert.Empty(Nbp.Asked);
+    }
+
+    [Fact]
+    public async Task AnAnswerForAnotherCurrencyIsDropped()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            Balances.Started(budget, October, Balances.AHolding("Konto", 10m, "EUR", 4.30m)));
+        Nbp.Gate = new TaskCompletionSource<NbpRateView?>();
+        var page = BalanceTab(budget);
+
+        await page.InvokeAsync(() => Nbp.Gate.SetResult(new NbpRateView("USD", 3.90m, Today)));
+
+        page.WaitForAssertion(() => Assert.Equal("—", Text(page, ".pspad-holding-today")));
+        Assert.Empty(page.FindAll(".pspad-balance-at-nbp"));
+    }
 
     static string Text(IRenderedComponent<BudgetPage> page, string selector) => page.Find(selector).TextContent.Trim();
 

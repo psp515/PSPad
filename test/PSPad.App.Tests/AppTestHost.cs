@@ -114,9 +114,22 @@ public static class AppTestHost
 #pragma warning restore CS0067
     }
 
+    public sealed class Offline : IConnectivity
+    {
+        public bool IsOnline => false;
+
+#pragma warning disable CS0067
+        public event Action? CameOnline;
+
+        public event Action? Changed;
+#pragma warning restore CS0067
+    }
+
     public sealed class FakeNbpRates : INbpRates
     {
         public NbpRateView? Next { get; set; }
+
+        public Dictionary<string, NbpRateView?> ByCurrency { get; } = [];
 
         public TaskCompletionSource<NbpRateView?>? Gate { get; set; }
 
@@ -125,7 +138,7 @@ public static class AppTestHost
         public Task<NbpRateView?> RateAsync(string currency, DateOnly date)
         {
             Asked.Add((currency, date));
-            return Gate?.Task ?? Task.FromResult(Next);
+            return Gate?.Task ?? Task.FromResult(ByCurrency.TryGetValue(currency, out var rate) ? rate : Next);
         }
     }
 
