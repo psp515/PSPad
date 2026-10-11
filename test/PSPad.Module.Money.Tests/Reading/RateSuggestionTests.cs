@@ -1,4 +1,5 @@
 using PSPad.Module.Money.Reading;
+using PSPad.Module.Money.Values;
 using PSPad.TestInfrastructure;
 using static PSPad.Module.Money.Tests.Given;
 
@@ -56,4 +57,50 @@ public class RateSuggestionTests
         var budget = ABudget();
         Assert.Equal(4.20m, RateSuggestion.For(" eur ", [AnExpense(budget, money: Eur(4.20m, 1))])!.RateToPln);
     }
+
+    [Fact]
+    public void AHoldingSuggestsARate()
+    {
+        var budget = ABudget();
+        var september = ASnapshot(budget, new YearMonth(2026, 9), [AHolding("Konto", 10m, "EUR", 4.25m, new DateOnly(2026, 9, 30))]);
+
+        Assert.Equal(new RateSuggestion(4.25m, new DateOnly(2026, 9, 30)), RateSuggestion.For("EUR", [], [september]));
+    }
+
+    [Fact]
+    public void TheLatestRateDateWinsAcrossEntriesAndHoldings()
+    {
+        var budget = ABudget();
+        var entry = AnExpense(budget, money: Eur(4.30m, 5));
+        var older = ASnapshot(budget, October, [AHolding("Konto", 10m, "EUR", 4.20m, new DateOnly(2026, 10, 1))]);
+        var newer = ASnapshot(budget, November, [AHolding("Konto", 10m, "EUR", 4.40m, new DateOnly(2026, 10, 7))]);
+
+        Assert.Equal(4.30m, RateSuggestion.For("EUR", [entry], [older])!.RateToPln);
+        Assert.Equal(4.40m, RateSuggestion.For("EUR", [entry], [older, newer])!.RateToPln);
+    }
+
+    [Fact]
+    public void ATieBetweenAnEntryAndAHoldingGoesToTheNewerDocument()
+    {
+        var budget = ABudget();
+        var entry = AnExpense(budget, money: Eur(4.30m, 5), at: Now);
+        var later = ASnapshot(budget, October, [AHolding("Konto", 10m, "EUR", 4.40m, new DateOnly(2026, 10, 5))], Now.AddHours(1));
+        var earlier = ASnapshot(budget, November, [AHolding("Konto", 10m, "EUR", 4.10m, new DateOnly(2026, 10, 5))], Now.AddHours(-1));
+
+        Assert.Equal(4.40m, RateSuggestion.For("EUR", [entry], [later])!.RateToPln);
+        Assert.Equal(4.30m, RateSuggestion.For("EUR", [entry], [earlier])!.RateToPln);
+    }
+
+    [Fact]
+    public void DeletedSnapshotsAreIgnored()
+    {
+        var budget = ABudget();
+        var deleted = DeleteSnapshot(ASnapshot(budget, October, [AHolding("Konto", 10m, "EUR", 4.40m, new DateOnly(2026, 10, 7))]), budget);
+
+        Assert.Null(RateSuggestion.For("EUR", [], [deleted]));
+    }
+
+    [Fact]
+    public void PlnIsStillOneWithSnapshots() =>
+        Assert.Equal(new RateSuggestion(1m, null), RateSuggestion.For("PLN", [], []));
 }
