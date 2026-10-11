@@ -785,6 +785,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         panel.Find(".pspad-repeat-save").Click();
         panel.Find(".pspad-panel-save").Click();
 
+        panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));
         var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
         Assert.Equal(RecurrenceKind.Daily, created.Recurrence!.Kind);
         Assert.Equal(2, created.Recurrence.Interval);
