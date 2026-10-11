@@ -86,6 +86,32 @@ public class BudgetSummaryChartsTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheCumulativeChartStartsAtZeroAndMarksEachMonth()
+    {
+        var charts = Charts(IncomeAndSpending(BudgetsPageTests.Named("Personal")), []);
+
+        var options = Assert.IsType<LineChartOptions>(ChartWith(charts, "Income").Instance.ChartOptions);
+        Assert.True(options.YAxisRequireZeroPoint);
+        Assert.True(options.ShowDataMarkers);
+    }
+
+    [Fact]
+    public void AOneMonthRangeStillDrawsVisibleMarkersFromZero()
+    {
+        AppTestHost.Arrange(this, Guid.NewGuid(), Today);
+        var budget = BudgetsPageTests.Named("Personal");
+        var summary = MoneySummary.For(
+            [MoneyEntries.Income(budget, "Pay", "Salary", 5000m, On(1, 5)), MoneyEntries.Expense(budget, "Rent", "Home", 3000m, On(1, 6))],
+            [], From, new DateOnly(2026, 1, 31));
+
+        var charts = Render<BudgetSummaryCharts>(parameters => parameters.Add(p => p.Summary, summary));
+
+        var line = charts.Find(".pspad-summary-cumulative svg");
+        Assert.Equal(2, line.QuerySelectorAll("circle[r='3.5']").Length);
+        Assert.Contains(">0<", line.InnerHtml);
+    }
+
+    [Fact]
     public void MonthlyExpensesStackTheTopFourCategoriesAndOther()
     {
         var budget = BudgetsPageTests.Named("Personal");
@@ -157,6 +183,7 @@ public class BudgetSummaryChartsTests : Bunit.TestContext
         var bars = charts.FindAll(".pspad-summary-ranking [role='progressbar']");
         Assert.Equal(["500", "400", "50"], bars.Select(bar => bar.GetAttribute("aria-valuenow")));
         Assert.Equal(["500", "500", "500"], bars.Select(bar => bar.GetAttribute("aria-valuemax")));
+        Assert.Equal(["true", "true", "true"], bars.Select(bar => bar.GetAttribute("aria-hidden")));
     }
 
     [Fact]

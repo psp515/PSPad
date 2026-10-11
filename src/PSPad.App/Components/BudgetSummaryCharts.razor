@@ -159,7 +159,9 @@
         _cumulativeOptions = new LineChartOptions
         {
             YAxisTicks = Step(Summary.Cumulative.Select(month => Math.Max(month.Income, month.Expenses))),
-            MaxNumYAxisTicks = ChartAxis.MaxTicks
+            MaxNumYAxisTicks = ChartAxis.MaxTicks,
+            YAxisRequireZeroPoint = true,
+            ShowDataMarkers = true
         };
 
         _byMonth = [.. Summary.ExpensesByMonth.Select(series => Series(series.Category, series.PerMonth))];
