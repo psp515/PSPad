@@ -58,6 +58,12 @@ public sealed class SyncCoordinator(
         Started = SyncNowAsync();
     }
 
+    public void Invalidate()
+    {
+        Revision++;
+        Changed?.Invoke();
+    }
+
     public async Task LoadLastSyncedAtAsync()
     {
         LastSyncedAt ??= await replica.LastSyncedAtAsync();

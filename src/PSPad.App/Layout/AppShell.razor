@@ -115,6 +115,7 @@
     bool _newInboxItem;
     Guid? _openReferenceItem;
     Guid? _newReferenceItemList;
+    readonly PeriodicTimer _dayCheck = new(TimeSpan.FromMinutes(1));
 
     protected override async Task OnInitializedAsync()
     {
@@ -151,6 +152,7 @@
         }
 
         Coordinator.Start();
+        _ = WatchForMidnightAsync();
 
         if (nothingLocalYet)
         {
@@ -349,7 +351,35 @@
 
     void OnPreferenceChanged() => InvokeAsync(StateHasChanged);
 
-    void OnSyncChanged() => InvokeAsync(ReloadAreasAndCountsAsync);
+    void OnSyncChanged() => InvokeAsync(async () =>
+    {
+        if (!RollDayOver())
+        {
+            await ReloadAreasAndCountsAsync();
+        }
+    });
+
+    async Task WatchForMidnightAsync()
+    {
+        while (await _dayCheck.WaitForNextTickAsync())
+        {
+            await InvokeAsync(() => { RollDayOver(); });
+        }
+    }
+
+    bool RollDayOver()
+    {
+        var today = TodayIn(State.TimeZone);
+
+        if (!_signedIn || today == State.Today)
+        {
+            return false;
+        }
+
+        State.Today = today;
+        Coordinator.Invalidate();
+        return true;
+    }
 
     void OnReachabilityChanged() => InvokeAsync(() =>
     {
@@ -384,6 +414,7 @@
         Sender.Sent -= OnCommandSent;
         Navigation.LocationChanged -= OnLocationChanged;
         Updates.Available -= OnUpdateAvailable;
+        _dayCheck.Dispose();
     }
 
     public async ValueTask DisposeAsync()
