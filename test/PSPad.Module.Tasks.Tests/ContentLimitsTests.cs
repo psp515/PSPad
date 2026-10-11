@@ -25,12 +25,12 @@ public class ContentLimitsTests
     [Fact]
     public void TheLimitsAreTheAgreedOnes()
     {
-        Assert.Equal(200, ContentLimits.Name);
-        Assert.Equal(100, ContentLimits.Label);
-        Assert.Equal(2_000, ContentLimits.FieldValue);
-        Assert.Equal(20_000, ContentLimits.Description);
-        Assert.Equal(100, ContentLimits.StepsPerTask);
-        Assert.Equal(100, ContentLimits.FieldsPerItem);
+        Assert.Equal(64, ContentLimits.Name);
+        Assert.Equal(64, ContentLimits.Label);
+        Assert.Equal(1_024, ContentLimits.FieldValue);
+        Assert.Equal(8_192, ContentLimits.Description);
+        Assert.Equal(128, ContentLimits.StepsPerTask);
+        Assert.Equal(64, ContentLimits.FieldsPerItem);
         Assert.Equal(100, ContentLimits.MembersPerList);
     }
 

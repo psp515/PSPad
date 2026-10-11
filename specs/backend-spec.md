@@ -295,10 +295,10 @@ not stated there:
   stored: no command, no event, no `CompletedAt`. Moving `DueOn` forward
   reopens it. The end is a cut-off, never a trigger — a repeating task is
   still never overdue.
-- Content limits (`ContentLimits`, `content-limits-design.md`): names 200,
-  field labels 100, field values 2,000, descriptions 20,000 characters;
-  at most 100 steps per task, fields per item and members per list. `Decide`
-  rejects anything over; member and owner display names are cut to 200
+- Content limits (`ContentLimits`, `content-limits-design.md`): names 64,
+  field labels 64, field values 1,024, descriptions 8,192 characters; at most
+  128 steps per task, 64 fields per item and 100 members per list. `Decide`
+  rejects anything over; member and owner display names are cut to 64
   instead.
 - `RepeatTally.Of(task, today)` derives the done count (`completedDays`)
   and the streak: done occurrences walking back from today, today's pending

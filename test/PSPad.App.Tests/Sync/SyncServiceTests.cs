@@ -306,7 +306,7 @@ public class SyncServiceTests
     public async Task ABatchStopsBeforeItsEnvelopesPassTheByteBudget()
     {
         var outbox = new InMemoryOutbox();
-        for (var index = 0; index < 10; index++)
+        for (var index = 0; index < 20; index++)
         {
             await outbox.AppendAsync(Guid.NewGuid(), LongestDescription());
         }
@@ -316,10 +316,10 @@ public class SyncServiceTests
         var outcome = await ServiceFor(api, outbox).SyncAsync(CancellationToken.None);
 
         var batch = Assert.Single(api.Sent);
-        Assert.InRange(batch.Count, 1, 9);
+        Assert.InRange(batch.Count, 1, 19);
         Assert.True(batch.Sum(SizeOf) <= SyncService.BatchBytes);
         Assert.Equal(batch.Count, outcome.Pushed);
-        Assert.Equal(10 - batch.Count, await outbox.CountAsync());
+        Assert.Equal(20 - batch.Count, await outbox.CountAsync());
     }
 
     [Fact]

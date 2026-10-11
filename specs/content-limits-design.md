@@ -19,12 +19,12 @@ and on the server (`adr/0003`, `adr/0004`). They live once, as constants on
 
 | Limit | Value | Applies to |
 |---|---|---|
-| `Name` | 200 | area, list, goal, task, step, reference item, inbox item text |
-| `Label` | 100 | reference field label |
-| `FieldValue` | 2,000 | reference field value |
-| `Description` | 20,000 | task and reference item description (Markdown) |
-| `StepsPerTask` | 100 | `AddStep` |
-| `FieldsPerItem` | 100 | `AddReferenceField` |
+| `Name` | 64 | area, list, goal, task, step, reference item, inbox item text |
+| `Label` | 64 | reference field label |
+| `FieldValue` | 1,024 | reference field value |
+| `Description` | 8,192 | task and reference item description (Markdown) |
+| `StepsPerTask` | 128 | `AddStep` |
+| `FieldsPerItem` | 64 | `AddReferenceField` |
 | `MembersPerList` | 100 | `JoinTaskList` |
 
 - Lengths count UTF-16 code units after the existing trim — what
@@ -43,7 +43,7 @@ and on the server (`adr/0003`, `adr/0004`). They live once, as constants on
 ## 3. Client
 
 - Every name, label, value and description input sets `MaxLength` from
-  `ContentLimits`; the description editor and field value show a counter.
+  `ContentLimits`; the description editor shows a counter.
 - `SyncService` keeps its 50-command batch but also stops a batch once its
   serialized envelopes pass 512 KB (always sending at least one), so a
   batch always fits the server's body limit.
@@ -51,7 +51,7 @@ and on the server (`adr/0003`, `adr/0004`). They live once, as constants on
 ## 4. Server
 
 - `KestrelServerOptions.Limits.MaxRequestBodySize` is 1 MB (default 30 MB).
-  The largest single command — a 20,000-character description with every
+  The largest single command — an 8,192-character description with every
   character JSON-escaped — stays well under it.
 
 ## 5. Out of scope

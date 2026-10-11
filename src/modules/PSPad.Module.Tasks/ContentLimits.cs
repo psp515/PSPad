@@ -4,12 +4,12 @@ namespace PSPad.Module.Tasks;
 
 public static class ContentLimits
 {
-    public const int Name = 200;
-    public const int Label = 100;
-    public const int FieldValue = 2_000;
-    public const int Description = 20_000;
-    public const int StepsPerTask = 100;
-    public const int FieldsPerItem = 100;
+    public const int Name = 64;
+    public const int Label = 64;
+    public const int FieldValue = 1_024;
+    public const int Description = 8_192;
+    public const int StepsPerTask = 128;
+    public const int FieldsPerItem = 64;
     public const int MembersPerList = 100;
 
     internal static string Within(string text, int limit, string what) =>
