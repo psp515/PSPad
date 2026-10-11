@@ -110,4 +110,8 @@ public class BalanceTotalsTests
         Assert.Equal(166.00m, BalanceTotals.AtRates(october, new Dictionary<string, decimal> { ["EUR"] = 4.40m }));
         Assert.Null(BalanceTotals.AtRates(october, new Dictionary<string, decimal>()));
     }
+
+    [Fact]
+    public void AtRatesOnAnEmptyMonthIsZeroNotUnknown() =>
+        Assert.Equal(0m, BalanceTotals.AtRates(ASnapshot(ABudget(), October), new Dictionary<string, decimal>()));
 }

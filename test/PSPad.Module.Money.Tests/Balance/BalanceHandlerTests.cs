@@ -178,4 +178,43 @@ public class BalanceHandlerTests
         Assert.Empty(_work.Staged);
         Assert.Equal(0, _snapshots.Loads);
     }
+
+    [Fact]
+    public async Task AMissingBudgetRejectsAStartWithoutLoadingAnySnapshot()
+    {
+        var budget = ABudget();
+        Seeded(ASnapshot(budget, September, [AHolding()]));
+
+        var result = await new StartBalanceMonthHandler(_budgets, _snapshots, _work, _clock).HandleAsync(
+            new StartBalanceMonth(Guid.NewGuid(), Owner, budget.Id, October), CancellationToken.None);
+
+        Assert.Equal("That budget does not exist.", result.Rejection);
+        Assert.Empty(_work.Staged);
+        Assert.Equal(0, _snapshots.Loads);
+    }
+
+    [Fact]
+    public async Task EditingInAMonthWithoutABalanceIsRejected()
+    {
+        var budget = Seeded(ABudget());
+
+        var result = await new EditHoldingHandler(_budgets, _snapshots, _work, _clock).HandleAsync(
+            new EditHolding(Guid.NewGuid(), Owner, budget.Id, October, Guid.NewGuid(), "Cash box", HoldingType.Cash,
+                new Money(10m, "PLN", 1m, Today)), CancellationToken.None);
+
+        Assert.Equal("That month has no balance yet.", result.Rejection);
+        Assert.Empty(_work.Staged);
+    }
+
+    [Fact]
+    public async Task RemovingFromAMonthWithoutABalanceIsRejected()
+    {
+        var budget = Seeded(ABudget());
+
+        var result = await new RemoveHoldingHandler(_budgets, _snapshots, _work, _clock).HandleAsync(
+            new RemoveHolding(Guid.NewGuid(), Owner, budget.Id, October, Guid.NewGuid()), CancellationToken.None);
+
+        Assert.Equal("That month has no balance yet.", result.Rejection);
+        Assert.Empty(_work.Staged);
+    }
 }
