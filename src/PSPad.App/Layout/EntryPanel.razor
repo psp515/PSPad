@@ -4,6 +4,7 @@
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Money
+@using PSPad.Module.Money.Balance
 @using PSPad.Module.Money.Budgets
 @using PSPad.Module.Money.Entries
 @using PSPad.Module.Money.Preferences
@@ -11,6 +12,7 @@
 @using PSPad.Module.Money.Values
 @inject IDocumentStore<Budget> Budgets
 @inject IDocumentStore<MoneyEntry> Entries
+@inject IDocumentStore<BalanceSnapshot> Snapshots
 @inject IDocumentStore<MoneyPreferences> Preferences
 @inject AppState State
 @inject CommandSender Sender
@@ -53,6 +55,7 @@
     Budget? _budget;
     MoneyEntry? _entry;
     IReadOnlyList<MoneyEntry> _budgetEntries = [];
+    IReadOnlyList<BalanceSnapshot> _budgetSnapshots = [];
     Guid? _loadedEntry;
     Guid? _loadedBudget;
     bool _loadedOnce;
@@ -125,6 +128,8 @@
 
         var all = await Entries.LoadAllAsync(State.UserId, CancellationToken.None);
         _budgetEntries = [.. all.Where(candidate => candidate.BudgetId == _budget.Id && !candidate.Deleted)];
+        var snapshots = await Snapshots.LoadAllAsync(State.UserId, CancellationToken.None);
+        _budgetSnapshots = [.. snapshots.Where(candidate => candidate.BudgetId == _budget.Id && !candidate.Deleted)];
 
         if (_entry is not null)
         {
@@ -162,7 +167,7 @@
     void Suggest(string currency)
     {
         _currency = currency;
-        var suggestion = RateSuggestion.For(currency, _budgetEntries);
+        var suggestion = RateSuggestion.For(currency, _budgetEntries, _budgetSnapshots);
         _rate = suggestion?.RateToPln;
         _rateDate = suggestion?.RateDate;
     }
