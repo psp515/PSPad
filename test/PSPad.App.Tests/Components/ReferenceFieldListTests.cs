@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
+using PSPad.Module.Tasks;
 using PSPad.Module.Tasks.References;
 using PSPad.TestInfrastructure;
 
@@ -35,6 +36,18 @@ public class ReferenceFieldListTests : Bunit.TestContext
         Assert.Equal("", fields.Find(".pspad-field-add-label input").GetAttribute("value") ?? "");
         Assert.Equal("", fields.Find(".pspad-field-add-value input").GetAttribute("value") ?? "");
         Assert.Contains(JSInterop.Invocations, invocation => invocation.Identifier == FocusIdentifier);
+    }
+
+    [Fact]
+    public void TheAddRowStopsAtTheLabelAndValueLimits()
+    {
+        var item = NewItem();
+        AppTestHost.Arrange(this, User, Today, item);
+
+        var fields = RenderList(item);
+
+        Assert.Equal($"{ContentLimits.Label}", fields.Find(".pspad-field-add-label input").GetAttribute("maxlength"));
+        Assert.Equal($"{ContentLimits.FieldValue}", fields.Find(".pspad-field-add-value input").GetAttribute("maxlength"));
     }
 
     [Fact]

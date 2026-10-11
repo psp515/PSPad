@@ -166,11 +166,19 @@ public sealed class TodoTask : Aggregate
 
             case AddStep add:
                 var adding = Require(task, grant);
-                return adding.Steps.Any(step => step.Id == add.StepId)
-                    ? []
-                    : [new StepAdded(
-                        adding.Id, grant.OwnerId, at, add.StepId, RequireName(add.Name),
-                        Positions.Next(adding.Steps.Select(step => step.Position)))];
+                if (adding.Steps.Any(step => step.Id == add.StepId))
+                {
+                    return [];
+                }
+
+                if (adding._steps.Count >= ContentLimits.StepsPerTask)
+                {
+                    throw new DomainRejectedException($"A task can have at most {ContentLimits.StepsPerTask} steps.");
+                }
+
+                return [new StepAdded(
+                    adding.Id, grant.OwnerId, at, add.StepId, RequireName(add.Name),
+                    Positions.Next(adding.Steps.Select(step => step.Position)))];
 
             case RenameStep renameStep:
                 var stepRenaming = Require(task, grant);
@@ -233,7 +241,8 @@ public sealed class TodoTask : Aggregate
 
             case SetTaskDescription describe:
                 var describing = Require(task, grant);
-                var description = (describe.Description ?? "").TrimEnd();
+                var description = ContentLimits.Within(
+                    (describe.Description ?? "").TrimEnd(), ContentLimits.Description, "A description");
                 return describing.Description == description
                     ? []
                     : [new TaskDescriptionSet(describing.Id, grant.OwnerId, at, description)];
@@ -424,5 +433,5 @@ public sealed class TodoTask : Aggregate
     static string RequireName(string name) =>
         string.IsNullOrWhiteSpace(name)
             ? throw new DomainRejectedException("A task needs a name.")
-            : name.Trim();
+            : ContentLimits.Within(name.Trim(), ContentLimits.Name, "A name");
 }

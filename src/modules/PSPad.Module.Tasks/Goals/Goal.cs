@@ -129,5 +129,5 @@ public sealed class Goal : Aggregate
     static string RequireName(string name) =>
         string.IsNullOrWhiteSpace(name)
             ? throw new DomainRejectedException("A goal needs a name.")
-            : name.Trim();
+            : ContentLimits.Within(name.Trim(), ContentLimits.Name, "A goal name");
 }

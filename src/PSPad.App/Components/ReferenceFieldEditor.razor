@@ -7,9 +7,9 @@
 @inject ILogger<ReferenceFieldEditor> Logger
 
 <MudTextField T="string" Label="Label" Class="pspad-field-label-input" Margin="Margin.Dense" AutoFocus="true"
-              @bind-Value="_label" />
+              MaxLength="@ContentLimits.Label" @bind-Value="_label" />
 <MudTextField @ref="_valueInput" T="string" Label="Value" Class="pspad-field-value-input" Margin="Margin.Dense" Lines="1"
-              Sizing="InputSizing.Auto" @bind-Value="_value" />
+              Sizing="InputSizing.Auto" MaxLength="@ContentLimits.FieldValue" @bind-Value="_value" />
 <MudSelect T="FieldKind?" Label="Display" Class="pspad-field-kind-input" Margin="Margin.Dense" @bind-Value="_kind">
     <MudSelectItem T="FieldKind?" Value="@((FieldKind?)null)">Automatic</MudSelectItem>
     <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Text)">Text</MudSelectItem>

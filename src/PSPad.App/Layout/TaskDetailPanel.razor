@@ -36,7 +36,7 @@
                              Color="Color.Primary" Disabled="@Disabled" aria-label="Done" />
             }
             <MudTextField T="string" Class="@($"pspad-task-name-field flex-grow-1 {(_task is null ? "px-2" : "")}")"
-                          Value="@Name" ValueChanged="@NameChangedAsync" Placeholder="Task name"
+                          Value="@Name" ValueChanged="@NameChangedAsync" Placeholder="Task name" MaxLength="@ContentLimits.Name"
                           Typo="Typo.h6" Underline="false" Immediate="@(Mode == PanelMode.Add)"
                           AutoFocus="@(Mode == PanelMode.Add)" Disabled="@Disabled"
                           OnKeyDown="@AddOnEnterAsync"

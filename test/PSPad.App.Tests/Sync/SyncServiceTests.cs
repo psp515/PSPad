@@ -11,7 +11,9 @@ using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Preferences;
 using PSPad.Module.Money.Values;
 using PSPad.Module.Presentation.AreaViews;
+using PSPad.Module.Tasks;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Sync;
@@ -299,6 +301,47 @@ public class SyncServiceTests
 
         Assert.Equal(SyncService.CollectionsFingerprint, await replica.CollectionsFingerprintAsync());
     }
+
+    [Fact]
+    public async Task ABatchStopsBeforeItsEnvelopesPassTheByteBudget()
+    {
+        var outbox = new InMemoryOutbox();
+        for (var index = 0; index < 10; index++)
+        {
+            await outbox.AppendAsync(Guid.NewGuid(), LongestDescription());
+        }
+
+        var api = new FakeApi();
+
+        var outcome = await ServiceFor(api, outbox).SyncAsync(CancellationToken.None);
+
+        var batch = Assert.Single(api.Sent);
+        Assert.InRange(batch.Count, 1, 9);
+        Assert.True(batch.Sum(SizeOf) <= SyncService.BatchBytes);
+        Assert.Equal(batch.Count, outcome.Pushed);
+        Assert.Equal(10 - batch.Count, await outbox.CountAsync());
+    }
+
+    [Fact]
+    public async Task AnEnvelopeOverTheByteBudgetStillGoesAloneRatherThanWedgingTheOutbox()
+    {
+        var outbox = new InMemoryOutbox();
+        var huge = new CommandEnvelope("Huge", JsonSerializer.SerializeToElement(new string('x', SyncService.BatchBytes + 1)));
+        await outbox.AppendAsync(Guid.NewGuid(), huge);
+        await outbox.AppendAsync(Guid.NewGuid(), Envelope());
+        var api = new FakeApi();
+
+        await ServiceFor(api, outbox).SyncAsync(CancellationToken.None);
+
+        Assert.Single(Assert.Single(api.Sent));
+    }
+
+    static int SizeOf(CommandEnvelope envelope) =>
+        JsonSerializer.SerializeToUtf8Bytes(envelope, new JsonSerializerOptions(JsonSerializerDefaults.Web)).Length;
+
+    static CommandEnvelope LongestDescription() =>
+        new(nameof(SetTaskDescription), JsonSerializer.SerializeToElement(
+            new SetTaskDescription(Guid.NewGuid(), User, Guid.NewGuid(), new string('ł', ContentLimits.Description))));
 
     static SyncService ServiceFor(ISyncApi api, IOutbox outbox) =>
         new(api, new InMemoryReplica(), outbox);

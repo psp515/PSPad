@@ -295,6 +295,11 @@ not stated there:
   stored: no command, no event, no `CompletedAt`. Moving `DueOn` forward
   reopens it. The end is a cut-off, never a trigger — a repeating task is
   still never overdue.
+- Content limits (`ContentLimits`, `content-limits-design.md`): names 200,
+  field labels 100, field values 2,000, descriptions 20,000 characters;
+  at most 100 steps per task, fields per item and members per list. `Decide`
+  rejects anything over; member and owner display names are cut to 200
+  instead.
 - `RepeatTally.Of(task, today)` derives the done count (`completedDays`)
   and the streak: done occurrences walking back from today, today's pending
   occurrence not breaking it.
@@ -707,6 +712,10 @@ directly in `PSPad.Api`:
 | `GET` | `/api/public/snapshots/{token}` | **Anonymous.** The frozen snapshot, or `404` for an unknown or expired token — indistinguishable by design |
 | `POST` | `/api/public/snapshots/{token}/marks` | **Anonymous.** `{entryId, stepId?, marked}` — tick or untick an entry; saved on the snapshot, then run against the owner's task through a server-only command |
 | `GET` | `/health` | Liveness, unauthenticated |
+
+Kestrel caps every request body at 1 MB; the client's outbox stops a batch
+at 50 commands or 512 KB of envelopes, whichever comes first, always sending
+at least one.
 
 Writes go through one endpoint because every write is a command and the
 outbox ships them in batches — splitting per feature would buy nothing and

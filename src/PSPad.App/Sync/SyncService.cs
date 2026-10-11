@@ -11,6 +11,10 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
 {
     const int BatchSize = 50;
 
+    public const int BatchBytes = 512 * 1024;
+
+    static readonly JsonSerializerOptions Wire = new(JsonSerializerDefaults.Web);
+
     // "users" is deliberately absent: the client reads its own user from /api/me, and User
     // lives in a module PSPad.App does not reference.
     static readonly Dictionary<string, Type> Collections = new()
@@ -39,7 +43,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
 
     async Task<(int Pushed, IReadOnlyList<string> Rejections, IReadOnlyList<Guid> RejectedCommands)> PushAsync()
     {
-        var batch = await outbox.PeekAsync(BatchSize);
+        var batch = WithinBudget(await outbox.PeekAsync(BatchSize));
         if (batch.Count == 0)
         {
             return (0, [], []);
@@ -71,6 +75,25 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         }
 
         return (accepted, [reason], [batch[accepted].CommandId]);
+    }
+
+    static IReadOnlyList<OutboxEntry> WithinBudget(IReadOnlyList<OutboxEntry> peeked)
+    {
+        var bytes = 0;
+        var take = 0;
+
+        while (take < peeked.Count)
+        {
+            bytes += JsonSerializer.SerializeToUtf8Bytes(peeked[take].Envelope, Wire).Length;
+            if (take > 0 && bytes > BatchBytes)
+            {
+                break;
+            }
+
+            take++;
+        }
+
+        return take == peeked.Count ? peeked : peeked.Take(take).ToArray();
     }
 
     public static string CollectionsFingerprint { get; } =

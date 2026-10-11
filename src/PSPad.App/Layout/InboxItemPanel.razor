@@ -36,13 +36,13 @@
             @if (_item is null)
             {
                 <MudTextField T="string" Class="pspad-inbox-name-field" Label="Name" Variant="Variant.Outlined"
-                              @bind-Value="_draft.Name" Immediate="true" AutoFocus="true" Disabled="@Disabled"
+                              @bind-Value="_draft.Name" Immediate="true" AutoFocus="true" Disabled="@Disabled" MaxLength="@ContentLimits.Name"
                               OnKeyDown="@AddOnEnterAsync" />
             }
             else
             {
                 <MudTextField T="string" Class="pspad-inbox-name-field" Label="Name" Variant="Variant.Outlined"
-                              Value="@_item.Text" ValueChanged="@RenameAsync" Disabled="@Disabled" />
+                              Value="@_item.Text" ValueChanged="@RenameAsync" Disabled="@Disabled" MaxLength="@ContentLimits.Name" />
             }
         </div>
 

@@ -66,7 +66,8 @@ public sealed class ReferenceItem : Aggregate
 
             case SetReferenceItemDescription describe:
                 var describing = Require(item, grant);
-                var description = (describe.Description ?? "").TrimEnd();
+                var description = ContentLimits.Within(
+                    (describe.Description ?? "").TrimEnd(), ContentLimits.Description, "A description");
                 return describing.Description == description
                     ? []
                     : [new ReferenceItemDescriptionSet(describing.Id, grant.OwnerId, at, description)];
@@ -90,17 +91,25 @@ public sealed class ReferenceItem : Aggregate
 
             case AddReferenceField add:
                 var adding = Require(item, grant);
-                return adding.Fields.Any(field => field.Id == add.FieldId)
-                    ? []
-                    : [new ReferenceFieldAdded(
-                        adding.Id, grant.OwnerId, at, add.FieldId, RequireLabel(add.Label), (add.Value ?? "").TrimEnd(), Hint(add.Display),
-                        Positions.Next(adding.Fields.Select(field => field.Position)))];
+                if (adding.Fields.Any(field => field.Id == add.FieldId))
+                {
+                    return [];
+                }
+
+                if (adding._fields.Count >= ContentLimits.FieldsPerItem)
+                {
+                    throw new DomainRejectedException($"An item can have at most {ContentLimits.FieldsPerItem} fields.");
+                }
+
+                return [new ReferenceFieldAdded(
+                    adding.Id, grant.OwnerId, at, add.FieldId, RequireLabel(add.Label), RequireValue(add.Value), Hint(add.Display),
+                    Positions.Next(adding.Fields.Select(field => field.Position)))];
 
             case EditReferenceField edit:
                 var editing = Require(item, grant);
                 var existing = RequireField(editing, edit.FieldId);
                 var label = RequireLabel(edit.Label);
-                var value = (edit.Value ?? "").TrimEnd();
+                var value = RequireValue(edit.Value);
                 var hint = Hint(edit.Display);
                 return existing.Label == label && existing.Value == value && existing.Display == hint
                     ? []
@@ -231,12 +240,15 @@ public sealed class ReferenceItem : Aggregate
     static string RequireName(string name) =>
         string.IsNullOrWhiteSpace(name)
             ? throw new DomainRejectedException("An item needs a name.")
-            : name.Trim();
+            : ContentLimits.Within(name.Trim(), ContentLimits.Name, "An item name");
 
     static string RequireLabel(string label) =>
         string.IsNullOrWhiteSpace(label)
             ? throw new DomainRejectedException("A field needs a label.")
-            : label.Trim();
+            : ContentLimits.Within(label.Trim(), ContentLimits.Label, "A label");
+
+    static string RequireValue(string? value) =>
+        ContentLimits.Within((value ?? "").TrimEnd(), ContentLimits.FieldValue, "A field value");
 
     static string? Hint(string? display) => string.IsNullOrWhiteSpace(display) ? null : display.Trim();
 

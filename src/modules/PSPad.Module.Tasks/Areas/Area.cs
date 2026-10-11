@@ -76,5 +76,5 @@ public sealed class Area : Aggregate
     static string RequireName(string name) =>
         string.IsNullOrWhiteSpace(name)
             ? throw new DomainRejectedException("An area needs a name.")
-            : name.Trim();
+            : ContentLimits.Within(name.Trim(), ContentLimits.Name, "An area name");
 }

@@ -24,7 +24,7 @@
              OnSave="@SaveCallback" SaveText="Add area" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
              OnDelete="@DeleteCallback" DeleteText="Delete area" Disabled="@Disabled">
     <div class="px-2 pt-3 pb-1">
-        <MudTextField T="string" Class="pspad-area-name-field flex-grow-1 px-2" Placeholder="Area name" Typo="Typo.h6"
+        <MudTextField T="string" Class="pspad-area-name-field flex-grow-1 px-2" Placeholder="Area name" Typo="Typo.h6" MaxLength="@ContentLimits.Name"
                       Underline="false" Value="@(_area?.Name ?? _draftName)" ValueChanged="@NameChangedAsync"
                       Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
     </div>

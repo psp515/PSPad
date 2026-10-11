@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using MudBlazor.Services;
 using PSPad.App.Components;
 using PSPad.App.Markdown;
+using PSPad.Module.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Components;
@@ -31,6 +32,16 @@ public class MarkdownFieldTests : Bunit.TestContext
         var textarea = field.Find(".pspad-markdown-input textarea");
         Assert.Equal("Add a description…", textarea.GetAttribute("placeholder"));
         Assert.Empty(field.FindAll("button"));
+    }
+
+    [Fact]
+    public void TheEditorStopsAtTheDescriptionLimit()
+    {
+        Arrange();
+
+        var field = Render("");
+
+        Assert.Equal($"{ContentLimits.Description}", field.Find(".pspad-markdown-input textarea").GetAttribute("maxlength"));
     }
 
     [Fact]

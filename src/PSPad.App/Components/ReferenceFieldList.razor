@@ -50,10 +50,10 @@
             <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary" />
         </span>
         <MudTextField @ref="_labelInput" T="string" Class="pspad-step-add pspad-field-add-label flex-grow-1 mt-0"
-                      @bind-Value="_newLabel" Placeholder="Label" aria-label="New label" Underline="false"
+                      @bind-Value="_newLabel" Placeholder="Label" MaxLength="@ContentLimits.Label" aria-label="New label" Underline="false"
                       Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@LabelKeyDownAsync" />
         <MudTextField @ref="_valueInput" T="string" Class="pspad-step-add pspad-field-add-value flex-grow-1 mt-0"
-                      @bind-Value="_newValue" Placeholder="Value" aria-label="New label value" Underline="false"
+                      @bind-Value="_newValue" Placeholder="Value" MaxLength="@ContentLimits.FieldValue" aria-label="New label value" Underline="false"
                       Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@ValueKeyDownAsync" />
     </div>
 </div>

@@ -4,7 +4,8 @@
 @if (ShowsEditor)
 {
     <MudTextField @ref="_input" T="string" Lines="3" Sizing="InputSizing.Auto" Variant="Variant.Outlined" Class="pspad-markdown-input mt-0"
-                  Placeholder="@Placeholder" aria-label="Description" Immediate="true" AutoFocus="@_editing"
+                  Placeholder="@Placeholder" aria-label="Description" Immediate="true"
+                  MaxLength="@ContentLimits.Description" Counter="@ContentLimits.Description" AutoFocus="@_editing"
                   Value="@_draft" ValueChanged="@DraftChanged" OnBlur="@CommitAsync" OnKeyDown="@DiscardOnEscape" />
 }
 else if (string.IsNullOrWhiteSpace(Value))
