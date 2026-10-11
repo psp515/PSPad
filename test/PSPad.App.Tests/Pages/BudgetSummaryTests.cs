@@ -131,6 +131,38 @@ public class BudgetSummaryTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ClickingTheSelectedPresetAgainKeepsItsRange()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = SummaryTab(budget);
+        Preset(page, "Last year").Click();
+        page.WaitForAssertion(() => Assert.Equal("1 Jan 2025 – 31 Dec 2025", Text(page, ".pspad-summary-range")));
+
+        Preset(page, "Last year").Click();
+
+        Assert.Equal("1 Jan 2025 – 31 Dec 2025", Text(page, ".pspad-summary-range"));
+        Assert.Equal("true", Preset(page, "Last year").GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void SpendingMoreThanEarnedMakesSavedAndTheRateNegative()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            MoneyEntries.Income(budget, "Pay", "Salary", 800m, On(3, 1)),
+            MoneyEntries.Expense(budget, "Rent", "Home", 900m, On(3, 2)));
+
+        var page = SummaryTab(budget);
+
+        Assert.Equal("−100.00 PLN", Tile(page, "saved"));
+        Assert.Equal("−13%", Tile(page, "rate"));
+        Assert.Contains("mud-error-text", page.Find(".pspad-summary-saved .pspad-money-tile-value").ClassList);
+        Assert.Contains("mud-error-text", page.Find(".pspad-summary-rate .pspad-money-tile-value").ClassList);
+        Assert.DoesNotContain("mud-error-text", page.Find(".pspad-summary-income .pspad-money-tile-value").ClassList);
+    }
+
+    [Fact]
     public void TheLastTwelveMonthsStartOnTheFirstOfTheMonthElevenMonthsBack()
     {
         var budget = BudgetsPageTests.Named("Personal");
@@ -171,7 +203,9 @@ public class BudgetSummaryTests : Bunit.TestContext
     public async Task AHalfPickedRangeKeepsTheCurrentRange()
     {
         var budget = BudgetsPageTests.Named("Personal");
-        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            MoneyEntries.Expense(budget, "A", "Food", 1m, On(3, 1)),
+            MoneyEntries.Expense(budget, "B", "Food", 7m, On(3, 3)));
         var page = SummaryTab(budget);
         Preset(page, "Custom").Click();
         page.WaitForAssertion(() => page.Find(".pspad-summary-picker"));
@@ -180,6 +214,7 @@ public class BudgetSummaryTests : Bunit.TestContext
             .InvokeAsync(new DateRange(new DateTime(2026, 3, 2), null)));
 
         Assert.Equal("1 Jan 2026 – 9 Oct 2026", Text(page, ".pspad-summary-range"));
+        Assert.Equal("8.00 PLN", Tile(page, "expenses"));
     }
 
     [Fact]
