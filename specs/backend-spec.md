@@ -514,6 +514,17 @@ aggregate; the loser gets a rejection carrying a reason. The outbox ships
 in order and stops on the first rejection, so a failed command can't be
 overtaken by one that depended on it.
 
+On the server every save is conditional on the version the handler loaded
+(`adr/0063`): `MongoUnitOfWork` replaces with `_id == id && version ==
+loaded` (loaded = version minus the staged events) and inserts a new
+aggregate only when no document has its id. A miss, or MongoDB's transient
+write conflict, aborts the transaction and throws
+`ConcurrencyConflictException`; `CommandDispatcher.RunAsync` re-runs the
+handler on fresh documents after a short jittered pause, up to five attempts,
+then rejects with "Someone else changed this at the same time. Try again."
+Sharing, ending a link, removing a member and leaving are server-only
+commands behind their own endpoints (§7), never in the outbox.
+
 **Every accepted command triggers an immediate sync**, not just the
 60-second poll / reconnect / app-start triggers. `CommandSender` calls
 `ISyncTrigger.SyncNowAsync()` once a command is accepted — fire-and-forget,
@@ -704,6 +715,10 @@ directly in `PSPad.Api`:
 | `POST` | `/api/commands` | Execute a batch of commands. The only write endpoint |
 | `GET` | `/api/sync?since=&full=&limit=` | Paged delta pull (`hasMore`), documents only, widened to lists the caller is a member of; `full` (comma-joined list ids the caller belongs to) returns those lists and their children in full regardless of `since` |
 | `POST` | `/api/lists/join` | Join a shared list by invite token and code. `200 JoinListResponse(ListId, Documents)`; one empty `404` for any bad token, wrong code or deleted list; `410` when token and code match an expired invite; `429` past 10 attempts per user per 30 minutes. Not through the outbox — see §5 |
+| `POST` | `/api/lists/{id}/share` | Owner shares or rotates the invite (`{token, code}`); `204`, `404` unknown list or not the owner, `409` with the rejection. Online-only (`adr/0063`) |
+| `DELETE` | `/api/lists/{id}/share` | Owner ends the invite link; `204` / `404` |
+| `DELETE` | `/api/lists/{id}/members/{memberId}` | Owner removes a member; `204` / `404` / `409` |
+| `POST` | `/api/lists/{id}/leave` | Member leaves; `204` / `404` |
 | `GET` | `/api/today` | Server-side Today, for a cold client; includes tasks from lists the caller is a member of, in the caller's own time zone |
 | `GET` | `/api/statistics/records?before=&limit=` | The statistics feed, newest first. `limit` clamps to 1..200, default 50 |
 | `GET` | `/api/statistics/overview?days=` | Tiles and the five chart series. `days` is 30, 90 or 365, default 30 |

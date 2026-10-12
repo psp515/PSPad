@@ -144,7 +144,7 @@ public class MemberSyncTests(MongoFixture fixture)
         var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
         await Sharing.JoinAsync(member, ct, token);
 
-        await Sharing.SendAsync(owner, ct, new RemoveListMember(Guid.NewGuid(), ownerId, listId, memberId));
+        (await Sharing.RemoveMemberAsync(owner, listId, memberId, ct)).EnsureSuccessStatusCode();
 
         var sync = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
 

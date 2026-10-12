@@ -1,6 +1,8 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using PSPad.App.Api;
 using PSPad.App.Components;
+using PSPad.App.State.Outbox;
 using PSPad.App.State;
 using PSPad.Module.Tasks.Lists;
 using PSPad.TestInfrastructure;
@@ -30,6 +32,8 @@ public class InviteLinkCardTests : Bunit.TestContext
         var stored = await replica.LoadAsync<TaskList>(list.Id);
         Assert.Equal(24, stored!.InviteToken!.Length);
         Assert.Equal("Lukasz", stored.OwnerName);
+        Assert.Equal([$"share {list.Id}"], ((FakeListSharingApi)Services.GetRequiredService<IListSharingApi>()).Calls);
+        Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
     }
 
     [Fact]

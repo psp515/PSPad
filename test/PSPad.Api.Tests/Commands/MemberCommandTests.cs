@@ -105,7 +105,7 @@ public class MemberCommandTests(MongoFixture fixture)
         var taskId = Guid.NewGuid();
         await Sharing.SendAsync(owner, ct, new CreateTask(Guid.NewGuid(), ownerId, taskId, listId, "Dune"));
 
-        await Sharing.SendAsync(owner, ct, new RemoveListMember(Guid.NewGuid(), ownerId, listId, memberId));
+        (await Sharing.RemoveMemberAsync(owner, listId, memberId, ct)).EnsureSuccessStatusCode();
 
         var response = await PostAsync(member, ct, new RenameTask(Guid.NewGuid(), memberId, taskId, "Mine now"));
 

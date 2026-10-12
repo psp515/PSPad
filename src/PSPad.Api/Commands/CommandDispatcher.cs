@@ -2,11 +2,14 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using PSPad.Abstractions;
 using PSPad.Contracts;
+using PSPad.Infrastructure.Mongo;
 
 namespace PSPad.Api.Commands;
 
 public sealed class CommandDispatcher(IServiceProvider services)
 {
+    public const int MostAttempts = 5;
+
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public async Task<CommandResponse> DispatchAsync(
@@ -76,6 +79,22 @@ public sealed class CommandDispatcher(IServiceProvider services)
         }
 
         var method = handler.GetType().GetMethod(nameof(ICommandHandler<ICommand>.HandleAsync))!;
-        return await (Task<CommandResult>)method.Invoke(handler, [command, ct])!;
+
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await (Task<CommandResult>)method.Invoke(handler, [command, ct])!;
+            }
+            catch (ConcurrencyConflictException) when (attempt < MostAttempts)
+            {
+                // Jittered so requests that collided once do not retry in lockstep and collide again.
+                await Task.Delay(Random.Shared.Next(10, 40) * attempt, ct);
+            }
+            catch (ConcurrencyConflictException)
+            {
+                return CommandResult.Rejected("Someone else changed this at the same time. Try again.");
+            }
+        }
     }
 }

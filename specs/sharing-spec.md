@@ -86,10 +86,10 @@ ordinary list.
 
 | Command | Who | Offline | Effect / rejections |
 |---|---|---|---|
-| `ShareTaskList(listId, token, code, ownerName)` | owner | yes | Sets or rotates `InviteToken` and `InviteCode`, restarts the 30-minute clock, zeroes `WrongCodes`. Rejects a blank or short token and a code that is not 6 alphabet characters. Rotating never removes members |
-| `StopSharingTaskList(listId)` | owner | yes | Clears `InviteToken`. Members stay. Emits nothing when already clear |
-| `RemoveListMember(listId, memberId)` | owner | yes | Rejects a non-member |
-| `LeaveTaskList(listId)` | member | yes | Rejects the owner and non-members |
+| `ShareTaskList(listId, token, code, ownerName)` | owner | **no** | Server-only, from `POST /api/lists/{id}/share`; `ownerName` is the caller's display name. Sets or rotates `InviteToken` and `InviteCode`, restarts the 30-minute clock, zeroes `WrongCodes`. Rejects a blank or short token and a code that is not 6 alphabet characters. Rotating never removes members |
+| `StopSharingTaskList(listId)` | owner | **no** | Server-only, from `DELETE /api/lists/{id}/share`. Clears `InviteToken`. Members stay. Emits nothing when already clear |
+| `RemoveListMember(listId, memberId)` | owner | **no** | Server-only, from `DELETE /api/lists/{id}/members/{memberId}`. Rejects a non-member |
+| `LeaveTaskList(listId)` | member | **no** | Server-only, from `POST /api/lists/{id}/leave`. Rejects the owner and non-members |
 | `JoinTaskList(listId, token, code, displayName)` | signed in | **no** | Server-only, from `POST /api/lists/join`. Rejects a deleted list, a wrong or cleared token ("This invite link no longer works.") and an expired invite ("This invite has expired."). A wrong code with a right token commits `InviteCodeRejected` instead of rejecting, so the count survives. Owner or existing member: accepted, no event |
 
 Events: `TaskListShared`, `TaskListSharingStopped`, `ListMemberRemoved`,
@@ -215,14 +215,26 @@ needs a connection" and a retry. A bad link or code shows "That link or
 code doesn't work."; an expired invite "This invite has expired"; a `429`
 "Too many tries".
 
-### 3.4 Losing access with commands queued
+### 3.4 Sharing and membership are online-only
+
+Sharing, ending a link, removing a member and leaving go straight to the
+server (§8) and take effect at once; they never wait in an outbox
+(`adr/0063`). The client calls the endpoint, then syncs, so the replica picks
+the change up; offline the controls are disabled with "Sharing changes need
+a connection." Filing a shared list under an area stays offline-capable
+(`PlaceList`). A queued sharing command from an older client is answered as
+unrecoverable and dropped (`adr/0021`).
+
+### 3.5 Losing access with commands queued
 
 A member removed while offline ships commands that `ListAccess` rejects; they
 surface as rejections (AD-5) and the purge follows on the same pull.
-Concurrent edits to one aggregate by two people keep the existing
-per-aggregate version check: last write wins, the loser is told.
+Every server save is conditional on the version the handler loaded
+(`adr/0063`): a request that read the list before a removal cannot write the
+member back, and parallel wrong codes each count toward the lockout. A
+conflicting command is re-run on fresh data, up to five attempts.
 
-### 3.5 New collection
+### 3.6 New collection
 
 `listviews` (§4) is a new sync collection; `adr/0049`'s fingerprint takes
 existing replicas through a one-time pull from zero. Membership adds no
@@ -424,6 +436,10 @@ Both roles:
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | `POST` | `/api/lists/join` | user | Join by token and code; returns list and children. Uniform `404`, `410` expired, `429` rate limit |
+| `POST` | `/api/lists/{id}/share` | owner | `{token, code}` — share or rotate the link. `204`; `404` unknown list or not the owner; `409` with the rejection (e.g. token in use) |
+| `DELETE` | `/api/lists/{id}/share` | owner | End the link. `204` / `404` |
+| `DELETE` | `/api/lists/{id}/members/{memberId}` | owner | Remove a member. `204` / `404` / `409` |
+| `POST` | `/api/lists/{id}/leave` | member | Leave the list. `204` / `404` |
 | `GET` | `/api/sync?since=&full=` | user | `full` = list ids to return whole; response adds `memberListIds` |
 | `POST` | `/api/lists/{id}/snapshots` | owner | `{expiresAt}` → `{id, token, expiresAt}` |
 | `GET` | `/api/lists/{id}/snapshots` | owner | Active snapshots of the list |

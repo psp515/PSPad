@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.App.Layout;
 using PSPad.App.State;
+using PSPad.App.State.Outbox;
+using PSPad.App.Sync;
 using PSPad.Module.Presentation.ListViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
@@ -36,6 +38,37 @@ public class ListMembersViewTests : Bunit.TestContext
 
         var stored = await replica.LoadAsync<TaskList>(list.Id);
         Assert.DoesNotContain(stored!.Members, member => member.UserId == Owner);
+        Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
+    }
+
+    [Fact]
+    public void OfflineTheOwnerCannotChangeWhoIsIn()
+    {
+        var area = NewArea(User, "Dom");
+        var list = Join(Share(NewList(User, area.Id), Midnight), Token, Owner, "Kasia");
+        AppTestHost.Arrange(this, User, Today, area, list);
+        Services.AddSingleton<IConnectivity>(new AppTestHost.Offline());
+
+        var panel = RenderWithOverlays(list.Id, ListPanelView.Members);
+
+        Assert.True(panel.Find(".pspad-share-remove").HasAttribute("disabled"));
+        Assert.True(panel.Find(".pspad-share-stop").HasAttribute("disabled"));
+        Assert.True(panel.Find(".pspad-invite-new").HasAttribute("disabled"));
+        Assert.Contains("connection", panel.Find(".pspad-share-offline").TextContent);
+    }
+
+    [Fact]
+    public void OfflineAMemberCannotLeaveButCanStillFileTheList()
+    {
+        var area = NewArea(User, "Dom");
+        var list = Join(Share(NewList(Owner), Midnight), Token, User, "Lukasz");
+        AppTestHost.Arrange(this, User, Today, area, list);
+        Services.AddSingleton<IConnectivity>(new AppTestHost.Offline());
+
+        var panel = RenderWithOverlays(list.Id, ListPanelView.Members);
+
+        Assert.True(panel.Find(".pspad-share-leave").HasAttribute("disabled"));
+        Assert.False(panel.Find(".pspad-list-filed-area input").HasAttribute("disabled"));
     }
 
     [Fact]

@@ -1,7 +1,9 @@
 @using System.Globalization
 @using PSPad.Abstractions
 @using PSPad.App.State
+@using PSPad.App.Api
 @using PSPad.App.State.Dispatch
+@using PSPad.App.Sync
 @using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
 @using PSPad.Module.Tasks.Lists
@@ -10,14 +12,23 @@
 @inject IDocumentStore<ListView> ListViews
 @inject AppState State
 @inject CommandSender Sender
+@inject IListSharingApi Sharing
+@inject ISyncTrigger SyncTrigger
+@inject IConnectivity Connectivity
+@inject ISnackbar Snackbar
+@implements IDisposable
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
 @inject IClock Clock
 
 <div class="pspad-list-members d-flex flex-column gap-3">
+    @if (!Connectivity.IsOnline)
+    {
+        <MudAlert Class="pspad-share-offline" Severity="Severity.Info" Dense="true">Sharing changes need a connection.</MudAlert>
+    }
     @if (IsMine)
     {
-        <InviteLinkCard List="@_list" Disabled="@Disabled" OnChanged="@ReloadAsync" />
+        <InviteLinkCard List="@_list" Disabled="@Locked" OnChanged="@ReloadAsync" />
     }
     else
     {
@@ -59,7 +70,7 @@
                             @if (IsMine)
                             {
                                 <MudIconButton Class="pspad-share-remove" Icon="@Icons.Material.Outlined.PersonRemove"
-                                               aria-label="@($"Remove {member.DisplayName}")" Disabled="@Disabled"
+                                               aria-label="@($"Remove {member.DisplayName}")" Disabled="@Locked"
                                                OnClick="@(() => RemoveMemberAsync(member))" />
                             }
                         </div>
@@ -78,7 +89,7 @@
         @if (_list.Members.Count > 0 || _list.IsInviteLiveAt(Clock.UtcNow))
         {
             <MudButton Class="pspad-share-stop align-self-start" Variant="Variant.Text" Color="Color.Error"
-                       Disabled="@Disabled" OnClick="@StopSharingAsync">
+                       Disabled="@Locked" OnClick="@StopSharingAsync">
                 Stop sharing · remove everyone
             </MudButton>
         }
@@ -96,7 +107,7 @@
         </MudSelect>
 
         <MudButton Class="pspad-share-leave align-self-start" Variant="Variant.Text" Color="Color.Error"
-                   StartIcon="@Icons.Material.Outlined.Logout" Disabled="@Disabled" OnClick="@LeaveAsync">
+                   StartIcon="@Icons.Material.Outlined.Logout" Disabled="@Locked" OnClick="@LeaveAsync">
             Leave list
         </MudButton>
     }
@@ -109,10 +120,18 @@
 
     [Parameter] public bool Disabled { get; set; }
 
+    bool Locked => Disabled || !Connectivity.IsOnline;
+
     TaskList? _source;
     TaskList _list = null!;
     IReadOnlyList<Area> _areas = [];
     Guid? _filedAreaId;
+
+    protected override void OnInitialized() => Connectivity.Changed += OnConnectivityChanged;
+
+    void OnConnectivityChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Connectivity.Changed -= OnConnectivityChanged;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -151,7 +170,7 @@
 
     async Task StopSharingAsync()
     {
-        if (Disabled)
+        if (Locked)
         {
             return;
         }
@@ -164,22 +183,26 @@
             return;
         }
 
-        if (_list.InviteToken is not null)
+        if (_list.InviteToken is not null && !await SucceededAsync(Sharing.StopSharingAsync(_list.Id)))
         {
-            await Sender.SendAsync(new StopSharingTaskList(Guid.NewGuid(), State.UserId, _list.Id));
+            return;
         }
 
         foreach (var member in _list.Members.ToList())
         {
-            await Sender.SendAsync(new RemoveListMember(Guid.NewGuid(), State.UserId, _list.Id, member.UserId));
+            if (!await SucceededAsync(Sharing.RemoveMemberAsync(_list.Id, member.UserId)))
+            {
+                break;
+            }
         }
 
+        await SyncTrigger.SyncNowAsync();
         await ReloadAsync();
     }
 
     async Task RemoveMemberAsync(ListMember member)
     {
-        if (Disabled)
+        if (Locked)
         {
             return;
         }
@@ -190,13 +213,16 @@
             return;
         }
 
-        await Sender.SendAsync(new RemoveListMember(Guid.NewGuid(), State.UserId, _list.Id, member.UserId));
-        await ReloadAsync();
+        if (await SucceededAsync(Sharing.RemoveMemberAsync(_list.Id, member.UserId)))
+        {
+            await SyncTrigger.SyncNowAsync();
+            await ReloadAsync();
+        }
     }
 
     async Task LeaveAsync()
     {
-        if (Disabled)
+        if (Locked)
         {
             return;
         }
@@ -207,8 +233,24 @@
             return;
         }
 
-        await Sender.SendAsync(new LeaveTaskList(Guid.NewGuid(), State.UserId, _list.Id));
+        if (!await SucceededAsync(Sharing.LeaveListAsync(_list.Id)))
+        {
+            return;
+        }
+
+        await SyncTrigger.SyncNowAsync();
         Navigation.NavigateTo(AreaLinks.For(SharedWithMe.AreaId));
+    }
+
+    async Task<bool> SucceededAsync(Task<string?> change)
+    {
+        if (await change is not { } rejection)
+        {
+            return true;
+        }
+
+        Snackbar.Add(rejection, Severity.Error);
+        return false;
     }
 
     async Task<bool> ConfirmAsync(string title, string message, string confirmText)
