@@ -134,10 +134,47 @@ jobs:
       - if: always()
         run: docker rm -f pspad-app-ci || true
 
+  backup-images:
+    runs-on: ubuntu-latest
+    needs: build-and-unit-test
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build both backup images
+        run: |
+          docker build --target mongo docker/backup \
+            -t pspad-backup-mongo:local \
+            -t ghcr.io/psp515/pspad-backup-mongo:latest \
+            -t ghcr.io/psp515/pspad-backup-mongo:${{ github.sha }}
+          docker build --target keycloak docker/backup \
+            -t keycloak-backup:local \
+            -t ghcr.io/psp515/keycloak-backup:latest \
+            -t ghcr.io/psp515/keycloak-backup:${{ github.sha }}
+
+      - name: Configuration, dump, upload and restore checks
+        run: docker/backup/test/run.sh pspad-backup-mongo:local keycloak-backup:local
+
+      - name: Round trip both stacks through S3
+        env:
+          ROUNDTRIP_BUILD: "false"
+        run: docker/backup/test/roundtrip.sh
+
+      - name: Push images
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push ghcr.io/psp515/pspad-backup-mongo:latest
+          docker push ghcr.io/psp515/pspad-backup-mongo:${{ github.sha }}
+          docker push ghcr.io/psp515/keycloak-backup:latest
+          docker push ghcr.io/psp515/keycloak-backup:${{ github.sha }}
+
   deploy:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: [integration-test, api-image, app-image]
+    needs: [integration-test, api-image, app-image, backup-images]
     steps:
       - name: Trigger update on the VPS
         uses: appleboy/ssh-action@v1
