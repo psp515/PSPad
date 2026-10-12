@@ -81,6 +81,35 @@ public class CommandDispatcherTests
     }
 
     [Fact]
+    public async Task AWronglyTypedFieldIsRejectedAsUnrecoverableRatherThanThrown()
+    {
+        var services = new ServiceCollection().AddPSPadCommands().BuildServiceProvider();
+        var payload = JsonSerializer.SerializeToElement(new
+        {
+            commandId = Guid.NewGuid(), userId = Guid.NewGuid(), areaId = "not-a-guid", name = "Home", position = 0
+        });
+
+        var response = await new CommandDispatcher(services).DispatchAsync(
+            new CommandEnvelope(nameof(CreateArea), payload), Guid.NewGuid(), CancellationToken.None);
+
+        Assert.False(response.Accepted);
+        Assert.True(response.Unrecoverable);
+        Assert.Equal("Malformed payload for CreateArea.", response.Rejection);
+    }
+
+    [Fact]
+    public async Task AMissingPayloadIsRejectedAsUnrecoverableRatherThanThrown()
+    {
+        var services = new ServiceCollection().AddPSPadCommands().BuildServiceProvider();
+
+        var response = await new CommandDispatcher(services).DispatchAsync(
+            new CommandEnvelope(nameof(CreateArea), default), Guid.NewGuid(), CancellationToken.None);
+
+        Assert.False(response.Accepted);
+        Assert.True(response.Unrecoverable);
+    }
+
+    [Fact]
     public async Task ACommandWithNoRegisteredHandlerIsRejectedAsUnrecoverable()
     {
         var services = new ServiceCollection().BuildServiceProvider();

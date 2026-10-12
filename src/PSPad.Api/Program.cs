@@ -1,13 +1,11 @@
-using System.Security.Claims;
-using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.RateLimiting;
 using PSPad.Abstractions;
 using PSPad.Api.Commands;
 using PSPad.Api.Endpoints;
 using PSPad.Api.Identity;
 using PSPad.Api.Presentation;
 using PSPad.Api.Rates;
+using PSPad.Api.RateLimiting;
 using PSPad.Api.Snapshots;
 using PSPad.Api.Statistics;
 using PSPad.Api.Sync;
@@ -37,27 +35,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy("public", context => RateLimitPartition.GetFixedWindowLimiter(
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = builder.Configuration.GetValue("Sharing:PublicRequestsPerMinute", 60),
-            Window = TimeSpan.FromMinutes(1)
-        }));
-    options.AddPolicy("join", context => RateLimitPartition.GetFixedWindowLimiter(
-        context.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? context.User.FindFirstValue("sub")
-            ?? context.Connection.RemoteIpAddress?.ToString()
-            ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = builder.Configuration.GetValue("Sharing:JoinAttemptsPerWindow", 10),
-            Window = TimeSpan.FromMinutes(30)
-        }));
-});
+builder.Services.AddPSPadRateLimiter(builder.Configuration);
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>

@@ -106,6 +106,60 @@ public class PSPadApiClientTests
         Assert.Equal(new JoinListRequest("token", "K7M4PX"), handler.Request);
     }
 
+    [Fact]
+    public async Task SendAsyncReportsATooManyRequestsAnswerAsBusyWithItsRetryAfter()
+    {
+        var client = new PSPadApiClient(new HttpClient(new BusyHandler(TimeSpan.FromSeconds(7)))
+        {
+            BaseAddress = new Uri("https://pspad.test/")
+        });
+
+        var busy = await Assert.ThrowsAsync<ServerBusyException>(() => client.SendAsync([]));
+
+        Assert.Equal(TimeSpan.FromSeconds(7), busy.RetryAfter);
+    }
+
+    [Fact]
+    public async Task SyncAsyncReportsATooManyRequestsAnswerAsBusyWithItsRetryAfter()
+    {
+        var client = new PSPadApiClient(new HttpClient(new BusyHandler(TimeSpan.FromSeconds(3)))
+        {
+            BaseAddress = new Uri("https://pspad.test/")
+        });
+
+        var busy = await Assert.ThrowsAsync<ServerBusyException>(() => client.SyncAsync(0, []));
+
+        Assert.Equal(TimeSpan.FromSeconds(3), busy.RetryAfter);
+    }
+
+    [Fact]
+    public async Task ABusyAnswerWithoutRetryAfterStillBacksOff()
+    {
+        var client = new PSPadApiClient(new HttpClient(new BusyHandler(null))
+        {
+            BaseAddress = new Uri("https://pspad.test/")
+        });
+
+        var busy = await Assert.ThrowsAsync<ServerBusyException>(() => client.SendAsync([]));
+
+        Assert.True(busy.RetryAfter > TimeSpan.Zero);
+    }
+
+    sealed class BusyHandler(TimeSpan? retryAfter) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+            if (retryAfter is { } delta)
+            {
+                response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(delta);
+            }
+
+            return Task.FromResult(response);
+        }
+    }
+
     sealed class JoinHandler(JoinListResponse response) : HttpMessageHandler
     {
         public JoinListRequest? Request { get; private set; }

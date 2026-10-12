@@ -18,7 +18,7 @@ public sealed class CommandDispatcher(IServiceProvider services)
             return new CommandResponse(Guid.Empty, false, $"Unknown command {envelope.Type}.", Unrecoverable: true);
         }
 
-        if (envelope.Payload.Deserialize(type, Json) is not ICommand command)
+        if (Deserialize(envelope.Payload, type) is not ICommand command)
         {
             return new CommandResponse(Guid.Empty, false, $"Malformed payload for {envelope.Type}.", Unrecoverable: true);
         }
@@ -40,6 +40,23 @@ public sealed class CommandDispatcher(IServiceProvider services)
 
         var result = await RunAsync(command, ct);
         return new CommandResponse(command.CommandId, result.Accepted, result.Rejection);
+    }
+
+    static object? Deserialize(JsonElement payload, Type type)
+    {
+        if (payload.ValueKind is JsonValueKind.Undefined)
+        {
+            return null;
+        }
+
+        try
+        {
+            return payload.Deserialize(type, Json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     public async Task<CommandResult> RunAsync(ICommand command, CancellationToken ct)

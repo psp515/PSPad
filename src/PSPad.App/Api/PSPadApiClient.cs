@@ -10,6 +10,8 @@ namespace PSPad.App.Api;
 
 public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ISnapshotsApi, INbpRates
 {
+    static readonly TimeSpan DefaultRetryAfter = TimeSpan.FromSeconds(5);
+
     public Task<MeResponse?> MeAsync() => GetAsync<MeResponse>("api/me");
 
     public async Task<MeResponse?> SetTimeZoneAsync(string timeZone)
@@ -48,14 +50,33 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
     public async Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes)
     {
         var response = await http.PostAsJsonAsync("api/commands", envelopes);
+        ThrowIfBusy(response);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<CommandResponse[]>() ?? [];
     }
 
-    public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
-        GetAsync<SyncResponse>(full.Count == 0
+    public async Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full)
+    {
+        var response = await http.GetAsync(full.Count == 0
             ? $"api/sync?since={since}"
             : $"api/sync?since={since}&full={string.Join(',', full)}");
+        ThrowIfBusy(response);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<SyncResponse>();
+    }
+
+    static void ThrowIfBusy(HttpResponseMessage response)
+    {
+        if (response.StatusCode != HttpStatusCode.TooManyRequests)
+        {
+            return;
+        }
+
+        var retryAfter = response.Headers.RetryAfter?.Delta
+            ?? response.Headers.RetryAfter?.Date - DateTimeOffset.UtcNow;
+
+        throw new ServerBusyException(retryAfter > TimeSpan.Zero ? retryAfter.Value : DefaultRetryAfter);
+    }
 
     public async Task<JoinOutcome> JoinAsync(string token, string code)
     {

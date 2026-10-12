@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using PSPad.Abstractions;
+using PSPad.App.Api;
 using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
@@ -148,6 +149,11 @@ public sealed class SyncCoordinator(
                     SurfaceRejections(outcome);
                 }
             }
+            catch (ServerBusyException busy)
+            {
+                LastSyncFailed = false;
+                _ = RetryAfterAsync(busy.RetryAfter);
+            }
             catch (HttpRequestException)
             {
                 LastSyncFailed = true;
@@ -156,6 +162,13 @@ public sealed class SyncCoordinator(
 
         PendingCount = await outbox.CountAsync();
         Changed?.Invoke();
+    }
+
+    // Past the poll interval the regular loop retries anyway; a longer wait would only stack timers.
+    async Task RetryAfterAsync(TimeSpan retryAfter)
+    {
+        await Task.Delay(retryAfter < PollInterval ? retryAfter : PollInterval);
+        await SyncNowAsync();
     }
 
     void SurfaceRejections(SyncOutcome outcome)
