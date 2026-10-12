@@ -81,7 +81,9 @@ Develop on your own machine with the .NET 10 SDK. Docker supplies the backing
 services and, for integration tests, a throwaway MongoDB.
 
 ```bash
+cp docker/keycloak/.env.example docker/keycloak/.env   # then set KEYCLOAK_DB_PASSWORD
 cp docker/.env.example docker/.env
+docker compose -f docker/keycloak/compose.yaml up -d
 docker compose -f docker/compose.yaml up -d
 dotnet build
 dotnet test
@@ -97,8 +99,11 @@ dotnet test --filter Category=Integration
 
 Each deployable carries its own `Dockerfile` next to its `.csproj`
 (`src/PSPad.Api`, `src/PSPad.App`), built with the repository root as
-context. `docker/compose.yaml` is both the development and the self-hosting
-stack — self-hosting is documented in full on the
+context. Two stacks joined by the `psplace` network serve both development
+and self-hosting: `docker/keycloak/compose.yaml` (Keycloak on Postgres,
+started first) and `docker/compose.yaml` (API, client, MongoDB). Each carries
+a nightly backup service behind the `backup` profile (`docker/backup/`,
+`specs/backup-design.md`). Self-hosting is documented in full on the
 [install page](https://psp515.com/pspad/install/).
 
 Design specs live in `specs/`, architecture decision records in `adr/` (see

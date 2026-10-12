@@ -767,10 +767,18 @@ still opens a database a newer build already upgraded at its existing
 version (stores are only ever added) and closes its connection on
 `versionchange`, so one tab never blocks another tab's upgrade.
 
-`docker/compose.yaml` runs MongoDB and Keycloak for development.
-Integration tests never touch it — they start their own MongoDB via
-Testcontainers. `docker/compose.prod.yaml` runs api, app, mongo and
-keycloak behind a reverse proxy terminating TLS.
+Two compose stacks, joined by the external `psplace` network, serve both
+development and self-hosting (`adr/0061`):
+- `docker/keycloak/compose.yaml` runs Keycloak (`start-dev`) on its own
+  Postgres, `keycloak-db`. It creates `psplace`, so it starts first.
+- `docker/compose.yaml` runs `api`, `app` and `mongo`. `api` joins `psplace`
+  and reaches Keycloak as `http://keycloak:8080`.
+
+Each stack has a backup service behind the `backup` profile, `mongo-backup`
+and `keycloak-backup`, built from `docker/backup/` (`specs/backup-design.md`).
+Integration tests never touch either stack; they start their own MongoDB via
+Testcontainers. Production runs the same images behind a reverse proxy that
+terminates TLS, with Keycloak deployed from its own repository.
 
 ---
 

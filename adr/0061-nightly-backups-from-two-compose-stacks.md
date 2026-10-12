@@ -2,7 +2,7 @@
 title: Two compose stacks joined by a network, each backing itself up nightly, encrypted before it leaves the host
 tags: [deployment, persistence, security, identity]
 date: 2026-10-12
-status: Proposed (amends [0015](0015-one-self-host-compose-stack.md))
+status: Active (amends [0015](0015-one-self-host-compose-stack.md))
 ---
 
 # ADR-0061: Two compose stacks joined by a network, each backing itself up nightly

@@ -17,7 +17,8 @@ const proof = [
   { title: 'Share a list', body: 'Send an invite link; whoever opens it works on the list with you, offline included.' },
   { title: 'Public snapshots', body: 'Publish a read-only link anyone can open, no account needed. They tick things off; you see it on your own copy.' },
   { title: 'Statistics', body: 'Charts, a consistency heatmap, a chart of what you captured each week and a record feed that show what actually got done.' },
-  { title: 'Yours, and multi-user', body: 'Your hardware, your Keycloak, your data.' }
+  { title: 'Yours, and multi-user', body: 'Your hardware, your Keycloak, your data.' },
+  { title: 'Nightly backups', body: 'Encrypted copies off the server every night, to S3 or Google Drive — and a restore every device follows.' }
 ]
 ---
 <Page
@@ -47,7 +48,7 @@ const proof = [
 
     <div class="call">
       <h2>Run it yourself</h2>
-      <p>One Compose file, four containers, about ten minutes.</p>
+      <p>Two Compose stacks, PSPad and Keycloak, about ten minutes.</p>
       <p><a class="button button-primary" href={join(base, 'install')}>Install PSPad</a></p>
     </div>
   </div>

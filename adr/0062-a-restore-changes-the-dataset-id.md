@@ -2,7 +2,7 @@
 title: A restore changes the dataset id, and a client that sees a new id re-pulls from zero
 tags: [sync, persistence, offline]
 date: 2026-10-12
-status: Proposed (amends [0006](0006-sync-is-delta-by-version.md))
+status: Active (amends [0006](0006-sync-is-delta-by-version.md))
 ---
 
 # ADR-0062: A restore changes the dataset id, and a client that sees a new id re-pulls from zero

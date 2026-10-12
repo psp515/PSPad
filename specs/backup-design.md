@@ -1,6 +1,6 @@
 # Daily backups — design
 
-Status: Proposed. Issue #120. Decisions of record:
+Status: Built. Issue #120. Decisions of record:
 [ADR-0061](../adr/0061-nightly-backups-from-two-compose-stacks.md),
 [ADR-0062](../adr/0062-a-restore-changes-the-dataset-id.md).
 Builds on #138 (Keycloak on Postgres) and #143 (dedicated Mongo users).
@@ -66,20 +66,23 @@ Out:
 docker/compose.yaml            api, app, mongo, mongo-backup[backup]   network psplace (external)
 docker/keycloak/compose.yaml   keycloak, keycloak-db, keycloak-backup[backup]   network psplace (owner)
 docker/backup/
-  Dockerfile        stage tools: rclone, age, supercronic (pinned, sha256-checked)
-                    target mongo:    FROM mongo:8.0.x   + tools + scripts
-                    target keycloak: FROM postgres:17.x + tools + scripts
-  lib.sh            package → encrypt → upload → prune → ping
-  entrypoint.sh     validate env, render crontab, exec supercronic
-  healthcheck.sh    last success within 26 h (or started under 26 h ago)
-  mongo/dump.sh  mongo/restore.sh
-  keycloak/dump.sh  keycloak/restore.sh
+  Dockerfile        stage tools: rclone, age, supercronic (pinned, sha256 in checksums.txt)
+                    target mongo:    FROM mongo:8.3.11  + tools + curl + scripts
+                    target keycloak: FROM postgres:17.11 + tools + curl + scripts
+  backup            entrypoint: run | check | now | list | restore | healthcheck
+  lib/common.sh     validate, rclone config, package → encrypt → upload → prune → ping,
+                    health, list, fetch → verify → confirm → restore
+  lib/mongo.sh      validate_stack, dump, restore_data
+  lib/keycloak.sh   validate_stack, dump, restore_data
+  test/run.sh       configuration, dump, upload and restore checks against both images
+  test/roundtrip.sh both stacks through S3, wiped and restored
 ```
 
-Each target ships only its own `dump.sh` and `restore.sh`, on a base image
-that already carries the matching client (`mongodump` in `mongo`, `pg_dump`
-in `postgres`). Everything after the dump is the shared `lib.sh`, so
-encryption, upload, retention and health behave the same in both stacks.
+Each target ships only its own `lib/<stack>.sh`, on a base image that
+already carries the matching client (`mongodump` in `mongo`, `pg_dump` in
+`postgres`). Everything else is `lib/common.sh`, so encryption, upload,
+retention and health behave the same in both stacks. The containers run as
+uid 10001 (`pspad-backup`).
 
 Neither stack touches .NET code. The API only learns about restores through
 the dataset id (§7).
@@ -109,19 +112,24 @@ URI instead.
 ## 3. One run (both stacks)
 
 1. **Dump.** This step is stack-specific:
-   - **mongo:** `mongodump --uri "$BACKUP_MONGO_URI" --oplog --archive --gzip`
-     produces `mongo.archive.gz`. `--oplog` makes the dump a single point in
-     time across collections. Documents, `events`, `counters`, Statistics
-     records and the dispatch marker (ADR-0036, ADR-0037) must agree. It
-     connects as the stack's root user `pspad` for now. Once #143 adds
+   - **mongo:** `mongodump --uri "$BACKUP_MONGO_URI" --oplog --gzip --out`
+     produces a `mongo/` directory. `--oplog` makes the dump a single point
+     in time across collections. Documents, `events`, `counters`, Statistics
+     records and the dispatch marker (ADR-0036, ADR-0037) must agree.
+     `--oplog` only works on a whole-instance dump, and its replay refuses
+     namespace filters. The dump therefore deletes `admin/` and `config/`
+     before packaging: restoring `admin` would replace the very user the
+     restore is signed in as, and the oplog replay would then be refused.
+     It connects as the stack's root user `pspad` for now. Once #143 adds
      dedicated Mongo users, it switches to `pspad-backup` with the `backup`
      and `restore` roles.
    - **keycloak:** `pg_dump --format=custom "$BACKUP_PG_URI"` produces
      `keycloak.dump`. It connects as Keycloak's own database user, which
      restore needs anyway.
-2. **Package.** The files and a `manifest.json` (stack, source version, run
-   time in UTC, sha256 and size of each file) go into
-   `<stack>-<yyyy-MM-ddTHHmmZ>.tar`.
+2. **Package.** The files, a `SHA256SUMS` and a `manifest.json` (stack,
+   name, run time in UTC, and the size and sha256 of each file) go into
+   `<stack>-<yyyy-MM-ddTHHmmssZ>.tar`. A lock refuses a second run while
+   one is in progress.
 3. **Local.** The tarball goes to `/backups` (the stack's own volume, or a
    bind mount set with `BACKUP_LOCAL_DIR`) unencrypted, so a restore on the
    same host needs no key. The directory is `0700`.
@@ -150,23 +158,28 @@ connection settings.
 | `BACKUP_KEEP_DAYS` | `14` | both | Retention at every destination |
 | `BACKUP_LOCAL_DIR` | — | both | Host path to bind instead of the stack's volume |
 | `BACKUP_AGE_RECIPIENT` | — | both | age public key; required once any remote is set |
+| `BACKUP_AGE_IDENTITY_FILE` | — | both | Host path of the age private key, mounted read-only at `/run/secrets/age-identity`; only for restoring from a remote |
 | `BACKUP_S3_ENDPOINT`, `_REGION`, `_BUCKET`, `_PREFIX`, `_ACCESS_KEY_ID`, `_SECRET_ACCESS_KEY` | — | both | S3-compatible remote (AWS, B2, R2, MinIO); enabled when `_BUCKET` is set |
 | `BACKUP_REMOTE_PRUNE` | `true` | both | `false` for write-only keys; retention moves to a bucket lifecycle rule |
 | `BACKUP_GDRIVE_TOKEN`, `_FOLDER_ID`, `_CLIENT_ID`, `_CLIENT_SECRET` | — | both | Google Drive remote; enabled when `_TOKEN` is set |
 | `BACKUP_PING_URL` | — | both | Called on success, with `/fail` appended on failure |
 | `BACKUP_MONGO_URI` | `mongodb://pspad:${MONGO_PASSWORD}@mongo:27017/?authSource=admin&directConnection=true` | mongo | Whole instance, not one database (for `--oplog`) |
+| `BACKUP_MONGO_DATABASE` | `${MONGO_DATABASE}` | mongo | The database a restore empties and confirms by name |
+| `BACKUP_SERVICE_PROBE` | `api:8080` / `keycloak:8080` | both | Set by compose: a restore refuses while this still accepts connections |
 | `BACKUP_PG_URI` | `postgresql://keycloak:${KEYCLOAK_DB_PASSWORD}@keycloak-db:5432/keycloak` | keycloak | Keycloak's database |
 
 The age key can be the same in both stacks or different. The docs
 recommend one key pair, kept off the server, for simplicity.
 
-**Fail fast at start**, with one decisive line each:
+**Fail fast**, with one decisive `backup:` line each:
 
-- a remote is configured without a recipient;
-- the recipient isn't a valid age key;
-- the URI is empty;
-- `BACKUP_AT` doesn't parse;
-- for keycloak, the target doesn't answer as Postgres (§5).
+- when scheduling or running a backup: a remote is configured without a
+  recipient, or the recipient isn't a valid age key. A restore only needs the
+  identity;
+- the URI is empty, or `BACKUP_MONGO_DATABASE` is;
+- `BACKUP_AT` doesn't parse, or `BACKUP_KEEP_DAYS` isn't a whole number;
+- for keycloak, at dump or restore time: the target doesn't answer as
+  Postgres within 10 s (§5).
 
 **Google Drive.** It uses the `drive.file` scope. The token comes from
 `rclone authorize "drive"` on any machine with a browser. Two pitfalls are
@@ -254,16 +267,18 @@ docker compose -f docker/compose.yaml start api
 
 `restore <name|latest>`:
 
-1. Fetch the backup and decrypt it with the private key mounted from
-   `BACKUP_AGE_IDENTITY_FILE` (only needed for restore). Verify the
-   manifest's sha256 values.
-2. Ask for confirmation by typing the database name, unless `--yes` is
-   passed.
-3. Refuse if `api:8080` still accepts connections (a bash `/dev/tcp`
-   probe over the stack network), naming `stop api`.
-4. Run `mongorestore --oplogReplay --drop --archive --gzip`.
+1. Refuse if `BACKUP_SERVICE_PROBE` (`api:8080`) still accepts connections.
+   This is a bash `/dev/tcp` probe over the stack network, and the message
+   names `docker compose stop api`.
+2. Fetch the backup. From a remote, decrypt it with the private key mounted
+   from `BACKUP_AGE_IDENTITY_FILE`. Verify `SHA256SUMS`.
+3. Ask for confirmation by typing the database name, unless `--yes` is
+   passed. Without a terminal, `--yes` is required.
+4. Drop the PSPad database, then run
+   `mongorestore --oplogReplay --drop --gzip --dir`. The dump holds no
+   `admin`, so Mongo's users and `MONGO_PASSWORD` stay as they are now.
 5. Delete `meta.dataset`.
-6. Print the backup's timestamp.
+6. Log the name of the backup it restored.
 
 Keycloak is the same sequence in its own stack: `stop keycloak`, then
 `run --rm keycloak-backup restore latest`, which makes the same probe
@@ -281,37 +296,49 @@ against `keycloak:8080` and runs
 - **Integration** (`[IntegrationTest]`, `test/PSPad.Api.Tests`):
   - `GET /api/sync` returns a stable `datasetId`.
   - Deleting `meta.dataset` yields a new one.
-- **Round trip** (a new CI job, `backup-roundtrip`):
-  1. Bring up both stacks with the `backup` profile, MinIO as the S3
-     remote, and a throwaway age key.
-  2. Seed data and run `backup now` in each stack.
-  3. Assert that each stack wrote a local tarball and a remote `.age`
-     object under its own prefix, and that the remote objects aren't
-     readable tars.
-  4. `down -v` both stacks, then bring them up again.
-  5. Restore Keycloak, then Mongo, from `s3`, with `--yes`.
-  6. Assert that the seeded user signs in with the same UUID, their
-     documents sync back, and `datasetId` changed.
+- **Image checks** (`docker/backup/test/run.sh`, CI job `backup-images`).
+  Against both images, the script checks:
+  - every fail-fast rule in §4;
+  - the rendered schedule;
+  - a Mongo run with an S3 upload (`rclone serve s3` stands in for the
+    bucket): the local copy, the success stamp, pruning that leaves other
+    stacks' files alone, the remote copy under `<prefix>/<stack>/` as age
+    ciphertext;
+  - restore refusing while the probe target listens, restore from S3, and
+    the dataset id gone;
+  - a Keycloak run and restore from local, with row ids kept;
+  - refusing a non-Postgres target;
+  - the healthcheck before the first run and after a stale success.
+- **Round trip** (`docker/backup/test/roundtrip.sh`, same CI job):
+  1. Bring up both stacks with the `backup` profile, an `rclone serve s3`
+     bucket, and a throwaway age key.
+  2. Create a Keycloak user and seed their data, then run `now` in each
+     stack.
+  3. Assert that both stacks' remote objects exist and are age ciphertext.
+  4. `down -v` both stacks, which removes the local backups too, then bring
+     them up again.
+  5. Restore Keycloak, then Mongo, from `s3`.
+  6. Assert that the user has the same UUID, their data is back, and the
+     dataset id is gone.
 
-  The job also checks that each entrypoint rejects a remote without a
-  recipient.
+  The round trip stops short of signing in through the API: that would need
+  a test client in the shipped realm.
 
 Google Drive isn't exercised in CI, because there's no hermetic fake.
 
 ## 9. Documentation
 
-- `install.astro` → **Backups** is rewritten:
-  - the two stacks and why they're separate;
-  - generating an age key pair (keep the private key off the server);
-  - S3 and Google Drive setup;
-  - health;
-  - the restore order and pairing rule (§6).
-
-  The manual `mongodump` one-liner stays as the fallback.
-- `docker/backup/{mongo,keycloak}/.env.example`: every variable, commented.
-- `features.astro`: one line, "Nightly encrypted backups, on the host and
-  off it".
-- `specs/backend-spec.md` §5 Sync: `datasetId` and the purge rule.
+- `install.astro`:
+  - two stacks and their start order;
+  - **Backups**: profile, schedule, health, age keys, S3 and Google Drive,
+    restore order and pairing rule, the re-sync callout;
+  - the manual `mongodump` fallback;
+  - a note for single-stack installs whose H2 volume isn't carried over.
+- `docker/.env.example`, `docker/keycloak/.env.example`: every variable,
+  commented.
+- `features.astro` and the landing page: nightly backups.
+- `README.md`: two stacks.
+- `specs/backend-spec.md`: §5 dataset id, and the containers paragraph.
 
 ## 10. Open questions
 

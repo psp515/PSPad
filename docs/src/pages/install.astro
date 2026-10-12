@@ -6,7 +6,9 @@ import Step from '../components/Step.astro'
 import { parseEnvExample, readRepoFile } from '../lib/repo'
 
 const compose = readRepoFile('docker/compose.yaml')
+const keycloakCompose = readRepoFile('docker/keycloak/compose.yaml')
 const entries = parseEnvExample(readRepoFile('docker/.env.example'))
+const keycloakEntries = parseEnvExample(readRepoFile('docker/keycloak/.env.example'))
 ---
 <Page
   title="Install PSPad"
@@ -15,8 +17,12 @@ const entries = parseEnvExample(readRepoFile('docker/.env.example'))
   <div class="wrap prose">
     <h1>Install</h1>
     <p>
-      Four containers — API, client, MongoDB, Keycloak — one Compose file. Budget a
-      few minutes for the first build.
+      Two Compose stacks joined by one Docker network, <code>psplace</code>.
+      <strong>Keycloak</strong> (<code>docker/keycloak/compose.yaml</code>) runs Keycloak
+      and its Postgres database. Its accounts serve every self-hosted app on the
+      <strong>psplace</strong> realm, not only PSPad. <strong>PSPad</strong>
+      (<code>docker/compose.yaml</code>) runs the API, the client and MongoDB. Each
+      stack can back itself up every night. Budget a few minutes for the first build.
     </p>
 
     <h2>Before you start</h2>
@@ -31,13 +37,20 @@ const entries = parseEnvExample(readRepoFile('docker/.env.example'))
 cd PSPad</code></pre>
     </Step>
 
-    <Step n={2} title="Create your environment file">
-      <pre><code>cp docker/.env.example docker/.env</code></pre>
+    <Step n={2} title="Create both environment files">
+      <pre><code>cp docker/keycloak/.env.example docker/keycloak/.env
+cp docker/.env.example docker/.env</code></pre>
       <p>
-        Do this first, or the stack starts with empty values. Defaults work on
-        <code>localhost</code> — change <code>MONGO_PASSWORD</code> and
-        <code>KEYCLOAK_ADMIN_PASSWORD</code> before it's reachable from anywhere else.
+        Do this first, or the stacks start with empty values. Defaults work on
+        <code>localhost</code>, except <code>KEYCLOAK_DB_PASSWORD</code>, which you
+        must set: the Keycloak stack refuses to start without it. Change
+        <code>MONGO_PASSWORD</code> and <code>KEYCLOAK_ADMIN_PASSWORD</code> before either
+        stack is reachable from anywhere else. Keep <code>KEYCLOAK_ADMIN_USER</code>
+        and <code>KEYCLOAK_ADMIN_PASSWORD</code> the same in both files.
       </p>
+      <p><code>docker/keycloak/.env</code>:</p>
+      <EnvTable entries={keycloakEntries} />
+      <p><code>docker/.env</code>:</p>
       <EnvTable entries={entries} />
       <Callout kind="warning" title="Two Keycloak URLs">
         <p>
@@ -49,24 +62,31 @@ cd PSPad</code></pre>
       </Callout>
       <Callout kind="warning" title="The admin credentials apply once to Keycloak, but the API keeps reading them">
         <p>
-          <code>KEYCLOAK_ADMIN_USER</code> and <code>KEYCLOAK_ADMIN_PASSWORD</code> only
-          bootstrap Keycloak itself on the very first start — change the password in the
-          Keycloak console afterwards and editing <code>.env</code> does nothing to Keycloak.
-          But the <code>api</code> container reads these same two variables at runtime, every
-          time it calls Keycloak's admin API to delete a user's login on account deletion.
-          Rotate the password in the Keycloak console without also updating <code>.env</code>
-          and restarting <code>api</code>, and account deletion keeps wiping the user's data
-          but silently stops removing their Keycloak login.
+          In <code>docker/keycloak/.env</code>, <code>KEYCLOAK_ADMIN_USER</code> and
+          <code>KEYCLOAK_ADMIN_PASSWORD</code> only bootstrap Keycloak on its very first
+          start. If you change the password in the Keycloak console afterwards, editing
+          that file does nothing to Keycloak. The <code>api</code> container reads its own copy
+          in <code>docker/.env</code> at runtime, every time it calls Keycloak's admin API
+          to delete a user's login on account deletion. If you rotate the password in the
+          console without also updating <code>docker/.env</code> and restarting
+          <code>api</code>, account deletion keeps wiping the user's data but silently
+          stops removing their Keycloak login.
         </p>
       </Callout>
     </Step>
 
-    <Step n={3} title="Start the stack">
-      <pre><code>docker compose -f docker/compose.yaml up -d --build</code></pre>
+    <Step n={3} title="Start Keycloak, then PSPad">
+      <pre><code>docker compose -f docker/keycloak/compose.yaml up -d
+docker compose -f docker/compose.yaml up -d --build</code></pre>
+      <p>
+        Keycloak goes first because its stack creates the <code>psplace</code> network
+        the API joins. The PSPad stack fails with <em>network psplace not found</em>
+        until it exists.
+      </p>
       <p>The first build takes a few minutes. Mongo starts as a replica set — required for transactions. Wait for it to report healthy:</p>
       <pre><code>docker compose -f docker/compose.yaml ps</code></pre>
       <p>
-        <code>api</code>, <code>app</code> and <code>keycloak</code> show a bare
+        <code>api</code> and <code>app</code> (and <code>keycloak</code> in its own stack) show a bare
         <code>Up</code> forever — that's normal. Confirm the API is actually answering:
       </p>
       <pre><code>curl -s -o /dev/null -w "%{'{'}http_code{'}'}\n" http://localhost:5000/api/today</code></pre>
@@ -127,7 +147,9 @@ cd PSPad</code></pre>
       </Callout>
     </Step>
 
-    <h2>The stack, in full</h2>
+    <h2>The stacks, in full</h2>
+    <p><code>docker/keycloak/compose.yaml</code>, exactly as it ships:</p>
+    <pre><code>{keycloakCompose}</code></pre>
     <p><code>docker/compose.yaml</code>, exactly as it ships:</p>
     <pre><code>{compose}</code></pre>
 
@@ -139,9 +161,11 @@ cd PSPad</code></pre>
     </p>
     <ol>
       <li>
-        Set <code>APP_BASE_ADDRESS</code>, <code>API_BASE_ADDRESS</code>,
-        <code>KEYCLOAK_AUTHORITY</code> and <code>KEYCLOAK_HOSTNAME</code> in
-        <code>docker/.env</code> to your public <code>https://</code> URLs.
+        Set <code>APP_BASE_ADDRESS</code>, <code>API_BASE_ADDRESS</code> and
+        <code>KEYCLOAK_AUTHORITY</code> in <code>docker/.env</code>, and
+        <code>KEYCLOAK_HOSTNAME</code>, <code>APP_BASE_ADDRESS</code> and
+        <code>API_BASE_ADDRESS</code> in <code>docker/keycloak/.env</code>, to your public
+        <code>https://</code> URLs.
       </li>
       <li>
         <strong>Update the Keycloak client too, or sign-in fails.</strong> The bundled realm
@@ -158,31 +182,151 @@ cd PSPad</code></pre>
         is no longer reachable except through the proxy — otherwise a caller can forge
         <code>X-Forwarded-For</code>.
       </li>
-      <li>Recreate the stack:
-        <pre><code>docker compose -f docker/compose.yaml up -d --force-recreate</code></pre>
+      <li>Recreate both stacks:
+        <pre><code>docker compose -f docker/keycloak/compose.yaml up -d --force-recreate
+docker compose -f docker/compose.yaml up -d --force-recreate</code></pre>
       </li>
     </ol>
-    <p>MongoDB publishes no port — it's reachable only from the other containers.</p>
+    <p>MongoDB and Postgres publish no port. Each is reachable only from its own stack.</p>
 
     <h2>Backups</h2>
-    <p>Three volumes hold everything:</p>
+    <p>Everything worth keeping lives in two volumes, one per stack:</p>
     <ul>
-      <li><code>pspad_mongo-data</code> — areas, lists, tasks, the event log.</li>
-      <li><code>pspad_mongo-keyfile</code> — the replica-set key. Lose it and <code>mongo-data</code> won't start.</li>
-      <li><code>pspad_keycloak-data</code> — accounts and realm config.</li>
+      <li><code>pspad_mongo-data</code>: areas, lists, tasks and the event log.</li>
+      <li>
+        <code>keycloak_keycloak-db-data</code>: accounts and realm settings.
+      </li>
     </ul>
+    <p>
+      <code>pspad_mongo-keyfile</code> only holds the replica-set key. A restore
+      doesn't need it, because a fresh install generates its own.
+    </p>
     <Callout kind="warning" title="Never pass -v to docker compose down">
       <p>
-        <code>down -v</code> deletes <code>pspad_keycloak-data</code>, and with it every
-        account. PSPad keys its users by the Keycloak user's UUID, so accounts recreated
-        afterwards are new people — the old areas, lists and tasks stay in MongoDB, owned by
-        a user that can no longer sign in. <code>down</code> on its own is safe.
+        <code>down -v</code> on the Keycloak stack deletes every account. PSPad keys its
+        users by the Keycloak user's UUID, so accounts recreated afterwards are new people.
+        The old areas, lists and tasks stay in MongoDB, owned by a user who can no longer
+        sign in. On the PSPad stack, <code>down -v</code> deletes the data and the local
+        backups with it. <code>down</code> on its own is safe.
       </p>
     </Callout>
-    <p>Dump the database:</p>
+
+    <h3>Turn on nightly backups</h3>
+    <p>
+      Each stack has a backup service behind the <code>backup</code> profile:
+      <code>mongo-backup</code> beside MongoDB, and <code>keycloak-backup</code> beside
+      Keycloak's Postgres. Start them with their stacks:
+    </p>
+    <pre><code>docker compose -f docker/keycloak/compose.yaml --profile backup up -d
+docker compose -f docker/compose.yaml --profile backup up -d --build</code></pre>
+    <p>Every night at <code>BACKUP_AT</code> each service:</p>
+    <ol>
+      <li>
+        Dumps its database: a point-in-time <code>mongodump --oplog</code> for PSPad, a
+        <code>pg_dump</code> for Keycloak.
+      </li>
+      <li>Keeps the dump in its <code>*-backups</code> volume, or in <code>BACKUP_LOCAL_DIR</code> if you set one.</li>
+      <li>If you configured S3 or Google Drive, encrypts a copy with your age key and uploads it.</li>
+      <li>Deletes copies older than <code>BACKUP_KEEP_DAYS</code>, but never after a failed run.</li>
+    </ol>
+    <p>
+      Keycloak's default time is half an hour after PSPad's. Restoring a pair from the
+      same night then never gives you accounts older than the data that belongs to them.
+    </p>
+    <p>
+      Run a backup now, or list what you have:
+    </p>
+    <pre><code>docker compose -f docker/compose.yaml run --rm mongo-backup now
+docker compose -f docker/compose.yaml run --rm mongo-backup list</code></pre>
+    <p>
+      Each service turns <em>unhealthy</em> in <code>docker compose ps</code> when its
+      last successful run is more than 26 hours old. To be told rather than having to
+      look, set <code>BACKUP_PING_URL</code> to a healthchecks.io-style URL. It is called
+      after every run, with <code>/fail</code> appended when the run failed.
+    </p>
+
+    <h3>Off-host copies, always encrypted</h3>
+    <p>
+      Create an <a href="https://age-encryption.org">age</a> key pair on a machine
+      other than the server:
+    </p>
+    <pre><code>docker run --rm --entrypoint age-keygen ghcr.io/psp515/pspad-backup-mongo:latest &gt; pspad-backup.key</code></pre>
+    <p>
+      Put the <code>age1…</code> public key from that file into
+      <code>BACKUP_AGE_RECIPIENT</code> in both <code>.env</code> files. Store the file
+      itself somewhere safe, away from the server. Without it, the off-host copies can't
+      be read by anyone, you included. A backup service with S3 or Google Drive set and no
+      recipient refuses to start.
+    </p>
+    <ul>
+      <li>
+        <strong>S3-compatible</strong> (AWS, Backblaze B2, Cloudflare R2, MinIO): set
+        <code>BACKUP_S3_ENDPOINT</code>, <code>BACKUP_S3_BUCKET</code> and the key pair.
+        Both stacks can share one bucket: each writes below
+        <code>&lt;prefix&gt;/mongo/</code> or <code>&lt;prefix&gt;/keycloak/</code>.
+        Turn on versioning or object lock, so a leaked key can't erase your history.
+        If the key may not delete, set <code>BACKUP_REMOTE_PRUNE=false</code> and let a
+        bucket lifecycle rule handle retention.
+      </li>
+      <li>
+        <strong>Google Drive</strong>: on any machine with a browser, run
+        <code>rclone authorize "drive"</code> and paste the JSON it prints into
+        <code>BACKUP_GDRIVE_TOKEN</code>. Uploads use the <code>drive.file</code> scope,
+        so the service only sees files it created itself. A Google service account won't
+        work with a personal Drive, because it has no storage quota. If you use your own
+        OAuth client, publish it: one left in <em>Testing</em> issues tokens that expire
+        after 7 days.
+      </li>
+    </ul>
+
+    <h3>Restore</h3>
+    <p>
+      Stop the service that writes to the database, restore, and start it again. The
+      restore refuses to run while that service still accepts connections.
+    </p>
+    <pre><code>docker compose -f docker/keycloak/compose.yaml stop keycloak
+docker compose -f docker/keycloak/compose.yaml run --rm keycloak-backup restore latest
+docker compose -f docker/keycloak/compose.yaml start keycloak
+
+docker compose -f docker/compose.yaml stop api
+docker compose -f docker/compose.yaml run --rm mongo-backup restore latest
+docker compose -f docker/compose.yaml start api</code></pre>
+    <ul>
+      <li>
+        <code>latest</code> takes the newest local copy. To pick another one, pass a name
+        from <code>list</code>.
+      </li>
+      <li>
+        <code>--from s3</code> or <code>--from gdrive</code> fetches the copy from
+        off-host instead. This needs the private key: set
+        <code>BACKUP_AGE_IDENTITY_FILE</code> to its path for the duration of the restore.
+      </li>
+      <li>
+        Each restore asks you to type the database name. <code>--yes</code> skips that.
+      </li>
+    </ul>
+    <p>
+      Restore Keycloak, then MongoDB. Pair a MongoDB backup with the first Keycloak backup
+      taken at or after it. Restoring <code>latest</code> on both stacks from the same
+      night does exactly that.
+    </p>
+    <Callout title="Every device re-syncs after a MongoDB restore">
+      <p>
+        A restore gives the database a new identity. Each signed-in device notices on its
+        next sync, drops its local copy and pulls everything again. Changes a device
+        hadn't sent yet are still sent afterwards. Any that refer to something the restore
+        took back show up as rejected in Settings → Sync. Anything written after the
+        backup was taken is gone.
+      </p>
+    </Callout>
+    <p>
+      A MongoDB restore leaves Mongo's own users alone, so <code>MONGO_PASSWORD</code>
+      stays whatever it is now. Without the backup profile, you can still dump the
+      database by hand:
+    </p>
     <pre><code>docker compose -f docker/compose.yaml exec -T mongo \
   sh -c 'mongodump --archive --username pspad --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' \
-  > pspad-backup.archive</code></pre>
+  &gt; pspad-backup.archive</code></pre>
     <p>
       Keep the single quotes — the password only exists inside the <code>mongo</code>
       container. Double quotes would expand it on your host instead, where it's empty.
@@ -190,6 +334,7 @@ cd PSPad</code></pre>
 
     <h2>Upgrading, restarting</h2>
     <pre><code>git pull
+docker compose -f docker/keycloak/compose.yaml up -d
 docker compose -f docker/compose.yaml up -d --build</code></pre>
     <p>
       Volumes survive — only <code>down -v</code> destroys them. Give Mongo 10–30 seconds to
@@ -199,9 +344,17 @@ docker compose -f docker/compose.yaml up -d --build</code></pre>
     <h2>Two things worth knowing</h2>
     <Callout kind="warning" title="Keycloak runs in development mode">
       <p>
-        Its data lives in an embedded H2 database on a volume — fine for one user, but
-        Keycloak doesn't support that mode for production, and a major image upgrade might
-        not migrate cleanly. Export the realm before bumping it.
+        Its data lives in Postgres now, which makes it safe to back up and restore. But
+        <code>start-dev</code> relaxes Keycloak's own hardening, so treat it as a
+        single-household setup. Take a backup before a major image upgrade.
+      </p>
+    </Callout>
+    <Callout title="Coming from the single-stack layout?">
+      <p>
+        Keycloak used to run inside <code>docker/compose.yaml</code> on an embedded H2
+        database, in the <code>pspad_keycloak-data</code> volume. The new Keycloak stack
+        starts fresh from the bundled realm and doesn't read that volume. Its accounts are
+        not carried over, and the volume can be removed once you no longer need it.
       </p>
     </Callout>
     <Callout kind="warning" title="The old keyfile is in the git history">

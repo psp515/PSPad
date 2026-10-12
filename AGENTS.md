@@ -55,9 +55,11 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 11 | Per-user views live in Presentation | 0051 |
 | 12 | Lists shared by membership | 0054, 0057 |
 | 13 | Public snapshots, server-only module | 0056 |
+| 14 | Two compose stacks (PSPad, Keycloak on Postgres) on network `psplace`; each backs itself up nightly; a restore rotates the dataset id | 0061, 0062 |
 
 Stack: .NET 10, MongoDB 8 replica set `rs0`, Blazor WASM PWA + MudBlazor,
-IndexedDB replica and outbox, Keycloak OIDC/JWT, Docker Compose, no messaging bus.
+IndexedDB replica and outbox, Keycloak OIDC/JWT on Postgres, two Docker
+Compose stacks, no messaging bus.
 
 ## 5. Layout
 

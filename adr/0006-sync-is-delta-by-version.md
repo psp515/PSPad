@@ -2,7 +2,7 @@
 title: Sync pulls deltas by a monotonic version marker, never a clock
 tags: [architecture, offline, sync]
 date: 2026-09-11
-status: Active
+status: Active (amended by ADR-0062: a dataset id forces a pull from zero after a restore)
 ---
 
 # ADR-0006: Sync pulls deltas by a monotonic version marker, never a clock

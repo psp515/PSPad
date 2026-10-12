@@ -1,5 +1,7 @@
 # Daily Backups and Two Compose Stacks — Implementation Plan
 
+> **Status:** implemented on `feature/backup`. Deviations from this plan are recorded in `specs/backup-design.md` (directory-mode Mongo dump without `admin`/`config`, `rclone serve s3` instead of MinIO, scripts under `docker/backup/lib/`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task by task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close #120. The repository runs two compose stacks joined by the

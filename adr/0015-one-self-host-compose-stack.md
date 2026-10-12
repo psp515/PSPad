@@ -2,7 +2,7 @@
 title: One .env-driven self-host compose stack
 tags: [deployment, security, identity]
 date: 2026-09-14
-status: Active (realm and client naming amended by ADR-0026)
+status: Active (realm and client naming amended by ADR-0026; split into two stacks with Keycloak on Postgres by ADR-0061)
 ---
 
 # ADR-0015: One `.env`-driven self-host compose stack
