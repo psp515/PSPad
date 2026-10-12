@@ -71,10 +71,12 @@ public class AccountEndpointTests(MongoFixture fixture)
         var client = factory.ClientFor(Guid.NewGuid().ToString());
         var userId = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
         var list = Guid.NewGuid();
-        var reorder = new ReorderLists(Guid.NewGuid(), userId, Guid.NewGuid(), [list], list, 0);
+        var area = new CreateArea(Guid.NewGuid(), userId, Guid.NewGuid(), "Dom", 0);
+        var reorder = new ReorderLists(Guid.NewGuid(), userId, area.AreaId, [list], list, 0);
 
         await client.PostAsJsonAsync("/api/commands", new[]
         {
+            new CommandEnvelope(nameof(CreateArea), JsonSerializer.SerializeToElement(area)),
             new CommandEnvelope(nameof(ReorderLists), JsonSerializer.SerializeToElement(reorder))
         }, ct);
 

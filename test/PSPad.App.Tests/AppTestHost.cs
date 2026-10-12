@@ -14,6 +14,7 @@ using PSPad.App.State.Viewport;
 using PSPad.App.Statistics;
 using PSPad.App.Theme;
 using PSPad.App.Updates;
+using PSPad.Module.Presentation;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Presentation.ListViews;
 using PSPad.Module.Tasks.Areas;
@@ -49,6 +50,7 @@ public static class AppTestHost
         context.Services.AddSingleton(work);
         context.Services.AddSingleton<IUnitOfWork>(work);
         context.Services.AddSingleton<IClock>(new FixedClock(today));
+        context.Services.AddScoped<IViewTargets, StoreViewTargets>();
         context.Services.AddSingleton<IDocumentStore<Area>>(new ReplicaDocumentStore<Area>(replica));
         context.Services.AddSingleton<IDocumentStore<TaskList>>(new ReplicaDocumentStore<TaskList>(replica));
         context.Services.AddSingleton<IDocumentStore<TodoTask>>(new ReplicaDocumentStore<TodoTask>(replica));

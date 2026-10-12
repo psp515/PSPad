@@ -17,6 +17,7 @@ using PSPad.App.Statistics;
 using PSPad.App.Sync;
 using PSPad.App.Theme;
 using PSPad.App.Updates;
+using PSPad.Module.Presentation;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -62,6 +63,7 @@ builder.Services.AddScoped<LocalAccountDeletion>();
 builder.Services.AddScoped<IReplica, IndexedDbReplica>();
 builder.Services.AddScoped<IOutbox, IndexedDbOutbox>();
 builder.Services.AddScoped(typeof(IDocumentStore<>), typeof(ReplicaDocumentStore<>));
+builder.Services.AddScoped<IViewTargets, StoreViewTargets>();
 builder.Services.AddScoped<ReplicaUnitOfWork>();
 builder.Services.AddScoped<IUnitOfWork>(services => services.GetRequiredService<ReplicaUnitOfWork>());
 builder.Services.AddSingleton<IClock, BrowserClock>();

@@ -46,8 +46,18 @@ missing view, or one naming a deleted or unknown area, falls back to
 "Shared with me" the same way a missing `AreaView` falls back to creation
 order. Collections `areaviews`, `listviews`.
 
+**Access.** View ids are derived from `(user, key)`, so a view must never be
+saved for a key the user cannot see, or a crafted key could land on another
+user's view id (#130). `PlaceList` requires the list to be owned by or shared
+with the user and its `AreaId`, when set, to be the user's; `ReorderLists`
+requires the area to be the user's. Handlers ask through the `IViewTargets`
+port; the server and the client each implement it over their own document
+stores with Tasks' `ListAccess.To` and `Area.Require`.
+
 **Must not.** Reference any module — commands carry what the view needs
-(e.g. the displayed order), so the module never reads a Tasks aggregate.
+(e.g. the displayed order), so the module never reads a Tasks aggregate; the
+one question it asks of Tasks, whether the user may see a list or area, goes
+through `IViewTargets`.
 Hold domain facts: deleting a view must never lose data, only a preference.
 Require a view to exist — every screen works with none, falling back to
 creation order.

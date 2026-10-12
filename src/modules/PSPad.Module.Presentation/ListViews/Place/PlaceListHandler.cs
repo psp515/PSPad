@@ -2,7 +2,8 @@ using PSPad.Abstractions;
 
 namespace PSPad.Module.Presentation.ListViews;
 
-public sealed class PlaceListHandler(IDocumentStore<ListView> store, IUnitOfWork work, IClock clock)
+public sealed class PlaceListHandler(
+    IDocumentStore<ListView> store, IViewTargets targets, IUnitOfWork work, IClock clock)
     : ICommandHandler<PlaceList>
 {
     public async Task<CommandResult> HandleAsync(PlaceList command, CancellationToken ct)
@@ -12,6 +13,12 @@ public sealed class PlaceListHandler(IDocumentStore<ListView> store, IUnitOfWork
         try
         {
             var events = ListView.Decide(existing, command, clock.UtcNow);
+            await targets.RequireListAsync(command.UserId, command.ListId, ct);
+            if (command.AreaId is { } areaId)
+            {
+                await targets.RequireAreaAsync(command.UserId, areaId, ct);
+            }
+
             var view = existing ?? new ListView();
             view.ApplyAll(events);
             work.Stage(view, events);
