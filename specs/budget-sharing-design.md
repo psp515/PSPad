@@ -251,8 +251,8 @@ control is disabled offline.
   `People` icon after the name; then **+ New budget**.
 - **Phone**: the Budgets tab lands on `/budgets`; nothing else changes.
 - **`/budgets`**: own cards first, then shared ones, in the same orders.
-  `BudgetCard` shows a `People` icon with a tooltip "Shared · N people" (owner
-  included) for an owner's shared budget, and a "Shared by {OwnerName}"
+  `BudgetCard` shows a tinted `People` chip with the head count (owner
+  included; tooltip "Shared · N people") for an owner's shared budget, and a "Shared by {OwnerName}"
   caption for a member. The subtitle counts both: "N budgets · M archived ·
   totals in PLN".
 - **Archived shared budget**: archived for everyone, under the existing
@@ -341,7 +341,8 @@ Every class tagged `[UnitTest]` or `[IntegrationTest]`.
 ## 8. Docs and records
 
 - **ADR-0064** — budgets are shared by membership; invite rules move to
-  Abstractions. Extends `adr/0054`, `adr/0057`, `adr/0059`, `adr/0063`.
+  Abstractions. Extends `adr/0054`, `adr/0057`, `adr/0059`, `adr/0063`. Mockups: the "PSPad Budget Sharing"
+design canvas (https://claude.ai/artifact/WZJqhSGw6eqrqHTg391UAg).
 - `AGENTS.md`: AD-12 covers budgets; §3 points here.
 - `specs/money-design.md` §9 points here; `specs/content-limits-design.md`
   gains `MembersPerBudget`.
