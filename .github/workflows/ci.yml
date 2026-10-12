@@ -145,14 +145,16 @@ jobs:
 
       - name: Build both backup images
         run: |
-          docker build --target mongo docker/backup \
+          docker build -f src/PSPad.Backup/Dockerfile --target mongo \
             -t pspad-backup-mongo:local \
             -t ghcr.io/psp515/pspad-backup-mongo:latest \
-            -t ghcr.io/psp515/pspad-backup-mongo:${{ github.sha }}
-          docker build --target keycloak docker/backup \
+            -t ghcr.io/psp515/pspad-backup-mongo:${{ github.sha }} \
+            .
+          docker build -f src/PSPad.Backup/Dockerfile --target keycloak \
             -t keycloak-backup:local \
             -t ghcr.io/psp515/keycloak-backup:latest \
-            -t ghcr.io/psp515/keycloak-backup:${{ github.sha }}
+            -t ghcr.io/psp515/keycloak-backup:${{ github.sha }} \
+            .
 
       - name: Configuration, dump, upload and restore checks
         run: docker/backup/test/run.sh pspad-backup-mongo:local keycloak-backup:local

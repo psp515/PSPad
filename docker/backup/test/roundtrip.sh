@@ -66,8 +66,8 @@ step "start both stacks and an S3 server"
 kc up -d --no-build
 ps up -d --no-build mongo mongo-backup
 docker volume create roundtrip-s3 >/dev/null
-docker run -d --name roundtrip-s3 --network psplace --user 0 -v roundtrip-s3:/data --entrypoint rclone \
-  pspad-backup-mongo:local serve s3 /data --addr :8333 --auth-key roundtripaccess,roundtripsecretkey1234 >/dev/null
+docker run -d --name roundtrip-s3 --network psplace --user 0 -v roundtrip-s3:/data \
+  "${S3_IMAGE:-rclone/rclone:1.75.1}" serve s3 /data --addr :8333 --auth-key roundtripaccess,roundtripsecretkey1234 >/dev/null
 docker network connect pspad_pspad roundtrip-s3
 docker network connect keycloak_keycloak roundtrip-s3
 docker exec roundtrip-s3 mkdir -p /data/backups

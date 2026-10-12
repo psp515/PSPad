@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>backup</AssemblyName>
+    <RootNamespace>PSPad.Backup</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PSPad.Backup.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\shared\PSPad.Infrastructure\PSPad.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" Version="4.0.104.3" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="1.77.0.4276" />
+  </ItemGroup>
+
+</Project>

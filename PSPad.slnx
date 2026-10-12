@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/PSPad.Api/PSPad.Api.csproj" />
     <Project Path="src/PSPad.App/PSPad.App.csproj" />
+    <Project Path="src/PSPad.Backup/PSPad.Backup.csproj" />
   </Folder>
   <Folder Name="/src/shared/">
     <Project Path="src/shared/PSPad.Abstractions/PSPad.Abstractions.csproj" />
@@ -24,5 +25,6 @@
     <Project Path="test/PSPad.Module.Sharing.Tests/PSPad.Module.Sharing.Tests.csproj" />
     <Project Path="test/PSPad.Api.Tests/PSPad.Api.Tests.csproj" />
     <Project Path="test/PSPad.App.Tests/PSPad.App.Tests.csproj" />
+    <Project Path="test/PSPad.Backup.Tests/PSPad.Backup.Tests.csproj" />
   </Folder>
 </Solution>

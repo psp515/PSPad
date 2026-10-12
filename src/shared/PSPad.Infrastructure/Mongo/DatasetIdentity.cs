@@ -20,6 +20,9 @@ public sealed class DatasetIdentity(MongoContext context)
         }
     }
 
+    public Task ForgetAsync(CancellationToken ct) =>
+        context.Collection<BsonDocument>("meta").DeleteOneAsync(Builders<BsonDocument>.Filter.Eq("_id", Key), ct);
+
     async Task<Guid> ReadOrCreateAsync(CancellationToken ct)
     {
         var stored = await context.Collection<BsonDocument>("meta").FindOneAndUpdateAsync(

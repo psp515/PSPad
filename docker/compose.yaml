@@ -59,7 +59,8 @@ services:
 
   mongo-backup:
     build:
-      context: ./backup
+      context: ..
+      dockerfile: src/PSPad.Backup/Dockerfile
       target: mongo
     image: pspad-backup-mongo:local
     profiles: [backup]
@@ -78,8 +79,8 @@ services:
       BACKUP_S3_PREFIX: ${BACKUP_S3_PREFIX:-}
       BACKUP_S3_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:-}
       BACKUP_S3_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:-}
-      BACKUP_GDRIVE_TOKEN: ${BACKUP_GDRIVE_TOKEN:-}
-      BACKUP_GDRIVE_FOLDER_ID: ${BACKUP_GDRIVE_FOLDER_ID:-}
+      BACKUP_GDRIVE_REFRESH_TOKEN: ${BACKUP_GDRIVE_REFRESH_TOKEN:-}
+      BACKUP_GDRIVE_FOLDER: ${BACKUP_GDRIVE_FOLDER:-pspad-backups}
       BACKUP_GDRIVE_CLIENT_ID: ${BACKUP_GDRIVE_CLIENT_ID:-}
       BACKUP_GDRIVE_CLIENT_SECRET: ${BACKUP_GDRIVE_CLIENT_SECRET:-}
       BACKUP_REMOTE_PRUNE: ${BACKUP_REMOTE_PRUNE:-true}

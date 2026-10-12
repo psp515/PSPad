@@ -4,6 +4,7 @@ set -euo pipefail
 usage="usage: run.sh <mongo-backup-image> <keycloak-backup-image>"
 mongo_image=${1:?$usage}
 keycloak_image=${2:?$usage}
+s3_image=${S3_IMAGE:-rclone/rclone:1.75.1}
 run_id=backup-test-$$
 network=$run_id
 passed=0
@@ -65,15 +66,17 @@ for image in "$mongo_image" "$keycloak_image"; do
   expect_failure "$image: a remote without a recipient is refused" "BACKUP_AGE_RECIPIENT" \
     "${env[@]}" -e BACKUP_S3_BUCKET=b "$image" check
   expect_failure "$image: Google Drive without a recipient is refused" "BACKUP_AGE_RECIPIENT" \
-    "${env[@]}" -e BACKUP_GDRIVE_TOKEN='{}' "$image" check
+    "${env[@]}" -e BACKUP_GDRIVE_REFRESH_TOKEN=token -e BACKUP_GDRIVE_CLIENT_ID=id -e BACKUP_GDRIVE_CLIENT_SECRET=secret "$image" check
+  expect_failure "$image: Google Drive without its OAuth client is refused" "BACKUP_GDRIVE_CLIENT_ID" \
+    "${env[@]}" -e BACKUP_GDRIVE_REFRESH_TOKEN=token "$image" check
   expect_failure "$image: a recipient that is not an age key is refused" "not an age recipient" \
     "${env[@]}" -e BACKUP_S3_BUCKET=b -e BACKUP_AGE_RECIPIENT=ssh-rsa "$image" check
   expect_failure "$image: an impossible run time is refused" "BACKUP_AT" \
     "${env[@]}" -e BACKUP_AT=25:00 "$image" check
   expect_failure "$image: a non-numeric retention is refused" "BACKUP_KEEP_DAYS" \
     "${env[@]}" -e BACKUP_KEEP_DAYS=two "$image" check
-  expect_success "$image: a local-only setup renders the daily schedule" "17 3 * * *" \
-    "${env[@]}" -e BACKUP_AT=03:17 "$image" check
+  expect_success "$image: a local-only setup reports the daily schedule" "daily at 03:17 Europe/Warsaw" \
+    "${env[@]}" -e BACKUP_AT=03:17 -e BACKUP_TZ=Europe/Warsaw "$image" check
 done
 expect_failure "mongo: a missing connection string is refused" "BACKUP_MONGO_URI" "$mongo_image" check
 expect_failure "keycloak: a missing connection string is refused" "BACKUP_PG_URI" "$keycloak_image" check
@@ -84,7 +87,7 @@ docker run -d --label "$run_id" --network "$network" --name mongo --network-alia
 docker run -d --label "$run_id" --network "$network" --name postgres --network-alias postgres \
   -e POSTGRES_DB=keycloak -e POSTGRES_USER=keycloak -e POSTGRES_PASSWORD=secret postgres:17 >/dev/null
 docker run -d --label "$run_id" --network "$network" --name s3 --network-alias s3 --user 0 \
-  -v "$run_id-s3:/data" --entrypoint rclone "$mongo_image" \
+  -v "$run_id-s3:/data" "$s3_image" \
   serve s3 /data --addr :8333 --auth-key ciaccesskey,cisecretaccesskey1234 >/dev/null
 
 for _ in $(seq 1 60); do
@@ -155,10 +158,11 @@ expect_failure "keycloak: a database that is not Postgres is refused" "is not a 
   --network "$network" -e BACKUP_PG_URI=postgresql://keycloak:secret@mongo:27017/keycloak "$keycloak_image" now
 
 echo "# health"
-expect_success "a fresh container is healthy before its first run" "healthy" "${mongo_env[@]}" --entrypoint sh "$mongo_image" \
-  -c 'backup start-clock && backup healthcheck && echo healthy'
+expect_failure "a container that never scheduled anything is unhealthy" "no successful backup" "$mongo_image" healthcheck
+expect_success "a scheduling container is healthy before its first run" "healthy" "${mongo_env[@]}" --entrypoint sh "$mongo_image" \
+  -c '(backup run &) ; sleep 3; backup healthcheck && echo healthy'
 expect_failure "a container whose last success is stale is unhealthy" "no successful backup" "${mongo_env[@]}" --entrypoint sh "$mongo_image" \
-  -c 'touch -d "2 days ago" /tmp/.backup-started /backups/.last-success && backup healthcheck'
+  -c 'echo 2020-01-01T00:00:00Z > /tmp/.backup-started && echo 2020-01-01T00:00:00Z > /backups/.last-success && backup healthcheck'
 
 rm -f "$identity_file"
 echo "passed $passed, failed $failed"

@@ -1,5 +1,3 @@
-using MongoDB.Bson;
-using MongoDB.Driver;
 using PSPad.Infrastructure.Mongo;
 using PSPad.TestInfrastructure;
 
@@ -27,7 +25,7 @@ public class DatasetIdentityTests(MongoFixture fixture)
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         var context = Persistence.TestContext.For(fixture);
-        await ForgetAsync(context, ct);
+        await new DatasetIdentity(context).ForgetAsync(ct);
 
         var reads = await Task.WhenAll(Enumerable.Range(0, 10)
             .Select(_ => new DatasetIdentity(context).CurrentAsync(ct)));
@@ -43,12 +41,8 @@ public class DatasetIdentityTests(MongoFixture fixture)
         var identity = new DatasetIdentity(context);
         var before = await identity.CurrentAsync(ct);
 
-        await ForgetAsync(context, ct);
+        await identity.ForgetAsync(ct);
 
         Assert.NotEqual(before, await identity.CurrentAsync(ct));
     }
-
-    static Task ForgetAsync(MongoContext context, CancellationToken ct) =>
-        context.Collection<BsonDocument>("meta")
-            .DeleteOneAsync(Builders<BsonDocument>.Filter.Eq("_id", "dataset"), ct);
 }
