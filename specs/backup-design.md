@@ -33,8 +33,9 @@ In:
   network `psplace`.
 - `mongo-backup` in the PSPad stack and `keycloak-backup` in the Keycloak
   stack, both behind the `backup` profile.
-- One multi-stage `docker/backup/Dockerfile` with two targets, `mongo` and
-  `keycloak`, that share the same tools and scripts.
+- A .NET worker, `src/PSPad.Backup`, built by one multi-stage
+  `src/PSPad.Backup/Dockerfile` into two images: target `mongo` and target
+  `keycloak`.
 - One run per day at `BACKUP_AT` (in `BACKUP_TZ`) in each stack, plus
   `backup now` on demand.
 - Destinations, per stack: always a local directory; optionally an
@@ -53,7 +54,7 @@ Out:
 - Point-in-time recovery or oplog tailing. The recovery point is the last
   nightly run of each stack.
 - Backups started from the app UI, and per-user export or import.
-- Any rclone backend other than S3 and Google Drive.
+- Any destination other than S3-compatible storage and Google Drive.
 - Backing up `mongo-keyfile`. A logical dump restores into any instance.
 - Backing up Keycloak while it runs on H2. See §5.
 - Keycloak `start` mode, hostname and port hardening. That stays #138's
@@ -65,32 +66,42 @@ Out:
 ```
 docker/compose.yaml            api, app, mongo, mongo-backup[backup]   network psplace (external)
 docker/keycloak/compose.yaml   keycloak, keycloak-db, keycloak-backup[backup]   network psplace (owner)
-docker/backup/
-  Dockerfile        stage tools: rclone, age, supercronic (pinned, sha256 in checksums.txt)
-                    target mongo:    FROM mongo:8.3.11  + tools + curl + scripts
-                    target keycloak: FROM postgres:17.11 + tools + curl + scripts
-  backup            entrypoint: run | check | now | list | restore | healthcheck
-  lib/common.sh     validate, rclone config, package → encrypt → upload → prune → ping,
-                    health, list, fetch → verify → confirm → restore
-  lib/mongo.sh      validate_stack, dump, restore_data
-  lib/keycloak.sh   validate_stack, dump, restore_data
-  test/run.sh       configuration, dump, upload and restore checks against both images
-  test/roundtrip.sh both stacks through S3, wiped and restored
+src/PSPad.Backup/              the worker; assembly `backup`, references PSPad.Infrastructure only
+  BackupCli                    run | check | now | list | restore | healthcheck | gdrive-login
+  Configuration/               BackupSettings.Read(env): every BACKUP_* variable, fail-fast rules
+  Scheduling/DailySchedule     next run in BACKUP_TZ; DST gaps run an hour later, repeats run once
+  Archives/                    BackupName, BackupArchive (SHA256SUMS + manifest.json + tar), RetentionPolicy
+  Runs/                        BackupRun, RestoreRun, TcpServiceProbe, ConsoleConfirmation
+  Databases/                   MongoDump (mongodump/mongorestore), PostgresDump (pg_dump/pg_restore)
+  Storage/                     LocalStore, S3Store (AWS SDK), DriveStore (Drive API v3)
+  Encryption/AgeEncryptor      the age binary
+  Health/                      HealthStamps, HttpPing
+  GoogleDrive/DriveDeviceLogin OAuth device flow for gdrive-login
+  Dockerfile                   build: self-contained single-file publish for TARGETARCH
+                               age:   age + age-keygen (pinned, sha256 in age.sha256)
+                               target mongo:    FROM mongo:8.3.11  + /opt/backup + age
+                               target keycloak: FROM postgres:17.11 + /opt/backup + age + CA bundle
+test/PSPad.Backup.Tests/       unit tests for all of the above, with fakes for stores, dumps and age
+docker/backup/test/
+  run.sh                       black-box checks against both images
+  roundtrip.sh                 both stacks through S3, wiped and restored
 ```
 
-Each target ships only its own `lib/<stack>.sh`, on a base image that
-already carries the matching client (`mongodump` in `mongo`, `pg_dump` in
-`postgres`). Everything else is `lib/common.sh`, so encryption, upload,
-retention and health behave the same in both stacks. The containers run as
-uid 10001 (`pspad-backup`).
+The worker owns everything except the dump itself and the cipher. Those are
+`mongodump`/`mongorestore`, `pg_dump`/`pg_restore` (already in each base
+image) and `age`, run as child processes. There's no .NET library that
+takes a consistent point-in-time dump of either database, nor a mature .NET
+age implementation. The binary is self-contained, so the base images need no
+.NET runtime. The containers run as uid 10001 (`pspad-backup`).
 
-Neither stack touches .NET code. The API only learns about restores through
-the dataset id (§7).
+The API only learns about restores through the dataset id (§7). The worker
+references `PSPad.Infrastructure` for `DatasetIdentity.ForgetAsync`, so the
+API and the restore share one definition of where that id lives.
 
-Every licence is GPL-3-compatible: rclone (MIT), age (BSD-3), supercronic
-(MIT), MongoDB Database Tools (Apache-2.0) and the PostgreSQL client
-(PostgreSQL licence). CI builds and publishes both images next to
-`pspad-api` and `pspad-app`.
+Every licence is GPL-3-compatible: AWS SDK for .NET and Google APIs .NET
+client (Apache-2.0), age (BSD-3), MongoDB Database Tools (Apache-2.0) and the
+PostgreSQL client (PostgreSQL licence). CI builds and publishes both images
+next to `pspad-api` and `pspad-app`.
 
 ### Reaching the database
 
@@ -128,16 +139,18 @@ URI instead.
      restore needs anyway.
 2. **Package.** The files, a `SHA256SUMS` and a `manifest.json` (stack,
    name, run time in UTC, and the size and sha256 of each file) go into
-   `<stack>-<yyyy-MM-ddTHHmmssZ>.tar`. A lock refuses a second run while
-   one is in progress.
+   `<stack>-<yyyy-MM-ddTHHmmssZ>.tar`.
 3. **Local.** The tarball goes to `/backups` (the stack's own volume, or a
    bind mount set with `BACKUP_LOCAL_DIR`) unencrypted, so a restore on the
    same host needs no key. The directory is `0700`.
 4. **Off-host.** When a remote is configured, the tarball is encrypted once
-   with `age -r "$BACKUP_AGE_RECIPIENT"` and uploaded with `rclone copyto`.
-   Remote paths are prefixed with the stack name, so both stacks can share
-   one bucket.
-5. **Prune.** Files older than `BACKUP_KEEP_DAYS` days are deleted, per
+   with `age -r "$BACKUP_AGE_RECIPIENT"` and uploaded to each remote. On
+   S3 it goes under `<prefix>/<stack>/`; on Drive, into
+   `<BACKUP_GDRIVE_FOLDER>/<stack>/`. Both stacks can share one bucket or
+   folder. The AWS SDK computes checksums only when required, so
+   S3-compatible stores without trailing checksums work.
+5. **Prune.** Retention reads the time in the file name, not the store's
+   modification time. Files older than `BACKUP_KEEP_DAYS` days are deleted, per
    destination. Nothing is pruned on a day whose run failed.
 6. **Report.** Each step logs one line. On success it writes
    `/backups/.last-success` and calls `BACKUP_PING_URL` (with `/fail`
@@ -161,7 +174,7 @@ connection settings.
 | `BACKUP_AGE_IDENTITY_FILE` | — | both | Host path of the age private key, mounted read-only at `/run/secrets/age-identity`; only for restoring from a remote |
 | `BACKUP_S3_ENDPOINT`, `_REGION`, `_BUCKET`, `_PREFIX`, `_ACCESS_KEY_ID`, `_SECRET_ACCESS_KEY` | — | both | S3-compatible remote (AWS, B2, R2, MinIO); enabled when `_BUCKET` is set |
 | `BACKUP_REMOTE_PRUNE` | `true` | both | `false` for write-only keys; retention moves to a bucket lifecycle rule |
-| `BACKUP_GDRIVE_TOKEN`, `_FOLDER_ID`, `_CLIENT_ID`, `_CLIENT_SECRET` | — | both | Google Drive remote; enabled when `_TOKEN` is set |
+| `BACKUP_GDRIVE_CLIENT_ID`, `_CLIENT_SECRET`, `_REFRESH_TOKEN`, `_FOLDER` | —, —, —, `pspad-backups` | both | Google Drive remote; enabled when `_REFRESH_TOKEN` is set, which then requires the client |
 | `BACKUP_PING_URL` | — | both | Called on success, with `/fail` appended on failure |
 | `BACKUP_MONGO_URI` | `mongodb://pspad:${MONGO_PASSWORD}@mongo:27017/?authSource=admin&directConnection=true` | mongo | Whole instance, not one database (for `--oplog`) |
 | `BACKUP_MONGO_DATABASE` | `${MONGO_DATABASE}` | mongo | The database a restore empties and confirms by name |
@@ -181,14 +194,16 @@ recommend one key pair, kept off the server, for simplicity.
 - for keycloak, at dump or restore time: the target doesn't answer as
   Postgres within 10 s (§5).
 
-**Google Drive.** It uses the `drive.file` scope. The token comes from
-`rclone authorize "drive"` on any machine with a browser. Two pitfalls are
-documented:
+**Google Drive.** It uses the `drive.file` scope, so the worker sees only
+files it created. That is why it creates its own folder rather than taking
+a folder id: a folder the user made is invisible to it. The refresh token
+comes from `gdrive-login`, an OAuth device flow. It prints a URL and a
+code, polls until the user approves on any device, then prints
+`BACKUP_GDRIVE_REFRESH_TOKEN=…`. Two pitfalls are documented:
 
-- Service accounts have no My Drive quota; they need a Workspace shared
-  drive.
-- An own OAuth client left in *Testing* issues refresh tokens that expire
-  after 7 days.
+- The OAuth client must be of type *TVs and Limited Input devices*. Google
+  allows `drive.file` for that type.
+- A client left in *Testing* issues refresh tokens that expire after 7 days.
 
 ## 5. Keycloak on Postgres
 
@@ -295,13 +310,27 @@ against `keycloak:8080` and runs
   - An equal id changes nothing.
 - **Integration** (`[IntegrationTest]`, `test/PSPad.Api.Tests`):
   - `GET /api/sync` returns a stable `datasetId`.
-  - Deleting `meta.dataset` yields a new one.
+  - Concurrent first reads agree on one id.
+  - `ForgetAsync` makes the next read mint a new one.
+- **Worker unit tests** (`[UnitTest]`, `test/PSPad.Backup.Tests`):
+  - settings and every fail-fast rule;
+  - the schedule, including DST gaps and repeats;
+  - backup names, and retention by name;
+  - pack and verify, including a tampered file;
+  - health stamps;
+  - `BackupRun`: plain local copy and ciphertext-only uploads; a failed
+    upload still tries the other remote, fails the run and prunes nothing;
+    pruning; a failed dump;
+  - `RestoreRun`: latest, named, from a remote with the identity, the probe
+    refusal, a missing identity, an unknown source, no backups, a declined
+    confirmation;
+  - the Drive device login: pending → approved, denied, wrong client type.
 - **Image checks** (`docker/backup/test/run.sh`, CI job `backup-images`).
   Against both images, the script checks:
   - every fail-fast rule in §4;
   - the rendered schedule;
-  - a Mongo run with an S3 upload (`rclone serve s3` stands in for the
-    bucket): the local copy, the success stamp, pruning that leaves other
+  - a Mongo run with an S3 upload (`rclone serve s3`, from the
+    `rclone/rclone` image, stands in for the bucket): the local copy, the success stamp, pruning that leaves other
     stacks' files alone, the remote copy under `<prefix>/<stack>/` as age
     ciphertext;
   - restore refusing while the probe target listens, restore from S3, and

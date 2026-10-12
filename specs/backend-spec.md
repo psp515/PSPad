@@ -24,6 +24,7 @@ src/
                                command adapters, namespaced `PSPad.Api.Snapshots`
                                — not `.Sharing`, to avoid clashing with a test helper)
   PSPad.App/                   Blazor WASM PWA, MudBlazor, IndexedDB replica + outbox, Dockerfile (nginx)
+  PSPad.Backup/                nightly backup worker, one image per stack (specs/backup-design.md), Dockerfile
   shared/
     PSPad.Abstractions/        ICommandHandler<T>, IDocumentStore<T>, IUnitOfWork, IClock, Aggregate
     PSPad.Contracts/            wire shapes: command envelope, sync DTOs, statistics DTOs
@@ -42,6 +43,7 @@ test/
   PSPad.Module.Sharing.Tests/     unit only
   PSPad.Api.Tests/                integration, Testcontainers MongoDB
   PSPad.App.Tests/                unit + bUnit
+  PSPad.Backup.Tests/             unit only
   PSPad.TestInfrastructure/       Mongo fixture, category attributes, architecture guards
 docker/                         compose files, Keycloak realm, nginx config
 ```
@@ -60,6 +62,7 @@ References run one way only:
 | `PSPad.Infrastructure` | `PSPad.Abstractions`, `PSPad.Contracts` — never a module |
 | `PSPad.Api` | everything |
 | `PSPad.App` | `PSPad.Module.Tasks`, `PSPad.Module.Presentation`, `PSPad.Abstractions`, `PSPad.Contracts` — never `PSPad.Infrastructure` |
+| `PSPad.Backup` | `PSPad.Infrastructure` (for `DatasetIdentity`) — never a module |
 
 `PSPad.Infrastructure` stores documents generically by `T`, so it never
 needs to know a module exists. `PSPad.App` references `PSPad.Module.Tasks`
@@ -775,7 +778,7 @@ development and self-hosting (`adr/0061`):
   and reaches Keycloak as `http://keycloak:8080`.
 
 Each stack has a backup service behind the `backup` profile, `mongo-backup`
-and `keycloak-backup`, built from `docker/backup/` (`specs/backup-design.md`).
+and `keycloak-backup`: the .NET worker `src/PSPad.Backup` (`specs/backup-design.md`).
 Integration tests never touch either stack; they start their own MongoDB via
 Testcontainers. Production runs the same images behind a reverse proxy that
 terminates TLS, with Keycloak deployed from its own repository.

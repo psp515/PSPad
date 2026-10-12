@@ -1,6 +1,6 @@
 # Daily Backups and Two Compose Stacks — Implementation Plan
 
-> **Status:** implemented on `feature/backup`. Deviations from this plan are recorded in `specs/backup-design.md` (directory-mode Mongo dump without `admin`/`config`, `rclone serve s3` instead of MinIO, scripts under `docker/backup/lib/`).
+> **Status:** implemented on `feature/backup`. The shell scripts this plan describes were later replaced, at the maintainer's request, by the .NET worker `src/PSPad.Backup`; `specs/backup-design.md` and ADR-0061 describe what shipped.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task by task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

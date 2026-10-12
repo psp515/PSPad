@@ -47,10 +47,17 @@ Each stack gets its own backup service behind a `backup` profile:
 - `mongo-backup` runs `mongodump --oplog` against PSPad's MongoDB.
 - `keycloak-backup` runs `pg_dump` against Keycloak's Postgres.
 
-Both are targets of one `docker/backup/Dockerfile` and share its packaging,
-age encryption, rclone upload to an optional S3-compatible bucket and
-optional Google Drive, retention, the healthcheck and the ping. Each
-service:
+Both run one .NET worker, `src/PSPad.Backup`, a self-contained binary
+built into two images from one Dockerfile: on `mongo:8.3.11` and on
+`postgres:17.11`, the images that already carry the dump tools. The worker
+owns:
+- the schedule, packaging and checksums;
+- the upload to an optional S3-compatible bucket (AWS SDK) and to optional
+  Google Drive (Drive API, with a device-code sign-in);
+- retention, the healthcheck, the ping and the restore.
+
+It runs `mongodump`/`mongorestore`, `pg_dump`/`pg_restore` and `age` as
+child processes. Each service:
 
 - reaches its database by service name inside its own stack, or through
   a URI;
@@ -77,8 +84,19 @@ Only the Mongo restore rotates the dataset id (ADR-0062).
 - **A hosted service in `PSPad.Api` exporting collections through the
   driver.** Rejected:
   - It reimplements `mongodump` without a point-in-time view.
-  - It puts remote credentials inside the API.
-  - It can't reach Keycloak at all.
+  - It puts remote credentials and dump load inside the API.
+  - It can't reach Keycloak's Postgres in the other stack.
+- **Shell scripts around rclone and supercronic.** Built first, then
+  replaced. They worked, but they sat outside the codebase's language,
+  conventions and test suite. The rules a restore depends on — retention
+  order, never pruning after a failed upload, the probe, checksum
+  verification — could only be tested by running containers. In C# they
+  are unit-tested like the rest of PSPad, and the image checks shrink to a
+  black-box smoke test.
+- **Doing the dump and the encryption in .NET too.** Rejected: no .NET
+  library takes a consistent point-in-time dump of MongoDB or Postgres, and
+  the .NET age implementations are immature. The worker calls the tools the
+  base images already ship.
 - **A host crontab and a documented script.** Rejected: nothing would run,
   report on or test it. The manual one-liner stays as the fallback.
 - **Plaintext uploads with bucket-side encryption.** Rejected: the bucket's
@@ -110,4 +128,8 @@ Only the Mongo restore rotates the dataset id (ADR-0062).
   lost.
 - Losing the age private key makes off-host copies unreadable. The local
   copy is still usable.
-- Two images and one base to build, pin and keep patched.
+- One Dockerfile and two images to build, pin and keep patched, plus a
+  sixth deployable in the solution. Its only project reference is
+  `PSPad.Infrastructure`, for `DatasetIdentity`.
+- Google Drive needs the self-hoster's own OAuth client of type
+  *TVs and Limited Input devices*. rclone's shared client can't be borrowed.

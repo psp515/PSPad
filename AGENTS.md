@@ -64,14 +64,15 @@ Compose stacks, no messaging bus.
 ## 5. Layout
 
 ```
-src/PSPad.Api  src/PSPad.App  src/shared/{Abstractions,Contracts,Infrastructure}
+src/PSPad.Api  src/PSPad.App  src/PSPad.Backup  src/shared/{Abstractions,Contracts,Infrastructure}
 src/modules/PSPad.Module.{Tasks,Statistics,Identity,Presentation,Sharing}
 test/  brand/  docs/  specs/  adr/  docker/  .superpowers/sdd/ (uncommitted plans)
 ```
 
 References run one way: `Tasks` sees `Abstractions` only; `Infrastructure` sees no
-module; `App` never sees `Infrastructure`; `Api` sees all. Only module edges:
-`Statistics`→`Tasks`, `Sharing`→`Tasks`. Detail: `specs/backend-spec.md` §1.
+module; `App` never sees `Infrastructure`; `Backup` sees `Infrastructure` and no
+module; `Api` sees all. Only module edges: `Statistics`→`Tasks`, `Sharing`→`Tasks`.
+Detail: `specs/backend-spec.md` §1.
 
 ## 6. Rules for agents
 

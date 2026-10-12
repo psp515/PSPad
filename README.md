@@ -102,7 +102,7 @@ Each deployable carries its own `Dockerfile` next to its `.csproj`
 context. Two stacks joined by the `psplace` network serve both development
 and self-hosting: `docker/keycloak/compose.yaml` (Keycloak on Postgres,
 started first) and `docker/compose.yaml` (API, client, MongoDB). Each carries
-a nightly backup service behind the `backup` profile (`docker/backup/`,
+a nightly backup service behind the `backup` profile (`src/PSPad.Backup`,
 `specs/backup-design.md`). Self-hosting is documented in full on the
 [install page](https://psp515.com/pspad/install/).
 

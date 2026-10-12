@@ -215,7 +215,8 @@ docker compose -f docker/compose.yaml up -d --force-recreate</code></pre>
     <p>
       Each stack has a backup service behind the <code>backup</code> profile:
       <code>mongo-backup</code> beside MongoDB, and <code>keycloak-backup</code> beside
-      Keycloak's Postgres. Start them with their stacks:
+      Keycloak's Postgres. Both are the same small .NET worker, built from
+      <code>src/PSPad.Backup</code>. Start them with their stacks:
     </p>
     <pre><code>docker compose -f docker/keycloak/compose.yaml --profile backup up -d
 docker compose -f docker/compose.yaml --profile backup up -d --build</code></pre>
@@ -269,13 +270,29 @@ docker compose -f docker/compose.yaml run --rm mongo-backup list</code></pre>
         bucket lifecycle rule handle retention.
       </li>
       <li>
-        <strong>Google Drive</strong>: on any machine with a browser, run
-        <code>rclone authorize "drive"</code> and paste the JSON it prints into
-        <code>BACKUP_GDRIVE_TOKEN</code>. Uploads use the <code>drive.file</code> scope,
-        so the service only sees files it created itself. A Google service account won't
-        work with a personal Drive, because it has no storage quota. If you use your own
-        OAuth client, publish it: one left in <em>Testing</em> issues tokens that expire
-        after 7 days.
+        <strong>Google Drive</strong>: Drive uploads need your own Google OAuth client.
+        <ol>
+          <li>
+            In the Google Cloud console, create a project, enable the <em>Google Drive
+            API</em>, and create an OAuth client of type <em>TVs and Limited Input
+            devices</em>.
+          </li>
+          <li>
+            Put its id and secret into <code>BACKUP_GDRIVE_CLIENT_ID</code> and
+            <code>BACKUP_GDRIVE_CLIENT_SECRET</code>.
+          </li>
+          <li>
+            Sign in once:
+            <pre><code>docker compose -f docker/compose.yaml run --rm mongo-backup gdrive-login</code></pre>
+            It prints a URL and a code. Open the URL on any device, enter the code, and
+            approve. It then prints <code>BACKUP_GDRIVE_REFRESH_TOKEN=…</code>. Copy that line
+            into both <code>.env</code> files.
+          </li>
+        </ol>
+        The backups only get the <code>drive.file</code> scope. They can only see files
+        they created themselves: a <code>pspad-backups</code> folder in your My Drive, with
+        one subfolder per stack. Publish the client's consent screen: a client left in
+        <em>Testing</em> issues tokens that expire after 7 days.
       </li>
     </ul>
 
