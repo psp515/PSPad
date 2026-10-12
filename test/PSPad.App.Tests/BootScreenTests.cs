@@ -44,6 +44,14 @@ public class BootScreenTests
     }
 
     [Fact]
+    public void TheTeardownTargetsTheStaticSplashByIdSoItNeverRemovesABlazorOwnedBrandSplash()
+    {
+        Assert.Contains("<div id=\"pspad-boot\" class=\"pspad-boot\">", Markup);
+        Assert.Contains("document.getElementById('pspad-boot')", Markup);
+        Assert.DoesNotContain("querySelector('.pspad-boot')", Markup);
+    }
+
+    [Fact]
     public void ItDefinesTheSplashTeardownInlineSoNoModuleLoadCanFailBeforeIt()
     {
         Assert.Contains("window.pspadBoot", Markup);

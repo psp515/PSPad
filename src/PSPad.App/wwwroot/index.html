@@ -8,7 +8,7 @@
     <script>
         window.pspadBoot = {
             done: function () {
-                var splash = document.querySelector('.pspad-boot');
+                var splash = document.getElementById('pspad-boot');
                 if (splash) { splash.remove(); }
             }
         };
@@ -87,7 +87,7 @@
 <body>
     <div id="app"></div>
 
-    <div class="pspad-boot">
+    <div id="pspad-boot" class="pspad-boot">
         <svg class="pspad-boot-mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"
              role="img" aria-label="Loading PSPad">
             <rect width="512" height="512" rx="112" fill="#4E7A5E" />
