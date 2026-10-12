@@ -215,6 +215,10 @@ public class SyncRefreshTests : Bunit.TestContext
 
         public Task SetLastSyncedAtAsync(DateTimeOffset at) => inner.SetLastSyncedAtAsync(at);
 
+        public Task<Guid?> DatasetIdAsync() => inner.DatasetIdAsync();
+
+        public Task SetDatasetIdAsync(Guid datasetId) => inner.SetDatasetIdAsync(datasetId);
+
         public Task<Guid?> OwnerAsync() => inner.OwnerAsync();
 
         public Task SetOwnerAsync(Guid userId) => inner.SetOwnerAsync(userId);

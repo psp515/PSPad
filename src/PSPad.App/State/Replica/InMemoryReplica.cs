@@ -7,6 +7,7 @@ public sealed class InMemoryReplica : IReplica
     readonly Dictionary<Guid, Aggregate> _documents = [];
     long _marker;
     Guid? _owner;
+    Guid? _datasetId;
     string? _collectionsFingerprint;
     DateTimeOffset? _lastSyncedAt;
 
@@ -52,6 +53,14 @@ public sealed class InMemoryReplica : IReplica
         return Task.CompletedTask;
     }
 
+    public Task<Guid?> DatasetIdAsync() => Task.FromResult(_datasetId);
+
+    public Task SetDatasetIdAsync(Guid datasetId)
+    {
+        _datasetId = datasetId;
+        return Task.CompletedTask;
+    }
+
     public Task<Guid?> OwnerAsync() => Task.FromResult(_owner);
 
     public Task SetOwnerAsync(Guid userId)
@@ -65,6 +74,7 @@ public sealed class InMemoryReplica : IReplica
         _documents.Clear();
         _marker = 0;
         _owner = null;
+        _datasetId = null;
         _collectionsFingerprint = null;
         _lastSyncedAt = null;
         return Task.CompletedTask;

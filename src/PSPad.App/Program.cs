@@ -105,6 +105,7 @@ builder.Services.AddScoped<ISnapshotsApi>(sp => sp.GetRequiredService<PSPadApiCl
 builder.Services.AddScoped<IServerProbe, BrowserServerProbe>();
 builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();
 builder.Services.AddScoped<IAppUpdates, BrowserAppUpdates>();
+builder.Services.AddScoped<DatasetReset>();
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<SyncCoordinator>();
 builder.Services.AddScoped<ISyncTrigger>(sp => sp.GetRequiredService<SyncCoordinator>());

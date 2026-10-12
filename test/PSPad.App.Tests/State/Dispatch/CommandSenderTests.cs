@@ -186,6 +186,10 @@ public class CommandSenderTests
 
         public Task SetLastSyncedAtAsync(DateTimeOffset at) => _inner.SetLastSyncedAtAsync(at);
 
+        public Task<Guid?> DatasetIdAsync() => _inner.DatasetIdAsync();
+
+        public Task SetDatasetIdAsync(Guid datasetId) => _inner.SetDatasetIdAsync(datasetId);
+
         public Task<Guid?> OwnerAsync() => _inner.OwnerAsync();
 
         public Task SetOwnerAsync(Guid userId) => _inner.SetOwnerAsync(userId);

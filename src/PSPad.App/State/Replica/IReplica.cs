@@ -25,6 +25,10 @@ public interface IReplica
 
     Task SetLastSyncedAtAsync(DateTimeOffset at);
 
+    Task<Guid?> DatasetIdAsync();
+
+    Task SetDatasetIdAsync(Guid datasetId);
+
     Task<Guid?> OwnerAsync();
 
     Task SetOwnerAsync(Guid userId);

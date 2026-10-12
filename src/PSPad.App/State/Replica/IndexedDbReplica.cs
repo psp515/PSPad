@@ -73,6 +73,19 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
         await module.InvokeVoidAsync("setMeta", "lastSyncedAt", at.ToString("O", CultureInfo.InvariantCulture));
     }
 
+    public async Task<Guid?> DatasetIdAsync()
+    {
+        var module = await ModuleAsync();
+        var stored = await module.InvokeAsync<OwnerRow?>("getMeta", "datasetId");
+        return stored is null ? null : Guid.Parse(stored.Value);
+    }
+
+    public async Task SetDatasetIdAsync(Guid datasetId)
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("setMeta", "datasetId", datasetId.ToString());
+    }
+
     public async Task<Guid?> OwnerAsync()
     {
         var module = await ModuleAsync();

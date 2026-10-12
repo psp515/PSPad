@@ -25,7 +25,11 @@ public class SyncServiceTests
         public SyncResponse Pull { get; set; } =
             new(0, new Dictionary<string, JsonElement[]>(), []);
 
+        public Queue<SyncResponse> Pulls { get; } = [];
+
         public long? RequestedSince { get; private set; }
+
+        public List<long> RequestedSinces { get; } = [];
 
         public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes)
         {
@@ -36,7 +40,8 @@ public class SyncServiceTests
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full)
         {
             RequestedSince = since;
-            return Task.FromResult<SyncResponse?>(Pull);
+            RequestedSinces.Add(since);
+            return Task.FromResult<SyncResponse?>(Pulls.Count > 0 ? Pulls.Dequeue() : Pull);
         }
 
         public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
@@ -217,6 +222,83 @@ public class SyncServiceTests
 
         Assert.Equal(SyncService.CollectionsFingerprint, await replica.CollectionsFingerprintAsync());
     }
+
+    [Fact]
+    public async Task AFirstDatasetIdIsRecordedWithoutAReset()
+    {
+        var replica = new InMemoryReplica();
+        await replica.SetMarkerAsync(42);
+        await replica.SetCollectionsFingerprintAsync(SyncService.CollectionsFingerprint);
+        var dataset = Guid.NewGuid();
+        var api = new FakeApi { Pull = EmptyPull(50, dataset) };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Equal([42L], api.RequestedSinces);
+        Assert.Equal(dataset, await replica.DatasetIdAsync());
+        Assert.Equal(50, await replica.MarkerAsync());
+    }
+
+    [Fact]
+    public async Task ANewDatasetIdResetsTheReplicaAndPullsFromZero()
+    {
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(User);
+        await replica.SetMarkerAsync(40);
+        await replica.SetCollectionsFingerprintAsync(SyncService.CollectionsFingerprint);
+        await replica.SetDatasetIdAsync(Guid.NewGuid());
+        var stale = new Area();
+        stale.ApplyAll(Area.Decide(
+            null, new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), "Gone", 0), DateTimeOffset.UnixEpoch));
+        await replica.SaveAsync(stale);
+        var restored = Guid.NewGuid();
+        var api = new FakeApi();
+        api.Pulls.Enqueue(EmptyPull(40, restored));
+        api.Pulls.Enqueue(EmptyPull(12, restored));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Equal([40L, 0L], api.RequestedSinces);
+        Assert.Null(await replica.LoadAsync<Area>(stale.Id));
+        Assert.Equal(restored, await replica.DatasetIdAsync());
+        Assert.Equal(User, await replica.OwnerAsync());
+        Assert.Equal(12, await replica.MarkerAsync());
+    }
+
+    [Fact]
+    public async Task AnUnchangedDatasetIdChangesNothing()
+    {
+        var replica = new InMemoryReplica();
+        var dataset = Guid.NewGuid();
+        await replica.SetMarkerAsync(42);
+        await replica.SetCollectionsFingerprintAsync(SyncService.CollectionsFingerprint);
+        await replica.SetDatasetIdAsync(dataset);
+        var api = new FakeApi { Pull = EmptyPull(43, dataset) };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Equal([42L], api.RequestedSinces);
+        Assert.Equal(43, await replica.MarkerAsync());
+    }
+
+    [Fact]
+    public async Task AResponseWithoutADatasetIdChangesNothing()
+    {
+        var replica = new InMemoryReplica();
+        var dataset = Guid.NewGuid();
+        await replica.SetMarkerAsync(42);
+        await replica.SetCollectionsFingerprintAsync(SyncService.CollectionsFingerprint);
+        await replica.SetDatasetIdAsync(dataset);
+        var api = new FakeApi { Pull = EmptyPull(43, null) };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Equal([42L], api.RequestedSinces);
+        Assert.Equal(dataset, await replica.DatasetIdAsync());
+    }
+
+    static SyncResponse EmptyPull(long marker, Guid? dataset) =>
+        new(marker, new Dictionary<string, JsonElement[]>(), [], DatasetId: dataset);
 
     static SyncService ServiceFor(ISyncApi api, IOutbox outbox) =>
         new(api, new InMemoryReplica(), outbox);

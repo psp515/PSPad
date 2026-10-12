@@ -7,8 +7,10 @@ using PSPad.Contracts;
 
 namespace PSPad.App.Sync;
 
-public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
+public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox, DatasetReset? datasetReset = null)
 {
+    readonly DatasetReset _datasetReset = datasetReset ?? new DatasetReset(replica);
+
     const int BatchSize = 50;
 
     // "users" is deliberately absent: the client reads its own user from /api/me, and User
@@ -79,7 +81,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         // A client built before a collection existed skipped its rows silently while still
         // advancing its marker past them, so a stale fingerprint forces one full re-pull.
         var since = storedFingerprint == CollectionsFingerprint ? await replica.MarkerAsync() : 0;
-        var response = await api.SyncAsync(since, []);
+        var response = await ConfirmDatasetAsync(await api.SyncAsync(since, []));
 
         if (response is null)
         {
@@ -107,6 +109,32 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         await replica.SetMarkerAsync(response.Marker);
         await replica.SetCollectionsFingerprintAsync(CollectionsFingerprint);
         return pulled;
+    }
+
+    // A restored server rolled its seq back, so this replica's marker and documents describe a
+    // dataset that no longer exists: start over from zero, keeping the outbox.
+    async Task<SyncResponse?> ConfirmDatasetAsync(SyncResponse? response)
+    {
+        if (response?.DatasetId is not { } current)
+        {
+            return response;
+        }
+
+        var known = await replica.DatasetIdAsync();
+
+        if (known is null)
+        {
+            await replica.SetDatasetIdAsync(current);
+            return response;
+        }
+
+        if (known == current)
+        {
+            return response;
+        }
+
+        await _datasetReset.ResetAsync(current);
+        return await api.SyncAsync(0, []);
     }
 
     // A failing full pull must not stall the marker -- the missing list stays missing and the

@@ -129,6 +129,10 @@ public class LocalAccountDeletionTests
 
         public Task SetLastSyncedAtAsync(DateTimeOffset at) => Task.CompletedTask;
 
+        public Task<Guid?> DatasetIdAsync() => Task.FromResult<Guid?>(null);
+
+        public Task SetDatasetIdAsync(Guid datasetId) => Task.CompletedTask;
+
         public Task<Guid?> OwnerAsync() => Task.FromResult<Guid?>(null);
 
         public Task SetOwnerAsync(Guid userId) => Task.CompletedTask;
