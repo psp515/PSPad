@@ -1,3 +1,4 @@
+using System.Text.Json;
 using PSPad.App.Sync;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,6 +56,7 @@ public static class AppTestHost
         context.Services.AddSingleton<IDocumentStore<Inbox>>(new ReplicaDocumentStore<Inbox>(replica));
         context.Services.AddSingleton<IDocumentStore<Module.Money.Budgets.Budget>>(new ReplicaDocumentStore<Module.Money.Budgets.Budget>(replica));
         context.Services.AddSingleton<IDocumentStore<Module.Money.Preferences.MoneyPreferences>>(new ReplicaDocumentStore<Module.Money.Preferences.MoneyPreferences>(replica));
+        context.Services.AddSingleton<IDocumentStore<Module.Money.Entries.MoneyEntry>>(new ReplicaDocumentStore<Module.Money.Entries.MoneyEntry>(replica));
         context.Services.AddSingleton<IDocumentStore<ReferenceItem>>(new ReplicaDocumentStore<ReferenceItem>(replica));
         context.Services.AddSingleton<IDocumentStore<AreaView>>(new ReplicaDocumentStore<AreaView>(replica));
         context.Services.AddSingleton<IDocumentStore<ListView>>(new ReplicaDocumentStore<ListView>(replica));
@@ -88,8 +90,16 @@ public static class AppTestHost
         context.Services.AddSingleton<IConnectivity>(new AlwaysOnline());
         context.Services.AddSingleton<IAppUpdates>(new FakeAppUpdates());
         context.Services.AddSingleton<ISnapshotsApi>(new NoOpSnapshotsApi());
+        context.Services.AddSingleton<INbpRates>(new FakeNbpRates());
 
         return replica;
+    }
+
+    public static async Task<T> SentAsync<T>(Bunit.TestContext context)
+    {
+        var entry = Assert.Single(await context.Services.GetRequiredService<IOutbox>().PeekAsync(10));
+        Assert.Equal(typeof(T).Name, entry.Envelope.Type);
+        return entry.Envelope.Payload.Deserialize<T>(new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
     }
 
     sealed class AlwaysOnline : IConnectivity
@@ -101,6 +111,21 @@ public static class AppTestHost
 
         public event Action? Changed;
 #pragma warning restore CS0067
+    }
+
+    public sealed class FakeNbpRates : INbpRates
+    {
+        public NbpRateView? Next { get; set; }
+
+        public TaskCompletionSource<NbpRateView?>? Gate { get; set; }
+
+        public List<(string Currency, DateOnly Date)> Asked { get; } = [];
+
+        public Task<NbpRateView?> RateAsync(string currency, DateOnly date)
+        {
+            Asked.Add((currency, date));
+            return Gate?.Task ?? Task.FromResult(Next);
+        }
     }
 
     public sealed class FakeAppUpdates : IAppUpdates

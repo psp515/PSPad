@@ -22,14 +22,23 @@ public static class CategoryName
 
     public static int IndexIn(IReadOnlyList<string> names, string name)
     {
+        var wanted = name.Trim();
+
         for (var index = 0; index < names.Count; index++)
         {
-            if (string.Equals(names[index], name.Trim(), StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(names[index], wanted, StringComparison.OrdinalIgnoreCase))
             {
                 return index;
             }
         }
 
         return -1;
+    }
+
+    public static string Resolve(IReadOnlyList<string> names, string name)
+    {
+        var normalised = Normalize(name);
+        var index = IndexIn(names, normalised);
+        return index >= 0 ? names[index] : normalised;
     }
 }

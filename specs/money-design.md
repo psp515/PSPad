@@ -39,16 +39,17 @@ like Tasks (AD-3, AD-4). No module references it except `PSPad.Api` and
 Folders follow the one-type-per-file, grouped-by-operation rule:
 
 ```
-Budgets/        Budget.cs, BudgetAccess.cs, CategoryKind.cs, CategoryName.cs,
-                Create/, Rename/, Archive/, Restore/, AddCategory/
-                (categories live inside the Budget aggregate; slice 2 adds
-                RenameCategory/, MergeCategory/, RemoveCategory/)
-Entries/        MoneyEntry.cs, EntryKind.cs, RecordExpense/, RecordIncome/, Edit/, Delete/
+Budgets/        Budget.cs, BudgetAccess.cs, CategoryKind.cs, CategoryName.cs, CategoryCascade.cs,
+                Create/, Rename/, Archive/, Restore/, AddCategory/, RenameCategory/,
+                MergeCategory/, RemoveCategory/ (categories live inside the Budget aggregate)
+Entries/        MoneyEntry.cs, MoneyEntryCascade.cs, RecordExpense/, RecordIncome/, Edit/,
+                Delete/, Recategorise/ (an entry's kind is CategoryKind)
 Balance/        BalanceSnapshot.cs, Holding.cs, HoldingType.cs, StartMonth/,
                 AddHolding/, EditHolding/, RemoveHolding/, DeleteMonth/
 Preferences/    MoneyPreferences.cs, SetDefaultCurrency/
-Values/         Currencies.cs (Money.cs and YearMonth.cs arrive in later slices)
-Reading/        RateSuggestion.cs, MonthTotals.cs, MoneySummary.cs
+Values/         Currencies.cs, YearMonth.cs, Money.cs (namespace PSPad.Module.Money: a type
+                named Money under …Money.Values would be shadowed by the namespace)
+Reading/        RateSuggestion.cs, MonthTotals.cs, CategoryTotal.cs, EntryDay.cs, MoneySummary.cs
 ```
 
 ## 3. Domain model
@@ -77,7 +78,7 @@ one used.
 | Aggregate | Id | Fields | Collection |
 |---|---|---|---|
 | `Budget` | Guid | `UserId` (owner), `Name`, `ExpenseCategories[]`, `IncomeCategories[]`, `CreatedAt`, `ArchivedAt?` | `budgets` |
-| `MoneyEntry` | Guid | `UserId`, `BudgetId`, `Kind` (Expense, Income), `Name`, `Category`, `Money`, `Date`, `Note?`, `Deleted` | `moneyentries` |
+| `MoneyEntry` | Guid | `UserId`, `BudgetId`, `Kind` (`CategoryKind`: Expense, Income), `Name`, `Category`, `Money`, `Date`, `Note?`, `RecordedAt`, `Deleted` | `moneyentries` |
 | `BalanceSnapshot` | `IdFor(budgetId, month)` | `UserId`, `BudgetId`, `Month`, `Holdings[]`, `Deleted` | `balancesnapshots` |
 | `MoneyPreferences` | `IdFor(userId)` | `UserId`, `DefaultCurrency` (default `PLN`) | `moneypreferences` |
 
@@ -116,11 +117,11 @@ without rewriting ownership.
 - `AddCategory(kind, name)` is a no-op if the name already exists
   (case-insensitive). Two offline devices adding "Hobby" therefore converge.
 - `RenameCategory(kind, from, to)` is rejected if `to` already exists; the
-  user should merge instead. It emits `CategoryRenamed` and one
+  user should merge instead. A case-only rename of the same category is allowed. It emits `CategoryRenamed` and one
   `MoneyEntryRecategorised` per live entry of that kind in the budget, all in
   one unit of work (the `adr/0042` cascade pattern).
-- `MergeCategory(kind, from, into)` relabels the same way, then removes
-  `from`.
+- `MergeCategory(kind, from, into)` relabels the same way and emits one
+  `CategoriesMerged`, whose fold removes `from`.
 - `RemoveCategory(kind, name)` is rejected while any live entry uses the name.
 - Merging a category into itself, or naming a category that doesn't exist, is
   rejected.
@@ -179,6 +180,11 @@ documents.
 ## 4. Reading (pure, in the module, shared by client and server)
 
 **`RateSuggestion.For(currency, entries, snapshots)`**
+- It returns `RateSuggestion(RateToPln, RateDate?)`. Slice 2 ships
+  `For(currency, entries)`; slice 3 adds the `snapshots` overload. The entry
+  panel keeps a suggested rate's `RateDate`; an NBP rate carries NBP's
+  `effectiveDate`; a typed rate takes the entry's date. Ties go to the entry
+  with the latest `RecordedAt`.
 - PLN → `1`.
 - Otherwise, the `RateToPln` with the latest `RateDate` across the budget's
   live entries and holdings in that currency; ties go to the newest
@@ -210,7 +216,8 @@ zone, never machine-local (the AGENTS.md §2 invariant).
   `moneypreferences` join delta sync by `seq` (AD-6), filtered by `UserId`.
   They are added to `SyncReader`, to `SyncService`'s collection map and to
   `MongoIndexes`. Existing replicas pull them from zero once (`adr/0049`).
-  The client gets IndexedDB stores for each.
+  The client needs no new store: the replica keeps every collection in its one
+  generic `documents` store, indexed by type and user.
 - **Commands** go through `/api/commands` and the outbox. Money's handlers are
   registered in both hosts. Rejections surface the usual way (AD-5,
   `adr/0021`).
@@ -223,8 +230,10 @@ zone, never machine-local (the AGENTS.md §2 invariant).
     and returns the last rate on or before `date`:
     `{ currency, rate, effectiveDate }`. NBP publishes nothing on weekends or
     holidays, hence the 7-day window.
-  - The timeout is 5 s. An unknown currency or no rate gives `404`; NBP
-    failing or timing out gives `502`.
+  - The timeout is 5 s. An unknown currency (without calling NBP), a date
+    before 2002-01-02, no rate or any NBP 4xx gives `404`; NBP 5xx, timeout,
+    network error, non-JSON or a response without rates gives `502`. Only
+    successes are cached.
   - Results are cached in memory per `(code, date)`: 24 h for past dates,
     1 h for today.
   - The client disables the NBP button while offline and shows a snackbar on
@@ -247,8 +256,9 @@ subtitle. No app bar.
 - The header subtitle reads "N budgets · M archived · totals in PLN".
 - A "Show archived" switch, off on each visit (not remembered). Archived
   cards are dimmed and open read-only.
-- Each card shows the current month's income, expenses and net, an
-  expense/income bar, and the latest net worth (or "Start {month}").
+- Each card shows the current month's income, expenses and net and an
+  expense/income bar (slice 2), and the latest net worth or "Start {month}"
+  (slice 3).
 - FAB: New budget, which opens a side panel asking for the name.
 - With no budgets at all, there's an empty state with a "Create budget"
   button.
@@ -275,7 +285,9 @@ Month (default), Balance, Summary and Settings. The tab lives in the URL.
   - a read-only "In PLN" value
   - date, defaulting to today in the user's time zone
   - note
-  - Save, Cancel, and Delete when editing.
+  - Save, Cancel (the panel's close button), and Delete when editing.
+  - A second save is ignored while one is sending. For an archived budget the
+    panel is read-only.
 - **Balance**
   - Month switcher.
   - A "{Month} has no balance yet · Start {month}" banner when there's no
@@ -311,9 +323,9 @@ budget is archived and read-only; Restore lives in the Settings tab's Budget car
 
 **Navigation** (`adr/0060`):
 - **Desktop sidebar:**
-  - Budgets is a collapsible `MudNavGroup` after the main rows. Its header
-    links to `/budgets`, and its children are the active budgets in creation
-    order.
+  - Budgets is a collapsible group after the main rows, with a custom header:
+    a link to `/budgets` plus a chevron toggle (a `MudNavGroup` header cannot
+    be both). Its children are the active budgets in creation order.
   - Areas becomes a collapsible group the same way.
   - The collapsed state of each group is remembered per device in
     `localStorage`.
@@ -364,11 +376,10 @@ Each slice ships green on its own:
    navigation changes, `/budgets`, Settings tab, default currency.
    `RenameCategory`, `MergeCategory` and `RemoveCategory` moved to slice 2:
    they cascade into entries and are untestable before entries exist.
-2. `MoneyEntry`, rename, merge and remove-category with their cascades, Month tab, `EntryPanel`, `RateSuggestion`, NBP endpoint.
+2. `Money` (`Decimal128`), `YearMonth`, `MoneyEntry` with category auto-add, rename, merge and remove-category with their cascades, Month tab (default; tab in the URL), `EntryPanel`, `RateSuggestion`, `MonthTotals`, budget-card totals, NBP endpoint, and the `install.astro` outbound-NBP note.
 3. `BalanceSnapshot`, Balance tab, `HoldingPanel`.
 4. Summary tab and charts.
-5. Docs: `features.astro`, the landing page, and the `install.astro`
-   outbound-NBP note.
+5. Docs: `features.astro` and the landing page.
 
 ## 9. Future: sharing a budget
 
