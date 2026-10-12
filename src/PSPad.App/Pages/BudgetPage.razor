@@ -30,35 +30,47 @@ else if (_budget is null)
 }
 else
 {
-    <PageHeading Title="@_budget.Name" Subtitle="@Subtitle" Icon="@Icons.Material.Outlined.AccountBalanceWallet" />
+    <PageHeading Title="@_budget.Name" Icon="@Icons.Material.Outlined.AccountBalanceWallet" />
 
     @if (_budget.IsArchived)
     {
         <MudAlert Severity="Severity.Info" Class="mb-4 pspad-archived-banner">This budget is archived. It is read-only.</MudAlert>
     }
 
-    <MudTabs Elevation="0" ApplyEffectsToContainer="true" Class="pspad-budget-tabs"
-             ActivePanelIndex="@TabIndex" ActivePanelIndexChanged="@SelectTab">
-        <MudTabPanel Text="Month">
-            <BudgetMonthTab Class="pt-4" Month="@_month" Totals="@MonthTotals.For(_entries, _month)"
+    <div class="d-flex align-center gap-2 mb-4 pspad-budget-nav">
+        <MudToggleGroup T="int" Class="flex-grow-1 pspad-budget-views" Color="Color.Primary" Size="Size.Small"
+                        SelectionMode="SelectionMode.SingleSelection" Value="@TabIndex" ValueChanged="@SelectTab">
+            <MudToggleItem Value="@MonthTab" Text="Month" />
+            <MudToggleItem Value="@BalanceTab" Text="Balance" />
+            <MudToggleItem Value="@SummaryTab" Text="Summary" />
+        </MudToggleGroup>
+        <MudIconButton Class="pspad-budget-settings" Icon="@Icons.Material.Outlined.Settings" aria-label="Budget settings"
+                       aria-pressed="@(TabIndex == SettingsTab ? "true" : "false")"
+                       Color="@(TabIndex == SettingsTab ? Color.Primary : Color.Default)" OnClick="@(() => SelectTab(SettingsTab))" />
+    </div>
+
+    @switch (TabIndex)
+    {
+        case MonthTab:
+            <BudgetMonthTab Month="@_month" Current="@Current" Totals="@MonthTotals.For(_entries, _month)"
                             OnMonthChanged="@ShowMonth" OnOpen="@OpenEntry" />
-        </MudTabPanel>
-        <MudTabPanel Text="Balance">
-            <BudgetBalanceTab Class="pt-4" Month="@_month" Totals="@Balance" ReadOnly="@_budget.IsArchived"
+            break;
+        case BalanceTab:
+            <BudgetBalanceTab Month="@_month" Totals="@Balance" ReadOnly="@_budget.IsArchived"
                               OnMonthChanged="@ShowMonth" OnStart="@StartMonthAsync" OnDeleteMonth="@DeleteMonthAsync"
                               OnOpen="@OpenHolding" />
-        </MudTabPanel>
-        <MudTabPanel Text="Summary">
-            <BudgetSummaryTab Class="pt-4" Entries="@_entries" Snapshots="@_snapshots" />
-        </MudTabPanel>
-        <MudTabPanel Text="Settings">
-            <BudgetSettingsTab Class="pt-4" Budget="@_budget" Entries="@_entries" OnAddCategory="@AddCategoryAsync"
+            break;
+        case SummaryTab:
+            <BudgetSummaryTab Entries="@_entries" Snapshots="@_snapshots" />
+            break;
+        default:
+            <BudgetSettingsTab Budget="@_budget" Entries="@_entries" OnAddCategory="@AddCategoryAsync"
                                OnRenameCategory="@RenameCategoryAsync" OnMergeCategory="@MergeCategoryAsync"
                                OnRemoveCategory="@RemoveCategoryAsync"
                                OnRename="@(() => Navigation.NavigateTo(BudgetQuery.For(Navigation.Uri, _budget.Id)))"
                                OnArchive="@ArchiveAsync" OnRestore="@RestoreAsync" />
-        </MudTabPanel>
-    </MudTabs>
+            break;
+    }
 
     @if (TabIndex == MonthTab && !_budget.IsArchived)
     {
@@ -83,6 +95,8 @@ else
 @code {
     const int MonthTab = 0;
     const int BalanceTab = 1;
+    const int SummaryTab = 2;
+    const int SettingsTab = 3;
     static readonly string[] Tabs = ["month", "balance", "summary", "settings"];
     static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Add entry" };
     static readonly Dictionary<string, object> AddExpenseAttributes = new() { ["aria-label"] = "Add expense" };
@@ -105,7 +119,7 @@ else
 
     int TabIndex => Math.Max(MonthTab, Array.IndexOf(Tabs, Tab?.ToLowerInvariant() ?? ""));
 
-    string Subtitle => $"{_budget!.ExpenseCategories.Count} expense · {_budget.IncomeCategories.Count} income categories";
+    YearMonth Current => YearMonth.Of(State.Today);
 
     BalanceTotals Balance => BalanceTotals.For(_snapshots, _month);
 

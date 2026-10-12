@@ -274,6 +274,42 @@ public partial class StylesheetRulesTests
         Assert.Contains("font-size: 13px", message);
     }
 
+    [Fact]
+    public void TheBudgetViewsShareTheRowEvenly() =>
+        Assert.Contains("flex: 1 1 0", Declarations(".pspad-budget-views .mud-toggle-item"));
+
+    [Fact]
+    public void TheMonthTitleReadsAsAHeadingNotAButtonLabel()
+    {
+        var title = Declarations(".pspad-month-switcher .pspad-month-title");
+
+        Assert.Contains("text-transform: none", title);
+        Assert.Contains("font-weight: 700", title);
+    }
+
+    [Fact]
+    public void OnAPhoneTheMonthPickerIsABottomSheet()
+    {
+        var sheet = DeclarationsInMedia("max-width: 599.98px", ".mud-dialog.pspad-month-sheet");
+
+        Assert.Contains("width: 100%", sheet);
+        Assert.Contains("margin: 0", sheet);
+        Assert.Contains("border-radius: 28px 28px 0 0", sheet);
+    }
+
+    [Fact]
+    public void TheMonthPickerLaysTheYearOutInFourColumns() =>
+        Assert.Contains("grid-template-columns: repeat(4, minmax(0, 1fr))", Declarations(".pspad-month-sheet-grid"));
+
+    [Fact]
+    public void TheSummaryPresetsScrollSidewaysInsteadOfWrapping()
+    {
+        var presets = Declarations(".pspad-summary-presets");
+
+        Assert.Contains("flex-wrap: nowrap", presets);
+        Assert.Contains("overflow-x: auto", presets);
+    }
+
     static string Declarations(string selector) =>
         string.Join("\n", Rule().Matches(Css)
             .Where(rule => SelectorsOf(rule).Contains(selector))

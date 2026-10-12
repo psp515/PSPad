@@ -1274,7 +1274,7 @@ and shows a 2px primary outline on keyboard focus.
 current area `--pspad-tint` with `TextPrimary` and medium weight, the rest
 `--pspad-hover` with `TextSecondary`, "New area" a text-style primary chip.
 `MudToggleGroup` (list kind, task kind One-time / Repeating, Statistics days,
-snapshot days, budget summary range) is a pill whose selected item is `--pspad-tint` with
+snapshot days, budget views) is a pill whose selected item is `--pspad-tint` with
 `TextPrimary`.
 
 **Panel rows and empty states.** The `PropertyRow` activator has an 8px
@@ -1375,9 +1375,13 @@ only its icon is primary, to hold the 4.5:1 contrast rule on the tint
 a New budget FAB; `BudgetPanel` creates and renames (`?budget=new|{id}`). Cards
 show the current month's income, expenses and net in PLN, and the latest net
 worth or a "Start {month}" link to the Balance tab.
-`/budgets/{id}/{tab}` holds `MudTabs` whose tab lives in the URL (`month`,
-`balance`, `summary`, `settings`): Month (default; month switcher, Income/Expenses/Net
-tiles, a stacked category bar, entries by day, FAB menu Add expense / Add
+`/budgets/{id}/{tab}` has no subtitle and one row of a full-width three-view
+`MudToggleGroup` (Month, Balance, Summary) plus a Settings gear button; the view
+lives in the URL (`month`, `balance`, `summary`, `settings`). The shared
+`MonthSwitcher` is the month title (a button opening a bottom-sheet month grid
+with ‹ year ›, This month and Cancel) with ‹ › at the right. Month (default;
+month switcher, a `MoneyHero` totals card with Net large, Income/Expenses under
+it and the stacked category bar, entries by day, FAB menu Add expense / Add
 income) and Settings (category lists with add, rename, merge and remove — remove
 disabled while a category has entries — and Archive/Restore). `EntryPanel` opens
 from `?entry={id}`, `?expense={budgetId}` or `?income={budgetId}`; its rate
@@ -1391,7 +1395,8 @@ archived), Net worth / At NBP today / Currency difference / vs-previous tiles
 `MudToggleGroup`, amount, currency, rate with NBP,
 In PLN, Remove. Summary (`BudgetSummaryTab`): This year / Last 12 months /
 Last year / Custom presets (a `MudDateRangePicker` for Custom; the range is
-not in the URL), Income / Expenses / Saved / Savings rate / Net worth tiles,
+not in the URL) as one sideways-scrolling row of single-select chips, a
+`MoneyHero` card (Saved large; Income / Expenses / Savings rate) and a Net worth tile,
 and `BudgetSummaryCharts`: cumulative income vs expenses (line), expenses by
 month (stacked bar, top 4 categories + Other), net worth by holding type
 (stacked bar) and a `MudProgressLinear` category ranking. Each of the three

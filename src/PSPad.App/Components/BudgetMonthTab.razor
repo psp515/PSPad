@@ -4,24 +4,20 @@
 @using PSPad.Module.Money.Values
 
 <div class="@Class">
-    <MonthSwitcher Class="mb-4" Month="@Month" OnMonthChanged="@OnMonthChanged" />
+    <MonthSwitcher Class="mb-2" Month="@Month" Current="@Current" OnMonthChanged="@OnMonthChanged" />
 
-    <MudGrid Spacing="3" Class="mb-4">
-        <MudItem xs="4">
-            <MoneyTile Class="pspad-month-income" Label="Income" Text="@MoneyText.Pln(Totals.Income)" />
-        </MudItem>
-        <MudItem xs="4">
-            <MoneyTile Class="pspad-month-expenses" Label="Expenses" Text="@MoneyText.Pln(Totals.Expenses)" />
-        </MudItem>
-        <MudItem xs="4">
-            <MoneyTile Class="pspad-month-net" Label="Net" Text="@MoneyText.SignedPln(Totals.Net)" Negative="@(Totals.Net < 0)" />
-        </MudItem>
-    </MudGrid>
-
-    @if (Totals.ExpensesByCategory.Count > 0)
-    {
-        <CategoryBar Class="mb-4" Totals="@Totals.ExpensesByCategory" />
-    }
+    <MoneyHero Class="mb-4" HeadlineClass="pspad-month-net" Label="Net" Text="@MoneyText.SignedPln(Totals.Net)" Negative="@(Totals.Net < 0)">
+        <ChildContent>
+            <MoneyFigure Class="pspad-month-income" Label="Income" Text="@MoneyText.Pln(Totals.Income)" />
+            <MoneyFigure Class="pspad-month-expenses" Label="Expenses" Text="@MoneyText.Pln(Totals.Expenses)" />
+        </ChildContent>
+        <Footer>
+            @if (Totals.ExpensesByCategory.Count > 0)
+            {
+                <CategoryBar Totals="@Totals.ExpensesByCategory" />
+            }
+        </Footer>
+    </MoneyHero>
 
     @if (Totals.Days.Count == 0)
     {
@@ -46,6 +42,8 @@
 
 @code {
     [Parameter, EditorRequired] public YearMonth Month { get; set; }
+
+    [Parameter, EditorRequired] public YearMonth Current { get; set; }
 
     [Parameter, EditorRequired] public MonthTotals Totals { get; set; } = default!;
 

@@ -1432,9 +1432,63 @@ button.pspad-heatmap-cell:focus-visible {
     border-radius: 50%;
 }
 
+.pspad-budget-views .mud-toggle-item {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.pspad-month-switcher .pspad-month-title {
+    text-transform: none;
+    font-size: 1.375rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    padding-inline: 4px;
+}
+
+.pspad-month-sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.pspad-month-sheet-grid .pspad-month-sheet-month {
+    min-height: 48px;
+    border-radius: 24px;
+    text-transform: none;
+}
+
+.pspad-money-hero-figures {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    gap: 12px;
+}
+
+.pspad-money-hero-value {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.pspad-summary-presets {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.pspad-summary-presets .mud-chip {
+    flex-shrink: 0;
+}
+
 @media (max-width: 599.98px) {
-    .pspad-summary-presets {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        border-radius: 16px;
+    .mud-dialog.pspad-month-sheet {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        align-self: flex-end;
+        border-radius: 28px 28px 0 0;
+    }
+
+    .pspad-money-hero-value {
+        font-size: 2rem;
     }
 }

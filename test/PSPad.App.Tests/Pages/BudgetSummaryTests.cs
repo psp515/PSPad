@@ -30,13 +30,13 @@ public class BudgetSummaryTests : Bunit.TestContext
     static string Text(IRenderedComponent<BudgetPage> page, string selector) => page.Find(selector).TextContent.Trim();
 
     static string Tile(IRenderedComponent<BudgetPage> page, string name) =>
-        Text(page, $".pspad-summary-{name} .pspad-money-tile-value");
+        Text(page, $".pspad-summary-{name} .pspad-money-value");
 
     static string TileLabel(IRenderedComponent<BudgetPage> page, string name) =>
         Text(page, $".pspad-summary-{name} .mud-typography-caption");
 
     static IElement Preset(IRenderedComponent<BudgetPage> page, string text) =>
-        page.FindAll(".pspad-summary-presets .mud-toggle-item").Single(item => item.TextContent.Trim() == text);
+        page.FindAll(".pspad-summary-presets .mud-chip").Single(item => item.TextContent.Trim() == text);
 
     [Fact]
     public void ThisYearIsTheDefaultRange()
@@ -47,10 +47,10 @@ public class BudgetSummaryTests : Bunit.TestContext
         var page = SummaryTab(budget);
 
         Assert.Equal("1 Jan 2026 – 9 Oct 2026", Text(page, ".pspad-summary-range"));
-        Assert.Equal("true", Preset(page, "This year").GetAttribute("aria-checked"));
-        Assert.Equal("false", Preset(page, "Last 12 months").GetAttribute("aria-checked"));
-        Assert.Equal("false", Preset(page, "Last year").GetAttribute("aria-checked"));
-        Assert.Equal("false", Preset(page, "Custom").GetAttribute("aria-checked"));
+        Assert.Equal("true", Preset(page, "This year").GetAttribute("aria-pressed"));
+        Assert.Equal("false", Preset(page, "Last 12 months").GetAttribute("aria-pressed"));
+        Assert.Equal("false", Preset(page, "Last year").GetAttribute("aria-pressed"));
+        Assert.Equal("false", Preset(page, "Custom").GetAttribute("aria-pressed"));
         Assert.Empty(page.FindAll(".pspad-summary-picker"));
     }
 
@@ -126,8 +126,8 @@ public class BudgetSummaryTests : Bunit.TestContext
 
         page.WaitForAssertion(() => Assert.Equal("1 Jan 2025 – 31 Dec 2025", Text(page, ".pspad-summary-range")));
         Assert.Equal("70.00 PLN", Tile(page, "expenses"));
-        Assert.Equal("true", Preset(page, "Last year").GetAttribute("aria-checked"));
-        Assert.Equal("false", Preset(page, "This year").GetAttribute("aria-checked"));
+        Assert.Equal("true", Preset(page, "Last year").GetAttribute("aria-pressed"));
+        Assert.Equal("false", Preset(page, "This year").GetAttribute("aria-pressed"));
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public class BudgetSummaryTests : Bunit.TestContext
         Preset(page, "Last year").Click();
 
         Assert.Equal("1 Jan 2025 – 31 Dec 2025", Text(page, ".pspad-summary-range"));
-        Assert.Equal("true", Preset(page, "Last year").GetAttribute("aria-checked"));
+        Assert.Equal("true", Preset(page, "Last year").GetAttribute("aria-pressed"));
     }
 
     [Fact]
@@ -157,9 +157,9 @@ public class BudgetSummaryTests : Bunit.TestContext
 
         Assert.Equal("−100.00 PLN", Tile(page, "saved"));
         Assert.Equal("−13%", Tile(page, "rate"));
-        Assert.Contains("mud-error-text", page.Find(".pspad-summary-saved .pspad-money-tile-value").ClassList);
-        Assert.Contains("mud-error-text", page.Find(".pspad-summary-rate .pspad-money-tile-value").ClassList);
-        Assert.DoesNotContain("mud-error-text", page.Find(".pspad-summary-income .pspad-money-tile-value").ClassList);
+        Assert.Contains("mud-error-text", page.Find(".pspad-summary-saved .pspad-money-value").ClassList);
+        Assert.Contains("mud-error-text", page.Find(".pspad-summary-rate .pspad-money-value").ClassList);
+        Assert.DoesNotContain("mud-error-text", page.Find(".pspad-summary-income .pspad-money-value").ClassList);
     }
 
     [Fact]
@@ -173,8 +173,8 @@ public class BudgetSummaryTests : Bunit.TestContext
         var page = SummaryTab(budget);
 
         Assert.Equal("0%", Tile(page, "rate"));
-        Assert.DoesNotContain("mud-error-text", page.Find(".pspad-summary-rate .pspad-money-tile-value").ClassList);
-        Assert.Contains("mud-error-text", page.Find(".pspad-summary-saved .pspad-money-tile-value").ClassList);
+        Assert.DoesNotContain("mud-error-text", page.Find(".pspad-summary-rate .pspad-money-value").ClassList);
+        Assert.Contains("mud-error-text", page.Find(".pspad-summary-saved .pspad-money-value").ClassList);
     }
 
     [Fact]

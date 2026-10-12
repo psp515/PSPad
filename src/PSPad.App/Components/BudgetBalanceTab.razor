@@ -11,7 +11,7 @@
 
 <div class="@Class">
     <div class="d-flex align-center mb-4">
-        <MonthSwitcher Class="flex-grow-1" Month="@Month" OnMonthChanged="@OnMonthChanged" />
+        <MonthSwitcher Class="flex-grow-1" Month="@Month" Current="@YearMonth.Of(State.Today)" OnMonthChanged="@OnMonthChanged" />
         @if (Snapshot is not null && !ReadOnly)
         {
             <MudMenu Icon="@Icons.Material.Filled.MoreVert" AriaLabel="Month actions" Class="pspad-balance-menu" Dense="true"

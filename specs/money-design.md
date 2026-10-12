@@ -307,13 +307,24 @@ subtitle. No app bar.
 - With no budgets at all, there's an empty state with a "Create budget"
   button.
 
-**`/budgets/{id}/{tab?}` (`Pages/BudgetPage.razor`)**, with `MudTabs` for
-Month (default), Balance, Summary and Settings. The tab lives in the URL.
+**`/budgets/{id}/{tab?}` (`Pages/BudgetPage.razor`)**. The heading has no
+subtitle. Under it one row: a full-width `MudToggleGroup` of three equal
+views, Month (default), Balance and Summary, then a gear icon button for
+Settings (`aria-pressed` on the settings route, where no view is selected).
+Four tabs never fit a phone; the gear keeps the row to three. The view lives
+in the URL.
+
+- **Month switcher** (`MonthSwitcher`, shared by Month and Balance): the
+  month title on the left as a button, ‹ › on the right. The title opens a
+  bottom sheet (a `MudDialog` at the bottom, full width on a phone) with
+  ‹ year ›, a 4×3 grid of months (the shown month filled), "This month"
+  (the current month in the user's time zone) and Cancel. Picking a month
+  closes the sheet.
 
 - **Month**
-  - ‹ month › switcher.
-  - Income, Expenses and Net tiles.
-  - A stacked bar of expenses by category, with a legend.
+  - Month switcher.
+  - One totals card (`MoneyHero`): Net large, Income and Expenses under it,
+    and the stacked bar of expenses by category with its legend.
   - Entries grouped by day. A row shows name, category chip and amount; a
     non-PLN row also shows "−X PLN @ rate".
   - Tapping a row opens `EntryPanel`.
@@ -375,14 +386,15 @@ Month (default), Balance, Summary and Settings. The tab lives in the URL.
 - **Summary**
   - Computed in the browser from the replica, so it works offline. No FAB,
     no writes; an archived budget shows the same Summary.
-  - Range presets in a `MudToggleGroup`: This year (default; 1 January to
+  - Range presets as single-select chips in one row that scrolls sideways
+    (`aria-pressed` on each): This year (default; 1 January to
     today), Last 12 months (the first of the month eleven months back to
     today), Last year (the whole previous calendar year) and Custom (a
     `MudDateRangePicker`, applied once both ends are picked). "Today" is the
     user's stored time zone. The range is not in the URL and is This year on
     each visit. A caption shows it, e.g. "1 Jan 2026 – 9 Oct 2026".
-  - Tiles: Income, Expenses, Saved, Savings rate (a whole percent, "—"
-    without income), and "Net worth · {Month yyyy}" of the latest snapshot
+  - A totals card: Saved large, with Income, Expenses and Savings rate (a
+    whole percent, "—" without income) under it; then a tile "Net worth · {Month yyyy}" of the latest snapshot
     ("Net worth" and "—" without one).
   - Three `MudChart`s: cumulative income vs expenses (line), expenses by
     month by category (stacked bar), net worth by holding type (stacked bar;
