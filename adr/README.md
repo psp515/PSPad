@@ -78,3 +78,5 @@ Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
 AGENTS.md stays the terse day-to-day reference (AD-1 … AD-11); this index is
 where the reasoning and rejected alternatives behind each one live.
+| [0061](0061-nightly-backups-from-a-compose-sidecar.md) | Nightly backups run in a compose sidecar, encrypted before they leave the host | Proposed (amends [0015](0015-one-self-host-compose-stack.md)) | 2026-10-12 | deployment, persistence, security, identity |
+| [0062](0062-a-restore-changes-the-dataset-id.md) | A restore changes the dataset id, and a client that sees a new id re-pulls from zero | Proposed (amends [0006](0006-sync-is-delta-by-version.md)) | 2026-10-12 | sync, persistence, offline |

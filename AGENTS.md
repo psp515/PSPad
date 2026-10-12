@@ -35,6 +35,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | List ordering | `specs/list-ordering-design.md` |
 | Recurrence lead time, yearly repeats | `specs/recurrence-lead-time-design.md` |
 | Phone navigation | `specs/mobile-navigation-design.md` |
+| Backups, restore, dataset id | `specs/backup-design.md` |
 | Why a decision was made | `adr/README.md` index → the `Active` record |
 
 Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither silently.
