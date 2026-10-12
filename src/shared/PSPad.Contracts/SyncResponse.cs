@@ -6,4 +6,5 @@ public sealed record SyncResponse(
     long Marker,
     IReadOnlyDictionary<string, JsonElement[]> Documents,
     Guid[]? MemberListIds = null,
-    bool HasMore = false);
+    bool HasMore = false,
+    Guid[]? MemberBudgetIds = null);

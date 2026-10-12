@@ -10,11 +10,11 @@ public static class SyncEndpoints
         app.MapGet("sync", async (
             long since, string? full, int? limit, SyncReader reader, ICurrentUser user, CancellationToken ct) =>
             Results.Ok(await reader.ReadAsync(
-                user.UserId, since, ListIds(full), ct, limit ?? SyncReader.MaxPageSize)))
+                user.UserId, since, ContainerIds(full), ct, limit ?? SyncReader.MaxPageSize)))
             .RequireRateLimiting("sync");
     }
 
-    static Guid[] ListIds(string? full) =>
+    static Guid[] ContainerIds(string? full) =>
         (full ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(part => Guid.TryParse(part, out var id) ? id : Guid.Empty)
             .Where(id => id != Guid.Empty)

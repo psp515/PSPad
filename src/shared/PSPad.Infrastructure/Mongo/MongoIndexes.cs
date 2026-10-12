@@ -39,6 +39,28 @@ public static class MongoIndexes
 
         await EnsureUniqueInviteTokenAsync(context, ct);
 
+        await context.Collection<BsonDocument>("budgets").Indexes.CreateManyAsync(
+        [
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("_members.userId").Ascending("seq")),
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("inviteToken"),
+                new CreateIndexOptions<BsonDocument>
+                {
+                    Name = InviteTokenIndex,
+                    Unique = true,
+                    PartialFilterExpression = Builders<BsonDocument>.Filter.Type("inviteToken", BsonType.String)
+                })
+        ], ct);
+
+        foreach (var name in new[] { "moneyentries", "balancesnapshots" })
+        {
+            await context.Collection<BsonDocument>(name).Indexes.CreateOneAsync(
+                new CreateIndexModel<BsonDocument>(
+                    Builders<BsonDocument>.IndexKeys.Ascending("budgetId").Ascending("seq")),
+                cancellationToken: ct);
+        }
+
         await context.Collection<BsonDocument>("referenceitems").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("listId")),

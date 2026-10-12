@@ -17,21 +17,10 @@ public static class UserDataWipe
         try
         {
             var sequence = new SequenceSource(context);
-            var lists = context.Collection<BsonDocument>("tasklists");
-            var memberships = await lists
-                .Find(session, Builders<BsonDocument>.Filter.Eq("_members.userId", userId))
-                .Project(Builders<BsonDocument>.Projection.Include("_id"))
-                .ToListAsync(ct);
 
-            foreach (var membership in memberships)
+            foreach (var shared in new[] { "tasklists", "budgets" })
             {
-                await lists.UpdateOneAsync(
-                    session,
-                    Builders<BsonDocument>.Filter.Eq("_id", membership["_id"]),
-                    Builders<BsonDocument>.Update
-                        .PullFilter("_members", Builders<BsonDocument>.Filter.Eq("userId", userId))
-                        .Set("seq", await sequence.NextAsync(session, ct)),
-                    cancellationToken: ct);
+                await LeaveAllAsync(context.Collection<BsonDocument>(shared), session, sequence, userId, ct);
             }
 
             foreach (var name in collectionNames)
@@ -46,6 +35,27 @@ public static class UserDataWipe
         {
             await session.AbortTransactionAsync(ct);
             throw;
+        }
+    }
+
+    static async Task LeaveAllAsync(
+        IMongoCollection<BsonDocument> containers, IClientSessionHandle session, SequenceSource sequence, Guid userId,
+        CancellationToken ct)
+    {
+        var memberships = await containers
+            .Find(session, Builders<BsonDocument>.Filter.Eq("_members.userId", userId))
+            .Project(Builders<BsonDocument>.Projection.Include("_id"))
+            .ToListAsync(ct);
+
+        foreach (var membership in memberships)
+        {
+            await containers.UpdateOneAsync(
+                session,
+                Builders<BsonDocument>.Filter.Eq("_id", membership["_id"]),
+                Builders<BsonDocument>.Update
+                    .PullFilter("_members", Builders<BsonDocument>.Filter.Eq("userId", userId))
+                    .Set("seq", await sequence.NextAsync(session, ct)),
+                cancellationToken: ct);
         }
     }
 }
