@@ -31,7 +31,11 @@ public class SyncServiceTests
             envelopes => envelopes.Select(_ => new CommandResponse(Guid.NewGuid(), true, null)).ToArray();
 
         public SyncResponse Pull { get; set; } =
-            new(0, new Dictionary<string, JsonElement[]>(), []);
+            new(0, new Dictionary<string, JsonElement[]>());
+
+        public Queue<SyncResponse> Pages { get; } = new();
+
+        public List<long> Requests { get; } = [];
 
         public long? RequestedSince { get; private set; }
 
@@ -44,7 +48,8 @@ public class SyncServiceTests
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full)
         {
             RequestedSince = since;
-            return Task.FromResult<SyncResponse?>(Pull);
+            Requests.Add(since);
+            return Task.FromResult<SyncResponse?>(Pages.TryDequeue(out var page) ? page : Pull);
         }
 
         public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
@@ -157,8 +162,7 @@ public class SyncServiceTests
                 new Dictionary<string, JsonElement[]>
                 {
                     ["areas"] = [JsonSerializer.SerializeToElement(area)]
-                },
-                [])
+                })
         };
 
         var outcome = await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
@@ -166,6 +170,67 @@ public class SyncServiceTests
         Assert.Equal(1, outcome.Pulled);
         Assert.Equal(17, await replica.MarkerAsync());
         Assert.Equal("Home", (await replica.LoadAsync<Area>(area.Id))!.Name);
+    }
+
+    [Fact]
+    public async Task PullKeepsAskingForPagesUntilTheServerHasNoMore()
+    {
+        var replica = new InMemoryReplica();
+        var api = new FakeApi();
+        api.Pages.Enqueue(new SyncResponse(10, AreaRows("One"), HasMore: true));
+        api.Pages.Enqueue(new SyncResponse(20, AreaRows("Two"), HasMore: true));
+        api.Pages.Enqueue(new SyncResponse(25, AreaRows("Three")));
+
+        var outcome = await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Equal([0L, 10L, 20L], api.Requests);
+        Assert.Equal(3, outcome.Pulled);
+        Assert.Equal(25, await replica.MarkerAsync());
+    }
+
+    [Fact]
+    public async Task AFailedPageKeepsTheMarkerOfThePagesAlreadySaved()
+    {
+        var replica = new InMemoryReplica();
+        var api = new FailingAfterFirstPageApi(new SyncResponse(10, AreaRows("One"), HasMore: true));
+
+        var outcome = await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.False(outcome.ReachedServer);
+        Assert.Equal(10, await replica.MarkerAsync());
+        Assert.Equal(SyncService.CollectionsFingerprint, await replica.CollectionsFingerprintAsync());
+    }
+
+    [Fact]
+    public async Task APageThatDoesNotAdvanceTheMarkerEndsThePull()
+    {
+        var api = new FakeApi { Pull = new SyncResponse(0, new Dictionary<string, JsonElement[]>(), HasMore: true) };
+
+        await new SyncService(api, new InMemoryReplica(), new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Single(api.Requests);
+    }
+
+    sealed class FailingAfterFirstPageApi(SyncResponse first) : ISyncApi
+    {
+        int _calls;
+
+        public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
+            Task.FromResult<IReadOnlyList<CommandResponse>>([]);
+
+        public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
+            Task.FromResult(_calls++ == 0 ? first : null);
+
+        public Task<JoinOutcome> JoinAsync(string token, string code) =>
+            Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
+    }
+
+    static Dictionary<string, JsonElement[]> AreaRows(string name)
+    {
+        var area = new Area();
+        area.ApplyAll(Area.Decide(
+            null, new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), name, 0), DateTimeOffset.UnixEpoch));
+        return new Dictionary<string, JsonElement[]> { ["areas"] = [JsonSerializer.SerializeToElement(area)] };
     }
 
     [Fact]
@@ -180,7 +245,7 @@ public class SyncServiceTests
             Pull = new(5, new Dictionary<string, JsonElement[]>
             {
                 ["areaviews"] = [JsonSerializer.SerializeToElement(view, new JsonSerializerOptions(JsonSerializerDefaults.Web))]
-            }, [])
+            })
         };
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
@@ -200,7 +265,7 @@ public class SyncServiceTests
             new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true });
         var api = new FakeApi
         {
-            Pull = new(5, new Dictionary<string, JsonElement[]> { ["budgets"] = [row] }, [])
+            Pull = new(5, new Dictionary<string, JsonElement[]> { ["budgets"] = [row] })
         };
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
@@ -234,7 +299,7 @@ public class SyncServiceTests
             new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true });
         var api = new FakeApi
         {
-            Pull = new(5, new Dictionary<string, JsonElement[]> { ["moneyentries"] = [row] }, [])
+            Pull = new(5, new Dictionary<string, JsonElement[]> { ["moneyentries"] = [row] })
         };
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
@@ -256,7 +321,7 @@ public class SyncServiceTests
             new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true });
         var api = new FakeApi
         {
-            Pull = new(5, new Dictionary<string, JsonElement[]> { ["moneypreferences"] = [row] }, [])
+            Pull = new(5, new Dictionary<string, JsonElement[]> { ["moneypreferences"] = [row] })
         };
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
@@ -368,7 +433,7 @@ public class SyncServiceTests
             new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true });
         var api = new FakeApi
         {
-            Pull = new(5, new Dictionary<string, JsonElement[]> { ["balancesnapshots"] = [row] }, [])
+            Pull = new(5, new Dictionary<string, JsonElement[]> { ["balancesnapshots"] = [row] })
         };
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);

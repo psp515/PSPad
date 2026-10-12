@@ -215,7 +215,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `referenceitems` | items in a `Reference` list | `listId`, `previousListId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`), `snapshotMarks[]` (`snapshotId`, `markedAt` — `adr/0056`) |
 | `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
 | `listviews` | one per (user, list): that user's placement of a shared list | `_id` = `ListView.IdFor(userId, listId)`, `listId`, `areaId?` (null = "Shared with me") |
-| `events` | the domain event log and the sync feed | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
+| `events` | the domain event log (not part of sync, `adr/0061`) | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
 | `statistics_records` | the statistics feed and every chart | `_id` = `"{seq}:{userId}"` (`adr/0055`), `seq`, `role` (`Owner` \| `Actor`), `userId`, `at`, `kind`, `taskId`, `taskName`, `listId`, `goalId`, `dueOn`, `occurrenceDay`, `completionNumber` |
@@ -445,12 +445,19 @@ not stated there:
 
 ## 5. Sync
 
-`GET /api/sync?since={seq}&full={listIds}` returns every aggregate document
-the caller can see with `seq > since` — owned, plus `tasklists` the caller
-is a member of and `todotasks`/`referenceitems` whose `listId` or
-`previousListId` (the list a moved row last left) is a list the caller is a
-member of — the events in that range (still `userId == caller` only; the
-client does not read them), and the new marker. `full` is a comma-joined
+`GET /api/sync?since={seq}&full={listIds}&limit={n}` returns one page of the
+aggregate documents the caller can see with `seq > since` — owned, plus
+`tasklists` the caller is a member of and `todotasks`/`referenceitems` whose
+`listId` or `previousListId` (the list a moved row last left) is a list the
+caller is a member of — and the new marker. It never returns events
+(`adr/0061`). Each collection is read in `seq` order, at most `limit` rows
+(default and maximum 1000, `SyncReader.MaxPageSize`). When any collection
+fills its limit, the page ends at the lowest last `seq` among the full
+collections, every collection is cut there, `hasMore` is `true` and the
+marker is that `seq`; otherwise `hasMore` is `false`. `SyncService` pulls
+page after page from each page's marker, saving the rows, marker and
+fingerprint of every page before asking for the next, and stops when
+`hasMore` is `false` or the marker fails to advance. `full` is a comma-joined
 list of ids the caller is a member of: those lists and their live children
 come back in full regardless of `since`, letting a device that just joined,
 or a second device of an already-joined user, catch up on a membership it
@@ -459,7 +466,7 @@ live lists the caller belongs to and does not own — on every call, not only
 a `full` one. The client overwrites its replica with what it receives — the
 server is truth, the replica is disposable (AD-6).
 
-**Reconciling membership.** `SyncService` saves the delta, then — only when
+**Reconciling membership.** `SyncService` saves the last page, then — only when
 the replica has a recorded owner and the response carries
 `memberListIds` — reconciles against it: a list in the replica not owned by
 the caller and missing from `memberListIds` is purged along with its tasks
@@ -695,7 +702,7 @@ directly in `PSPad.Api`:
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/api/commands` | Execute a batch of commands. The only write endpoint |
-| `GET` | `/api/sync?since=&full=` | Delta pull, widened to lists the caller is a member of; `full` (comma-joined list ids the caller belongs to) returns those lists and their children in full regardless of `since` |
+| `GET` | `/api/sync?since=&full=&limit=` | Paged delta pull (`hasMore`), documents only, widened to lists the caller is a member of; `full` (comma-joined list ids the caller belongs to) returns those lists and their children in full regardless of `since` |
 | `POST` | `/api/lists/join` | Join a shared list by invite token and code. `200 JoinListResponse(ListId, Documents)`; one empty `404` for any bad token, wrong code or deleted list; `410` when token and code match an expired invite; `429` past 10 attempts per user per 30 minutes. Not through the outbox — see §5 |
 | `GET` | `/api/today` | Server-side Today, for a cold client; includes tasks from lists the caller is a member of, in the caller's own time zone |
 | `GET` | `/api/statistics/records?before=&limit=` | The statistics feed, newest first. `limit` clamps to 1..200, default 50 |

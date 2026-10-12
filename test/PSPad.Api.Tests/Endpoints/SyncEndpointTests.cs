@@ -29,7 +29,7 @@ public class SyncEndpointTests(MongoFixture fixture)
 
         Assert.True(sync!.Marker > 0);
         Assert.Equal(ProvisioningPlan.SeedAreaNames.Count + 1, sync.Documents["areas"].Length);
-        Assert.NotEmpty(sync.Events);
+        Assert.False(sync.HasMore);
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class SyncEndpointTests(MongoFixture fixture)
 
         var second = await client.GetFromJsonAsync<SyncResponse>($"/api/sync?since={first!.Marker}", ct);
 
-        Assert.Empty(second!.Events);
+        Assert.All(second!.Documents.Values, Assert.Empty);
         Assert.Equal(first.Marker, second.Marker);
     }
 
@@ -69,7 +69,6 @@ public class SyncEndpointTests(MongoFixture fixture)
         var mineClient = factory.ClientFor(Guid.NewGuid().ToString());
         var sync = await mineClient.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
 
-        Assert.Empty(sync!.Events);
-        Assert.False(sync.Documents.TryGetValue("areas", out var areas) && areas.Length > 0);
+        Assert.False(sync!.Documents.TryGetValue("areas", out var areas) && areas.Length > 0);
     }
 }

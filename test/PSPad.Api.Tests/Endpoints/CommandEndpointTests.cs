@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using MongoDB.Driver;
 using PSPad.Contracts;
+using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
 
@@ -73,8 +75,12 @@ public class CommandEndpointTests(MongoFixture fixture)
         var results = await replay.Content.ReadFromJsonAsync<CommandResponse[]>(ct);
         Assert.True(Assert.Single(results!).Accepted);
 
-        var sync = await client.GetFromJsonAsync<JsonElement>($"/api/sync?since={marker}", ct);
-        Assert.Equal(1, sync.GetProperty("events").GetArrayLength());
+        var events = await Persistence.TestContext.For(fixture).Collection<StoredEvent>("events")
+            .CountDocumentsAsync(
+                Builders<StoredEvent>.Filter.Eq(entry => entry.UserId, user) &
+                Builders<StoredEvent>.Filter.Gt(entry => entry.Seq, marker),
+                cancellationToken: ct);
+        Assert.Equal(1, events);
     }
 
     static CommandEnvelope Envelope<T>(T command) where T : notnull =>
