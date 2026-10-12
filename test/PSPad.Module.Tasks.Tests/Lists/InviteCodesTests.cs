@@ -1,4 +1,4 @@
-using PSPad.Module.Tasks.Lists;
+using PSPad.Abstractions;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Module.Tasks.Tests.Lists;

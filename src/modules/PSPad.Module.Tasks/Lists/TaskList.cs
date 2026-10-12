@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 
@@ -7,11 +5,9 @@ namespace PSPad.Module.Tasks.Lists;
 
 public sealed class TaskList : Aggregate
 {
-    const int ShortestToken = 22;
+    public const int MostWrongCodes = Invites.MostWrongCodes;
 
-    public const int MostWrongCodes = 5;
-
-    public static readonly TimeSpan InviteLife = TimeSpan.FromMinutes(30);
+    public static readonly TimeSpan InviteLife = Invites.Life;
 
     [JsonInclude]
     public Guid AreaId { get; private set; }
@@ -47,23 +43,10 @@ public sealed class TaskList : Aggregate
 
     public bool ClosedByWrongCodes => InviteToken is null && WrongCodes >= MostWrongCodes;
 
-    public bool IsInviteLiveAt(DateTimeOffset now) =>
-        InviteToken is not null && InviteCode is not null && InviteExpiresAt is { } expiresAt && now < expiresAt;
+    public bool IsInviteLiveAt(DateTimeOffset now) => Invites.IsLiveAt(InviteToken, InviteCode, InviteExpiresAt, now);
 
-    public InviteCheck CheckInvite(string token, string code, DateTimeOffset now)
-    {
-        if (!SameSecret(InviteToken, token))
-        {
-            return InviteCheck.Unknown;
-        }
-
-        if (!SameSecret(InviteCode, InviteCodes.Normalize(code)))
-        {
-            return IsInviteLiveAt(now) ? InviteCheck.WrongCode : InviteCheck.Unknown;
-        }
-
-        return IsInviteLiveAt(now) ? InviteCheck.Open : InviteCheck.Expired;
-    }
+    public InviteCheck CheckInvite(string token, string code, DateTimeOffset now) =>
+        Invites.Check(InviteToken, InviteCode, InviteExpiresAt, token, code, now);
 
     public bool IsShared => _members.Count > 0;
 
@@ -114,17 +97,8 @@ public sealed class TaskList : Aggregate
 
             case ShareTaskList share:
                 var sharing = Require(list, share.UserId);
-                var token = share.Token;
-                if (string.IsNullOrWhiteSpace(token) || token.Length < ShortestToken)
-                {
-                    throw new DomainRejectedException("An invite link needs a longer token.");
-                }
-
-                var code = InviteCodes.Normalize(share.Code);
-                if (!InviteCodes.IsWellFormed(code))
-                {
-                    throw new DomainRejectedException("An invite needs a 6-character code.");
-                }
+                var token = Invites.RequireToken(share.Token);
+                var code = Invites.RequireCode(share.Code);
 
                 var ownerName = ContentLimits.Cut(share.OwnerName.Trim(), ContentLimits.Name);
                 return sharing.InviteToken == token && sharing.InviteCode == code && sharing.OwnerName == ownerName
@@ -231,10 +205,6 @@ public sealed class TaskList : Aggregate
         InviteCode = null;
         InviteExpiresAt = null;
     }
-
-    static bool SameSecret(string? stored, string offered) =>
-        stored is not null &&
-        CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(stored), Encoding.UTF8.GetBytes(offered));
 
     static TaskList Live(TaskList? list)
     {

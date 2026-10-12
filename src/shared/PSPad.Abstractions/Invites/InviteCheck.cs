@@ -1,4 +1,4 @@
-namespace PSPad.Module.Tasks.Lists;
+namespace PSPad.Abstractions;
 
 public enum InviteCheck
 {

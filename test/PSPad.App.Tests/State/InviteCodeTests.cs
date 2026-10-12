@@ -1,5 +1,5 @@
 using PSPad.App.State;
-using PSPad.Module.Tasks.Lists;
+using PSPad.Abstractions;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.State;
