@@ -1,5 +1,7 @@
+@using PSPad.Abstractions
 @using PSPad.Module.Money.Budgets
 @using PSPad.Module.Money.Entries
+@inject IClock Clock
 
 <MudGrid Spacing="4" Class="@Class">
     <MudItem xs="12" md="6">
@@ -18,9 +20,29 @@
                           OnRename="@(change => OnRenameCategory((CategoryKind.Income, change.From, change.To)))"
                           OnMerge="@(change => OnMergeCategory((CategoryKind.Income, change.From, change.Into)))"
                           OnRemove="@(name => OnRemoveCategory((CategoryKind.Income, name)))" />
+            <MudPaper Outlined="true" Class="pa-4 pspad-budget-sharing">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Sharing</MudText>
+                <MudButton Class="pspad-budget-sharing-open" FullWidth="true" Variant="Variant.Text" Color="Color.Default"
+                           StartIcon="@Icons.Material.Outlined.People" EndIcon="@Icons.Material.Filled.ChevronRight"
+                           OnClick="@OnOpenMembers">
+                    <span class="d-flex flex-column align-start flex-grow-1 text-left" style="text-transform:none">
+                        <span>Members</span>
+                        <span class="mud-typography-caption pspad-muted">@SharingSummary</span>
+                    </span>
+                </MudButton>
+                <MudText Typo="Typo.body2" Class="pspad-muted mt-2">
+                    @(IsMine
+                        ? "Members see every entry and balance and can add and edit them. Only you can rename, archive or invite."
+                        : $"Only {Budget.OwnerName} can rename, archive or invite.")
+                </MudText>
+            </MudPaper>
             <MudPaper Outlined="true" Class="pa-4 pspad-budget-card-settings">
                 <MudText Typo="Typo.subtitle2" Class="mb-3">Budget</MudText>
-                @if (Budget.IsArchived)
+                @if (!IsMine)
+                {
+                    <MudText Typo="Typo.body2" Class="pspad-budget-shared-by">@($"Shared by {Budget.OwnerName}.")</MudText>
+                }
+                else if (Budget.IsArchived)
                 {
                     <MudButton Class="pspad-restore-budget" Variant="Variant.Outlined" Color="Color.Primary"
                                OnClick="@OnRestore">Restore budget</MudButton>
@@ -47,6 +69,10 @@
 
     [Parameter] public IReadOnlyList<MoneyEntry> Entries { get; set; } = [];
 
+    [Parameter] public Guid Viewer { get; set; }
+
+    [Parameter] public EventCallback OnOpenMembers { get; set; }
+
     [Parameter] public Func<(CategoryKind Kind, string Name), Task<bool>> OnAddCategory { get; set; } = _ => Task.FromResult(true);
 
     [Parameter] public Func<(CategoryKind Kind, string From, string To), Task<bool>> OnRenameCategory { get; set; } =
@@ -63,6 +89,31 @@
     [Parameter] public EventCallback OnArchive { get; set; }
 
     [Parameter] public EventCallback OnRestore { get; set; }
+
+    bool IsMine => Budget.UserId == Viewer;
+
+    string SharingSummary
+    {
+        get
+        {
+            var joined = Budget.Members.Count;
+
+            if (!IsMine)
+            {
+                return $"{joined + 1} people";
+            }
+
+            var people = joined == 0 ? "Nobody joined yet" : $"{joined} joined";
+
+            if (Budget.IsInviteLiveAt(Clock.UtcNow))
+            {
+                var left = (int)Math.Ceiling((Budget.InviteExpiresAt!.Value - Clock.UtcNow).TotalMinutes);
+                return $"{people} · link {left} min left";
+            }
+
+            return joined == 0 ? "Only you" : people;
+        }
+    }
 
     IReadOnlyDictionary<string, int> UsageOf(CategoryKind kind) =>
         Entries.Where(entry => entry.Kind == kind && !entry.Deleted)

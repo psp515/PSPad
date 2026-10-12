@@ -102,7 +102,7 @@ public class PSPadApiClientTests
 
         var outcome = await client.JoinAsync("token", "K7M4PX");
 
-        Assert.Equal(listId, Assert.IsType<JoinOutcome.Joined>(outcome).ListId);
+        Assert.Equal(listId, Assert.IsType<JoinOutcome.Joined>(outcome).Id);
         Assert.Equal(new JoinListRequest("token", "K7M4PX"), handler.Request);
     }
 

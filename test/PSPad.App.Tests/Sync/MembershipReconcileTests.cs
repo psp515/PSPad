@@ -4,6 +4,11 @@ using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Sync;
 using PSPad.Contracts;
+using PSPad.Module.Money;
+using PSPad.Module.Money.Balance;
+using PSPad.Module.Money.Budgets;
+using PSPad.Module.Money.Entries;
+using PSPad.Module.Money.Values;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
@@ -219,7 +224,7 @@ public class MembershipReconcileTests
         var joined = await new SyncService(api, replica, new InMemoryOutbox())
             .JoinAsync("token", "K7M4PX", CancellationToken.None);
 
-        Assert.Equal(listId, Assert.IsType<JoinOutcome.Joined>(joined).ListId);
+        Assert.Equal(listId, Assert.IsType<JoinOutcome.Joined>(joined).Id);
         Assert.Equal(("token", "K7M4PX"), api.JoinedWith);
         Assert.NotNull(await replica.LoadAsync<TaskList>(listId));
     }
@@ -233,6 +238,133 @@ public class MembershipReconcileTests
             .JoinAsync("token", "K7M4PX", CancellationToken.None);
 
         Assert.IsType<JoinOutcome.Expired>(joined);
+    }
+
+    [Fact]
+    public async Task ABudgetThatLeftTheSetIsPurgedWithItsEntriesAndSnapshots()
+    {
+        var budget = BudgetOwnedBy(Owner);
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        await replica.SaveAsync(budget);
+        await replica.SaveAsync(EntryIn(budget));
+        await replica.SaveAsync(SnapshotIn(budget));
+        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), MemberBudgetIds: []));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Null(await replica.LoadAsync<Budget>(budget.Id));
+        Assert.Empty(await replica.LoadAllAsync<MoneyEntry>(Guid.Empty));
+        Assert.Empty(await replica.LoadAllAsync<BalanceSnapshot>(Guid.Empty));
+    }
+
+    [Fact]
+    public async Task MyOwnBudgetsAreNeverPurged()
+    {
+        var budget = BudgetOwnedBy(Me);
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        await replica.SaveAsync(budget);
+        await replica.SaveAsync(EntryIn(budget));
+        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), MemberBudgetIds: []));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.NotNull(await replica.LoadAsync<Budget>(budget.Id));
+        Assert.Single(await replica.LoadAllAsync<MoneyEntry>(Guid.Empty));
+    }
+
+    [Fact]
+    public async Task AMissingMemberBudgetIsPulledWhole()
+    {
+        var budget = BudgetOwnedBy(Owner);
+        var entry = EntryIn(budget);
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        var api = new ScriptedApi(
+            new SyncResponse(5, new Dictionary<string, JsonElement[]>(), MemberListIds: [], MemberBudgetIds: [budget.Id]),
+            new SyncResponse(5, new Dictionary<string, JsonElement[]>
+            {
+                ["budgets"] = [Serialize(budget)],
+                ["moneyentries"] = [Serialize(entry)]
+            }));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.NotNull(await replica.LoadAsync<Budget>(budget.Id));
+        Assert.NotNull(await replica.LoadAsync<MoneyEntry>(entry.Id));
+        Assert.Equal(new[] { budget.Id }, api.FullRequests[1]);
+    }
+
+    [Fact]
+    public async Task AnEntryOfABudgetIDoNotHoldIsDropped()
+    {
+        var budget = BudgetOwnedBy(Owner);
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        var entry = EntryIn(budget);
+        var snapshot = SnapshotIn(budget);
+        var api = new ScriptedApi(new SyncResponse(2, new Dictionary<string, JsonElement[]>
+        {
+            ["moneyentries"] = [Serialize(entry)],
+            ["balancesnapshots"] = [Serialize(snapshot)]
+        }, MemberBudgetIds: []));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Null(await replica.LoadAsync<MoneyEntry>(entry.Id));
+        Assert.Null(await replica.LoadAsync<BalanceSnapshot>(snapshot.Id));
+    }
+
+    [Fact]
+    public async Task AnOldServerWithoutTheBudgetSetPurgesNoBudget()
+    {
+        var budget = BudgetOwnedBy(Owner);
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        await replica.SaveAsync(budget);
+        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), MemberListIds: []));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.NotNull(await replica.LoadAsync<Budget>(budget.Id));
+    }
+
+    [Fact]
+    public async Task AdoptingWritesJoinedDocuments()
+    {
+        var budget = BudgetOwnedBy(Owner);
+        var replica = new InMemoryReplica();
+
+        await new SyncService(new ScriptedApi(), replica, new InMemoryOutbox()).AdoptAsync(
+            new Dictionary<string, JsonElement[]> { ["budgets"] = [Serialize(budget)] });
+
+        Assert.NotNull(await replica.LoadAsync<Budget>(budget.Id));
+    }
+
+    static Budget BudgetOwnedBy(Guid owner)
+    {
+        var budget = new Budget();
+        budget.ApplyAll(Budget.Decide(null, new CreateBudget(Guid.NewGuid(), owner, Guid.NewGuid(), "Household"),
+            DateTimeOffset.UnixEpoch));
+        return budget;
+    }
+
+    static MoneyEntry EntryIn(Budget budget)
+    {
+        var day = new DateOnly(2026, 10, 9);
+        var entry = new MoneyEntry();
+        entry.ApplyAll(MoneyEntry.Decide(null, budget, new RecordExpense(Guid.NewGuid(), budget.UserId, Guid.NewGuid(),
+            budget.Id, "Bread", "Food", new Money(5m, "PLN", 1m, day), day, null), DateTimeOffset.UnixEpoch));
+        return entry;
+    }
+
+    static BalanceSnapshot SnapshotIn(Budget budget)
+    {
+        var snapshot = new BalanceSnapshot();
+        snapshot.ApplyAll(BalanceSnapshot.Decide(null, budget,
+            new StartBalanceMonth(Guid.NewGuid(), budget.UserId, budget.Id, new YearMonth(2026, 10)), DateTimeOffset.UnixEpoch));
+        return snapshot;
     }
 
     static TaskList ListOwnedBy(Guid owner, Guid listId)

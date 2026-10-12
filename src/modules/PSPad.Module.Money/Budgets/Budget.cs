@@ -62,6 +62,8 @@ public sealed class Budget : Aggregate
 
     public bool HasMember(Guid userId) => _members.Any(member => member.UserId == userId);
 
+    public bool Admits(Guid userId) => UserId == userId || HasMember(userId);
+
     public bool IsInviteLiveAt(DateTimeOffset now) => Invites.IsLiveAt(InviteToken, InviteCode, InviteExpiresAt, now);
 
     public InviteCheck CheckInvite(string token, string code, DateTimeOffset now) =>

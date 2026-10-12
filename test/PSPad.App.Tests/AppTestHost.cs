@@ -96,6 +96,8 @@ public static class AppTestHost
         context.Services.AddSingleton<INbpRates>(new FakeNbpRates());
         context.Services.AddSingleton<IListSharingApi>(services => new FakeListSharingApi(
             replica, services.GetRequiredService<AppState>(), services.GetRequiredService<IClock>()));
+        context.Services.AddSingleton<IBudgetSharingApi>(services => new FakeBudgetSharingApi(
+            replica, services.GetRequiredService<AppState>(), services.GetRequiredService<IClock>()));
 
         return replica;
     }

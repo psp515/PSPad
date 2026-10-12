@@ -1,0 +1,57 @@
+@using System.Globalization
+@using PSPad.App.State
+@inject AppState State
+
+<div>
+    <MudText Typo="Typo.overline" Class="pspad-muted d-block mb-1">@($"People · {Members.Count + 1}")</MudText>
+    <MudPaper Outlined="true">
+        <MudList T="string" Class="pspad-share-members">
+            <MudListItem T="string" Class="pspad-share-owner-row">
+                <div class="d-flex align-center gap-3">
+                    <MudAvatar Color="Color.Primary" Size="Size.Small">@AvatarColor.InitialsOf(OwnerIsMe ? State.DisplayName : OwnerName)</MudAvatar>
+                    <MudText Typo="Typo.body2" Class="flex-grow-1">@(OwnerIsMe ? "You" : OwnerName)</MudText>
+                    <MudChip T="string" Class="ma-0" Size="Size.Small">Owner</MudChip>
+                </div>
+            </MudListItem>
+            @foreach (var member in Members)
+            {
+                <MudListItem T="string" @key="member.UserId" Class="pspad-share-member">
+                    <div class="d-flex align-center gap-3">
+                        <MudAvatar Size="Size.Small" Style="@($"background:{AvatarColor.For(member.UserId)};color:#fff")">
+                            @AvatarColor.InitialsOf(member.DisplayName)
+                        </MudAvatar>
+                        <div class="flex-grow-1">
+                            <MudText Typo="Typo.body2">@(member.UserId == State.UserId ? "You" : member.DisplayName)</MudText>
+                            @if (OwnerIsMe)
+                            {
+                                <MudText Typo="Typo.caption" Class="pspad-muted">@($"Joined {member.JoinedAt.ToString("d MMM", CultureInfo.InvariantCulture)}")</MudText>
+                            }
+                        </div>
+                        @if (OwnerIsMe)
+                        {
+                            <MudIconButton Class="pspad-share-remove" Icon="@Icons.Material.Outlined.PersonRemove"
+                                           aria-label="@($"Remove {member.DisplayName}")" Disabled="@Disabled"
+                                           OnClick="@(() => OnRemove.InvokeAsync(member))" />
+                        }
+                    </div>
+                </MudListItem>
+            }
+        </MudList>
+    </MudPaper>
+    @if (!OwnerIsMe)
+    {
+        <MudText Typo="Typo.caption" Class="pspad-muted d-block mt-2">@($"Only {OwnerName} can invite people.")</MudText>
+    }
+</div>
+
+@code {
+    [Parameter] public bool OwnerIsMe { get; set; }
+
+    [Parameter] public string OwnerName { get; set; } = "";
+
+    [Parameter] public IReadOnlyList<SharePerson> Members { get; set; } = [];
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback<SharePerson> OnRemove { get; set; }
+}

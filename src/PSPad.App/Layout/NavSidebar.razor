@@ -37,7 +37,14 @@
             {
                 <MudNavLink @key="budget.Id" Href="@BudgetLinks.For(budget.Id)"
                             Icon="@Icons.Material.Outlined.AccountBalanceWallet">
-                    @budget.Name
+                    <span class="d-flex align-center gap-2">
+                        <span class="flex-grow-1">@budget.Name</span>
+                        @if (budget.IsShared)
+                        {
+                            <MudIcon Class="pspad-budget-shared" Icon="@Icons.Material.Outlined.People" Size="Size.Small"
+                                     aria-label="@(budget.UserId == UserId ? "Shared" : "Shared with you")" />
+                        }
+                    </span>
                 </MudNavLink>
             }
 
@@ -124,7 +131,7 @@
     [Inject] NavGroupState Groups { get; set; } = default!;
 
     IReadOnlyList<Budget> ActiveBudgets =>
-        [.. Budgets.Where(budget => !budget.IsArchived).OrderBy(budget => budget.CreatedAt)];
+        [.. BudgetOrder.For(Budgets, UserId).Where(budget => !budget.IsArchived)];
 
     protected override void OnInitialized()
     {

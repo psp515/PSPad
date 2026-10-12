@@ -1,0 +1,35 @@
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.Module.Money.Budgets
+@inject IDocumentStore<Budget> Budgets
+@inject AppState State
+
+<DetailPanel Open="@(_budget is not null)" Title="Members" TitleTypo="Typo.body2" OnClose="@OnClose" Disabled="@Disabled">
+    @if (_budget is not null)
+    {
+        <div class="px-4 py-3">
+            <BudgetMembersView Budget="@_budget" Disabled="@Disabled" OnChanged="@ReloadAsync" />
+        </div>
+    }
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? BudgetId { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
+    Budget? _budget;
+
+    protected override Task OnParametersSetAsync() => ReloadAsync();
+
+    async Task ReloadAsync()
+    {
+        var budget = BudgetId is null ? null : await Budgets.LoadAsync(BudgetId.Value, CancellationToken.None);
+        _budget = budget is not null && budget.Admits(State.UserId) ? budget : null;
+    }
+}

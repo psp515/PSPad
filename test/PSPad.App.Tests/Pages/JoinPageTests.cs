@@ -216,6 +216,41 @@ public class JoinPageTests : Bunit.TestContext
     Bunit.TestDoubles.BunitNavigationManager Navigation =>
         (Bunit.TestDoubles.BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
 
+    [Fact]
+    public async Task ABudgetLinkJoinsTheBudgetAndOpensIt()
+    {
+        var budget = new PSPad.Module.Money.Budgets.Budget();
+        budget.ApplyAll(PSPad.Module.Money.Budgets.Budget.Decide(null,
+            new PSPad.Module.Money.Budgets.CreateBudget(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Household"),
+            DateTimeOffset.UnixEpoch));
+        var api = Arrange(new JoinOutcome.Invalid());
+        var budgets = (FakeBudgetSharingApi)Services.GetRequiredService<IBudgetSharingApi>();
+        budgets.JoinOutcome = new JoinOutcome.Joined(budget.Id, new Dictionary<string, JsonElement[]>
+        {
+            ["budgets"] = [JsonSerializer.SerializeToElement(budget, new JsonSerializerOptions(JsonSerializerDefaults.Web))]
+        });
+        NavigateTo("budgets/join/tok#code=K7M4PX");
+
+        var page = RenderPage("tok");
+
+        Assert.Empty(api.Calls);
+        Assert.Equal(("tok", "K7M4PX"), budgets.JoinedWith);
+        Assert.EndsWith($"/budgets/{budget.Id}", page.Services.GetRequiredService<NavigationManager>().Uri);
+        Assert.NotNull(await Services.GetRequiredService<IReplica>().LoadAsync<PSPad.Module.Money.Budgets.Budget>(budget.Id));
+    }
+
+    [Fact]
+    public void ABudgetLinkAsksForTheBudgetsCode()
+    {
+        Arrange(new JoinOutcome.Invalid());
+        NavigateTo("budgets/join/tok");
+
+        var page = RenderPage("tok");
+
+        Assert.Contains("The person who shared the budget has a 6-character code.", page.Markup);
+        Assert.Contains("Join budget", page.Find(".pspad-join-submit").TextContent);
+    }
+
     void NavigateTo(string uri) => Services.GetRequiredService<NavigationManager>().NavigateTo(uri);
 
     IRenderedComponent<JoinPage> RenderPage(string token) =>

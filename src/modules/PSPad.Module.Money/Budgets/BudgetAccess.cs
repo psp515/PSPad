@@ -5,7 +5,7 @@ namespace PSPad.Module.Money.Budgets;
 public static class BudgetAccess
 {
     public static Budget To(Budget? budget, Guid actorId) =>
-        budget is null || (budget.UserId != actorId && !budget.HasMember(actorId))
+        budget is null || !budget.Admits(actorId)
             ? throw Missing()
             : budget;
 

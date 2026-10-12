@@ -43,7 +43,7 @@ else
         @foreach (var budget in Visible)
         {
             <MudItem @key="budget.Id" xs="12" sm="6" lg="4">
-                <BudgetCard Budget="@budget" Month="@ThisMonth" Totals="@TotalsFor(budget)" Latest="@LatestFor(budget)" />
+                <BudgetCard Budget="@budget" Viewer="@State.UserId" Month="@ThisMonth" Totals="@TotalsFor(budget)" Latest="@LatestFor(budget)" />
             </MudItem>
         }
     </MudGrid>
@@ -106,7 +106,7 @@ else
     async Task ReloadAsync()
     {
         var budgets = await BudgetStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        _budgets = [.. budgets.OrderBy(budget => budget.CreatedAt)];
+        _budgets = BudgetOrder.For(budgets, State.UserId);
         _entries = [.. await EntryStore.LoadAllAsync(State.UserId, CancellationToken.None)];
         _snapshots = [.. await SnapshotStore.LoadAllAsync(State.UserId, CancellationToken.None)];
         _loaded = true;

@@ -274,4 +274,14 @@ public class BudgetSharingTests
         Assert.IsAssignableFrom<IServerOnlyCommand>(new LeaveBudget(Guid.NewGuid(), Member, Guid.NewGuid()));
         Assert.IsAssignableFrom<IServerOnlyCommand>(new JoinBudget(Guid.NewGuid(), Member, Guid.NewGuid(), Token, Code, "A"));
     }
+
+    [Fact]
+    public void TheOwnerAndMembersAreAdmitted()
+    {
+        var budget = Given.Join(Shared());
+
+        Assert.True(budget.Admits(Owner));
+        Assert.True(budget.Admits(Member));
+        Assert.False(budget.Admits(Stranger));
+    }
 }

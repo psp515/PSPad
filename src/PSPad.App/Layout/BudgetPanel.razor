@@ -47,7 +47,7 @@
     async Task ReloadAsync()
     {
         var budget = BudgetId is null ? null : await Budgets.LoadAsync(BudgetId.Value, CancellationToken.None);
-        _budget = budget is null || budget.IsArchived ? null : budget;
+        _budget = budget is null || budget.IsArchived || budget.UserId != State.UserId ? null : budget;
     }
 
     async Task NameChangedAsync(string name)
