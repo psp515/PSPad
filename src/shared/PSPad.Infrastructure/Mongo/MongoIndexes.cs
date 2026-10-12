@@ -84,6 +84,11 @@ public static class MongoIndexes
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("listId"))
         ], ct);
 
+        await context.Collection<BsonDocument>("snapshot_mark_budgets").Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("expiresAt"),
+                new CreateIndexOptions { ExpireAfter = TimeSpan.Zero }),
+            cancellationToken: ct);
+
         await context.Collection<BsonDocument>("snapshot_visits").Indexes.CreateManyAsync(
         [
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("expiresAt"),

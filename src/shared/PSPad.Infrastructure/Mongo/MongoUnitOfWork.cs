@@ -53,6 +53,11 @@ public sealed class MongoUnitOfWork(
                     var @event = staged.UserId == userId ? staged : staged with { ActorId = userId };
                     var seq = await _sequence.NextAsync(session, ct);
                     aggregate.Seq = seq;
+                    if (@event is IUnloggedEvent)
+                    {
+                        continue;
+                    }
+
                     published.Add(new DomainEventEnvelope(seq, @event));
                     await events.InsertOneAsync(session, new StoredEvent
                     {
@@ -69,12 +74,15 @@ public sealed class MongoUnitOfWork(
                 await SaveAsync(session, aggregate, aggregate.Version - stagedEvents.Count, ct);
             }
 
-            await processed.InsertOneAsync(session, new ProcessedCommand
+            if (!IsUnloggedOnly())
             {
-                Id = commandId,
-                UserId = userId,
-                At = DateTimeOffset.UtcNow
-            }, cancellationToken: ct);
+                await processed.InsertOneAsync(session, new ProcessedCommand
+                {
+                    Id = commandId,
+                    UserId = userId,
+                    At = DateTimeOffset.UtcNow
+                }, cancellationToken: ct);
+            }
 
             await session.CommitTransactionAsync(ct);
 
@@ -112,6 +120,12 @@ public sealed class MongoUnitOfWork(
             _staged.Clear();
             published.Clear();
         }
+    }
+
+    bool IsUnloggedOnly()
+    {
+        var events = _staged.SelectMany(staged => staged.Events).ToArray();
+        return events.Length > 0 && events.All(@event => @event is IUnloggedEvent);
     }
 
     static bool IsDuplicateInviteToken(MongoWriteException exception) =>

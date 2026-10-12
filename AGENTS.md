@@ -48,7 +48,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | AD | Summary | ADR |
 |----|---------|-----|
 | 1 | Modular monolith: Tasks, Statistics, Identity, Presentation, Sharing, Money | 0010, 0045, 0059 |
-| 2 | Documents are truth, events are the log | 0011 |
+| 2 | Documents are truth, events are the log; snapshot marks are state-only | 0011, 0064 |
 | 3–4 | Commands shared; Tasks compiles to WASM | 0003, 0004 |
 | 5–6 | LWW conflicts offline, version-checked saves on the server; delta sync by monotonic `seq`, paged, documents only | 0005, 0006, 0061, 0063 |
 | 7 | Recurrence template + occurrences | 0007, 0043, 0053 |
@@ -57,7 +57,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 10 | Events dispatch after commit, replayed from a marker | 0036, 0037 |
 | 11 | Per-user views live in Presentation | 0051 |
 | 12 | Lists shared by membership | 0054, 0057 |
-| 13 | Public snapshots, server-only module | 0056 |
+| 13 | Public snapshots, server-only module | 0056, 0064 |
 | 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount | 0059 |
 
 Stack: .NET 10, MongoDB 8 replica set `rs0`, Blazor WASM PWA + MudBlazor,

@@ -3,8 +3,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using PSPad.Api.Snapshots;
 using PSPad.Api.Tests.Sync;
 using PSPad.Contracts;
+using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Sharing.Snapshots;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
@@ -158,6 +161,54 @@ public class SnapshotMarkTests(MongoFixture fixture)
             new MarkSnapshotEntryRequest(taskId, null, true), ct);
 
         Assert.Equal(HttpStatusCode.NotFound, markResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task VisitorMarksLeaveNoRowInTheEventLog()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var (owner, ownerId, listId, taskId, _) = await SeedTaskAsync(factory, ct);
+        var published = await PublishAsync(owner, listId, ct);
+
+        var anonymous = factory.CreateClient();
+        foreach (var marked in new[] { true, false, true })
+        {
+            (await anonymous.PostAsJsonAsync(
+                $"/api/public/snapshots/{published.Token}/marks",
+                new MarkSnapshotEntryRequest(taskId, null, marked), ct)).EnsureSuccessStatusCode();
+        }
+
+        var context = Persistence.TestContext.For(fixture);
+        var markEvents = await context.Collection<StoredEvent>("events").CountDocumentsAsync(
+            Builders<StoredEvent>.Filter.Eq(entry => entry.AggregateId, taskId) &
+            Builders<StoredEvent>.Filter.Eq(entry => entry.Type, nameof(TaskSnapshotMarkSet)),
+            cancellationToken: ct);
+        Assert.Equal(0, markEvents);
+    }
+
+    [Fact]
+    public async Task MarkingAListWhoseDailyBudgetIsSpentIs429()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var (owner, ownerId, listId, taskId, _) = await SeedTaskAsync(factory, ct);
+        var published = await PublishAsync(owner, listId, ct);
+
+        var budget = new MongoMarkBudget(Persistence.TestContext.For(fixture));
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        while (await budget.TryTakeAsync(listId, today, SnapshotMarking.DailyMarksPerList, ct))
+        {
+        }
+
+        var anonymous = factory.CreateClient();
+        var markResponse = await anonymous.PostAsJsonAsync(
+            $"/api/public/snapshots/{published.Token}/marks",
+            new MarkSnapshotEntryRequest(taskId, null, true), ct);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, markResponse.StatusCode);
+        var view = await anonymous.GetFromJsonAsync<SnapshotView>($"/api/public/snapshots/{published.Token}", ct);
+        Assert.False(Assert.Single(view!.Tasks).Marked);
     }
 
     static async Task<PublishedSnapshotView> PublishAsync(HttpClient owner, Guid listId, CancellationToken ct)

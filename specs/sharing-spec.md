@@ -140,7 +140,10 @@ an occurrence, never enters the Today rule, and Statistics ignores its events.
 | `ClearReferenceItemSnapshotMarks(itemId)` | owner or member | yes | Same, for a reference item |
 
 Events: `TaskSnapshotMarkSet`, `TaskSnapshotMarksCleared`,
-`ReferenceItemSnapshotMarkSet`, `ReferenceItemSnapshotMarksCleared`.
+`ReferenceItemSnapshotMarkSet`, `ReferenceItemSnapshotMarksCleared`. The two
+`…MarkSet` events are `IUnloggedEvent` (`adr/0064`): they change the document
+and its `seq` but leave no row in the event log and no command id; the owner
+keeps only the current marks.
 `ActorId` = `UserId` (the owner); there is no account behind an anonymous
 visitor.
 
@@ -358,9 +361,15 @@ frozen content until it expires or is revoked (`adr/0056`).
 anonymous, rate-limited like the read. Any visitor may tick or untick any
 entry; the token is the guard and the snapshot expires.
 
-1. Sharing sets `marked`/`markedAt` on the snapshot entry and saves. Unknown
-   entry or expired snapshot → 404; unchanged → 204, nothing further.
-2. It then runs `MarkTaskFromSnapshot` or `MarkReferenceItemFromSnapshot`
+1. Unknown entry or expired snapshot → 404; unchanged → 204, nothing
+   further.
+2. Sharing takes one unit of the list's daily budget
+   (`SnapshotMarking.DailyMarksPerList`, 100 changes per UTC day across all
+   the list's snapshots and visitors, `adr/0064`). None left → 429, nothing
+   written; the page reverts the tick and says "Too many ticks on this list.
+   Try again later."
+3. Sharing sets `marked`/`markedAt` on the snapshot entry and saves.
+4. It then runs `MarkTaskFromSnapshot` or `MarkReferenceItemFromSnapshot`
    through the server pipeline with the owner as `UserId` and a fresh
    `CommandId`. A rejection (the task was deleted since) is logged and
    ignored — the snapshot's tick stands.

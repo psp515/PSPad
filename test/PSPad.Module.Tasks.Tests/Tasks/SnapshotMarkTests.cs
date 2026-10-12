@@ -15,6 +15,17 @@ public class SnapshotMarkTests
     static readonly ListAccess MemberAccess = new(Owner, Member);
 
     [Fact]
+    public void AMarkIsStateOnlyAndNeverReachesTheEventLog()
+    {
+        var task = Existing();
+
+        var events = TodoTask.Decide(
+            task, new MarkTaskFromSnapshot(Guid.NewGuid(), Owner, task.Id, null, SnapshotId, true), Now);
+
+        Assert.IsAssignableFrom<IUnloggedEvent>(Assert.Single(events));
+    }
+
+    [Fact]
     public void AMarkOnTheTaskIsRecorded()
     {
         var task = Existing();

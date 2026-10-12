@@ -23,7 +23,12 @@ public static class PublicSnapshotEndpoints
             string token, MarkSnapshotEntryRequest request, SnapshotMarking marking, CancellationToken ct) =>
         {
             var outcome = await marking.MarkAsync(token, request.EntryId, request.StepId, request.Marked, ct);
-            return outcome == MarkOutcome.NotFound ? Results.NotFound() : Results.NoContent();
+            return outcome switch
+            {
+                MarkOutcome.NotFound => Results.NotFound(),
+                MarkOutcome.Throttled => Results.StatusCode(StatusCodes.Status429TooManyRequests),
+                _ => Results.NoContent()
+            };
         });
     }
 }
