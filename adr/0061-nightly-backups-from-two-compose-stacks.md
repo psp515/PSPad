@@ -94,9 +94,10 @@ Only the Mongo restore rotates the dataset id (ADR-0062).
   doesn't force a Mongo restore, and a bad PSPad upgrade doesn't touch
   accounts.
 - `docker compose down -v` on PSPad no longer destroys accounts.
-- Self-hosters run two `up` commands, Keycloak first. Existing installs
-  migrate once: the H2 realm is exported, Keycloak's service and volume
-  leave `docker/compose.yaml`, and the new stack imports.
+- Self-hosters run two `up` commands, Keycloak first. The old H2 volume
+  isn't migrated: production's accounts already live in Postgres in their
+  own repository, and the repository stack starts fresh from the realm
+  file.
 - The pair is never one atomic snapshot. Restoring a Keycloak backup older
   than the Mongo one loses accounts created in between, and orphans their
   data. The schedule order and the documented pairing rule are the only
@@ -104,7 +105,7 @@ Only the Mongo restore rotates the dataset id (ADR-0062).
 - Two `.env` files, and two backup containers to watch. One age key pair
   can serve both.
 - The repository compose gains a Postgres container, the cost ADR-0015
-  avoided. Existing H2 installs need a one-off export and import.
+  avoided.
 - The recovery point is the last nightly run. Up to a day of writes can be
   lost.
 - Losing the age private key makes off-host copies unreadable. The local

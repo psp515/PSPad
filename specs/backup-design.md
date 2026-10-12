@@ -180,24 +180,17 @@ documented:
 ## 5. Keycloak on Postgres
 
 `pg_dump` is the one supported path. It's consistent while Keycloak runs,
-and it matches production. This depends on #138 moving Keycloak from
-`start-dev`/H2 to `start` on Postgres.
+and it matches production.
 
 The Keycloak stack keeps `start-dev` and moves only its database:
 `KC_DB=postgres` against `keycloak-db` (`postgres:17`, volume
 `keycloak-db-data`). Dev mode accepts any database, so this change is
 independent of #138's switch to `start`.
 
-**Migration for existing H2 installs** is a one-off and is documented in
-`install.astro`:
-
-1. Stop Keycloak.
-2. Run `kc.sh export --dir /export --users realm_file` in a one-off
-   container on `keycloak-data`.
-3. Start the new Keycloak stack. Its first start imports from that
-   directory instead of `realm-psplace.json`.
-
-User UUIDs survive an export and import.
+There is no migration from the old H2 volume. The new stack starts from
+`realm-psplace.json`. Production already runs Keycloak on Postgres from its
+own repository, so no deployment holding real accounts goes through this
+change.
 
 ## 6. Two stacks, one restore
 
@@ -312,8 +305,7 @@ Google Drive isn't exercised in CI, because there's no hermetic fake.
   - generating an age key pair (keep the private key off the server);
   - S3 and Google Drive setup;
   - health;
-  - the restore order and pairing rule (§6);
-  - the H2 → Postgres migration.
+  - the restore order and pairing rule (§6).
 
   The manual `mongodump` one-liner stays as the fallback.
 - `docker/backup/{mongo,keycloak}/.env.example`: every variable, commented.
