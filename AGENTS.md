@@ -17,7 +17,9 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
   occurrence shows. Rule lives once in the domain layer, shared client and server.
 - Recurrence = template + occurrences, only Done days stored (AD-7).
 - Goals are global entities; star means important only, never puts a task on Today.
-- `PSPad.Module.Tasks` is WASM-safe: references `PSPad.Abstractions` only.
+- `PSPad.Module.Tasks` and `PSPad.Module.Money` are WASM-safe: reference
+  `PSPad.Abstractions` only.
+- Money totals are PLN; every amount carries its rate frozen at entry (AD-14).
 - Aggregate documents are truth; events are the log beside them. No audit table.
 - Commands are the shared contract; same handler runs in WASM and on the server.
 - Offline conflicts: last-write-wins per aggregate; rejected commands are surfaced.
@@ -35,6 +37,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | List ordering | `specs/list-ordering-design.md` |
 | Recurrence lead time, yearly repeats | `specs/recurrence-lead-time-design.md` |
 | Phone navigation | `specs/mobile-navigation-design.md` |
+| Budgets, expenses, balances, NBP rates | `specs/money-design.md` |
 | Why a decision was made | `adr/README.md` index → the `Active` record |
 
 Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither silently.
@@ -43,7 +46,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 
 | AD | Summary | ADR |
 |----|---------|-----|
-| 1 | Modular monolith: Tasks, Statistics, Identity, Presentation, Sharing | 0010, 0045 |
+| 1 | Modular monolith: Tasks, Statistics, Identity, Presentation, Sharing, Money | 0010, 0045, 0059 |
 | 2 | Documents are truth, events are the log | 0011 |
 | 3–4 | Commands shared; Tasks compiles to WASM | 0003, 0004 |
 | 5–6 | LWW conflicts; delta sync by monotonic `seq` | 0005, 0006 |
@@ -54,6 +57,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 11 | Per-user views live in Presentation | 0051 |
 | 12 | Lists shared by membership | 0054, 0057 |
 | 13 | Public snapshots, server-only module | 0056 |
+| 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount | 0059 |
 
 Stack: .NET 10, MongoDB 8 replica set `rs0`, Blazor WASM PWA + MudBlazor,
 IndexedDB replica and outbox, Keycloak OIDC/JWT, Docker Compose, no messaging bus.
@@ -62,11 +66,11 @@ IndexedDB replica and outbox, Keycloak OIDC/JWT, Docker Compose, no messaging bu
 
 ```
 src/PSPad.Api  src/PSPad.App  src/shared/{Abstractions,Contracts,Infrastructure}
-src/modules/PSPad.Module.{Tasks,Statistics,Identity,Presentation,Sharing}
+src/modules/PSPad.Module.{Tasks,Statistics,Identity,Presentation,Sharing,Money}
 test/  brand/  docs/  specs/  adr/  docker/  .superpowers/sdd/ (uncommitted plans)
 ```
 
-References run one way: `Tasks` sees `Abstractions` only; `Infrastructure` sees no
+References run one way: `Tasks` and `Money` see `Abstractions` only; `Infrastructure` sees no
 module; `App` never sees `Infrastructure`; `Api` sees all. Only module edges:
 `Statistics`→`Tasks`, `Sharing`→`Tasks`. Detail: `specs/backend-spec.md` §1.
 

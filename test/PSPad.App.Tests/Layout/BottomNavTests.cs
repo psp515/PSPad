@@ -32,7 +32,7 @@ public class BottomNavTests : Bunit.TestContext
     [InlineData("areas/0b8c1c7e-0000-0000-0000-000000000001", "/areas")]
     [InlineData("lists/0b8c1c7e-0000-0000-0000-000000000001", "/areas")]
     [InlineData("goals", "/goals")]
-    [InlineData("statistics", "/statistics")]
+    [InlineData("budgets", "/budgets")]
     public void TheCurrentScreensTabIsMarked(string path, string tabHref)
     {
         Arrange();
@@ -127,5 +127,17 @@ public class BottomNavTests : Bunit.TestContext
         }
 
         return inbox;
+    }
+
+    [Fact]
+    public void TheSlotsAreInboxAreasMyDayGoalsBudgets()
+    {
+        Arrange();
+
+        var nav = Render<BottomNav>();
+
+        var hrefs = nav.FindAll(".pspad-bottom-nav-slots > a, .pspad-bottom-nav-slots > .mud-button-root")
+            .Select(slot => slot.GetAttribute("href"));
+        Assert.Equal(["/inbox", "/areas", "/", "/goals", "/budgets"], hrefs);
     }
 }

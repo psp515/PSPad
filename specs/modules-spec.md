@@ -123,6 +123,26 @@ authentication mechanics (Keycloak/JWT live in `PSPad.Infrastructure` and
 
 ---
 
+## PSPad.Module.Money
+
+**Purpose.** Budgets, expenses, incomes and monthly balances, with PLN as the
+base for every total (`adr/0059`, `specs/money-design.md`).
+
+**Owns.** `Budget` (categories inside, archived and never deleted),
+`MoneyEntry`, `BalanceSnapshot` (holdings inside), `MoneyPreferences`; the
+`Money` value with its frozen rate, `RateSuggestion`, `MonthTotals` and
+`MoneySummary`. Collections `budgets`, `moneyentries`, `balancesnapshots` and
+`moneypreferences`.
+
+**Must not.** Reference anything but `PSPad.Abstractions` (it is WASM-safe,
+like Tasks). Call NBP or any network: the NBP lookup lives in `PSPad.Api`.
+Know that Tasks, Statistics or Presentation exist. Recompute a stored rate.
+
+**Extension points.** Budget sharing by membership, following `adr/0054`:
+widen `BudgetAccess.To` and the sync filter. Not built.
+
+---
+
 ## Future modules
 
 Each external integration is its own module (`adr/0045`, Proposed). Habits

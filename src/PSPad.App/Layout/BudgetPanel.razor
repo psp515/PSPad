@@ -1,0 +1,110 @@
+@using PSPad.Abstractions
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Money.Budgets
+@inject IDocumentStore<Budget> Budgets
+@inject AppState State
+@inject CommandSender Sender
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<DetailPanel Open="@(IsNew || _budget is not null)" Title="@(IsNew ? "New budget" : "Budget")" TitleTypo="Typo.body2"
+             OnClose="@OnClose" OnSave="@SaveCallback" SaveText="Add budget"
+             CanSave="@(!string.IsNullOrWhiteSpace(_draftName))" Disabled="@Disabled">
+    <div class="px-2 pt-3 pb-1">
+        <MudTextField T="string" Class="pspad-budget-name-field flex-grow-1 px-2" Placeholder="Budget name"
+                      Typo="Typo.h6" Underline="false" MaxLength="80" Value="@(_budget?.Name ?? _draftName)"
+                      ValueChanged="@NameChangedAsync" Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@Disabled"
+                      OnKeyDown="@AddOnEnterAsync" />
+    </div>
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? BudgetId { get; set; }
+
+    [Parameter] public bool IsNew { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    Budget? _budget;
+    string _draftName = "";
+
+    EventCallback SaveCallback => IsNew ? EventCallback.Factory.Create(this, CreateAsync) : default;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsNew)
+        {
+            _draftName = "";
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task ReloadAsync()
+    {
+        var budget = BudgetId is null ? null : await Budgets.LoadAsync(BudgetId.Value, CancellationToken.None);
+        _budget = budget is null || budget.IsArchived ? null : budget;
+    }
+
+    async Task NameChangedAsync(string name)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_budget is null)
+        {
+            _draftName = name;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(name) || name.Trim() == _budget.Name)
+        {
+            return;
+        }
+
+        var result = await Sender.SendAsync(new RenameBudget(Guid.NewGuid(), State.UserId, _budget.Id, name.Trim()));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't rename the budget.", Severity.Warning);
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task AddOnEnterAsync(KeyboardEventArgs args)
+    {
+        if (IsNew && args.Key == "Enter")
+        {
+            await CreateAsync();
+        }
+    }
+
+    async Task CreateAsync()
+    {
+        var name = _draftName.Trim();
+
+        if (Disabled || !IsNew || name.Length == 0)
+        {
+            return;
+        }
+
+        var budgetId = Guid.NewGuid();
+        var result = await Sender.SendAsync(new CreateBudget(Guid.NewGuid(), State.UserId, budgetId, name));
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't add the budget.", Severity.Warning);
+            return;
+        }
+
+        _draftName = "";
+        Navigation.NavigateTo(BudgetLinks.For(budgetId));
+    }
+}

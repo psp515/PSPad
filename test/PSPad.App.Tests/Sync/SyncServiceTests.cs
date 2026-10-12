@@ -4,6 +4,7 @@ using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Sync;
 using PSPad.Contracts;
+using PSPad.Module.Money.Budgets;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
@@ -179,6 +180,34 @@ public class SyncServiceTests
 
         var stored = await replica.LoadAsync<AreaView>(view.Id);
         Assert.Equal([list], stored!.Order);
+    }
+
+    [Fact]
+    public async Task APulledBudgetLandsInTheReplicaWithItsCategories()
+    {
+        var replica = new InMemoryReplica();
+        var budget = new Budget();
+        budget.ApplyAll(Budget.Decide(null, new CreateBudget(Guid.NewGuid(), User, Guid.NewGuid(), "Personal"),
+            DateTimeOffset.UnixEpoch));
+        var row = JsonSerializer.SerializeToElement(budget,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true });
+        var api = new FakeApi
+        {
+            Pull = new(5, new Dictionary<string, JsonElement[]> { ["budgets"] = [row] }, [])
+        };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        var stored = await replica.LoadAsync<Budget>(budget.Id);
+        Assert.NotNull(stored);
+        Assert.Equal(8, stored.ExpenseCategories.Count);
+    }
+
+    [Fact]
+    public void TheFingerprintNamesTheMoneyCollections()
+    {
+        Assert.Contains("budgets", SyncService.CollectionsFingerprint);
+        Assert.Contains("moneypreferences", SyncService.CollectionsFingerprint);
     }
 
     [Fact]

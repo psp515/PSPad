@@ -283,7 +283,7 @@ top of the page, with no panel, dialog or drawer open, runs the same sync;
 offline it does nothing. Both call `ISyncTrigger.SyncNowAsync`.
 
 Below `md`, `Layout/BottomNav.razor` is a `MudAppBar Bottom="true"` with
-five equal slots — Inbox, Areas, My Day, Goals, Statistics — My Day raised
+five equal slots — Inbox, Areas, My Day, Goals, Budgets (`/budgets`) — My Day raised
 as the centre `MudFab`, always filled `Color.Primary`; the other four are
 `MudButton`s (icon over label, the sidebar's own icons) whose active slot
 gets a primary icon, a bold label and a tonal pill. The active slot is a
@@ -292,7 +292,7 @@ it.
 
 Below `md`, the avatar in `MobileTopBar` opens `Layout/AccountDrawer.razor`
 — a `MudDrawer`, `Anchor.End`, `DrawerVariant.Temporary`, 300px — holding
-`AccountBadge`, Settings and App info as `MudNavLink`s, then
+`AccountBadge`, Statistics, List snapshots, Settings and App info as `MudNavLink`s, then
 `Components/SidebarFooter.razor` (connection status, clock, "PSPad · GPL
 v3"), the same footer component the permanent sidebar uses. Navigating
 closes the drawer.
@@ -1347,7 +1347,10 @@ the example. The Consistency heatmap is not a `MudChart` — see §1.
 non-interactive `AccountBadge` (avatar, display name, email — a label, not
 a control), then a nav group of **My Day / Inbox / Goals / Statistics /
 List snapshots**,
-divider, the user's areas in `Position` order, then **Shared with me**
+divider, a collapsible **Budgets** group (header links `/budgets`; active budgets
+in creation order), a collapsible **Areas** group holding the user's areas in
+`Position` order (expanded state per device in local storage key
+`pspad.navgroups`; a collapsed header reads "Label · N"; `adr/0060`), then **Shared with me**
 (`People` icon) when the user has a member list, then **+ New area**,
 divider, **Settings** / **App info**, then a spacer, then a footer
 (connection status, current date/time, "PSPad · GPL v3"). There is no search field in
@@ -1360,12 +1363,20 @@ and footer moved into `AccountDrawer` (`adr/0050`).
 At `md`+ the sidebar is still `MudNavMenu`/`MudNavLink`, styled through a
 `pspad-nav` class: 12px padding inside the drawer, links with an 8px radius
 and 2px gap, outlined icons (`Icons.Material.Outlined.*`), counts as a
-right-aligned muted number (not in the label) and a muted "Areas" caption
-above the areas group. The active link is tinted with the primary at 12%
+right-aligned muted number (not in the label) and the group headers above the
+Budgets and Areas groups. The active link is tinted with the primary at 12%
 (`color-mix` on `--mud-palette-primary`, so every accent and dark mode
 follow) at medium weight; its text uses `--mud-palette-text-primary` and
 only its icon is primary, to hold the 4.5:1 contrast rule on the tint
 (`PSPadThemeTests.TheActiveSidebarLinkReadsOnItsTint`).
+
+**Budgets** (`adr/0059`, `adr/0060`; full design `specs/money-design.md` §6).
+`/budgets` lists budget cards with a "Show archived" switch, an empty state and
+a New budget FAB; `BudgetPanel` creates and renames (`?budget=new|{id}`).
+`/budgets/{id}` shows the budget's Settings tab: expense and income category
+lists with Add, and Archive/Restore with an archived banner. Settings holds the
+default currency select. The Month, Balance and Summary tabs arrive in later
+slices.
 
 **Routes:**
 
