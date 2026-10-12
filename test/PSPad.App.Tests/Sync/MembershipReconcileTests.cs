@@ -26,7 +26,7 @@ public class MembershipReconcileTests
         await replica.SaveAsync(ListOwnedBy(Owner, listId));
         await replica.SaveAsync(TaskIn(listId));
         await replica.SaveAsync(ItemIn(listId));
-        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), [], MemberListIds: []));
+        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), MemberListIds: []));
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
 
@@ -55,7 +55,7 @@ public class MembershipReconcileTests
         {
             ["todotasks"] = [Serialize(task)],
             ["referenceitems"] = [Serialize(item)]
-        }, [], MemberListIds: [sharedId]));
+        }, MemberListIds: [sharedId]));
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
 
@@ -81,7 +81,7 @@ public class MembershipReconcileTests
         var api = new ScriptedApi(new SyncResponse(9, new Dictionary<string, JsonElement[]>
         {
             ["todotasks"] = [stub]
-        }, [], MemberListIds: [sharedId]));
+        }, MemberListIds: [sharedId]));
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
 
@@ -98,7 +98,7 @@ public class MembershipReconcileTests
             null, new CreateTask(Guid.NewGuid(), Me, Guid.NewGuid(), Guid.NewGuid(), "Mine"),
             DateTimeOffset.UnixEpoch));
         await replica.SaveAsync(task);
-        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), [], MemberListIds: []));
+        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), MemberListIds: []));
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
 
@@ -112,7 +112,7 @@ public class MembershipReconcileTests
         var replica = new InMemoryReplica();
         await replica.SetOwnerAsync(Me);
         await replica.SaveAsync(ListOwnedBy(Me, listId));
-        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), [], MemberListIds: []));
+        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), MemberListIds: []));
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
 
@@ -128,12 +128,12 @@ public class MembershipReconcileTests
         var list = ListOwnedBy(Owner, listId);
         var task = TaskIn(listId);
         var api = new ScriptedApi(
-            new SyncResponse(5, new Dictionary<string, JsonElement[]>(), [], MemberListIds: [listId]),
+            new SyncResponse(5, new Dictionary<string, JsonElement[]>(), MemberListIds: [listId]),
             new SyncResponse(5, new Dictionary<string, JsonElement[]>
             {
                 ["tasklists"] = [Serialize(list)],
                 ["todotasks"] = [Serialize(task)]
-            }, []));
+            }));
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
 
@@ -157,7 +157,7 @@ public class MembershipReconcileTests
             new SyncResponse(5, new Dictionary<string, JsonElement[]>
             {
                 ["areas"] = [Serialize(area)]
-            }, [], MemberListIds: [listId]),
+            }, MemberListIds: [listId]),
             throwOnFull: true);
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
@@ -173,7 +173,7 @@ public class MembershipReconcileTests
         var replica = new InMemoryReplica();
         await replica.SetOwnerAsync(Me);
         await replica.SaveAsync(ListOwnedBy(Owner, listId));
-        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), [], MemberListIds: null));
+        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), MemberListIds: null));
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
 
@@ -186,7 +186,7 @@ public class MembershipReconcileTests
         var listId = Guid.NewGuid();
         var replica = new InMemoryReplica();
         await replica.SaveAsync(ListOwnedBy(Owner, listId));
-        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), [], MemberListIds: []));
+        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), MemberListIds: []));
 
         await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
 

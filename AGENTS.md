@@ -50,7 +50,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 1 | Modular monolith: Tasks, Statistics, Identity, Presentation, Sharing, Money | 0010, 0045, 0059 |
 | 2 | Documents are truth, events are the log | 0011 |
 | 3–4 | Commands shared; Tasks compiles to WASM | 0003, 0004 |
-| 5–6 | LWW conflicts; delta sync by monotonic `seq` | 0005, 0006 |
+| 5–6 | LWW conflicts; delta sync by monotonic `seq`, paged, documents only | 0005, 0006, 0061 |
 | 7 | Recurrence template + occurrences | 0007, 0043, 0053 |
 | 8 | Aggregates: User, Area, TaskList, TodoTask, Goal, Inbox, ReferenceItem | 0008, 0047 |
 | 9 | Integration tests own a Testcontainers MongoDB 8 replica set | 0009 |

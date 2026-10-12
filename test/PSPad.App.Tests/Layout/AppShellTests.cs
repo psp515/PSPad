@@ -537,7 +537,7 @@ public class AppShellTests : Bunit.TestContext
 
         Assert.Empty(JSInterop.Invocations["pspadBoot.done"]);
 
-        pull.SetResult(new SyncResponse(9, new Dictionary<string, System.Text.Json.JsonElement[]>(), []));
+        pull.SetResult(new SyncResponse(9, new Dictionary<string, System.Text.Json.JsonElement[]>()));
 
         shell.WaitForAssertion(() => JSInterop.VerifyInvoke("pspadBoot.done"));
     }
@@ -581,7 +581,7 @@ public class AppShellTests : Bunit.TestContext
 
         Assert.NotEmpty(shell.FindComponents<BrandLoader>());
 
-        pull.SetResult(new SyncResponse(9, new Dictionary<string, System.Text.Json.JsonElement[]>(), []));
+        pull.SetResult(new SyncResponse(9, new Dictionary<string, System.Text.Json.JsonElement[]>()));
 
         shell.WaitForAssertion(() => Assert.Empty(shell.FindComponents<BrandLoader>()));
     }
@@ -638,7 +638,7 @@ public class AppShellTests : Bunit.TestContext
 
         Assert.NotEmpty(shell.FindComponents<BrandLoader>());
 
-        pull.SetResult(new SyncResponse(9, new Dictionary<string, System.Text.Json.JsonElement[]>(), []));
+        pull.SetResult(new SyncResponse(9, new Dictionary<string, System.Text.Json.JsonElement[]>()));
 
         shell.WaitForAssertion(() => Assert.Empty(shell.FindComponents<BrandLoader>()));
     }

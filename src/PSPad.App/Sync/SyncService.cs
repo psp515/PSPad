@@ -106,14 +106,29 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         // A client built before a collection existed skipped its rows silently while still
         // advancing its marker past them, so a stale fingerprint forces one full re-pull.
         var since = storedFingerprint == CollectionsFingerprint ? await replica.MarkerAsync() : 0;
-        var response = await api.SyncAsync(since, []);
+        var pulled = 0;
+        SyncResponse? response;
 
-        if (response is null)
+        while (true)
         {
-            return null;
-        }
+            response = await api.SyncAsync(since, []);
 
-        var pulled = await SaveAsync(response.Documents);
+            if (response is null)
+            {
+                return null;
+            }
+
+            pulled += await SaveAsync(response.Documents);
+
+            if (!response.HasMore || response.Marker <= since)
+            {
+                break;
+            }
+
+            await replica.SetMarkerAsync(response.Marker);
+            await replica.SetCollectionsFingerprintAsync(CollectionsFingerprint);
+            since = response.Marker;
+        }
 
         var me = await replica.OwnerAsync();
 

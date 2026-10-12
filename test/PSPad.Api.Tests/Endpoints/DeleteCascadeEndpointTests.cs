@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using MongoDB.Driver;
 using PSPad.Contracts;
+using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
@@ -30,9 +32,10 @@ public class DeleteCascadeEndpointTests(MongoFixture fixture)
         AssertDeleted(sync.Documents["areas"], [areaId]);
         AssertDeleted(sync.Documents["tasklists"], listIds);
         AssertDeleted(sync.Documents["todotasks"], taskIds);
-        Assert.Single(sync.Events, @event => @event.Type == nameof(AreaDeleted));
-        Assert.Equal(2, sync.Events.Count(@event => @event.Type == nameof(TaskListDeleted)));
-        Assert.Equal(3, sync.Events.Count(@event => @event.Type == nameof(TaskDeleted)));
+        var events = await EventsSinceAsync(user, marker, ct);
+        Assert.Single(events, @event => @event.Type == nameof(AreaDeleted));
+        Assert.Equal(2, events.Count(@event => @event.Type == nameof(TaskListDeleted)));
+        Assert.Equal(3, events.Count(@event => @event.Type == nameof(TaskDeleted)));
         Assert.Empty((await client.GetFromJsonAsync<TodayEntry[]>("/api/today", ct))!);
     }
 
@@ -51,8 +54,7 @@ public class DeleteCascadeEndpointTests(MongoFixture fixture)
         var replay = await PostAsync(client, ct, delete);
 
         Assert.True(Assert.Single(replay).Accepted);
-        var sync = (await client.GetFromJsonAsync<SyncResponse>($"/api/sync?since={marker}", ct))!;
-        Assert.Empty(sync.Events);
+        Assert.Empty(await EventsSinceAsync(user, marker, ct));
     }
 
     [Fact]
@@ -116,6 +118,12 @@ public class DeleteCascadeEndpointTests(MongoFixture fixture)
             records.Where(record => record.Kind == "Deleted").Select(record => record.TaskId).Order());
     }
 
+
+    async Task<List<StoredEvent>> EventsSinceAsync(Guid user, long since, CancellationToken ct) =>
+        await Persistence.TestContext.For(fixture).Collection<StoredEvent>("events")
+            .Find(Builders<StoredEvent>.Filter.Eq(entry => entry.UserId, user) &
+                  Builders<StoredEvent>.Filter.Gt(entry => entry.Seq, since))
+            .ToListAsync(ct);
     static async Task<int> OutstandingTodayAsync(HttpClient client, CancellationToken ct) =>
         (await client.GetFromJsonAsync<StatisticsOverview>("/api/statistics/overview?days=7", ct))!.Outstanding[^1].Count;
 

@@ -30,15 +30,18 @@ public sealed class SyncReader(MongoContext context)
     static readonly string[] InviteSecrets =
         ["inviteToken", "inviteCode", "inviteExpiresAt", "wrongCodes", "closedByWrongCodes"];
 
+    public const int MaxPageSize = 1000;
+
     public async Task<SyncResponse> ReadAsync(
-        Guid userId, long since, IReadOnlyCollection<Guid> full, CancellationToken ct)
+        Guid userId, long since, IReadOnlyCollection<Guid> full, CancellationToken ct, int limit = MaxPageSize)
     {
         using var session = await context.Client.StartSessionAsync(cancellationToken: ct);
         session.StartTransaction(new TransactionOptions(readConcern: ReadConcern.Snapshot));
 
         try
         {
-            var response = await ReadWithinSessionAsync(session, userId, since, full, ct);
+            var response = await ReadWithinSessionAsync(
+                session, userId, since, full, Math.Clamp(limit, 1, MaxPageSize), ct);
             await session.CommitTransactionAsync(ct);
             return response;
         }
@@ -50,15 +53,9 @@ public sealed class SyncReader(MongoContext context)
     }
 
     async Task<SyncResponse> ReadWithinSessionAsync(
-        IClientSessionHandle session, Guid userId, long since, IReadOnlyCollection<Guid> full, CancellationToken ct)
+        IClientSessionHandle session, Guid userId, long since, IReadOnlyCollection<Guid> full, int limit,
+        CancellationToken ct)
     {
-        var events = await context.Collection<StoredEvent>("events")
-            .Find(session,
-                Builders<StoredEvent>.Filter.Eq(entry => entry.UserId, userId) &
-                Builders<StoredEvent>.Filter.Gt(entry => entry.Seq, since))
-            .SortBy(entry => entry.Seq)
-            .ToListAsync(ct);
-
         var memberListIds = await context.Collection<TaskList>()
             .Find(session,
                 Builders<TaskList>.Filter.Eq("_members.userId", userId) &
@@ -71,93 +68,91 @@ public sealed class SyncReader(MongoContext context)
 
         bool Readable(Guid ownerId, Guid listId) => ownerId == userId || visible.Contains(listId);
 
-        var areas = await ReadAsync<Area>(session, since, Owned<Area>(userId), None<Area>(), ct);
-        var taskLists = await ReadAsync(session, since,
-            Owned<TaskList>(userId) | Builders<TaskList>.Filter.Eq("_members.userId", userId),
-            Builders<TaskList>.Filter.In(list => list.Id, wholeLists), ct,
-            list => list.UserId == userId ? Serialize(list) : WithoutInvite(Serialize(list)));
-        var todoTasks = await ReadAsync(session, since,
-            Owned<TodoTask>(userId) |
-            Builders<TodoTask>.Filter.In(task => task.ListId, memberListIds) |
-            Builders<TodoTask>.Filter.In(task => task.PreviousListId, memberListIds.Select(id => (Guid?)id)),
-            Builders<TodoTask>.Filter.In(task => task.ListId, wholeLists), ct,
-            task => Readable(task.UserId, task.ListId)
-                ? Serialize(task)
-                : Stub(task, task.ListId, task.PreviousListId));
-        var goals = await ReadAsync<Goal>(session, since, Owned<Goal>(userId), None<Goal>(), ct);
-        var inboxes = await ReadAsync<Inbox>(session, since, Owned<Inbox>(userId), None<Inbox>(), ct);
-        var users = await ReadAsync<User>(session, since, Owned<User>(userId), None<User>(), ct);
-        var referenceItems = await ReadAsync(session, since,
-            Owned<ReferenceItem>(userId) |
-            Builders<ReferenceItem>.Filter.In(item => item.ListId, memberListIds) |
-            Builders<ReferenceItem>.Filter.In(item => item.PreviousListId, memberListIds.Select(id => (Guid?)id)),
-            Builders<ReferenceItem>.Filter.In(item => item.ListId, wholeLists), ct,
-            item => Readable(item.UserId, item.ListId)
-                ? Serialize(item)
-                : Stub(item, item.ListId, item.PreviousListId));
-        var areaViews = await ReadAsync<AreaView>(session, since, Owned<AreaView>(userId), None<AreaView>(), ct);
-        var listViews = await ReadAsync<ListView>(session, since, Owned<ListView>(userId), None<ListView>(), ct);
-        var budgets = await ReadAsync<Budget>(session, since, Owned<Budget>(userId), None<Budget>(), ct);
-        var moneyPreferences = await ReadAsync<MoneyPreferences>(
-            session, since, Owned<MoneyPreferences>(userId), None<MoneyPreferences>(), ct);
-        var moneyEntries = await ReadAsync<MoneyEntry>(
-            session, since, Owned<MoneyEntry>(userId), None<MoneyEntry>(), ct);
-        var balanceSnapshots = await ReadAsync<BalanceSnapshot>(
-            session, since, Owned<BalanceSnapshot>(userId), None<BalanceSnapshot>(), ct);
+        Task<SyncSource> Read<T>(
+            string collection, FilterDefinition<T> visible, FilterDefinition<T>? whole = null,
+            Func<T, JsonElement>? project = null) where T : Aggregate =>
+            ReadSourceAsync(session, collection, visible, whole, since, limit, project ?? Serialize, ct);
 
-        var documents = new Dictionary<string, JsonElement[]>
+        var sources = new SyncSource[]
         {
-            ["areas"] = areas.Rows,
-            ["tasklists"] = taskLists.Rows,
-            ["todotasks"] = todoTasks.Rows,
-            ["goals"] = goals.Rows,
-            ["inboxes"] = inboxes.Rows,
-            ["users"] = users.Rows,
-            ["referenceitems"] = referenceItems.Rows,
-            ["areaviews"] = areaViews.Rows,
-            ["listviews"] = listViews.Rows,
-            ["budgets"] = budgets.Rows,
-            ["moneypreferences"] = moneyPreferences.Rows,
-            ["moneyentries"] = moneyEntries.Rows,
-            ["balancesnapshots"] = balanceSnapshots.Rows
+            await Read("areas", Owned<Area>(userId)),
+            await Read("tasklists",
+                Owned<TaskList>(userId) | Builders<TaskList>.Filter.Eq("_members.userId", userId),
+                WholeOrNone(Builders<TaskList>.Filter.In(list => list.Id, wholeLists), wholeLists),
+                list => list.UserId == userId ? Serialize(list) : WithoutInvite(Serialize(list))),
+            await Read("todotasks",
+                Owned<TodoTask>(userId) |
+                Builders<TodoTask>.Filter.In(task => task.ListId, memberListIds) |
+                Builders<TodoTask>.Filter.In(task => task.PreviousListId, memberListIds.Select(id => (Guid?)id)),
+                WholeOrNone(Builders<TodoTask>.Filter.In(task => task.ListId, wholeLists), wholeLists),
+                task => Readable(task.UserId, task.ListId)
+                    ? Serialize(task)
+                    : Stub(task, task.ListId, task.PreviousListId)),
+            await Read("goals", Owned<Goal>(userId)),
+            await Read("inboxes", Owned<Inbox>(userId)),
+            await Read("users", Owned<User>(userId)),
+            await Read("referenceitems",
+                Owned<ReferenceItem>(userId) |
+                Builders<ReferenceItem>.Filter.In(item => item.ListId, memberListIds) |
+                Builders<ReferenceItem>.Filter.In(item => item.PreviousListId, memberListIds.Select(id => (Guid?)id)),
+                WholeOrNone(Builders<ReferenceItem>.Filter.In(item => item.ListId, wholeLists), wholeLists),
+                item => Readable(item.UserId, item.ListId)
+                    ? Serialize(item)
+                    : Stub(item, item.ListId, item.PreviousListId)),
+            await Read("areaviews", Owned<AreaView>(userId)),
+            await Read("listviews", Owned<ListView>(userId)),
+            await Read("budgets", Owned<Budget>(userId)),
+            await Read("moneypreferences", Owned<MoneyPreferences>(userId)),
+            await Read("moneyentries", Owned<MoneyEntry>(userId)),
+            await Read("balancesnapshots", Owned<BalanceSnapshot>(userId))
         };
 
-        var highestDocumentSeq = new[]
-        {
-            areas.HighestSeq, taskLists.HighestSeq, todoTasks.HighestSeq,
-            goals.HighestSeq, inboxes.HighestSeq, users.HighestSeq, referenceItems.HighestSeq,
-            areaViews.HighestSeq, listViews.HighestSeq, budgets.HighestSeq, moneyPreferences.HighestSeq,
-            moneyEntries.HighestSeq, balanceSnapshots.HighestSeq
-        }.Max();
+        // A full source stops at its own last seq; every source is cut there so no row past it is skipped.
+        var bounded = sources.Where(source => source.Full).ToArray();
+        var hasMore = bounded.Length > 0;
+        var upTo = hasMore ? bounded.Min(source => source.LastSeq) : long.MaxValue;
 
-        var highestEventSeq = events.Count > 0
-            ? events[^1].Seq
-            : Math.Max(since, await HighestSeqAsync(session, userId, ct));
+        var documents = sources.ToDictionary(
+            source => source.Collection,
+            source => source.Rows.Where(row => row.Seq <= upTo || row.Whole).Select(row => row.Json).ToArray());
 
-        var marker = Math.Max(highestEventSeq, highestDocumentSeq);
+        var marker = hasMore
+            ? upTo
+            : Math.Max(
+                Math.Max(since, await HighestSeqAsync(session, userId, ct)),
+                sources.Max(source => source.LastSeq));
 
-        return new SyncResponse(
-            marker,
-            documents,
-            events.Select(entry => new SyncEvent(
-                entry.Seq, entry.AggregateType, entry.AggregateId, entry.Type, entry.Payload, entry.At))
-                .ToArray(),
-            [.. memberListIds]);
+        return new SyncResponse(marker, documents, [.. memberListIds], hasMore);
     }
 
-    async Task<(JsonElement[] Rows, long HighestSeq)> ReadAsync<T>(
-        IClientSessionHandle session, long since, FilterDefinition<T> visible, FilterDefinition<T> whole,
-        CancellationToken ct, Func<T, JsonElement>? project = null)
+    async Task<SyncSource> ReadSourceAsync<T>(
+        IClientSessionHandle session, string collection, FilterDefinition<T> visible, FilterDefinition<T>? whole,
+        long since, int limit, Func<T, JsonElement> project, CancellationToken ct)
         where T : Aggregate
     {
-        var rows = await context.Collection<T>()
-            .Find(session, (visible & Builders<T>.Filter.Gt(document => document.Seq, since)) | whole)
+        var changed = await context.Collection<T>()
+            .Find(session, visible & Builders<T>.Filter.Gt(document => document.Seq, since))
+            .SortBy(document => document.Seq)
+            .Limit(limit)
             .ToListAsync(ct);
 
-        var highestSeq = rows.Count > 0 ? rows.Max(row => row.Seq) : 0;
+        var lists = whole is null ? [] : await context.Collection<T>().Find(session, whole).ToListAsync(ct);
+        var inLists = lists.Select(row => row.Id).ToHashSet();
+        var already = changed.Select(row => row.Id).ToHashSet();
 
-        return (rows.Select(project ?? Serialize).ToArray(), highestSeq);
+        var rows = changed
+            .Select(row => new SyncRow(row.Id, row.Seq, project(row), inLists.Contains(row.Id)))
+            .Concat(lists
+                .Where(row => !already.Contains(row.Id))
+                .Select(row => new SyncRow(row.Id, row.Seq, project(row), true)))
+            .ToArray();
+
+        return new SyncSource(
+            collection, rows, changed.Count == limit, changed.Count > 0 ? changed[^1].Seq : 0);
     }
+
+    static FilterDefinition<T>? WholeOrNone<T>(FilterDefinition<T> filter, Guid[] lists) =>
+        lists.Length > 0 ? filter : null;
 
     static JsonElement Serialize<T>(T row) where T : Aggregate =>
         JsonSerializer.SerializeToElement(row, JsonOptions);
@@ -199,6 +194,4 @@ public sealed class SyncReader(MongoContext context)
     static FilterDefinition<T> Owned<T>(Guid userId) where T : Aggregate =>
         Builders<T>.Filter.Eq(document => document.UserId, userId);
 
-    static FilterDefinition<T> None<T>() where T : Aggregate =>
-        Builders<T>.Filter.In(document => document.Id, Array.Empty<Guid>());
 }

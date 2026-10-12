@@ -165,7 +165,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
     public async Task ThePulledRevisionStandsStillWhenNothingCameDown()
     {
         // Polling every minute must not make every open screen re-read the replica for nothing.
-        var coordinator = CoordinatorFor(new SyncResponse(7, new Dictionary<string, JsonElement[]>(), []));
+        var coordinator = CoordinatorFor(new SyncResponse(7, new Dictionary<string, JsonElement[]>()));
 
         await coordinator.SyncNowAsync();
         await coordinator.SyncNowAsync();
@@ -382,8 +382,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
                     JsonSerializer.SerializeToElement(
                         area, new JsonSerializerOptions(JsonSerializerDefaults.Web))
                 ]
-            },
-            []);
+            });
     }
 
     SyncCoordinator CoordinatorFor(HttpRequestException failure, InMemoryReplica? replica = null)
@@ -443,7 +442,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
                     : new CommandResponse(Guid.NewGuid(), false, Reasons[0]))]);
 
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
-            Task.FromResult<SyncResponse?>(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), []));
+            Task.FromResult<SyncResponse?>(new SyncResponse(1, new Dictionary<string, JsonElement[]>()));
 
         public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
     }
