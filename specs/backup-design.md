@@ -8,24 +8,33 @@ Builds on #138 (Keycloak on Postgres) and #143 (dedicated Mongo users).
 Once a day, PSPad's data and the accounts that own it are copied somewhere
 that survives a lost disk, a bad upgrade or a `down -v`.
 
-Two stacks do this, one per store:
+The repository runs two compose stacks, joined by one Docker network,
+`psplace`:
 
-- **`mongo-backup`** backs up PSPad's MongoDB. It belongs to PSPad.
-- **`keycloak-backup`** backs up Keycloak's Postgres. It belongs to
-  Keycloak, which holds the shared `psplace` realm for every self-hosted
-  application (ADR-0026), not just PSPad.
+- **PSPad** (`docker/compose.yaml`): `api`, `app`, `mongo` and
+  **`mongo-backup`**.
+- **Keycloak** (`docker/keycloak/compose.yaml`): `keycloak`, `keycloak-db`
+  (Postgres) and **`keycloak-backup`**.
 
-Each one is its own compose file with its own `.env`. They run, fail and
-restore independently.
+Keycloak holds the shared `psplace` realm for every self-hosted application
+(ADR-0026). Production already runs it from its own repository. Here it
+stays in this repository, as a separate stack.
+
+Each backup service lives in its store's stack, behind the `backup`
+profile, with that stack's `.env`. The two run, fail and restore
+independently.
 
 ## 1. Scope
 
 In:
 
-- `docker/backup/mongo/compose.yaml` and
-  `docker/backup/keycloak/compose.yaml`, each with an `.env.example`.
-- Two images, `pspad-backup-mongo` and `keycloak-backup`, on one shared
-  base, `docker/backup/base/`.
+- Splitting Keycloak out of `docker/compose.yaml` into
+  `docker/keycloak/compose.yaml` on Postgres, with the shared external
+  network `psplace`.
+- `mongo-backup` in the PSPad stack and `keycloak-backup` in the Keycloak
+  stack, both behind the `backup` profile.
+- One multi-stage `docker/backup/Dockerfile` with two targets, `mongo` and
+  `keycloak`, that share the same tools and scripts.
 - One run per day at `BACKUP_AT` (in `BACKUP_TZ`) in each stack, plus
   `backup now` on demand.
 - Destinations, per stack: always a local directory; optionally an
@@ -36,7 +45,8 @@ In:
   (§7).
 - Health: each container turns unhealthy when its last successful run is
   more than 26 h old. An optional ping URL is set per stack.
-- Docs: `install.astro` Backups section, both `.env.example` files.
+- Docs: `install.astro` (two stacks, Backups), `docker/.env.example`,
+  `docker/keycloak/.env.example`.
 
 Out:
 
@@ -45,25 +55,31 @@ Out:
 - Backups started from the app UI, and per-user export or import.
 - Any rclone backend other than S3 and Google Drive.
 - Backing up `mongo-keyfile`. A logical dump restores into any instance.
-- Backing up Keycloak while it runs on H2 (`start-dev`). See §5.
+- Backing up Keycloak while it runs on H2. See §5.
+- Keycloak `start` mode, hostname and port hardening. That stays #138's
+  work; this change only moves Keycloak's database.
 - One combined, atomic snapshot of both stores. See §6.
 
 ## 2. Shape
 
 ```
+docker/compose.yaml            api, app, mongo, mongo-backup[backup]   network psplace (external)
+docker/keycloak/compose.yaml   keycloak, keycloak-db, keycloak-backup[backup]   network psplace (owner)
 docker/backup/
-  base/             Dockerfile: rclone, age, supercronic (pinned) +
-                    lib.sh: package → encrypt → upload → prune → ping,
-                    entrypoint.sh: validate env, render crontab, exec supercronic
-  mongo/            Dockerfile FROM base + MongoDB Database Tools
-                    dump.sh, restore.sh, compose.yaml, .env.example
-  keycloak/         Dockerfile FROM base + postgresql-client
-                    dump.sh, restore.sh, compose.yaml, .env.example
+  Dockerfile        stage tools: rclone, age, supercronic (pinned, sha256-checked)
+                    target mongo:    FROM mongo:8.0.x   + tools + scripts
+                    target keycloak: FROM postgres:17.x + tools + scripts
+  lib.sh            package → encrypt → upload → prune → ping
+  entrypoint.sh     validate env, render crontab, exec supercronic
+  healthcheck.sh    last success within 26 h (or started under 26 h ago)
+  mongo/dump.sh  mongo/restore.sh
+  keycloak/dump.sh  keycloak/restore.sh
 ```
 
-Each image only adds a `dump.sh` that writes its files into a work
-directory. Everything after that step is the shared `lib.sh`, so encryption,
-upload, retention and health behave the same in both stacks.
+Each target ships only its own `dump.sh` and `restore.sh`, on a base image
+that already carries the matching client (`mongodump` in `mongo`, `pg_dump`
+in `postgres`). Everything after the dump is the shared `lib.sh`, so
+encryption, upload, retention and health behave the same in both stacks.
 
 Neither stack touches .NET code. The API only learns about restores through
 the dataset id (§7).
@@ -75,18 +91,20 @@ Every licence is GPL-3-compatible: rclone (MIT), age (BSD-3), supercronic
 
 ### Reaching the database
 
-Each compose file declares its target's network as `external`. That's
-`pspad_pspad` for Mongo, and the Keycloak stack's network for Keycloak, set
-with `BACKUP_NETWORK`. The stack then connects by service name.
-
-When the database lives somewhere else (production's external
-`MONGO_CONNECTIONSTRING`, a managed Postgres), the self-hoster sets the URI
-and drops the network. No port has to be published either way.
+The Keycloak stack creates the network (`name: psplace`). The PSPad stack
+joins it as `external: true`, so Keycloak starts first. Each backup service
+reaches its own database by service name inside its own stack. The API
+reaches Keycloak as `http://keycloak:8080` over `psplace`, as it does
+today. No database port is published.
 
 ```
-docker compose -f docker/backup/mongo/compose.yaml --env-file docker/backup/mongo/.env up -d
-docker compose -f docker/backup/keycloak/compose.yaml --env-file docker/backup/keycloak/.env up -d
+docker compose -f docker/keycloak/compose.yaml --profile backup up -d
+docker compose -f docker/compose.yaml --profile backup up -d
 ```
+
+When a database lives elsewhere (production's external
+`MONGO_CONNECTIONSTRING`, a managed Postgres), its backup service takes a
+URI instead.
 
 ## 3. One run (both stacks)
 
@@ -95,10 +113,12 @@ docker compose -f docker/backup/keycloak/compose.yaml --env-file docker/backup/k
      produces `mongo.archive.gz`. `--oplog` makes the dump a single point in
      time across collections. Documents, `events`, `counters`, Statistics
      records and the dispatch marker (ADR-0036, ADR-0037) must agree. It
-     connects as `pspad-backup`, with the `backup` and `restore` roles, not
-     root (#143).
+     connects as the stack's root user `pspad` for now. Once #143 adds
+     dedicated Mongo users, it switches to `pspad-backup` with the `backup`
+     and `restore` roles.
    - **keycloak:** `pg_dump --format=custom "$BACKUP_PG_URI"` produces
-     `keycloak.dump`. It connects as a role with read access only.
+     `keycloak.dump`. It connects as Keycloak's own database user, which
+     restore needs anyway.
 2. **Package.** The files and a `manifest.json` (stack, source version, run
    time in UTC, sha256 and size of each file) go into
    `<stack>-<yyyy-MM-ddTHHmmZ>.tar`.
@@ -129,14 +149,13 @@ connection settings.
 | `BACKUP_TZ` | `UTC` | both | Time zone for `BACKUP_AT` |
 | `BACKUP_KEEP_DAYS` | `14` | both | Retention at every destination |
 | `BACKUP_LOCAL_DIR` | — | both | Host path to bind instead of the stack's volume |
-| `BACKUP_NETWORK` | `pspad_pspad` / — | both | External network the database is on |
 | `BACKUP_AGE_RECIPIENT` | — | both | age public key; required once any remote is set |
 | `BACKUP_S3_ENDPOINT`, `_REGION`, `_BUCKET`, `_PREFIX`, `_ACCESS_KEY_ID`, `_SECRET_ACCESS_KEY` | — | both | S3-compatible remote (AWS, B2, R2, MinIO); enabled when `_BUCKET` is set |
 | `BACKUP_REMOTE_PRUNE` | `true` | both | `false` for write-only keys; retention moves to a bucket lifecycle rule |
 | `BACKUP_GDRIVE_TOKEN`, `_FOLDER_ID`, `_CLIENT_ID`, `_CLIENT_SECRET` | — | both | Google Drive remote; enabled when `_TOKEN` is set |
 | `BACKUP_PING_URL` | — | both | Called on success, with `/fail` appended on failure |
-| `BACKUP_MONGO_URI` | `mongodb://pspad-backup:${BACKUP_MONGO_PASSWORD}@mongo:27017/?authSource=admin&directConnection=true` | mongo | Whole instance, not one database (for `--oplog`) |
-| `BACKUP_PG_URI` | `postgresql://keycloak_backup:${BACKUP_PG_PASSWORD}@keycloak-db:5432/keycloak` | keycloak | Keycloak's database |
+| `BACKUP_MONGO_URI` | `mongodb://pspad:${MONGO_PASSWORD}@mongo:27017/?authSource=admin&directConnection=true` | mongo | Whole instance, not one database (for `--oplog`) |
+| `BACKUP_PG_URI` | `postgresql://keycloak:${KEYCLOAK_DB_PASSWORD}@keycloak-db:5432/keycloak` | keycloak | Keycloak's database |
 
 The age key can be the same in both stacks or different. The docs
 recommend one key pair, kept off the server, for simplicity.
@@ -164,11 +183,10 @@ documented:
 and it matches production. This depends on #138 moving Keycloak from
 `start-dev`/H2 to `start` on Postgres.
 
-The `keycloak-backup` stack is written for Keycloak living in its own
-compose stack, which is the ownership ADR-0026 says it should have once a
-second application uses the realm. While Keycloak is still part of
-`docker/compose.yaml`, `BACKUP_NETWORK=pspad_pspad` points the stack at it
-there. When Keycloak moves out, only that variable changes.
+The Keycloak stack keeps `start-dev` and moves only its database:
+`KC_DB=postgres` against `keycloak-db` (`postgres:17`, volume
+`keycloak-db-data`). Dev mode accepts any database, so this change is
+independent of #138's switch to `start`.
 
 **Migration for existing H2 installs** is a one-off and is documented in
 `install.astro`:
@@ -176,7 +194,8 @@ there. When Keycloak moves out, only that variable changes.
 1. Stop Keycloak.
 2. Run `kc.sh export --dir /export --users realm_file` in a one-off
    container on `keycloak-data`.
-3. Start the Postgres-backed Keycloak with `--import-realm`.
+3. Start the new Keycloak stack. Its first start imports from that
+   directory instead of `realm-psplace.json`.
 
 User UUIDs survive an export and import.
 
@@ -196,11 +215,9 @@ So Keycloak runs **after** Mongo (default 30 minutes later). The restore
 docs say to pair a Mongo backup with the first Keycloak backup taken at or
 after it.
 
-`keycloak/restore.sh latest` and `mongo/restore.sh latest` from the same
-night satisfy this by default. Each restore script prints its backup's
-timestamp, and `mongo/restore.sh` warns when the running Keycloak's newest
-user was created after the Mongo backup it's restoring. In that case the
-pairing is fine; it reports it anyway, so the operator knows.
+Restoring `latest` in both stacks from the same night satisfies this by
+default. Each restore prints its backup's timestamp. `restore list` shows
+the backups at each destination, so the operator can pick a pair by hand.
 
 Restoring only one store is supported:
 
@@ -226,28 +243,40 @@ and the collections fingerprint (ADR-0049):
 - If the stored id is missing, it records the id it receives. Existing
   installs upgrade with no purge.
 - If the stored id differs, the sync discards that response. It clears
-  every replica collection and the marker, keeps the recorded owner and the
-  outbox, records the new id, and pulls with `since = 0`.
+  every replica collection and the marker, and the Statistics and snapshot
+  caches. It keeps the recorded owner and the outbox, records the new id,
+  and pulls with `since = 0`.
 - The outbox replays under last-write-wins (AD-5). Commands that refer to
   aggregates the restore lost come back rejected and are surfaced.
 
-**`mongo/restore.sh <file|latest> [--from local|s3|gdrive] [--yes]`:**
+**Restoring.** Restore runs as a one-off of the backup service. The
+operator stops the writer first; the backup container never gets the
+Docker socket.
 
-1. Fetch the backup, decrypt it with `BACKUP_AGE_IDENTITY_FILE` (needed
-   only for restore), and verify the manifest's sha256 values.
+```
+docker compose -f docker/compose.yaml stop api
+docker compose -f docker/compose.yaml run --rm mongo-backup restore latest [--from local|s3|gdrive] [--yes]
+docker compose -f docker/compose.yaml start api
+```
+
+`restore <name|latest>`:
+
+1. Fetch the backup and decrypt it with the private key mounted from
+   `BACKUP_AGE_IDENTITY_FILE` (only needed for restore). Verify the
+   manifest's sha256 values.
 2. Ask for confirmation by typing the database name, unless `--yes` is
    passed.
-3. Stop PSPad's `api` (`BACKUP_API_CONTAINER`, `pspad-api-1` by default)
-   so nothing writes during the restore. The script uses the Docker socket,
-   mounted read-only and only into `restore` runs, never into the
-   scheduled service.
+3. Refuse if `api:8080` still accepts connections (a bash `/dev/tcp`
+   probe over the stack network), naming `stop api`.
 4. Run `mongorestore --oplogReplay --drop --archive --gzip`.
 5. Delete `meta.dataset`.
-6. Start `api`.
+6. Print the backup's timestamp.
 
-**`keycloak/restore.sh`** follows the same steps 1–2. It then stops
-Keycloak, runs `pg_restore --clean --if-exists`, and starts Keycloak
-again. It has no dataset-id step.
+Keycloak is the same sequence in its own stack: `stop keycloak`, then
+`run --rm keycloak-backup restore latest`, which makes the same probe
+against `keycloak:8080` and runs
+`pg_restore --clean --if-exists --single-transaction`, then
+`start keycloak`. It has no dataset-id step.
 
 ## 8. Testing
 
@@ -260,15 +289,14 @@ again. It has no dataset-id step.
   - `GET /api/sync` returns a stable `datasetId`.
   - Deleting `meta.dataset` yields a new one.
 - **Round trip** (a new CI job, `backup-roundtrip`):
-  1. Bring up the app stack, both backup stacks, MinIO as the S3 remote,
-     and a throwaway age key.
+  1. Bring up both stacks with the `backup` profile, MinIO as the S3
+     remote, and a throwaway age key.
   2. Seed data and run `backup now` in each stack.
   3. Assert that each stack wrote a local tarball and a remote `.age`
      object under its own prefix, and that the remote objects aren't
      readable tars.
-  4. `down -v` the app stack and bring it up again.
-  5. Run `keycloak/restore.sh latest --from s3 --yes`, then
-     `mongo/restore.sh latest --from s3 --yes`.
+  4. `down -v` both stacks, then bring them up again.
+  5. Restore Keycloak, then Mongo, from `s3`, with `--yes`.
   6. Assert that the seeded user signs in with the same UUID, their
      documents sync back, and `datasetId` changed.
 
@@ -300,6 +328,3 @@ Google Drive isn't exercised in CI, because there's no hermetic fake.
 - Should a dump that shrinks by more than 50 % compared with the previous
   run fail the ping, so a silently emptied database is caught before
   retention rotates the good copies out?
-- Should `keycloak-backup` (and later Keycloak itself) move to its own
-  repository, since it serves every self-hosted application and not only
-  PSPad?

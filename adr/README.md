@@ -73,7 +73,7 @@ the old one's status line to point at the new number.
 | [0056](0056-public-snapshots-are-frozen-copies.md) | Public snapshots are frozen copies, served from a new Sharing module | Active | 2026-10-01 | architecture, modularity, domain, persistence, security |
 | [0057](0057-invites-need-a-link-and-a-code.md) | Invites need a link and a code, and expire after 30 minutes | Active (amends [0054](0054-lists-are-shared-by-membership.md)) | 2026-10-05 | security, domain, sync |
 | [0058](0058-offline-is-confirmed-by-the-server.md) | Offline is confirmed by the server, not by the browser's flag alone | Active (amends [0044](0044-the-boot-never-waits-on-the-network.md)) | 2026-10-08 | sync, ui |
-| [0061](0061-nightly-backups-from-two-compose-stacks.md) | Nightly backups run as two compose stacks, one for MongoDB and one for Keycloak, encrypted before they leave the host | Proposed (amends [0015](0015-one-self-host-compose-stack.md)) | 2026-10-12 | deployment, persistence, security, identity |
+| [0061](0061-nightly-backups-from-two-compose-stacks.md) | Two compose stacks joined by a network, each backing itself up nightly, encrypted before it leaves the host | Proposed (amends [0015](0015-one-self-host-compose-stack.md)) | 2026-10-12 | deployment, persistence, security, identity |
 | [0062](0062-a-restore-changes-the-dataset-id.md) | A restore changes the dataset id, and a client that sees a new id re-pulls from zero | Proposed (amends [0006](0006-sync-is-delta-by-version.md)) | 2026-10-12 | sync, persistence, offline |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design

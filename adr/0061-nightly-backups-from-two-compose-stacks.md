@@ -1,11 +1,11 @@
 ---
-title: Nightly backups run as two compose stacks, one for MongoDB and one for Keycloak, encrypted before they leave the host
+title: Two compose stacks joined by a network, each backing itself up nightly, encrypted before it leaves the host
 tags: [deployment, persistence, security, identity]
 date: 2026-10-12
 status: Proposed (amends [0015](0015-one-self-host-compose-stack.md))
 ---
 
-# ADR-0061: Nightly backups run as two compose stacks, one for MongoDB and one for Keycloak
+# ADR-0061: Two compose stacks joined by a network, each backing itself up nightly
 
 ## Context
 
@@ -32,36 +32,48 @@ copy while Keycloak runs. Production already runs Keycloak on Postgres, and
 
 ## Decision
 
-We will ship two independent backup stacks, each with its own compose file
-and `.env`:
+We will split the repository's compose into two stacks joined by one
+Docker network, `psplace`:
 
-- `docker/backup/mongo/` runs `mongodump --oplog` against PSPad's MongoDB.
-- `docker/backup/keycloak/` runs `pg_dump` against Keycloak's Postgres.
+- `docker/compose.yaml`: PSPad (`api`, `app`, `mongo`).
+- `docker/keycloak/compose.yaml`: Keycloak and its Postgres. This stack
+  creates the network.
 
-Both images build on one base in `docker/backup/base/`, which owns
-packaging, age encryption, rclone upload to an optional S3-compatible
-bucket and optional Google Drive, retention, the healthcheck and the ping.
-Each stack:
+Production already runs Keycloak from its own repository. This repository
+keeps a copy of that shape so that development and self-hosting match it.
 
-- reaches its database over an external Docker network, or through a URI;
+Each stack gets its own backup service behind a `backup` profile:
+
+- `mongo-backup` runs `mongodump --oplog` against PSPad's MongoDB.
+- `keycloak-backup` runs `pg_dump` against Keycloak's Postgres.
+
+Both are targets of one `docker/backup/Dockerfile` and share its packaging,
+age encryption, rclone upload to an optional S3-compatible bucket and
+optional Google Drive, retention, the healthcheck and the ping. Each
+service:
+
+- reaches its database by service name inside its own stack, or through
+  a URI;
 - runs daily at its own time, with Keycloak after Mongo, so a same-night
   pair never has Keycloak older than Mongo;
 - always keeps a local plaintext copy, and never uploads plaintext.
 
-Keycloak moves to Postgres (#138), amending ADR-0015's rejection of that
-option. The Keycloak stack refuses to start against anything but Postgres.
+Keycloak moves to Postgres, still in `start-dev` (#138 owns `start`).
+This amends ADR-0015 twice: it rejected Postgres, and it chose one stack. The Keycloak stack refuses to start against anything but Postgres.
 
 Only the Mongo restore rotates the dataset id (ADR-0062).
 
 ## Considered alternatives
 
-- **One backup service in `docker/compose.yaml` dumping both stores.**
-  Rejected:
-  - It ties the shared realm's backups to PSPad's lifecycle, which
+- **One stack, with one backup service dumping both stores.** Rejected:
+  - It ties the shared realm and its backups to PSPad's lifecycle, which
     ADR-0026 calls the wrong ownership.
-  - A Keycloak that moves to its own stack, or a production Keycloak on a
-    different host, would need the PSPad stack to reach into it.
+  - It doesn't match production, where Keycloak is its own stack.
   - One failing dump would fail the whole run.
+- **Standalone backup compose files beside each stack.** Rejected: a third
+  and fourth `.env` to keep in sync with the stacks they back up, and an
+  external network for each only to reach a database the stack already
+  owns.
 - **A hosted service in `PSPad.Api` exporting collections through the
   driver.** Rejected:
   - It reimplements `mongodump` without a point-in-time view.
@@ -81,14 +93,16 @@ Only the Mongo restore rotates the dataset id (ADR-0062).
 - Each store is backed up, monitored and restored on its own. A lost realm
   doesn't force a Mongo restore, and a bad PSPad upgrade doesn't touch
   accounts.
-- The keycloak stack moves with Keycloak, unchanged, when Keycloak leaves
-  PSPad's compose stack.
+- `docker compose down -v` on PSPad no longer destroys accounts.
+- Self-hosters run two `up` commands, Keycloak first. Existing installs
+  migrate once: the H2 realm is exported, Keycloak's service and volume
+  leave `docker/compose.yaml`, and the new stack imports.
 - The pair is never one atomic snapshot. Restoring a Keycloak backup older
   than the Mongo one loses accounts created in between, and orphans their
   data. The schedule order and the documented pairing rule are the only
   guard.
-- Two `.env` files, and two containers to watch. One age key pair can serve
-  both.
+- Two `.env` files, and two backup containers to watch. One age key pair
+  can serve both.
 - The repository compose gains a Postgres container, the cost ADR-0015
   avoided. Existing H2 installs need a one-off export and import.
 - The recovery point is the last nightly run. Up to a day of writes can be
