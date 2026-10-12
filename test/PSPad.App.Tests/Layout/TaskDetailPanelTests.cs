@@ -1173,7 +1173,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var open = NewGoalWith("Zdrowie", GoalStatus.InProgress);
         var done = NewGoalWith("Maraton", GoalStatus.Achieved);
         var task = NewTask("Run");
-        task.ApplyAll(TodoTask.Decide(task, new LinkTaskToGoal(Guid.NewGuid(), User, task.Id, done.Id), DateTimeOffset.UnixEpoch));
+        done.ApplyAll(Goal.Decide(done, new AddTaskToGoal(Guid.NewGuid(), User, done.Id, task.Id), DateTimeOffset.UnixEpoch, task));
         AppTestHost.Arrange(this, User, Today, task, open, done);
 
         var panel = RenderWithOverlays(taskId: task.Id);
@@ -1196,32 +1196,25 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheGoalRowIsHiddenForAMembersTaskInASharedList()
+    public async Task AMemberPutsASharedTaskIntoTheirOwnGoal()
     {
         var owner = Guid.NewGuid();
         var shared = NewMemberList(owner, User, "Errands");
         var task = NewMemberTask(owner, User, shared.Id, "Buy milk");
-        AppTestHost.Arrange(this, User, Today, shared, task);
+        var goal = NewGoalWith("Eat better", PSPad.Module.Tasks.Goals.GoalStatus.InProgress);
+        var replica = AppTestHost.Arrange(this, User, Today, shared, task, goal);
 
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-goal");
+        panel.Find(".pspad-goal-option").Click();
 
-        Assert.Empty(panel.FindAll(".pspad-task-goal"));
+        var stored = await replica.LoadAsync<PSPad.Module.Tasks.Goals.Goal>(goal.Id);
+        Assert.Contains(task.Id, stored!.TaskIds);
+        panel.WaitForAssertion(() => Assert.Contains("Eat better", panel.Find(".pspad-task-goal").TextContent));
     }
 
     [Fact]
-    public void TheGoalRowIsHiddenForAMembersTaskEvenWhenItsListHasNotLoaded()
-    {
-        var owner = Guid.NewGuid();
-        var task = NewMemberTask(owner, User, Guid.NewGuid(), "Buy milk");
-        AppTestHost.Arrange(this, User, Today, task);
-
-        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
-
-        Assert.Empty(panel.FindAll(".pspad-task-goal"));
-    }
-
-    [Fact]
-    public void TheGoalRowIsHiddenForANewTaskDraftInASharedList()
+    public void TheGoalRowShowsForANewTaskDraftInASharedList()
     {
         var owner = Guid.NewGuid();
         var shared = NewMemberList(owner, User, "Errands");
@@ -1229,7 +1222,40 @@ public class TaskDetailPanelTests : Bunit.TestContext
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)shared.Id));
 
-        Assert.Empty(panel.FindAll(".pspad-task-goal"));
+        Assert.NotEmpty(panel.FindAll(".pspad-task-goal"));
+    }
+
+    [Fact]
+    public async Task ChoosingAnotherGoalMovesTheTaskOutOfTheFirst()
+    {
+        var first = NewGoalWith("Eat better", PSPad.Module.Tasks.Goals.GoalStatus.InProgress);
+        var second = NewGoalWith("Run more", PSPad.Module.Tasks.Goals.GoalStatus.InProgress);
+        var task = NewTask("Run");
+        first.ApplyAll(PSPad.Module.Tasks.Goals.Goal.Decide(first,
+            new PSPad.Module.Tasks.Goals.AddTaskToGoal(Guid.NewGuid(), User, first.Id, task.Id), DateTimeOffset.UnixEpoch, task));
+        var replica = AppTestHost.Arrange(this, User, Today, task, first, second);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        OpenRow(panel, ".pspad-task-goal");
+        panel.FindAll(".pspad-goal-option").Single(option => option.TextContent.Trim() == "Run more").Click();
+
+        Assert.DoesNotContain(task.Id, (await replica.LoadAsync<PSPad.Module.Tasks.Goals.Goal>(first.Id))!.TaskIds);
+        Assert.Contains(task.Id, (await replica.LoadAsync<PSPad.Module.Tasks.Goals.Goal>(second.Id))!.TaskIds);
+    }
+
+    [Fact]
+    public async Task ClearingTheGoalTakesTheTaskOutOfIt()
+    {
+        var goal = NewGoalWith("Eat better", PSPad.Module.Tasks.Goals.GoalStatus.InProgress);
+        var task = NewTask("Run");
+        goal.ApplyAll(PSPad.Module.Tasks.Goals.Goal.Decide(goal,
+            new PSPad.Module.Tasks.Goals.AddTaskToGoal(Guid.NewGuid(), User, goal.Id, task.Id), DateTimeOffset.UnixEpoch, task));
+        var replica = AppTestHost.Arrange(this, User, Today, task, goal);
+
+        var panel = RenderWithOverlays(taskId: task.Id);
+        panel.Find(".pspad-task-goal .pspad-property-clear").Click();
+
+        Assert.Empty((await replica.LoadAsync<PSPad.Module.Tasks.Goals.Goal>(goal.Id))!.TaskIds);
     }
 
     static TaskList NewMemberList(Guid owner, Guid member, string name)

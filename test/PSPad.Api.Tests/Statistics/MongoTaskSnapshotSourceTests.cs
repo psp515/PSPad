@@ -27,7 +27,7 @@ public class MongoTaskSnapshotSourceTests(MongoFixture fixture)
         var taskId = await SeedTask(client, user, "Buy milk", ct);
         var source = SourceFor(factory);
 
-        var snapshots = await source.CurrentAsync([taskId], ct);
+        var snapshots = await source.CurrentAsync(user, [taskId], ct);
 
         Assert.Equal(new TaskSnapshot(PSPad.Module.Statistics.TaskStatus.Open, "Buy milk"), snapshots[taskId]);
     }
@@ -47,7 +47,7 @@ public class MongoTaskSnapshotSourceTests(MongoFixture fixture)
         }, ct);
         var source = SourceFor(factory);
 
-        var snapshots = await source.CurrentAsync([taskId], ct);
+        var snapshots = await source.CurrentAsync(user, [taskId], ct);
 
         Assert.Equal(new TaskSnapshot(PSPad.Module.Statistics.TaskStatus.Done, "Buy milk"), snapshots[taskId]);
     }
@@ -60,7 +60,7 @@ public class MongoTaskSnapshotSourceTests(MongoFixture fixture)
         var source = SourceFor(factory);
         var missingId = Guid.NewGuid();
 
-        var snapshots = await source.CurrentAsync([missingId], ct);
+        var snapshots = await source.CurrentAsync(Guid.NewGuid(), [missingId], ct);
 
         Assert.Equal(new TaskSnapshot(PSPad.Module.Statistics.TaskStatus.Gone, ""), snapshots[missingId]);
     }
@@ -80,9 +80,25 @@ public class MongoTaskSnapshotSourceTests(MongoFixture fixture)
         }, ct);
         var source = SourceFor(factory);
 
-        var snapshots = await source.CurrentAsync([taskId], ct);
+        var snapshots = await source.CurrentAsync(user, [taskId], ct);
 
         Assert.Equal(PSPad.Module.Statistics.TaskStatus.Gone, snapshots[taskId].Status);
+    }
+
+    [Fact]
+    public async Task SomeoneElsesTaskComesBackGoneSoItsNameNeverLeaks()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = (await owner.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var stranger = factory.ClientFor(Guid.NewGuid().ToString());
+        var strangerId = (await stranger.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var taskId = await SeedTask(owner, ownerId, "Private plan", ct);
+
+        var snapshots = await SourceFor(factory).CurrentAsync(strangerId, [taskId], ct);
+
+        Assert.Equal(new TaskSnapshot(PSPad.Module.Statistics.TaskStatus.Gone, ""), snapshots[taskId]);
     }
 
     [Fact]
@@ -102,7 +118,7 @@ public class MongoTaskSnapshotSourceTests(MongoFixture fixture)
         var missingId = Guid.NewGuid();
         var source = SourceFor(factory);
 
-        var snapshots = await source.CurrentAsync([openId, doneId, missingId], ct);
+        var snapshots = await source.CurrentAsync(user, [openId, doneId, missingId], ct);
 
         Assert.Equal(3, snapshots.Count);
         Assert.Equal(PSPad.Module.Statistics.TaskStatus.Open, snapshots[openId].Status);

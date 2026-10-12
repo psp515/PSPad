@@ -88,7 +88,7 @@ public class GoalsPageTests : Bunit.TestContext
     {
         var goal = NewGoal("Eat healthier");
         var list = NewList("Health");
-        Arrange([goal, list, .. Enumerable.Range(0, 7).Select(index => NewTask(list.Id, $"Task {index}", goal.Id))]);
+        Arrange([goal, list, .. Enumerable.Range(0, 7).Select(index => NewTask(list.Id, $"Task {index}", goal))]);
 
         var page = Render<GoalsPage>();
         var card = page.FindComponent<GoalCard>();
@@ -104,7 +104,7 @@ public class GoalsPageTests : Bunit.TestContext
     {
         var goal = NewGoal("Eat healthier");
         var list = NewList("Health");
-        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id));
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal));
 
         var page = Render<GoalsPage>();
         var row = page.FindComponent<TaskRow>();
@@ -187,7 +187,7 @@ public class GoalsPageTests : Bunit.TestContext
         var goal = NewGoal("Eat healthier");
         var other = NewGoal("Ship the redesign");
         var list = NewList("Health");
-        Arrange(goal, other, list, NewTask(list.Id, "Book a check-up", goal.Id), NewTask(list.Id, "Deploy", other.Id));
+        Arrange(goal, other, list, NewTask(list.Id, "Book a check-up", goal), NewTask(list.Id, "Deploy", other));
 
         var page = Render<GoalsPage>();
         var card = page.FindComponents<GoalCard>().Single(c => c.Instance.Goal.Id == goal.Id);
@@ -202,13 +202,13 @@ public class GoalsPageTests : Bunit.TestContext
         var today = new DateOnly(2026, 9, 12);
         var goal = NewGoal("Read more");
         var list = NewList("Health");
-        var ended = NewTask(list.Id, "Read a book", goal.Id);
+        var ended = NewTask(list.Id, "Read a book", goal);
         ended.ApplyAll(TodoTask.Decide(ended,
             new SetTaskRecurrence(Guid.NewGuid(), User, ended.Id, RecurrenceRule.Daily(today.AddDays(-7))),
             DateTimeOffset.UnixEpoch));
         ended.ApplyAll(TodoTask.Decide(ended,
             new SetTaskDueDate(Guid.NewGuid(), User, ended.Id, today.AddDays(-1)), DateTimeOffset.UnixEpoch));
-        Arrange(goal, list, ended, NewTask(list.Id, "Buy a lamp", goal.Id));
+        Arrange(goal, list, ended, NewTask(list.Id, "Buy a lamp", goal));
 
         var page = Render<GoalsPage>();
         var card = page.FindComponents<GoalCard>().Single();
@@ -222,7 +222,7 @@ public class GoalsPageTests : Bunit.TestContext
     {
         var goal = NewGoal("Eat healthier");
         var list = NewList("Health");
-        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id), NewTask(list.Id, "Buy oats", goal.Id));
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal), NewTask(list.Id, "Buy oats", goal));
         var sender = Services.GetRequiredService<CommandSender>();
 
         var result = await sender.SendAsync(
@@ -240,7 +240,7 @@ public class GoalsPageTests : Bunit.TestContext
     {
         var goal = NewGoal("Eat healthier");
         var list = NewList("Health");
-        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal.Id));
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal));
 
         var page = Render<GoalsPage>();
 
@@ -335,7 +335,7 @@ public class GoalsPageTests : Bunit.TestContext
         var active = NewGoal("Eat healthier");
         var achieved = NewGoal("Run a marathon", achieved: true);
         var list = NewList("Health");
-        Arrange(active, achieved, list, NewTask(list.Id, "Buy shoes", achieved.Id));
+        Arrange(active, achieved, list, NewTask(list.Id, "Buy shoes", achieved));
 
         var page = Render<GoalsPage>();
 
@@ -409,7 +409,7 @@ public class GoalsPageTests : Bunit.TestContext
     {
         var goal = NewGoal("Eat healthier");
         var list = NewList("Health");
-        var task = NewTask(list.Id, "Book a check-up", goal.Id);
+        var task = NewTask(list.Id, "Book a check-up", goal);
         Arrange(goal, list, task);
 
         var page = Render<GoalsPage>();
@@ -477,13 +477,13 @@ public class GoalsPageTests : Bunit.TestContext
         return list;
     }
 
-    static TodoTask NewTask(Guid listId, string name, Guid goalId)
+    static TodoTask NewTask(Guid listId, string name, Goal goal)
     {
         var task = new TodoTask();
         task.ApplyAll(TodoTask.Decide(
             null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), listId, name), DateTimeOffset.UnixEpoch));
-        task.ApplyAll(TodoTask.Decide(
-            task, new LinkTaskToGoal(Guid.NewGuid(), User, task.Id, goalId), DateTimeOffset.UnixEpoch));
+        goal.ApplyAll(Goal.Decide(
+            goal, new AddTaskToGoal(Guid.NewGuid(), User, goal.Id, task.Id), DateTimeOffset.UnixEpoch, task));
         return task;
     }
 }

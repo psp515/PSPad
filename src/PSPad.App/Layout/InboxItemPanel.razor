@@ -196,9 +196,9 @@
             await Sender.SendAsync(new SetTaskPriority(Guid.NewGuid(), userId, taskId, _draft.Priority));
         }
 
-        if (_draft.GoalId is not null)
+        if (_draft.GoalId is { } goalId)
         {
-            await Sender.SendAsync(new LinkTaskToGoal(Guid.NewGuid(), userId, taskId, _draft.GoalId));
+            await Sender.SendAsync(new AddTaskToGoal(Guid.NewGuid(), userId, goalId, taskId));
         }
 
         if (_draft.Starred)

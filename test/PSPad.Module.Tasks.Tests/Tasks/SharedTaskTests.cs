@@ -70,15 +70,6 @@ public class SharedTaskTests
                 OwnedTask(), new RenameTask(Guid.NewGuid(), Member, TaskId, "X"), Now, new ListAccess(Stranger, Member)));
 
     [Fact]
-    public void OnlyTheOwnerLinksAGoal()
-    {
-        Assert.Throws<DomainRejectedException>(() =>
-            TodoTask.Decide(OwnedTask(), new LinkTaskToGoal(Guid.NewGuid(), Member, TaskId, Guid.NewGuid()), Now, Access));
-        Assert.Single(TodoTask.Decide(
-            OwnedTask(), new LinkTaskToGoal(Guid.NewGuid(), Owner, TaskId, Guid.NewGuid()), Now, ListAccess.Owner(Owner)));
-    }
-
-    [Fact]
     public async Task TheHandlerLetsAMemberRenameThroughTheList()
     {
         var lists = new FakeDocumentStore<TaskList>();

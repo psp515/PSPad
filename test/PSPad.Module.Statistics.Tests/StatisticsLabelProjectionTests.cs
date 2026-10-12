@@ -31,7 +31,7 @@ public class StatisticsLabelProjectionTests
                 Saved.Where(label => label.UserId == userId).ToList());
 
         public Task<IReadOnlyList<StatisticsLabel>> ByIdsAsync(
-            IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+            Guid userId, IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<StatisticsLabel>>(
                 Saved.Where(label => ids.Contains(label.Id)).ToList());
     }

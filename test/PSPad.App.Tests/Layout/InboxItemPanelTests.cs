@@ -146,7 +146,7 @@ public class InboxItemPanelTests : Bunit.TestContext
         Assert.Equal(repairs.Id, task.ListId);
         Assert.Equal(Today.AddDays(1), task.DueOn);
         Assert.Equal(Priority.High, task.Priority);
-        Assert.Equal(goal.Id, task.GoalId);
+        Assert.Contains(task.Id, (await replica.LoadAsync<Goal>(goal.Id))!.TaskIds);
         Assert.True(task.Starred);
         Assert.Empty((await replica.LoadAsync<Inbox>(inbox.Id))!.Items);
     }

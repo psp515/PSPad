@@ -1,6 +1,7 @@
 using MongoDB.Driver;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Statistics;
+using PSPad.Module.Tasks.Lists;
 
 namespace PSPad.Api.Statistics;
 
@@ -26,8 +27,18 @@ public sealed class MongoLabelStore(MongoContext context) : ILabelStore
             .ToListAsync(ct);
 
     public async Task<IReadOnlyList<StatisticsLabel>> ByIdsAsync(
-        IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
-        await Labels
-            .Find(Builders<StatisticsLabel>.Filter.In(label => label.Id, ids))
+        Guid userId, IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        var memberLists = await context.Collection<TaskList>()
+            .Find(Builders<TaskList>.Filter.Eq("_members.userId", userId))
+            .Project(list => list.Id)
             .ToListAsync(ct);
+
+        return await Labels
+            .Find(Builders<StatisticsLabel>.Filter.In(label => label.Id, ids) &
+                  (Builders<StatisticsLabel>.Filter.Eq(label => label.UserId, userId) |
+                   Builders<StatisticsLabel>.Filter.Eq(label => label.Kind, LabelKind.List) &
+                   Builders<StatisticsLabel>.Filter.In(label => label.Id, memberLists)))
+            .ToListAsync(ct);
+    }
 }

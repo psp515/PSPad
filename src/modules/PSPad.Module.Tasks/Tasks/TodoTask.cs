@@ -21,9 +21,6 @@ public sealed class TodoTask : Aggregate
     public DateOnly? DueOn { get; private set; }
 
     [JsonInclude]
-    public Guid? GoalId { get; private set; }
-
-    [JsonInclude]
     public Priority Priority { get; private set; } = Priority.None;
 
     [JsonInclude]
@@ -117,17 +114,6 @@ public sealed class TodoTask : Aggregate
                     ? []
                     : [new TaskStarred(starring.Id, grant.OwnerId, at, star.Starred)];
 
-            case LinkTaskToGoal link:
-                var linking = Require(task, grant);
-                if (!grant.ByOwner)
-                {
-                    throw new DomainRejectedException("Only the list's owner links a goal.");
-                }
-
-                return linking.GoalId == link.GoalId
-                    ? []
-                    : [new TaskLinkedToGoal(linking.Id, grant.OwnerId, at, link.GoalId, linking.Name)];
-
             case MoveTaskToList move:
                 var moving = Require(task, grant);
                 if (move.ListId == Guid.Empty)
@@ -150,7 +136,7 @@ public sealed class TodoTask : Aggregate
                     ? []
                     : [new TaskCompleted(
                         completing.Id, grant.OwnerId, at,
-                        completing.Name, completing.ListId, completing.GoalId, completing.DueOn)];
+                        completing.Name, completing.ListId, null, completing.DueOn)];
 
             case ReopenTask reopen:
                 var reopening = Require(task, grant);
@@ -263,7 +249,7 @@ public sealed class TodoTask : Aggregate
                     ? []
                     : [new OccurrenceCompleted(
                         ticking.Id, grant.OwnerId, at, occurrence.Day, occurrence.Completed,
-                        ticking.Name, ticking.ListId, ticking.GoalId)];
+                        ticking.Name, ticking.ListId, null)];
 
             case MarkTaskFromSnapshot mark:
                 var marking = Require(task, grant);
@@ -309,9 +295,6 @@ public sealed class TodoTask : Aggregate
                 break;
             case TaskStarred starred:
                 Starred = starred.Starred;
-                break;
-            case TaskLinkedToGoal linked:
-                GoalId = linked.GoalId;
                 break;
             case TaskMovedToList moved:
                 PreviousListId = ListId;

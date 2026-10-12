@@ -1,3 +1,5 @@
+using PSPad.Abstractions;
+using PSPad.Module.Tasks.Goals;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Module.Statistics.Tests;
@@ -93,16 +95,25 @@ public class StatisticsOverviewReaderTests
             Task.FromResult<IReadOnlyList<StatisticsLabel>>(labels);
 
         public Task<IReadOnlyList<StatisticsLabel>> ByIdsAsync(
-            IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+            Guid userId, IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
             throw new NotSupportedException();
     }
 
     static InboxRecord Capture(long id, DateOnly day) =>
         new() { Id = id, UserId = User, At = Midday(day), ItemId = Guid.NewGuid() };
 
+    sealed class FakeGoalStore(params Goal[] goals) : IDocumentStore<Goal>
+    {
+        public Task<Goal?> LoadAsync(Guid id, CancellationToken ct) =>
+            Task.FromResult(goals.FirstOrDefault(goal => goal.Id == id));
+
+        public Task<IReadOnlyList<Goal>> LoadAllAsync(Guid userId, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<Goal>>(goals.Where(goal => goal.UserId == userId).ToArray());
+    }
+
     static StatisticsOverviewReader Reader(
-        IStatisticsStore store, ILabelStore? labels = null, IInboxRecordStore? inbox = null) =>
-        new(store, labels ?? new FakeLabelStore(), inbox ?? new FakeInboxStore());
+        IStatisticsStore store, ILabelStore? labels = null, IInboxRecordStore? inbox = null, params Goal[] goals) =>
+        new(store, labels ?? new FakeLabelStore(), inbox ?? new FakeInboxStore(), new FakeGoalStore(goals));
 
     static DateTimeOffset Midday(DateOnly day) =>
         new(day.ToDateTime(new TimeOnly(12, 0)), TimeSpan.FromHours(2));
@@ -120,6 +131,22 @@ public class StatisticsOverviewReaderTests
             TaskName = "task",
             GoalId = goalId
         };
+
+    [Fact]
+    public async Task ACompletionCountsTowardTheReadersGoalHoldingTheTask()
+    {
+        var taskId = Guid.NewGuid();
+        var goal = new Goal();
+        goal.Apply(new GoalCreated(Guid.NewGuid(), User, Midday(Today), "Read more"));
+        goal.Apply(new TaskAddedToGoal(goal.Id, User, Midday(Today), taskId, "Dune"));
+        var store = new FakeStore(Record(1, RecordKind.Completed, Today, taskId));
+        var labels = new FakeLabelStore(new StatisticsLabel { Id = goal.Id, UserId = User, Kind = LabelKind.Goal, Name = "Read more" });
+
+        var overview = await Reader(store, labels, null, goal)
+            .ReadAsync(User, Today, 30, Zone, TestContext.Current.CancellationToken);
+
+        Assert.Contains(overview.ByGoal, bar => bar.GoalId == goal.Id && bar.Count == 1);
+    }
 
     [Fact]
     public async Task BothHalvesOfTheWindowAreReadFromTheSameInstant()

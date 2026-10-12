@@ -1,4 +1,5 @@
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Tasks;
 
 namespace PSPad.Module.Statistics;
@@ -65,6 +66,15 @@ public sealed class StatisticsRecordProjection(IStatisticsStore store) : IDomain
             TaskLinkedToGoal linked => Base(envelope, RecordKind.LinkedToGoal, linked.Name) with
             {
                 GoalId = linked.GoalId
+            },
+            TaskAddedToGoal added => Base(envelope, RecordKind.LinkedToGoal, added.TaskName) with
+            {
+                TaskId = added.TaskId,
+                GoalId = added.AggregateId
+            },
+            TaskRemovedFromGoal { MovedTo: null } removed => Base(envelope, RecordKind.LinkedToGoal, removed.TaskName) with
+            {
+                TaskId = removed.TaskId
             },
             OccurrenceCompleted ticked => Base(
                 envelope,

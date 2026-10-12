@@ -1,9 +1,11 @@
+using PSPad.Abstractions;
 using PSPad.Contracts;
+using PSPad.Module.Tasks.Goals;
 
 namespace PSPad.Module.Statistics;
 
 public sealed class StatisticsOverviewReader(
-    IStatisticsStore store, ILabelStore labels, IInboxRecordStore inbox)
+    IStatisticsStore store, ILabelStore labels, IInboxRecordStore inbox, IDocumentStore<Goal> goals)
 {
     const int DefaultRange = 30;
 
@@ -20,6 +22,11 @@ public sealed class StatisticsOverviewReader(
         var openAtStart = await store.OpenTaskIdsBeforeAsync(userId, from, ct);
         var captures = await inbox.SinceAsync(userId, from, ct);
         var known = await labels.AllAsync(userId, ct);
+        var links = (await goals.LoadAllAsync(userId, ct))
+            .Where(goal => goal.UserId == userId && !goal.Deleted)
+            .SelectMany(goal => goal.TaskIds.Select(taskId => (TaskId: taskId, GoalId: goal.Id)))
+            .DistinctBy(link => link.TaskId)
+            .ToDictionary(link => link.TaskId, link => link.GoalId);
 
         var outstanding = StatisticsCharts.Outstanding(records, today, range, zone, openAtStart);
 
@@ -28,7 +35,7 @@ public sealed class StatisticsOverviewReader(
             StatisticsCharts.Completions(records, today, range, zone).Select(Completions).ToArray(),
             StatisticsCharts.Opened(records, today, range, zone).Select(Count).ToArray(),
             outstanding.Select(Count).ToArray(),
-            StatisticsCharts.ByGoal(records, known).Select(Goal).ToArray(),
+            StatisticsCharts.ByGoal(records, known, links).Select(Bar).ToArray(),
             StatisticsCharts.Heatmap(records, today, range, zone).Select(Count).ToArray(),
             StatisticsCharts.Captures(captures, today, range, zone).Select(Week).ToArray());
     }
@@ -43,7 +50,7 @@ public sealed class StatisticsOverviewReader(
 
     static WeeklyCountView Week(WeeklyCount week) => new(week.WeekStart, week.Count);
 
-    static GoalTotalView Goal(GoalTotal bar) => new(bar.GoalId, bar.Name, bar.Count);
+    static GoalTotalView Bar(GoalTotal bar) => new(bar.GoalId, bar.Name, bar.Count);
 
     static DateTimeOffset StartOfDay(DateOnly day, TimeZoneInfo zone)
     {

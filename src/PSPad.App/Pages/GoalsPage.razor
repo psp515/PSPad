@@ -131,7 +131,10 @@ else
         _loaded = true;
     }
 
-    IReadOnlyList<TodoTask> TasksOf(Guid goalId) => [.. _tasks.Where(task => task.GoalId == goalId)];
+    IReadOnlyList<TodoTask> TasksOf(Guid goalId) =>
+        _active.Concat(_achieved).Concat(_notAchieved).FirstOrDefault(goal => goal.Id == goalId) is { } goal
+            ? [.. _tasks.Where(task => goal.TaskIds.Contains(task.Id))]
+            : [];
 
     void Open(TodoTask task) =>
         Navigation.NavigateTo($"{Navigation.Uri.Split('?')[0]}?task={task.Id}");

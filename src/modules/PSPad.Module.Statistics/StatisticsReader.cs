@@ -29,14 +29,14 @@ public sealed class StatisticsReader(
         }
 
         var current = await snapshots.CurrentAsync(
-            records.Select(record => record.TaskId).Distinct().ToArray(), ct);
+            userId, records.Select(record => record.TaskId).Distinct().ToArray(), ct);
         var labelIds = records
             .SelectMany(record => new[] { record.ListId, record.GoalId })
             .Where(id => id is not null)
             .Select(id => id!.Value)
             .Distinct()
             .ToArray();
-        var names = (await labels.ByIdsAsync(labelIds, ct))
+        var names = (await labels.ByIdsAsync(userId, labelIds, ct))
             .ToDictionary(label => label.Id, label => label.Name);
 
         return records.Select(record => View(record, current, names)).ToArray();
