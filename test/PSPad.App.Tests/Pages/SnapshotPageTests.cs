@@ -162,6 +162,21 @@ public class SnapshotPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ATickRefusedForTooManyChangesSaysSo()
+    {
+        Arrange(SampleTaskSnapshot(), markSucceeds: false);
+        _handler.FailureStatus = HttpStatusCode.TooManyRequests;
+        var page = RenderPage("tok123");
+
+        page.Find("input.mud-checkbox-input").Change(true);
+
+        var snackbar = page.Services.GetRequiredService<ISnackbar>();
+        Assert.Contains(
+            snackbar.ShownSnackbars,
+            snack => snack.Message?.Contains("Too many ticks on this list. Try again later.") == true);
+    }
+
+    [Fact]
     public void AnUnknownTokenShowsTheExpiredScreen()
     {
         Arrange(snapshot: null);
@@ -301,6 +316,8 @@ public class SnapshotPageTests : Bunit.TestContext
 
         public bool MarkSucceeds { get; set; } = markSucceeds;
 
+        public HttpStatusCode FailureStatus { get; set; } = HttpStatusCode.BadRequest;
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -319,7 +336,7 @@ public class SnapshotPageTests : Bunit.TestContext
             }
 
             return Task.FromResult(new HttpResponseMessage(
-                MarkSucceeds ? HttpStatusCode.NoContent : HttpStatusCode.BadRequest));
+                MarkSucceeds ? HttpStatusCode.NoContent : FailureStatus));
         }
     }
 

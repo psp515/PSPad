@@ -1,5 +1,6 @@
 @page "/public/snapshot/{Token}"
 @layout PublicLayout
+@using System.Net
 @using PSPad.Abstractions
 @using PSPad.App.Api
 @using PSPad.App.Auth
@@ -278,11 +279,15 @@
         var previous = _snapshot;
         _snapshot = WithMark(_snapshot, entryId, stepId, marked);
 
-        var ok = await Client.MarkAsync(Token, entryId, stepId, marked);
-        if (!ok)
+        var status = await Client.MarkAsync(Token, entryId, stepId, marked);
+        if ((int)status is < 200 or > 299)
         {
             _snapshot = previous;
-            Snackbar.Add("Couldn't save that tick. Try again.", Severity.Warning);
+            Snackbar.Add(
+                status == HttpStatusCode.TooManyRequests
+                    ? "Too many ticks on this list. Try again later."
+                    : "Couldn't save that tick. Try again.",
+                Severity.Warning);
         }
     }
 

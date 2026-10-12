@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using PSPad.Contracts;
 
@@ -13,10 +14,10 @@ public sealed class PublicSnapshotsClient(HttpClient http)
             : null;
     }
 
-    public async Task<bool> MarkAsync(string token, Guid entryId, Guid? stepId, bool marked)
+    public async Task<HttpStatusCode> MarkAsync(string token, Guid entryId, Guid? stepId, bool marked)
     {
         var response = await http.PostAsJsonAsync(
             $"api/public/snapshots/{token}/marks", new MarkSnapshotEntryRequest(entryId, stepId, marked));
-        return response.IsSuccessStatusCode;
+        return response.StatusCode;
     }
 }

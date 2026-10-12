@@ -28,6 +28,17 @@ public class ReferenceSnapshotMarkTests
     }
 
     [Fact]
+    public void AMarkIsStateOnlyAndNeverReachesTheEventLog()
+    {
+        var item = Item();
+
+        var events = ReferenceItem.Decide(
+            item, new MarkReferenceItemFromSnapshot(Guid.NewGuid(), Owner, item.Id, SnapshotId, true), Now);
+
+        Assert.IsAssignableFrom<IUnloggedEvent>(Assert.Single(events));
+    }
+
+    [Fact]
     public void UnmarkingRemovesTheMark()
     {
         var item = Item();

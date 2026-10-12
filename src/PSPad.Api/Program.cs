@@ -73,6 +73,7 @@ builder.Services.AddScoped<ISnapshotVisitStore, MongoSnapshotVisitStore>();
 builder.Services.AddScoped<IListContent, MongoListContent>();
 builder.Services.AddScoped<IServerCommands, DispatcherServerCommands>();
 builder.Services.AddScoped<SnapshotPublishing>();
+builder.Services.AddScoped<IMarkBudget, MongoMarkBudget>();
 builder.Services.AddScoped<SnapshotMarking>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<NbpRateClient>(client =>

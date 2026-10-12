@@ -8,8 +8,10 @@ using PSPad.Module.Tasks.Tasks;
 namespace PSPad.Module.Sharing.Snapshots;
 
 public sealed class SnapshotMarking(
-    ISnapshotStore snapshots, IServerCommands commands, IClock clock, ILogger<SnapshotMarking> logger)
+    ISnapshotStore snapshots, IMarkBudget budget, IServerCommands commands, IClock clock, ILogger<SnapshotMarking> logger)
 {
+    public const int DailyMarksPerList = 100;
+
     public async Task<MarkOutcome> MarkAsync(string token, Guid entryId, Guid? stepId, bool marked, CancellationToken ct)
     {
         var snapshot = await snapshots.FindByTokenAsync(token, ct);
@@ -23,6 +25,11 @@ public sealed class SnapshotMarking(
         if (ReferenceEquals(updated, snapshot))
         {
             return MarkOutcome.Unchanged;
+        }
+
+        if (!await budget.TryTakeAsync(snapshot.ListId, DateOnly.FromDateTime(now.UtcDateTime), DailyMarksPerList, ct))
+        {
+            return MarkOutcome.Throttled;
         }
 
         await snapshots.SaveAsync(updated, ct);

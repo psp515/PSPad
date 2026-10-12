@@ -187,6 +187,11 @@ sequence and records the command id **in one MongoDB transaction**. In the
 browser, the same call writes the IndexedDB replica and appends to the
 outbox.
 
+An event implementing `IUnloggedEvent` (today only the anonymous snapshot
+marks, `adr/0064`) still changes the document and takes a sequence number,
+but writes no `events` row and is not dispatched; a commit made only of such
+events records no command id.
+
 `Aggregate` carries one settable `long Seq`, stamped with the sequence of
 the last event that touched it — data about the write, never the domain,
 and no `Decide` may read it.
@@ -224,6 +229,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq`, `projectionVersion` (`adr/0055`) |
 | `list_snapshots` | a frozen, owner-published copy of one list (`adr/0056`) | `_id` (GUID), `token` (unique, server-generated, distinct from `_id`), `userId` (owner), `listId`, `kind`, `name`, `createdAt`, `expiresAt`, `tasks[]` or `items[]` — each entry its own `id`/`name`/`done`/`marked`/`markedAt`, steps or fields nested the same way. Content is frozen at publish; only `marked`/`markedAt` change afterwards |
 | `snapshot_visits` | a signed-in visitor's own record of opening a snapshot | `_id` = `"{userId}:{snapshotId}"`, `userId`, `snapshotId`, `token`, `name`, `expiresAt`, `visitedAt` |
+| `snapshot_mark_budgets` | anonymous mark changes spent per list and UTC day (`adr/0064`) | `_id` = `"{listId}:{yyyy-MM-dd}"`, `spent`, `expiresAt` (two days after the day) |
 
 Every aggregate document carries `_id` (GUID), `userId`, `version`
 (optimistic concurrency), `seq` (sequence of the last touching event) and
@@ -254,6 +260,7 @@ transaction; the returned value stamps both the event and the aggregate's
   List snapshots tab). TTL deletion lags the instant, so both collections'
   reads also check `expiresAt > now` themselves rather than trusting the
   sweep to have already run
+- `snapshot_mark_budgets`: TTL on `expiresAt`
 - `processed_commands`: TTL index on `at`, 30 days
 - `statistics_records`: `{userId: 1, seq: -1}` (the feed page, `adr/0055`
   replaces `{userId: 1, _id: -1}` now that `_id` is no longer the bare `seq`),

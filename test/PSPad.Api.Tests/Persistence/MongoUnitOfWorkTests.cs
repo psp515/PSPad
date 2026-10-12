@@ -137,6 +137,52 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         await work.CommitAsync(Guid.NewGuid(), user, ct);
     }
 
+    sealed record AreaTouched(Guid AggregateId, Guid UserId, DateTimeOffset At)
+        : DomainEvent(AggregateId, UserId, At), IUnloggedEvent;
+
+    sealed class RecordingDispatcher : IDomainEventDispatcher
+    {
+        public List<DomainEventEnvelope> Published { get; } = [];
+
+        public Task PublishAsync(IReadOnlyList<DomainEventEnvelope> events, CancellationToken ct)
+        {
+            Published.AddRange(events);
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task AnUnloggedEventSavesTheAggregateUnderANewSeqWithoutALogRowOrCommandId()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var user = Guid.NewGuid();
+        var context = TestContext.For(fixture);
+        var (area, events) = NewArea(user);
+        var created = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        created.Stage(area, events);
+        await created.CommitAsync(Guid.NewGuid(), user, ct);
+        var createdSeq = area.Seq;
+
+        var dispatcher = new RecordingDispatcher();
+        var commandId = Guid.NewGuid();
+        var touch = new MongoUnitOfWork(context, dispatcher, NullLogger<MongoUnitOfWork>.Instance);
+        DomainEvent[] touched = [new AreaTouched(area.Id, user, DateTimeOffset.UtcNow)];
+        area.ApplyAll(touched);
+        touch.Stage(area, touched);
+        await touch.CommitAsync(commandId, user, ct);
+
+        var stored = await new MongoDocumentStore<Area>(context).LoadAsync(area.Id, ct);
+        var log = await context.Collection<StoredEvent>("events")
+            .Find(Builders<StoredEvent>.Filter.Eq(entry => entry.UserId, user)).ToListAsync(ct);
+        var processed = await context.Collection<ProcessedCommand>("processed_commands")
+            .Find(Builders<ProcessedCommand>.Filter.Eq(entry => entry.Id, commandId)).ToListAsync(ct);
+
+        Assert.True(stored!.Seq > createdSeq);
+        Assert.Equal(nameof(AreaCreated), Assert.Single(log).Type);
+        Assert.Empty(processed);
+        Assert.Empty(dispatcher.Published);
+    }
+
     static (Area Area, IReadOnlyList<DomainEvent> Events) NewArea(Guid user)
     {
         var area = new Area();

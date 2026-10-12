@@ -16,6 +16,7 @@ public class SnapshotMarkingTests
     static readonly Guid TaskId = Guid.Parse("66666666-6666-6666-6666-666666666666");
     static readonly Guid StepId = Guid.Parse("77777777-7777-7777-7777-777777777777");
     static readonly Guid ItemId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+    static readonly Guid ListId = Guid.Parse("99999999-9999-9999-9999-999999999999");
     const string Token = "k3Jv9s2mQ0x7b1nR4tYw8eZa";
     static readonly DateTimeOffset Now = new(2026, 9, 28, 8, 0, 0, TimeSpan.Zero);
 
@@ -141,15 +142,68 @@ public class SnapshotMarkingTests
         Assert.True(Assert.Single(saved!.Tasks).Marked);
     }
 
+    [Fact]
+    public async Task AListTakesAHundredMarkChangesADayThenThrottles()
+    {
+        var store = new InMemorySnapshotStore();
+        await store.SaveAsync(TasksSnapshot(Now.AddDays(1)), CancellationToken.None);
+        var commands = new RecordingServerCommands();
+        var marking = NewMarking(store, commands, new InMemoryMarkBudget());
+
+        for (var change = 0; change < SnapshotMarking.DailyMarksPerList; change++)
+        {
+            Assert.Equal(MarkOutcome.Marked,
+                await marking.MarkAsync(Token, TaskId, null, change % 2 == 0, CancellationToken.None));
+        }
+
+        var outcome = await marking.MarkAsync(Token, TaskId, null, true, CancellationToken.None);
+
+        Assert.Equal(MarkOutcome.Throttled, outcome);
+        Assert.Equal(SnapshotMarking.DailyMarksPerList, commands.Received.Count);
+        var saved = await store.FindAsync(SnapshotId, CancellationToken.None);
+        Assert.False(Assert.Single(saved!.Tasks).Marked);
+    }
+
+    [Fact]
+    public async Task TheBudgetIsSpentOnTheSnapshotsListForTheUtcDay()
+    {
+        var store = new InMemorySnapshotStore();
+        await store.SaveAsync(TasksSnapshot(Now.AddDays(1)), CancellationToken.None);
+        var budget = new InMemoryMarkBudget();
+        var marking = NewMarking(store, new RecordingServerCommands(), budget);
+
+        await marking.MarkAsync(Token, TaskId, null, true, CancellationToken.None);
+
+        Assert.Equal(1, budget.SpentOn(ListId, DateOnly.FromDateTime(Now.UtcDateTime)));
+    }
+
+    [Fact]
+    public async Task AnUnchangedMarkSpendsNoBudget()
+    {
+        var snapshot = TasksSnapshot(Now.AddDays(1)).WithMark(TaskId, null, true, Now);
+        var store = new InMemorySnapshotStore();
+        await store.SaveAsync(snapshot, CancellationToken.None);
+        var budget = new InMemoryMarkBudget();
+        var marking = NewMarking(store, new RecordingServerCommands(), budget);
+
+        await marking.MarkAsync(Token, TaskId, null, true, CancellationToken.None);
+
+        Assert.Equal(0, budget.SpentOn(ListId, DateOnly.FromDateTime(Now.UtcDateTime)));
+    }
+
     static SnapshotMarking NewMarking(InMemorySnapshotStore store, RecordingServerCommands commands) =>
-        new(store, commands, new FixedClock(Now), NullLogger<SnapshotMarking>.Instance);
+        NewMarking(store, commands, new InMemoryMarkBudget());
+
+    static SnapshotMarking NewMarking(
+        InMemorySnapshotStore store, RecordingServerCommands commands, InMemoryMarkBudget budget) =>
+        new(store, budget, commands, new FixedClock(Now), NullLogger<SnapshotMarking>.Instance);
 
     static ListSnapshot TasksSnapshot(DateTimeOffset expiresAt) => new()
     {
         Id = SnapshotId,
         Token = Token,
         UserId = Owner,
-        ListId = Guid.NewGuid(),
+        ListId = ListId,
         Kind = ListKind.Tasks,
         Name = "Groceries",
         CreatedAt = Now,
@@ -170,7 +224,7 @@ public class SnapshotMarkingTests
         Id = SnapshotId,
         Token = Token,
         UserId = Owner,
-        ListId = Guid.NewGuid(),
+        ListId = ListId,
         Kind = ListKind.Reference,
         Name = "Filaments",
         CreatedAt = Now,
