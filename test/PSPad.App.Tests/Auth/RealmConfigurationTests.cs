@@ -32,6 +32,6 @@ public class RealmConfigurationTests
             directory = directory.Parent;
         }
 
-        return Path.Combine(directory!.FullName, "docker", "keycloak", "realm-psplace.json");
+        return Path.Combine(directory!.FullName, "docker", "keycloak", "import", "realm-psplace.json");
     }
 }

@@ -21,7 +21,7 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
-    networks: [pspad]
+    networks: [pspad, psplace]
 
   app:
     build:
@@ -57,29 +57,47 @@ services:
       start_period: 10s
     networks: [pspad]
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.0
-    command: ["start-dev", "--import-realm"]
+  mongo-backup:
+    build:
+      context: ./backup
+      target: mongo
+    image: pspad-backup-mongo:local
+    profiles: [backup]
     environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      KC_HEALTH_ENABLED: "true"
-      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME}
-      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
-      KC_PROXY_HEADERS: xforwarded
-      APP_BASE_ADDRESS: ${APP_BASE_ADDRESS}
-      API_BASE_ADDRESS: ${API_BASE_ADDRESS}
-    ports:
-      - "8080:8080"
+      BACKUP_STACK: mongo
+      BACKUP_MONGO_URI: ${BACKUP_MONGO_URI:-mongodb://pspad:${MONGO_PASSWORD}@mongo:27017/?authSource=admin&directConnection=true}
+      BACKUP_MONGO_DATABASE: ${MONGO_DATABASE}
+      BACKUP_SERVICE_PROBE: api:8080
+      BACKUP_AT: ${BACKUP_AT:-03:17}
+      BACKUP_TZ: ${BACKUP_TZ:-UTC}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_PREFIX: ${BACKUP_S3_PREFIX:-}
+      BACKUP_S3_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:-}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:-}
+      BACKUP_GDRIVE_TOKEN: ${BACKUP_GDRIVE_TOKEN:-}
+      BACKUP_GDRIVE_FOLDER_ID: ${BACKUP_GDRIVE_FOLDER_ID:-}
+      BACKUP_GDRIVE_CLIENT_ID: ${BACKUP_GDRIVE_CLIENT_ID:-}
+      BACKUP_GDRIVE_CLIENT_SECRET: ${BACKUP_GDRIVE_CLIENT_SECRET:-}
+      BACKUP_REMOTE_PRUNE: ${BACKUP_REMOTE_PRUNE:-true}
+      BACKUP_PING_URL: ${BACKUP_PING_URL:-}
     volumes:
-      - ./keycloak:/opt/keycloak/data/import:ro
-      - keycloak-data:/opt/keycloak/data
+      - ${BACKUP_LOCAL_DIR:-mongo-backups}:/backups
+      - ${BACKUP_AGE_IDENTITY_FILE:-/dev/null}:/run/secrets/age-identity:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
     networks: [pspad]
 
 volumes:
   mongo-data:
   mongo-keyfile:
-  keycloak-data:
+  mongo-backups:
 
 networks:
   pspad:
+  psplace:
+    external: true
