@@ -9,8 +9,6 @@ namespace PSPad.App.Sync;
 
 public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
 {
-    const int BatchSize = 50;
-
     public const int BatchBytes = 512 * 1024;
 
     static readonly JsonSerializerOptions Wire = new(JsonSerializerDefaults.Web);
@@ -43,7 +41,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
 
     async Task<(int Pushed, IReadOnlyList<string> Rejections, IReadOnlyList<Guid> RejectedCommands)> PushAsync()
     {
-        var batch = WithinBudget(await outbox.PeekAsync(BatchSize));
+        var batch = WithinBudget(await outbox.PeekAsync(CommandBatch.MaxEnvelopes));
         if (batch.Count == 0)
         {
             return (0, [], []);

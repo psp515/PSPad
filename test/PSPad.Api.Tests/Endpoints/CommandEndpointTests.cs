@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using MongoDB.Driver;
@@ -81,6 +82,70 @@ public class CommandEndpointTests(MongoFixture fixture)
                 Builders<StoredEvent>.Filter.Gt(entry => entry.Seq, marker),
                 cancellationToken: ct);
         Assert.Equal(1, events);
+    }
+
+    [Fact]
+    public async Task ABatchAtTheCapIsAccepted()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var batch = Enumerable.Range(0, CommandBatch.MaxEnvelopes)
+            .Select(position => Envelope(new CreateArea(Guid.NewGuid(), user, Guid.NewGuid(), $"Area {position}", position)))
+            .ToArray();
+
+        var response = await client.PostAsJsonAsync("/api/commands", batch, ct);
+
+        response.EnsureSuccessStatusCode();
+        var results = await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct);
+        Assert.Equal(CommandBatch.MaxEnvelopes, results!.Length);
+    }
+
+    [Fact]
+    public async Task ABatchOverTheCapIsRefusedAndNothingIsStored()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var batch = Enumerable.Range(0, CommandBatch.MaxEnvelopes + 1)
+            .Select(position => Envelope(new CreateArea(Guid.NewGuid(), user, Guid.NewGuid(), $"Area {position}", position)))
+            .ToArray();
+
+        var response = await client.PostAsJsonAsync("/api/commands", batch, ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var sync = await client.GetFromJsonAsync<JsonElement>("/api/sync?since=0", ct);
+        var areas = sync.GetProperty("documents").TryGetProperty("areas", out var stored) ? stored.EnumerateArray() : default;
+        Assert.DoesNotContain(areas, area => area.GetProperty("name").GetString()!.StartsWith("Area "));
+    }
+
+    [Fact]
+    public async Task AWronglyTypedCommandMidBatchKeepsTheResponsesOfTheOthers()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var wronglyTyped = JsonSerializer.SerializeToElement(new
+        {
+            commandId = Guid.NewGuid(), userId = user, areaId = "not-a-guid", name = "Broken", position = 0
+        });
+
+        var response = await client.PostAsJsonAsync("/api/commands", new[]
+        {
+            Envelope(new CreateArea(Guid.NewGuid(), user, Guid.NewGuid(), "Home", 0)),
+            new CommandEnvelope(nameof(CreateArea), wronglyTyped),
+            Envelope(new CreateArea(Guid.NewGuid(), user, Guid.NewGuid(), "Work", 1))
+        }, ct);
+
+        response.EnsureSuccessStatusCode();
+        var results = (await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct))!;
+        Assert.True(results[0].Accepted);
+        Assert.False(results[1].Accepted);
+        Assert.True(results[1].Unrecoverable);
+        Assert.True(results[2].Accepted);
     }
 
     static CommandEnvelope Envelope<T>(T command) where T : notnull =>

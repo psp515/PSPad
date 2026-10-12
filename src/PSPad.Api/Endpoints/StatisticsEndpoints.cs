@@ -16,7 +16,8 @@ public static class StatisticsEndpoints
             StatisticsReader reader,
             ICurrentUser current,
             CancellationToken ct) =>
-            Results.Ok(await reader.ReadAsync(current.UserId, before, limit ?? 50, ct)));
+            Results.Ok(await reader.ReadAsync(current.UserId, before, limit ?? 50, ct)))
+            .RequireRateLimiting("statistics");
 
         app.MapGet("statistics/overview", async (
             int? days,
@@ -31,6 +32,6 @@ public static class StatisticsEndpoints
             var today = TodayRule.TodayIn(clock.UtcNow, zone);
 
             return Results.Ok(await reader.ReadAsync(current.UserId, today, days ?? 30, zone, ct));
-        });
+        }).RequireRateLimiting("statistics");
     }
 }

@@ -76,6 +76,7 @@ the old one's status line to point at the new number.
 | [0059](0059-money-is-its-own-wasm-safe-module.md) | Money is its own WASM-safe module, with budgets as containers and rates frozen on every amount | Active | 2026-10-09 | architecture, modularity, domain, offline, sync, integrations |
 | [0060](0060-budgets-take-the-statistics-slot-and-sidebar-groups-collapse.md) | Budgets take Statistics' bottom-bar slot, and the sidebar's Budgets and Areas collapse | Active (amends [0050](0050-phones-navigate-from-a-bottom-bar.md), [0014](0014-one-navigation-tree-at-every-width.md), [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md)) | 2026-10-09 | ui, navigation, mobile |
 | [0061](0061-sync-pulls-in-seq-pages-without-events.md) | Sync pulls documents in bounded seq pages and never ships the event log | Active (amends [0006](0006-sync-is-delta-by-version.md)) | 2026-10-12 | architecture, offline, sync, security |
+| [0062](0062-per-user-rate-limits-and-a-command-batch-cap.md) | Limit each user's API traffic with token buckets and cap a command batch at 50 | Active | 2026-10-12 | http, security, sync |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

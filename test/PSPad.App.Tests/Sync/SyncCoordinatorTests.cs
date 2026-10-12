@@ -293,6 +293,28 @@ public class SyncCoordinatorTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task ABusyServerIsNotFlaggedAsAFailedSync()
+    {
+        var coordinator = CoordinatorFor(new BusyOnceApi(TimeSpan.FromHours(1)));
+
+        await coordinator.SyncNowAsync();
+
+        Assert.False(coordinator.LastSyncFailed);
+    }
+
+    [Fact]
+    public async Task ABusyServerIsRetriedOnceItsRetryAfterHasPassed()
+    {
+        var api = new BusyOnceApi(TimeSpan.FromMilliseconds(10));
+        var coordinator = CoordinatorFor(api);
+
+        await coordinator.SyncNowAsync();
+        await api.SecondCall.WaitAsync(TimeSpan.FromSeconds(5), global::Xunit.TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, api.SyncCalls);
+    }
+
+    [Fact]
     public async Task OfflineLeavesTheStampAlone()
     {
         var coordinator = CoordinatorFor(AnAreaCalled("Dom"), online: false);
@@ -395,6 +417,16 @@ public class SyncCoordinatorTests : Bunit.TestContext
             _belts, Navigation, local, new StoppedClock(Noon));
     }
 
+    SyncCoordinator CoordinatorFor(ISyncApi api)
+    {
+        Services.AddMudServices();
+        var replica = new InMemoryReplica();
+        var outbox = new InMemoryOutbox();
+        return new SyncCoordinator(
+            new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
+            _belts, Navigation, replica, new StoppedClock(Noon));
+    }
+
     SyncCoordinator CoordinatorFor(SyncResponse? pull, bool online = true, InMemoryReplica? replica = null)
     {
         Services.AddMudServices();
@@ -427,6 +459,32 @@ public class SyncCoordinatorTests : Bunit.TestContext
 
         public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
             failure is null ? Task.FromResult(pull) : Task.FromException<SyncResponse?>(failure);
+
+        public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
+    }
+
+    sealed class BusyOnceApi(TimeSpan retryAfter) : ISyncApi
+    {
+        readonly TaskCompletionSource _secondCall = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int SyncCalls { get; private set; }
+
+        public Task SecondCall => _secondCall.Task;
+
+        public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
+            Task.FromResult<IReadOnlyList<CommandResponse>>([]);
+
+        public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full)
+        {
+            SyncCalls++;
+            if (SyncCalls == 1)
+            {
+                return Task.FromException<SyncResponse?>(new ServerBusyException(retryAfter));
+            }
+
+            _secondCall.TrySetResult();
+            return Task.FromResult<SyncResponse?>(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), []));
+        }
 
         public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
     }

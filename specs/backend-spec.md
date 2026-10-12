@@ -722,7 +722,30 @@ directly in `PSPad.Api`:
 
 Kestrel caps every request body at 1 MB; the client's outbox stops a batch
 at 50 commands or 512 KB of envelopes, whichever comes first, always sending
-at least one.
+at least one. The 50 is `CommandBatch.MaxEnvelopes` in `PSPad.Contracts`:
+`/api/commands` answers a longer batch with `400` before dispatching any of
+it. A payload that fails to deserialize, or is missing, gets the
+malformed-payload response with `Unrecoverable: true` and the rest of the
+batch carries on.
+
+Every authenticated request draws on a per-user token bucket keyed by the
+JWT subject (`adr/0062`); `/api/commands`, `/api/sync` and
+`/api/statistics/*` additionally draw on their own bucket. Defaults, from
+the `RateLimits` configuration section (code defaults for tests, not a
+documented self-hoster setting):
+
+| Bucket | Applies to | Burst | Refill |
+|--------|-----------|-------|--------|
+| `Api` | every authenticated request | 120 | 12/s |
+| `Commands` | `POST /api/commands` | 30 | 3/s |
+| `Sync` | `GET /api/sync` | 30 | 3/s |
+| `Statistics` | `GET /api/statistics/*` | 60 | 6/s |
+
+An empty bucket answers `429` with `Retry-After` in whole seconds.
+Anonymous requests skip these buckets. The client turns a `429` from
+`/api/commands` or `/api/sync` into `ServerBusyException`; `SyncCoordinator`
+does not flag it as a failed sync and retries once after `Retry-After`
+(5 s when absent), capped at the 60-second poll interval.
 
 Writes go through one endpoint because every write is a command and the
 outbox ships them in batches — splitting per feature would buy nothing and

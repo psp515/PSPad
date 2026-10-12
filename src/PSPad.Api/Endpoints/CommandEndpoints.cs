@@ -14,6 +14,13 @@ public static class CommandEndpoints
             ICurrentUser user,
             CancellationToken ct) =>
         {
+            if (envelopes.Length > CommandBatch.MaxEnvelopes)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    detail: $"A batch holds at most {CommandBatch.MaxEnvelopes} commands.");
+            }
+
             var responses = new List<CommandResponse>(envelopes.Length);
 
             foreach (var envelope in envelopes)
@@ -22,6 +29,6 @@ public static class CommandEndpoints
             }
 
             return Results.Ok(responses);
-        });
+        }).RequireRateLimiting("commands");
     }
 }
