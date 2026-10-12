@@ -48,6 +48,9 @@ else
                               OnMonthChanged="@ShowMonth" OnStart="@StartMonthAsync" OnDeleteMonth="@DeleteMonthAsync"
                               OnOpen="@OpenHolding" />
         </MudTabPanel>
+        <MudTabPanel Text="Summary">
+            <BudgetSummaryTab Class="pt-4" Entries="@_entries" Snapshots="@_snapshots" />
+        </MudTabPanel>
         <MudTabPanel Text="Settings">
             <BudgetSettingsTab Class="pt-4" Budget="@_budget" Entries="@_entries" OnAddCategory="@AddCategoryAsync"
                                OnRenameCategory="@RenameCategoryAsync" OnMergeCategory="@MergeCategoryAsync"
@@ -80,7 +83,7 @@ else
 @code {
     const int MonthTab = 0;
     const int BalanceTab = 1;
-    static readonly string[] Tabs = ["month", "balance", "settings"];
+    static readonly string[] Tabs = ["month", "balance", "summary", "settings"];
     static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Add entry" };
     static readonly Dictionary<string, object> AddExpenseAttributes = new() { ["aria-label"] = "Add expense" };
     static readonly Dictionary<string, object> AddIncomeAttributes = new() { ["aria-label"] = "Add income" };

@@ -33,7 +33,7 @@ src/
     PSPad.Module.Statistics/    queries over the event log
     PSPad.Module.Identity/      User, time zone, first-sign-in provisioning
     PSPad.Module.Presentation/  per-user views of shared data (AreaView: list order) — pure, WASM-safe
-    PSPad.Module.Money/         budgets, categories, entries, balance snapshots, money preferences, rate suggestion, month and balance totals — pure, WASM-safe (adr/0059)
+    PSPad.Module.Money/         budgets, categories, entries, balance snapshots, money preferences, rate suggestion, month, balance and range summaries — pure, WASM-safe (adr/0059)
     PSPad.Module.Sharing/       public snapshots — frozen list copies, server-side only (adr/0056)
 test/
   PSPad.Module.Tasks.Tests/       unit only

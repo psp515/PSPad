@@ -1,0 +1,89 @@
+@using PSPad.App.State
+@using PSPad.Module.Money.Balance
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Reading
+@inject AppState State
+
+<div class="@($"pspad-summary {Class}")">
+    <div class="d-flex flex-wrap align-center gap-3 mb-4">
+        <MudToggleGroup T="SummaryPreset" Value="@_preset" ValueChanged="@Choose" Class="pspad-summary-presets" Size="Size.Small"
+                        SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary">
+            <MudToggleItem Value="SummaryPreset.ThisYear" Text="This year" />
+            <MudToggleItem Value="SummaryPreset.Last12Months" Text="Last 12 months" />
+            <MudToggleItem Value="SummaryPreset.LastYear" Text="Last year" />
+            <MudToggleItem Value="SummaryPreset.Custom" Text="Custom" />
+        </MudToggleGroup>
+        @if (_preset == SummaryPreset.Custom)
+        {
+            <MudDateRangePicker Class="pspad-summary-picker" Label="Range" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                DateRange="@Picked" DateRangeChanged="@Pick" />
+        }
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pspad-summary-range">@MoneyText.Range(_range.From, _range.To)</MudText>
+    </div>
+
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="6" sm="4">
+            <MoneyTile Class="pspad-summary-income" Label="Income" Text="@MoneyText.Pln(_summary.Income)" />
+        </MudItem>
+        <MudItem xs="6" sm="4">
+            <MoneyTile Class="pspad-summary-expenses" Label="Expenses" Text="@MoneyText.Pln(_summary.Expenses)" />
+        </MudItem>
+        <MudItem xs="6" sm="4">
+            <MoneyTile Class="pspad-summary-saved" Label="Saved" Text="@MoneyText.SignedPln(_summary.Saved)"
+                       Negative="@(_summary.Saved < 0)" />
+        </MudItem>
+        <MudItem xs="6" sm="4">
+            <MoneyTile Class="pspad-summary-rate" Label="Savings rate" Text="@MoneyText.Percent(_summary.SavingsRate)"
+                       Negative="@MoneyText.PercentIsNegative(_summary.SavingsRate)" />
+        </MudItem>
+        <MudItem xs="12" sm="8">
+            <MoneyTile Class="pspad-summary-net-worth" Label="@NetWorthLabel" Text="@NetWorthText" />
+        </MudItem>
+    </MudGrid>
+
+    <BudgetSummaryCharts Summary="@_summary" />
+</div>
+
+@code {
+    SummaryPreset _preset = SummaryPreset.ThisYear;
+    SummaryRange _range = default!;
+    MoneySummary _summary = default!;
+
+    [Parameter, EditorRequired] public IReadOnlyList<MoneyEntry> Entries { get; set; } = [];
+
+    [Parameter, EditorRequired] public IReadOnlyList<BalanceSnapshot> Snapshots { get; set; } = [];
+
+    [Parameter] public string Class { get; set; } = "";
+
+    DateRange Picked => new(_range.From.ToDateTime(TimeOnly.MinValue), _range.To.ToDateTime(TimeOnly.MinValue));
+
+    string NetWorthLabel => _summary.Latest is { } latest ? $"Net worth · {MoneyText.MonthTitle(latest.Month)}" : "Net worth";
+
+    string NetWorthText => _summary.LatestNetWorth is { } value ? MoneyText.Pln(value) : "—";
+
+    protected override void OnInitialized() => _range = SummaryRange.For(_preset, State.Today);
+
+    protected override void OnParametersSet() => Summarise();
+
+    void Summarise() => _summary = MoneySummary.For(Entries, Snapshots, _range.From, _range.To);
+
+    void Choose(SummaryPreset preset)
+    {
+        _preset = preset;
+
+        if (preset != SummaryPreset.Custom)
+        {
+            _range = SummaryRange.For(preset, State.Today);
+            Summarise();
+        }
+    }
+
+    void Pick(DateRange? picked)
+    {
+        if (SummaryRange.Picked(picked?.Start, picked?.End) is { } range)
+        {
+            _range = range;
+            Summarise();
+        }
+    }
+}

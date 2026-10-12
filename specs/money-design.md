@@ -51,7 +51,7 @@ Values/         Currencies.cs, YearMonth.cs, YearMonthJsonConverter.cs, Money.cs
                 PSPad.Module.Money: a type named Money under …Money.Values would be shadowed
                 by the namespace)
 Reading/        RateSuggestion.cs, MonthTotals.cs, CategoryTotal.cs, EntryDay.cs, BalanceTotals.cs,
-                MoneySummary.cs
+                MoneySummary.cs, CumulativeMonth.cs, CategorySeries.cs, NetWorthMonth.cs
 ```
 
 ## 3. Domain model
@@ -230,16 +230,24 @@ documents.
   at the NBP rates the Balance tab fetched. PLN needs no rate; `AtRates` is
   `null` while any currency lacks one.
 
-**`MoneySummary.For(entries, snapshots, from, to)`**
+**`MoneySummary.For(entries, snapshots, from, to)`** (one budget's documents)
+- `from` and `to` are days, both inclusive; the months run from `from`'s
+  month to `to`'s. A range that ends before it starts is rejected.
 - Income, expenses, saved (income − expenses), and savings rate (saved ÷
-  income; `null` when income is 0).
-- Cumulative income and expenses per month.
-- Expenses per month per category: the top 4 categories in the range are
-  shown, and the rest go into "Other".
-- Net worth per month by holding type, at snapshot rates. A month without a
-  snapshot is a gap, not carried forward.
-- Category ranking.
-- Latest net worth: the newest snapshot on or before `to`.
+  income; `null` when income is 0, negative when spending exceeds income).
+- Cumulative income and expenses per month (`CumulativeMonth`), running from
+  0 at the first month.
+- Expenses per month per category (`CategorySeries`): the top 4 categories in
+  the range keep their own series, and the rest go into "Other" (into the
+  top-4 category itself when one is called "Other").
+- Net worth per month by holding type (`NetWorthMonth`: Cash, Savings,
+  Investment), at snapshot rates. A month without a live snapshot is a gap
+  (all `null`), not carried forward.
+- Category ranking: every expense category in the range, largest first, ties
+  by name, without an "Other" bucket. `CategoryTotal.RankingOf` does the
+  ranking for both `MonthTotals` and `MoneySummary`.
+- Latest net worth: the newest live snapshot on or before `to`'s month, even
+  when it is older than `from`.
 
 "Today" for default dates and the current month is the user's stored time
 zone, never machine-local (the AGENTS.md §2 invariant).
@@ -365,13 +373,27 @@ Month (default), Balance, Summary and Settings. The tab lives in the URL.
   - Read-only for an archived budget. A second save is ignored while one is
     sending.
 - **Summary**
-  - Range presets: This year (default), Last 12 months, Last year and Custom
-    (a `MudDateRangePicker`).
-  - Tiles: income, expenses, saved, savings rate, net worth.
-  - Four `MudChart`s: cumulative income vs expenses (line), monthly expenses
-    by category (stacked bar), net worth by holding type (stacked bar), and
-    category ranking (horizontal bars).
-  - Each chart has a table fallback for screen readers, as Statistics does.
+  - Computed in the browser from the replica, so it works offline. No FAB,
+    no writes; an archived budget shows the same Summary.
+  - Range presets in a `MudToggleGroup`: This year (default; 1 January to
+    today), Last 12 months (the first of the month eleven months back to
+    today), Last year (the whole previous calendar year) and Custom (a
+    `MudDateRangePicker`, applied once both ends are picked). "Today" is the
+    user's stored time zone. The range is not in the URL and is This year on
+    each visit. A caption shows it, e.g. "1 Jan 2026 – 9 Oct 2026".
+  - Tiles: Income, Expenses, Saved, Savings rate (a whole percent, "—"
+    without income), and "Net worth · {Month yyyy}" of the latest snapshot
+    ("Net worth" and "—" without one).
+  - Three `MudChart`s: cumulative income vs expenses (line), expenses by
+    month by category (stacked bar), net worth by holding type (stacked bar;
+    a gap month draws as 0). Category ranking is a `MudProgressLinear` per
+    category with its name and amount, as Statistics' "Where the work went"
+    does (MudBlazor 9.9 has no horizontal bar chart).
+  - Each of the three charts has a visually hidden table fallback for
+    screen readers, as Statistics does; a gap reads "—". The ranking has no
+    table: its bars are `aria-hidden` and its text is visible. Without expenses the two category
+    cards say "No expenses in this range."; without any balance in the range
+    the net worth card says "No balances in this range.".
 - **Settings**
   - Expense and income category lists. Each row has rename, merge and
     remove; remove is disabled while the category has entries, which the row
