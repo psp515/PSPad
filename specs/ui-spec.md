@@ -1348,7 +1348,8 @@ non-interactive `AccountBadge` (avatar, display name, email — a label, not
 a control), then a nav group of **My Day / Inbox / Goals / Statistics /
 List snapshots**,
 divider, a collapsible **Budgets** group (header links `/budgets`; active budgets
-in creation order), a collapsible **Areas** group holding the user's areas in
+in creation order, then **+ New budget**, which opens `BudgetPanel` via
+`?budget=new` on the current page), a collapsible **Areas** group holding the user's areas in
 `Position` order (expanded state per device in local storage key
 `pspad.navgroups`; a collapsed header reads "Label · N"; `adr/0060`), then **Shared with me**
 (`People` icon) when the user has a member list, then **+ New area**,
@@ -1374,10 +1375,15 @@ only its icon is primary, to hold the 4.5:1 contrast rule on the tint
 `/budgets` lists budget cards with a "Show archived" switch, an empty state and
 a New budget FAB; `BudgetPanel` creates and renames (`?budget=new|{id}`). Cards
 show the current month's income, expenses and net in PLN, and the latest net
-worth or a "Start {month}" link to the Balance tab.
-`/budgets/{id}/{tab}` has no subtitle and one row of a full-width three-view
-`MudToggleGroup` (Month, Balance, Summary) plus a Settings gear button; the view
-lives in the URL (`month`, `balance`, `summary`, `settings`). The shared
+worth or a "Start {month}" link to the Balance tab. The whole card is the
+link to the budget (the name's link covers the card; the Start link sits above
+it); hover outlines it in the primary and tints its chevron.
+`/budgets/{id}/{tab}` is at most 960px wide and centred, has a back arrow to
+`/budgets` and no subtitle, and one row of a three-view
+`MudToggleGroup` (Month, Balance, Summary; at most 420px from 960px up) plus a
+Settings gear button; on Month and Balance the `MonthSwitcher` (with Balance's
+"Month actions" menu) shares that row from 960px up and takes its own line
+below. The view lives in the URL (`month`, `balance`, `summary`, `settings`). The shared
 `MonthSwitcher` is the month title (a button opening a bottom-sheet month grid
 with ‹ year ›, This month and Cancel) with ‹ › at the right. Month (default;
 month switcher, a `MoneyHero` totals card with Net large, Income/Expenses under

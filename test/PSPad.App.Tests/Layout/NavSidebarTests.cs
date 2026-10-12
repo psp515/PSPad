@@ -313,6 +313,36 @@ public class NavSidebarTests : Bunit.TestContext
         Assert.False(Services.GetRequiredService<NavGroupState>().IsExpanded(NavGroupState.Areas));
     }
 
+    [Fact]
+    public void NewBudgetEndsTheBudgetsGroupAndOpensTheNewBudgetPanel()
+    {
+        Arrange();
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/my-day");
+        var sidebar = Render(Areas("Dom"), BudgetNamed("Personal"));
+
+        sidebar.Find(".pspad-new-budget .mud-nav-link").Click();
+
+        Assert.True(BudgetQuery.IsNew(navigation.Uri));
+        Assert.Contains("/my-day", navigation.Uri);
+    }
+
+    [Fact]
+    public void NewBudgetIsDisabledUntilTheShellIsReady()
+    {
+        Arrange();
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        var sidebar = Render<NavSidebar>(parameters => parameters
+            .Add(p => p.Areas, Areas("Dom"))
+            .Add(p => p.Email, "ada@example.com")
+            .Add(p => p.UserId, User)
+            .Add(p => p.Disabled, true));
+
+        sidebar.Find(".pspad-new-budget .mud-nav-link").Click();
+
+        Assert.False(BudgetQuery.IsNew(navigation.Uri));
+    }
+
     static Budget BudgetNamed(string name, bool archived = false)
     {
         var budget = new Budget();

@@ -4,8 +4,6 @@
 @using PSPad.Module.Money.Values
 
 <div class="@Class">
-    <MonthSwitcher Class="mb-2" Month="@Month" Current="@Current" OnMonthChanged="@OnMonthChanged" />
-
     <MoneyHero Class="mb-4" HeadlineClass="pspad-month-net" Label="Net" Text="@MoneyText.SignedPln(Totals.Net)" Negative="@(Totals.Net < 0)">
         <ChildContent>
             <MoneyFigure Class="pspad-month-income" Label="Income" Text="@MoneyText.Pln(Totals.Income)" />
@@ -43,11 +41,7 @@
 @code {
     [Parameter, EditorRequired] public YearMonth Month { get; set; }
 
-    [Parameter, EditorRequired] public YearMonth Current { get; set; }
-
     [Parameter, EditorRequired] public MonthTotals Totals { get; set; } = default!;
-
-    [Parameter] public EventCallback<YearMonth> OnMonthChanged { get; set; }
 
     [Parameter] public EventCallback<MoneyEntry> OnOpen { get; set; }
 

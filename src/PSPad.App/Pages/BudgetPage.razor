@@ -30,7 +30,9 @@ else if (_budget is null)
 }
 else
 {
-    <PageHeading Title="@_budget.Name" Icon="@Icons.Material.Outlined.AccountBalanceWallet" />
+    <div class="pspad-budget-page">
+    <PageHeading Title="@_budget.Name" Icon="@Icons.Material.Outlined.AccountBalanceWallet" BackHref="@BudgetLinks.Index"
+                 BackLabel="Back to budgets" />
 
     @if (_budget.IsArchived)
     {
@@ -47,18 +49,29 @@ else
         <MudIconButton Class="pspad-budget-settings" Icon="@Icons.Material.Outlined.Settings" aria-label="Budget settings"
                        aria-pressed="@(TabIndex == SettingsTab ? "true" : "false")"
                        Color="@(TabIndex == SettingsTab ? Color.Primary : Color.Default)" OnClick="@(() => SelectTab(SettingsTab))" />
+        @if (TabIndex is MonthTab or BalanceTab)
+        {
+            <MonthSwitcher Month="@_month" Current="@Current" OnMonthChanged="@ShowMonth">
+                @if (TabIndex == BalanceTab && Balance.Snapshot is not null && !_budget.IsArchived)
+                {
+                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" AriaLabel="Month actions" Class="pspad-balance-menu" Dense="true"
+                             AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                        <MudMenuItem Class="pspad-delete-month" OnClick="@DeleteMonthAsync">Delete month</MudMenuItem>
+                    </MudMenu>
+                }
+            </MonthSwitcher>
+        }
     </div>
 
     @switch (TabIndex)
     {
         case MonthTab:
-            <BudgetMonthTab Month="@_month" Current="@Current" Totals="@MonthTotals.For(_entries, _month)"
-                            OnMonthChanged="@ShowMonth" OnOpen="@OpenEntry" />
+            <BudgetMonthTab Month="@_month" Totals="@MonthTotals.For(_entries, _month)"
+                            OnOpen="@OpenEntry" />
             break;
         case BalanceTab:
             <BudgetBalanceTab Month="@_month" Totals="@Balance" ReadOnly="@_budget.IsArchived"
-                              OnMonthChanged="@ShowMonth" OnStart="@StartMonthAsync" OnDeleteMonth="@DeleteMonthAsync"
-                              OnOpen="@OpenHolding" />
+                              OnStart="@StartMonthAsync" OnOpen="@OpenHolding" />
             break;
         case SummaryTab:
             <BudgetSummaryTab Entries="@_entries" Snapshots="@_snapshots" />
@@ -71,6 +84,7 @@ else
                                OnArchive="@ArchiveAsync" OnRestore="@RestoreAsync" />
             break;
     }
+    </div>
 
     @if (TabIndex == MonthTab && !_budget.IsArchived)
     {

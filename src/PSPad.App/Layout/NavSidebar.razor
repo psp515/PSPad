@@ -3,6 +3,7 @@
 @using PSPad.Module.Money.Budgets
 @using PSPad.Module.Tasks.Areas
 @inject SidebarCounts Counts
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <div class="d-flex flex-column pspad-nav" style="height:100%">
@@ -39,6 +40,11 @@
                     @budget.Name
                 </MudNavLink>
             }
+
+            <MudNavLink Icon="@Icons.Material.Outlined.Add" Class="pspad-new-budget"
+                        Disabled="@Disabled" OnClick="@OnNewBudgetClick">
+                New budget
+            </MudNavLink>
         }
     </MudNavMenu>
 
@@ -152,6 +158,14 @@
     void OnCountsChanged() => InvokeAsync(StateHasChanged);
 
     static RenderFragment Count(int count) => count == 0 ? (_ => { }) : @<span class="pspad-nav-count">@count</span>;
+
+    void OnNewBudgetClick()
+    {
+        if (!Disabled)
+        {
+            Navigation.NavigateTo(BudgetQuery.ForNew(Navigation.Uri));
+        }
+    }
 
     Task OnNewAreaClick() => Disabled ? Task.CompletedTask : OnNewArea.InvokeAsync();
 

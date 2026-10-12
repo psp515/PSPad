@@ -307,14 +307,15 @@ subtitle. No app bar.
 - With no budgets at all, there's an empty state with a "Create budget"
   button.
 
-**`/budgets/{id}/{tab?}` (`Pages/BudgetPage.razor`)**. The heading has no
-subtitle. Under it one row: a full-width `MudToggleGroup` of three equal
+**`/budgets/{id}/{tab?}` (`Pages/BudgetPage.razor`)**, at most 960px wide.
+The heading has a back arrow to `/budgets` and no subtitle. Under it one row: a full-width `MudToggleGroup` of three equal
 views, Month (default), Balance and Summary, then a gear icon button for
 Settings (`aria-pressed` on the settings route, where no view is selected).
 Four tabs never fit a phone; the gear keeps the row to three. The view lives
 in the URL.
 
-- **Month switcher** (`MonthSwitcher`, shared by Month and Balance): the
+- **Month switcher** (`MonthSwitcher`, in the view row on Month and
+  Balance; its own line below 960px; Balance adds its "Month actions" menu): the
   month title on the left as a button, ‹ › on the right. The title opens a
   bottom sheet (a `MudDialog` at the bottom, full width on a phone) with
   ‹ year ›, a 4×3 grid of months (the shown month filled), "This month"
@@ -421,7 +422,8 @@ budget is archived and read-only; Restore lives in the Settings tab's Budget car
 - **Desktop sidebar:**
   - Budgets is a collapsible group after the main rows, with a custom header:
     a link to `/budgets` plus a chevron toggle (a `MudNavGroup` header cannot
-    be both). Its children are the active budgets in creation order.
+    be both). Its children are the active budgets in creation order, then
+    "+ New budget", which opens `BudgetPanel` on the current page.
   - Areas becomes a collapsible group the same way.
   - The collapsed state of each group is remembered per device in
     `localStorage`.

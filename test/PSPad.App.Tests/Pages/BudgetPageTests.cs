@@ -193,6 +193,35 @@ public class BudgetPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheHeadingLeadsBackToTheBudgets()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id));
+
+        page.WaitForAssertion(() => page.Find(".pspad-month-title"));
+        Assert.Equal(BudgetLinks.Index, Services.GetRequiredService<PageHeader>().BackHref);
+    }
+
+    [Theory]
+    [InlineData("month", true)]
+    [InlineData("balance", true)]
+    [InlineData("summary", false)]
+    [InlineData("settings", false)]
+    public void TheMonthSwitcherSharesTheViewRowOnlyForMonthAndBalance(string tab, bool shown)
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, tab));
+
+        page.WaitForAssertion(() => page.Find(".pspad-budget-nav"));
+        Assert.Equal(shown ? 1 : 0, page.FindAll(".pspad-budget-nav .pspad-month-switcher").Count);
+        Assert.Equal(shown ? 1 : 0, page.FindAll(".pspad-month-switcher").Count);
+    }
+
+    [Fact]
     public void TheHeadingHasNoCategoryCountSubtitle()
     {
         var budget = BudgetsPageTests.Named("Personal");

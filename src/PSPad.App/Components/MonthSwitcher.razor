@@ -10,6 +10,7 @@
                    OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Previous()))" />
     <MudIconButton Class="pspad-month-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next month"
                    OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Next()))" />
+    @ChildContent
 </div>
 
 <MudDialog @bind-Visible="_picking" Class="pspad-month-sheet" Options="@SheetOptions">
@@ -53,6 +54,8 @@
     [Parameter, EditorRequired] public YearMonth Current { get; set; }
 
     [Parameter] public EventCallback<YearMonth> OnMonthChanged { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
 
     [Parameter] public string Class { get; set; } = "";
 

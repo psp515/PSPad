@@ -310,6 +310,46 @@ public partial class StylesheetRulesTests
         Assert.Contains("overflow-x: auto", presets);
     }
 
+    [Fact]
+    public void TheBudgetViewsKeepTheirCase() =>
+        Assert.Contains("text-transform: none", Declarations(".pspad-budget-views .mud-toggle-item"));
+
+    [Fact]
+    public void TheBudgetPageStopsAtNineHundredSixtyPixels()
+    {
+        var page = Declarations(".pspad-budget-page");
+
+        Assert.Contains("max-width: 960px", page);
+        Assert.Contains("margin-inline: auto", page);
+    }
+
+    [Fact]
+    public void OnAPhoneTheMonthSwitcherTakesItsOwnLine() =>
+        Assert.Contains("flex-basis: 100%", DeclarationsInMedia("max-width: 959.98px", ".pspad-budget-nav .pspad-month-switcher"));
+
+    [Fact]
+    public void OnDesktopTheViewsAreNotStretched() =>
+        Assert.Contains("max-width: 420px", DeclarationsInMedia("min-width: 960px", ".pspad-budget-views"));
+
+    [Fact]
+    public void OnDesktopTheHeroFiguresSitBesideTheHeadline() =>
+        Assert.Contains("flex-direction: row", DeclarationsInMedia("min-width: 960px", ".pspad-money-hero-top"));
+
+    [Fact]
+    public void TheWholeBudgetCardIsTheLink()
+    {
+        var cover = Declarations(".pspad-budget-card .pspad-budget-card-name::after");
+
+        Assert.Contains("position: absolute", cover);
+        Assert.Contains("inset: 0", cover);
+        Assert.Contains("position: relative", Declarations(".pspad-budget-card"));
+        Assert.Contains("z-index: 1", Declarations(".pspad-budget-card .pspad-budget-card-start"));
+    }
+
+    [Fact]
+    public void AHoveredBudgetCardOutlinesInThePrimary() =>
+        Assert.Contains("border-color: var(--mud-palette-primary)", Declarations(".pspad-budget-card:hover"));
+
     static string Declarations(string selector) =>
         string.Join("\n", Rule().Matches(Css)
             .Where(rule => SelectorsOf(rule).Contains(selector))

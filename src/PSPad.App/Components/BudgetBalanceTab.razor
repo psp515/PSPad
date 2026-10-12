@@ -10,17 +10,6 @@
 @implements IDisposable
 
 <div class="@Class">
-    <div class="d-flex align-center mb-4">
-        <MonthSwitcher Class="flex-grow-1" Month="@Month" Current="@YearMonth.Of(State.Today)" OnMonthChanged="@OnMonthChanged" />
-        @if (Snapshot is not null && !ReadOnly)
-        {
-            <MudMenu Icon="@Icons.Material.Filled.MoreVert" AriaLabel="Month actions" Class="pspad-balance-menu" Dense="true"
-                     AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                <MudMenuItem Class="pspad-delete-month" OnClick="@OnDeleteMonth">Delete month</MudMenuItem>
-            </MudMenu>
-        }
-    </div>
-
     @if (Snapshot is null)
     {
         <MudAlert Severity="Severity.Info" Class="pspad-balance-missing">
@@ -96,11 +85,7 @@
 
     [Parameter] public bool ReadOnly { get; set; }
 
-    [Parameter] public EventCallback<YearMonth> OnMonthChanged { get; set; }
-
     [Parameter] public EventCallback OnStart { get; set; }
-
-    [Parameter] public EventCallback OnDeleteMonth { get; set; }
 
     [Parameter] public EventCallback<Holding> OnOpen { get; set; }
 

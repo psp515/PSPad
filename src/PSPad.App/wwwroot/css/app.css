@@ -1432,9 +1432,78 @@ button.pspad-heatmap-cell:focus-visible {
     border-radius: 50%;
 }
 
+.pspad-budget-page {
+    max-width: 960px;
+    margin-inline: auto;
+}
+
+.pspad-budget-nav {
+    flex-wrap: wrap;
+}
+
 .pspad-budget-views .mud-toggle-item {
     flex: 1 1 0;
     min-width: 0;
+    text-transform: none;
+}
+
+@media (max-width: 959.98px) {
+    .pspad-budget-nav .pspad-month-switcher {
+        flex-basis: 100%;
+    }
+}
+
+@media (min-width: 960px) {
+    .pspad-budget-views {
+        max-width: 420px;
+    }
+
+    .pspad-budget-nav .pspad-month-switcher {
+        flex: 1 1 auto;
+    }
+
+    .pspad-money-hero-top {
+        flex-direction: row;
+        align-items: flex-end;
+        gap: 48px;
+    }
+
+    .pspad-money-hero-figures {
+        grid-auto-flow: column;
+        grid-template-columns: none;
+        grid-auto-columns: max-content;
+        column-gap: 48px;
+        padding-bottom: 6px;
+    }
+}
+
+.pspad-budget-card {
+    position: relative;
+    transition: border-color 120ms ease;
+}
+
+.pspad-budget-card:hover {
+    border-color: var(--mud-palette-primary);
+}
+
+.pspad-budget-card .pspad-budget-card-name::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+}
+
+.pspad-budget-card .pspad-budget-card-start {
+    position: relative;
+    z-index: 1;
+}
+
+.pspad-budget-card-chevron {
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-budget-card:hover .pspad-budget-card-chevron {
+    color: var(--mud-palette-primary);
 }
 
 .pspad-month-switcher .pspad-month-title {
