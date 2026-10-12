@@ -38,6 +38,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Recurrence lead time, yearly repeats | `specs/recurrence-lead-time-design.md` |
 | Phone navigation | `specs/mobile-navigation-design.md` |
 | Budgets, expenses, balances, NBP rates | `specs/money-design.md` |
+| Sharing a budget | `specs/budget-sharing-design.md` |
 | Length and count limits on user content | `specs/content-limits-design.md` |
 | Why a decision was made | `adr/README.md` index → the `Active` record |
 
@@ -56,7 +57,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 9 | Integration tests own a Testcontainers MongoDB 8 replica set | 0009 |
 | 10 | Events dispatch after commit, replayed from a marker | 0036, 0037 |
 | 11 | Per-user views live in Presentation | 0051 |
-| 12 | Lists shared by membership | 0054, 0057 |
+| 12 | Lists and budgets shared by membership | 0054, 0057, 0066 |
 | 13 | Public snapshots, server-only module | 0056, 0064 |
 | 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount | 0059 |
 

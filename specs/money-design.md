@@ -494,15 +494,7 @@ Each slice ships green on its own:
 
 ## 9. Future: sharing a budget
 
-Tracked in #121. It follows `adr/0054` and `adr/0057`:
-- `Budget` gains `Members[]` and `InviteToken`.
-- Invites use a link plus a code and expire after 30 minutes.
-- `JoinBudget` is a server-only command.
-- `BudgetAccess.To` grants members content writes. Rename, archive and the
-  sharing commands stay owner-only.
-- The sync filter widens to budgets the user is a member of.
-- `ActorId` on events records who entered each entry.
-- `MoneyPreferences` stays personal.
-
-Nothing in v1 needs to change for that, beyond what §3.2 already fixes:
-owner-keyed `UserId`, `BudgetId` on everything, and one access function.
+Tracked in #121 and designed in `specs/budget-sharing-design.md`
+(`adr/0064`). Nothing in v1 needs to change for it, beyond what §3.2 already
+fixes: owner-keyed `UserId`, `BudgetId` on everything, and one access
+function.
