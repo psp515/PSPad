@@ -54,10 +54,10 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         var page = BalanceTab(budget);
 
-        page.WaitForAssertion(() => Assert.Equal("166.00 PLN", Text(page, ".pspad-balance-at-nbp .pspad-money-tile-value")));
-        Assert.Equal("164.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-tile-value"));
-        Assert.Equal("+2.00 PLN", Text(page, ".pspad-balance-currency .pspad-money-tile-value"));
-        Assert.Equal(["+1.00 PLN", "+1.00 PLN", "—"],
+        page.WaitForAssertion(() => Assert.Equal("166.00 PLN", Text(page, ".pspad-balance-at-nbp .pspad-money-value")));
+        Assert.Equal("164.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-value"));
+        Assert.Equal("+2.00 PLN", Text(page, ".pspad-balance-currency .pspad-money-value"));
+        Assert.Equal(["—", "+1.00 PLN", "+1.00 PLN"],
             page.FindAll(".pspad-holding-today").Select(cell => cell.TextContent.Trim()));
         Assert.Equal([("EUR", Today)], Nbp.Asked);
     }
@@ -72,7 +72,7 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         var page = BalanceTab(budget);
 
-        page.WaitForAssertion(() => Assert.Equal("−1.00 PLN", Text(page, ".pspad-balance-currency .pspad-money-tile-value")));
+        page.WaitForAssertion(() => Assert.Equal("−1.00 PLN", Text(page, ".pspad-balance-currency .pspad-money-value")));
         Assert.Equal("−1.00 PLN", Text(page, ".pspad-holding-today"));
     }
 
@@ -106,7 +106,7 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         page.InvokeAsync(connectivity.GoOnline);
 
-        page.WaitForAssertion(() => Assert.Equal("166.00 PLN", Text(page, ".pspad-balance-at-nbp .pspad-money-tile-value")));
+        page.WaitForAssertion(() => Assert.Equal("166.00 PLN", Text(page, ".pspad-balance-at-nbp .pspad-money-value")));
         Assert.Equal([("EUR", Today)], Nbp.Asked);
     }
 
@@ -121,7 +121,7 @@ public class BudgetBalanceTests : Bunit.TestContext
         page.WaitForAssertion(() => page.Find(".pspad-balance-net-worth"));
         var before = connectivity.Subscribers;
 
-        page.FindAll(".mud-tab").Single(tab => tab.TextContent.Contains("Settings")).Click();
+        page.Render(parameters => parameters.Add(p => p.Tab, "settings"));
 
         page.WaitForAssertion(() => Assert.True(connectivity.Subscribers < before));
     }
@@ -153,8 +153,8 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         var page = BalanceTab(budget);
 
-        page.WaitForAssertion(() => Assert.Equal("100.00 PLN", Text(page, ".pspad-balance-at-nbp .pspad-money-tile-value")));
-        Assert.Equal("0.00 PLN", Text(page, ".pspad-balance-currency .pspad-money-tile-value"));
+        page.WaitForAssertion(() => Assert.Equal("100.00 PLN", Text(page, ".pspad-balance-at-nbp .pspad-money-value")));
+        Assert.Equal("0.00 PLN", Text(page, ".pspad-balance-currency .pspad-money-value"));
         Assert.Empty(Nbp.Asked);
     }
 
@@ -207,7 +207,7 @@ public class BudgetBalanceTests : Bunit.TestContext
         Assert.Equal((budget.Id, October), (sent.BudgetId, sent.Month));
         page.WaitForAssertion(() => Assert.Equal("Wallet", Text(page, ".pspad-holding-name")));
         Assert.Empty(page.FindAll(".pspad-balance-missing"));
-        Assert.Equal("100.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-tile-value"));
+        Assert.Equal("100.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-value"));
     }
 
     [Fact]
@@ -221,8 +221,8 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         var page = BalanceTab(budget);
 
-        page.WaitForAssertion(() => Assert.Equal("143.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-tile-value")));
-        Assert.Equal("+43.00 PLN", Text(page, ".pspad-balance-change .pspad-money-tile-value"));
+        page.WaitForAssertion(() => Assert.Equal("143.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-value")));
+        Assert.Equal("+43.00 PLN", Text(page, ".pspad-balance-change .pspad-money-value"));
         Assert.Contains("vs August 2026", Text(page, ".pspad-balance-change"));
     }
 
@@ -235,7 +235,7 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         var page = BalanceTab(budget);
 
-        page.WaitForAssertion(() => Assert.Equal("—", Text(page, ".pspad-balance-change .pspad-money-tile-value")));
+        page.WaitForAssertion(() => Assert.Equal("—", Text(page, ".pspad-balance-change .pspad-money-value")));
         Assert.Contains("vs previous month", Text(page, ".pspad-balance-change"));
     }
 
@@ -250,10 +250,29 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         page.WaitForAssertion(() => Assert.Single(page.FindAll(".pspad-holding-row")));
         Assert.Equal("Konto", Text(page, ".pspad-holding-name"));
-        Assert.Equal("Savings", Text(page, ".pspad-holding-type"));
+        Assert.Equal("Savings", Text(page, ".pspad-holding-group-name"));
+        Assert.Equal("43.00 PLN", Text(page, ".pspad-holding-group-total"));
+        Assert.Equal("10.00 EUR @ 4.3000", Text(page, ".pspad-holding-sub"));
         Assert.Equal("10.00 EUR", Text(page, ".pspad-holding-amount"));
         Assert.Equal("4.3000", Text(page, ".pspad-holding-rate"));
         Assert.Equal("43.00 PLN", Text(page, ".pspad-holding-pln"));
+    }
+
+    [Fact]
+    public void HoldingsAreGroupedByTypeWithATypeBar()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            Balances.Started(budget, October,
+                Balances.AHolding("Broker", 300m, "PLN", 1m, HoldingType.Investment),
+                Balances.AHolding("Wallet", 100m, "PLN", 1m, HoldingType.Cash)));
+
+        var page = BalanceTab(budget);
+
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-holding-row").Count));
+        Assert.Equal(["Cash", "Investment"], page.FindAll(".pspad-holding-group-name").Select(name => name.TextContent.Trim()));
+        Assert.Equal(["Wallet", "Broker"], page.FindAll(".pspad-holding-name").Select(name => name.TextContent.Trim()));
+        Assert.Equal(2, page.FindAll(".pspad-balance-types .pspad-category-legend").Count);
     }
 
     [Fact]
@@ -265,7 +284,7 @@ public class BudgetBalanceTests : Bunit.TestContext
         var page = BalanceTab(budget);
 
         page.WaitForAssertion(() => Assert.Equal("No holdings in October 2026.", Text(page, ".pspad-balance-empty")));
-        Assert.Equal("0.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-tile-value"));
+        Assert.Equal("0.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-value"));
     }
 
     [Fact]
@@ -369,7 +388,7 @@ public class BudgetBalanceTests : Bunit.TestContext
         page.Find(".pspad-month-previous").Click();
 
         page.WaitForAssertion(() => Assert.Equal("September 2026", Text(page, ".pspad-month-title")));
-        Assert.Equal("75.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-tile-value"));
+        Assert.Equal("75.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-value"));
     }
 
     [Fact]

@@ -1,57 +1,86 @@
 @using PSPad.App.State
+@using PSPad.Module.Money.Budgets
 @using PSPad.Module.Money.Entries
 @using PSPad.Module.Money.Reading
 @using PSPad.Module.Money.Values
 
 <div class="@Class">
-    <MonthSwitcher Class="mb-4" Month="@Month" OnMonthChanged="@OnMonthChanged" />
+    <MoneyHero Class="mb-4" HeadlineClass="pspad-month-net" Label="Net" Text="@MoneyText.SignedPln(Totals.Net)" Negative="@(Totals.Net < 0)">
+        <ChildContent>
+            <MoneyFigure Class="pspad-month-income" Label="Income" Text="@MoneyText.Pln(Totals.Income)" />
+            <MoneyFigure Class="pspad-month-expenses" Label="Expenses" Text="@MoneyText.Pln(Totals.Expenses)" />
+        </ChildContent>
+        <Footer>
+            @if (Totals.ExpensesByCategory.Count > 0)
+            {
+                <CategoryBar Totals="@Totals.ExpensesByCategory" />
+            }
+        </Footer>
+    </MoneyHero>
 
-    <MudGrid Spacing="3" Class="mb-4">
-        <MudItem xs="4">
-            <MoneyTile Class="pspad-month-income" Label="Income" Text="@MoneyText.Pln(Totals.Income)" />
-        </MudItem>
-        <MudItem xs="4">
-            <MoneyTile Class="pspad-month-expenses" Label="Expenses" Text="@MoneyText.Pln(Totals.Expenses)" />
-        </MudItem>
-        <MudItem xs="4">
-            <MoneyTile Class="pspad-month-net" Label="Net" Text="@MoneyText.SignedPln(Totals.Net)" Negative="@(Totals.Net < 0)" />
-        </MudItem>
-    </MudGrid>
-
-    @if (Totals.ExpensesByCategory.Count > 0)
+    @if (Totals.Days.Count > 0)
     {
-        <CategoryBar Class="mb-4" Totals="@Totals.ExpensesByCategory" />
+    <MudChipSet T="EntryFilter" SelectedValue="@_filter" SelectedValueChanged="@Choose" Class="mb-1 pspad-entry-filter"
+                SelectionMode="SelectionMode.SingleSelection" CheckMark="false" Color="Color.Primary" Variant="Variant.Outlined"
+                SelectedColor="Color.Primary" Size="Size.Small">
+        <MudChip Value="EntryFilter.All" aria-pressed="@Pressed(EntryFilter.All)" Text="All" />
+        <MudChip Value="EntryFilter.Expenses" aria-pressed="@Pressed(EntryFilter.Expenses)" Text="Expenses" />
+        <MudChip Value="EntryFilter.Income" aria-pressed="@Pressed(EntryFilter.Income)" Text="Income" />
+    </MudChipSet>
     }
 
-    @if (Totals.Days.Count == 0)
+    @if (Days.Count == 0)
     {
         <MudText Typo="Typo.body2" Class="pspad-muted pspad-month-empty">No entries in @MoneyText.MonthTitle(Month).</MudText>
     }
     else
     {
-        @foreach (var day in Totals.Days)
+        @foreach (var day in Days)
         {
-            <MudPaper @key="day.Date" Outlined="true" Class="mb-3 pspad-entry-day">
-                <MudText Typo="Typo.subtitle2" Class="px-4 pt-3">@MoneyText.Day(day.Date)</MudText>
-                <MudList T="MoneyEntry" Dense="true">
-                    @foreach (var entry in day.Entries)
-                    {
-                        <EntryRow @key="entry.Id" Entry="@entry" OnOpen="@OnOpen" />
-                    }
-                </MudList>
-            </MudPaper>
+            <section @key="day.Date" class="pspad-entry-day">
+                <div class="d-flex align-baseline px-1 pt-3 pb-1">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-entry-day-title">@MoneyText.Day(day.Date)</MudText>
+                    <MudText Typo="Typo.caption" Class="pspad-muted pspad-entry-day-net">@MoneyText.SignedAmount(day.Net)</MudText>
+                </div>
+                <MudPaper Outlined="true" Class="pspad-entry-day-list">
+                    <MudList T="MoneyEntry" Dense="true" Class="py-0">
+                        @foreach (var entry in day.Entries)
+                        {
+                            <EntryRow @key="entry.Id" Entry="@entry" OnOpen="@OnOpen" />
+                        }
+                    </MudList>
+                </MudPaper>
+            </section>
         }
     }
 </div>
 
 @code {
+    EntryFilter _filter = EntryFilter.All;
+
     [Parameter, EditorRequired] public YearMonth Month { get; set; }
 
     [Parameter, EditorRequired] public MonthTotals Totals { get; set; } = default!;
 
-    [Parameter] public EventCallback<YearMonth> OnMonthChanged { get; set; }
-
     [Parameter] public EventCallback<MoneyEntry> OnOpen { get; set; }
 
     [Parameter] public string Class { get; set; } = "";
+
+    IReadOnlyList<EntryDay> Days =>
+    [
+        .. Totals.Days
+            .Select(day => day with { Entries = [.. day.Entries.Where(Shows)] })
+            .Where(day => day.Entries.Count > 0)
+    ];
+
+    bool Shows(MoneyEntry entry) => _filter switch
+    {
+        EntryFilter.Expenses => entry.Kind == CategoryKind.Expense,
+        EntryFilter.Income => entry.Kind == CategoryKind.Income,
+        _ => true
+    };
+
+    string Pressed(EntryFilter filter) => filter == _filter ? "true" : "false";
+
+    void Choose(EntryFilter filter) => _filter = filter;
 }

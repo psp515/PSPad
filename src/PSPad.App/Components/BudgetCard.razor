@@ -6,7 +6,11 @@
 
 <MudCard Outlined="true" Class="@($"pspad-budget-card {(Budget.IsArchived ? "pspad-archived" : "")}")">
     <MudCardContent>
-        <MudLink Href="@BudgetLinks.For(Budget.Id)" Typo="Typo.h6" Class="pspad-budget-card-name">@Budget.Name</MudLink>
+        <div class="d-flex align-center">
+            <MudLink Href="@BudgetLinks.For(Budget.Id)" Typo="Typo.h6" Class="pspad-budget-card-name">@Budget.Name</MudLink>
+            <MudSpacer />
+            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Class="pspad-budget-card-chevron" aria-hidden="true" />
+        </div>
         @if (Budget.IsArchived)
         {
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Archived</MudChip>

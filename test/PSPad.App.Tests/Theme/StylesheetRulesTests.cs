@@ -274,6 +274,111 @@ public partial class StylesheetRulesTests
         Assert.Contains("font-size: 13px", message);
     }
 
+    [Fact]
+    public void TheBudgetViewsShareTheRowEvenly() =>
+        Assert.Contains("flex: 1 1 0", Declarations(".pspad-budget-views .mud-toggle-item"));
+
+    [Fact]
+    public void TheMonthTitleReadsAsAHeadingNotAButtonLabel()
+    {
+        var title = Declarations(".pspad-month-switcher .pspad-month-title");
+
+        Assert.Contains("text-transform: none", title);
+        Assert.Contains("font-weight: 700", title);
+    }
+
+    [Fact]
+    public void OnAPhoneTheMonthPickerIsABottomSheet()
+    {
+        var sheet = DeclarationsInMedia("max-width: 599.98px", ".mud-dialog.pspad-month-sheet");
+
+        Assert.Contains("width: 100%", sheet);
+        Assert.Contains("margin: 0", sheet);
+        Assert.Contains("border-radius: 28px 28px 0 0", sheet);
+    }
+
+    [Fact]
+    public void TheMonthPickerLaysTheYearOutInFourColumns() =>
+        Assert.Contains("grid-template-columns: repeat(4, minmax(0, 1fr))", Declarations(".pspad-month-sheet-grid"));
+
+    [Fact]
+    public void TheSummaryPresetsScrollSidewaysInsteadOfWrapping()
+    {
+        var presets = Declarations(".pspad-summary-presets");
+
+        Assert.Contains("flex-wrap: nowrap", presets);
+        Assert.Contains("overflow-x: auto", presets);
+    }
+
+    [Fact]
+    public void TheBudgetViewsKeepTheirCase() =>
+        Assert.Contains("text-transform: none", Declarations(".pspad-budget-views .mud-toggle-item"));
+
+    [Fact]
+    public void TheBudgetPageStopsAtNineHundredSixtyPixels()
+    {
+        var page = Declarations(".pspad-budget-page");
+
+        Assert.Contains("max-width: 960px", page);
+        Assert.Contains("margin-inline: auto", page);
+    }
+
+    [Fact]
+    public void OnAPhoneTheMonthSwitcherTakesItsOwnLine() =>
+        Assert.Contains("flex-basis: 100%", DeclarationsInMedia("max-width: 959.98px", ".pspad-budget-nav .pspad-month-switcher"));
+
+    [Fact]
+    public void OnDesktopTheViewsAreNotStretched() =>
+        Assert.Contains("max-width: 420px", DeclarationsInMedia("min-width: 960px", ".pspad-budget-views"));
+
+    [Fact]
+    public void OnDesktopTheHeroFiguresSitBesideTheHeadline() =>
+        Assert.Contains("flex-direction: row", DeclarationsInMedia("min-width: 960px", ".pspad-money-hero-top"));
+
+    [Fact]
+    public void TheWholeBudgetCardIsTheLink()
+    {
+        var cover = Declarations(".pspad-budget-card .pspad-budget-card-name::after");
+
+        Assert.Contains("position: absolute", cover);
+        Assert.Contains("inset: 0", cover);
+        Assert.Contains("position: relative", Declarations(".pspad-budget-card"));
+        Assert.Contains("z-index: 1", Declarations(".pspad-budget-card .pspad-budget-card-start"));
+    }
+
+    [Fact]
+    public void AHoveredBudgetCardOutlinesInThePrimary() =>
+        Assert.Contains("border-color: var(--mud-palette-primary)", Declarations(".pspad-budget-card:hover"));
+
+    [Fact]
+    public void TheHeroFiguresWrapRatherThanOverflow()
+    {
+        Assert.Contains("flex-wrap: wrap", Declarations(".pspad-money-hero-figures"));
+        Assert.Contains("flex-wrap: wrap", DeclarationsInMedia("min-width: 960px", ".pspad-money-hero-top"));
+    }
+
+    [Fact]
+    public void TheMonthControlIsOnePill()
+    {
+        var control = Declarations(".pspad-month-control");
+
+        Assert.Contains("border-radius: 22px", control);
+        Assert.Contains("border: 1px solid var(--mud-palette-lines-default)", control);
+    }
+
+    [Fact]
+    public void OnDesktopHoldingsLineUpInColumns() =>
+        Assert.Contains("grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr))",
+            DeclarationsInMedia("min-width: 960px", ".pspad-holding-row"));
+
+    [Fact]
+    public void OnAPhoneHoldingsHideTheirTableCells() =>
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-holding-row .pspad-holding-cell"));
+
+    [Fact]
+    public void LongEntryNamesEndInAnEllipsis() =>
+        Assert.Contains("text-overflow: ellipsis", Declarations(".pspad-entry-name"));
+
     static string Declarations(string selector) =>
         string.Join("\n", Rule().Matches(Css)
             .Where(rule => SelectorsOf(rule).Contains(selector))

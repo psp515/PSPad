@@ -29,6 +29,20 @@ public class MonthTotalsTests
     }
 
     [Fact]
+    public void ADaysNetIsItsIncomeMinusItsExpensesInPln()
+    {
+        var budget = ABudget();
+        var totals = MonthTotals.For(
+        [
+            AnExpense(budget, money: new Money(10m, "EUR", 4.3m, Oct(3)), date: Oct(3)),
+            AnIncome(budget, amount: 100m, date: Oct(3)),
+            AnExpense(budget, amount: 5m, date: Oct(4))
+        ], October);
+
+        Assert.Equal([-5m, 57m], totals.Days.Select(day => day.Net));
+    }
+
+    [Fact]
     public void OnlyTheMonthsOwnDaysCount()
     {
         var budget = ABudget();

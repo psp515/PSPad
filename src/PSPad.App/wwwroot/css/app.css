@@ -1432,9 +1432,326 @@ button.pspad-heatmap-cell:focus-visible {
     border-radius: 50%;
 }
 
+.pspad-budget-page {
+    max-width: 960px;
+    margin-inline: auto;
+}
+
+.pspad-budget-nav {
+    flex-wrap: wrap;
+}
+
+.pspad-budget-views .mud-toggle-item {
+    flex: 1 1 0;
+    min-width: 0;
+    text-transform: none;
+}
+
+@media (max-width: 959.98px) {
+    .pspad-budget-nav .pspad-month-switcher {
+        flex-basis: 100%;
+    }
+
+    .pspad-budget-nav .pspad-month-control {
+        flex: 1 1 auto;
+    }
+}
+
+@media (min-width: 960px) {
+    .pspad-budget-views {
+        max-width: 420px;
+    }
+
+    .pspad-budget-nav .pspad-month-switcher {
+        flex: 1 1 auto;
+        justify-content: flex-end;
+    }
+
+    .pspad-budget-nav .pspad-month-control {
+        width: 280px;
+    }
+
+    .pspad-money-hero-top {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 12px 48px;
+    }
+
+    .pspad-money-hero-figures {
+        column-gap: 40px;
+        padding-bottom: 6px;
+    }
+}
+
+.pspad-budget-card {
+    position: relative;
+    transition: border-color 120ms ease;
+}
+
+.pspad-budget-card:hover {
+    border-color: var(--mud-palette-primary);
+}
+
+.pspad-budget-card .pspad-budget-card-name::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+}
+
+.pspad-budget-card .pspad-budget-card-start {
+    position: relative;
+    z-index: 1;
+}
+
+.pspad-budget-card-chevron {
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-budget-card:hover .pspad-budget-card-chevron {
+    color: var(--mud-palette-primary);
+}
+
+.pspad-month-control {
+    flex: 0 0 auto;
+    height: 44px;
+    padding: 0 4px;
+    border-radius: 22px;
+    border: 1px solid var(--mud-palette-lines-default);
+    background-color: var(--mud-palette-surface);
+}
+
+.pspad-month-switcher .pspad-month-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-transform: none;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    white-space: nowrap;
+    border-radius: 18px;
+}
+
+.pspad-entry-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+    background-color: var(--mud-palette-action-default-hover);
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-entry-avatar.pspad-entry-income {
+    background-color: var(--pspad-tint);
+    color: var(--mud-palette-primary);
+}
+
+.pspad-entry-main {
+    min-width: 0;
+}
+
+.pspad-entry-name,
+.pspad-entry-sub {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pspad-entry-sub {
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-entry-amount {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.pspad-holdings-head {
+    display: none;
+}
+
+.pspad-holding-list {
+    overflow: hidden;
+}
+
+.pspad-holding-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 56px;
+    padding: 10px 16px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pspad-holding-row + .pspad-holding-row {
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+.pspad-holding-row:hover,
+.pspad-holding-row:focus-visible {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.pspad-holding-row:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+.pspad-holding-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.pspad-holding-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.pspad-holding-icon-cash {
+    background-color: var(--pspad-tint);
+    color: var(--mud-palette-primary);
+}
+
+.pspad-holding-icon-savings {
+    color: var(--mud-palette-info);
+}
+
+.pspad-holding-icon-investment {
+    color: var(--mud-palette-warning);
+}
+
+.pspad-holding-text {
+    min-width: 0;
+}
+
+.pspad-holding-name,
+.pspad-holding-sub {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pspad-holding-sub,
+.pspad-holding-today {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-holding-values {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 959.98px) {
+    .pspad-holding-row .pspad-holding-cell {
+        display: none;
+    }
+}
+
+@media (min-width: 960px) {
+    .pspad-holdings-head,
+    .pspad-holding-row {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr));
+        column-gap: 16px;
+    }
+
+    .pspad-holdings-head {
+        padding: 0 17px;
+        font-size: 0.75rem;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .pspad-holdings-head > span:not(:first-child),
+    .pspad-holding-cell,
+    .pspad-holding-pln,
+    .pspad-holding-today {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .pspad-holding-values {
+        display: contents;
+    }
+
+    .pspad-holding-today {
+        font-size: inherit;
+    }
+}
+
+.pspad-month-sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.pspad-month-sheet-grid .pspad-month-sheet-month {
+    min-height: 48px;
+    border-radius: 24px;
+    text-transform: none;
+}
+
+.pspad-money-hero-top {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.pspad-money-hero-figures {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 32px;
+}
+
+.pspad-money-hero-value {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.pspad-summary-presets {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.pspad-summary-presets .mud-chip {
+    flex-shrink: 0;
+}
+
 @media (max-width: 599.98px) {
-    .pspad-summary-presets {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        border-radius: 16px;
+    .mud-dialog.pspad-month-sheet {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        align-self: flex-end;
+        border-radius: 28px 28px 0 0;
+    }
+
+    .pspad-money-hero-value {
+        font-size: 2rem;
     }
 }

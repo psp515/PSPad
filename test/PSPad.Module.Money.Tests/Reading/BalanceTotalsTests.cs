@@ -1,3 +1,4 @@
+using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Reading;
 using PSPad.Module.Money.Values;
 using PSPad.TestInfrastructure;
@@ -21,6 +22,23 @@ public class BalanceTotalsTests
 
         Assert.Same(october, totals.Snapshot);
         Assert.Equal(142.51m, totals.NetWorth);
+    }
+
+    [Fact]
+    public void ByTypeTotalsEachHoldingTypeInPlnInTypeOrderSkippingEmptyTypes()
+    {
+        var budget = ABudget();
+        var october = ASnapshot(budget, October,
+        [
+            AHolding("Broker", 300m, type: HoldingType.Investment),
+            AHolding("Wallet", 100m),
+            AHolding("Konto", 10m, "EUR", 4.3m, type: HoldingType.Investment)
+        ]);
+
+        var byType = BalanceTotals.ByType(october);
+
+        Assert.Equal([(HoldingType.Cash, 100m), (HoldingType.Investment, 343m)], byType.Select(total => (total.Type, total.Pln)));
+        Assert.Equal(["Broker", "Konto"], byType[1].Holdings.Select(holding => holding.Name));
     }
 
     [Fact]

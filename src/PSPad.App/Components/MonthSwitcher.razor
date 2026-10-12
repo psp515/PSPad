@@ -1,18 +1,76 @@
+@using System.Globalization
 @using PSPad.App.State
 @using PSPad.Module.Money.Values
 
-<div class="@($"d-flex align-center justify-center gap-2 pspad-month-switcher {Class}")">
-    <MudIconButton Class="pspad-month-previous" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous month"
-                   OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Previous()))" />
-    <MudText Typo="Typo.h6" Class="pspad-month-title">@MoneyText.MonthTitle(Month)</MudText>
-    <MudIconButton Class="pspad-month-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next month"
-                   OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Next()))" />
+<div class="@($"d-flex align-center gap-1 pspad-month-switcher {Class}")">
+    <div class="d-flex align-center pspad-month-control">
+        <MudIconButton Class="pspad-month-previous" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous month" Size="Size.Small"
+                       OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Previous()))" />
+        <MudButton Class="pspad-month-title" Variant="Variant.Text" EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                   aria-label="@($"Choose month, {MoneyText.MonthTitle(Month)}")" OnClick="@Open">@MoneyText.MonthTitle(Month)</MudButton>
+        <MudIconButton Class="pspad-month-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next month" Size="Size.Small"
+                       OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Next()))" />
+    </div>
+    @ChildContent
 </div>
 
+<MudDialog @bind-Visible="_picking" Class="pspad-month-sheet" Options="@SheetOptions">
+    <DialogContent>
+        <div class="d-flex align-center mb-3">
+            <MudIconButton Class="pspad-month-sheet-previous" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous year"
+                           OnClick="@(() => _year--)" />
+            <MudText Typo="Typo.h6" Align="Align.Center" Class="flex-grow-1 pspad-month-sheet-year">@_year</MudText>
+            <MudIconButton Class="pspad-month-sheet-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next year"
+                           OnClick="@(() => _year++)" />
+        </div>
+        <div class="pspad-month-sheet-grid">
+            @for (var number = 1; number <= 12; number++)
+            {
+                var month = new YearMonth(_year, number);
+                var label = Abbreviation(number);
+                <MudButton @key="number" Class="pspad-month-sheet-month" Variant="@(month == Month ? Variant.Filled : Variant.Text)"
+                           Color="@(month == Month ? Color.Primary : Color.Default)" aria-current="@(month == Month ? "date" : null)"
+                           OnClick="@(() => PickAsync(month))">@label</MudButton>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Class="pspad-month-sheet-current" Color="Color.Primary" OnClick="@(() => PickAsync(Current))">This month</MudButton>
+        <MudButton Color="Color.Primary" OnClick="@(() => _picking = false)">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
+    static readonly DialogOptions SheetOptions = new()
+    {
+        CloseOnEscapeKey = true, BackdropClick = true, NoHeader = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true,
+        Position = DialogPosition.BottomCenter
+    };
+
+    bool _picking;
+    int _year;
+
     [Parameter, EditorRequired] public YearMonth Month { get; set; }
+
+    [Parameter, EditorRequired] public YearMonth Current { get; set; }
 
     [Parameter] public EventCallback<YearMonth> OnMonthChanged { get; set; }
 
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
     [Parameter] public string Class { get; set; } = "";
+
+    static string Abbreviation(int month) => CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(month);
+
+    void Open()
+    {
+        _year = Month.Year;
+        _picking = true;
+    }
+
+    async Task PickAsync(YearMonth month)
+    {
+        _picking = false;
+        await OnMonthChanged.InvokeAsync(month);
+    }
 }

@@ -1,0 +1,28 @@
+<MudPaper Outlined="true" Class="@($"pa-4 d-flex flex-column gap-3 pspad-money-hero {Class}")">
+    <div class="pspad-money-hero-top">
+    <div class="@($"d-flex flex-column {HeadlineClass}")">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@Label</MudText>
+        <MudText Typo="Typo.h4" Color="@(Negative ? Color.Error : Color.Primary)" Class="pspad-money-value pspad-money-hero-value">@Text</MudText>
+    </div>
+    <div class="pspad-money-hero-figures">
+        @ChildContent
+    </div>
+    </div>
+    @Footer
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+
+    [Parameter] public bool Negative { get; set; }
+
+    [Parameter] public string HeadlineClass { get; set; } = "";
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public RenderFragment? Footer { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+}

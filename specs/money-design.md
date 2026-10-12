@@ -311,15 +311,32 @@ subtitle. No app bar.
 - With no budgets at all, there's an empty state with a "Create budget"
   button.
 
-**`/budgets/{id}/{tab?}` (`Pages/BudgetPage.razor`)**, with `MudTabs` for
-Month (default), Balance, Summary and Settings. The tab lives in the URL.
+**`/budgets/{id}/{tab?}` (`Pages/BudgetPage.razor`)**, at most 960px wide.
+The heading has a back arrow to `/budgets` and no subtitle. Under it one row: a full-width `MudToggleGroup` of three equal
+views, Month (default), Balance and Summary, then a gear icon button for
+Settings (`aria-pressed` on the settings route, where no view is selected).
+Four tabs never fit a phone; the gear keeps the row to three. The view lives
+in the URL.
+
+- **Month switcher** (`MonthSwitcher`, in the view row on Month and
+  Balance; its own line below 960px; Balance adds its "Month actions" menu): one
+  pill, ‹ month ›, with the month title in the middle as a button; full width
+  on a phone, 280px at the right of the view row from 960px. The title opens a
+  bottom sheet (a `MudDialog` at the bottom, full width on a phone) with
+  ‹ year ›, a 4×3 grid of months (the shown month filled), "This month"
+  (the current month in the user's time zone) and Cancel. Picking a month
+  closes the sheet.
 
 - **Month**
-  - ‹ month › switcher.
-  - Income, Expenses and Net tiles.
-  - A stacked bar of expenses by category, with a legend.
-  - Entries grouped by day. A row shows name, category chip and amount; a
-    non-PLN row also shows "−X PLN @ rate".
+  - Month switcher.
+  - One totals card (`MoneyHero`): Net large, Income and Expenses under it,
+    and the stacked bar of expenses by category with its legend.
+  - All / Expenses / Income filter chips (list only; the totals card always
+    counts the whole month; hidden when the month has no entries).
+  - Entries grouped by day; each day heading shows the day's net in PLN. A
+    row shows a round badge with the category's initial (tinted for income),
+    the name, the category in grey (plus "X CUR @ rate" for non-PLN) and the
+    signed PLN amount, green for income. Name and grey line end in an ellipsis.
   - Tapping a row opens `EntryPanel`.
   - FAB menu: Add expense / Add income.
 - **`EntryPanel`** fields:
@@ -341,17 +358,21 @@ Month (default), Balance, Summary and Settings. The tab lives in the URL.
   - Month switcher, shared with the Month tab.
   - With no snapshot: a "{Month yyyy} has no balance yet" banner with a
     "Start {Month yyyy}" button (no button when archived), and no FAB.
-  - Tiles: Net worth; At NBP today; Currency difference (at NBP today minus
-    net worth); and "vs {Month yyyy}" against the latest earlier snapshot
-    ("vs previous month" and "—" without one).
-  - The two NBP tiles call the lookup for today once per foreign currency
+  - A totals card: Net worth large; "vs {Month yyyy}" against the latest
+    earlier snapshot ("vs previous month" and "—" without one); At NBP today
+    and Currency difference (at NBP today minus net worth); and a bar of net
+    worth by holding type with its legend.
+  - The two NBP figures call the lookup for today once per foreign currency
     per visit, only while online. They are hidden offline and while any
     currency lacks a rate. A failed lookup isn't retried during the visit and
     shows no snackbar; an answer for another currency is dropped. Nothing is
     stored. A PLN-only balance shows them without any lookup.
-  - Holdings table (`MudTable`): name and type chip, amount and currency,
-    rate, PLN, and "Today" (the difference at today's NBP rate; "—" for PLN
-    or a missing rate).
+  - Holdings grouped by type (Cash, Savings, Investment; empty types
+    skipped), each group headed by its PLN subtotal. A row is a button: type
+    icon, name, a grey line with the currency (or "X CUR @ rate"), then PLN
+    and "vs NBP today" (the difference at today's NBP rate; "—" for PLN or a
+    missing rate). From 960px the same rows line up as columns under a
+    header: Holding, Amount, Rate, In PLN, vs NBP today.
   - FAB: Add holding, only when the month has a snapshot and the budget isn't
     archived. Tapping a row
     opens `HoldingPanel` (`?balance={snapshotId}&holding={holdingId|new}`).
@@ -379,14 +400,15 @@ Month (default), Balance, Summary and Settings. The tab lives in the URL.
 - **Summary**
   - Computed in the browser from the replica, so it works offline. No FAB,
     no writes; an archived budget shows the same Summary.
-  - Range presets in a `MudToggleGroup`: This year (default; 1 January to
+  - Range presets as single-select chips in one row that scrolls sideways
+    (`aria-pressed` on each): This year (default; 1 January to
     today), Last 12 months (the first of the month eleven months back to
     today), Last year (the whole previous calendar year) and Custom (a
     `MudDateRangePicker`, applied once both ends are picked). "Today" is the
     user's stored time zone. The range is not in the URL and is This year on
     each visit. A caption shows it, e.g. "1 Jan 2026 – 9 Oct 2026".
-  - Tiles: Income, Expenses, Saved, Savings rate (a whole percent, "—"
-    without income), and "Net worth · {Month yyyy}" of the latest snapshot
+  - A totals card: Saved large, with Income, Expenses and Savings rate (a
+    whole percent, "—" without income) under it; then a tile "Net worth · {Month yyyy}" of the latest snapshot
     ("Net worth" and "—" without one).
   - Three `MudChart`s: cumulative income vs expenses (line), expenses by
     month by category (stacked bar), net worth by holding type (stacked bar;
@@ -413,7 +435,8 @@ budget is archived and read-only; Restore lives in the Settings tab's Budget car
 - **Desktop sidebar:**
   - Budgets is a collapsible group after the main rows, with a custom header:
     a link to `/budgets` plus a chevron toggle (a `MudNavGroup` header cannot
-    be both). Its children are the active budgets in creation order.
+    be both). Its children are the active budgets in creation order, then
+    "+ New budget", which opens `BudgetPanel` on the current page.
   - Areas becomes a collapsible group the same way.
   - The collapsed state of each group is remembered per device in
     `localStorage`.
