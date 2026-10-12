@@ -1,11 +1,13 @@
 @using System.Globalization
 @using PSPad.Abstractions
 @using PSPad.App.State
-@using PSPad.App.State.Dispatch
+@using PSPad.App.Api
+@using PSPad.App.Sync
 @using PSPad.Module.Tasks.Lists
 @implements IDisposable
 @inject AppState State
-@inject CommandSender Sender
+@inject IListSharingApi Sharing
+@inject ISyncTrigger SyncTrigger
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
 @inject Clipboard Clipboard
@@ -184,14 +186,20 @@
             return;
         }
 
-        await Sender.SendAsync(new StopSharingTaskList(Guid.NewGuid(), State.UserId, List.Id));
-        await OnChanged.InvokeAsync();
+        await ApplyAsync(Sharing.StopSharingAsync(List.Id));
     }
 
-    async Task ShareAsync()
+    Task ShareAsync() => ApplyAsync(Sharing.ShareListAsync(List.Id, InviteToken.New(), InviteCode.New()));
+
+    async Task ApplyAsync(Task<string?> change)
     {
-        await Sender.SendAsync(new ShareTaskList(
-            Guid.NewGuid(), State.UserId, List.Id, InviteToken.New(), InviteCode.New(), State.DisplayName));
+        if (await change is { } rejection)
+        {
+            Snackbar.Add(rejection, Severity.Error);
+            return;
+        }
+
+        await SyncTrigger.SyncNowAsync();
         await OnChanged.InvokeAsync();
     }
 

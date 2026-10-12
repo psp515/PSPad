@@ -66,7 +66,7 @@ public sealed class MongoUnitOfWork(
                     }, cancellationToken: ct);
                 }
 
-                await ReplaceAsync(session, aggregate, ct);
+                await SaveAsync(session, aggregate, aggregate.Version - stagedEvents.Count, ct);
             }
 
             await processed.InsertOneAsync(session, new ProcessedCommand
@@ -97,6 +97,11 @@ public sealed class MongoUnitOfWork(
             await session.AbortTransactionAsync(ct);
             throw new DomainRejectedException("That invite link is already in use.");
         }
+        catch (MongoException transient) when (transient.HasErrorLabel("TransientTransactionError"))
+        {
+            await session.AbortTransactionAsync(ct);
+            throw new ConcurrencyConflictException(_staged.FirstOrDefault().Aggregate?.Id ?? Guid.Empty);
+        }
         catch
         {
             await session.AbortTransactionAsync(ct);
@@ -113,14 +118,37 @@ public sealed class MongoUnitOfWork(
         exception.WriteError?.Category == ServerErrorCategory.DuplicateKey &&
         exception.WriteError.Message.Contains(MongoIndexes.InviteTokenIndex, StringComparison.Ordinal);
 
-    Task ReplaceAsync(IClientSessionHandle session, Aggregate aggregate, CancellationToken ct)
+    async Task SaveAsync(IClientSessionHandle session, Aggregate aggregate, int loadedVersion, CancellationToken ct)
     {
         var collection = context.Database.GetCollection<Aggregate>(MongoContext.NameOf(aggregate.GetType()));
-        return collection.ReplaceOneAsync(
+
+        if (loadedVersion == 0)
+        {
+            try
+            {
+                await collection.InsertOneAsync(session, aggregate, cancellationToken: ct);
+                return;
+            }
+            catch (MongoWriteException exception) when (IsDuplicateId(exception))
+            {
+                throw new ConcurrencyConflictException(aggregate.Id);
+            }
+        }
+
+        var replaced = await collection.ReplaceOneAsync(
             session,
-            Builders<Aggregate>.Filter.Eq(document => document.Id, aggregate.Id),
+            Builders<Aggregate>.Filter.Eq(document => document.Id, aggregate.Id) &
+            Builders<Aggregate>.Filter.Eq(document => document.Version, loadedVersion),
             aggregate,
-            new ReplaceOptions { IsUpsert = true },
-            ct);
+            cancellationToken: ct);
+
+        if (replaced.MatchedCount == 0)
+        {
+            throw new ConcurrencyConflictException(aggregate.Id);
+        }
     }
+
+    static bool IsDuplicateId(MongoWriteException exception) =>
+        exception.WriteError?.Category == ServerErrorCategory.DuplicateKey &&
+        exception.WriteError.Message.Contains("_id_", StringComparison.Ordinal);
 }

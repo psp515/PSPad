@@ -182,8 +182,8 @@ public class CommandDispatcherServerOnlyTests(MongoFixture fixture)
 
         await Send(owner, ct,
             new CreateArea(Guid.NewGuid(), ownerId, areaId, "Dom", 0),
-            new CreateTaskList(Guid.NewGuid(), ownerId, listId, areaId, "Zakupy"),
-            new ShareTaskList(Guid.NewGuid(), ownerId, listId, token, Sharing.Code, "Owner"));
+            new CreateTaskList(Guid.NewGuid(), ownerId, listId, areaId, "Zakupy"));
+        (await Sharing.ShareAsync(owner, listId, token, ct)).EnsureSuccessStatusCode();
 
         var member = factory.ClientFor(Guid.NewGuid().ToString());
         var memberId = (await member.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;

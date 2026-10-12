@@ -106,6 +106,7 @@ builder.Services.AddScoped<IStatisticsSource>(sp => sp.GetRequiredService<PSPadA
 builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISnapshotsApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<INbpRates>(sp => sp.GetRequiredService<PSPadApiClient>());
+builder.Services.AddScoped<IListSharingApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IServerProbe, BrowserServerProbe>();
 builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();
 builder.Services.AddScoped<IAppUpdates, BrowserAppUpdates>();

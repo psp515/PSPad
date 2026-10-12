@@ -8,7 +8,7 @@ using PSPad.Contracts;
 
 namespace PSPad.App.Api;
 
-public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ISnapshotsApi, INbpRates
+public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ISnapshotsApi, INbpRates, IListSharingApi
 {
     static readonly TimeSpan DefaultRetryAfter = TimeSpan.FromSeconds(5);
 
@@ -95,6 +95,48 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
         var joined = await response.EnsureSuccessStatusCode().Content.ReadFromJsonAsync<JoinListResponse>();
         return new JoinOutcome.Joined(joined!.ListId, joined.Documents);
     }
+
+    public Task<string?> ShareListAsync(Guid listId, string token, string code) =>
+        ChangeListAsync(() => http.PostAsJsonAsync($"api/lists/{listId}/share", new ShareListRequest(token, code)));
+
+    public Task<string?> StopSharingAsync(Guid listId) =>
+        ChangeListAsync(() => http.DeleteAsync($"api/lists/{listId}/share"));
+
+    public Task<string?> RemoveMemberAsync(Guid listId, Guid memberId) =>
+        ChangeListAsync(() => http.DeleteAsync($"api/lists/{listId}/members/{memberId}"));
+
+    public Task<string?> LeaveListAsync(Guid listId) =>
+        ChangeListAsync(() => http.PostAsync($"api/lists/{listId}/leave", null));
+
+    static async Task<string?> ChangeListAsync(Func<Task<HttpResponseMessage>> send)
+    {
+        try
+        {
+            var response = await send();
+
+            if (response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            if (response.StatusCode == HttpStatusCode.Conflict &&
+                await response.Content.ReadFromJsonAsync<JsonElement>() is { ValueKind: JsonValueKind.Object } problem &&
+                problem.TryGetProperty("detail", out var detail) && detail.GetString() is { } reason)
+            {
+                return reason;
+            }
+
+            return response.StatusCode == HttpStatusCode.NotFound
+                ? "That list is no longer shared with you."
+                : "That did not go through. Try again.";
+        }
+        catch (HttpRequestException)
+        {
+            return OfflineReason;
+        }
+    }
+
+    public const string OfflineReason = "Sharing changes need a connection. Try again when you are online.";
 
     public Task<StatisticsOverview?> OverviewAsync(int days) =>
         GetAsync<StatisticsOverview>($"api/statistics/overview?days={days}");

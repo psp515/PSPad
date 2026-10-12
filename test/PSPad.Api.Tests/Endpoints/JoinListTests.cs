@@ -91,9 +91,7 @@ public class JoinListTests(MongoFixture fixture)
 
         var token = Sharing.FreshToken();
         var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
-        await Sharing.SendAsync(owner, ct,
-            new ShareTaskList(
-                Guid.NewGuid(), ownerId, listId, token + "x", Sharing.Code, "Owner"));
+        (await Sharing.ShareAsync(owner, listId, token + "x", ct)).EnsureSuccessStatusCode();
 
         var response = await Sharing.JoinAsync(member, ct, token);
 
@@ -120,14 +118,10 @@ public class JoinListTests(MongoFixture fixture)
         await Sharing.SendAsync(thief, ct,
             new CreateArea(Guid.NewGuid(), thiefId, areaId, "Dom", 0),
             new CreateTaskList(Guid.NewGuid(), thiefId, thiefListId, areaId, "Pułapka"));
-        var envelope = new CommandEnvelope(nameof(ShareTaskList), JsonSerializer.SerializeToElement(
-            new ShareTaskList(Guid.NewGuid(), thiefId, thiefListId, token, Sharing.Code, "Thief")));
-        var hijack = await thief.PostAsJsonAsync("/api/commands", new[] { envelope }, ct);
+        var hijack = await Sharing.ShareAsync(thief, thiefListId, token, ct);
 
-        Assert.Equal(HttpStatusCode.OK, hijack.StatusCode);
-        var rejected = Assert.Single((await hijack.Content.ReadFromJsonAsync<CommandResponse[]>(ct))!);
-        Assert.False(rejected.Accepted);
-        Assert.Equal("That invite link is already in use.", rejected.Rejection);
+        Assert.Equal(HttpStatusCode.Conflict, hijack.StatusCode);
+        Assert.Contains("That invite link is already in use.", await hijack.Content.ReadAsStringAsync(ct));
 
         var response = await Sharing.JoinAsync(member, ct, token);
         var body = await response.Content.ReadFromJsonAsync<JoinListResponse>(ct);
@@ -324,7 +318,7 @@ public class JoinListTests(MongoFixture fixture)
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         await using var factory = new ApiFactory(fixture);
-        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var owner = factory.ClientFor(Guid.NewGuid().ToString(), name: "Owner");
         var ownerId = await Sharing.SignInAsync(owner, ct);
         var member = factory.ClientFor(Guid.NewGuid().ToString());
         await Sharing.SignInAsync(member, ct);

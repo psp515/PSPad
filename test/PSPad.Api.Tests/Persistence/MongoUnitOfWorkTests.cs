@@ -88,6 +88,55 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         Assert.Single(log);
     }
 
+    [Fact]
+    public async Task AStaleSaveIsRefusedInsteadOfOverwritingANewerOne()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var user = Guid.NewGuid();
+        var context = TestContext.For(fixture);
+        var store = new MongoDocumentStore<Area>(context);
+        var (area, events) = NewArea(user);
+        var create = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        create.Stage(area, events);
+        await create.CommitAsync(Guid.NewGuid(), user, ct);
+        var fresh = (await store.LoadAsync(area.Id, ct))!;
+        var stale = (await store.LoadAsync(area.Id, ct))!;
+
+        await Rename(context, fresh, user, "Work", ct);
+        var refused = await Assert.ThrowsAsync<ConcurrencyConflictException>(() => Rename(context, stale, user, "Play", ct));
+
+        Assert.Equal(area.Id, refused.AggregateId);
+        Assert.Equal("Work", (await store.LoadAsync(area.Id, ct))!.Name);
+    }
+
+    [Fact]
+    public async Task ANewAggregateIsNeverInsertedOverAnExistingOne()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var user = Guid.NewGuid();
+        var context = TestContext.For(fixture);
+        var (area, events) = NewArea(user);
+        var first = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        first.Stage(area, events);
+        await first.CommitAsync(Guid.NewGuid(), user, ct);
+        var twin = new Area();
+        twin.ApplyAll(events);
+
+        var second = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        second.Stage(twin, events);
+
+        await Assert.ThrowsAsync<ConcurrencyConflictException>(() => second.CommitAsync(Guid.NewGuid(), user, ct));
+    }
+
+    static async Task Rename(MongoContext context, Area area, Guid user, string name, CancellationToken ct)
+    {
+        var events = Area.Decide(area, new RenameArea(Guid.NewGuid(), user, area.Id, name), DateTimeOffset.UtcNow);
+        area.ApplyAll(events);
+        var work = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        work.Stage(area, events);
+        await work.CommitAsync(Guid.NewGuid(), user, ct);
+    }
+
     static (Area Area, IReadOnlyList<DomainEvent> Events) NewArea(Guid user)
     {
         var area = new Area();
