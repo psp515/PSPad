@@ -525,6 +525,21 @@ not silently skipped forever by a marker that had already advanced past
 them (`adr/0049`). `areaviews` (`adr/0051`) and `listviews` (`adr/0054`) are
 such collections.
 
+Every sync response also carries a **`datasetId`**, a Guid held in the
+`meta` collection (`{ _id: "dataset" }`) and created on first read, before
+the snapshot transaction starts. Only a restore changes it: the restore
+deletes the document, so the next sync mints a new id (`adr/0062`,
+`specs/backup-design.md` §7). The client keeps the id in replica meta.
+- If it has none stored, it records the id it receives.
+- If the stored id differs, the client discards that response and runs
+  `DatasetReset`. That clears the replica and the Statistics and snapshot
+  caches, and keeps the recorded owner and the **outbox**. The client then
+  pulls again with `since = 0`.
+
+A restored server has rolled `seq` back, so the old marker would skip new
+writes forever, and the old documents describe data that no longer
+exists. The kept outbox replays last-write-wins (AD-5).
+
 **App updates are offered, never forced** (`adr/0040`). The published
 service worker keeps the browser's waiting state — no `skipWaiting()` on
 install, no `clients.claim()` — and only skips waiting when a page posts it
