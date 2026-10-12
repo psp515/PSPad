@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using MudBlazor.Services;
 using PSPad.App.Components;
 using PSPad.App.Markdown;
-using PSPad.Module.Tasks;
+using PSPad.Abstractions;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Components;

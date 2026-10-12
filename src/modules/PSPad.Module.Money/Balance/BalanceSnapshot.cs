@@ -7,7 +7,9 @@ namespace PSPad.Module.Money.Balance;
 
 public sealed class BalanceSnapshot : Aggregate
 {
-    public const int MaxHoldingNameLength = 80;
+    public const int MaxHoldingNameLength = ContentLimits.Name;
+
+    public const int MaxHoldings = 64;
 
     static readonly byte[] Salt = Guid.Parse("62616c61-6e63-6573-6e61-700000000001").ToByteArray();
 
@@ -73,6 +75,11 @@ public sealed class BalanceSnapshot : Aggregate
                 if (adding.IndexOf(add.HoldingId) >= 0)
                 {
                     throw new DomainRejectedException("That holding already exists.");
+                }
+
+                if (adding._holdings.Count >= MaxHoldings)
+                {
+                    throw new DomainRejectedException($"A month can have at most {MaxHoldings} holdings.");
                 }
 
                 return [new HoldingAdded(adding.Id, adding.UserId, at,

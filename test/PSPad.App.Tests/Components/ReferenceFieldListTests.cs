@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
-using PSPad.Module.Tasks;
 using PSPad.Module.Tasks.References;
 using PSPad.TestInfrastructure;
 

@@ -11,7 +11,7 @@ using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Preferences;
 using PSPad.Module.Money.Values;
 using PSPad.Module.Presentation.AreaViews;
-using PSPad.Module.Tasks;
+using PSPad.Abstractions;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;

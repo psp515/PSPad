@@ -1,3 +1,4 @@
+@using PSPad.Module.Money.Budgets
 <MudPaper Outlined="true" Class="@($"pa-4 pspad-category-list {Class}")">
     <div class="d-flex align-center mb-2">
         <MudText Typo="Typo.subtitle2" Class="flex-grow-1">@Title</MudText>
@@ -14,7 +15,7 @@
             <MudListItem T="string" @key="name" Class="pspad-category-row">
                 @if (_renaming == name)
                 {
-                    <MudTextField T="string" @bind-Value="_renameDraft" Immediate="true" AutoFocus="true" MaxLength="40"
+                    <MudTextField T="string" @bind-Value="_renameDraft" Immediate="true" AutoFocus="true" MaxLength="@CategoryName.MaxLength"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="pspad-category-rename-input"
                                   OnKeyDown="@(args => RenameKeyDownAsync(args, name))" />
                 }
@@ -58,7 +59,7 @@
     </MudList>
     @if (_adding && !ReadOnly)
     {
-        <MudTextField T="string" @bind-Value="_draft" Immediate="true" AutoFocus="true" Placeholder="New category" MaxLength="40"
+        <MudTextField T="string" @bind-Value="_draft" Immediate="true" AutoFocus="true" Placeholder="New category" MaxLength="@CategoryName.MaxLength"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="pspad-category-input mt-2"
                       OnKeyDown="@KeyDownAsync" />
     }

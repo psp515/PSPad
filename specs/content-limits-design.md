@@ -15,7 +15,8 @@ MongoDB's 16 MB limit every later command on it fails with a 500.
 
 Limits are domain rules, checked in `Decide`, so the same check runs in WASM
 and on the server (`adr/0003`, `adr/0004`). They live once, as constants on
-`PSPad.Module.Tasks.ContentLimits`, which the client reads for its inputs.
+`PSPad.Abstractions.ContentLimits`, shared by every module and read by the
+client for its inputs.
 
 | Limit | Value | Applies to |
 |---|---|---|
@@ -39,6 +40,21 @@ and on the server (`adr/0003`, `adr/0004`). They live once, as constants on
 - A full list rejects a join; the join endpoint answers its usual `404`.
 - Limits apply to writes only. A document already over a limit still loads;
   adding one more step or field to it is rejected, editing it down is not.
+
+### 2.1 Money
+
+Money applies the same limits through its own constants, which point at
+`ContentLimits` where the meaning matches:
+
+| Limit | Value | Applies to |
+|---|---|---|
+| `Budget.MaxNameLength` | 64 (`Name`) | budget name |
+| `MoneyEntry.MaxNameLength` | 64 (`Name`) | expense and income name |
+| `BalanceSnapshot.MaxHoldingNameLength` | 64 (`Name`) | holding name |
+| `MoneyEntry.MaxNoteLength` | 1,024 (`FieldValue`) | entry note |
+| `CategoryName.MaxLength` | 40 | category name (unchanged, already tighter) |
+| `Budget.MaxCategoriesPerKind` | 64 | `AddCategory` and the auto-add on entries |
+| `BalanceSnapshot.MaxHoldings` | 64 | `AddHolding` |
 
 ## 3. Client
 

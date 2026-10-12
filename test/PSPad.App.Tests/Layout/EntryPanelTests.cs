@@ -65,6 +65,18 @@ public class EntryPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheNameAndNoteStopAtTheirLimits()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var panel = NewExpense(budget);
+
+        Assert.Equal("64", panel.Find(".pspad-entry-name-field input").GetAttribute("maxlength"));
+        Assert.Equal("1024", panel.Find(".pspad-entry-note-field textarea").GetAttribute("maxlength"));
+    }
+
+    [Fact]
     public async Task TheRateFieldIsHiddenForPlnAndShownForOtherCurrencies()
     {
         var budget = BudgetsPageTests.Named("Personal");
@@ -457,12 +469,12 @@ public class EntryPanelTests : Bunit.TestContext
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
         var panel = NewExpense(budget);
 
-        await FillAsync(panel, new string('n', 121), "Food", 5m);
+        await FillAsync(panel, new string('n', 65), "Food", 5m);
         panel.Find(".pspad-panel-save").Click();
 
         Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
         Assert.Contains(Services.GetRequiredService<ISnackbar>().ShownSnackbars,
-            snackbar => snackbar.Message == "An entry name is at most 120 characters.");
+            snackbar => snackbar.Message == "An entry name is at most 64 characters.");
         Assert.NotEmpty(panel.FindAll(".pspad-panel-save"));
     }
 

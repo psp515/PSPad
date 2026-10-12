@@ -22,6 +22,24 @@ public class BudgetCategoryTests
         Assert.Throws<DomainRejectedException>(() => Budget.Decide(budget, command, Now)).Message;
 
     [Fact]
+    public void AKindHoldsAtMostSixtyFourCategories()
+    {
+        var budget = ABudget();
+        while (budget.ExpenseCategories.Count < 64)
+        {
+            budget.ApplyAll(Budget.Decide(budget,
+                new AddCategory(Guid.NewGuid(), Owner, budget.Id, CategoryKind.Expense, $"Category {budget.ExpenseCategories.Count}"), Now));
+        }
+
+        Assert.Equal("A budget can have at most 64 expense categories.", Rejection(budget,
+            new AddCategory(Guid.NewGuid(), Owner, budget.Id, CategoryKind.Expense, "One too many")));
+        Assert.Empty(Budget.Decide(budget,
+            new AddCategory(Guid.NewGuid(), Owner, budget.Id, CategoryKind.Expense, "food"), Now));
+        Assert.Single(Budget.Decide(budget,
+            new AddCategory(Guid.NewGuid(), Owner, budget.Id, CategoryKind.Income, "Bonus"), Now));
+    }
+
+    [Fact]
     public void RenamingReplacesTheNameInPlace()
     {
         var budget = ABudget();

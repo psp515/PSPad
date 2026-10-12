@@ -1,7 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components.Web;
 using PSPad.App.Components;
-using PSPad.Module.Tasks;
+using PSPad.Abstractions;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 

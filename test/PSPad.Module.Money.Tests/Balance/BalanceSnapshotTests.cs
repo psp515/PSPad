@@ -187,14 +187,28 @@ public class BalanceSnapshotTests
     }
 
     [Fact]
-    public void AHoldingNameIsAtMostEightyCharacters()
+    public void AHoldingNameIsAtMostSixtyFourCharacters()
     {
         var budget = ABudget();
         var snapshot = ASnapshot(budget, October);
 
-        Assert.Equal("A holding name is at most 80 characters.",
-            Rejection(snapshot, budget, Add(budget, October, new string('h', 81))));
-        Assert.Single(BalanceSnapshot.Decide(snapshot, budget, Add(budget, October, new string('h', 80)), Now));
+        Assert.Equal("A holding name is at most 64 characters.",
+            Rejection(snapshot, budget, Add(budget, October, new string('h', 65))));
+        Assert.Single(BalanceSnapshot.Decide(snapshot, budget, Add(budget, October, new string('h', 64)), Now));
+    }
+
+    [Fact]
+    public void AMonthHoldsAtMostSixtyFourHoldings()
+    {
+        var budget = ABudget();
+        var snapshot = ASnapshot(budget, October);
+        for (var index = 0; index < 64; index++)
+        {
+            snapshot.ApplyAll(BalanceSnapshot.Decide(snapshot, budget, Add(budget, October, $"Account {index}"), Now));
+        }
+
+        Assert.Equal("A month can have at most 64 holdings.",
+            Rejection(snapshot, budget, Add(budget, October, "One too many")));
     }
 
     [Fact]

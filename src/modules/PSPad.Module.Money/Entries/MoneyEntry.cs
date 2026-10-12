@@ -6,7 +6,9 @@ namespace PSPad.Module.Money.Entries;
 
 public sealed class MoneyEntry : Aggregate
 {
-    public const int MaxNameLength = 120;
+    public const int MaxNameLength = ContentLimits.Name;
+
+    public const int MaxNoteLength = ContentLimits.FieldValue;
 
     [JsonInclude]
     public Guid BudgetId { get; private set; }
@@ -146,5 +148,16 @@ public sealed class MoneyEntry : Aggregate
             : trimmed;
     }
 
-    static string? NoteOf(string? note) => string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+    static string? NoteOf(string? note)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return null;
+        }
+
+        var trimmed = note.Trim();
+        return trimmed.Length > MaxNoteLength
+            ? throw new DomainRejectedException($"A note is at most {MaxNoteLength} characters.")
+            : trimmed;
+    }
 }

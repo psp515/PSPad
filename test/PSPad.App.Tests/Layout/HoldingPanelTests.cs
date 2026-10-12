@@ -315,11 +315,11 @@ public class HoldingPanelTests : Bunit.TestContext
         AppTestHost.Arrange(this, budget.UserId, Today, budget, october);
         var panel = Open(october);
 
-        await FillAsync(panel, new string('h', 81), 10m);
+        await FillAsync(panel, new string('h', 65), 10m);
         panel.Find(".pspad-panel-save").Click();
 
         Assert.Contains(Services.GetRequiredService<ISnackbar>().ShownSnackbars,
-            snackbar => snackbar.Message == "A holding name is at most 80 characters.");
+            snackbar => snackbar.Message == "A holding name is at most 64 characters.");
         Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
         Assert.NotEmpty(panel.FindAll(".pspad-holding-name-field"));
     }
