@@ -1,6 +1,6 @@
 # Budget Sharing — design
 
-Status: Proposed. Issue #121. Decision of record: `adr/0064`. Builds on
+Status: Built. Issue #121. Decision of record: `adr/0064`. Builds on
 `specs/money-design.md` (the module), `specs/sharing-spec.md` (list
 sharing, whose mechanics this copies) and `adr/0054`, `adr/0057`,
 `adr/0059`, `adr/0063`.
@@ -50,9 +50,10 @@ behaviour, to `PSPad.Abstractions/Invites/`:
 
 - `InviteCodes` (alphabet, length, `Normalize`, `IsWellFormed`, `Format`).
 - `InviteCheck` (`Unknown`, `WrongCode`, `Expired`, `Open`).
-- `Invites` — `Life` (30 minutes), `MostWrongCodes` (5), `MinTokenLength`,
-  `IsLiveAt(token, code, expiresAt, now)` and `Check(storedToken,
-  storedCode, expiresAt, token, code, now)` with the constant-time compare.
+- `Invites` — `Life` (30 minutes), `MostWrongCodes` (5), `ShortestToken`
+  (22), `IsLiveAt(token, code, expiresAt, now)`, `Check(storedToken,
+  storedCode, expiresAt, token, code, now)` with the constant-time compare,
+  and `RequireToken` / `RequireCode` for the share commands.
 
 `TaskList` delegates to them; its fields and BSON stay as they are.
 `TaskList.InviteLife` and `TaskList.MostWrongCodes` stay as aliases until
@@ -71,7 +72,7 @@ their `using` and gain a budget link (§4.1).
   `_members` in BSON. `DisplayName` comes from the joiner's token and is cut
   to `ContentLimits.Name`.
 - `IsShared` = `Members` non-empty or an invite token is set.
-- `HasMember(userId)`, `ClosedByWrongCodes`, `IsInviteLiveAt(now)`,
+- `HasMember(userId)`, `Admits(userId)` (owner or member), `ClosedByWrongCodes`, `IsInviteLiveAt(now)`,
   `CheckInvite(token, code, now)` over `Invites`.
 - `UserId` stays the owner, always (`specs/money-design.md` §3.2).
 
@@ -197,24 +198,25 @@ panel"), with the budget's own entry point.
 
 `InviteLinkCard` and the people list stop depending on `TaskList`:
 
-- `InviteLinkCard` takes an `InviteState(Token, Code, ExpiresAt,
-  ClosedByWrongCodes, MemberCount)`, a `JoinLink`, `ThingName` ("list" /
-  "budget") and two callbacks, `OnShare(token, code)` and `OnEnd`, each
-  returning the rejection or `null`. Its four states (None, Live, Expired,
-  Closed) and copy stay; the None text names the thing.
+- `InviteCard` takes an `InviteState(Token, Code, ExpiresAt,
+  ClosedByWrongCodes, MemberCount)`, a `LinkFor(token, code)`, `Thing` ("list" /
+  "budget"), an `Invitation` text, an optional `BlockedReason` and two
+  callbacks, `OnShare(token, code)` and `OnEnd`, each returning the rejection
+  or `null`. Its four states (None, Live, Expired, Closed) and copy stay; the
+  None text names the thing. `InviteLinkCard` stays as the list's wrapper.
 - `SharePeople` — the **People · N** list: owner row with **Owner** chip,
   member rows with initials avatar (`AvatarColor`), "You", join date for the
   owner, and a remove icon when `OnRemove` is bound.
 - `ListMembersView` and the new `BudgetMembersView` compose the two.
-- `InviteCode.JoinLinkFor` gains a budget form:
+- `InviteCode.BudgetJoinLinkFor` builds the budget form:
   `{base}/budgets/join/{token}#code={code}`.
 
 ### 4.2 Entry point
 
 - **`BudgetPage` header row**: when the budget `IsShared`, a `People`
   `MudIconButton` with a member-count `MudBadge` sits before the settings
-  gear (`aria-label` "Members"). It opens `BudgetMembersPanel` via
-  `?members=1`.
+  gear (`aria-label` "Members, N people"). It opens `BudgetMembersPanel` via
+  `?members={budgetId}`.
 - **Settings tab**: a **Sharing** card under the Budget card — one row
   "Members" with secondary text "Only you", "Nobody joined yet", "N joined",
   or "N joined · link M min left", and a chevron. It opens the same panel.
@@ -263,8 +265,8 @@ control is disabled offline.
 
 ### 4.5 Join page
 
-`JoinPage` gains a second route, `/budgets/join/{Token}`, and a `Kind`
-(List, Budget). The budget form reads "The person who shared the budget has
+`JoinPage` gains a second route, `/budgets/join/{Token}`, and tells the
+kinds apart by that path. The budget form reads "The person who shared the budget has
 a 6-character code.", the button **Join budget**, and success navigates to
 `/budgets/{id}`. Offline, expired, invalid and throttled states are the
 list's.

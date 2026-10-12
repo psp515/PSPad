@@ -252,6 +252,10 @@ transaction; the returned value stamps both the event and the aggregate's
   duplicate-key write on commit is rejected as "That invite link is already
   in use."; startup drops the older sparse `inviteToken_1`)
 - `referenceitems`: `{userId: 1, listId: 1}`, `{listId: 1, seq: 1}` and `{previousListId: 1, seq: 1}` (a member's delta sync)
+- `budgets`: `{_members.userId: 1, seq: 1}` (a member's delta sync) and a
+  unique partial `{inviteToken: 1}` named `inviteToken_unique`, as on
+  `tasklists` (`specs/budget-sharing-design.md`)
+- `moneyentries`, `balancesnapshots`: `{budgetId: 1, seq: 1}` (a member's delta sync)
 - `list_snapshots`: unique `{token: 1}`, TTL on `expiresAt`
   (`expireAfterSeconds: 0`), `{userId: 1, listId: 1}` (the panel's active list)
 - `snapshot_visits`: TTL on `expiresAt`, `{userId: 1, visitedAt: -1}` (the
@@ -460,11 +464,12 @@ not stated there:
 
 ## 5. Sync
 
-`GET /api/sync?since={seq}&full={listIds}&limit={n}` returns one page of the
+`GET /api/sync?since={seq}&full={ids}&limit={n}` returns one page of the
 aggregate documents the caller can see with `seq > since` — owned, plus
 `tasklists` the caller is a member of and `todotasks`/`referenceitems` whose
 `listId` or `previousListId` (the list a moved row last left) is a list the
-caller is a member of — and the new marker. It never returns events
+caller is a member of, plus `budgets` the caller is a member of and the
+`moneyentries`/`balancesnapshots` of those budgets — and the new marker. It never returns events
 (`adr/0061`). Each collection is read in `seq` order, at most `limit` rows
 (default and maximum 1000, `SyncReader.MaxPageSize`). When any collection
 fills its limit, the page ends at the lowest last `seq` among the full
@@ -473,12 +478,13 @@ marker is that `seq`; otherwise `hasMore` is `false`. `SyncService` pulls
 page after page from each page's marker, saving the rows, marker and
 fingerprint of every page before asking for the next, and stops when
 `hasMore` is `false` or the marker fails to advance. `full` is a comma-joined
-list of ids the caller is a member of: those lists and their live children
+list of list and budget ids the caller is a member of: those lists and
+budgets and their live children
 come back in full regardless of `since`, letting a device that just joined,
 or a second device of an already-joined user, catch up on a membership it
 has no delta history for. The response also carries `memberListIds` — the
-live lists the caller belongs to and does not own — on every call, not only
-a `full` one. The client overwrites its replica with what it receives — the
+live lists the caller belongs to and does not own — and `memberBudgetIds`,
+the same for budgets, on every call, not only a `full` one. The client overwrites its replica with what it receives — the
 server is truth, the replica is disposable (AD-6).
 
 **Reconciling membership.** `SyncService` saves the last page, then — only when
@@ -486,7 +492,10 @@ the replica has a recorded owner and the response carries
 `memberListIds` — reconciles against it: a list in the replica not owned by
 the caller and missing from `memberListIds` is purged along with its tasks
 and reference items; one rule covers leaving, removal, the owner deleting
-the list, and the owner deleting their account. A list in `memberListIds`
+the list, and the owner deleting their account. Budgets reconcile the same
+way against `memberBudgetIds` (purging a budget's entries and snapshots with
+it), and an entry or snapshot the caller does not own whose budget the
+replica does not hold is dropped. A list in `memberListIds`
 missing from the replica is pulled in the same pull, by asking again with
 `full=` at the just-saved marker. A device holding nothing yet for this user
 has no recorded owner, so reconciliation is skipped entirely — every list
@@ -516,7 +525,12 @@ The endpoint carries the `"join"` rate-limit policy: 10 attempts per user
 `JoinAsync` maps these to `JoinOutcome` (`Joined`, `Invalid`, `Expired`,
 `TooManyTries`) and writes a `Joined` response straight into the replica.
 
-A member's copy of a `tasklists` row — in `/api/sync` and in the join
+`POST /api/budgets/join {token, code}` is the same for a budget: it rejects
+an archived budget with the uniform `404`, runs `JoinBudget`, returns
+`200 JoinBudgetResponse(BudgetId, Documents)` and draws on the same `"join"`
+bucket, so list and budget joins share the 10 attempts.
+
+A member's copy of a `tasklists` or `budgets` row — in `/api/sync` and in the join
 response — never carries `inviteToken`, `inviteCode`, `inviteExpiresAt`,
 `wrongCodes` or `closedByWrongCodes`; `SyncReader` strips them from every
 list the caller does not own.
@@ -537,8 +551,9 @@ write conflict, aborts the transaction and throws
 `ConcurrencyConflictException`; `CommandDispatcher.RunAsync` re-runs the
 handler on fresh documents after a short jittered pause, up to five attempts,
 then rejects with "Someone else changed this at the same time. Try again."
-Sharing, ending a link, removing a member and leaving are server-only
-commands behind their own endpoints (§7), never in the outbox.
+Sharing, ending a link, removing a member and leaving — for lists and for
+budgets — are server-only commands behind their own endpoints (§7), never in
+the outbox.
 
 **Every accepted command triggers an immediate sync**, not just the
 60-second poll / reconnect / app-start triggers. `CommandSender` calls
@@ -684,7 +699,7 @@ directly in `PSPad.Api`:
    10 seconds, `adr/0041`). Otherwise a projection still in flight writes
    `statistics_*` documents back after the wipe.
 2. In the same transaction, before the sweep: pull the caller out of
-   `_members` on every other owner's `tasklists` document they belong to
+   `_members` on every other owner's `tasklists` and `budgets` document they belong to
    (`$pull` by `userId`), stamping each with a fresh `seq` so those owners'
    next sync carries the departure. The caller's own lists are untouched
    here — they are deleted outright by the sweep below, same as everything
@@ -696,8 +711,8 @@ directly in `PSPad.Api`:
    added later (a habit, a yearly goal) is covered with no code change here —
    `list_snapshots` and `snapshot_visits` (`adr/0056`) needed none either,
    since both carry `userId` like every other collection; only
-   `tasklists._members`, a nested array rather than a document of its own,
-   needed the explicit `$pull` in step 2.
+   `tasklists._members` and `budgets._members`, nested arrays rather than
+   documents of their own, needed the explicit `$pull` in step 2.
 4. Only once that transaction commits, call Keycloak's Admin REST API
    (`DELETE /admin/realms/{realm}/users/{sub}`), authenticating with the
    existing bootstrap master-realm admin credentials
@@ -728,12 +743,17 @@ directly in `PSPad.Api`:
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/api/commands` | Execute a batch of commands. The only write endpoint |
-| `GET` | `/api/sync?since=&full=&limit=` | Paged delta pull (`hasMore`), documents only, widened to lists the caller is a member of; `full` (comma-joined list ids the caller belongs to) returns those lists and their children in full regardless of `since` |
+| `GET` | `/api/sync?since=&full=&limit=` | Paged delta pull (`hasMore`), documents only, widened to lists and budgets the caller is a member of; `full` (comma-joined list and budget ids the caller belongs to) returns those and their children in full regardless of `since` |
 | `POST` | `/api/lists/join` | Join a shared list by invite token and code. `200 JoinListResponse(ListId, Documents)`; one empty `404` for any bad token, wrong code or deleted list; `410` when token and code match an expired invite; `429` past 10 attempts per user per 30 minutes. Not through the outbox — see §5 |
 | `POST` | `/api/lists/{id}/share` | Owner shares or rotates the invite (`{token, code}`); `204`, `404` unknown list or not the owner, `409` with the rejection. Online-only (`adr/0063`) |
 | `DELETE` | `/api/lists/{id}/share` | Owner ends the invite link; `204` / `404` |
 | `DELETE` | `/api/lists/{id}/members/{memberId}` | Owner removes a member; `204` / `404` / `409` |
 | `POST` | `/api/lists/{id}/leave` | Member leaves; `204` / `404` |
+| `POST` | `/api/budgets/join` | Join a shared budget by invite token and code. `200 JoinBudgetResponse(BudgetId, Documents)`; `404` / `410` / `429` as for lists; an archived budget is `404` |
+| `POST` | `/api/budgets/{id}/share` | Owner shares or rotates the budget's invite (`{token, code}`); `204`, `404` unknown budget or not the owner, `409` with the rejection (e.g. archived) |
+| `DELETE` | `/api/budgets/{id}/share` | Owner ends the budget's invite link; `204` / `404` |
+| `DELETE` | `/api/budgets/{id}/members/{memberId}` | Owner removes a member; `204` / `404` / `409` |
+| `POST` | `/api/budgets/{id}/leave` | Member leaves the budget; `204` / `404` |
 | `GET` | `/api/today` | Server-side Today, for a cold client; includes tasks from lists the caller is a member of, in the caller's own time zone |
 | `GET` | `/api/statistics/records?before=&limit=` | The statistics feed, newest first. `limit` clamps to 1..200, default 50 |
 | `GET` | `/api/statistics/overview?days=` | Tiles and the five chart series. `days` is 30, 90 or 365, default 30 |

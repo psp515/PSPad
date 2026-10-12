@@ -2,7 +2,7 @@
 title: Share budgets by membership on the Budget, with invite rules in Abstractions
 tags: [architecture, sharing, money, sync, security]
 date: 2026-10-12
-status: Proposed
+status: Active
 ---
 
 # ADR-0066: Share budgets by membership on the Budget, with invite rules in Abstractions

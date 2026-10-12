@@ -80,7 +80,7 @@ the old one's status line to point at the new number.
 | [0063](0063-server-saves-check-the-loaded-version.md) | Server saves check the loaded version, and sharing and membership go online-only | Active (amends [0005](0005-offline-conflicts-last-write-wins.md)) | 2026-10-12 | architecture, storage, sync, security, sharing |
 | [0064](0064-snapshot-marks-are-state-only.md) | Anonymous snapshot marks change state only, under a daily budget per list | Active (amends [0011](0011-aggregate-documents-are-truth.md) and [0056](0056-public-snapshots-are-frozen-copies.md)) | 2026-10-12 | architecture, persistence, event-sourcing, sharing, security |
 | [0065](0065-a-goal-holds-its-own-task-links.md) | A goal holds its own task links; a task names no goal | Active (amends [0008](0008-aggregate-boundaries.md)) | 2026-10-12 | architecture, domain, aggregates, security, sharing, statistics |
-| [0066](0066-budgets-are-shared-by-membership.md) | Share budgets by membership on the Budget, with invite rules in Abstractions | Proposed (extends [0054](0054-lists-are-shared-by-membership.md), [0057](0057-invites-need-a-link-and-a-code.md), [0059](0059-money-is-its-own-wasm-safe-module.md)) | 2026-10-12 | architecture, sharing, money, sync, security |
+| [0066](0066-budgets-are-shared-by-membership.md) | Share budgets by membership on the Budget, with invite rules in Abstractions | Active (extends [0054](0054-lists-are-shared-by-membership.md), [0057](0057-invites-need-a-link-and-a-code.md), [0059](0059-money-is-its-own-wasm-safe-module.md)) | 2026-10-12 | architecture, sharing, money, sync, security |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
