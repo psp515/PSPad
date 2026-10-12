@@ -25,24 +25,23 @@
     }
     else
     {
-        <MudGrid Spacing="3" Class="mb-4">
-            <MudItem xs="6" md="3">
-                <MoneyTile Class="pspad-balance-net-worth" Label="Net worth" Text="@MoneyText.Pln(Totals.NetWorth)" />
-            </MudItem>
-            @if (AtToday is { } atToday)
-            {
-                <MudItem xs="6" md="3">
-                    <MoneyTile Class="pspad-balance-at-nbp" Label="At NBP today" Text="@MoneyText.Pln(atToday)" />
-                </MudItem>
-                <MudItem xs="6" md="3">
-                    <MoneyTile Class="pspad-balance-currency" Label="Currency difference"
-                               Text="@MoneyText.SignedPln(atToday - Totals.NetWorth)" Negative="@(atToday < Totals.NetWorth)" />
-                </MudItem>
-            }
-            <MudItem xs="6" md="3">
-                <MoneyTile Class="pspad-balance-change" Label="@ChangeLabel" Text="@ChangeText" Negative="@(Totals.Change < 0)" />
-            </MudItem>
-        </MudGrid>
+        <MoneyHero Class="mb-2" HeadlineClass="pspad-balance-net-worth" Label="Net worth" Text="@MoneyText.Pln(Totals.NetWorth)">
+            <ChildContent>
+                <MoneyFigure Class="pspad-balance-change" Label="@ChangeLabel" Text="@ChangeText" Negative="@(Totals.Change < 0)" />
+                @if (AtToday is { } atToday)
+                {
+                    <MoneyFigure Class="pspad-balance-at-nbp" Label="At NBP today" Text="@MoneyText.Pln(atToday)" />
+                    <MoneyFigure Class="pspad-balance-currency" Label="Currency difference"
+                                 Text="@MoneyText.SignedPln(atToday - Totals.NetWorth)" Negative="@(atToday < Totals.NetWorth)" />
+                }
+            </ChildContent>
+            <Footer>
+                @if (ByType.Count > 0)
+                {
+                    <CategoryBar Class="pspad-balance-types" Totals="@TypeTotals" />
+                }
+            </Footer>
+        </MoneyHero>
 
         @if (Snapshot.Holdings.Count == 0)
         {
@@ -50,26 +49,46 @@
         }
         else
         {
-            <MudTable T="Holding" Items="@Snapshot.Holdings" Hover="true" Dense="true" Elevation="0" Outlined="true"
-                      Breakpoint="Breakpoint.Sm" Class="pspad-holdings" RowClass="pspad-holding-row" OnRowClick="@OpenRow">
-                <HeaderContent>
-                    <MudTh>Holding</MudTh>
-                    <MudTh>Amount</MudTh>
-                    <MudTh>Rate</MudTh>
-                    <MudTh>PLN</MudTh>
-                    <MudTh>Today</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Holding">
-                        <span class="pspad-holding-name">@context.Name</span>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0 ml-2 pspad-holding-type">@context.Type</MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="Amount" Class="pspad-holding-amount">@MoneyText.Amount(context.Money.Amount) @context.Money.Currency</MudTd>
-                    <MudTd DataLabel="Rate" Class="pspad-holding-rate">@MoneyText.Rate(context.Money.RateToPln)</MudTd>
-                    <MudTd DataLabel="PLN" Class="pspad-holding-pln">@MoneyText.Pln(context.Money.InPln)</MudTd>
-                    <MudTd DataLabel="Today" Class="pspad-holding-today">@TodayText(context)</MudTd>
-                </RowTemplate>
-            </MudTable>
+            <div class="pspad-holdings">
+                <div class="pspad-holdings-head" aria-hidden="true">
+                    <span>Holding</span>
+                    <span class="pspad-holding-cell">Amount</span>
+                    <span class="pspad-holding-cell">Rate</span>
+                    <span>In PLN</span>
+                    <span>vs NBP today</span>
+                </div>
+                @foreach (var group in ByType)
+                {
+                    <section @key="group.Type" class="pspad-holding-group">
+                        <div class="d-flex align-baseline px-1 pt-3 pb-1">
+                            <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-holding-group-name">@group.Type</MudText>
+                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-holding-group-total">@MoneyText.Pln(group.Pln)</MudText>
+                        </div>
+                        <MudPaper Outlined="true" Class="pspad-holding-list">
+                            @foreach (var holding in group.Holdings)
+                            {
+                                <button @key="holding.HoldingId" type="button" class="pspad-holding-row" @onclick="@(() => OnOpen.InvokeAsync(holding))">
+                                    <span class="d-flex align-center gap-3 pspad-holding-main">
+                                        <span class="@($"pspad-holding-icon pspad-holding-icon-{group.Type.ToString().ToLowerInvariant()}")" aria-hidden="true">
+                                            <MudIcon Icon="@TypeIcon(group.Type)" Size="Size.Small" />
+                                        </span>
+                                        <span class="d-flex flex-column pspad-holding-text">
+                                            <span class="pspad-holding-name">@holding.Name</span>
+                                            <span class="pspad-holding-sub">@SubText(holding)</span>
+                                        </span>
+                                    </span>
+                                    <span class="pspad-holding-cell pspad-holding-amount">@MoneyText.Amount(holding.Money.Amount) @holding.Money.Currency</span>
+                                    <span class="pspad-holding-cell pspad-holding-rate">@MoneyText.Rate(holding.Money.RateToPln)</span>
+                                    <span class="pspad-holding-values">
+                                        <span class="pspad-holding-pln">@MoneyText.Pln(holding.Money.InPln)</span>
+                                        <span class="pspad-holding-today">@TodayText(holding)</span>
+                                    </span>
+                                </button>
+                            }
+                        </MudPaper>
+                    </section>
+                }
+            </div>
         }
     }
 </div>
@@ -92,6 +111,21 @@
     [Parameter] public string Class { get; set; } = "";
 
     BalanceSnapshot? Snapshot => Totals.Snapshot;
+
+    IReadOnlyList<HoldingTypeTotal> ByType => Snapshot is null ? [] : BalanceTotals.ByType(Snapshot);
+
+    IReadOnlyList<CategoryTotal> TypeTotals => [.. ByType.Select(total => new CategoryTotal(total.Type.ToString(), total.Pln))];
+
+    static string SubText(Holding holding) => holding.Money.Currency == Currencies.Pln
+        ? holding.Money.Currency
+        : $"{MoneyText.Amount(holding.Money.Amount)} {holding.Money.Currency} @ {MoneyText.Rate(holding.Money.RateToPln)}";
+
+    static string TypeIcon(HoldingType type) => type switch
+    {
+        HoldingType.Cash => Icons.Material.Outlined.Payments,
+        HoldingType.Savings => Icons.Material.Outlined.AccountBalance,
+        _ => Icons.Material.Outlined.TrendingUp
+    };
 
     decimal? AtToday => Snapshot is not null && Connectivity.IsOnline ? BalanceTotals.AtRates(Snapshot, _todayRates) : null;
 
@@ -159,9 +193,6 @@
             }
         }
     }
-
-    Task OpenRow(TableRowClickEventArgs<Holding> args) =>
-        args.Item is null ? Task.CompletedTask : OnOpen.InvokeAsync(args.Item);
 
     public void Dispose()
     {

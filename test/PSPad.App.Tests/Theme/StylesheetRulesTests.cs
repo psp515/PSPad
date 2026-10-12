@@ -350,6 +350,35 @@ public partial class StylesheetRulesTests
     public void AHoveredBudgetCardOutlinesInThePrimary() =>
         Assert.Contains("border-color: var(--mud-palette-primary)", Declarations(".pspad-budget-card:hover"));
 
+    [Fact]
+    public void TheHeroFiguresWrapRatherThanOverflow()
+    {
+        Assert.Contains("flex-wrap: wrap", Declarations(".pspad-money-hero-figures"));
+        Assert.Contains("flex-wrap: wrap", DeclarationsInMedia("min-width: 960px", ".pspad-money-hero-top"));
+    }
+
+    [Fact]
+    public void TheMonthControlIsOnePill()
+    {
+        var control = Declarations(".pspad-month-control");
+
+        Assert.Contains("border-radius: 22px", control);
+        Assert.Contains("border: 1px solid var(--mud-palette-lines-default)", control);
+    }
+
+    [Fact]
+    public void OnDesktopHoldingsLineUpInColumns() =>
+        Assert.Contains("grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr))",
+            DeclarationsInMedia("min-width: 960px", ".pspad-holding-row"));
+
+    [Fact]
+    public void OnAPhoneHoldingsHideTheirTableCells() =>
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-holding-row .pspad-holding-cell"));
+
+    [Fact]
+    public void LongEntryNamesEndInAnEllipsis() =>
+        Assert.Contains("text-overflow: ellipsis", Declarations(".pspad-entry-name"));
+
     static string Declarations(string selector) =>
         string.Join("\n", Rule().Matches(Css)
             .Where(rule => SelectorsOf(rule).Contains(selector))

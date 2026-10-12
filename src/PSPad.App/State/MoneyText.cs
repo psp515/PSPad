@@ -19,6 +19,13 @@ public static class MoneyText
         _ => Pln(0)
     };
 
+    public static string SignedAmount(decimal value) => value switch
+    {
+        < 0 => $"{Minus}{Amount(-value)}",
+        > 0 => $"+{Amount(value)}",
+        _ => Amount(0)
+    };
+
     public static string Signed(CategoryKind kind, decimal value, string currency) =>
         $"{(kind == CategoryKind.Expense ? Minus : "+")}{Amount(value)} {currency}";
 

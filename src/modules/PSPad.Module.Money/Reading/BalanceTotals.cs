@@ -26,6 +26,14 @@ public sealed record BalanceTotals(BalanceSnapshot? Snapshot, BalanceSnapshot? P
     public static decimal NetWorthOf(BalanceSnapshot snapshot) =>
         snapshot.Holdings.Sum(holding => holding.Money.InPln);
 
+    public static IReadOnlyList<HoldingTypeTotal> ByType(BalanceSnapshot snapshot) =>
+    [
+        .. snapshot.Holdings
+            .GroupBy(holding => holding.Type)
+            .OrderBy(group => group.Key)
+            .Select(group => new HoldingTypeTotal(group.Key, group.Sum(holding => holding.Money.InPln), [.. group]))
+    ];
+
     public static decimal? ValueToday(Holding holding, IReadOnlyDictionary<string, decimal> rates) =>
         holding.Money.Currency == Currencies.Pln
             ? holding.Money.InPln

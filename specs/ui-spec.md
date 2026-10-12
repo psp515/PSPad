@@ -1384,8 +1384,8 @@ it); hover outlines it in the primary and tints its chevron.
 Settings gear button; on Month and Balance the `MonthSwitcher` (with Balance's
 "Month actions" menu) shares that row from 960px up and takes its own line
 below. The view lives in the URL (`month`, `balance`, `summary`, `settings`). The shared
-`MonthSwitcher` is the month title (a button opening a bottom-sheet month grid
-with ‹ year ›, This month and Cancel) with ‹ › at the right. Month (default;
+`MonthSwitcher` is one pill, ‹ month ›, the month title in the middle a button
+opening a bottom-sheet month grid with ‹ year ›, This month and Cancel. Month (default;
 month switcher, a `MoneyHero` totals card with Net large, Income/Expenses under
 it and the stacked category bar, entries by day, FAB menu Add expense / Add
 income) and Settings (category lists with add, rename, merge and remove — remove
@@ -1394,8 +1394,9 @@ from `?entry={id}`, `?expense={budgetId}` or `?income={budgetId}`; its rate
 field is hidden for PLN and its NBP button is disabled offline. Settings holds
 the default currency select. Balance (`BudgetBalanceTab`): the shared month
 switcher, a "{Month} has no balance yet" banner with a Start button (none when
-archived), Net worth / At NBP today / Currency difference / vs-previous tiles
-(the NBP pair online only), a `MudTable` of holdings, an Add holding FAB and a
+archived), a `MoneyHero` card (Net worth; vs previous, At NBP today, Currency difference; a by-type bar)
+(the NBP pair online only), holdings grouped by type as button rows that line
+up as columns from 960px, an Add holding FAB and a
 "Month actions" menu with Delete month. `HoldingPanel` opens from
 `?balance={snapshotId}&holding={id|new}`: name, a Cash/Savings/Investment
 `MudToggleGroup`, amount, currency, rate with NBP,

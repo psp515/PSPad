@@ -80,6 +80,18 @@ public class MonthSwitcherTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItIsOneControlWithTheMonthBetweenTheArrows()
+    {
+        var switcher = Switcher(October);
+
+        var parts = switcher.Find(".pspad-month-control").Children.Select(child => child.ClassList);
+
+        Assert.Equal(
+            ["pspad-month-previous", "pspad-month-title", "pspad-month-next"],
+            parts.Select(classes => classes.First(name => name.StartsWith("pspad-month-"))));
+    }
+
+    [Fact]
     public void TheArrowsStillStepOneMonth()
     {
         var switcher = Switcher(October);

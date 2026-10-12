@@ -18,6 +18,13 @@ public class MoneyTextTests
     [InlineData(0, "0.00 PLN")]
     public void SignedPlnShowsTheSign(int value, string expected) => Assert.Equal(expected, MoneyText.SignedPln(value));
 
+    [Theory]
+    [InlineData(-1234.5, "−1,234.50")]
+    [InlineData(5, "+5.00")]
+    [InlineData(0, "0.00")]
+    public void SignedAmountShowsTheSignWithoutACurrency(double value, string expected) =>
+        Assert.Equal(expected, MoneyText.SignedAmount((decimal)value));
+
     [Fact]
     public void AnExpenseIsMinusAndAnIncomeIsPlus()
     {

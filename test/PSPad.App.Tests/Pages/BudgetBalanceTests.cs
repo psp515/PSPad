@@ -57,7 +57,7 @@ public class BudgetBalanceTests : Bunit.TestContext
         page.WaitForAssertion(() => Assert.Equal("166.00 PLN", Text(page, ".pspad-balance-at-nbp .pspad-money-value")));
         Assert.Equal("164.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-value"));
         Assert.Equal("+2.00 PLN", Text(page, ".pspad-balance-currency .pspad-money-value"));
-        Assert.Equal(["+1.00 PLN", "+1.00 PLN", "—"],
+        Assert.Equal(["—", "+1.00 PLN", "+1.00 PLN"],
             page.FindAll(".pspad-holding-today").Select(cell => cell.TextContent.Trim()));
         Assert.Equal([("EUR", Today)], Nbp.Asked);
     }
@@ -250,10 +250,29 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         page.WaitForAssertion(() => Assert.Single(page.FindAll(".pspad-holding-row")));
         Assert.Equal("Konto", Text(page, ".pspad-holding-name"));
-        Assert.Equal("Savings", Text(page, ".pspad-holding-type"));
+        Assert.Equal("Savings", Text(page, ".pspad-holding-group-name"));
+        Assert.Equal("43.00 PLN", Text(page, ".pspad-holding-group-total"));
+        Assert.Equal("10.00 EUR @ 4.3000", Text(page, ".pspad-holding-sub"));
         Assert.Equal("10.00 EUR", Text(page, ".pspad-holding-amount"));
         Assert.Equal("4.3000", Text(page, ".pspad-holding-rate"));
         Assert.Equal("43.00 PLN", Text(page, ".pspad-holding-pln"));
+    }
+
+    [Fact]
+    public void HoldingsAreGroupedByTypeWithATypeBar()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            Balances.Started(budget, October,
+                Balances.AHolding("Broker", 300m, "PLN", 1m, HoldingType.Investment),
+                Balances.AHolding("Wallet", 100m, "PLN", 1m, HoldingType.Cash)));
+
+        var page = BalanceTab(budget);
+
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-holding-row").Count));
+        Assert.Equal(["Cash", "Investment"], page.FindAll(".pspad-holding-group-name").Select(name => name.TextContent.Trim()));
+        Assert.Equal(["Wallet", "Broker"], page.FindAll(".pspad-holding-name").Select(name => name.TextContent.Trim()));
+        Assert.Equal(2, page.FindAll(".pspad-balance-types .pspad-category-legend").Count);
     }
 
     [Fact]

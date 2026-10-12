@@ -315,8 +315,9 @@ Four tabs never fit a phone; the gear keeps the row to three. The view lives
 in the URL.
 
 - **Month switcher** (`MonthSwitcher`, in the view row on Month and
-  Balance; its own line below 960px; Balance adds its "Month actions" menu): the
-  month title on the left as a button, ‹ › on the right. The title opens a
+  Balance; its own line below 960px; Balance adds its "Month actions" menu): one
+  pill, ‹ month ›, with the month title in the middle as a button; full width
+  on a phone, 280px at the right of the view row from 960px. The title opens a
   bottom sheet (a `MudDialog` at the bottom, full width on a phone) with
   ‹ year ›, a 4×3 grid of months (the shown month filled), "This month"
   (the current month in the user's time zone) and Cancel. Picking a month
@@ -326,8 +327,12 @@ in the URL.
   - Month switcher.
   - One totals card (`MoneyHero`): Net large, Income and Expenses under it,
     and the stacked bar of expenses by category with its legend.
-  - Entries grouped by day. A row shows name, category chip and amount; a
-    non-PLN row also shows "−X PLN @ rate".
+  - All / Expenses / Income filter chips (list only; the totals card always
+    counts the whole month; hidden when the month has no entries).
+  - Entries grouped by day; each day heading shows the day's net in PLN. A
+    row shows a round badge with the category's initial (tinted for income),
+    the name, the category in grey (plus "X CUR @ rate" for non-PLN) and the
+    signed PLN amount, green for income. Name and grey line end in an ellipsis.
   - Tapping a row opens `EntryPanel`.
   - FAB menu: Add expense / Add income.
 - **`EntryPanel`** fields:
@@ -349,17 +354,21 @@ in the URL.
   - Month switcher, shared with the Month tab.
   - With no snapshot: a "{Month yyyy} has no balance yet" banner with a
     "Start {Month yyyy}" button (no button when archived), and no FAB.
-  - Tiles: Net worth; At NBP today; Currency difference (at NBP today minus
-    net worth); and "vs {Month yyyy}" against the latest earlier snapshot
-    ("vs previous month" and "—" without one).
-  - The two NBP tiles call the lookup for today once per foreign currency
+  - A totals card: Net worth large; "vs {Month yyyy}" against the latest
+    earlier snapshot ("vs previous month" and "—" without one); At NBP today
+    and Currency difference (at NBP today minus net worth); and a bar of net
+    worth by holding type with its legend.
+  - The two NBP figures call the lookup for today once per foreign currency
     per visit, only while online. They are hidden offline and while any
     currency lacks a rate. A failed lookup isn't retried during the visit and
     shows no snackbar; an answer for another currency is dropped. Nothing is
     stored. A PLN-only balance shows them without any lookup.
-  - Holdings table (`MudTable`): name and type chip, amount and currency,
-    rate, PLN, and "Today" (the difference at today's NBP rate; "—" for PLN
-    or a missing rate).
+  - Holdings grouped by type (Cash, Savings, Investment; empty types
+    skipped), each group headed by its PLN subtotal. A row is a button: type
+    icon, name, a grey line with the currency (or "X CUR @ rate"), then PLN
+    and "vs NBP today" (the difference at today's NBP rate; "—" for PLN or a
+    missing rate). From 960px the same rows line up as columns under a
+    header: Holding, Amount, Rate, In PLN, vs NBP today.
   - FAB: Add holding, only when the month has a snapshot and the budget isn't
     archived. Tapping a row
     opens `HoldingPanel` (`?balance={snapshotId}&holding={holdingId|new}`).
