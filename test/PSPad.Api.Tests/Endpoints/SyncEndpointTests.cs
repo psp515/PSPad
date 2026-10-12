@@ -33,6 +33,21 @@ public class SyncEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task EverySyncCarriesTheSameDatasetId()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        await client.GetFromJsonAsync<MeResponse>("/api/me", ct);
+
+        var first = await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
+        var second = await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
+
+        Assert.NotNull(first!.DatasetId);
+        Assert.Equal(first.DatasetId, second!.DatasetId);
+    }
+
+    [Fact]
     public async Task SyncingFromTheLastMarkerReturnsOnlyWhatChangedSince()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;

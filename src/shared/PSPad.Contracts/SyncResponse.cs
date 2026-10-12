@@ -9,4 +9,5 @@ public sealed record SyncResponse(
     long Marker,
     IReadOnlyDictionary<string, JsonElement[]> Documents,
     SyncEvent[] Events,
-    Guid[]? MemberListIds = null);
+    Guid[]? MemberListIds = null,
+    Guid? DatasetId = null);

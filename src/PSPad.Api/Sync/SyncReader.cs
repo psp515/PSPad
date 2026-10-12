@@ -18,6 +18,8 @@ namespace PSPad.Api.Sync;
 
 public sealed class SyncReader(MongoContext context)
 {
+    readonly DatasetIdentity _dataset = new(context);
+
     static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         IncludeFields = true
@@ -29,6 +31,8 @@ public sealed class SyncReader(MongoContext context)
     public async Task<SyncResponse> ReadAsync(
         Guid userId, long since, IReadOnlyCollection<Guid> full, CancellationToken ct)
     {
+        // Read before the snapshot transaction: a first-ever upsert inside it would write-conflict.
+        var datasetId = await _dataset.CurrentAsync(ct);
         using var session = await context.Client.StartSessionAsync(cancellationToken: ct);
         session.StartTransaction(new TransactionOptions(readConcern: ReadConcern.Snapshot));
 
@@ -36,7 +40,7 @@ public sealed class SyncReader(MongoContext context)
         {
             var response = await ReadWithinSessionAsync(session, userId, since, full, ct);
             await session.CommitTransactionAsync(ct);
-            return response;
+            return response with { DatasetId = datasetId };
         }
         catch
         {
