@@ -13,6 +13,8 @@ public static class ContentLimits
     public const int FieldsPerItem = 64;
     public const int MembersPerList = 100;
 
+    public const int MembersPerBudget = 100;
+
     /// <summary>Returns <paramref name="text"/>, or rejects it as <paramref name="what"/> when it is longer than <paramref name="limit"/>.</summary>
     public static string Within(string text, int limit, string what) =>
         text.Length > limit

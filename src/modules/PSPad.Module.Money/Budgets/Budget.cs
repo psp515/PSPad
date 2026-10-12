@@ -25,6 +25,24 @@ public sealed class Budget : Aggregate
     public DateTimeOffset? ArchivedAt { get; private set; }
 
     [JsonInclude]
+    public string? InviteToken { get; private set; }
+
+    [JsonInclude]
+    public string? InviteCode { get; private set; }
+
+    [JsonInclude]
+    public DateTimeOffset? InviteExpiresAt { get; private set; }
+
+    [JsonInclude]
+    public int WrongCodes { get; private set; }
+
+    [JsonInclude]
+    public string? OwnerName { get; private set; }
+
+    [JsonInclude]
+    List<BudgetMember> _members = [];
+
+    [JsonInclude]
     List<string> _expenseCategories = [];
 
     [JsonInclude]
@@ -35,6 +53,19 @@ public sealed class Budget : Aggregate
     public IReadOnlyList<string> IncomeCategories => _incomeCategories;
 
     public bool IsArchived => ArchivedAt is not null;
+
+    public IReadOnlyList<BudgetMember> Members => _members;
+
+    public bool IsShared => _members.Count > 0 || InviteToken is not null;
+
+    public bool ClosedByWrongCodes => InviteToken is null && WrongCodes >= Invites.MostWrongCodes;
+
+    public bool HasMember(Guid userId) => _members.Any(member => member.UserId == userId);
+
+    public bool IsInviteLiveAt(DateTimeOffset now) => Invites.IsLiveAt(InviteToken, InviteCode, InviteExpiresAt, now);
+
+    public InviteCheck CheckInvite(string token, string code, DateTimeOffset now) =>
+        Invites.Check(InviteToken, InviteCode, InviteExpiresAt, token, code, now);
 
     public IReadOnlyList<string> CategoriesOf(CategoryKind kind) =>
         kind == CategoryKind.Expense ? _expenseCategories : _incomeCategories;
@@ -53,16 +84,16 @@ public sealed class Budget : Aggregate
                     SeedExpenseCategories, SeedIncomeCategories)];
 
             case RenameBudget rename:
-                var renaming = BudgetAccess.Writable(BudgetAccess.To(budget, rename.UserId));
+                var renaming = BudgetAccess.Writable(BudgetAccess.Owned(budget, rename.UserId));
                 var name = RequireName(rename.Name);
                 return renaming.Name == name ? [] : [new BudgetRenamed(renaming.Id, renaming.UserId, at, name)];
 
             case ArchiveBudget archive:
-                var archiving = BudgetAccess.To(budget, archive.UserId);
+                var archiving = BudgetAccess.Owned(budget, archive.UserId);
                 return archiving.IsArchived ? [] : [new BudgetArchived(archiving.Id, archiving.UserId, at)];
 
             case RestoreBudget restore:
-                var restoring = BudgetAccess.To(budget, restore.UserId);
+                var restoring = BudgetAccess.Owned(budget, restore.UserId);
                 return restoring.IsArchived ? [new BudgetRestored(restoring.Id, restoring.UserId, at)] : [];
 
             case AddCategory add:
@@ -110,6 +141,53 @@ public sealed class Budget : Aggregate
                 return [new CategoryRemoved(removing.Id, removing.UserId, at, removeCategory.Kind,
                     removeList[RequireCategory(removeList, removeCategory.Name)])];
 
+            case ShareBudget share:
+                var sharing = BudgetAccess.Writable(BudgetAccess.Owned(budget, share.UserId));
+                var token = Invites.RequireToken(share.Token);
+                var code = Invites.RequireCode(share.Code);
+                var ownerName = ContentLimits.Cut(share.OwnerName.Trim(), ContentLimits.Name);
+                return sharing.InviteToken == token && sharing.InviteCode == code && sharing.OwnerName == ownerName
+                    && sharing.IsInviteLiveAt(at)
+                    ? []
+                    : [new BudgetShared(sharing.Id, sharing.UserId, at, token, code, ownerName)];
+
+            case StopSharingBudget stop:
+                var stopping = BudgetAccess.Owned(budget, stop.UserId);
+                return stopping.InviteToken is null ? [] : [new BudgetSharingStopped(stopping.Id, stopping.UserId, at)];
+
+            case RemoveBudgetMember remove:
+                var removingMember = BudgetAccess.Owned(budget, remove.UserId);
+                return removingMember.HasMember(remove.MemberId)
+                    ? [new BudgetMemberRemoved(removingMember.Id, removingMember.UserId, at, remove.MemberId)]
+                    : throw new DomainRejectedException("That person is not a member of this budget.");
+
+            case LeaveBudget leave:
+                var leaving = budget ?? throw new DomainRejectedException("That budget does not exist.");
+                return leaving.HasMember(leave.UserId)
+                    ? [new BudgetLeft(leaving.Id, leaving.UserId, at, leave.UserId)]
+                    : throw new DomainRejectedException(leaving.UserId == leave.UserId
+                        ? "The owner cannot leave their own budget."
+                        : "You are not a member of this budget.");
+
+            case JoinBudget join:
+                var joining = budget ?? throw new DomainRejectedException("This invite link no longer works.");
+                if (joining.UserId == join.UserId || joining.HasMember(join.UserId))
+                {
+                    return [];
+                }
+
+                return joining.CheckInvite(join.Token, join.Code, at) switch
+                {
+                    InviteCheck.Open when joining._members.Count >= ContentLimits.MembersPerBudget =>
+                        throw new DomainRejectedException("This budget already has as many members as it can hold."),
+                    InviteCheck.Open =>
+                        [new BudgetJoined(joining.Id, joining.UserId, at, join.UserId, RequireMemberName(join.DisplayName))],
+                    InviteCheck.WrongCode =>
+                        [new BudgetInviteCodeRejected(joining.Id, joining.UserId, at, joining.WrongCodes + 1)],
+                    InviteCheck.Expired => throw new DomainRejectedException("This invite has expired."),
+                    _ => throw new DomainRejectedException("This invite link no longer works.")
+                };
+
             default:
                 throw new DomainRejectedException($"A budget cannot handle {command.GetType().Name}.");
         }
@@ -132,9 +210,37 @@ public sealed class Budget : Aggregate
                 break;
             case BudgetArchived archived:
                 ArchivedAt = archived.At;
+                CloseInvite();
                 break;
             case BudgetRestored:
                 ArchivedAt = null;
+                break;
+            case BudgetShared shared:
+                InviteToken = shared.Token;
+                InviteCode = shared.Code;
+                InviteExpiresAt = shared.At + Invites.Life;
+                WrongCodes = 0;
+                OwnerName = shared.OwnerName;
+                break;
+            case BudgetSharingStopped:
+                CloseInvite();
+                break;
+            case BudgetInviteCodeRejected rejected:
+                WrongCodes = rejected.WrongCodes;
+                if (WrongCodes >= Invites.MostWrongCodes)
+                {
+                    CloseInvite();
+                }
+
+                break;
+            case BudgetJoined joined:
+                _members.Add(new BudgetMember(joined.MemberId, joined.DisplayName, joined.At));
+                break;
+            case BudgetMemberRemoved removed:
+                _members.RemoveAll(member => member.UserId == removed.MemberId);
+                break;
+            case BudgetLeft left:
+                _members.RemoveAll(member => member.UserId == left.MemberId);
                 break;
             case CategoryAdded added:
                 ListOf(added.Kind).Add(added.Name);
@@ -152,6 +258,13 @@ public sealed class Budget : Aggregate
                 removedList.RemoveAt(CategoryName.IndexIn(removedList, removed.Name));
                 break;
         }
+    }
+
+    void CloseInvite()
+    {
+        InviteToken = null;
+        InviteCode = null;
+        InviteExpiresAt = null;
     }
 
     List<string> ListOf(CategoryKind kind) => kind == CategoryKind.Expense ? _expenseCategories : _incomeCategories;
@@ -175,4 +288,9 @@ public sealed class Budget : Aggregate
             ? throw new DomainRejectedException($"A budget name is at most {MaxNameLength} characters.")
             : trimmed;
     }
+
+    static string RequireMemberName(string name) =>
+        string.IsNullOrWhiteSpace(name)
+            ? throw new DomainRejectedException("A member needs a name.")
+            : ContentLimits.Cut(name.Trim(), ContentLimits.Name);
 }
