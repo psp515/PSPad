@@ -58,7 +58,7 @@ public sealed class Area : Aggregate
         }
     }
 
-    internal static Area Require(Area? area, Guid userId)
+    public static Area Require(Area? area, Guid userId)
     {
         if (area is null || area.Deleted)
         {

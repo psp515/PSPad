@@ -2,7 +2,8 @@ using PSPad.Abstractions;
 
 namespace PSPad.Module.Presentation.AreaViews;
 
-public sealed class ReorderListsHandler(IDocumentStore<AreaView> store, IUnitOfWork work, IClock clock)
+public sealed class ReorderListsHandler(
+    IDocumentStore<AreaView> store, IViewTargets targets, IUnitOfWork work, IClock clock)
     : ICommandHandler<ReorderLists>
 {
     public async Task<CommandResult> HandleAsync(ReorderLists command, CancellationToken ct)
@@ -12,6 +13,7 @@ public sealed class ReorderListsHandler(IDocumentStore<AreaView> store, IUnitOfW
         try
         {
             var events = AreaView.Decide(existing, command, clock.UtcNow);
+            await targets.RequireAreaAsync(command.UserId, command.AreaId, ct);
             var view = existing ?? new AreaView();
             view.ApplyAll(events);
             work.Stage(view, events);

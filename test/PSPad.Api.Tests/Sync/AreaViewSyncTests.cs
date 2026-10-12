@@ -51,6 +51,7 @@ public class AreaViewSyncTests(MongoFixture fixture)
         var first = Guid.NewGuid();
         var second = Guid.NewGuid();
         var reorder = new ReorderLists(Guid.NewGuid(), user, areaId, [first, second], second, 0);
+        await Send(client, ct, new CreateArea(Guid.NewGuid(), user, areaId, "Dom", 0));
 
         await Send(client, ct, reorder);
         await Send(client, ct, reorder);

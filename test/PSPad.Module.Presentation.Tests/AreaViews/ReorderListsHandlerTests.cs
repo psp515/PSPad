@@ -13,6 +13,7 @@ public class ReorderListsHandlerTests
 
     readonly FakeDocumentStore<AreaView> _store = new();
     readonly FakeUnitOfWork _work = new();
+    readonly FakeViewTargets _targets = new FakeViewTargets().OwnsArea(User, Area);
 
     [Fact]
     public async Task TheFirstReorderStagesANewView()
@@ -58,5 +59,17 @@ public class ReorderListsHandlerTests
         Assert.False(_work.Committed);
     }
 
-    ReorderListsHandler Handler() => new(_store, _work, new FixedClock(Now));
+    [Fact]
+    public async Task AnAreaTheUserDoesNotOwnIsRejected()
+    {
+        var a = Guid.NewGuid();
+
+        var result = await Handler().HandleAsync(
+            new ReorderLists(Guid.NewGuid(), User, Guid.NewGuid(), [a], a, 0), CancellationToken.None);
+
+        Assert.False(result.Accepted);
+        Assert.False(_work.Committed);
+    }
+
+    ReorderListsHandler Handler() => new(_store, _targets, _work, new FixedClock(Now));
 }
