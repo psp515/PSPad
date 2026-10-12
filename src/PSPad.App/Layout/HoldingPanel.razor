@@ -1,0 +1,244 @@
+@using PSPad.Abstractions
+@using PSPad.Contracts
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Money
+@using PSPad.Module.Money.Balance
+@using PSPad.Module.Money.Budgets
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Preferences
+@using PSPad.Module.Money.Reading
+@using PSPad.Module.Money.Values
+@inject IDocumentStore<Budget> Budgets
+@inject IDocumentStore<BalanceSnapshot> Snapshots
+@inject IDocumentStore<MoneyEntry> Entries
+@inject IDocumentStore<MoneyPreferences> Preferences
+@inject AppState State
+@inject CommandSender Sender
+@inject ISnackbar Snackbar
+
+<DetailPanel Open="@(_snapshot is not null)" Title="@Title" TitleTypo="Typo.body2" Class="pspad-holding-panel"
+             OnClose="@OnClose" OnSave="@SaveCallback" CanSave="@CanSave" OnDelete="@RemoveCallback" DeleteText="Remove"
+             Disabled="@(Disabled || _saving)">
+    <div class="d-flex flex-column gap-3 pa-4">
+        <MudTextField T="string" Class="pspad-holding-name-field" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      MaxLength="@BalanceSnapshot.MaxHoldingNameLength" @bind-Value="_name" Immediate="true"
+                      AutoFocus="@IsNew" Disabled="@ReadOnly" />
+        <MudToggleGroup T="HoldingType" @bind-Value="_type" Class="pspad-holding-type-field" Color="Color.Primary"
+                        Outlined="true" Disabled="@ReadOnly">
+            <MudToggleItem Value="HoldingType.Cash" Text="Cash" />
+            <MudToggleItem Value="HoldingType.Savings" Text="Savings" />
+            <MudToggleItem Value="HoldingType.Investment" Text="Investment" />
+        </MudToggleGroup>
+        <RateFields @key="@((_loadedSnapshot, _loadedHolding))" CssPrefix="pspad-holding-panel" @bind-Amount="_amount"
+                    Currency="@_currency" CurrencyChanged="@Suggest" Rate="@_rate" RateTyped="@RateTyped"
+                    NbpDate="@RateDay" NbpFetched="@ApplyNbpRate" ReadOnly="@ReadOnly" />
+    </div>
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? SnapshotId { get; set; }
+
+    [Parameter] public Guid? HoldingId { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    BalanceSnapshot? _snapshot;
+    Budget? _budget;
+    Holding? _holding;
+    IReadOnlyList<MoneyEntry> _budgetEntries = [];
+    IReadOnlyList<BalanceSnapshot> _budgetSnapshots = [];
+    Guid? _loadedSnapshot;
+    Guid? _loadedHolding;
+    bool _loadedOnce;
+    string _name = "";
+    HoldingType _type = HoldingType.Cash;
+    decimal? _amount;
+    string _currency = Currencies.Pln;
+    decimal? _rate;
+    DateOnly? _rateDate;
+    bool _saving;
+
+    bool IsNew => _holding is null;
+
+    bool ReadOnly => _budget?.IsArchived == true;
+
+    string Title => IsNew ? "New holding" : "Holding";
+
+    bool IsPln => _currency == Currencies.Pln;
+
+    decimal Rate => IsPln ? 1m : _rate.GetValueOrDefault();
+
+    DateOnly? RateDay => _snapshot is null ? null : RateDayOf(_snapshot.Month, State.Today);
+
+    bool CanSave => !ReadOnly && !string.IsNullOrWhiteSpace(_name) && _amount.GetValueOrDefault() > 0 && Rate > 0;
+
+    EventCallback SaveCallback => ReadOnly ? default : EventCallback.Factory.Create(this, SaveAsync);
+
+    EventCallback RemoveCallback => ReadOnly || IsNew ? default : EventCallback.Factory.Create(this, RemoveAsync);
+
+    static DateOnly RateDayOf(YearMonth month, DateOnly today) => month.LastDay < today ? month.LastDay : today;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedOnce && _loadedSnapshot == SnapshotId && _loadedHolding == HoldingId)
+        {
+            return;
+        }
+
+        _loadedOnce = true;
+        _loadedSnapshot = SnapshotId;
+        _loadedHolding = HoldingId;
+        await LoadAsync();
+    }
+
+    async Task LoadAsync()
+    {
+        _snapshot = null;
+        _budget = null;
+        _holding = null;
+        var snapshot = SnapshotId is null ? null : await Snapshots.LoadAsync(SnapshotId.Value, CancellationToken.None);
+        var budget = snapshot is null || snapshot.Deleted
+            ? null
+            : await Budgets.LoadAsync(snapshot.BudgetId, CancellationToken.None);
+
+        if (snapshot is null || budget is null || budget.UserId != State.UserId)
+        {
+            return;
+        }
+
+        var holding = HoldingId is null
+            ? null
+            : snapshot.Holdings.FirstOrDefault(candidate => candidate.HoldingId == HoldingId);
+
+        if (HoldingId is not null && holding is null)
+        {
+            return;
+        }
+
+        var entries = await Entries.LoadAllAsync(State.UserId, CancellationToken.None);
+        var snapshots = await Snapshots.LoadAllAsync(State.UserId, CancellationToken.None);
+        _budgetEntries = [.. entries.Where(entry => entry.BudgetId == budget.Id && !entry.Deleted)];
+        _budgetSnapshots = [.. snapshots.Where(candidate => candidate.BudgetId == budget.Id && !candidate.Deleted)];
+        _snapshot = snapshot;
+        _budget = budget;
+        _holding = holding;
+
+        if (holding is not null)
+        {
+            Fill(holding);
+        }
+        else
+        {
+            await StartNewAsync();
+        }
+    }
+
+    void Fill(Holding holding)
+    {
+        _name = holding.Name;
+        _type = holding.Type;
+        _amount = holding.Money.Amount;
+        _currency = holding.Money.Currency;
+        _rate = holding.Money.RateToPln;
+        _rateDate = holding.Money.RateDate;
+    }
+
+    async Task StartNewAsync()
+    {
+        var preferences = await Preferences.LoadAsync(MoneyPreferences.IdFor(State.UserId), CancellationToken.None);
+        _name = "";
+        _type = HoldingType.Cash;
+        _amount = null;
+        Suggest(preferences?.DefaultCurrency ?? Currencies.Pln);
+    }
+
+    void Suggest(string currency)
+    {
+        _currency = currency;
+        var suggestion = RateSuggestion.For(currency, _budgetEntries, _budgetSnapshots);
+        _rate = suggestion?.RateToPln;
+        _rateDate = suggestion?.RateDate;
+    }
+
+    void RateTyped(decimal? rate)
+    {
+        _rate = rate;
+        _rateDate = null;
+    }
+
+    void ApplyNbpRate(NbpRateView rate)
+    {
+        _rate = rate.Rate;
+        _rateDate = rate.EffectiveDate;
+    }
+
+    async Task SaveAsync()
+    {
+        if (Disabled || _saving || !CanSave || _snapshot is null)
+        {
+            return;
+        }
+
+        var snapshot = _snapshot;
+        var money = new Money(_amount.GetValueOrDefault(), _currency, Rate,
+            _rateDate ?? RateDayOf(snapshot.Month, State.Today));
+        var name = _name.Trim();
+
+        _saving = true;
+        CommandResult result;
+
+        try
+        {
+            result = _holding is null
+                ? await Sender.SendAsync(new AddHolding(Guid.NewGuid(), State.UserId, snapshot.BudgetId, snapshot.Month,
+                    Guid.NewGuid(), name, _type, money))
+                : await Sender.SendAsync(new EditHolding(Guid.NewGuid(), State.UserId, snapshot.BudgetId, snapshot.Month,
+                    _holding.HoldingId, name, _type, money));
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't save the holding.", Severity.Warning);
+            return;
+        }
+
+        await OnClose.InvokeAsync();
+    }
+
+    async Task RemoveAsync()
+    {
+        if (Disabled || _saving || _snapshot is null || _holding is null)
+        {
+            return;
+        }
+
+        _saving = true;
+        CommandResult result;
+
+        try
+        {
+            result = await Sender.SendAsync(new RemoveHolding(Guid.NewGuid(), State.UserId, _snapshot.BudgetId,
+                _snapshot.Month, _holding.HoldingId));
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? "Couldn't remove the holding.", Severity.Warning);
+            return;
+        }
+
+        await OnClose.InvokeAsync();
+    }
+}

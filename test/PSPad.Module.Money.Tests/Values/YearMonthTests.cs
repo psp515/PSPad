@@ -1,3 +1,4 @@
+using System.Text.Json;
 using PSPad.Module.Money.Values;
 using PSPad.TestInfrastructure;
 
@@ -49,4 +50,39 @@ public class YearMonthTests
 
     [Fact]
     public void ItPrintsAsYearDashMonth() => Assert.Equal("2026-03", new YearMonth(2026, 3).ToString());
+
+    [Fact]
+    public void ItParsesItsOwnText()
+    {
+        Assert.Equal(new YearMonth(2026, 10), YearMonth.Parse("2026-10"));
+        Assert.Equal(new YearMonth(2027, 1), YearMonth.Parse(new YearMonth(2027, 1).ToString()));
+    }
+
+    [Theory]
+    [InlineData("2026-13")]
+    [InlineData("2026-00")]
+    [InlineData("2026-1")]
+    [InlineData("26-10")]
+    [InlineData("2026/10")]
+    [InlineData("0000-10")]
+    [InlineData("+026-10")]
+    [InlineData("")]
+    public void ItRejectsAnythingElse(string text) =>
+        Assert.Throws<FormatException>(() => YearMonth.Parse(text));
+
+    [Fact]
+    public void JsonCarriesTheMonthAsText()
+    {
+        var json = JsonSerializer.Serialize(new YearMonth(2026, 3));
+
+        Assert.Equal("\"2026-03\"", json);
+        Assert.Equal(new YearMonth(2026, 3), JsonSerializer.Deserialize<YearMonth>(json));
+    }
+
+    [Fact]
+    public void JsonRejectsAnInvalidMonth()
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<YearMonth>("\"2026-13\""));
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<YearMonth>("{\"Year\":2026,\"Month\":3}"));
+    }
 }

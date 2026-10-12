@@ -5,12 +5,14 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Money.Balance
 @using PSPad.Module.Money.Budgets
 @using PSPad.Module.Money.Entries
 @using PSPad.Module.Money.Reading
 @using PSPad.Module.Money.Values
 @inject IDocumentStore<Budget> BudgetStore
 @inject IDocumentStore<MoneyEntry> EntryStore
+@inject IDocumentStore<BalanceSnapshot> SnapshotStore
 @inject AppState State
 @inject CommandSender Sender
 @inject NavigationManager Navigation
@@ -41,6 +43,11 @@ else
             <BudgetMonthTab Class="pt-4" Month="@_month" Totals="@MonthTotals.For(_entries, _month)"
                             OnMonthChanged="@ShowMonth" OnOpen="@OpenEntry" />
         </MudTabPanel>
+        <MudTabPanel Text="Balance">
+            <BudgetBalanceTab Class="pt-4" Month="@_month" Totals="@Balance" ReadOnly="@_budget.IsArchived"
+                              OnMonthChanged="@ShowMonth" OnStart="@StartMonthAsync" OnDeleteMonth="@DeleteMonthAsync"
+                              OnOpen="@OpenHolding" />
+        </MudTabPanel>
         <MudTabPanel Text="Settings">
             <BudgetSettingsTab Class="pt-4" Budget="@_budget" Entries="@_entries" OnAddCategory="@AddCategoryAsync"
                                OnRenameCategory="@RenameCategoryAsync" OnMergeCategory="@MergeCategoryAsync"
@@ -63,14 +70,21 @@ else
             </MudTooltip>
         </MudFabMenu>
     }
+    else if (TabIndex == BalanceTab && !_budget.IsArchived && Balance.Snapshot is not null)
+    {
+        <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@NewHolding"
+                UserAttributes="@AddHoldingAttributes" />
+    }
 }
 
 @code {
     const int MonthTab = 0;
-    static readonly string[] Tabs = ["month", "settings"];
+    const int BalanceTab = 1;
+    static readonly string[] Tabs = ["month", "balance", "settings"];
     static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Add entry" };
     static readonly Dictionary<string, object> AddExpenseAttributes = new() { ["aria-label"] = "Add expense" };
     static readonly Dictionary<string, object> AddIncomeAttributes = new() { ["aria-label"] = "Add income" };
+    static readonly Dictionary<string, object> AddHoldingAttributes = new() { ["aria-label"] = "Add holding" };
 
     [Parameter] public Guid BudgetId { get; set; }
 
@@ -83,11 +97,14 @@ else
     Guid _renderedId;
     Budget? _budget;
     IReadOnlyList<MoneyEntry> _entries = [];
+    IReadOnlyList<BalanceSnapshot> _snapshots = [];
     YearMonth _month;
 
     int TabIndex => Math.Max(MonthTab, Array.IndexOf(Tabs, Tab?.ToLowerInvariant() ?? ""));
 
     string Subtitle => $"{_budget!.ExpenseCategories.Count} expense · {_budget.IncomeCategories.Count} income categories";
+
+    BalanceTotals Balance => BalanceTotals.For(_snapshots, _month);
 
     protected override void OnInitialized()
     {
@@ -119,6 +136,8 @@ else
         _budget = budget is null || budget.UserId != State.UserId ? null : budget;
         var entries = await EntryStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _entries = [.. entries.Where(entry => entry.BudgetId == BudgetId && !entry.Deleted)];
+        var snapshots = await SnapshotStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _snapshots = [.. snapshots.Where(snapshot => snapshot.BudgetId == BudgetId && !snapshot.Deleted)];
         _loaded = true;
     }
 
@@ -135,6 +154,19 @@ else
     void OpenEntry(MoneyEntry entry) => Navigation.NavigateTo(EntryQuery.For(Navigation.Uri, entry.Id));
 
     void AddEntry(CategoryKind kind) => Navigation.NavigateTo(EntryQuery.ForNew(Navigation.Uri, BudgetId, kind));
+
+    void OpenHolding(Holding holding) =>
+        Navigation.NavigateTo(HoldingQuery.For(Navigation.Uri, Balance.Snapshot!.Id, holding.HoldingId));
+
+    void NewHolding() => Navigation.NavigateTo(HoldingQuery.ForNew(Navigation.Uri, Balance.Snapshot!.Id));
+
+    async Task StartMonthAsync() =>
+        Surface(await Sender.SendAsync(new StartBalanceMonth(Guid.NewGuid(), State.UserId, BudgetId, _month)),
+            "Couldn't start the month.");
+
+    async Task DeleteMonthAsync() =>
+        Surface(await Sender.SendAsync(new DeleteBalanceMonth(Guid.NewGuid(), State.UserId, BudgetId, _month)),
+            "Couldn't delete the month.");
 
     async Task<bool> AddCategoryAsync((CategoryKind Kind, string Name) category) =>
         Surface(await Sender.SendAsync(new AddCategory(Guid.NewGuid(), State.UserId, BudgetId, category.Kind, category.Name)),

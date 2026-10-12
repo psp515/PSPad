@@ -1,3 +1,4 @@
+using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Values;
 
@@ -6,7 +7,16 @@ namespace PSPad.Module.Money.Reading;
 public sealed record RateSuggestion(decimal RateToPln, DateOnly? RateDate)
 {
     public static RateSuggestion? For(string currency, IEnumerable<MoneyEntry> entries) =>
-        Latest(currency, entries.Where(entry => !entry.Deleted).Select(entry => (entry.Money, entry.RecordedAt)));
+        For(currency, entries, []);
+
+    public static RateSuggestion? For(
+        string currency, IEnumerable<MoneyEntry> entries, IEnumerable<BalanceSnapshot> snapshots) =>
+        Latest(currency, entries
+            .Where(entry => !entry.Deleted)
+            .Select(entry => (entry.Money, entry.RecordedAt))
+            .Concat(snapshots
+                .Where(snapshot => !snapshot.Deleted)
+                .SelectMany(snapshot => snapshot.Holdings.Select(holding => (holding.Money, snapshot.UpdatedAt)))));
 
     static RateSuggestion? Latest(string currency, IEnumerable<(Money Money, DateTimeOffset WrittenAt)> amounts)
     {

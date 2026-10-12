@@ -1,11 +1,10 @@
 @using PSPad.Abstractions
 @using PSPad.Contracts
-@using PSPad.App.Api
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
-@using PSPad.App.Sync
 @using PSPad.Module.Money
+@using PSPad.Module.Money.Balance
 @using PSPad.Module.Money.Budgets
 @using PSPad.Module.Money.Entries
 @using PSPad.Module.Money.Preferences
@@ -13,9 +12,8 @@
 @using PSPad.Module.Money.Values
 @inject IDocumentStore<Budget> Budgets
 @inject IDocumentStore<MoneyEntry> Entries
+@inject IDocumentStore<BalanceSnapshot> Snapshots
 @inject IDocumentStore<MoneyPreferences> Preferences
-@inject INbpRates Nbp
-@inject IConnectivity Connectivity
 @inject AppState State
 @inject CommandSender Sender
 @inject ISnackbar Snackbar
@@ -33,29 +31,9 @@
                 @(CategoryChoices.IsNew(Categories, choice) ? $"Create category \"{choice}\"" : choice)
             </ItemTemplate>
         </MudAutocomplete>
-        <div class="d-flex gap-3">
-            <MudNumericField T="decimal?" Class="pspad-entry-amount-field flex-grow-1" Label="Amount" Variant="Variant.Outlined"
-                             Margin="Margin.Dense" @bind-Value="_amount" Immediate="true" HideSpinButtons="true" Max="@Money.MaxAmount" Disabled="@ReadOnly" />
-            <MudSelect T="string" Class="pspad-entry-currency-field" Label="Currency" Variant="Variant.Outlined"
-                       Margin="Margin.Dense" Value="@_currency" ValueChanged="@Suggest" Disabled="@ReadOnly">
-                @foreach (var currency in Currencies.All)
-                {
-                    <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
-                }
-            </MudSelect>
-        </div>
-        @if (_currency != Currencies.Pln)
-        {
-            <div class="d-flex align-center gap-2 pspad-entry-rate">
-                <MudNumericField T="decimal?" Class="pspad-entry-rate-field flex-grow-1" Label="Rate to PLN"
-                                 Variant="Variant.Outlined" Margin="Margin.Dense" Value="@_rate" ValueChanged="@RateTyped"
-                                 Immediate="true" HideSpinButtons="true" Max="@Money.MaxRate" Disabled="@ReadOnly" />
-                <MudButton Class="pspad-entry-nbp" Variant="Variant.Outlined" Color="Color.Primary"
-                           Disabled="@(ReadOnly || _fetching || !Connectivity.IsOnline)" OnClick="@FetchNbpRateAsync">NBP</MudButton>
-            </div>
-        }
-        <MudTextField T="string" Class="pspad-entry-pln" Label="In PLN" Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Value="@InPlnText" ReadOnly="true" />
+        <RateFields @key="@((_loadedEntry, _loadedBudget, _loadedKind))" CssPrefix="pspad-entry" @bind-Amount="_amount" Currency="@_currency" CurrencyChanged="@Suggest"
+                    Rate="@_rate" RateTyped="@RateTyped" NbpDate="@EntryDate" NbpFetched="@ApplyNbpRate"
+                    ReadOnly="@ReadOnly" />
         <MudDatePicker Class="pspad-entry-date-field" Label="Date" Variant="Variant.Outlined" Margin="Margin.Dense"
                        Date="@_date" DateChanged="@DateChanged" Disabled="@ReadOnly" />
         <MudTextField T="string" Class="pspad-entry-note-field" Label="Note" Variant="Variant.Outlined" Margin="Margin.Dense"
@@ -77,6 +55,7 @@
     Budget? _budget;
     MoneyEntry? _entry;
     IReadOnlyList<MoneyEntry> _budgetEntries = [];
+    IReadOnlyList<BalanceSnapshot> _budgetSnapshots = [];
     Guid? _loadedEntry;
     Guid? _loadedBudget;
     bool _loadedOnce;
@@ -88,7 +67,6 @@
     DateOnly? _rateDate;
     DateTime? _date;
     string? _note;
-    bool _fetching;
     bool _saving;
     CategoryKind _loadedKind;
 
@@ -115,9 +93,7 @@
     bool CanSave => !ReadOnly && !string.IsNullOrWhiteSpace(_name) && !string.IsNullOrWhiteSpace(_category)
         && _amount.GetValueOrDefault() > 0 && _date is not null && Rate > 0;
 
-    string InPlnText => _amount.GetValueOrDefault() > 0 && Rate > 0
-        ? MoneyText.Pln(new Money(_amount.GetValueOrDefault(), _currency, Rate, State.Today).InPln)
-        : "";
+    DateOnly? EntryDate => _date is null ? null : DateOnly.FromDateTime(_date.Value);
 
     EventCallback SaveCallback => ReadOnly ? default : EventCallback.Factory.Create(this, SaveAsync);
 
@@ -152,6 +128,8 @@
 
         var all = await Entries.LoadAllAsync(State.UserId, CancellationToken.None);
         _budgetEntries = [.. all.Where(candidate => candidate.BudgetId == _budget.Id && !candidate.Deleted)];
+        var snapshots = await Snapshots.LoadAllAsync(State.UserId, CancellationToken.None);
+        _budgetSnapshots = [.. snapshots.Where(candidate => candidate.BudgetId == _budget.Id && !candidate.Deleted)];
 
         if (_entry is not null)
         {
@@ -189,7 +167,7 @@
     void Suggest(string currency)
     {
         _currency = currency;
-        var suggestion = RateSuggestion.For(currency, _budgetEntries);
+        var suggestion = RateSuggestion.For(currency, _budgetEntries, _budgetSnapshots);
         _rate = suggestion?.RateToPln;
         _rateDate = suggestion?.RateDate;
     }
@@ -207,38 +185,8 @@
     Task<IEnumerable<string>> SearchCategoriesAsync(string? text, CancellationToken ct) =>
         Task.FromResult<IEnumerable<string>>(CategoryChoices.Search(Categories, text));
 
-    async Task FetchNbpRateAsync()
+    void ApplyNbpRate(NbpRateView rate)
     {
-        if (_date is null || IsPln || !Connectivity.IsOnline)
-        {
-            return;
-        }
-
-        var currency = _currency;
-        var asked = _date.Value;
-        _fetching = true;
-        NbpRateView? rate;
-
-        try
-        {
-            rate = await Nbp.RateAsync(currency, DateOnly.FromDateTime(asked));
-        }
-        finally
-        {
-            _fetching = false;
-        }
-
-        if (_currency != currency || _date != asked)
-        {
-            return;
-        }
-
-        if (rate is null)
-        {
-            Snackbar.Add("Couldn't get the NBP rate. Type the rate instead.", Severity.Warning);
-            return;
-        }
-
         _rate = rate.Rate;
         _rateDate = rate.EffectiveDate;
     }

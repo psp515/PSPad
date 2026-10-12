@@ -25,9 +25,10 @@ const entries = parseEnvExample(readRepoFile('docker/.env.example'))
       <li>About 2 GB of disk.</li>
       <li>Beyond <code>localhost</code>: a reverse proxy for TLS. The stack serves plain HTTP only.</li>
       <li>
-        Optional: outbound HTTPS from the API container to <code>api.nbp.pl</code>. Only the
-        NBP button in a budget's entry panel uses it, to fetch an exchange rate; without it
-        that button fails and everything else works. No env var or port is involved.
+        Optional: outbound HTTPS from the API container to <code>api.nbp.pl</code>. Only a
+        budget's exchange-rate lookups use it: the NBP button in the entry and holding panels
+        and the Balance tab's "At NBP today" tiles. Without it the button fails, the tiles stay
+        hidden and everything else works. No env var or port is involved.
       </li>
     </ul>
 

@@ -92,6 +92,8 @@
     <BudgetPanel BudgetId="@_openBudget" IsNew="@_newBudget" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <EntryPanel EntryId="@_openEntry" NewInBudget="@_newEntry?.BudgetId" NewKind="@(_newEntry?.Kind ?? CategoryKind.Expense)"
                 OnClose="@ClosePanel" Disabled="@(!_ready)" />
+    <HoldingPanel SnapshotId="@_openHolding?.SnapshotId" HoldingId="@_openHolding?.HoldingId"
+                  OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <InboxItemPanel ItemId="@_openInboxItem" IsNew="@_newInboxItem" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <ReferenceItemPanel ItemId="@_openReferenceItem" NewInList="@_newReferenceItemList" OnClose="@ClosePanel" Disabled="@(!_ready)" />
 </MudLayout>
@@ -120,6 +122,7 @@
     bool _newBudget;
     Guid? _openEntry;
     (Guid BudgetId, CategoryKind Kind)? _newEntry;
+    (Guid SnapshotId, Guid? HoldingId)? _openHolding;
     bool _newGoal;
     Guid? _openInboxItem;
     bool _newInboxItem;
@@ -311,6 +314,7 @@
         _newBudget = BudgetQuery.IsNew(Navigation.Uri);
         _openEntry = EntryQuery.From(Navigation.Uri);
         _newEntry = EntryQuery.NewFrom(Navigation.Uri);
+        _openHolding = HoldingQuery.From(Navigation.Uri);
         _openInboxItem = InboxQuery.From(Navigation.Uri);
         _newInboxItem = InboxQuery.IsNew(Navigation.Uri);
         _openReferenceItem = ReferenceQuery.From(Navigation.Uri);

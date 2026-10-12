@@ -57,6 +57,7 @@ public static class AppTestHost
         context.Services.AddSingleton<IDocumentStore<Module.Money.Budgets.Budget>>(new ReplicaDocumentStore<Module.Money.Budgets.Budget>(replica));
         context.Services.AddSingleton<IDocumentStore<Module.Money.Preferences.MoneyPreferences>>(new ReplicaDocumentStore<Module.Money.Preferences.MoneyPreferences>(replica));
         context.Services.AddSingleton<IDocumentStore<Module.Money.Entries.MoneyEntry>>(new ReplicaDocumentStore<Module.Money.Entries.MoneyEntry>(replica));
+        context.Services.AddSingleton<IDocumentStore<Module.Money.Balance.BalanceSnapshot>>(new ReplicaDocumentStore<Module.Money.Balance.BalanceSnapshot>(replica));
         context.Services.AddSingleton<IDocumentStore<ReferenceItem>>(new ReplicaDocumentStore<ReferenceItem>(replica));
         context.Services.AddSingleton<IDocumentStore<AreaView>>(new ReplicaDocumentStore<AreaView>(replica));
         context.Services.AddSingleton<IDocumentStore<ListView>>(new ReplicaDocumentStore<ListView>(replica));
@@ -113,9 +114,51 @@ public static class AppTestHost
 #pragma warning restore CS0067
     }
 
+    public sealed class Offline : IConnectivity
+    {
+        public bool IsOnline => false;
+
+#pragma warning disable CS0067
+        public event Action? CameOnline;
+
+        public event Action? Changed;
+#pragma warning restore CS0067
+    }
+
+    public sealed class SwitchableConnectivity : IConnectivity
+    {
+        Action? _cameOnline;
+        Action? _changed;
+
+        public bool IsOnline { get; private set; }
+
+        public int Subscribers => (_cameOnline?.GetInvocationList().Length ?? 0) + (_changed?.GetInvocationList().Length ?? 0);
+
+        public event Action? CameOnline
+        {
+            add => _cameOnline += value;
+            remove => _cameOnline -= value;
+        }
+
+        public event Action? Changed
+        {
+            add => _changed += value;
+            remove => _changed -= value;
+        }
+
+        public void GoOnline()
+        {
+            IsOnline = true;
+            _cameOnline?.Invoke();
+            _changed?.Invoke();
+        }
+    }
+
     public sealed class FakeNbpRates : INbpRates
     {
         public NbpRateView? Next { get; set; }
+
+        public Dictionary<string, NbpRateView?> ByCurrency { get; } = [];
 
         public TaskCompletionSource<NbpRateView?>? Gate { get; set; }
 
@@ -124,7 +167,7 @@ public static class AppTestHost
         public Task<NbpRateView?> RateAsync(string currency, DateOnly date)
         {
             Asked.Add((currency, date));
-            return Gate?.Task ?? Task.FromResult(Next);
+            return Gate?.Task ?? Task.FromResult(ByCurrency.TryGetValue(currency, out var rate) ? rate : Next);
         }
     }
 

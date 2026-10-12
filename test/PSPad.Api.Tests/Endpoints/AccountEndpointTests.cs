@@ -8,9 +8,11 @@ using PSPad.Api.Tests.Sync;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Money;
+using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Preferences;
+using PSPad.Module.Money.Values;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
@@ -99,11 +101,12 @@ public class AccountEndpointTests(MongoFixture fixture)
             new CreateBudget(Guid.NewGuid(), userId, budgetId, "Personal"),
             new SetDefaultCurrency(Guid.NewGuid(), userId, "EUR"),
             new RecordExpense(Guid.NewGuid(), userId, Guid.NewGuid(), budgetId, "Rolls", "Food",
-                new Money(3m, "PLN", 1m, day), day, null));
+                new Money(3m, "PLN", 1m, day), day, null),
+            new StartBalanceMonth(Guid.NewGuid(), userId, budgetId, new YearMonth(2026, 10)));
 
         var context = Persistence.TestContext.For(fixture);
         var owned = Builders<BsonDocument>.Filter.Eq("userId", userId);
-        string[] collections = ["budgets", "moneypreferences", "moneyentries"];
+        string[] collections = ["budgets", "moneypreferences", "moneyentries", "balancesnapshots"];
         foreach (var name in collections)
         {
             Assert.Equal(1, await context.Collection<BsonDocument>(name).Find(owned).CountDocumentsAsync(ct));

@@ -1,5 +1,7 @@
+using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Entries;
+using PSPad.Module.Money.Values;
 
 namespace PSPad.Module.Money.Tests;
 
@@ -52,5 +54,38 @@ internal static class Given
         var entry = new MoneyEntry();
         entry.ApplyAll(MoneyEntry.Decide(null, budget, command, at));
         return entry;
+    }
+
+    public static readonly YearMonth October = new(2026, 10);
+    public static readonly YearMonth November = new(2026, 11);
+
+    public static Holding AHolding(
+        string name = "Wallet", decimal amount = 100m, string currency = "PLN", decimal rate = 1m,
+        DateOnly? rateDate = null, HoldingType type = HoldingType.Cash) =>
+        new(Guid.NewGuid(), name, type, new Money(amount, currency, rate, rateDate ?? Today));
+
+    public static BalanceSnapshot ASnapshot(
+        Budget budget, YearMonth month, IReadOnlyList<Holding>? holdings = null, DateTimeOffset? at = null)
+    {
+        var when = at ?? Now;
+        var snapshot = new BalanceSnapshot();
+        snapshot.ApplyAll(BalanceSnapshot.Decide(null, budget,
+            new StartBalanceMonth(Guid.NewGuid(), budget.UserId, budget.Id, month), when));
+
+        foreach (var holding in holdings ?? [])
+        {
+            snapshot.ApplyAll(BalanceSnapshot.Decide(snapshot, budget,
+                new AddHolding(Guid.NewGuid(), budget.UserId, budget.Id, month, holding.HoldingId, holding.Name,
+                    holding.Type, holding.Money), when));
+        }
+
+        return snapshot;
+    }
+
+    public static BalanceSnapshot DeleteSnapshot(BalanceSnapshot snapshot, Budget budget)
+    {
+        snapshot.ApplyAll(BalanceSnapshot.Decide(snapshot, budget,
+            new DeleteBalanceMonth(Guid.NewGuid(), budget.UserId, budget.Id, snapshot.Month), Now));
+        return snapshot;
     }
 }

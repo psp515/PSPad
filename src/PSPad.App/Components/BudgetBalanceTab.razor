@@ -1,0 +1,187 @@
+@using PSPad.App.Api
+@using PSPad.App.State
+@using PSPad.App.Sync
+@using PSPad.Module.Money.Balance
+@using PSPad.Module.Money.Reading
+@using PSPad.Module.Money.Values
+@inject INbpRates Nbp
+@inject IConnectivity Connectivity
+@inject AppState State
+@implements IDisposable
+
+<div class="@Class">
+    <div class="d-flex align-center mb-4">
+        <MonthSwitcher Class="flex-grow-1" Month="@Month" OnMonthChanged="@OnMonthChanged" />
+        @if (Snapshot is not null && !ReadOnly)
+        {
+            <MudMenu Icon="@Icons.Material.Filled.MoreVert" AriaLabel="Month actions" Class="pspad-balance-menu" Dense="true"
+                     AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                <MudMenuItem Class="pspad-delete-month" OnClick="@OnDeleteMonth">Delete month</MudMenuItem>
+            </MudMenu>
+        }
+    </div>
+
+    @if (Snapshot is null)
+    {
+        <MudAlert Severity="Severity.Info" Class="pspad-balance-missing">
+            <div class="d-flex align-center flex-wrap gap-3">
+                <span>@MoneyText.MonthTitle(Month) has no balance yet</span>
+                @if (!ReadOnly)
+                {
+                    <MudButton Class="pspad-start-month" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               OnClick="@OnStart">Start @MoneyText.MonthTitle(Month)</MudButton>
+                }
+            </div>
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid Spacing="3" Class="mb-4">
+            <MudItem xs="6" md="3">
+                <MoneyTile Class="pspad-balance-net-worth" Label="Net worth" Text="@MoneyText.Pln(Totals.NetWorth)" />
+            </MudItem>
+            @if (AtToday is { } atToday)
+            {
+                <MudItem xs="6" md="3">
+                    <MoneyTile Class="pspad-balance-at-nbp" Label="At NBP today" Text="@MoneyText.Pln(atToday)" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MoneyTile Class="pspad-balance-currency" Label="Currency difference"
+                               Text="@MoneyText.SignedPln(atToday - Totals.NetWorth)" Negative="@(atToday < Totals.NetWorth)" />
+                </MudItem>
+            }
+            <MudItem xs="6" md="3">
+                <MoneyTile Class="pspad-balance-change" Label="@ChangeLabel" Text="@ChangeText" Negative="@(Totals.Change < 0)" />
+            </MudItem>
+        </MudGrid>
+
+        @if (Snapshot.Holdings.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="pspad-muted pspad-balance-empty">No holdings in @MoneyText.MonthTitle(Month).</MudText>
+        }
+        else
+        {
+            <MudTable T="Holding" Items="@Snapshot.Holdings" Hover="true" Dense="true" Elevation="0" Outlined="true"
+                      Breakpoint="Breakpoint.Sm" Class="pspad-holdings" RowClass="pspad-holding-row" OnRowClick="@OpenRow">
+                <HeaderContent>
+                    <MudTh>Holding</MudTh>
+                    <MudTh>Amount</MudTh>
+                    <MudTh>Rate</MudTh>
+                    <MudTh>PLN</MudTh>
+                    <MudTh>Today</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Holding">
+                        <span class="pspad-holding-name">@context.Name</span>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0 ml-2 pspad-holding-type">@context.Type</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Amount" Class="pspad-holding-amount">@MoneyText.Amount(context.Money.Amount) @context.Money.Currency</MudTd>
+                    <MudTd DataLabel="Rate" Class="pspad-holding-rate">@MoneyText.Rate(context.Money.RateToPln)</MudTd>
+                    <MudTd DataLabel="PLN" Class="pspad-holding-pln">@MoneyText.Pln(context.Money.InPln)</MudTd>
+                    <MudTd DataLabel="Today" Class="pspad-holding-today">@TodayText(context)</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    }
+</div>
+
+@code {
+    readonly Dictionary<string, decimal> _todayRates = [];
+    readonly HashSet<string> _asked = [];
+    bool _disposed;
+
+    [Parameter, EditorRequired] public YearMonth Month { get; set; }
+
+    [Parameter, EditorRequired] public BalanceTotals Totals { get; set; } = default!;
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    [Parameter] public EventCallback<YearMonth> OnMonthChanged { get; set; }
+
+    [Parameter] public EventCallback OnStart { get; set; }
+
+    [Parameter] public EventCallback OnDeleteMonth { get; set; }
+
+    [Parameter] public EventCallback<Holding> OnOpen { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+
+    BalanceSnapshot? Snapshot => Totals.Snapshot;
+
+    decimal? AtToday => Snapshot is not null && Connectivity.IsOnline ? BalanceTotals.AtRates(Snapshot, _todayRates) : null;
+
+    protected override void OnInitialized()
+    {
+        Connectivity.Changed += OnConnectivityChanged;
+        Connectivity.CameOnline += OnCameOnline;
+    }
+
+    void OnConnectivityChanged() => InvokeAsync(StateHasChanged);
+
+    void OnCameOnline() => InvokeAsync(async () =>
+    {
+        await LookUpAsync();
+        StateHasChanged();
+    });
+
+    string ChangeLabel => Totals.Previous is null
+        ? "vs previous month"
+        : $"vs {MoneyText.MonthTitle(Totals.Previous.Month)}";
+
+    string ChangeText => Totals.Change is { } change ? MoneyText.SignedPln(change) : "—";
+
+    string TodayText(Holding holding) =>
+        holding.Money.Currency != Currencies.Pln && Connectivity.IsOnline &&
+        BalanceTotals.ValueToday(holding, _todayRates) is { } value
+            ? MoneyText.SignedPln(value - holding.Money.InPln)
+            : "—";
+
+    protected override Task OnParametersSetAsync() => LookUpAsync();
+
+    async Task LookUpAsync()
+    {
+        if (Snapshot is null || !Connectivity.IsOnline)
+        {
+            return;
+        }
+
+        var missing = new List<string>();
+        foreach (var currency in Snapshot.Holdings.Select(holding => holding.Money.Currency).Distinct())
+        {
+            if (currency != Currencies.Pln && _asked.Add(currency))
+            {
+                missing.Add(currency);
+            }
+        }
+
+        if (missing.Count == 0)
+        {
+            return;
+        }
+
+        var answers = await Task.WhenAll(missing.Select(currency => Nbp.RateAsync(currency, State.Today)));
+
+        if (_disposed)
+        {
+            return;
+        }
+
+        foreach (var (currency, answer) in missing.Zip(answers))
+        {
+            if (answer is not null && answer.Currency == currency)
+            {
+                _todayRates[currency] = answer.Rate;
+            }
+        }
+    }
+
+    Task OpenRow(TableRowClickEventArgs<Holding> args) =>
+        args.Item is null ? Task.CompletedTask : OnOpen.InvokeAsync(args.Item);
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Connectivity.Changed -= OnConnectivityChanged;
+        Connectivity.CameOnline -= OnCameOnline;
+    }
+}

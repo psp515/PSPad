@@ -12,6 +12,7 @@ using PSPad.Module.Money;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Preferences;
+using PSPad.Module.Money.Values;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Layout;
@@ -191,6 +192,76 @@ public class EntryPanelTests : Bunit.TestContext
 
         panel.WaitForAssertion(() => Assert.False(panel.Find(".pspad-entry-nbp").HasAttribute("disabled")));
         Assert.True(panel.Find(".pspad-panel-save").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task TheRateCanComeFromABalanceHolding()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            MoneyEntries.Expense(budget, "Hotel", "Home", 100m, new DateOnly(2026, 9, 5), "EUR", 4.30m),
+            Balances.Started(budget, new YearMonth(2026, 9),
+                Balances.AHolding("Konto", 10m, "EUR", 4.25m, rateDate: new DateOnly(2026, 9, 30))));
+        var panel = NewExpense(budget);
+
+        await FillAsync(panel, "Train", "Car", 10m);
+        await PickCurrencyAsync(panel, "EUR");
+
+        Assert.Equal("42.50 PLN", panel.Find(".pspad-entry-pln input").GetAttribute("value"));
+        panel.Find(".pspad-panel-save").Click();
+        Assert.Equal(new Money(10m, "EUR", 4.25m, new DateOnly(2026, 9, 30)), (await SentAsync<RecordExpense>()).Money);
+    }
+
+    [Fact]
+    public async Task AnotherBudgetsHoldingIsNotSuggested()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        var other = BudgetsPageTests.Named("Other");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, other,
+            Balances.Started(other, new YearMonth(2026, 9), Balances.AHolding("Konto", 10m, "EUR", 4.25m)));
+        var panel = NewExpense(budget);
+
+        await FillAsync(panel, "Train", "Car", 10m);
+        await PickCurrencyAsync(panel, "EUR");
+
+        Assert.True(panel.Find(".pspad-panel-save").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task ANewerEntryRateBeatsAnOlderHolding()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            MoneyEntries.Expense(budget, "Hotel", "Home", 100m, new DateOnly(2026, 10, 8), "EUR", 4.30m),
+            Balances.Started(budget, new YearMonth(2026, 9),
+                Balances.AHolding("Konto", 10m, "EUR", 4.25m, rateDate: new DateOnly(2026, 9, 30))));
+        var panel = NewExpense(budget);
+
+        await FillAsync(panel, "Train", "Car", 10m);
+        await PickCurrencyAsync(panel, "EUR");
+
+        Assert.Equal("43.00 PLN", panel.Find(".pspad-entry-pln input").GetAttribute("value"));
+        panel.Find(".pspad-panel-save").Click();
+        Assert.Equal(new Money(10m, "EUR", 4.30m, new DateOnly(2026, 10, 8)), (await SentAsync<RecordExpense>()).Money);
+    }
+
+    [Fact]
+    public async Task ALateNbpAnswerForAnotherEntryIsDropped()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        var hotel = MoneyEntries.Expense(budget, "Hotel", "Home", 10m, new DateOnly(2026, 10, 5), "EUR", 4.30m);
+        var taxi = MoneyEntries.Expense(budget, "Taxi", "Car", 10m, new DateOnly(2026, 10, 5), "EUR", 4.10m);
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, hotel, taxi);
+        Nbp.Gate = new TaskCompletionSource<NbpRateView?>();
+        var panel = Render<EntryPanel>(parameters => parameters.Add(p => p.EntryId, (Guid?)hotel.Id));
+        panel.Find(".pspad-entry-nbp").Click();
+
+        panel.Render(parameters => parameters.Add(p => p.EntryId, (Guid?)taxi.Id));
+        panel.WaitForAssertion(() =>
+            Assert.Equal("Taxi", panel.Find(".pspad-entry-name-field input").GetAttribute("value")));
+        await panel.InvokeAsync(() => Nbp.Gate.SetResult(new NbpRateView("EUR", 4.2512m, new DateOnly(2026, 10, 8))));
+
+        Assert.Equal("41.00 PLN", panel.Find(".pspad-entry-pln input").GetAttribute("value"));
     }
 
     [Fact]

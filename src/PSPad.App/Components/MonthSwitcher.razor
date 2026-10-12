@@ -1,0 +1,18 @@
+@using PSPad.App.State
+@using PSPad.Module.Money.Values
+
+<div class="@($"d-flex align-center justify-center gap-2 pspad-month-switcher {Class}")">
+    <MudIconButton Class="pspad-month-previous" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous month"
+                   OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Previous()))" />
+    <MudText Typo="Typo.h6" Class="pspad-month-title">@MoneyText.MonthTitle(Month)</MudText>
+    <MudIconButton Class="pspad-month-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next month"
+                   OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Next()))" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public YearMonth Month { get; set; }
+
+    [Parameter] public EventCallback<YearMonth> OnMonthChanged { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+}

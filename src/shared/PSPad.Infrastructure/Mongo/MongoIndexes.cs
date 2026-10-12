@@ -8,7 +8,7 @@ public static class MongoIndexes
     static readonly string[] AggregateCollections =
     [
         "areas", "tasklists", "todotasks", "goals", "inboxes", "users", "referenceitems", "areaviews", "listviews",
-        "budgets", "moneypreferences", "moneyentries"
+        "budgets", "moneypreferences", "moneyentries", "balancesnapshots"
     ];
 
     public static async Task EnsureAsync(MongoContext context, CancellationToken ct)

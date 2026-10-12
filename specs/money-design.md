@@ -47,9 +47,11 @@ Entries/        MoneyEntry.cs, MoneyEntryCascade.cs, RecordExpense/, RecordIncom
 Balance/        BalanceSnapshot.cs, Holding.cs, HoldingType.cs, StartMonth/,
                 AddHolding/, EditHolding/, RemoveHolding/, DeleteMonth/
 Preferences/    MoneyPreferences.cs, SetDefaultCurrency/
-Values/         Currencies.cs, YearMonth.cs, Money.cs (namespace PSPad.Module.Money: a type
-                named Money under …Money.Values would be shadowed by the namespace)
-Reading/        RateSuggestion.cs, MonthTotals.cs, CategoryTotal.cs, EntryDay.cs, MoneySummary.cs
+Values/         Currencies.cs, YearMonth.cs, YearMonthJsonConverter.cs, Money.cs (namespace
+                PSPad.Module.Money: a type named Money under …Money.Values would be shadowed
+                by the namespace)
+Reading/        RateSuggestion.cs, MonthTotals.cs, CategoryTotal.cs, EntryDay.cs, BalanceTotals.cs,
+                MoneySummary.cs
 ```
 
 ## 3. Domain model
@@ -67,7 +69,9 @@ Reading/        RateSuggestion.cs, MonthTotals.cs, CategoryTotal.cs, EntryDay.cs
   It is computed, never stored.
 - Stored as BSON `Decimal128`, never `double` or string.
 
-`YearMonth` is a `yyyy-MM` value with ordering and `LastDay`.
+`YearMonth` is a `yyyy-MM` value with ordering, `FirstDay`, `LastDay` and
+`Parse`. JSON carries it as text, e.g. `"2026-10"` (`YearMonthJsonConverter`),
+so commands and events hold the month as text.
 
 A category is a trimmed name of 1–40 characters. Names are case-insensitive
 unique within one kind of one budget, and the stored spelling is the first
@@ -79,12 +83,15 @@ one used.
 |---|---|---|---|
 | `Budget` | Guid | `UserId` (owner), `Name`, `ExpenseCategories[]`, `IncomeCategories[]`, `CreatedAt`, `ArchivedAt?` | `budgets` |
 | `MoneyEntry` | Guid | `UserId`, `BudgetId`, `Kind` (`CategoryKind`: Expense, Income), `Name`, `Category`, `Money`, `Date`, `Note?`, `RecordedAt`, `Deleted` | `moneyentries` |
-| `BalanceSnapshot` | `IdFor(budgetId, month)` | `UserId`, `BudgetId`, `Month`, `Holdings[]`, `Deleted` | `balancesnapshots` |
+| `BalanceSnapshot` | `IdFor(budgetId, month)` | `UserId`, `BudgetId`, `Month` (stored as the text `_month`, e.g. `"2026-10"`: the BSON driver can't deserialize a struct), `Holdings[]`, `UpdatedAt` (the last event's time), `Deleted` | `balancesnapshots` |
 | `MoneyPreferences` | `IdFor(userId)` | `UserId`, `DefaultCurrency` (default `PLN`) | `moneypreferences` |
 
 `Holding(Guid HoldingId, string Name, HoldingType Type, Money Money)`, where
-`Type` is Cash, Savings or Investment. A holding's `Money.RateDate` defaults
-to the month's last day.
+`Type` is Cash, Savings or Investment and `Name` is trimmed, 1–80 characters.
+A holding's money follows the `Money` rules with the month's last day as its
+own date, so a PLN holding is always dated the last day. A foreign holding's
+`RateDate` is the day its rate is from (see §6 `HoldingPanel`). `IdFor` XORs
+the budget id with a fixed salt and the month, like `MoneyPreferences.IdFor`.
 
 `UserId` on every Money document is the budget's owner, always. That is the
 same rule shared lists use (`adr/0054`), so sharing can be added later
@@ -141,11 +148,14 @@ without rewriting ownership.
 
 **Balance**
 
-- `StartBalanceMonth(budgetId, month)` is rejected if a live snapshot already
-  exists for that month.
-  - Otherwise it copies the holdings of the latest earlier live snapshot,
-    keeping their `HoldingId`s and rates, with `RateDate` moved to the new
-    month's last day.
+- `StartBalanceMonth(budgetId, month)` is a no-op if a live snapshot already
+  exists for that month, so two devices starting the same month offline
+  converge. An existing snapshot of another budget is rejected ("That budget
+  does not exist.").
+  - Otherwise it copies the holdings of the latest earlier live snapshot
+    unchanged, keeping their `HoldingId`s, rates and `RateDate`s. A rate date
+    is the day the rate is from, so `RateSuggestion`'s latest-wins stays
+    honest.
   - With no earlier snapshot, it starts empty.
   - Starting a month earlier than an existing one is allowed, and copies from
     whatever precedes it.
@@ -153,6 +163,16 @@ without rewriting ownership.
   existing snapshot.
 - `DeleteBalanceMonth` soft-deletes the snapshot. Starting the month again
   afterwards revives the same id with fresh holdings.
+- Every balance command carries `BudgetId` and `Month`. Its handler loads
+  the budget first and the snapshot `IdFor(budgetId, month)` second, and
+  access is checked before any snapshot rule, so a stranger's budget reads
+  "That budget does not exist." like a missing one.
+- `AddHolding`, `EditHolding`, `RemoveHolding` and `DeleteBalanceMonth` need
+  a snapshot for that month ("That month has no balance yet."). Deleting a
+  deleted month again is a no-op; an edit that changes nothing emits nothing.
+- A holding id is unique within its snapshot ("That holding already
+  exists."). Carried holdings keep theirs, so one id can appear in several
+  months.
 
 **Preferences**
 
@@ -163,6 +183,9 @@ without rewriting ownership.
 records an expense under Food. When B syncs, `RecordExpense` auto-adds Food
 again. That is accepted: the user sees both categories and merges them. Last
 write wins per aggregate (AD-5); there is no cross-aggregate merge.
+Two devices that start the same month offline converge: the second
+`StartBalanceMonth` is a no-op when it syncs, and its holding commands land
+in the first device's snapshot.
 
 ### 3.4 Events
 
@@ -183,18 +206,29 @@ documents.
 - It returns `RateSuggestion(RateToPln, RateDate?)`. Slice 2 ships
   `For(currency, entries)`; slice 3 adds the `snapshots` overload. The entry
   panel keeps a suggested rate's `RateDate`; an NBP rate carries NBP's
-  `effectiveDate`; a typed rate takes the entry's date. Ties go to the entry
-  with the latest `RecordedAt`.
+  `effectiveDate`; a typed rate takes the entry's date.
 - PLN → `1`.
 - Otherwise, the `RateToPln` with the latest `RateDate` across the budget's
   live entries and holdings in that currency; ties go to the newest
-  document.
+  document (an entry's `RecordedAt`, a snapshot's `UpdatedAt`). The entry
+  and holding panels both use this overload.
 - None → no suggestion, and the rate field is required.
 
 **`MonthTotals.For(entries, month)`**
 - Income, expenses and net in PLN.
 - Expenses per category, sorted by value descending.
 - Entries grouped by date, newest first.
+
+**`BalanceTotals.For(snapshots, month)`** (one budget's snapshots)
+- The month's live snapshot, and the latest earlier live one as `Previous`.
+- Net worth: the holdings' `InPln` at their frozen rates, summed; 0 without
+  a snapshot.
+- Change: net worth minus `Previous`'s; `null` without either.
+- `Latest(snapshots, onOrBefore)`: the newest live snapshot on or before a
+  month, for the budget cards.
+- `ValueToday(holding, rates)` and `AtRates(snapshot, rates)` value holdings
+  at the NBP rates the Balance tab fetched. PLN needs no rate; `AtRates` is
+  `null` while any currency lacks one.
 
 **`MoneySummary.For(entries, snapshots, from, to)`**
 - Income, expenses, saved (income − expenses), and savings rate (saved ÷
@@ -257,8 +291,10 @@ subtitle. No app bar.
 - A "Show archived" switch, off on each visit (not remembered). Archived
   cards are dimmed and open read-only.
 - Each card shows the current month's income, expenses and net and an
-  expense/income bar (slice 2), and the latest net worth or "Start {month}"
-  (slice 3).
+  expense/income bar. Below them: "Net worth · {Month yyyy}" with the value
+  of the newest live snapshot on or before the current month, or, without
+  one, a "Start {current Month yyyy}" link to the Balance tab
+  ("No balance yet" on an archived card). A card never writes.
 - FAB: New budget, which opens a side panel asking for the name.
 - With no budgets at all, there's an empty state with a "Create budget"
   button.
@@ -281,7 +317,8 @@ Month (default), Balance, Summary and Settings. The tab lives in the URL.
   - amount
   - currency, preselected from `MoneyPreferences`
   - rate to PLN, prefilled by `RateSuggestion`, with an NBP button for the
-    entry date; hidden for PLN
+    entry date; hidden for PLN. Amount, currency, rate and NBP are the shared
+    `RateFields`, which restart for each entry that opens.
   - a read-only "In PLN" value
   - date, defaulting to today in the user's time zone
   - note
@@ -289,19 +326,44 @@ Month (default), Balance, Summary and Settings. The tab lives in the URL.
   - A second save is ignored while one is sending. For an archived budget the
     panel is read-only.
 - **Balance**
-  - Month switcher.
-  - A "{Month} has no balance yet · Start {month}" banner when there's no
-    snapshot.
-  - Tiles: net worth, at NBP today, currency difference, vs previous month.
-    The two NBP tiles call the lookup once per currency while online, are
-    hidden offline, and never store anything.
-  - Holdings table: name and type chip, amount and currency, rate, PLN, and
-    the difference today.
-  - FAB: Add holding. Tapping a row opens `HoldingPanel`.
-  - Overflow menu: Delete month.
-- **`HoldingPanel`**: name, type (a three-way toggle), amount, currency, rate
-  with an NBP button for the month's last day, "In PLN", Remove, Cancel and
-  Save.
+  - Month switcher, shared with the Month tab.
+  - With no snapshot: a "{Month yyyy} has no balance yet" banner with a
+    "Start {Month yyyy}" button (no button when archived), and no FAB.
+  - Tiles: Net worth; At NBP today; Currency difference (at NBP today minus
+    net worth); and "vs {Month yyyy}" against the latest earlier snapshot
+    ("vs previous month" and "—" without one).
+  - The two NBP tiles call the lookup for today once per foreign currency
+    per visit, only while online. They are hidden offline and while any
+    currency lacks a rate. A failed lookup isn't retried during the visit and
+    shows no snackbar; an answer for another currency is dropped. Nothing is
+    stored. A PLN-only balance shows them without any lookup.
+  - Holdings table (`MudTable`): name and type chip, amount and currency,
+    rate, PLN, and "Today" (the difference at today's NBP rate; "—" for PLN
+    or a missing rate).
+  - FAB: Add holding, only when the month has a snapshot and the budget isn't
+    archived. Tapping a row
+    opens `HoldingPanel` (`?balance={snapshotId}&holding={holdingId|new}`).
+  - Overflow menu ("Month actions"): Delete month, only when the month has a
+    snapshot and the budget isn't archived. No confirmation; starting the
+    month again revives it.
+- **`HoldingPanel`**: name, type (a three-way `MudToggleGroup`: Cash,
+  Savings, Investment), amount, currency (preselected from
+  `MoneyPreferences`), rate with an NBP button, "In PLN", Remove, Cancel (the
+  close button) and Save.
+  - The rate is prefilled by `RateSuggestion` over the budget's entries and
+    holdings and hidden for PLN. A suggested rate keeps its date, an NBP rate
+    takes NBP's `effectiveDate`, and a typed rate is dated the month's last
+    day, or today while the month hasn't ended.
+  - The NBP button asks for that same day: the month's last day, or today
+    while the month hasn't ended (the endpoint rejects later dates). It is
+    disabled offline; a failure shows the same snackbar as the entry panel;
+    an answer that arrives after the currency or the open holding changed is
+    dropped.
+  - Amount, currency, rate, NBP and "In PLN" are the same `RateFields`
+    component the entry panel uses; its fields restart for each entry or
+    holding that opens.
+  - Read-only for an archived budget. A second save is ignored while one is
+    sending.
 - **Summary**
   - Range presets: This year (default), Last 12 months, Last year and Custom
     (a `MudDateRangePicker`).
@@ -343,8 +405,8 @@ Every test class is tagged `[UnitTest]` or `[IntegrationTest]` (`specs/testing-s
     rejection, and archived-budget rejection.
   - Category auto-add, case-insensitive dedupe, rename/merge cascades
     emitting one event per entry, and remove-while-used rejection.
-  - `StartBalanceMonth` carry-forward and rejecting a month that already has
-    a snapshot.
+  - `StartBalanceMonth` carry-forward (rate dates kept) and the no-op start
+    of a month that already has a snapshot.
 - **Unit, values and reading:**
   - `Money.InPln` rounding, PLN forced to rate 1, the currency whitelist.
   - `RateSuggestion` with entries and holdings mixed.
