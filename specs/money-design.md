@@ -87,7 +87,8 @@ one used.
 | `MoneyPreferences` | `IdFor(userId)` | `UserId`, `DefaultCurrency` (default `PLN`) | `moneypreferences` |
 
 `Holding(Guid HoldingId, string Name, HoldingType Type, Money Money)`, where
-`Type` is Cash, Savings or Investment and `Name` is trimmed, 1–80 characters.
+`Type` is Cash, Savings or Investment and `Name` is trimmed, 1–64 characters.
+A month holds at most 64 holdings (`content-limits-design.md`).
 A holding's money follows the `Money` rules with the month's last day as its
 own date, so a PLN holding is always dated the last day. A foreign holding's
 `RateDate` is the day its rate is from (see §6 `HoldingPanel`). `IdFor` XORs
@@ -104,7 +105,9 @@ without rewriting ownership.
 - `CreateBudget` seeds 8 expense categories (Home, Food, Eating Out, PC, Bike,
   Car, Gifts, Clothes) and 5 income categories (Salary, Freelance, Interest,
   Gifts, Other).
-- A name is required, 1–80 characters.
+- A name is required, 1–64 characters.
+- Each kind holds at most 64 categories. `AddCategory`, and the auto-add
+  inside `RecordExpense`, `RecordIncome` and `EditEntry`, reject the 65th.
 - `ArchiveBudget` sets `ArchivedAt`, and `RestoreBudget` clears it. Each is a
   no-op when the budget is already in that state.
 - There is no delete.
@@ -136,7 +139,8 @@ without rewriting ownership.
 **Entries**
 
 - `RecordExpense` and `RecordIncome` carry `EntryId`, `BudgetId`, `Name`
-  (1–120 characters), `Category`, `Money`, `Date` and `Note?`.
+  (1–64 characters), `Category`, `Money`, `Date` and `Note?` (at most
+  1,024 characters).
 - A category the budget doesn't have yet is added within the same command
   (`CategoryAdded` plus `ExpenseRecorded`). This is how the entry panel's
   "Create category" works.

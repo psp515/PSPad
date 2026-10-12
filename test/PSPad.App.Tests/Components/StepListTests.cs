@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components.Web;
 using PSPad.App.Components;
+using PSPad.Abstractions;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -25,6 +26,17 @@ public class StepListTests : Bunit.TestContext
 
         var stored = await replica.LoadAsync<TodoTask>(task.Id);
         Assert.Equal("Check the fridge", Assert.Single(stored!.Steps).Name);
+    }
+
+    [Fact]
+    public void TheAddFieldStopsAtTheNameLimit()
+    {
+        var task = NewTask();
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
+
+        Assert.Equal($"{ContentLimits.Name}", steps.Find(".pspad-step-add input").GetAttribute("maxlength"));
     }
 
     [Fact]

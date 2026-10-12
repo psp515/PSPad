@@ -38,6 +38,18 @@ public class ReferenceFieldListTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheAddRowStopsAtTheLabelAndValueLimits()
+    {
+        var item = NewItem();
+        AppTestHost.Arrange(this, User, Today, item);
+
+        var fields = RenderList(item);
+
+        Assert.Equal($"{ContentLimits.Label}", fields.Find(".pspad-field-add-label input").GetAttribute("maxlength"));
+        Assert.Equal($"{ContentLimits.FieldValue}", fields.Find(".pspad-field-add-value input").GetAttribute("maxlength"));
+    }
+
+    [Fact]
     public async Task EnterInTheLabelFieldMovesFocusToValueWithoutAdding()
     {
         var item = NewItem();

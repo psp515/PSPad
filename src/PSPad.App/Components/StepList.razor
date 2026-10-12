@@ -44,7 +44,7 @@
             <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary" />
         </span>
         <MudTextField T="string" Class="pspad-step-add flex-grow-1 mt-0" @bind-Value="_newStep"
-                      Placeholder="@(StepCount == 0 ? "Add step" : "Next step")" Underline="false"
+                      Placeholder="@(StepCount == 0 ? "Add step" : "Next step")" Underline="false" MaxLength="@ContentLimits.Name"
                       Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
     </div>
 </div>

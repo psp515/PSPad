@@ -19,6 +19,8 @@ using PSPad.Module.Statistics;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = 1024 * 1024);
+
 builder.Services.AddPSPadInfrastructure(builder.Configuration);
 builder.Services.AddPSPadCommands();
 builder.Services.AddHttpContextAccessor();

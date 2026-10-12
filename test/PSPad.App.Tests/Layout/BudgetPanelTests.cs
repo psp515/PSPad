@@ -54,24 +54,24 @@ public class BudgetPanelTests : Bunit.TestContext
         var startUri = Services.GetRequiredService<NavigationManager>().Uri;
         var panel = Render<BudgetPanel>(parameters => parameters.Add(p => p.IsNew, true));
 
-        panel.Find(".pspad-budget-name-field input").Input(new string('x', 81));
+        panel.Find(".pspad-budget-name-field input").Input(new string('x', 65));
         panel.Find(".pspad-panel-save").Click();
 
         Assert.Equal(startUri, Services.GetRequiredService<NavigationManager>().Uri);
         Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
         Assert.Contains(Services.GetRequiredService<ISnackbar>().ShownSnackbars,
-            snackbar => snackbar.Message?.Contains("A budget name is at most 80 characters.") == true);
-        Assert.Equal(new string('x', 81), panel.Find(".pspad-budget-name-field input").GetAttribute("value"));
+            snackbar => snackbar.Message?.Contains("A budget name is at most 64 characters.") == true);
+        Assert.Equal(new string('x', 65), panel.Find(".pspad-budget-name-field input").GetAttribute("value"));
     }
 
     [Fact]
-    public void TheNameFieldCapsAtEightyCharacters()
+    public void TheNameFieldCapsAtSixtyFourCharacters()
     {
         AppTestHost.Arrange(this, User, Today);
 
         var panel = Render<BudgetPanel>(parameters => parameters.Add(p => p.IsNew, true));
 
-        Assert.Equal("80", panel.Find(".pspad-budget-name-field input").GetAttribute("maxlength"));
+        Assert.Equal("64", panel.Find(".pspad-budget-name-field input").GetAttribute("maxlength"));
     }
 
     [Fact]
@@ -97,9 +97,9 @@ public class BudgetPanelTests : Bunit.TestContext
         var panel = Render<BudgetPanel>(parameters => parameters.Add(p => p.BudgetId, budget.Id));
         panel.WaitForAssertion(() => Assert.Equal("Old", panel.Find(".pspad-budget-name-field input").GetAttribute("value")));
 
-        panel.Find(".pspad-budget-name-field input").Change(new string('y', 81));
+        panel.Find(".pspad-budget-name-field input").Change(new string('y', 65));
 
         Assert.Contains(Services.GetRequiredService<ISnackbar>().ShownSnackbars,
-            snackbar => snackbar.Message?.Contains("A budget name is at most 80 characters.") == true);
+            snackbar => snackbar.Message?.Contains("A budget name is at most 64 characters.") == true);
     }
 }

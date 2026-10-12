@@ -35,6 +35,7 @@
         <div class="px-2 pt-3 pb-1">
             <MudTextField T="string" Class="pspad-item-name-field flex-grow-1" Value="@Name"
                           ValueChanged="@NameChangedAsync" Placeholder="Item name" Typo="Typo.h6" Underline="false"
+                          MaxLength="@ContentLimits.Name"
                           Immediate="@(Mode == PanelMode.Add)" AutoFocus="@(Mode == PanelMode.Add)"
                           Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
         </div>

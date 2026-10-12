@@ -90,16 +90,39 @@ public class MoneyEntryTests
     }
 
     [Fact]
-    public void ANameOver120CharactersIsRejected()
+    public void ANameOver64CharactersIsRejected()
     {
         var budget = ABudget();
-        Assert.Equal("An entry name is at most 120 characters.",
-            Rejection(null, budget, Expense(budget, name: new string('n', 121))));
+        Assert.Equal("An entry name is at most 64 characters.",
+            Rejection(null, budget, Expense(budget, name: new string('n', 65))));
     }
 
     [Fact]
-    public void ANameOfExactly120CharactersIsAllowed() =>
-        Assert.Equal(120, AnExpense(ABudget(), name: new string('n', 120)).Name.Length);
+    public void ANameOfExactly64CharactersIsAllowed() =>
+        Assert.Equal(64, AnExpense(ABudget(), name: new string('n', 64)).Name.Length);
+
+    [Fact]
+    public void ANoteOver1024CharactersIsRejected()
+    {
+        var budget = ABudget();
+        var entry = AnExpense(budget);
+
+        Assert.Equal("A note is at most 1024 characters.",
+            Rejection(null, budget, Expense(budget, note: new string('n', 1_025))));
+        Assert.Equal("A note is at most 1024 characters.",
+            Rejection(entry, budget, Edit(entry, note: new string('n', 1_025))));
+    }
+
+    [Fact]
+    public void ANoteOfExactly1024CharactersIsAllowed()
+    {
+        var budget = ABudget();
+
+        var recorded = Assert.IsType<ExpenseRecorded>(Assert.Single(
+            MoneyEntry.Decide(null, budget, Expense(budget, note: new string('n', 1_024)), Now)));
+
+        Assert.Equal(1_024, recorded.Note!.Length);
+    }
 
     [Fact]
     public void AZeroAmountIsRejected()

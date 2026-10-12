@@ -22,7 +22,7 @@
              OnClose="@OnClose" OnSave="@SaveCallback" CanSave="@CanSave" OnDelete="@DeleteCallback" Disabled="@(Disabled || _saving)">
     <div class="d-flex flex-column gap-3 pa-4">
         <MudTextField T="string" Class="pspad-entry-name-field" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense"
-                      MaxLength="120" @bind-Value="_name" Immediate="true" AutoFocus="@IsNew" Disabled="@ReadOnly" />
+                      MaxLength="@MoneyEntry.MaxNameLength" @bind-Value="_name" Immediate="true" AutoFocus="@IsNew" Disabled="@ReadOnly" />
         <MudAutocomplete T="string" Class="pspad-entry-category-field" Label="Category" Variant="Variant.Outlined"
                          Margin="Margin.Dense" Value="@_category" ValueChanged="@CategoryChanged"
                          SearchFunc="@SearchCategoriesAsync" CoerceValue="true" DebounceInterval="0"
@@ -37,7 +37,7 @@
         <MudDatePicker Class="pspad-entry-date-field" Label="Date" Variant="Variant.Outlined" Margin="Margin.Dense"
                        Date="@_date" DateChanged="@DateChanged" Disabled="@ReadOnly" />
         <MudTextField T="string" Class="pspad-entry-note-field" Label="Note" Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Lines="3" @bind-Value="_note" Disabled="@ReadOnly" />
+                      Lines="3" MaxLength="@MoneyEntry.MaxNoteLength" Counter="@MoneyEntry.MaxNoteLength" @bind-Value="_note" Disabled="@ReadOnly" />
     </div>
 </DetailPanel>
 

@@ -118,5 +118,5 @@ public sealed class Inbox : Aggregate
     static string RequireText(string text) =>
         string.IsNullOrWhiteSpace(text)
             ? throw new DomainRejectedException("An inbox item needs some text.")
-            : text.Trim();
+            : ContentLimits.Within(text.Trim(), ContentLimits.Name, "An inbox item");
 }

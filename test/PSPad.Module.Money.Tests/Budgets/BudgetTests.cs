@@ -56,9 +56,13 @@ public class BudgetTests
         Assert.Equal(message, Rejection(null, new CreateBudget(Guid.NewGuid(), Owner, BudgetId, name)));
 
     [Fact]
-    public void ANameOver80CharactersIsRejected() =>
-        Assert.Equal("A budget name is at most 80 characters.",
-            Rejection(null, new CreateBudget(Guid.NewGuid(), Owner, BudgetId, new string('b', 81))));
+    public void ANameOver64CharactersIsRejected() =>
+        Assert.Equal("A budget name is at most 64 characters.",
+            Rejection(null, new CreateBudget(Guid.NewGuid(), Owner, BudgetId, new string('b', 65))));
+
+    [Fact]
+    public void ANameOfExactly64CharactersIsAllowed() =>
+        Assert.Single(Budget.Decide(null, new CreateBudget(Guid.NewGuid(), Owner, BudgetId, new string('b', 64)), Now));
 
     [Fact]
     public void CreatingAnExistingIdIsRejected() =>

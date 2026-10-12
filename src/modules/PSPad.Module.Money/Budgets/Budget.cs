@@ -5,7 +5,9 @@ namespace PSPad.Module.Money.Budgets;
 
 public sealed class Budget : Aggregate
 {
-    public const int MaxNameLength = 80;
+    public const int MaxNameLength = ContentLimits.Name;
+
+    public const int MaxCategoriesPerKind = 64;
 
     public static IReadOnlyList<string> SeedExpenseCategories { get; } =
         ["Home", "Food", "Eating Out", "PC", "Bike", "Car", "Gifts", "Clothes"];
@@ -66,8 +68,15 @@ public sealed class Budget : Aggregate
             case AddCategory add:
                 var adding = BudgetAccess.Writable(BudgetAccess.To(budget, add.UserId));
                 var category = CategoryName.Normalize(add.Name);
-                return CategoryName.IndexIn(adding.CategoriesOf(add.Kind), category) >= 0
-                    ? []
+                var existing = adding.CategoriesOf(add.Kind);
+                if (CategoryName.IndexIn(existing, category) >= 0)
+                {
+                    return [];
+                }
+
+                return existing.Count >= MaxCategoriesPerKind
+                    ? throw new DomainRejectedException(
+                        $"A budget can have at most {MaxCategoriesPerKind} {add.Kind.ToString().ToLowerInvariant()} categories.")
                     : [new CategoryAdded(adding.Id, adding.UserId, at, add.Kind, category)];
 
             case RenameCategory renameCategory:

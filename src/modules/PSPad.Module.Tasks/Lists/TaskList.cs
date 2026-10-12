@@ -126,7 +126,7 @@ public sealed class TaskList : Aggregate
                     throw new DomainRejectedException("An invite needs a 6-character code.");
                 }
 
-                var ownerName = share.OwnerName.Trim();
+                var ownerName = ContentLimits.Cut(share.OwnerName.Trim(), ContentLimits.Name);
                 return sharing.InviteToken == token && sharing.InviteCode == code && sharing.OwnerName == ownerName
                     && sharing.IsInviteLiveAt(at)
                     ? []
@@ -159,6 +159,8 @@ public sealed class TaskList : Aggregate
 
                 return joining.CheckInvite(join.Token, join.Code, at) switch
                 {
+                    InviteCheck.Open when joining._members.Count >= ContentLimits.MembersPerList =>
+                        throw new DomainRejectedException("This list already has as many members as it can hold."),
                     InviteCheck.Open =>
                         [new TaskListJoined(joining.Id, joining.UserId, at, join.UserId, RequireMemberName(join.DisplayName))],
                     InviteCheck.WrongCode =>
@@ -274,10 +276,10 @@ public sealed class TaskList : Aggregate
     static string RequireName(string name) =>
         string.IsNullOrWhiteSpace(name)
             ? throw new DomainRejectedException("A list needs a name.")
-            : name.Trim();
+            : ContentLimits.Within(name.Trim(), ContentLimits.Name, "A list name");
 
     static string RequireMemberName(string name) =>
         string.IsNullOrWhiteSpace(name)
             ? throw new DomainRejectedException("A member needs a name.")
-            : name.Trim();
+            : ContentLimits.Cut(name.Trim(), ContentLimits.Name);
 }
