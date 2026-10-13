@@ -41,6 +41,15 @@ public class EntryPreviewTests
     }
 
     [Fact]
+    public void AZeroRateOnAnEmptyCurrencyRowIsAnErrorWhenTheDefaultCurrencyIsForeign()
+    {
+        var row = Assert.Single(Preview("expense,2026-09-03,Steam,PC,19.99,,0,\n", defaultCurrency: "EUR").Entries);
+
+        Assert.Equal(ImportStatus.Error, row.Status);
+        Assert.Equal("A rate to PLN has to be more than zero.", row.Error);
+    }
+
+    [Fact]
     public void AGivenRateIsDatedOnTheEntry()
     {
         var row = Assert.Single(Preview("expense,2026-09-03,Steam,PC,19.99,EUR,4.2731,\n").Entries);

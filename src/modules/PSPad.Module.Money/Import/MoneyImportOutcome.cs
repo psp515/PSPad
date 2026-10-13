@@ -8,6 +8,11 @@ public sealed record MoneyImportOutcome(int Entries, int Holdings, int Months, I
 {
     public static MoneyImportOutcome From(IReadOnlyList<PlannedCommand> plan, IReadOnlyList<CommandResult> results)
     {
+        if (results.Count < plan.Count)
+        {
+            throw new ArgumentException("There is a result for every planned command.", nameof(results));
+        }
+
         var landed = plan.Zip(results).Where(pair => pair.Second.Accepted).Select(pair => pair.First.Command).ToArray();
 
         return new MoneyImportOutcome(
@@ -23,6 +28,7 @@ public sealed record MoneyImportOutcome(int Entries, int Holdings, int Months, I
     {
         AddHolding add => add.Month,
         EditHolding edit => edit.Month,
+        RemoveHolding remove => remove.Month,
         _ => null
     };
 }

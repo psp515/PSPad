@@ -31,7 +31,7 @@ internal static class CsvValues
 
     static decimal? Number(string text, int maxDecimals)
     {
-        var compact = string.Concat(text.Where(character => character is not (' ' or ' ' or ' ')));
+        var compact = string.Concat(text.Where(character => character is not (' ' or '\u00A0' or '\u202F')));
 
         if (compact.Contains('.') && compact.Contains(','))
         {

@@ -11,7 +11,8 @@ public class CsvValuesTests
     [InlineData("84.20", 84.20)]
     [InlineData("84,20", 84.20)]
     [InlineData("1 234,56", 1234.56)]
-    [InlineData("1 234.5", 1234.5)]
+    [InlineData("1\u00A0234.5", 1234.5)]
+    [InlineData("1\u202F234,5", 1234.5)]
     [InlineData("-3", -3)]
     public void AmountsReadEitherDecimalSeparator(string text, double expected)
     {

@@ -15,12 +15,21 @@ public class BalancePreviewTests
     static readonly YearMonth September = new(2026, 9);
 
     static MoneyImportPreview Preview(string rows, Budget budget, IReadOnlyList<BalanceSnapshot>? snapshots = null,
-        RateBook? rates = null) =>
+        RateBook? rates = null, string defaultCurrency = "PLN") =>
         MoneyImportPreview.Build(null, MoneyCsv.ParseBalances(Header + rows),
-            new ImportContext(budget, [], snapshots ?? [], "PLN"), rates ?? RateBook.Empty, Guid.NewGuid);
+            new ImportContext(budget, [], snapshots ?? [], defaultCurrency), rates ?? RateBook.Empty, Guid.NewGuid);
 
     static Holding Pln(string name, decimal amount, YearMonth month, HoldingType type = HoldingType.Cash) =>
         new(Guid.NewGuid(), name, type, new Money(amount, "PLN", 1m, month.LastDay));
+
+    [Fact]
+    public void AZeroRateOnAnEmptyCurrencyRowIsAnErrorWhenTheDefaultCurrencyIsForeign()
+    {
+        var row = Assert.Single(Preview("2026-09,Wallet,cash,10,,0\n", ABudget(), defaultCurrency: "EUR").Holdings);
+
+        Assert.Equal(ImportStatus.Error, row.Status);
+        Assert.Equal("A rate to PLN has to be more than zero.", row.Error);
+    }
 
     [Fact]
     public void AMonthWithNoEarlierBalanceAddsEveryRow()

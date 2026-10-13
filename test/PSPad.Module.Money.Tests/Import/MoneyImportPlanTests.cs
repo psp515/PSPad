@@ -83,4 +83,23 @@ public class MoneyImportPlanTests
         Assert.Equal(1, outcome.Months);
         Assert.Equal(new CsvRowError(3, "nope"), Assert.Single(outcome.Rejected));
     }
+
+    [Fact]
+    public void TheOutcomeRefusesResultsShorterThanThePlan()
+    {
+        var plan = MoneyImportPlan.Build(Preview("expense,2026-09-03,Bread,Food,1,,,\n", ""), new HashSet<int>(), Owner, Guid.NewGuid);
+
+        Assert.Throws<ArgumentException>(() => MoneyImportOutcome.From(plan, []));
+    }
+
+    [Fact]
+    public void AMonthTouchedOnlyByARemovalStillCounts()
+    {
+        var removal = new PlannedCommand(
+            new RemoveHolding(Guid.NewGuid(), Owner, Guid.NewGuid(), new YearMonth(2026, 9), Guid.NewGuid()), null);
+
+        var outcome = MoneyImportOutcome.From([removal], [CommandResult.Ok()]);
+
+        Assert.Equal(1, outcome.Months);
+    }
 }

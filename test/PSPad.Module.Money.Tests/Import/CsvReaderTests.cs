@@ -29,7 +29,7 @@ public class CsvReaderTests
     [Fact]
     public void ItDropsAByteOrderMark()
     {
-        var table = CsvReader.Read("﻿kind,date\nexpense,2026-09-03");
+        var table = CsvReader.Read("\uFEFFkind,date\nexpense,2026-09-03");
 
         Assert.Equal("kind", table.Header[0]);
     }

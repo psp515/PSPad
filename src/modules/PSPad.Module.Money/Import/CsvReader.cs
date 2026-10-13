@@ -8,7 +8,7 @@ public static class CsvReader
 
     public static CsvTable Read(string text)
     {
-        var content = text.TrimStart('﻿');
+        var content = text.TrimStart('\uFEFF');
         var delimiter = DelimiterOf(content);
 
         if (delimiter is null)

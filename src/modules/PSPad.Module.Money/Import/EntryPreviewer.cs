@@ -26,22 +26,35 @@ internal static class EntryPreviewer
                 missing.Add(request);
             }
 
-            var status = !Admit(row, context.Budget, added[row.Kind])
-                ? ImportStatus.Error
-                : failure is not null
-                    ? ImportStatus.Error
-                    : money is null
-                        ? ImportStatus.WaitingForRate
-                        : live.Contains(Key(row.Kind, row.Date, row.Amount, currency, row.Name))
-                            ? ImportStatus.AlreadyInBudget
-                            : ImportStatus.ToImport;
-            var error = status != ImportStatus.Error
-                ? null
-                : failure ?? $"A budget can have at most {Budget.MaxCategoriesPerKind} {row.Kind.ToString().ToLowerInvariant()} categories.";
+            var (status, error) = Judge(row, context, added[row.Kind], failure, money, live.Contains(Key(row.Kind, row.Date, row.Amount, currency, row.Name)));
             previews.Add(new EntryPreview(row.Line, row, status == ImportStatus.Error ? null : money, status, error));
         }
 
         return ([.. previews.OrderBy(preview => preview.Line)], added[CategoryKind.Expense], added[CategoryKind.Income]);
+    }
+
+    static (ImportStatus Status, string? Error) Judge(
+        ParsedEntryRow row, ImportContext context, List<string> added, string? failure, Money? money, bool duplicate)
+    {
+        var admitted = Admit(row, context.Budget, added);
+
+        if (failure is not null)
+        {
+            return (ImportStatus.Error, failure);
+        }
+
+        if (!admitted)
+        {
+            return (ImportStatus.Error,
+                $"A budget can have at most {Budget.MaxCategoriesPerKind} {row.Kind.ToString().ToLowerInvariant()} categories.");
+        }
+
+        if (money is null)
+        {
+            return (ImportStatus.WaitingForRate, null);
+        }
+
+        return (duplicate ? ImportStatus.AlreadyInBudget : ImportStatus.ToImport, null);
     }
 
     static bool Admit(ParsedEntryRow row, Budget budget, List<string> added)
