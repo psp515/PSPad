@@ -1,0 +1,53 @@
+@using Microsoft.AspNetCore.Components.Forms
+
+<div class="@($"d-flex flex-column gap-1 {Class}")">
+    <MudFileUpload T="IBrowserFile" Accept=".csv,text/csv" FilesChanged="@PickedAsync">
+        <CustomContent>
+            <MudButton HtmlTag="label" for="@context" Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Outlined.UploadFile">
+                @Label
+            </MudButton>
+        </CustomContent>
+    </MudFileUpload>
+    @if (FileName is not null)
+    {
+        <MudText Typo="Typo.caption" Class="pspad-muted">@FileName</MudText>
+    }
+    @if (Error is not null)
+    {
+        <MudText Typo="Typo.body2" Color="Color.Error" Class="pspad-import-file-error">@Error</MudText>
+    }
+</div>
+
+@code {
+    public const long MaxBytes = 2 * 1024 * 1024;
+
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    [Parameter] public string Class { get; set; } = "";
+
+    [Parameter] public string? FileName { get; set; }
+
+    [Parameter] public string? Error { get; set; }
+
+    [Parameter] public EventCallback<(string Name, byte[]? Bytes)> OnPicked { get; set; }
+
+    async Task PickedAsync(IBrowserFile? file)
+    {
+        if (file is null)
+        {
+            return;
+        }
+
+        if (file.Size > MaxBytes)
+        {
+            await OnPicked.InvokeAsync((file.Name, null));
+            return;
+        }
+
+        using var stream = file.OpenReadStream(MaxBytes);
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer);
+        await OnPicked.InvokeAsync((file.Name, buffer.ToArray()));
+    }
+}

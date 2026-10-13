@@ -40,7 +40,9 @@ public class SyncRefreshTests : Bunit.TestContext
         // SnapshotPage renders a frozen server copy (or its own offline cache), never the replica.
         typeof(SnapshotPage),
         // SnapshotsPage lists the server's visit records (or its own offline cache), never the replica.
-        typeof(SnapshotsPage)
+        typeof(SnapshotsPage),
+        // The import page previews against the replica as it was when files were picked; a refill must not reset a running import.
+        typeof(BudgetImportPage)
     ];
 
     public static TheoryData<Type> ReplicaBackedPages()

@@ -1,0 +1,25 @@
+@using PSPad.App.State
+@using PSPad.Module.Money.Import
+
+<MudPaper Outlined="true" Class="pa-4 pspad-import-summary">
+    <MudText Typo="Typo.subtitle1">
+        Imported @Outcome.Entries entries and @Outcome.Holdings holdings in @Outcome.Months months.
+    </MudText>
+    @if (Outcome.Rejected.Count > 0)
+    {
+        <MudText Typo="Typo.body2" Color="Color.Warning" Class="mt-2">Not imported:</MudText>
+        <MudList T="string" Dense="true">
+            @foreach (var rejected in Outcome.Rejected)
+            {
+                <MudListItem T="string" Text="@(rejected.Line > 0 ? $"Line {rejected.Line}: {rejected.Message}" : rejected.Message)" />
+            }
+        </MudList>
+    }
+    <MudButton Class="mt-2" Variant="Variant.Text" Color="Color.Primary" Href="@BudgetLinks.For(BudgetId)">Open the budget</MudButton>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public MoneyImportOutcome Outcome { get; set; } = default!;
+
+    [Parameter, EditorRequired] public Guid BudgetId { get; set; }
+}

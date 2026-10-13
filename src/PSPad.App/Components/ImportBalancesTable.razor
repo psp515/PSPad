@@ -1,0 +1,36 @@
+@using System.Globalization
+@using PSPad.Module.Money.Import
+
+@foreach (var month in Months)
+{
+    <MudText Typo="Typo.subtitle2" Class="mt-3 pspad-import-month">
+        @month.Month · @(month.IsNew
+            ? $"New month: {month.Holdings} holdings"
+            : $"Existing month: updates {month.Updates}, adds {month.Adds}, unchanged {month.Unchanged}")
+    </MudText>
+}
+<MudTable T="HoldingPreview" Items="@Rows" Dense="true" Hover="true" Virtualize="true" Height="60vh" FixedHeader="true"
+          RowClassFunc="@RowClass" Class="mt-2">
+    <HeaderContent>
+        <MudTh>Line</MudTh><MudTh>Month</MudTh><MudTh>Holding</MudTh><MudTh>Type</MudTh><MudTh>Amount</MudTh>
+        <MudTh>Rate</MudTh><MudTh>Status</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.Line</MudTd>
+        <MudTd>@context.Row?.Month</MudTd>
+        <MudTd>@context.Row?.Name</MudTd>
+        <MudTd>@context.Row?.Type</MudTd>
+        <MudTd>@(context.Row is { } row ? $"{row.Amount.ToString("0.00", CultureInfo.InvariantCulture)} {context.Money?.Currency ?? row.Currency}" : "")</MudTd>
+        <MudTd>@(context.Money is { Currency: not "PLN" } money ? $"{money.RateToPln.ToString(CultureInfo.InvariantCulture)} ({money.RateDate:yyyy-MM-dd})" : "")</MudTd>
+        <MudTd>@(context.Error ?? ImportEntriesTable.StatusText(context.Status))</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<HoldingPreview> Rows { get; set; } = [];
+
+    [Parameter, EditorRequired] public IReadOnlyList<MonthPreview> Months { get; set; } = [];
+
+    static string RowClass(HoldingPreview row, int _) =>
+        row.Status == ImportStatus.Error ? "pspad-import-row pspad-import-row-error" : "pspad-import-row";
+}
