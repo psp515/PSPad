@@ -5,7 +5,7 @@ date: 2026-10-13
 status: Active
 ---
 
-# ADR-0066: The client ships a strict content security policy, and the API allows named origins only
+# ADR-0068: The client ships a strict content security policy, and the API allows named origins only
 
 > Status: Active
 
@@ -84,6 +84,11 @@ replaces the first entry with `APP_BASE_ADDRESS`.
 - A new inline script in `index.html` needs no policy change; a new external
   origin (an image host, a second API) does, in `19-pspad-csp.envsh`.
 - `style-src 'unsafe-inline'` stays, because MudBlazor sets inline styles.
+- `img-src 'self' data:` is strict on purpose: no image is loaded from another
+  origin. The maintainer decided on issue #136 that markdown renders no images
+  and makes no HTTP requests, and that branch removes image rendering from
+  `MarkdownRenderer`. Until #136 merges, a remote image in markdown is blocked
+  by the policy rather than loaded.
 - Behind a proxy that adds its own `Content-Security-Policy`, the browser
   enforces both; a proxy that rewrites or strips headers can undo this.
 - An origin outside `*.psplace.dev` must be listed in `Cors:AllowedOrigins`

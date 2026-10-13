@@ -854,8 +854,10 @@ Browsers reach the API cross-origin, so `UseCors` runs first with one policy
 (`CorsRegistration`) built from `Cors:AllowedOrigins` when the options are
 first resolved, wildcard subdomains allowed. `appsettings.json` allows
 `https://*.psplace.dev`, `appsettings.Development.json` (and so hosted tests)
-`http://localhost:5001`, and compose sets the first entry to
-`APP_BASE_ADDRESS`. Any other origin gets no `Access-Control-Allow-Origin`.
+`http://localhost:5001`. Compose always sets the first entry to
+`APP_BASE_ADDRESS`, so under compose the wildcard default never applies and
+an empty `APP_BASE_ADDRESS` denies every origin; the wildcard is the fallback
+for deployments that set no `Cors__AllowedOrigins__0`. Any other origin gets no `Access-Control-Allow-Origin`.
 
 ---
 
@@ -890,7 +892,7 @@ version (stores are only ever added) and closes its connection on
 
 Every client response carries a content security policy,
 `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and a
-`Permissions-Policy` denying camera, microphone and geolocation (ADR-0066).
+`Permissions-Policy` denying camera, microphone and geolocation (ADR-0068).
 `docker/nginx/19-pspad-csp.envsh`, sourced by the nginx entrypoint before its
 template step, takes the API and Keycloak origins from `API_BASE_ADDRESS` and
 `KEYCLOAK_AUTHORITY` and adds a `sha256` hash for every inline script of the

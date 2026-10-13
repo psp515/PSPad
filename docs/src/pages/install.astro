@@ -206,7 +206,8 @@ cd PSPad</code></pre>
         reaches the API or Keycloak at any other address, it refuses the request — sign-in
         or sync fails with a "Refused to connect" error in the browser console. Fix the
         value and recreate <code>app</code>. Likewise the API accepts cross-origin calls
-        only from <code>APP_BASE_ADDRESS</code>.
+        only from <code>APP_BASE_ADDRESS</code> — compose always passes it to the API, so
+        leave it empty and every browser call to the API is refused.
       </p>
     </Callout>
     <p>MongoDB publishes no port — it's reachable only from the other containers.</p>
