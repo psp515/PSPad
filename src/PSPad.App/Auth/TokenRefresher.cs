@@ -66,11 +66,13 @@ public sealed class TokenRefresher(HttpClient http, IClock clock, string authori
         AccessToken = payload.AccessToken;
         AccessTokenExpiresAt = clock.UtcNow.AddSeconds(payload.ExpiresIn);
 
-        return new RefreshOutcome.Renewed(payload.AccessToken, AccessTokenExpiresAt, payload.RefreshToken);
+        return new RefreshOutcome.Renewed(
+            payload.AccessToken, AccessTokenExpiresAt, payload.RefreshToken, payload.IdToken);
     }
 
     sealed record TokenResponse(
         [property: JsonPropertyName("access_token")] string AccessToken,
         [property: JsonPropertyName("expires_in")] int ExpiresIn,
-        [property: JsonPropertyName("refresh_token")] string RefreshToken);
+        [property: JsonPropertyName("refresh_token")] string RefreshToken,
+        [property: JsonPropertyName("id_token")] string? IdToken);
 }

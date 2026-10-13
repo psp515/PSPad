@@ -637,7 +637,8 @@ now" (only answerable online, and only matters at call time).
 | Gates | Opening the app | API calls only |
 
 `LocalSession` holds the user id, display name, email, time zone, the OIDC
-refresh token, and `LastServerContactUtc`. A custom
+refresh token, the latest id token (the end-session hint), and
+`LastServerContactUtc`. A custom
 `LocalAuthenticationStateProvider` builds its principal from this record,
 not from the library's token store.
 
@@ -692,9 +693,16 @@ the same transport failure the sync loop and `ServerReachability` already
 treat as offline. The limit covers the wait for headers, not the body, so a
 large first pull on a slow link is not cut off mid-download.
 
-**Sign-out** ends the Keycloak session directly (not just local state).
-Signed-out visitors land on the public `/welcome` screen, never a bare
-redirect. The Keycloak realm sets `ssoSessionIdleTimeout` (30 days) and
+**Sign-out** ends the Keycloak session directly (not just local state),
+and only online (`adr/0073`). It first POSTs the refresh token to
+`{Authority}/protocol/openid-connect/revoke`. If Keycloak is unreachable
+(a transport failure, a stall or a 5xx), nothing is cleared and the user
+stays signed in. A 2xx or a 4xx goes on: clear the replica, the **outbox**,
+the statistics and snapshot caches, and the session, then navigate to end-session with `client_id`,
+`post_logout_redirect_uri` and `id_token_hint`. Offline, sign-out is refused,
+with no deferred revocation. Unsynced outbox entries are confirmed away in
+the UI first (`specs/ui-spec.md`). Signed-out visitors land on the public
+`/welcome` screen, never a bare redirect. The Keycloak realm sets `ssoSessionIdleTimeout` (30 days) and
 `ssoSessionMaxLifespan` (90 days) explicitly — the idle timeout must exceed
 the 7-day local trust window, or the server invalidates the refresh token
 before the client-side window becomes the effective bound.

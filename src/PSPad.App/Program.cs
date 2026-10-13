@@ -41,6 +41,8 @@ var stalledRequestLimit = TimeSpan.FromSeconds(10);
 builder.Services.AddSingleton(services => new TokenRefresher(
     new HttpClient { Timeout = stalledRequestLimit },
     services.GetRequiredService<IClock>(), keycloakAuthority, keycloakClientId));
+builder.Services.AddSingleton(new KeycloakTokenRevoker(
+    new HttpClient { Timeout = stalledRequestLimit }, keycloakAuthority, keycloakClientId));
 builder.Services.AddScoped<SessionBootstrapper>();
 
 builder.Services.AddScoped<IRemoteAuthenticationService<RemoteAuthenticationState>>(services =>

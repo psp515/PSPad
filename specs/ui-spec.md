@@ -1502,6 +1502,13 @@ third pattern.
 
 **Sign-out lives inside the Account card**, under the avatar/name/email
 block — not a standalone button elsewhere on the page.
+It needs a connection (ADR-0073). Offline, the button is disabled and a caption
+(`pspad-sign-out-offline`) says the device can't be signed out securely
+until it connects. With pending outbox commands, a `ConfirmDialog` ("N
+unsynced changes haven't reached the server yet…", confirm text "Sign out")
+comes first, and Cancel changes nothing. If Keycloak can't be reached to
+revoke the refresh token, a warning snackbar says the user is still signed
+in, and nothing is cleared.
 
 **Change password is a link out, beside sign-out.** PSPad keeps no
 passwords, so the Account card's "Change password" button opens Keycloak's
@@ -1519,7 +1526,7 @@ inline (spinner, no redirect) and requires connectivity — same online check
 as sign-out. A `keycloakRemoved: false` response still counts as success —
 the dialog says the account's data is gone and sign-in removal needs an
 administrator — and either way the client clears everything local: the
-replica, the outbox too (unlike sign-out, which keeps it), and the session
+replica, the outbox too (as sign-out does, but without asking), and the session
 store/tokens — composing the three existing `IReplica`/`IOutbox`/
 `ILocalSessionStore.ClearAsync()` calls rather than adding new storage
 interop — then lands on `/welcome`, same destination as sign-out.

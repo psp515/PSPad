@@ -81,6 +81,38 @@ public class SessionAuthorizationHandlerTests
     }
 
     [Fact]
+    public async Task ItStoresTheRotatedIdTokenWithTheSession()
+    {
+        var queue = new QueuingHandler(
+            $$"""{"access_token":"at","expires_in":300,"refresh_token":"r1","id_token":"it1"}""");
+        var refresher = new TokenRefresher(
+            new HttpClient(queue), new FixedClock(Now),
+            "http://localhost:8080/realms/psplace", "pspad-frontend");
+        var sessions = new InMemoryLocalSessionStore(Session());
+        var client = Client(refresher, sessions, new CapturingHandler());
+
+        await client.GetAsync("http://api.test/me", TestContext.Current.CancellationToken);
+
+        Assert.Equal("it1", sessions.Current?.IdToken);
+    }
+
+    [Fact]
+    public async Task ItKeepsTheStoredIdTokenWhenARefreshCarriesNone()
+    {
+        var queue = new QueuingHandler(
+            $$"""{"access_token":"at","expires_in":300,"refresh_token":"r1"}""");
+        var refresher = new TokenRefresher(
+            new HttpClient(queue), new FixedClock(Now),
+            "http://localhost:8080/realms/psplace", "pspad-frontend");
+        var sessions = new InMemoryLocalSessionStore(Session() with { IdToken = "it0" });
+        var client = Client(refresher, sessions, new CapturingHandler());
+
+        await client.GetAsync("http://api.test/me", TestContext.Current.CancellationToken);
+
+        Assert.Equal("it0", sessions.Current?.IdToken);
+    }
+
+    [Fact]
     public async Task ItReusesACachedTokenOutsideTheMarginWithoutRefreshing()
     {
         var queue = new QueuingHandler(

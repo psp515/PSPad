@@ -25,6 +25,28 @@ public class TokenRefresherTests
     }
 
     [Fact]
+    public async Task ItKeepsTheIdTokenSoSignOutCanNameTheSessionItEnds()
+    {
+        var refresher = Refresher(Respond(HttpStatusCode.OK,
+            """{"access_token":"at","expires_in":300,"refresh_token":"rotated","id_token":"it"}"""));
+
+        var renewed = Assert.IsType<RefreshOutcome.Renewed>(await refresher.RefreshAsync("stored"));
+
+        Assert.Equal("it", renewed.IdToken);
+    }
+
+    [Fact]
+    public async Task ItRenewsWithoutAnIdTokenWhenTheExchangeCarriesNone()
+    {
+        var refresher = Refresher(Respond(HttpStatusCode.OK,
+            """{"access_token":"at","expires_in":300,"refresh_token":"rotated"}"""));
+
+        var renewed = Assert.IsType<RefreshOutcome.Renewed>(await refresher.RefreshAsync("stored"));
+
+        Assert.Null(renewed.IdToken);
+    }
+
+    [Fact]
     public async Task ItTreatsInvalidGrantAsRevoked()
     {
         var refresher = Refresher(Respond(HttpStatusCode.BadRequest,

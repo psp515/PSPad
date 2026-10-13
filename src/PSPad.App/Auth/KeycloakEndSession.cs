@@ -2,8 +2,10 @@ namespace PSPad.App.Auth;
 
 public static class KeycloakEndSession
 {
-    public static string UrlFor(string authority, string clientId, string postLogoutRedirectUri) =>
+    public static string UrlFor(
+        string authority, string clientId, string postLogoutRedirectUri, string? idTokenHint = null) =>
         $"{authority.TrimEnd('/')}/protocol/openid-connect/logout" +
         $"?client_id={Uri.EscapeDataString(clientId)}" +
-        $"&post_logout_redirect_uri={Uri.EscapeDataString(postLogoutRedirectUri)}";
+        $"&post_logout_redirect_uri={Uri.EscapeDataString(postLogoutRedirectUri)}" +
+        (string.IsNullOrEmpty(idTokenHint) ? "" : $"&id_token_hint={Uri.EscapeDataString(idTokenHint)}");
 }

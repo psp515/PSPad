@@ -67,6 +67,7 @@ public sealed class SessionAuthorizationHandler(
                 await sessions.SaveAsync(session with
                 {
                     RefreshToken = renewed.RefreshToken,
+                    IdToken = renewed.IdToken ?? session.IdToken,
                     LastServerContactUtc = clock.UtcNow
                 });
 

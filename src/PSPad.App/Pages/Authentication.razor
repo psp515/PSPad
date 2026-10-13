@@ -62,7 +62,7 @@
 
             var session = new LocalSession(
                 account.UserId, account.DisplayName, account.Email, account.TimeZone,
-                renewed.RefreshToken, Clock.UtcNow);
+                renewed.RefreshToken, Clock.UtcNow, renewed.IdToken);
 
             await Sessions.SaveAsync(session);
             AuthProvider.SignedIn(session);

@@ -6,4 +6,5 @@ public sealed record LocalSession(
     string Email,
     string TimeZone,
     string RefreshToken,
-    DateTimeOffset LastServerContactUtc);
+    DateTimeOffset LastServerContactUtc,
+    string? IdToken = null);
