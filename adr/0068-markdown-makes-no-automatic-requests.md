@@ -5,7 +5,7 @@ date: 2026-10-13
 status: Active
 ---
 
-# ADR-0069: Rendered Markdown makes no automatic requests; images show as links
+# ADR-0068: Rendered Markdown makes no automatic requests; images show as links
 
 > Amends [ADR-0048](0048-descriptions-are-markdown.md).
 
