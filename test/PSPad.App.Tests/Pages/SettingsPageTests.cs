@@ -749,6 +749,63 @@ public class SettingsPageTests : Bunit.TestContext
         Assert.All(routeWhenAnnounced, route => Assert.EndsWith("/welcome", route));
     }
 
+    [Fact]
+    public async Task AStaleSignInAsksToSignInAgainAndKeepsTheAccount()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com", accountDeleteNeedsFreshSignIn: true);
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        page.Find(".pspad-delete-account").Click();
+        page.Find(".pspad-confirm-email input").Input("ada@example.com");
+        await page.InvokeAsync(() => page.Find(".pspad-confirm-delete").Click());
+
+        Assert.Contains("sign in again", page.Markup, StringComparison.OrdinalIgnoreCase);
+        Assert.NotEmpty(page.FindAll(".pspad-reauthenticate"));
+        Assert.NotNull(_sessions!.Current);
+        Assert.Equal("http://localhost/", navigation.Uri);
+    }
+
+    [Fact]
+    public async Task SigningInAgainForcesAFreshKeycloakLoginThatComesBackToTheDeletion()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com", accountDeleteNeedsFreshSignIn: true);
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        page.Find(".pspad-delete-account").Click();
+        page.Find(".pspad-confirm-email input").Input("ada@example.com");
+        await page.InvokeAsync(() => page.Find(".pspad-confirm-delete").Click());
+        page.Find(".pspad-reauthenticate").Click();
+
+        Assert.Equal("http://localhost/authentication/login", navigation.Uri);
+        using var state = JsonDocument.Parse(navigation.History.First().Options.HistoryEntryState!);
+        var request = state.RootElement;
+        Assert.Equal("http://localhost/settings?deleteAccount=confirm",
+            Property(request, "returnUrl").GetString());
+        var parameters = Property(request, "additionalRequestParameters");
+        Assert.Equal("login", Property(parameters, "prompt").GetString());
+        Assert.Equal("0", Property(parameters, "max_age").GetString());
+        Assert.NotNull(_sessions!.Current);
+    }
+
+    [Fact]
+    public void ComingBackFromSigningInAgainReopensTheDeleteDialog()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo("settings?deleteAccount=confirm");
+
+        var page = Render(BuildSettingsPageWithDialogs());
+
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll(".pspad-confirm-email input")));
+        Assert.True(page.Find(".pspad-confirm-delete").HasAttribute("disabled"));
+        Assert.Equal("http://localhost/settings", navigation.Uri);
+    }
+
+    static JsonElement Property(JsonElement element, string name) =>
+        element.EnumerateObject().Single(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)).Value;
+
     RenderFragment BuildSettingsPageWithDialogs() => builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
@@ -761,7 +818,7 @@ public class SettingsPageTests : Bunit.TestContext
 
     AppState Arrange(
         string displayName, string email, bool respondWithNullTimeZone = false, bool online = true,
-        bool accountDeleteFails = false, bool keycloakRemoved = true)
+        bool accountDeleteFails = false, bool keycloakRemoved = true, bool accountDeleteNeedsFreshSignIn = false)
     {
         _replica = AppTestHost.Arrange(this, User, Today);
         Services.AddSingleton<IConnectivity>(new FixedConnectivity(online));
@@ -790,7 +847,8 @@ public class SettingsPageTests : Bunit.TestContext
 
         Services.AddSingleton(new PSPadApiClient(
             new HttpClient(new StubApiHandler(
-                User, displayName, email, respondWithNullTimeZone, accountDeleteFails, keycloakRemoved))
+                User, displayName, email, respondWithNullTimeZone, accountDeleteFails, keycloakRemoved,
+                accountDeleteNeedsFreshSignIn))
         {
             BaseAddress = new Uri("http://localhost/")
         }));
@@ -815,12 +873,20 @@ public class SettingsPageTests : Bunit.TestContext
 
     sealed class StubApiHandler(
         Guid userId, string displayName, string email, bool respondWithNullTimeZone, bool accountDeleteFails,
-        bool keycloakRemoved = true)
+        bool keycloakRemoved = true, bool accountDeleteNeedsFreshSignIn = false)
         : HttpMessageHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (request.Method == HttpMethod.Delete && accountDeleteNeedsFreshSignIn)
+            {
+                var challenge = new HttpResponseMessage(HttpStatusCode.Unauthorized);
+                challenge.Headers.TryAddWithoutValidation(
+                    "WWW-Authenticate", """Bearer error="insufficient_user_authentication", max_age=300""");
+                return challenge;
+            }
+
             if (request.Method == HttpMethod.Delete)
             {
                 return accountDeleteFails

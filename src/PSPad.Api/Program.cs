@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Net.Http.Headers;
 using PSPad.Abstractions;
 using PSPad.Api.Commands;
 using PSPad.Api.Endpoints;
@@ -40,11 +41,13 @@ builder.Services.AddPSPadRateLimiter(builder.Configuration);
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
     options.AddPolicy("AppClient", policy =>
-        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()
+            .WithExposedHeaders(HeaderNames.WWWAuthenticate)));
 
 builder.Services.AddScoped<ICurrentUser, ClaimsCurrentUser>();
 builder.Services.Configure<KeycloakAdminOptions>(builder.Configuration.GetSection(KeycloakAdminOptions.Section));
 builder.Services.AddHttpClient<IKeycloakAdminClient, KeycloakAdminClient>();
+builder.Services.Configure<AccountDeletionOptions>(builder.Configuration.GetSection(AccountDeletionOptions.Section));
 builder.Services.AddScoped<UserProvisioner>();
 builder.Services.AddScoped<CommandDispatcher>();
 builder.Services.AddScoped<SyncReader>();

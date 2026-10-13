@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
@@ -24,6 +25,14 @@ public sealed class TestAuthenticationHandler(
         if (Request.Headers.TryGetValue("X-Test-Zone", out var zone))
         {
             claims.Add(new Claim("zoneinfo", zone!));
+        }
+
+        var authTime = Request.Headers.TryGetValue("X-Test-Auth-Time", out var stated)
+            ? stated.ToString()
+            : DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+        if (authTime != "none")
+        {
+            claims.Add(new Claim("auth_time", authTime));
         }
 
         if (Request.Headers.TryGetValue("X-Test-Name", out var name))

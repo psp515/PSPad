@@ -1,3 +1,6 @@
+using System.Security.Claims;
+using Microsoft.Extensions.Options;
+using PSPad.Abstractions;
 using PSPad.Api.Identity;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Events;
@@ -11,10 +14,17 @@ public static class AccountEndpoints
 
     public static void MapAccountEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapDelete("account", async (
+        app.MapDelete("account", async Task<IResult> (
+            ClaimsPrincipal user, IClock clock, IOptions<AccountDeletionOptions> options,
             ICurrentUser current, MongoContext context, IKeycloakAdminClient keycloak,
             ChannelDomainEventDispatcher dispatcher, ILogger<DeleteAccountResponse> logger, CancellationToken ct) =>
         {
+            var maxAge = options.Value.MaxAuthenticationAge;
+            if (!RecentAuthentication.Holds(user, clock.UtcNow, maxAge))
+            {
+                return new StepUpChallenge(maxAge);
+            }
+
             await DrainProjectionsAsync(dispatcher, logger, ct);
             await UserDataWipe.RunAsync(context, current.UserId, ct);
 

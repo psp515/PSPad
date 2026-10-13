@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using MongoDB.Bson;
@@ -339,6 +341,89 @@ public class AccountEndpointTests(MongoFixture fixture)
                 .Find(Builders<BsonDocument>.Filter.Eq("userId", ownerId))
                 .CountDocumentsAsync(ct));
     }
+
+    [Fact]
+    public async Task ASignInOlderThanFiveMinutesIsChallengedToStepUpAndNothingIsDeleted()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var keycloak = new FakeKeycloakAdminClient(succeeds: true);
+        await using var factory = new ApiFactory(fixture, keycloak);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var userId = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        client.DefaultRequestHeaders.Add("X-Test-Auth-Time", SignedInAgo(TimeSpan.FromMinutes(6)));
+
+        var response = await client.DeleteAsync("/api/account", ct);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var challenge = Assert.Single(response.Headers.WwwAuthenticate);
+        Assert.Equal("Bearer", challenge.Scheme);
+        Assert.Contains("error=\"insufficient_user_authentication\"", challenge.Parameter);
+        Assert.Contains("max_age=300", challenge.Parameter);
+        Assert.Empty(keycloak.DeletedSubjects);
+        Assert.Equal(1, await UsersAsync(userId, ct));
+    }
+
+    [Fact]
+    public async Task TheBrowserClientMayReadTheStepUpChallengeAcrossOrigins()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture, new FakeKeycloakAdminClient(succeeds: true));
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        await client.GetFromJsonAsync<MeResponse>("/api/me", ct);
+        client.DefaultRequestHeaders.Add("X-Test-Auth-Time", SignedInAgo(TimeSpan.FromHours(1)));
+        client.DefaultRequestHeaders.Add("Origin", "http://localhost:5001");
+
+        var response = await client.DeleteAsync("/api/account", ct);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Contains("WWW-Authenticate",
+            response.Headers.GetValues("Access-Control-Expose-Headers"), StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ATokenThatNamesNoSignInTimeIsChallengedToStepUp()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var keycloak = new FakeKeycloakAdminClient(succeeds: true);
+        await using var factory = new ApiFactory(fixture, keycloak);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var userId = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        client.DefaultRequestHeaders.Add("X-Test-Auth-Time", "none");
+
+        var response = await client.DeleteAsync("/api/account", ct);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Contains("insufficient_user_authentication", response.Headers.WwwAuthenticate.Single().Parameter);
+        Assert.Empty(keycloak.DeletedSubjects);
+        Assert.Equal(1, await UsersAsync(userId, ct));
+    }
+
+    [Fact]
+    public async Task TheMaximumSignInAgeComesFromConfiguration()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var keycloak = new FakeKeycloakAdminClient(succeeds: true);
+        await using var factory = new ApiFactory(fixture, keycloak, new Dictionary<string, string?>
+        {
+            ["AccountDeletion:MaxAuthenticationAge"] = "00:30:00"
+        });
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        await client.GetFromJsonAsync<MeResponse>("/api/me", ct);
+        client.DefaultRequestHeaders.Add("X-Test-Auth-Time", SignedInAgo(TimeSpan.FromMinutes(20)));
+
+        var response = await client.DeleteAsync("/api/account", ct);
+
+        response.EnsureSuccessStatusCode();
+        Assert.Single(keycloak.DeletedSubjects);
+    }
+
+    static string SignedInAgo(TimeSpan age) =>
+        DateTimeOffset.UtcNow.Subtract(age).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+
+    async Task<long> UsersAsync(Guid userId, CancellationToken ct) =>
+        await Persistence.TestContext.For(fixture).Collection<BsonDocument>("users")
+            .Find(Builders<BsonDocument>.Filter.Eq("userId", userId))
+            .CountDocumentsAsync(ct);
 
     static async Task<Dictionary<string, long>> CountsPerCollectionAsync(
         MongoContext context, IReadOnlyList<string> collectionNames, Guid userId, CancellationToken ct)

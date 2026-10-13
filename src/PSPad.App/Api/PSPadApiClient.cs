@@ -32,19 +32,30 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
         }
     }
 
-    public async Task<DeleteAccountResponse?> DeleteAccountAsync()
+    public async Task<AccountDeletionOutcome> DeleteAccountAsync()
     {
         try
         {
             var response = await http.DeleteAsync("api/account");
 
-            return response.IsSuccessStatusCode
-                ? await response.Content.ReadFromJsonAsync<DeleteAccountResponse>()
-                : null;
+            if (StepUpChallenge.Names(response))
+            {
+                return new AccountDeletionOutcome.ReauthenticationRequired();
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new AccountDeletionOutcome.Failed();
+            }
+
+            var deleted = await response.Content.ReadFromJsonAsync<DeleteAccountResponse>();
+            return deleted is null
+                ? new AccountDeletionOutcome.Failed()
+                : new AccountDeletionOutcome.Deleted(deleted.KeycloakRemoved);
         }
         catch (HttpRequestException)
         {
-            return null;
+            return new AccountDeletionOutcome.Failed();
         }
     }
 

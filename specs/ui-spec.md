@@ -52,7 +52,7 @@ rather than as a bare attribute beside it.
 Not every `pspad-*` class carries a CSS rule. Several exist purely as a
 stable selector for tests to find a MudBlazor element that has no other
 reliable hook (`pspad-sign-out`, `pspad-change-password`, `pspad-account-card`, `pspad-delete-account`,
-`pspad-confirm-email`, `pspad-confirm-delete`). Don't "clean up" an
+`pspad-confirm-email`, `pspad-confirm-delete`, `pspad-reauthenticate`). Don't "clean up" an
 apparently-unstyled `pspad-*` class without checking whether a test depends
 on it first.
 
@@ -1523,3 +1523,10 @@ replica, the outbox too (unlike sign-out, which keeps it), and the session
 store/tokens — composing the three existing `IReplica`/`IOutbox`/
 `ILocalSessionStore.ClearAsync()` calls rather than adding new storage
 interop — then lands on `/welcome`, same destination as sign-out.
+When the server answers the step-up challenge (sign-in older than five
+minutes, `adr/0072`), the dialog deletes nothing locally and instead says a
+fresh sign-in is needed, with a "Sign in again" button (`pspad-reauthenticate`)
+that starts an interactive Keycloak login with `prompt=login` and `max_age=0`.
+The login returns to `/settings?deleteAccount=confirm`; Settings replaces that
+URL with `/settings` and reopens the delete dialog, empty — the person types
+their email again to delete.
