@@ -134,7 +134,7 @@ public sealed class MoneyEntry : Aggregate
     static MoneyEntry RequireLive(MoneyEntry? entry) =>
         entry is null || entry.Deleted ? throw new DomainRejectedException("That entry does not exist.", Unrecoverable: true) : entry;
 
-    static string RequireName(string name)
+    internal static string RequireName(string name)
     {
         var trimmed = name.Trim();
 
@@ -148,7 +148,7 @@ public sealed class MoneyEntry : Aggregate
             : trimmed;
     }
 
-    static string? NoteOf(string? note)
+    internal static string? NoteOf(string? note)
     {
         if (string.IsNullOrWhiteSpace(note))
         {
