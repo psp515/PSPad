@@ -98,24 +98,29 @@ public static class StatisticsCharts
     }
 
     public static IReadOnlyList<GoalTotal> ByGoal(
-        IReadOnlyList<StatisticsRecord> records, IReadOnlyList<StatisticsLabel> labels)
+        IReadOnlyList<StatisticsRecord> records,
+        IReadOnlyList<StatisticsLabel> labels,
+        IReadOnlyDictionary<Guid, Guid>? links = null)
     {
         var names = new Dictionary<Guid, string>();
+        links ??= new Dictionary<Guid, Guid>();
 
         foreach (var label in labels.Where(label => label.Kind == LabelKind.Goal))
         {
             names[label.Id] = label.Name;
         }
 
-        var owned = records.Where(record => record.Role == RecordRole.Owner).ToList();
+        var counted = records
+            .Where(record => record.Role == RecordRole.Owner || links.ContainsKey(record.TaskId))
+            .ToList();
         var totals = new Dictionary<Guid, int>();
         var withoutGoal = 0;
 
-        foreach (var record in owned
+        foreach (var record in counted
                      .Where(record => record.Kind == RecordKind.Completed)
-                     .Concat(FinalOccurrenceTicks(owned)))
+                     .Concat(FinalOccurrenceTicks(counted)))
         {
-            if (record.GoalId is { } goalId)
+            if (GoalOf(record, links, names) is { } goalId)
             {
                 totals[goalId] = totals.GetValueOrDefault(goalId) + 1;
             }
@@ -197,6 +202,13 @@ public static class StatisticsCharts
             open.Remove(record.TaskId);
         }
     }
+
+    // An old record's goal counts only if it is the reader's own: it may name a goal someone else linked.
+    static Guid? GoalOf(
+        StatisticsRecord record, IReadOnlyDictionary<Guid, Guid> links, IReadOnlyDictionary<Guid, string> names) =>
+        links.TryGetValue(record.TaskId, out var linked)
+            ? linked
+            : record.GoalId is { } recorded && names.ContainsKey(recorded) ? recorded : null;
 
     static string NameOf(Guid goalId, IReadOnlyDictionary<Guid, string> names) =>
         names.TryGetValue(goalId, out var name) ? name : UnknownGoal;

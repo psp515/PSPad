@@ -77,10 +77,7 @@
 
             <PriorityRow Value="@Priority" ValueChanged="@PriorityAsync" Disabled="@Disabled" />
 
-            @if (_goalVisible)
-            {
-                <GoalRow Goals="@_goals" Value="@GoalId" ValueChanged="@LinkGoalAsync" Disabled="@Disabled" />
-            }
+            <GoalRow Goals="@_goals" Value="@GoalId" ValueChanged="@LinkGoalAsync" Disabled="@Disabled" />
 
             @if (_task is not null)
             {
@@ -145,7 +142,6 @@
     ListPlacement _placement = ListPlacement.Empty;
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<Goal> _goals = [];
-    bool _goalVisible = true;
     Guid? _draftFor;
     bool _creating;
     TaskDraft _draft = new();
@@ -175,7 +171,7 @@
 
     Priority Priority => _task?.Priority ?? _draft.Priority;
 
-    Guid? GoalId => _task is null ? _draft.GoalId : _task.GoalId;
+    Guid? GoalId => _task is null ? _draft.GoalId : Goal.Holding(_goals, _task.Id)?.Id;
 
 
     DateOnly? DueOn => _task is null ? _draft.DueOn : _task.DueOn;
@@ -226,12 +222,6 @@
         var current = _task is null ? null : _placement.All.FirstOrDefault(list => list.Id == _task.ListId);
         _lists = [.. _placement.All.Where(list =>
             list.Kind == ListKind.Tasks && (current is null || list.UserId == current.UserId))];
-
-        _goalVisible = _task is not null
-            ? _task.UserId == State.UserId
-            : NewInList is { } newListId &&
-              _placement.All.FirstOrDefault(list => list.Id == newListId) is { } newList &&
-              newList.UserId == State.UserId;
 
         var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
         _goals = [.. goals.Where(goal => !goal.Deleted)];
@@ -300,9 +290,9 @@
             await Sender.SendAsync(new SetTaskPriority(Guid.NewGuid(), State.UserId, taskId, _draft.Priority));
         }
 
-        if (_draft.GoalId is not null)
+        if (_draft.GoalId is { } goalId)
         {
-            await Sender.SendAsync(new LinkTaskToGoal(Guid.NewGuid(), State.UserId, taskId, _draft.GoalId));
+            await Sender.SendAsync(new AddTaskToGoal(Guid.NewGuid(), State.UserId, goalId, taskId));
         }
 
         if (_draft.Starred)
@@ -507,7 +497,15 @@
             return;
         }
 
-        await Sender.SendAsync(new LinkTaskToGoal(Guid.NewGuid(), State.UserId, _task.Id, goalId));
+        if (goalId is { } chosen)
+        {
+            await Sender.SendAsync(new AddTaskToGoal(Guid.NewGuid(), State.UserId, chosen, _task.Id));
+        }
+        else
+        {
+            await Sender.SendAsync(new RemoveTaskFromGoal(Guid.NewGuid(), State.UserId, GoalId!.Value, _task.Id));
+        }
+
         await ReloadAsync();
     }
 

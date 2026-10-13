@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Tasks;
 
 namespace PSPad.Module.Tasks.Goals;
 
@@ -17,12 +18,17 @@ public sealed class Goal : Aggregate
     [JsonInclude]
     public DateOnly? DueOn { get; private set; }
 
+    [JsonInclude]
+    HashSet<Guid> _taskIds = [];
+
+    public IReadOnlySet<Guid> TaskIds => _taskIds;
+
     [JsonIgnore]
     public GoalStatus Status => Achieved
         ? GoalStatus.Achieved
         : NotAchieved ? GoalStatus.NotAchieved : GoalStatus.InProgress;
 
-    public static IReadOnlyList<DomainEvent> Decide(Goal? goal, ICommand command, DateTimeOffset at)
+    public static IReadOnlyList<DomainEvent> Decide(Goal? goal, ICommand command, DateTimeOffset at, TodoTask? task = null)
     {
         switch (command)
         {
@@ -69,6 +75,21 @@ public sealed class Goal : Aggregate
                     ? []
                     : [new GoalReopened(reopening.Id, reopen.UserId, at)];
 
+            case AddTaskToGoal add:
+                var adding = Require(goal, add.UserId);
+                var added = task is { Deleted: false } && task.Id == add.TaskId
+                    ? task
+                    : throw new DomainRejectedException("That task no longer exists.");
+                return adding._taskIds.Contains(added.Id)
+                    ? []
+                    : [new TaskAddedToGoal(adding.Id, add.UserId, at, added.Id, added.Name)];
+
+            case RemoveTaskFromGoal remove:
+                var removing = Require(goal, remove.UserId);
+                return removing._taskIds.Contains(remove.TaskId)
+                    ? [new TaskRemovedFromGoal(removing.Id, remove.UserId, at, remove.TaskId, task?.Name ?? "")]
+                    : [];
+
             case DeleteGoal delete:
                 var deleting = Require(goal, delete.UserId);
                 return deleting.Deleted ? [] : [new GoalDeleted(deleting.Id, delete.UserId, at)];
@@ -108,8 +129,22 @@ public sealed class Goal : Aggregate
             case GoalDeleted:
                 Deleted = true;
                 break;
+            case TaskAddedToGoal added:
+                _taskIds.Add(added.TaskId);
+                break;
+            case TaskRemovedFromGoal removed:
+                _taskIds.Remove(removed.TaskId);
+                break;
         }
     }
+
+    public static Goal? Holding(IEnumerable<Goal> goals, Guid taskId) =>
+        goals.FirstOrDefault(goal => !goal.Deleted && goal._taskIds.Contains(taskId));
+
+    public static IReadOnlyList<DomainEvent> MoveOut(Goal other, Goal into, TodoTask task, DateTimeOffset at) =>
+        other.Id != into.Id && !other.Deleted && other._taskIds.Contains(task.Id)
+            ? [new TaskRemovedFromGoal(other.Id, other.UserId, at, task.Id, task.Name, into.Id)]
+            : [];
 
     static Goal Require(Goal? goal, Guid userId)
     {

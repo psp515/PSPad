@@ -470,7 +470,9 @@ from its day lands in today's Completed. The page re-plans on
 `/goals`, the goal's name as title with a small outlined status `MudChip`
 (In progress / Achieved — `Color.Success` — / Not achieved) and its due
 date as a caption under it. Tasks come first: every open task as its own
-card (list name on each row), then a collapsed **Completed (N)**. The charts are a separate section at the bottom (`mt-8`, their own
+card (list name on each row), then a collapsed **Completed (N)**. Its tasks are
+the goal's `TaskIds` the replica holds and has not deleted, shared tasks
+included. The charts are a separate section at the bottom (`mt-8`, their own
 `MudGrid`): the **Progress** card and, for dated goals, the **Pace** card,
 each half width from `md` up. Tasks and charts never share a grid. With
 no open tasks it shows an `EmptyState` "No open tasks." with no create
@@ -987,7 +989,11 @@ addressed as `?inbox=new` (the Inbox FAB or its empty state) or
     (`AppState.LastInboxListId`), falling back to the first list.
 - `PriorityRow`, `GoalRow` and `ListRow` are shared with `TaskDetailPanel`.
   `GoalRow` offers only In progress goals, but still names a linked goal
-  that has since closed.
+  that has since closed. It lists the user's own goals for every task they
+  can open, shared ones included; picking a goal sends `AddTaskToGoal`
+  (moving the task out of the user's other goal), clearing sends
+  `RemoveTaskFromGoal`. The task's current goal is the user's goal whose
+  `TaskIds` hold it (`Goal.Holding`, `adr/0065`).
   The Inbox never uses a dialog to capture.
 
 **Reference items use the same shell, addressed like a task.**

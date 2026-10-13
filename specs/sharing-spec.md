@@ -30,8 +30,8 @@ In:
   30 minutes from creation, closed by five wrong codes, replaceable by a new
   invite (members stay).
 - Members: create, edit, tick, reorder, delete tasks, steps and reference
-  items in the list. Owner-only: rename, delete, move to area, sharing,
-  goals.
+  items in the list, and put a shared task into one of their **own** goals
+  (`adr/0065`). Owner-only: rename, delete, move to area, sharing.
 - "Shared with me" virtual area; members may file a shared list into one of
   their own areas instead.
 - Shared tasks on the member's Today, in the member's time zone.
@@ -106,7 +106,9 @@ everyone else; `TaskList.Require` (owner only) stays for list-level commands.
   `OrganiseInboxItem` into the list. A handler that does not load the parent
   list today starts loading it.
 - **Owner only** — `RenameTaskList`, `DeleteTaskList`, `MoveTaskListToArea`,
-  the four sharing commands above, and `LinkTaskToGoal`.
+  the four sharing commands above. Goal links live on each user's own goal
+  (`AddTaskToGoal`), so members and the owner link the same task to their
+  own goals independently.
 
 ### 2.4 Owner and actor
 
@@ -306,13 +308,14 @@ migration code; the log is the source.
 
 ### 5.4 What the actor's record carries
 
-- `goalId` null — goals are the owner's.
-- Labels for the owner's list resolve by aggregate id, not `userId`, so the
-  member's feed names the list.
+- `goalId` null — a record's goal comes from the reader's own goal links when
+  charts are read (`adr/0065`).
+- Labels for the owner's list resolve while the reader is a member of it, so
+  the member's feed names the list; another user's goal never resolves.
 - **Outstanding** counts `Owner` records only; a member completing the
   owner's tasks must not drive their own line negative.
-- Completions, opened, the heatmap, by-goal (owner side) and the feed count
-  both.
+- Completions, opened, the heatmap and the feed count both; by-goal counts
+  the reader's own records plus any task in one of the reader's goals.
 
 ## 6. Public snapshots — `PSPad.Module.Sharing`
 
@@ -430,7 +433,7 @@ Member, Members view:
 - "Shared by {OwnerName}", the people list read-only, **Show in my area**
   (`PlaceList`) and **Leave list** (confirm). No invite link or code.
 - Rename, delete and move-to-area hidden on Details; no Public snapshots
-  row. Task panel hides the goal field. Move-to-list pickers offer only
+  row. Task panel's goal field offers the member's own goals. Move-to-list pickers offer only
   lists with the same owner.
 
 Both roles:
@@ -510,8 +513,8 @@ Unit — `PSPad.Module.Tasks.Tests`:
 - Every sharing command and rejection; join idempotent for owner and member;
   rotate keeps members.
 - `ListAccess`: owner and member pass, stranger and removed member rejected,
-  for each content command family; list-level commands and `LinkTaskToGoal`
-  reject members.
+  for each content command family; list-level commands reject members; a
+  member adds a shared task to their own goal, never to the owner's.
 - Owner/actor: a member's `CreateTask`, `OrganiseInboxItem`,
   `CreateReferenceItem` produce owner-owned aggregates with `ActorId` the
   member.
@@ -551,7 +554,7 @@ Integration — `PSPad.Api.Tests`:
 bUnit — `PSPad.App.Tests`:
 
 - "Shared with me" appears only with unplaced member lists; filing moves it.
-- Sharing section per role; goal field hidden for members.
+- Sharing section per role; a member puts a shared task into their own goal.
 - Purge reconciliation on the replica.
 - `/public/snapshot/{token}` renders tasks and items, mark toggles and revert on failure,
   expired screen; "Marked on a snapshot" chip and Dismiss; `/snapshots` online

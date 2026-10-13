@@ -51,7 +51,7 @@ public class StatisticsReaderTests
             Task.FromResult<IReadOnlyList<StatisticsLabel>>(labels);
 
         public Task<IReadOnlyList<StatisticsLabel>> ByIdsAsync(
-            IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+            Guid userId, IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<StatisticsLabel>>(
                 labels.Where(label => ids.Contains(label.Id)).ToArray());
     }
@@ -61,7 +61,7 @@ public class StatisticsReaderTests
         public List<Guid[]> Lookups { get; } = [];
 
         public Task<IReadOnlyDictionary<Guid, TaskSnapshot>> CurrentAsync(
-            IReadOnlyCollection<Guid> taskIds, CancellationToken ct)
+            Guid userId, IReadOnlyCollection<Guid> taskIds, CancellationToken ct)
         {
             Lookups.Add(taskIds.ToArray());
 

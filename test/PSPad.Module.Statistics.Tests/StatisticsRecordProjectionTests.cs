@@ -1,4 +1,5 @@
 using PSPad.Abstractions;
+using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -147,6 +148,36 @@ public class StatisticsRecordProjectionTests
         Assert.Null(member.GoalId);
         Assert.Equal(StatisticsRecord.IdFor(7, Member), member.Id);
         Assert.Equal(1, member.CompletionNumber);
+    }
+
+    [Fact]
+    public async Task AddingATaskToAGoalIsALinkedToGoalRecordForTheGoalsOwner()
+    {
+        var store = new InMemoryStatisticsStore();
+        var goalId = Guid.NewGuid();
+        var taskId = Guid.NewGuid();
+        var added = new TaskAddedToGoal(goalId, User, At, taskId, "Dune");
+
+        await new StatisticsRecordProjection(store).HandleAsync(new DomainEventEnvelope(11, added), CancellationToken.None);
+
+        var record = Assert.Single(store.Records);
+        Assert.Equal((RecordKind.LinkedToGoal, taskId, "Dune", goalId, User), (record.Kind, record.TaskId, record.TaskName, record.GoalId, record.UserId));
+    }
+
+    [Fact]
+    public async Task TakingATaskOutOfAGoalIsAnUnlinkUnlessItMovedToAnother()
+    {
+        var store = new InMemoryStatisticsStore();
+        var taskId = Guid.NewGuid();
+        var projection = new StatisticsRecordProjection(store);
+
+        await projection.HandleAsync(new DomainEventEnvelope(12,
+            new TaskRemovedFromGoal(Guid.NewGuid(), User, At, taskId, "Dune")), CancellationToken.None);
+        await projection.HandleAsync(new DomainEventEnvelope(13,
+            new TaskRemovedFromGoal(Guid.NewGuid(), User, At, taskId, "Dune", MovedTo: Guid.NewGuid())), CancellationToken.None);
+
+        var record = Assert.Single(store.Records);
+        Assert.Equal((RecordKind.LinkedToGoal, taskId, (Guid?)null), (record.Kind, record.TaskId, record.GoalId));
     }
 
     [Fact]

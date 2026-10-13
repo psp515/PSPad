@@ -142,10 +142,9 @@ public class SnapshotBuilderTests
     }
 
     [Fact]
-    public void TheSnapshotTaskCarriesNoGoalOrRecurrenceData()
+    public void TheSnapshotTaskCarriesNoRecurrenceData()
     {
         var task = NewTask("Buy milk");
-        task.ApplyAll(TodoTask.Decide(task, new LinkTaskToGoal(Guid.NewGuid(), Owner, task.Id, Guid.NewGuid()), Now));
 
         var snapshot = Build(TasksList(), [task], []);
 

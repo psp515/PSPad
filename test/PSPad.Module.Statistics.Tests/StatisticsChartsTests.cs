@@ -424,6 +424,47 @@ public class StatisticsChartsTests
     }
 
     [Fact]
+    public void ACompletionCountsTowardTheGoalItsTaskIsInNow()
+    {
+        var before = Guid.NewGuid();
+        var now = Guid.NewGuid();
+        var task = Guid.NewGuid();
+
+        var bars = StatisticsCharts.ByGoal(
+            [Record(1, RecordKind.Completed, Today, task, goalId: before)],
+            [Goal(before, "Before"), Goal(now, "Now")],
+            new Dictionary<Guid, Guid> { [task] = now });
+
+        Assert.Equal(1, Assert.Single(bars, bar => bar.GoalId == now).Count);
+        Assert.DoesNotContain(bars, bar => bar.GoalId == before);
+    }
+
+    [Fact]
+    public void AnOldRecordNamingSomeoneElsesGoalCountsAsNoGoal()
+    {
+        var foreign = Guid.NewGuid();
+
+        var bars = StatisticsCharts.ByGoal([Record(1, RecordKind.Completed, Today, goalId: foreign)], []);
+
+        Assert.DoesNotContain(bars, bar => bar.GoalId == foreign);
+        Assert.Equal(1, Assert.Single(bars, bar => bar.GoalId is null).Count);
+    }
+
+    [Fact]
+    public void AMembersCompletionOfASharedTaskCountsTowardTheirOwnGoal()
+    {
+        var goal = Guid.NewGuid();
+        var shared = Guid.NewGuid();
+
+        var bars = StatisticsCharts.ByGoal(
+            [Record(1, RecordKind.Completed, Today, shared, role: RecordRole.Actor)],
+            [Goal(goal, "Read more")],
+            new Dictionary<Guid, Guid> { [shared] = goal });
+
+        Assert.Equal(1, Assert.Single(bars, bar => bar.GoalId == goal).Count);
+    }
+
+    [Fact]
     public void TheNoGoalBarIsThereEvenWhenEveryTaskHasAGoal()
     {
         var goal = Guid.NewGuid();

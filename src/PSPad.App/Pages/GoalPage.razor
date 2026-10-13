@@ -169,7 +169,7 @@ else
         _goal = goal is null || goal.Deleted ? null : goal;
 
         var all = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        var mine = all.Where(task => task.GoalId == GoalId && !task.Deleted).ToArray();
+        var mine = all.Where(task => _goal?.TaskIds.Contains(task.Id) == true && !task.Deleted).ToArray();
         _open = [.. mine.Where(task => !IsDone(task))];
         _done = [.. mine.Where(IsDone)];
         _progress = GoalProgress.Of(mine, State.TimeZone, State.Today);

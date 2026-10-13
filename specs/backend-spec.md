@@ -151,13 +151,11 @@ plan's work).
 everyone else; `TaskList.Require` (owner only) stays for list-level
 commands. Every content handler — tasks, steps, recurrence, descriptions,
 stars, priorities, due dates, completion, occurrences, reference items and
-their fields, including `LinkTaskToGoal` — loads the parent `TaskList` to
+their fields — loads the parent `TaskList` to
 resolve `ListAccess` (`ListAccessLoading.AccessAsync`), even one that
-previously loaded only its own aggregate. `LinkTaskToGoal` reaches
-`TodoTask.Decide` the same way as any content command; the aggregate itself
-then rejects a non-owner `ListAccess.ActorId` (goals are the owner's), so
-the owner-only gate sits in the aggregate's rule, not in which loader the
-handler calls.
+previously loaded only its own aggregate. `AddTaskToGoal` does the same for
+the task it names: the task must be visible to the actor, while the goal must
+be the actor's own (`adr/0065`).
 
 Aggregates keep rules pure and testable with no store: `Decide(command)`
 returns the events a command produces, or throws `DomainRejectedException`;
@@ -215,8 +213,8 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `areas` | user-defined areas | `name`, `position` |
 | `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation), `inviteToken` (`adr/0054`, null = not shared), `inviteCode`, `inviteExpiresAt` (`adr/0057`; 30 minutes from the share), `wrongCodes`, `ownerName`, `_members[]` (`userId`, `displayName`, `joinedAt`; the leading underscore keeps the BSON field name stable, like `_steps`). Documents written before `adr/0051` still carry a `position` nobody reads |
 | `inboxes` | one per user | `items[]` |
-| `todotasks` | tasks with steps inline | `listId`, `previousListId` (the list it last left, null until moved), `dueOn`, `goalId`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0056`) |
-| `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn` |
+| `todotasks` | tasks with steps inline | `listId`, `previousListId` (the list it last left, null until moved), `dueOn`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0056`) |
+| `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn`, `_taskIds[]` (the tasks this user counts toward the goal — `adr/0065`) |
 | `referenceitems` | items in a `Reference` list | `listId`, `previousListId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`), `snapshotMarks[]` (`snapshotId`, `markedAt` — `adr/0056`) |
 | `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
 | `listviews` | one per (user, list): that user's placement of a shared list | `_id` = `ListView.IdFor(userId, listId)`, `listId`, `areaId?` (null = "Shared with me") |
@@ -364,6 +362,19 @@ not stated there:
   already queued in an outbox are not rejected; `ReopenGoal` returns any
   closed goal to `InProgress`. `SetGoalDueDate` sets or clears an
   optional `dueOn`.
+- A goal holds its task links; a task names no goal (`adr/0065`).
+  `AddTaskToGoal(goalId, taskId)` and `RemoveTaskFromGoal(goalId, taskId)`
+  act on the actor's own goal only ("That goal belongs to somebody else.");
+  adding needs a task the actor can see — their own, or one in a list they
+  are a member of — so a member can count a shared task toward their own
+  goal. A task sits in at most one of a user's goals: adding it to goal B
+  stages `TaskRemovedFromGoal(MovedTo: B)` on the user's goal that held it, in
+  the same unit of work. Adding twice or removing an absent task emits
+  nothing. The client finds a task's goal with `Goal.Holding(goals, taskId)`.
+  A deleted task's id stays in the goal; readers skip ids they cannot
+  resolve. `MongoBackfill.EnsureGoalLinksAsync` moved each pre-existing
+  `todotasks.goalId` onto its owner's goal (dropping links to another user's
+  goal) and unset the field, bumping the goal's `seq` but not its `version`.
 - Deleting a container deletes its live children in the same command and
   transaction (`adr/0042`, extended to reference items by `adr/0047`):
   `DeleteArea` → its lists → their tasks and reference items;
@@ -411,13 +422,10 @@ not stated there:
   time, a wrong code commits `InviteCodeRejected`, the fifth closes the invite). `ListAccess` admits the owner or a
   member to every content command on tasks, steps, reference items and
   their fields, plus `CreateTask`, `CreateReferenceItem`,
-  `OrganiseInboxItem`, and `LinkTaskToGoal`; list-level commands
+  `OrganiseInboxItem`, and the task side of `AddTaskToGoal`; list-level commands
   (`RenameTaskList`, `DeleteTaskList`, `MoveTaskListToArea`, the five
   sharing commands) stay owner-only through `TaskList.Require`.
-  `LinkTaskToGoal` goes through `ListAccess` like any content command, but
-  `TodoTask.Decide` itself rejects a non-owner actor — goals are the
-  owner's, so the gate lives in the aggregate's rule rather than in the
-  loader. Every event carries the owner as `UserId`; `ActorId` records who
+  Every event carries the owner as `UserId`; `ActorId` records who
   actually acted.
   `MoveTaskToList` and `MoveReferenceItemToList` reject a target list whose
   owner differs from the source list's — a task or item never crosses
@@ -874,13 +882,18 @@ it writes the owner's record (`Role: Owner`) and a second, actor-facing copy
 (`Role: Actor`): same `Seq`, `UserId` set to the actor, `GoalId` cleared,
 `CompletionNumber` recomputed against the actor's own completions of that
 task. `statistics_inbox_records` never gets an actor copy — the Inbox is
-never shared. Labels resolve by id (`ILabelStore.ByIdsAsync`), not by the
-caller's `userId`, so a member's feed can still name a list or goal that
-belongs to the owner. `StatisticsCharts.Outstanding`, its tiles
-(`NetChange` included) and `ByGoal` all restrict to `Role: Owner` records —
-a member's own "outstanding" line and net change must not move because they
-completed someone else's task, and a task's goal stays the owner's business.
-See `adr/0055`.
+never shared. Labels resolve through `ILabelStore.ByIdsAsync(userId, ids)`:
+the caller's own labels plus the list labels of lists they are currently a
+member of — never another user's goal (`adr/0065`). `ITaskSnapshotSource`
+is scoped the same way: a task the caller neither owns nor can see in a
+member list comes back `Gone`. `StatisticsCharts.Outstanding` and its tiles
+(`NetChange` included) restrict to `Role: Owner` records — a member's own
+"outstanding" line and net change must not move because they completed
+someone else's task. `ByGoal` counts `Role: Owner` records plus any record
+whose task sits in one of the reader's goals, and attributes each by the
+reader's current goal links (`IDocumentStore<Goal>`); an old record's
+`GoalId` counts only when it names one of the reader's own goals. See
+`adr/0055`, `adr/0065`.
 
 **A versioned projection rebuilds once when its shape changes.**
 `statistics_state.projectionVersion` (absent = 1) is compared against
@@ -897,8 +910,12 @@ migration script; the log is the source (`adr/0055`).
 **Record shape and enrichment.** `StatisticsRecord` (fields in §3) is built
 from its source event's payload alone — no live lookup at projection time.
 `TaskCompleted`, `TaskReopened`, `TaskDeleted`, `TaskMovedToList`,
-`TaskLinkedToGoal` and `OccurrenceCompleted` all carry `Name` (and
-`ListId`/`GoalId`/`DueOn` where relevant) for this reason; `TaskCreated`
+`TaskLinkedToGoal` (old events only) and `OccurrenceCompleted` all carry `Name` (and
+`ListId`/`DueOn` where relevant; `GoalId` only on events stored before
+`adr/0065`) for this reason; `TaskAddedToGoal` and `TaskRemovedFromGoal`
+carry `TaskId` and `TaskName` and become `LinkedToGoal` records for the
+goal's owner (a removal that only moved the task to another goal writes
+none); `TaskCreated`
 already did. Events stored before this enrichment deserialize with those
 fields empty — `StatisticsReader` falls back to `ITaskSnapshotSource` for
 the task's current name, or renders `(deleted task)` if the task is gone.
