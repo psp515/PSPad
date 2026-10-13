@@ -37,6 +37,7 @@ public class SettingsPageTests : Bunit.TestContext
     InMemoryLocalSessionStore? _sessions;
     InMemoryReplica? _replica;
     LocalAuthenticationStateProvider? _authProvider;
+    RevocationEndpoint? _revocation;
 
     [Fact]
     public void ItShowsTheAccountName()
@@ -345,28 +346,75 @@ public class SettingsPageTests : Bunit.TestContext
         Arrange(displayName: "Ada", email: "ada@example.com");
 
         var page = Render<SettingsPage>();
-        page.Find(".pspad-sign-out").Click();
+        await page.InvokeAsync(() => page.Find(".pspad-sign-out").Click());
 
         Assert.Null(_sessions!.Current);
         Assert.Null(await _replica!.OwnerAsync());
     }
 
     [Fact]
-    public async Task SigningOutKeepsTheOutbox()
+    public async Task SigningOutRevokesTheRefreshTokenAtKeycloak()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
-        var outbox = Services.GetRequiredService<IOutbox>();
-        await outbox.AppendAsync(
-            Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
 
         var page = Render<SettingsPage>();
-        page.Find(".pspad-sign-out").Click();
+        await page.InvokeAsync(() => page.Find(".pspad-sign-out").Click());
 
-        Assert.Equal(1, await outbox.CountAsync());
+        Assert.Equal(1, _revocation!.Requests);
     }
 
     [Fact]
-    public void SigningOutClearsBeforeLeavingForKeycloakSoAnInterruptedSignOutStillSignsOut()
+    public async Task UnsyncedChangesAskForConfirmationBeforeAnythingIsRemoved()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var outbox = await QueueAPendingCommandAsync();
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        await page.InvokeAsync(() => page.Find(".pspad-sign-out").Click());
+
+        Assert.Contains("1 unsynced change", page.Find(".mud-dialog").TextContent);
+        Assert.Equal(1, await outbox.CountAsync());
+        Assert.NotNull(_sessions!.Current);
+        Assert.Equal(0, _revocation!.Requests);
+        Assert.Equal("http://localhost/", navigation.Uri);
+    }
+
+    [Fact]
+    public async Task ConfirmingRemovesTheUnsyncedChangesAndSignsOut()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var outbox = await QueueAPendingCommandAsync();
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        await page.InvokeAsync(() => page.Find(".pspad-sign-out").Click());
+        await page.InvokeAsync(() => DialogButton(page, "Sign out").Click());
+
+        page.WaitForAssertion(() => Assert.StartsWith("http://localhost:8080/", navigation.Uri));
+        Assert.Equal(0, await outbox.CountAsync());
+        Assert.Null(_sessions!.Current);
+    }
+
+    [Fact]
+    public async Task CancellingKeepsTheUnsyncedChangesAndTheSession()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var outbox = await QueueAPendingCommandAsync();
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+
+        var page = Render(BuildSettingsPageWithDialogs());
+        await page.InvokeAsync(() => page.Find(".pspad-sign-out").Click());
+        await page.InvokeAsync(() => DialogButton(page, "Cancel").Click());
+
+        Assert.Equal(1, await outbox.CountAsync());
+        Assert.NotNull(_sessions!.Current);
+        Assert.Equal(0, _revocation!.Requests);
+        Assert.Equal("http://localhost/", navigation.Uri);
+    }
+
+    [Fact]
+    public async Task SigningOutClearsBeforeLeavingForKeycloakSoAnInterruptedSignOutStillSignsOut()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");
         var navigation = Services.GetRequiredService<BunitNavigationManager>();
@@ -374,14 +422,14 @@ public class SettingsPageTests : Bunit.TestContext
 
         var page = Render<SettingsPage>();
         _sessions!.Cleared = () => whereWeStillWere = navigation.Uri;
-        page.Find(".pspad-sign-out").Click();
+        await page.InvokeAsync(() => page.Find(".pspad-sign-out").Click());
 
         Assert.Equal("http://localhost/", whereWeStillWere);
         Assert.StartsWith("http://localhost:8080/", navigation.Uri);
     }
 
     [Fact]
-    public void SigningOutEndsTheKeycloakSessionAndComesBackToTheWelcomeScreen()
+    public async Task SigningOutEndsTheKeycloakSessionItNamesAndComesBackToTheWelcomeScreen()
     {
         // Dropping only the local session leaves Keycloak's own alive, and the next authorization
         // bounce signs the same user straight back in without ever asking.
@@ -389,31 +437,73 @@ public class SettingsPageTests : Bunit.TestContext
         var navigation = Services.GetRequiredService<BunitNavigationManager>();
 
         var page = Render<SettingsPage>();
-        page.Find(".pspad-sign-out").Click();
+        await page.InvokeAsync(() => page.Find(".pspad-sign-out").Click());
 
         Assert.StartsWith(
             "http://localhost:8080/realms/psplace/protocol/openid-connect/logout?", navigation.Uri);
         Assert.Contains("client_id=pspad-frontend", navigation.Uri);
+        Assert.Contains("id_token_hint=id-token", navigation.Uri);
         Assert.Contains(
             $"post_logout_redirect_uri={Uri.EscapeDataString("http://localhost/welcome")}",
             navigation.Uri);
     }
 
     [Fact]
-    public void SigningOutStaysLocalAndAnonymousWhenThereIsNoNetworkToReachKeycloakOn()
+    public void OfflineTheSignOutButtonIsDisabledAndSaysWhy()
     {
         Arrange(displayName: "Ada", email: "ada@example.com", online: false);
-        var navigation = Services.GetRequiredService<BunitNavigationManager>();
-        var routeWhenAnnounced = new List<string>();
-        _authProvider!.AuthenticationStateChanged += _ => routeWhenAnnounced.Add(navigation.Uri);
 
         var page = Render<SettingsPage>();
-        page.Find(".pspad-sign-out").Click();
 
-        Assert.Equal("http://localhost/welcome", navigation.Uri);
-        Assert.All(routeWhenAnnounced, route => Assert.EndsWith("/welcome", route));
-        Assert.NotEmpty(routeWhenAnnounced);
+        Assert.True(page.Find(".pspad-sign-out").HasAttribute("disabled"));
+        Assert.Contains("can't be signed out securely", page.Find(".pspad-sign-out-offline").TextContent);
+        Assert.NotNull(_sessions!.Current);
     }
+
+    [Fact]
+    public void TheSignOutButtonComesBackWithTheConnection()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var connectivity = new SwitchableConnectivity();
+        Services.AddSingleton<IConnectivity>(connectivity);
+
+        var page = Render<SettingsPage>();
+        connectivity.GoOnline();
+
+        page.WaitForAssertion(() => Assert.False(page.Find(".pspad-sign-out").HasAttribute("disabled")));
+        Assert.Empty(page.FindAll(".pspad-sign-out-offline"));
+    }
+
+    [Fact]
+    public async Task AnUnreachableKeycloakKeepsTheUserSignedInAndSaysSo()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com", keycloakReachable: false);
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
+        var announced = false;
+        _authProvider!.AuthenticationStateChanged += _ => announced = true;
+
+        var page = Render<SettingsPage>();
+        await page.InvokeAsync(() => page.Find(".pspad-sign-out").Click());
+
+        Assert.NotNull(_sessions!.Current);
+        Assert.Equal(User, await _replica!.OwnerAsync());
+        Assert.False(announced);
+        Assert.Equal("http://localhost/", navigation.Uri);
+        Assert.Contains(
+            Services.GetRequiredService<ISnackbar>().ShownSnackbars,
+            snackbar => snackbar.Message?.Contains("still signed in") == true);
+    }
+
+    async Task<IOutbox> QueueAPendingCommandAsync()
+    {
+        var outbox = Services.GetRequiredService<IOutbox>();
+        await outbox.AppendAsync(
+            Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
+        return outbox;
+    }
+
+    static AngleSharp.Dom.IElement DialogButton(IRenderedComponent<IComponent> page, string text) =>
+        page.FindAll(".mud-dialog button").Single(button => button.TextContent.Trim() == text);
 
     [Fact]
     public void ItOffersTheThreeThemeModes()
@@ -818,7 +908,8 @@ public class SettingsPageTests : Bunit.TestContext
 
     AppState Arrange(
         string displayName, string email, bool respondWithNullTimeZone = false, bool online = true,
-        bool accountDeleteFails = false, bool keycloakRemoved = true, bool accountDeleteNeedsFreshSignIn = false)
+        bool accountDeleteFails = false, bool keycloakRemoved = true, bool accountDeleteNeedsFreshSignIn = false,
+        bool keycloakReachable = true)
     {
         _replica = AppTestHost.Arrange(this, User, Today);
         Services.AddSingleton<IConnectivity>(new FixedConnectivity(online));
@@ -830,11 +921,15 @@ public class SettingsPageTests : Bunit.TestContext
             })
             .Build());
         _sessions = new InMemoryLocalSessionStore(
-            new LocalSession(User, displayName, email, "UTC", "refresh-token", DateTimeOffset.UtcNow));
+            new LocalSession(User, displayName, email, "UTC", "refresh-token", DateTimeOffset.UtcNow, "id-token"));
         _authProvider = new LocalAuthenticationStateProvider(_sessions);
         Services.AddSingleton<ILocalSessionStore>(_sessions);
         Services.AddSingleton(_authProvider);
-        Services.AddSingleton(new LocalSignOut(_sessions, _replica, _authProvider, NullLogger<LocalSignOut>.Instance));
+        _revocation = new RevocationEndpoint(keycloakReachable);
+        Services.AddSingleton(services => new LocalSignOut(
+            _sessions, _replica, services.GetRequiredService<IOutbox>(),
+            new KeycloakTokenRevoker(new HttpClient(_revocation), "http://localhost:8080/realms/psplace", "pspad-frontend"),
+            _authProvider, NullLogger<LocalSignOut>.Instance));
 
         var state = new AppState
         {
@@ -858,6 +953,36 @@ public class SettingsPageTests : Bunit.TestContext
             NullLogger<LocalAccountDeletion>.Instance));
 
         return state;
+    }
+
+    sealed class RevocationEndpoint(bool reachable) : HttpMessageHandler
+    {
+        public int Requests { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests++;
+            return reachable
+                ? Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK))
+                : throw new HttpRequestException("Keycloak is down.");
+        }
+    }
+
+    sealed class SwitchableConnectivity : IConnectivity
+    {
+        public bool IsOnline { get; private set; }
+
+        public event Action? CameOnline;
+
+        public event Action? Changed;
+
+        public void GoOnline()
+        {
+            IsOnline = true;
+            Changed?.Invoke();
+            CameOnline?.Invoke();
+        }
     }
 
     sealed class FixedConnectivity(bool online) : IConnectivity

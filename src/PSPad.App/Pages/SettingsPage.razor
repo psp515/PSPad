@@ -26,6 +26,7 @@
 @inject ISyncStatus SyncStatus
 @inject IDialogService Dialogs
 @inject LocalAccountDeletion AccountDeletion
+@inject ISnackbar Snackbar
 @implements IDisposable
 
 <PageHeading Title="Settings" Subtitle="Account, appearance and sync" Icon="@Icons.Material.Outlined.Settings" />
@@ -49,10 +50,16 @@
                     Change password
                 </MudButton>
                 <MudButton Class="pspad-sign-out" OnClick="@SignOutAsync" StartIcon="@Icons.Material.Filled.Logout"
-                           Color="Color.Error" Variant="Variant.Outlined">
+                           Color="Color.Error" Variant="Variant.Outlined" Disabled="@(!Connectivity.IsOnline || _signingOut)">
                     Sign out
                 </MudButton>
             </MudStack>
+            @if (!Connectivity.IsOnline)
+            {
+                <MudText Typo="Typo.caption" Class="d-block mt-2 pspad-sign-out-offline">
+                    You're offline, so this device can't be signed out securely. Connect to sign out.
+                </MudText>
+            }
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -136,6 +143,7 @@
     bool _rejected;
     string _defaultCurrency = Currencies.Pln;
     int _pendingCommands;
+    bool _signingOut;
 
     static readonly string[] TimeZoneIds =
         TimeZoneInfo.GetSystemTimeZones().Select(zone => zone.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray();
@@ -172,6 +180,7 @@
     {
         Sender.Sent += OnCommandSent;
         SyncStatus.Changed += OnSyncChanged;
+        Connectivity.Changed += OnConnectivityChanged;
         _timer = new Timer(_ => InvokeAsync(StateHasChanged), null, Tick, Tick);
         await RefreshPendingAsync();
         await LoadDefaultCurrencyAsync();
@@ -204,18 +213,24 @@
 
     void OnSyncChanged() => InvokeAsync(RefreshPendingAsync);
 
+    void OnConnectivityChanged() => InvokeAsync(StateHasChanged);
+
     async Task SignOutAsync()
     {
-        // Clearing before the redirect leaves the app is what makes an interrupted or offline
-        // sign-out still a sign-out: the Keycloak round trip may never come back.
-        await SignOut.ClearStorageAsync();
-
-        if (!Connectivity.IsOnline)
+        if (_signingOut || !Connectivity.IsOnline || !await ConfirmLosingUnsyncedChangesAsync())
         {
-            // Announcing the anonymous state while still on a route that requires authorization
-            // would send AuthorizeRouteView back to the login page.
-            Navigation.NavigateTo("welcome");
-            SignOut.Announce();
+            return;
+        }
+
+        _signingOut = true;
+
+        // Storage is cleared before the redirect leaves the app, so an interrupted round trip still signs out.
+        if (await SignOut.SignOutAsync() is not SignOutOutcome.Cleared cleared)
+        {
+            _signingOut = false;
+            Snackbar.Add(
+                "Couldn't reach the sign-in server, so you're still signed in. Try again when you're connected.",
+                Severity.Warning);
             return;
         }
 
@@ -223,14 +238,37 @@
             KeycloakEndSession.UrlFor(
                 Configuration["Keycloak:Authority"]!,
                 Configuration["Keycloak:ClientId"]!,
-                Navigation.ToAbsoluteUri("welcome").ToString()),
+                Navigation.ToAbsoluteUri("welcome").ToString(),
+                cleared.IdTokenHint),
             forceLoad: true);
+    }
+
+    async Task<bool> ConfirmLosingUnsyncedChangesAsync()
+    {
+        var pending = await Outbox.CountAsync();
+
+        if (pending == 0)
+        {
+            return true;
+        }
+
+        var changes = pending == 1 ? "1 unsynced change hasn't" : $"{pending} unsynced changes haven't";
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, $"{changes} reached the server yet. Signing out removes them from this device." },
+            { dialog => dialog.ConfirmText, "Sign out" }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Sign out", parameters);
+        var result = await dialog.Result;
+
+        return result is { Canceled: false };
     }
 
     public void Dispose()
     {
         Sender.Sent -= OnCommandSent;
         SyncStatus.Changed -= OnSyncChanged;
+        Connectivity.Changed -= OnConnectivityChanged;
         _timer?.Dispose();
     }
 
