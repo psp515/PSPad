@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Net.Http.Headers;
 using PSPad.Abstractions;
 using PSPad.Api.Commands;
+using PSPad.Api.Cors;
 using PSPad.Api.Endpoints;
 using PSPad.Api.Identity;
 using PSPad.Api.Presentation;
@@ -40,11 +40,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddPSPadForwardedHeaders();
 builder.Services.AddPSPadRateLimiter(builder.Configuration);
 
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
-builder.Services.AddCors(options =>
-    options.AddPolicy("AppClient", policy =>
-        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()
-            .WithExposedHeaders(HeaderNames.WWWAuthenticate)));
+builder.Services.AddPSPadCors();
 
 builder.Services.AddScoped<ICurrentUser, ClaimsCurrentUser>();
 builder.Services.Configure<KeycloakAdminOptions>(builder.Configuration.GetSection(KeycloakAdminOptions.Section));
@@ -90,7 +86,7 @@ builder.Services.AddHttpClient<NbpRateClient>(client =>
 var app = builder.Build();
 
 app.UseForwardedHeaders();
-app.UseCors("AppClient");
+app.UseCors(CorsRegistration.Policy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
