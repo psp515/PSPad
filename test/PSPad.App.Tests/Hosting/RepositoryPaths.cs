@@ -8,6 +8,10 @@ static class RepositoryPaths
 
     public static string Nginx => Path.Combine(Root, "docker", "nginx");
 
+    public static string ServingImage { get; } = File.ReadLines(Path.Combine(Root, "src", "PSPad.App", "Dockerfile"))
+        .Last(line => line.StartsWith("FROM ", StringComparison.Ordinal))
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries)[1];
+
     static string FindRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

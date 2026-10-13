@@ -866,11 +866,23 @@ for deployments that set no `Cors__AllowedOrigins__0`. Any other origin gets no 
 Two images, each with a `Dockerfile` beside its `.csproj`, built with the
 repo root as context.
 
-- `src/PSPad.Api/Dockerfile` — ASP.NET runtime, port 8080.
+- `src/PSPad.Api/Dockerfile` — ASP.NET runtime, port 8080, runs as the
+  image's non-root `app` user (`USER $APP_UID`, UID 1654).
 - `src/PSPad.App/Dockerfile` — publishes the WASM output into
-  `nginx:alpine`; nginx serves pre-compressed assets, sets the
-  `application/wasm` MIME type, falls back to `/index.html` for client
-  routes.
+  `nginxinc/nginx-unprivileged` (UID 101, port 8080); nginx serves
+  pre-compressed assets, sets the `application/wasm` MIME type, falls back
+  to `/index.html` for client routes. The served files stay root-owned;
+  only `appsettings.json` and `appsettings.json.gz`, which the entrypoint
+  rewrites, belong to nginx, and the publish-time `appsettings.json.br` is
+  dropped at build.
+
+Every base image — and every image `docker/compose.yaml` pulls — is pinned
+to an exact version tag (`major.minor.patch`), never `latest`, a bare major
+or a digest. Package versions live once, in
+`Directory.Packages.props` (central package management); no `.csproj`
+carries a `Version`. `.github/dependabot.yml` proposes NuGet, Dockerfile,
+compose and GitHub Actions updates weekly, minor and patch grouped
+(ADR-0071). `ContainerImageTests` and `CentralPackageTests` guard all of it.
 
 The client is static, so its API base URL and Keycloak settings can't be
 baked in — the image ships `wwwroot/appsettings.json` as a template plus an
@@ -904,10 +916,14 @@ the OIDC silent sign-in lands the login callback in an iframe of the app
 itself. Fonts are bundled (`wwwroot/fonts/roboto`, SIL OFL 1.1); the page
 loads nothing from another origin. HSTS belongs to the TLS-terminating proxy.
 
-`docker/compose.yaml` runs MongoDB and Keycloak for development.
-Integration tests never touch it — they start their own MongoDB via
-Testcontainers. `docker/compose.prod.yaml` runs api, app, mongo and
-keycloak behind a reverse proxy terminating TLS.
+`docker/compose.yaml` is the self-hosting stack: api, app, mongo and
+keycloak. The API signs in as MongoDB's root user (`pspad`,
+`MONGO_PASSWORD`). `docker/mongo-app-user.js` is an optional hardening
+example, run by hand as root: it waits up to 60 seconds for a writable
+primary, then creates a user holding `readWrite` on one database only, or
+resets its password and roles; the install guide shows the compose override
+that points the API at it (ADR-0071). Integration tests never touch the stack — they start their own
+MongoDB via Testcontainers. TLS belongs to a reverse proxy in front of it.
 
 ---
 

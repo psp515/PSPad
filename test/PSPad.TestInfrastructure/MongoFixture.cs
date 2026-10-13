@@ -11,6 +11,8 @@ public sealed class MongoFixture : IAsyncLifetime
 
     IMongoClient _client = null!;
 
+    public MongoDbContainer Container => _container;
+
     public string ConnectionString => _container.GetConnectionString();
 
     public IMongoClient Client => _client;

@@ -65,6 +65,16 @@ public partial class FrontendHeadersTests(FrontendContainer frontend) : IClassFi
         Assert.Equal(["'self'"], (await DirectivesAsync())["frame-ancestors"]);
     }
 
+    [Fact]
+    public async Task NginxRunsWithoutRoot()
+    {
+        var status = await frontend.ExecAsync(["cat", "/proc/1/status"]);
+        var uid = status.Stdout.Split('\n').Single(line => line.StartsWith("Uid:", StringComparison.Ordinal))
+            .Split('\t', StringSplitOptions.RemoveEmptyEntries)[1];
+
+        Assert.NotEqual("0", uid);
+    }
+
     async Task<Dictionary<string, string[]>> DirectivesAsync()
     {
         var response = await frontend.Client.GetAsync("/", TestContext.Current.CancellationToken);
