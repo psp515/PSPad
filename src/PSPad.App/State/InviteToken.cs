@@ -8,4 +8,6 @@ public static class InviteToken
         Convert.ToBase64String(RandomNumberGenerator.GetBytes(18)).Replace('+', '-').Replace('/', '_');
 
     public static string LinkFor(string baseUri, string token) => $"{baseUri.TrimEnd('/')}/join/{token}";
+
+    public static string BudgetLinkFor(string baseUri, string token) => $"{baseUri.TrimEnd('/')}/budgets/join/{token}";
 }

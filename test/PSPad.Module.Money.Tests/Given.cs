@@ -8,7 +8,10 @@ namespace PSPad.Module.Money.Tests;
 internal static class Given
 {
     public static readonly Guid Owner = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    public static readonly Guid Member = Guid.Parse("33333333-3333-3333-3333-333333333333");
     public static readonly Guid Stranger = Guid.Parse("99999999-9999-9999-9999-999999999999");
+    public const string InviteToken = "abcdefghijklmnopqrstuvwxyz";
+    public const string InviteCode = "K7M4PX";
     public static readonly DateTimeOffset Now = new(2026, 10, 9, 8, 0, 0, TimeSpan.Zero);
     public static readonly DateOnly Today = new(2026, 10, 9);
 
@@ -16,6 +19,20 @@ internal static class Given
     {
         var budget = new Budget();
         budget.ApplyAll(Budget.Decide(null, new CreateBudget(Guid.NewGuid(), Owner, Guid.NewGuid(), "Personal"), Now));
+        return budget;
+    }
+
+    public static Budget Share(Budget budget)
+    {
+        budget.ApplyAll(Budget.Decide(budget,
+            new ShareBudget(Guid.NewGuid(), budget.UserId, budget.Id, InviteToken, InviteCode, "Lukasz Kolber"), Now));
+        return budget;
+    }
+
+    public static Budget Join(Budget budget, Guid? who = null)
+    {
+        budget.ApplyAll(Budget.Decide(budget,
+            new JoinBudget(Guid.NewGuid(), who ?? Member, budget.Id, InviteToken, InviteCode, "Anna Nowak"), Now));
         return budget;
     }
 

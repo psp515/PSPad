@@ -226,12 +226,12 @@ public sealed class ReferenceItem : Aggregate
     {
         if (item is null || item.Deleted)
         {
-            throw new DomainRejectedException("That item no longer exists.");
+            throw new DomainRejectedException("That item no longer exists.", Unrecoverable: true);
         }
 
         if (item.UserId != grant.OwnerId)
         {
-            throw new DomainRejectedException("That item belongs to somebody else.");
+            throw new DomainRejectedException("That item belongs to somebody else.", Unrecoverable: true);
         }
 
         return item;

@@ -5,6 +5,7 @@ using PSPad.Abstractions;
 using PSPad.Api.Tests.Sync;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Api.Tests.Endpoints;
@@ -85,6 +86,28 @@ public class ListSharingEndpointTests(MongoFixture fixture)
 
         var sync = await member.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
         Assert.DoesNotContain(listId, sync!.MemberListIds ?? []);
+    }
+
+    [Fact]
+    public async Task ARemovedMembersQueuedChangeIsRejectedForGood()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var (owner, ownerId) = await SignedIn(factory, ct);
+        var (member, memberId) = await SignedIn(factory, ct);
+        var token = Sharing.FreshToken();
+        var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
+        (await Sharing.JoinAsync(member, ct, token)).EnsureSuccessStatusCode();
+        (await Sharing.RemoveMemberAsync(owner, listId, memberId, ct)).EnsureSuccessStatusCode();
+
+        var envelopes = new[] { new CommandEnvelope(nameof(CreateTask),
+            JsonSerializer.SerializeToElement(new CreateTask(Guid.NewGuid(), memberId, Guid.NewGuid(), listId, "Milk"))) };
+        var results = await (await member.PostAsJsonAsync("/api/commands", envelopes, ct))
+            .Content.ReadFromJsonAsync<CommandResponse[]>(ct);
+
+        var result = Assert.Single(results!);
+        Assert.False(result.Accepted);
+        Assert.True(result.Unrecoverable);
     }
 
     [Fact]

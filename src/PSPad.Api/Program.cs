@@ -95,6 +95,7 @@ var api = app.MapGroup("/api").RequireAuthorization();
 api.MapCommandEndpoints();
 api.MapSyncEndpoints();
 api.MapListEndpoints();
+api.MapBudgetEndpoints();
 api.MapTodayEndpoints();
 api.MapMeEndpoints();
 api.MapAccountEndpoints();

@@ -36,7 +36,7 @@ else
 
     @if (_budget.IsArchived)
     {
-        <MudAlert Severity="Severity.Info" Class="mb-4 pspad-archived-banner">This budget is archived. It is read-only.</MudAlert>
+        <MudAlert Severity="Severity.Info" Class="mb-4 pspad-archived-banner">@ArchivedText</MudAlert>
     }
 
     <div class="d-flex align-center gap-2 mb-4 pspad-budget-nav">
@@ -46,6 +46,14 @@ else
             <MudToggleItem Value="@BalanceTab" Text="Balance" />
             <MudToggleItem Value="@SummaryTab" Text="Summary" />
         </MudToggleGroup>
+        @if (_budget.IsShared)
+        {
+            <MudBadge Class="pspad-budget-members-button" Content="@(_budget.Members.Count + 1)" Color="Color.Primary"
+                      Overlap="true" Bordered="true">
+                <MudIconButton Icon="@Icons.Material.Outlined.People" aria-label="@($"Members, {_budget.Members.Count + 1} people")"
+                               OnClick="@OpenMembers" />
+            </MudBadge>
+        }
         <MudIconButton Class="pspad-budget-settings" Icon="@Icons.Material.Outlined.Settings" aria-label="Budget settings"
                        aria-pressed="@(TabIndex == SettingsTab ? "true" : "false")"
                        Color="@(TabIndex == SettingsTab ? Color.Primary : Color.Default)" OnClick="@(() => SelectTab(SettingsTab))" />
@@ -77,7 +85,8 @@ else
             <BudgetSummaryTab Entries="@_entries" Snapshots="@_snapshots" />
             break;
         default:
-            <BudgetSettingsTab Budget="@_budget" Entries="@_entries" OnAddCategory="@AddCategoryAsync"
+            <BudgetSettingsTab Budget="@_budget" Entries="@_entries" Viewer="@State.UserId" OnOpenMembers="@OpenMembers"
+                               OnAddCategory="@AddCategoryAsync"
                                OnRenameCategory="@RenameCategoryAsync" OnMergeCategory="@MergeCategoryAsync"
                                OnRemoveCategory="@RemoveCategoryAsync"
                                OnRename="@(() => Navigation.NavigateTo(BudgetQuery.For(Navigation.Uri, _budget.Id)))"
@@ -164,7 +173,7 @@ else
     async Task ReloadAsync()
     {
         var budget = await BudgetStore.LoadAsync(BudgetId, CancellationToken.None);
-        _budget = budget is null || budget.UserId != State.UserId ? null : budget;
+        _budget = budget is null || !budget.Admits(State.UserId) ? null : budget;
         var entries = await EntryStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _entries = [.. entries.Where(entry => entry.BudgetId == BudgetId && !entry.Deleted)];
         var snapshots = await SnapshotStore.LoadAllAsync(State.UserId, CancellationToken.None);
@@ -181,6 +190,12 @@ else
     }
 
     void ShowMonth(YearMonth month) => _month = month;
+
+    string ArchivedText => _budget!.UserId == State.UserId
+        ? "This budget is archived. It is read-only."
+        : $"{_budget.OwnerName} archived this budget. It is read-only.";
+
+    void OpenMembers() => Navigation.NavigateTo(BudgetMembersQuery.For(Navigation.Uri, BudgetId));
 
     void OpenEntry(MoneyEntry entry) => Navigation.NavigateTo(EntryQuery.For(Navigation.Uri, entry.Id));
 

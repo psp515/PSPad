@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using PSPad.Module.Tasks.Lists;
+using PSPad.Abstractions;
 
 namespace PSPad.App.State;
 
@@ -11,4 +11,7 @@ public static class InviteCode
 
     public static string JoinLinkFor(string baseUri, string token, string code) =>
         $"{InviteToken.LinkFor(baseUri, token)}#code={code}";
+
+    public static string BudgetJoinLinkFor(string baseUri, string token, string code) =>
+        $"{InviteToken.BudgetLinkFor(baseUri, token)}#code={code}";
 }

@@ -10,5 +10,9 @@ public interface ISyncStatus
 
     IReadOnlyList<string> LastRejections { get; }
 
+    bool HasStuckChange { get; }
+
+    Task DiscardStuckChangeAsync();
+
     event Action? Changed;
 }

@@ -23,7 +23,6 @@ In:
 
 Out (each its own issue):
 
-- Sharing a budget with other users (#121, see §9). The model is built for it.
 - Public snapshots of money. Never.
 - Investment detail (units, buy price, gain on the asset itself).
 - Recurring expenses, budget limits, imports from bank files.
@@ -492,17 +491,9 @@ Each slice ships green on its own:
 4. Summary tab and charts.
 5. Docs: `features.astro` and the landing page.
 
-## 9. Future: sharing a budget
+## 9. Sharing a budget
 
-Tracked in #121. It follows `adr/0054` and `adr/0057`:
-- `Budget` gains `Members[]` and `InviteToken`.
-- Invites use a link plus a code and expire after 30 minutes.
-- `JoinBudget` is a server-only command.
-- `BudgetAccess.To` grants members content writes. Rename, archive and the
-  sharing commands stay owner-only.
-- The sync filter widens to budgets the user is a member of.
-- `ActorId` on events records who entered each entry.
-- `MoneyPreferences` stays personal.
-
-Nothing in v1 needs to change for that, beyond what §3.2 already fixes:
-owner-keyed `UserId`, `BudgetId` on everything, and one access function.
+Built in #121: `specs/budget-sharing-design.md` (`adr/0066`). It needed
+nothing beyond what §3.2 already fixed: owner-keyed `UserId`, `BudgetId` on
+everything, and one access function, now split into `BudgetAccess.To`
+(owner or member) and `BudgetAccess.Owned`.

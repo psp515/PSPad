@@ -119,7 +119,7 @@
         _entry = entry is { Deleted: false } ? entry : null;
         var budgetId = _entry?.BudgetId ?? (EntryId is null ? NewInBudget : null);
         var budget = budgetId is null ? null : await Budgets.LoadAsync(budgetId.Value, CancellationToken.None);
-        _budget = budget is null || budget.UserId != State.UserId ? null : budget;
+        _budget = budget is null || !budget.Admits(State.UserId) ? null : budget;
 
         if (_budget is null)
         {

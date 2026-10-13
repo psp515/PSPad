@@ -19,7 +19,7 @@ public sealed class SetGoalStatusHandler(IDocumentStore<Goal> store, IUnitOfWork
         }
         catch (DomainRejectedException rejection)
         {
-            return CommandResult.Rejected(rejection.Message);
+            return CommandResult.Rejected(rejection);
         }
     }
 }

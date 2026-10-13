@@ -402,12 +402,12 @@ public sealed class TodoTask : Aggregate
     {
         if (task is null || task.Deleted)
         {
-            throw new DomainRejectedException("That task no longer exists.");
+            throw new DomainRejectedException("That task no longer exists.", Unrecoverable: true);
         }
 
         if (task.UserId != grant.OwnerId)
         {
-            throw new DomainRejectedException("That task belongs to somebody else.");
+            throw new DomainRejectedException("That task belongs to somebody else.", Unrecoverable: true);
         }
 
         return task;

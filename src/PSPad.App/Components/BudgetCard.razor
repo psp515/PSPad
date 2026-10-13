@@ -9,8 +9,24 @@
         <div class="d-flex align-center">
             <MudLink Href="@BudgetLinks.For(Budget.Id)" Typo="Typo.h6" Class="pspad-budget-card-name">@Budget.Name</MudLink>
             <MudSpacer />
+            @if (Budget.UserId == Viewer && Budget.IsShared)
+            {
+                <MudTooltip Text="@SharedText">
+                    <MudChip T="string" Class="pspad-budget-card-shared ma-0" Size="Size.Small" Color="Color.Primary"
+                             Variant="Variant.Text" Icon="@Icons.Material.Outlined.People" aria-label="@SharedText">
+                        @(Budget.Members.Count + 1)
+                    </MudChip>
+                </MudTooltip>
+            }
             <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Class="pspad-budget-card-chevron" aria-hidden="true" />
         </div>
+        @if (BudgetOrder.IsSharedWith(Budget, Viewer))
+        {
+            <MudText Typo="Typo.caption" Class="pspad-muted pspad-budget-card-shared-by d-flex align-center gap-1">
+                <MudIcon Icon="@Icons.Material.Outlined.People" Size="Size.Small" aria-hidden="true" />
+                @($"Shared by {Budget.OwnerName}")
+            </MudText>
+        }
         @if (Budget.IsArchived)
         {
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Archived</MudChip>
@@ -62,11 +78,15 @@
 @code {
     [Parameter, EditorRequired] public Budget Budget { get; set; } = default!;
 
+    [Parameter] public Guid Viewer { get; set; }
+
     [Parameter, EditorRequired] public YearMonth Month { get; set; }
 
     [Parameter, EditorRequired] public MonthTotals Totals { get; set; } = default!;
 
     [Parameter] public BalanceSnapshot? Latest { get; set; }
+
+    string SharedText => Budget.Members.Count == 0 ? "Shared · 1 person" : $"Shared · {Budget.Members.Count + 1} people";
 
     double SpentShare => Totals.Income == 0
         ? Totals.Expenses > 0 ? 100 : 0

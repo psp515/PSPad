@@ -4,7 +4,7 @@ namespace PSPad.App.Sync;
 
 public abstract record JoinOutcome
 {
-    public sealed record Joined(Guid ListId, IReadOnlyDictionary<string, JsonElement[]> Documents) : JoinOutcome;
+    public sealed record Joined(Guid Id, IReadOnlyDictionary<string, JsonElement[]> Documents) : JoinOutcome;
 
     public sealed record Invalid : JoinOutcome;
 

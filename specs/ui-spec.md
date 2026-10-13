@@ -324,7 +324,12 @@ border.
 
 `AppShell` raises Update and Offline; `SyncCoordinator` raises Rejected and
 keeps the messages of the last sync that had rejections in `ISyncStatus.LastRejections` (a clean sync keeps them), which the
-Settings Sync card (`id="sync"`) lists under "Couldn’t be saved".
+Settings Sync card (`id="sync"`) lists under "Couldn’t be saved". When the
+rejected change is still queued and holding back the rest
+(`ISyncStatus.HasStuckChange`, `adr/0067`), the card adds a caption ("It
+holds back every change made after it. Discarding it puts the saved version
+back.") and an outlined error button "Discard this change"
+(`.pspad-discard-stuck`), which calls `DiscardStuckChangeAsync`.
 `PublicLayout` shows neither state, so it has no stack.
 
 **Small messages.** One action's outcome ("Couldn't star the item.",
@@ -1416,6 +1421,32 @@ month (stacked bar, top 4 categories + Other), net worth by holding type
 charts has a `mud-sr-only` table like Statistics; the ranking has none (its
 bars are `aria-hidden`, the names and amounts are visible text). No FAB;
 works offline.
+
+**Budget sharing** (`adr/0066`; full design `specs/budget-sharing-design.md` §4).
+A shared budget's view row gains a **Members** `MudIconButton` (`People`,
+`aria-label` "Members, N people") inside a `MudBadge` with the head count,
+before the gear (`.pspad-budget-members-button`). Settings gains a
+**Sharing** card (`.pspad-budget-sharing`) with one **Members** row whose
+caption reads "Only you", "Nobody joined yet", "N joined", "N joined · link M
+min left" (owner) or "N people" (member). Both open `BudgetMembersPanel`
+from `?members={budgetId}`: a `DetailPanel` titled "Members" holding
+`BudgetMembersView`, which mirrors `ListMembersView` — the owner sees the
+kind-neutral `InviteCard` (its None state reads "Only you use this budget";
+an archived budget shows "Restore the budget to invite people." and a
+disabled create button), `SharePeople` with remove icons and **Stop sharing
+· remove everyone**; a member sees "Shared by {OwnerName}" with "You can
+edit", `SharePeople` read-only and **Leave budget** (confirmed, then
+`/budgets`). Every membership control is disabled offline under "Sharing
+changes need a connection.". For a member, Settings' Budget card reads
+"Shared by {OwnerName}." instead of Rename/Archive, and an archived budget's
+banner reads "{OwnerName} archived this budget. It is read-only.". The
+sidebar Budgets group and `/budgets` list the user's own budgets by creation,
+then shared ones by join date (`BudgetOrder`); a shared budget's sidebar row
+ends in a `People` icon, an owner's card shows a `People` chip with the head
+count, and a member's card a "Shared by {OwnerName}" caption.
+`/budgets/join/{token}` is `JoinPage` with budget wording ("Join budget") and
+lands on the budget. `InviteLinkCard` is now the list wrapper over
+`InviteCard`; `SharePeople` is the people list both views share.
 
 **Routes:**
 

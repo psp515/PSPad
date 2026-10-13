@@ -23,6 +23,7 @@ public sealed class SyncCoordinator(
     Task? _inFlight;
     bool _rerunRequested;
     readonly HashSet<Guid> _surfacedCommands = [];
+    Guid? _stuckCommand;
 
     public int PendingCount { get; private set; }
 
@@ -37,6 +38,8 @@ public sealed class SyncCoordinator(
     public Task Started { get; private set; } = Task.CompletedTask;
 
     public IReadOnlyList<string> LastRejections { get; private set; } = [];
+
+    public bool HasStuckChange => _stuckCommand is not null;
 
     public static string RejectedText(int count) =>
         count == 1 ? "1 change couldn’t be saved." : $"{count} changes couldn’t be saved.";
@@ -148,6 +151,8 @@ public sealed class SyncCoordinator(
                 {
                     SurfaceRejections(outcome);
                 }
+
+                _stuckCommand = await StuckCommandAsync(outcome);
             }
             catch (ServerBusyException busy)
             {
@@ -162,6 +167,35 @@ public sealed class SyncCoordinator(
 
         PendingCount = await outbox.CountAsync();
         Changed?.Invoke();
+    }
+
+    public async Task DiscardStuckChangeAsync()
+    {
+        if (_inFlight is { IsCompleted: false })
+        {
+            await _inFlight;
+        }
+
+        var head = (await outbox.PeekAsync(1)).FirstOrDefault();
+        if (_stuckCommand is not { } stuck || head?.CommandId != stuck)
+        {
+            return;
+        }
+
+        await outbox.RemoveThroughAsync(head.Position);
+        _stuckCommand = null;
+        LastRejections = [];
+        belts.Clear(BeltKind.Rejected);
+
+        // The replica already shows the discarded change; only a full pull puts the server's copy back.
+        await replica.SetMarkerAsync(0);
+        await SyncNowAsync();
+    }
+
+    async Task<Guid?> StuckCommandAsync(SyncOutcome outcome)
+    {
+        var head = (await outbox.PeekAsync(1)).FirstOrDefault();
+        return head is not null && outcome.RejectedCommands.Contains(head.CommandId) ? head.CommandId : null;
     }
 
     // Past the poll interval the regular loop retries anyway; a longer wait would only stack timers.

@@ -27,6 +27,7 @@ client for its inputs.
 | `StepsPerTask` | 128 | `AddStep` |
 | `FieldsPerItem` | 64 | `AddReferenceField` |
 | `MembersPerList` | 100 | `JoinTaskList` |
+| `MembersPerBudget` | 100 | `JoinBudget` |
 
 - Lengths count UTF-16 code units after the existing trim — what
   `string.Length` and the HTML `maxlength` attribute both count.

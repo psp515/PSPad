@@ -38,6 +38,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Recurrence lead time, yearly repeats | `specs/recurrence-lead-time-design.md` |
 | Phone navigation | `specs/mobile-navigation-design.md` |
 | Budgets, expenses, balances, NBP rates | `specs/money-design.md` |
+| Sharing a budget | `specs/budget-sharing-design.md` |
 | Length and count limits on user content | `specs/content-limits-design.md` |
 | Why a decision was made | `adr/README.md` index → the `Active` record |
 
@@ -50,13 +51,13 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 1 | Modular monolith: Tasks, Statistics, Identity, Presentation, Sharing, Money | 0010, 0045, 0059 |
 | 2 | Documents are truth, events are the log; snapshot marks are state-only | 0011, 0064 |
 | 3–4 | Commands shared; Tasks compiles to WASM | 0003, 0004 |
-| 5–6 | LWW conflicts offline, version-checked saves on the server; delta sync by monotonic `seq`, paged, documents only | 0005, 0006, 0061, 0063 |
+| 5–6 | LWW conflicts offline, version-checked saves on the server, final rejections dropped; delta sync by monotonic `seq`, paged, documents only | 0005, 0006, 0061, 0063, 0067 |
 | 7 | Recurrence template + occurrences | 0007, 0043, 0053 |
 | 8 | Aggregates: User, Area, TaskList, TodoTask, Goal, Inbox, ReferenceItem; a goal holds its task links | 0008, 0047, 0065 |
 | 9 | Integration tests own a Testcontainers MongoDB 8 replica set | 0009 |
 | 10 | Events dispatch after commit, replayed from a marker | 0036, 0037 |
 | 11 | Per-user views live in Presentation | 0051 |
-| 12 | Lists shared by membership | 0054, 0057 |
+| 12 | Lists and budgets shared by membership | 0054, 0057, 0066 |
 | 13 | Public snapshots, server-only module | 0056, 0064 |
 | 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount | 0059 |
 

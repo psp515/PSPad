@@ -19,7 +19,7 @@ public sealed class RenameAreaHandler(IDocumentStore<Area> store, IUnitOfWork wo
         }
         catch (DomainRejectedException rejection)
         {
-            return CommandResult.Rejected(rejection.Message);
+            return CommandResult.Rejected(rejection);
         }
     }
 }

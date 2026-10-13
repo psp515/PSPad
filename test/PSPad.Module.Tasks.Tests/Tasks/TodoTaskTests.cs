@@ -30,6 +30,16 @@ public class TodoTaskTests
     }
 
     [Fact]
+    public void ChangingADeletedTaskIsRejectedForGood()
+    {
+        var task = Existing();
+        task.ApplyAll(TodoTask.Decide(task, new DeleteTask(Guid.NewGuid(), User, task.Id), Now));
+
+        Assert.True(Assert.Throws<DomainRejectedException>(() => TodoTask.Decide(
+            task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, new DateOnly(2026, 9, 14)), Now)).Unrecoverable);
+    }
+
+    [Fact]
     public void SettingADueDateRecordsIt()
     {
         var task = Existing();

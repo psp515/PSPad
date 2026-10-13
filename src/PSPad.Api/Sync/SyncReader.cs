@@ -68,6 +68,13 @@ public sealed class SyncReader(MongoContext context)
 
         bool Readable(Guid ownerId, Guid listId) => ownerId == userId || visible.Contains(listId);
 
+        var memberBudgetIds = await context.Collection<Budget>()
+            .Find(session, Builders<Budget>.Filter.Eq("_members.userId", userId))
+            .Project(budget => budget.Id)
+            .ToListAsync(ct);
+
+        var wholeBudgets = full.Where(memberBudgetIds.Contains).ToArray();
+
         Task<SyncSource> Read<T>(
             string collection, FilterDefinition<T> visible, FilterDefinition<T>? whole = null,
             Func<T, JsonElement>? project = null) where T : Aggregate =>
@@ -101,10 +108,18 @@ public sealed class SyncReader(MongoContext context)
                     : Stub(item, item.ListId, item.PreviousListId)),
             await Read("areaviews", Owned<AreaView>(userId)),
             await Read("listviews", Owned<ListView>(userId)),
-            await Read("budgets", Owned<Budget>(userId)),
+            await Read("budgets",
+                Owned<Budget>(userId) | Builders<Budget>.Filter.Eq("_members.userId", userId),
+                WholeOrNone(Builders<Budget>.Filter.In(budget => budget.Id, wholeBudgets), wholeBudgets),
+                budget => budget.UserId == userId ? Serialize(budget) : WithoutInvite(Serialize(budget))),
             await Read("moneypreferences", Owned<MoneyPreferences>(userId)),
-            await Read("moneyentries", Owned<MoneyEntry>(userId)),
-            await Read("balancesnapshots", Owned<BalanceSnapshot>(userId))
+            await Read("moneyentries",
+                Owned<MoneyEntry>(userId) | Builders<MoneyEntry>.Filter.In(entry => entry.BudgetId, memberBudgetIds),
+                WholeOrNone(Builders<MoneyEntry>.Filter.In(entry => entry.BudgetId, wholeBudgets), wholeBudgets)),
+            await Read("balancesnapshots",
+                Owned<BalanceSnapshot>(userId) |
+                Builders<BalanceSnapshot>.Filter.In(snapshot => snapshot.BudgetId, memberBudgetIds),
+                WholeOrNone(Builders<BalanceSnapshot>.Filter.In(snapshot => snapshot.BudgetId, wholeBudgets), wholeBudgets))
         };
 
         // A full source stops at its own last seq; every source is cut there so no row past it is skipped.
@@ -122,7 +137,7 @@ public sealed class SyncReader(MongoContext context)
                 Math.Max(since, await HighestSeqAsync(session, userId, ct)),
                 sources.Max(source => source.LastSeq));
 
-        return new SyncResponse(marker, documents, [.. memberListIds], hasMore);
+        return new SyncResponse(marker, documents, [.. memberListIds], hasMore, [.. memberBudgetIds]);
     }
 
     async Task<SyncSource> ReadSourceAsync<T>(
@@ -151,8 +166,8 @@ public sealed class SyncReader(MongoContext context)
             collection, rows, changed.Count == limit, changed.Count > 0 ? changed[^1].Seq : 0);
     }
 
-    static FilterDefinition<T>? WholeOrNone<T>(FilterDefinition<T> filter, Guid[] lists) =>
-        lists.Length > 0 ? filter : null;
+    static FilterDefinition<T>? WholeOrNone<T>(FilterDefinition<T> filter, Guid[] containers) =>
+        containers.Length > 0 ? filter : null;
 
     static JsonElement Serialize<T>(T row) where T : Aggregate =>
         JsonSerializer.SerializeToElement(row, JsonOptions);

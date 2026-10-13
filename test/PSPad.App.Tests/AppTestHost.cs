@@ -96,6 +96,8 @@ public static class AppTestHost
         context.Services.AddSingleton<INbpRates>(new FakeNbpRates());
         context.Services.AddSingleton<IListSharingApi>(services => new FakeListSharingApi(
             replica, services.GetRequiredService<AppState>(), services.GetRequiredService<IClock>()));
+        context.Services.AddSingleton<IBudgetSharingApi>(services => new FakeBudgetSharingApi(
+            replica, services.GetRequiredService<AppState>(), services.GetRequiredService<IClock>()));
 
         return replica;
     }
@@ -254,6 +256,10 @@ public static class AppTestHost
         public DateTimeOffset? LastSyncedAt => null;
 
         public IReadOnlyList<string> LastRejections => [];
+
+        public bool HasStuckChange => false;
+
+        public Task DiscardStuckChangeAsync() => Task.CompletedTask;
 
 #pragma warning disable CS0067
         public event Action? Changed;

@@ -1,4 +1,3 @@
-@using System.Globalization
 @using PSPad.Abstractions
 @using PSPad.App.State
 @using PSPad.App.Api
@@ -42,47 +41,8 @@
         </MudPaper>
     }
 
-    <div>
-        <MudText Typo="Typo.overline" Class="pspad-muted d-block mb-1">@($"People · {_list.Members.Count + 1}")</MudText>
-        <MudPaper Outlined="true">
-            <MudList T="string" Class="pspad-share-members">
-                <MudListItem T="string" Class="pspad-share-owner-row">
-                    <div class="d-flex align-center gap-3">
-                        <MudAvatar Color="Color.Primary" Size="Size.Small">@AvatarColor.InitialsOf(IsMine ? State.DisplayName : _list.OwnerName)</MudAvatar>
-                        <MudText Typo="Typo.body2" Class="flex-grow-1">@(IsMine ? "You" : _list.OwnerName)</MudText>
-                        <MudChip T="string" Class="ma-0" Size="Size.Small">Owner</MudChip>
-                    </div>
-                </MudListItem>
-                @foreach (var member in _list.Members)
-                {
-                    <MudListItem T="string" @key="member.UserId" Class="pspad-share-member">
-                        <div class="d-flex align-center gap-3">
-                            <MudAvatar Size="Size.Small" Style="@($"background:{AvatarColor.For(member.UserId)};color:#fff")">
-                                @AvatarColor.InitialsOf(member.DisplayName)
-                            </MudAvatar>
-                            <div class="flex-grow-1">
-                                <MudText Typo="Typo.body2">@(member.UserId == State.UserId ? "You" : member.DisplayName)</MudText>
-                                @if (IsMine)
-                                {
-                                    <MudText Typo="Typo.caption" Class="pspad-muted">@($"Joined {member.JoinedAt.ToString("d MMM", CultureInfo.InvariantCulture)}")</MudText>
-                                }
-                            </div>
-                            @if (IsMine)
-                            {
-                                <MudIconButton Class="pspad-share-remove" Icon="@Icons.Material.Outlined.PersonRemove"
-                                               aria-label="@($"Remove {member.DisplayName}")" Disabled="@Locked"
-                                               OnClick="@(() => RemoveMemberAsync(member))" />
-                            }
-                        </div>
-                    </MudListItem>
-                }
-            </MudList>
-        </MudPaper>
-        @if (!IsMine)
-        {
-            <MudText Typo="Typo.caption" Class="pspad-muted d-block mt-2">@($"Only {_list.OwnerName} can invite people.")</MudText>
-        }
-    </div>
+    <SharePeople OwnerIsMe="@IsMine" OwnerName="@(_list.OwnerName ?? "")" Disabled="@Locked" OnRemove="@RemoveMemberAsync"
+                 Members="@([.. _list.Members.Select(member => new SharePerson(member.UserId, member.DisplayName, member.JoinedAt))])" />
 
     @if (IsMine)
     {
@@ -200,7 +160,7 @@
         await ReloadAsync();
     }
 
-    async Task RemoveMemberAsync(ListMember member)
+    async Task RemoveMemberAsync(SharePerson member)
     {
         if (Locked)
         {

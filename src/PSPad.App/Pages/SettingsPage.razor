@@ -100,6 +100,16 @@
                                      IconColor="Color.Error" Text="@rejection" />
                     }
                 </MudList>
+                @if (SyncStatus.HasStuckChange)
+                {
+                    <MudText Typo="Typo.caption" Class="d-block mb-2">
+                        It holds back every change made after it. Discarding it puts the saved version back.
+                    </MudText>
+                    <MudButton Class="pspad-discard-stuck mb-3" Color="Color.Error" Variant="Variant.Outlined"
+                               OnClick="@SyncStatus.DiscardStuckChangeAsync">
+                        Discard this change
+                    </MudButton>
+                }
             }
             <SyncButton Labeled="true" />
         </MudPaper>

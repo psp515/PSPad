@@ -8,7 +8,8 @@ using PSPad.Contracts;
 
 namespace PSPad.App.Api;
 
-public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ISnapshotsApi, INbpRates, IListSharingApi
+public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ISnapshotsApi, INbpRates, IListSharingApi,
+    IBudgetSharingApi
 {
     static readonly TimeSpan DefaultRetryAfter = TimeSpan.FromSeconds(5);
 
@@ -82,33 +83,66 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
     {
         var response = await http.PostAsJsonAsync("api/lists/join", new JoinListRequest(token, code));
 
-        switch (response.StatusCode)
+        if (FailedJoin(response) is { } failed)
         {
-            case HttpStatusCode.NotFound:
-                return new JoinOutcome.Invalid();
-            case HttpStatusCode.Gone:
-                return new JoinOutcome.Expired();
-            case HttpStatusCode.TooManyRequests:
-                return new JoinOutcome.TooManyTries();
+            return failed;
         }
 
         var joined = await response.EnsureSuccessStatusCode().Content.ReadFromJsonAsync<JoinListResponse>();
         return new JoinOutcome.Joined(joined!.ListId, joined.Documents);
     }
 
+    public async Task<JoinOutcome> JoinBudgetAsync(string token, string code)
+    {
+        var response = await http.PostAsJsonAsync("api/budgets/join", new JoinBudgetRequest(token, code));
+
+        if (FailedJoin(response) is { } failed)
+        {
+            return failed;
+        }
+
+        var joined = await response.EnsureSuccessStatusCode().Content.ReadFromJsonAsync<JoinBudgetResponse>();
+        return new JoinOutcome.Joined(joined!.BudgetId, joined.Documents);
+    }
+
+    static JoinOutcome? FailedJoin(HttpResponseMessage response) => response.StatusCode switch
+    {
+        HttpStatusCode.NotFound => new JoinOutcome.Invalid(),
+        HttpStatusCode.Gone => new JoinOutcome.Expired(),
+        HttpStatusCode.TooManyRequests => new JoinOutcome.TooManyTries(),
+        _ => null
+    };
+
+    const string ListGone = "That list is no longer shared with you.";
+
+    const string BudgetGone = "That budget is no longer shared with you.";
+
     public Task<string?> ShareListAsync(Guid listId, string token, string code) =>
-        ChangeListAsync(() => http.PostAsJsonAsync($"api/lists/{listId}/share", new ShareListRequest(token, code)));
+        ChangeSharingAsync(() => http.PostAsJsonAsync($"api/lists/{listId}/share", new ShareListRequest(token, code)), ListGone);
 
     public Task<string?> StopSharingAsync(Guid listId) =>
-        ChangeListAsync(() => http.DeleteAsync($"api/lists/{listId}/share"));
+        ChangeSharingAsync(() => http.DeleteAsync($"api/lists/{listId}/share"), ListGone);
 
     public Task<string?> RemoveMemberAsync(Guid listId, Guid memberId) =>
-        ChangeListAsync(() => http.DeleteAsync($"api/lists/{listId}/members/{memberId}"));
+        ChangeSharingAsync(() => http.DeleteAsync($"api/lists/{listId}/members/{memberId}"), ListGone);
 
     public Task<string?> LeaveListAsync(Guid listId) =>
-        ChangeListAsync(() => http.PostAsync($"api/lists/{listId}/leave", null));
+        ChangeSharingAsync(() => http.PostAsync($"api/lists/{listId}/leave", null), ListGone);
 
-    static async Task<string?> ChangeListAsync(Func<Task<HttpResponseMessage>> send)
+    public Task<string?> ShareBudgetAsync(Guid budgetId, string token, string code) =>
+        ChangeSharingAsync(
+            () => http.PostAsJsonAsync($"api/budgets/{budgetId}/share", new ShareBudgetRequest(token, code)), BudgetGone);
+
+    public Task<string?> StopSharingBudgetAsync(Guid budgetId) =>
+        ChangeSharingAsync(() => http.DeleteAsync($"api/budgets/{budgetId}/share"), BudgetGone);
+
+    public Task<string?> RemoveBudgetMemberAsync(Guid budgetId, Guid memberId) =>
+        ChangeSharingAsync(() => http.DeleteAsync($"api/budgets/{budgetId}/members/{memberId}"), BudgetGone);
+
+    public Task<string?> LeaveBudgetAsync(Guid budgetId) =>
+        ChangeSharingAsync(() => http.PostAsync($"api/budgets/{budgetId}/leave", null), BudgetGone);
+
+    static async Task<string?> ChangeSharingAsync(Func<Task<HttpResponseMessage>> send, string gone)
     {
         try
         {
@@ -127,7 +161,7 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
             }
 
             return response.StatusCode == HttpStatusCode.NotFound
-                ? "That list is no longer shared with you."
+                ? gone
                 : "That did not go through. Try again.";
         }
         catch (HttpRequestException)

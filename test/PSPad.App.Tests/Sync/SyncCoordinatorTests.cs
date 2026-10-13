@@ -315,6 +315,67 @@ public class SyncCoordinatorTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task ARejectionStillQueuedIsAStuckChange()
+    {
+        var (coordinator, _, _, _) = await StuckBehind(unrecoverable: false);
+
+        await coordinator.SyncNowAsync();
+
+        Assert.True(coordinator.HasStuckChange);
+    }
+
+    [Fact]
+    public async Task ARejectionAlreadyDroppedIsNoStuckChange()
+    {
+        var (coordinator, _, _, _) = await StuckBehind(unrecoverable: true);
+
+        await coordinator.SyncNowAsync();
+
+        Assert.False(coordinator.HasStuckChange);
+    }
+
+    [Fact]
+    public async Task DiscardingTheStuckChangeLetsTheRestOfTheQueueSync()
+    {
+        var (coordinator, outbox, api, _) = await StuckBehind(unrecoverable: false);
+        await coordinator.SyncNowAsync();
+
+        await coordinator.DiscardStuckChangeAsync();
+
+        Assert.Equal(0, await outbox.CountAsync());
+        Assert.Equal(2, api.Sent.Count(envelope => envelope.Type == "Behind"));
+        Assert.False(coordinator.HasStuckChange);
+    }
+
+    [Fact]
+    public async Task DiscardingTheStuckChangePullsEverythingAgainToUndoItLocally()
+    {
+        var (coordinator, _, api, replica) = await StuckBehind(unrecoverable: false);
+        await coordinator.SyncNowAsync();
+        await replica.SetMarkerAsync(40);
+
+        await coordinator.DiscardStuckChangeAsync();
+
+        Assert.Equal(0, api.LastSince);
+    }
+
+    async Task<(SyncCoordinator Coordinator, InMemoryOutbox Outbox, StuckApi Api, InMemoryReplica Replica)> StuckBehind(
+        bool unrecoverable)
+    {
+        Services.AddMudServices();
+        var outbox = new InMemoryOutbox();
+        var replica = new InMemoryReplica();
+        await replica.SetCollectionsFingerprintAsync(SyncService.CollectionsFingerprint);
+        await outbox.AppendAsync(Guid.NewGuid(), new CommandEnvelope("Stuck", JsonSerializer.SerializeToElement(new { })));
+        await outbox.AppendAsync(Guid.NewGuid(), new CommandEnvelope("Behind", JsonSerializer.SerializeToElement(new { })));
+        var api = new StuckApi(unrecoverable);
+        var coordinator = new SyncCoordinator(
+            new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
+            _belts, Navigation, replica, new StoppedClock(Noon));
+        return (coordinator, outbox, api, replica);
+    }
+
+    [Fact]
     public async Task OfflineLeavesTheStampAlone()
     {
         var coordinator = CoordinatorFor(AnAreaCalled("Dom"), online: false);
@@ -484,6 +545,30 @@ public class SyncCoordinatorTests : Bunit.TestContext
 
             _secondCall.TrySetResult();
             return Task.FromResult<SyncResponse?>(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), []));
+        }
+
+        public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
+    }
+
+    sealed class StuckApi(bool unrecoverable) : ISyncApi
+    {
+        public List<CommandEnvelope> Sent { get; } = [];
+
+        public long? LastSince { get; private set; }
+
+        public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes)
+        {
+            Sent.AddRange(envelopes);
+            return Task.FromResult<IReadOnlyList<CommandResponse>>(
+                [.. envelopes.Select(envelope => envelope.Type == "Stuck"
+                    ? new CommandResponse(Guid.NewGuid(), false, "That budget does not exist.", unrecoverable)
+                    : new CommandResponse(Guid.NewGuid(), true, null))]);
+        }
+
+        public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full)
+        {
+            LastSince = since;
+            return Task.FromResult<SyncResponse?>(new SyncResponse(since, new Dictionary<string, JsonElement[]>(), []));
         }
 
         public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());

@@ -130,18 +130,36 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
 
         var me = await replica.OwnerAsync();
 
-        // With no recorded owner, every list looks foreign -- skip reconciliation entirely so the
-        // user's own lists are never purged.
-        if (me is { } owner && response.MemberListIds is { } memberLists)
+        // With no recorded owner, every list and budget looks foreign -- skip reconciliation entirely so
+        // the user's own are never purged.
+        if (me is { } owner && (response.MemberListIds is not null || response.MemberBudgetIds is not null))
         {
-            var missing = await ReconcileAsync(owner, memberLists);
+            var missing = new List<Guid>();
+
+            if (response.MemberListIds is { } memberLists)
+            {
+                missing.AddRange(await ReconcileAsync(owner, memberLists));
+            }
+
+            if (response.MemberBudgetIds is { } memberBudgets)
+            {
+                missing.AddRange(await ReconcileBudgetsAsync(owner, memberBudgets));
+            }
 
             if (missing.Count > 0 && await FullPullAsync(response.Marker, missing) is { } whole)
             {
                 pulled += await SaveAsync(whole.Documents);
             }
 
-            await DropStrandedAsync(owner);
+            if (response.MemberListIds is not null)
+            {
+                await DropStrandedAsync(owner);
+            }
+
+            if (response.MemberBudgetIds is not null)
+            {
+                await DropStrandedMoneyAsync(owner);
+            }
         }
 
         await replica.SetMarkerAsync(response.Marker);
@@ -199,6 +217,53 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         return memberLists.Where(id => !held.Contains(id)).ToArray();
     }
 
+    async Task<IReadOnlyList<Guid>> ReconcileBudgetsAsync(Guid me, IReadOnlyCollection<Guid> memberBudgets)
+    {
+        var budgets = await replica.LoadAllAsync<Module.Money.Budgets.Budget>(me);
+        var held = budgets.Select(budget => budget.Id).ToHashSet();
+
+        foreach (var lost in budgets.Where(budget => budget.UserId != me && !memberBudgets.Contains(budget.Id)))
+        {
+            await PurgeBudgetAsync(lost.Id);
+        }
+
+        return memberBudgets.Where(id => !held.Contains(id)).ToArray();
+    }
+
+    async Task DropStrandedMoneyAsync(Guid me)
+    {
+        var held = (await replica.LoadAllAsync<Module.Money.Budgets.Budget>(me)).Select(budget => budget.Id).ToHashSet();
+
+        foreach (var entry in (await replica.LoadAllAsync<Module.Money.Entries.MoneyEntry>(Guid.Empty))
+                     .Where(entry => entry.UserId != me && !held.Contains(entry.BudgetId)))
+        {
+            await replica.RemoveAsync(entry.Id);
+        }
+
+        foreach (var snapshot in (await replica.LoadAllAsync<Module.Money.Balance.BalanceSnapshot>(Guid.Empty))
+                     .Where(snapshot => snapshot.UserId != me && !held.Contains(snapshot.BudgetId)))
+        {
+            await replica.RemoveAsync(snapshot.Id);
+        }
+    }
+
+    async Task PurgeBudgetAsync(Guid budgetId)
+    {
+        foreach (var entry in (await replica.LoadAllAsync<Module.Money.Entries.MoneyEntry>(Guid.Empty))
+                     .Where(entry => entry.BudgetId == budgetId))
+        {
+            await replica.RemoveAsync(entry.Id);
+        }
+
+        foreach (var snapshot in (await replica.LoadAllAsync<Module.Money.Balance.BalanceSnapshot>(Guid.Empty))
+                     .Where(snapshot => snapshot.BudgetId == budgetId))
+        {
+            await replica.RemoveAsync(snapshot.Id);
+        }
+
+        await replica.RemoveAsync(budgetId);
+    }
+
     // A row the owner moved out of a shared list arrives once, naming a list this device never holds.
     async Task DropStrandedAsync(Guid me)
     {
@@ -233,6 +298,8 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
 
         await replica.RemoveAsync(listId);
     }
+
+    public Task AdoptAsync(IReadOnlyDictionary<string, JsonElement[]> documents) => SaveAsync(documents);
 
     public async Task<JoinOutcome> JoinAsync(string token, string code, CancellationToken ct)
     {

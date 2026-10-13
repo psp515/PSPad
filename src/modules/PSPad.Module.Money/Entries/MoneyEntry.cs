@@ -71,7 +71,7 @@ public sealed class MoneyEntry : Aggregate
                     : [new MoneyEntryEdited(editing.Id, editing.UserId, at, name, category, money, edit.Date, note)];
 
             case DeleteEntry delete:
-                var deleting = entry ?? throw new DomainRejectedException("That entry does not exist.");
+                var deleting = entry ?? throw new DomainRejectedException("That entry does not exist.", Unrecoverable: true);
                 BudgetAccess.Writable(BudgetAccess.To(budget, delete.UserId));
                 return deleting.Deleted ? [] : [new MoneyEntryDeleted(deleting.Id, deleting.UserId, at)];
 
@@ -132,7 +132,7 @@ public sealed class MoneyEntry : Aggregate
     }
 
     static MoneyEntry RequireLive(MoneyEntry? entry) =>
-        entry is null || entry.Deleted ? throw new DomainRejectedException("That entry does not exist.") : entry;
+        entry is null || entry.Deleted ? throw new DomainRejectedException("That entry does not exist.", Unrecoverable: true) : entry;
 
     static string RequireName(string name)
     {

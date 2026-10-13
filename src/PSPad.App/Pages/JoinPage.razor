@@ -1,9 +1,13 @@
 @page "/join/{Token}"
+@page "/budgets/join/{Token}"
 @attribute [Authorize]
+@using PSPad.Abstractions
 @using PSPad.App.Components
+@using PSPad.App.State
 @using PSPad.App.Sync
 @using PSPad.Module.Tasks.Lists
 @inject SyncService Sync
+@inject PSPad.App.Api.IBudgetSharingApi BudgetSharing
 @inject IConnectivity Connectivity
 @inject ISyncTrigger SyncTrigger
 @inject NavigationManager Navigation
@@ -33,7 +37,7 @@ else if (_state != JoinState.Joining)
                 </MudAvatar>
                 <MudText Typo="Typo.h6">Enter the invite code</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
-                    The person who shared the list has a 6-character code. Ask them for it.
+                    @($"The person who shared the {Thing} has a 6-character code. Ask them for it.")
                 </MudText>
                 @if (_state == JoinState.Invalid)
                 {
@@ -53,7 +57,7 @@ else if (_state != JoinState.Joining)
                               HelperText="Capital letters A–Z and digits 0–9." OnKeyDown="@SubmitOnEnterAsync"
                               UserAttributes="@(new Dictionary<string, object?> { ["autocomplete"] = "one-time-code" })" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="pspad-join-submit"
-                           Disabled="@(!CanSubmit)" OnClick="@SubmitAsync">Join list</MudButton>
+                           Disabled="@(!CanSubmit)" OnClick="@SubmitAsync">@($"Join {Thing}")</MudButton>
             </MudStack>
         </MudPaper>
         <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
@@ -77,6 +81,26 @@ else if (_state != JoinState.Joining)
 
     JoinState _state = JoinState.Joining;
     string _input = "";
+
+    bool IsBudget => new Uri(Navigation.Uri).AbsolutePath.StartsWith("/budgets/join/", StringComparison.Ordinal);
+
+    string Thing => IsBudget ? "budget" : "list";
+
+    async Task<JoinOutcome> JoinOnServerAsync(string code)
+    {
+        if (!IsBudget)
+        {
+            return await Sync.JoinAsync(Token, code, CancellationToken.None);
+        }
+
+        var outcome = await BudgetSharing.JoinBudgetAsync(Token, code);
+        if (outcome is JoinOutcome.Joined joined)
+        {
+            await Sync.AdoptAsync(joined.Documents);
+        }
+
+        return outcome;
+    }
 
     bool CanSubmit => InviteCodes.IsWellFormed(InviteCodes.Normalize(_input));
 
@@ -115,11 +139,11 @@ else if (_state != JoinState.Joining)
 
         try
         {
-            var outcome = await Sync.JoinAsync(Token, InviteCodes.Normalize(_input), CancellationToken.None);
+            var outcome = await JoinOnServerAsync(InviteCodes.Normalize(_input));
             if (outcome is JoinOutcome.Joined joined)
             {
                 _ = SyncTrigger.SyncNowAsync();
-                Navigation.NavigateTo($"/lists/{joined.ListId}", replace: true);
+                Navigation.NavigateTo(IsBudget ? BudgetLinks.For(joined.Id) : $"/lists/{joined.Id}", replace: true);
                 return;
             }
 
