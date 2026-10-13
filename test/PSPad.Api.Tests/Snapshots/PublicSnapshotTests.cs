@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using PSPad.Api.Tests.Sync;
@@ -129,34 +131,59 @@ public class PublicSnapshotTests(MongoFixture fixture)
     }
 
     [Fact]
-    public async Task BehindAProxyEachForwardedVisitorHasTheirOwnLimit()
+    public async Task BehindATrustedProxyEachVisitorHasTheirOwnLimit()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
-        await using var factory = new ApiFactory(
-            fixture, configuration: new Dictionary<string, string?>
-            {
-                ["Sharing:PublicRequestsPerMinute"] = "1",
-                ["ForwardedHeaders_Enabled"] = "true"
-            });
-        var owner = factory.ClientFor(Guid.NewGuid().ToString());
-        var ownerId = await Sharing.SignInAsync(owner, ct);
-        var listId = await CreatePlainListAsync(owner, ownerId, ct);
-        var published = await PublishAsync(owner, listId, ct);
+        await using var factory = BehindProxy(sourceAddress: "172.18.0.7");
+        var token = await PublishAnyListAsync(factory, ct);
 
-        var first = await VisitFromAsync(factory, published.Token, "203.0.113.1", ct);
-        var second = await VisitFromAsync(factory, published.Token, "203.0.113.2", ct);
-        var firstAgain = await VisitFromAsync(factory, published.Token, "203.0.113.1", ct);
+        var first = await VisitFromAsync(factory, token, "203.0.113.1", ct);
+        var second = await VisitFromAsync(factory, token, "203.0.113.2", ct);
+        var firstAgain = await VisitFromAsync(factory, token, "203.0.113.1", ct);
 
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         Assert.Equal(HttpStatusCode.OK, second.StatusCode);
         Assert.Equal(HttpStatusCode.TooManyRequests, firstAgain.StatusCode);
     }
 
+    [Fact]
+    public async Task ACallerOutsideTheTrustedNetworkCannotForgeFreshLimits()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = BehindProxy(sourceAddress: "198.51.100.9");
+        var token = await PublishAnyListAsync(factory, ct);
+
+        var first = await VisitFromAsync(factory, token, "203.0.113.1", ct);
+        var forged = await VisitFromAsync(factory, token, "203.0.113.2", ct);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, forged.StatusCode);
+    }
+
+    ApiFactory BehindProxy(string sourceAddress) => new(
+        fixture,
+        configuration: new Dictionary<string, string?>
+        {
+            ["Sharing:PublicRequestsPerMinute"] = "1",
+            ["Proxy:KnownNetworks:0"] = "172.18.0.0/16",
+            ["Proxy:ClientIpHeader"] = "CF-Connecting-IP"
+        },
+        testServices: services => services.AddTransient<IStartupFilter>(_ =>
+            new ConnectionFrom(IPAddress.Parse(sourceAddress))));
+
+    static async Task<string> PublishAnyListAsync(ApiFactory factory, CancellationToken ct)
+    {
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var listId = await CreatePlainListAsync(owner, ownerId, ct);
+        return (await PublishAsync(owner, listId, ct)).Token;
+    }
+
     static Task<HttpResponseMessage> VisitFromAsync(
         ApiFactory factory, string token, string address, CancellationToken ct)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, $"/api/public/snapshots/{token}");
-        request.Headers.Add("X-Forwarded-For", address);
+        request.Headers.Add("CF-Connecting-IP", address);
         return factory.CreateClient().SendAsync(request, ct);
     }
 

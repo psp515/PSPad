@@ -33,14 +33,14 @@ public static class RateLimiterRegistration
             options.AddPolicy("statistics", context => PerUser(context, Limits(context).Statistics));
 
             options.AddPolicy("public", context => RateLimitPartition.GetFixedWindowLimiter(
-                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                ClientAddress(context),
                 _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = configuration.GetValue("Sharing:PublicRequestsPerMinute", 60),
                     Window = TimeSpan.FromMinutes(1)
                 }));
             options.AddPolicy("join", context => RateLimitPartition.GetFixedWindowLimiter(
-                Subject(context.User) ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                Subject(context.User) ?? ClientAddress(context),
                 _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = configuration.GetValue("Sharing:JoinAttemptsPerWindow", 10),
@@ -62,6 +62,9 @@ public static class RateLimiterRegistration
                 AutoReplenishment = true
             })
             : RateLimitPartition.GetNoLimiter("anonymous");
+
+    static string ClientAddress(HttpContext context) =>
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     static UserRateLimits Limits(HttpContext context) =>
         context.RequestServices.GetRequiredService<IOptions<UserRateLimits>>().Value;
