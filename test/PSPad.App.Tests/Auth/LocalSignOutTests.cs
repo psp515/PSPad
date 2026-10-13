@@ -1,9 +1,12 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.JSInterop;
 using PSPad.App.Auth;
+using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
+using PSPad.App.Statistics;
 using PSPad.Contracts;
 using PSPad.TestInfrastructure;
 
@@ -21,6 +24,10 @@ public class LocalSignOutTests
 
     readonly InMemoryOutbox _outbox = new();
 
+    readonly StatisticsCache _statistics = new(new LocalStorage());
+
+    readonly InMemorySnapshotCache _snapshots = new();
+
     [Fact]
     public async Task ClearingRemovesTheOutboxWithTheReplicaAndTheSession()
     {
@@ -31,6 +38,28 @@ public class LocalSignOutTests
         Assert.Null(_sessions.Current);
         Assert.Null(await _replica.OwnerAsync());
         Assert.Equal(0, await _outbox.CountAsync());
+    }
+
+    [Fact]
+    public async Task ClearingRemovesTheStatisticsOverviewAndTheOpenedSnapshots()
+    {
+        await ArrangeStorageAsync();
+
+        await SignOut(HttpStatusCode.OK).ClearAsync();
+
+        Assert.Null(await _statistics.ReadAsync(30));
+        Assert.Empty(await _snapshots.AllAsync());
+    }
+
+    [Fact]
+    public async Task SigningOutLeavesNoStatisticsOrSnapshotsBehind()
+    {
+        await ArrangeStorageAsync();
+
+        await SignOut(HttpStatusCode.OK).SignOutAsync();
+
+        Assert.Null(await _statistics.ReadAsync(30));
+        Assert.Empty(await _snapshots.AllAsync());
     }
 
     [Fact]
@@ -70,6 +99,8 @@ public class LocalSignOutTests
         Assert.NotNull(_sessions.Current);
         Assert.Equal(User, await _replica.OwnerAsync());
         Assert.Equal(1, await _outbox.CountAsync());
+        Assert.NotNull(await _statistics.ReadAsync(30));
+        Assert.NotEmpty(await _snapshots.AllAsync());
     }
 
     [Fact]
@@ -101,6 +132,11 @@ public class LocalSignOutTests
         await _replica.SetOwnerAsync(User);
         await _outbox.AppendAsync(
             Guid.NewGuid(), new CommandEnvelope("Test", JsonSerializer.SerializeToElement(new { })));
+        await _statistics.WriteAsync(30, new StatisticsOverview(new StatisticsTilesView(0, 0, 0, 0), [], [], [], [], [], []));
+        await _snapshots.SaveAsync(
+            "snapshot-token",
+            new SnapshotView(Guid.NewGuid(), "List", "Tasks", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(1), [], []),
+            DateTimeOffset.UtcNow);
     }
 
     LocalSignOut SignOut(HttpStatusCode revocationStatus) =>
@@ -110,7 +146,7 @@ public class LocalSignOutTests
     {
         var store = sessions ?? _sessions;
         return new LocalSignOut(
-            store, _replica, _outbox,
+            store, _replica, _outbox, _statistics, _snapshots,
             new KeycloakTokenRevoker(new HttpClient(endpoint), "http://localhost:8080/realms/psplace", "pspad-frontend"),
             new LocalAuthenticationStateProvider(store), NullLogger<LocalSignOut>.Instance);
     }
@@ -129,5 +165,33 @@ public class LocalSignOutTests
             SessionWasStillStored = sessions.Current is not null;
             return new HttpResponseMessage(status);
         }
+    }
+
+    sealed class LocalStorage : IJSRuntime
+    {
+        readonly Dictionary<string, string> _values = [];
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            var key = (string)args![0]!;
+
+            switch (identifier)
+            {
+                case "localStorage.getItem":
+                    return ValueTask.FromResult((TValue)(object?)(_values.TryGetValue(key, out var value) ? value : null)!);
+                case "localStorage.setItem":
+                    _values[key] = (string)args[1]!;
+                    break;
+                case "localStorage.removeItem":
+                    _values.Remove(key);
+                    break;
+            }
+
+            return ValueTask.FromResult(default(TValue)!);
+        }
+
+        public ValueTask<TValue> InvokeAsync<TValue>(
+            string identifier, CancellationToken cancellationToken, object?[]? args) =>
+            InvokeAsync<TValue>(identifier, args);
     }
 }

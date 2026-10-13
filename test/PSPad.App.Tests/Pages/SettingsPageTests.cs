@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
 using PSPad.App.Api;
+using PSPad.App.Statistics;
 using PSPad.App.Sync;
 using PSPad.App.Auth;
 using PSPad.App.Components;
@@ -928,6 +929,7 @@ public class SettingsPageTests : Bunit.TestContext
         _revocation = new RevocationEndpoint(keycloakReachable);
         Services.AddSingleton(services => new LocalSignOut(
             _sessions, _replica, services.GetRequiredService<IOutbox>(),
+            services.GetRequiredService<StatisticsCache>(), services.GetRequiredService<ISnapshotCache>(),
             new KeycloakTokenRevoker(new HttpClient(_revocation), "http://localhost:8080/realms/psplace", "pspad-frontend"),
             _authProvider, NullLogger<LocalSignOut>.Instance));
 

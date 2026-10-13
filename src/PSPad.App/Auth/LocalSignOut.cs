@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
+using PSPad.App.Statistics;
 
 namespace PSPad.App.Auth;
 
@@ -8,6 +10,8 @@ public sealed class LocalSignOut(
     ILocalSessionStore sessions,
     IReplica replica,
     IOutbox outbox,
+    StatisticsCache statistics,
+    ISnapshotCache snapshots,
     KeycloakTokenRevoker revoker,
     LocalAuthenticationStateProvider authenticationState,
     ILogger<LocalSignOut> logger)
@@ -71,6 +75,24 @@ public sealed class LocalSignOut(
         catch (Exception exception)
         {
             logger.LogWarning("Outbox clear on sign-out failed: {Reason}", exception.Message);
+        }
+
+        try
+        {
+            await statistics.ClearAsync();
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning("Statistics cache clear on sign-out failed: {Reason}", exception.Message);
+        }
+
+        try
+        {
+            await snapshots.ClearAsync();
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning("Snapshot cache clear on sign-out failed: {Reason}", exception.Message);
         }
 
         try

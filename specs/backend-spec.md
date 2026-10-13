@@ -697,8 +697,8 @@ large first pull on a slow link is not cut off mid-download.
 and only online (`adr/0071`). It first POSTs the refresh token to
 `{Authority}/protocol/openid-connect/revoke`. If Keycloak is unreachable
 (a transport failure, a stall or a 5xx), nothing is cleared and the user
-stays signed in. A 2xx or a 4xx goes on: clear the replica, the **outbox**
-and the session, then navigate to end-session with `client_id`,
+stays signed in. A 2xx or a 4xx goes on: clear the replica, the **outbox**,
+the statistics and snapshot caches, and the session, then navigate to end-session with `client_id`,
 `post_logout_redirect_uri` and `id_token_hint`. Offline, sign-out is refused,
 with no deferred revocation. Unsynced outbox entries are confirmed away in
 the UI first (`specs/ui-spec.md`). Signed-out visitors land on the public

@@ -60,8 +60,10 @@ the device the user walked away from would still hold a live token.
 
 **Sign-out clears the outbox, after asking.** When the outbox holds pending
 commands, a `ConfirmDialog` says how many unsynced changes will be removed.
-Cancelling changes nothing. Confirming clears the replica, the outbox and the
-session, then leaves for end-session.
+Cancelling changes nothing. Confirming clears the replica, the outbox, the
+statistics cache, the cached public snapshots (their tokens are bearer
+capabilities) and the session, then leaves for end-session. That is the same
+per-user set `ReplicaOwnership` purges on a user switch.
 
 ## Considered alternatives
 
@@ -81,7 +83,7 @@ session, then leaves for end-session.
 ## Consequences
 
 A shared device keeps nothing of a signed-out user: no replica, outbox,
-session or OIDC credentials, and no live refresh token or SSO session at
+statistics, opened snapshots, session or OIDC credentials, and no live refresh token or SSO session at
 Keycloak.
 
 Signing out offline is no longer possible. A user who must leave a device
@@ -99,4 +101,6 @@ ADR-0027 describes).
 
 The trust-window expiry and an `invalid_grant` clear are not explicit
 sign-outs. They still keep the outbox; `ReplicaOwnership` drops it when a
-different user signs in.
+different user signs in. Account deletion (`LocalAccountDeletion`) still
+leaves the statistics and snapshot caches behind; it is owned by another
+change in flight and is not touched here.

@@ -14,8 +14,10 @@ using PSPad.App.Api;
 using PSPad.App.Auth;
 using PSPad.App.Layout;
 using PSPad.App.Pages;
+using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
+using PSPad.App.Statistics;
 using PSPad.App.Tests.Auth;
 using PSPad.Contracts;
 using PSPad.TestInfrastructure;
@@ -250,7 +252,7 @@ public class AuthenticationTests : Bunit.TestContext
         Services.AddSingleton(authProvider);
         Services.AddSingleton<AuthenticationStateProvider>(authProvider);
         Services.AddSingleton(new LocalSignOut(
-            sessions, _replica, new InMemoryOutbox(),
+            sessions, _replica, new InMemoryOutbox(), new StatisticsCache(JSInterop.JSRuntime), new InMemorySnapshotCache(),
             new KeycloakTokenRevoker(new HttpClient(new UnreachableTokenEndpoint()), "http://localhost:8080/realms/pspad", "pspad-frontend"),
             authProvider, NullLogger<LocalSignOut>.Instance));
 
