@@ -34,7 +34,7 @@ public sealed class CommandSender(IServiceProvider services, ReplicaUnitOfWork w
             foreach (var command in commands)
             {
                 ct.ThrowIfCancellationRequested();
-                results.Add(await RunAsync(command, ct));
+                results.Add(await RunOrRejectAsync(command, ct));
                 progress?.Report(results.Count);
             }
         }
@@ -47,6 +47,18 @@ public sealed class CommandSender(IServiceProvider services, ReplicaUnitOfWork w
         }
 
         return results;
+    }
+
+    async Task<CommandResult> RunOrRejectAsync(ICommand command, CancellationToken ct)
+    {
+        try
+        {
+            return await RunAsync(command, ct);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return CommandResult.Rejected(exception.Message);
+        }
     }
 
     async Task<CommandResult> RunAsync(ICommand command, CancellationToken ct)

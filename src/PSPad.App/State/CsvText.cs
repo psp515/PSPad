@@ -10,7 +10,7 @@ public static class CsvText
     {
         try
         {
-            return StrictUtf8.GetString(bytes).TrimStart('﻿');
+            return StrictUtf8.GetString(bytes).TrimStart('\uFEFF');
         }
         catch (DecoderFallbackException)
         {

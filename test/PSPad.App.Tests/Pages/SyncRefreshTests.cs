@@ -41,7 +41,7 @@ public class SyncRefreshTests : Bunit.TestContext
         typeof(SnapshotPage),
         // SnapshotsPage lists the server's visit records (or its own offline cache), never the replica.
         typeof(SnapshotsPage),
-        // The import page previews against the replica as it was when files were picked; a refill must not reset a running import.
+        // The import page reloads its context whenever a file is picked and ignores refills, so a refill cannot reset a running import.
         typeof(BudgetImportPage)
     ];
 

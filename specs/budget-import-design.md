@@ -210,8 +210,8 @@ not-found state, and no pickers.
 3. **Import.** **Import N rows** sits under the table. It is disabled while
    rates are loading and when nothing is ticked. Pressing it builds the plan
    (§5.2) and runs it with a `MudProgressLinear` showing commands done out of
-   total. Navigating away mid-run asks first; commands already run stay
-   queued in the outbox either way.
+   total. Navigation is blocked until the run finishes, so the plan always
+   completes and its commands stay queued in the outbox.
 4. **Result.** "Imported 1,240 entries and 18 holdings in 6 months." Commands
    rejected locally are listed with their line number and message, and a link
    leads back to the budget's Month tab. Later server rejections surface the
@@ -233,11 +233,11 @@ never sees bytes.
   is one. It covers §2.1–§2.3 except the currency default and NBP.
 - `ParsedEntryRow(Line, Kind, Date, Name, Category, Amount, Currency?, Rate?, Note?)`
   and `ParsedHoldingRow(Line, Month, Name, Type, Amount, Currency?, Rate?)`.
-- `MoneyImportPreview.Build(entries, holdings, budget, liveEntries, snapshots, defaultCurrency)`
+- `MoneyImportPreview.Build(entries, balances, ImportContext context, RateBook rates, Func<Guid> newId)`
   applies §3.1–§3.3 and returns the per-row status, the new categories per
   kind, the per-month outcome, and the `RateRequest(Currency, Date)` pairs
   NBP must answer.
-- `MoneyImportPlan.Build(preview, ticked, rates, newId, userId)` returns
+- `MoneyImportPlan.Build(preview, toggled, userId, newId)` returns
   an ordered `IReadOnlyList<ICommand>`:
   1. Months in ascending order. A new month gets `StartBalanceMonth`, then
      `EditHolding` or `RemoveHolding` for the holdings copied from the latest
@@ -265,7 +265,8 @@ No command, event, aggregate or rule changes.
   which across thousands of commands means thousands of re-renders and sync
   kicks. `SendManyAsync` runs each command through the same handler path,
   one at a time, collects each `CommandResult` without stopping at a
-  rejection, and fires `Sent` and one sync at the end, after a cancellation
+  rejection (a handler exception becomes a rejected result for that command;
+  cancellation still throws), and fires `Sent` and one sync at the end, after a cancellation
   too.
 
 ### 5.3 Server

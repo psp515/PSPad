@@ -48,49 +48,52 @@ else
         {
             <div class="d-flex flex-wrap gap-6 mb-4">
                 <ImportFilePicker Label="Entries (.csv)" Class="pspad-import-entries" FileName="@_entriesName"
-                                  Error="@_entries?.FileError" OnPicked="@(file => PickAsync(file, entries: true))" />
+                                  Error="@_entries?.FileError" Disabled="@_running" OnPicked="@(file => PickAsync(file, entries: true))" />
                 <ImportFilePicker Label="Balances (.csv)" Class="pspad-import-balances" FileName="@_balancesName"
-                                  Error="@_balances?.FileError" OnPicked="@(file => PickAsync(file, entries: false))" />
+                                  Error="@_balances?.FileError" Disabled="@_running" OnPicked="@(file => PickAsync(file, entries: false))" />
             </div>
 
             @if (_preview is not null)
             {
-                <div class="d-flex flex-wrap gap-2 mb-3 pspad-import-chips">
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">To import @Ready</MudChip>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Error">Errors @Errors</MudChip>
-                    <MudChip T="string" Size="Size.Small">Already in budget @_preview.Entries.Count(row => row.Status == ImportStatus.AlreadyInBudget)</MudChip>
-                    <MudChip T="string" Size="Size.Small">New categories @(_preview.NewExpenseCategories.Count + _preview.NewIncomeCategories.Count)</MudChip>
-                    <MudChip T="string" Size="Size.Small">Rates from NBP @FromNbp</MudChip>
-                </div>
-
-                @if (_preview.NewExpenseCategories.Count > 0)
+                @if (!_running)
                 {
-                    <MudText Typo="Typo.body2">New expense categories: @string.Join(", ", _preview.NewExpenseCategories)</MudText>
-                }
-                @if (_preview.NewIncomeCategories.Count > 0)
-                {
-                    <MudText Typo="Typo.body2">New income categories: @string.Join(", ", _preview.NewIncomeCategories)</MudText>
-                }
+                    <div class="d-flex flex-wrap gap-2 mb-3 pspad-import-chips">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">To import @Ready</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error">Errors @Errors</MudChip>
+                        <MudChip T="string" Size="Size.Small">Already in budget @_preview.Entries.Count(row => row.Status == ImportStatus.AlreadyInBudget)</MudChip>
+                        <MudChip T="string" Size="Size.Small">New categories @(_preview.NewExpenseCategories.Count + _preview.NewIncomeCategories.Count)</MudChip>
+                        <MudChip T="string" Size="Size.Small">Rates from NBP @FromNbp</MudChip>
+                    </div>
 
-                <MudTabs Elevation="0" Class="mt-2">
-                    @if (_entries is { FileError: null })
+                    @if (_preview.NewExpenseCategories.Count > 0)
                     {
-                        <MudTabPanel Text="Entries">
-                            <ImportEntriesTable Rows="@_preview.Entries" Toggled="@_toggled" OnToggle="@Toggle" />
-                        </MudTabPanel>
+                        <MudText Typo="Typo.body2">New expense categories: @string.Join(", ", _preview.NewExpenseCategories)</MudText>
                     }
-                    @if (_balances is { FileError: null })
+                    @if (_preview.NewIncomeCategories.Count > 0)
                     {
-                        <MudTabPanel Text="Balances">
-                            <ImportBalancesTable Rows="@_preview.Holdings" Months="@_preview.Months" />
-                        </MudTabPanel>
+                        <MudText Typo="Typo.body2">New income categories: @string.Join(", ", _preview.NewIncomeCategories)</MudText>
                     }
-                </MudTabs>
+
+                    <MudTabs Elevation="0" Class="mt-2">
+                        @if (_entries is { FileError: null })
+                        {
+                            <MudTabPanel Text="Entries">
+                                <ImportEntriesTable Rows="@_preview.Entries" Toggled="@_toggled" OnToggle="@Toggle" />
+                            </MudTabPanel>
+                        }
+                        @if (_balances is { FileError: null })
+                        {
+                            <MudTabPanel Text="Balances">
+                                <ImportBalancesTable Rows="@_preview.Holdings" Months="@_preview.Months" />
+                            </MudTabPanel>
+                        }
+                    </MudTabs>
+                }
 
                 @if (_rates.Failed.Count > 0)
                 {
                     <MudButton Class="pspad-import-retry mt-2" Variant="Variant.Text" Color="Color.Primary"
-                               Disabled="@Fetching" OnClick="@RetryRatesAsync">Retry rates</MudButton>
+                               Disabled="@(Fetching || _running)" OnClick="@RetryRatesAsync">Retry rates</MudButton>
                 }
 
                 @if (_running)
@@ -148,24 +151,32 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var budget = await BudgetStore.LoadAsync(BudgetId, CancellationToken.None);
-
-        if (budget is not null && budget.Admits(State.UserId))
-        {
-            var entries = await EntryStore.LoadAllAsync(State.UserId, CancellationToken.None);
-            var snapshots = await SnapshotStore.LoadAllAsync(State.UserId, CancellationToken.None);
-            var preferences = await PreferencesStore.LoadAsync(MoneyPreferences.IdFor(State.UserId), CancellationToken.None);
-            _context = new ImportContext(budget,
-                [.. entries.Where(entry => entry.BudgetId == BudgetId)],
-                [.. snapshots.Where(snapshot => snapshot.BudgetId == BudgetId)],
-                preferences?.DefaultCurrency ?? Currencies.Pln);
-        }
-
+        _context = await LoadContextAsync();
         _loaded = true;
     }
 
-    Task PickAsync((string Name, byte[]? Bytes) file, bool entries)
+    async Task<ImportContext?> LoadContextAsync()
     {
+        var budget = await BudgetStore.LoadAsync(BudgetId, CancellationToken.None);
+
+        if (budget is null || !budget.Admits(State.UserId))
+        {
+            return null;
+        }
+
+        var entries = await EntryStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var snapshots = await SnapshotStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var preferences = await PreferencesStore.LoadAsync(MoneyPreferences.IdFor(State.UserId), CancellationToken.None);
+        return new ImportContext(budget,
+            [.. entries.Where(entry => entry.BudgetId == BudgetId)],
+            [.. snapshots.Where(snapshot => snapshot.BudgetId == BudgetId)],
+            preferences?.DefaultCurrency ?? Currencies.Pln);
+    }
+
+    async Task PickAsync((string Name, byte[]? Bytes) file, bool entries)
+    {
+        _context = await LoadContextAsync() ?? _context;
+
         if (entries)
         {
             _entriesName = file.Name;
@@ -184,7 +195,6 @@ else
 
         Rebuild();
         _ = FetchRatesAsync(_preview!.MissingRates.Where(request => !_rates.Failed.ContainsKey(request) && !_inFlight.Contains(request)).ToArray());
-        return Task.CompletedTask;
     }
 
     async Task RetryRatesAsync() => await FetchRatesAsync([.. _rates.Failed.Keys]);
@@ -256,7 +266,11 @@ else
         var progress = new Progress<int>(done =>
         {
             _done = done;
-            StateHasChanged();
+
+            if (ImportProgress.IsDue(done, _total))
+            {
+                StateHasChanged();
+            }
         });
 
         try
