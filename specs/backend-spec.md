@@ -694,7 +694,7 @@ treat as offline. The limit covers the wait for headers, not the body, so a
 large first pull on a slow link is not cut off mid-download.
 
 **Sign-out** ends the Keycloak session directly (not just local state),
-and only online (`adr/0071`). It first POSTs the refresh token to
+and only online (`adr/0073`). It first POSTs the refresh token to
 `{Authority}/protocol/openid-connect/revoke`. If Keycloak is unreachable
 (a transport failure, a stall or a 5xx), nothing is cleared and the user
 stays signed in. A 2xx or a 4xx goes on: clear the replica, the **outbox**,

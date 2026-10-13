@@ -1502,7 +1502,7 @@ third pattern.
 
 **Sign-out lives inside the Account card**, under the avatar/name/email
 block — not a standalone button elsewhere on the page.
-It needs a connection (ADR-0071). Offline, the button is disabled and a caption
+It needs a connection (ADR-0073). Offline, the button is disabled and a caption
 (`pspad-sign-out-offline`) says the device can't be signed out securely
 until it connects. With pending outbox commands, a `ConfirmDialog` ("N
 unsynced changes haven't reached the server yet…", confirm text "Sign out")

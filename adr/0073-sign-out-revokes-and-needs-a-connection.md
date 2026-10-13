@@ -5,7 +5,7 @@ date: 2026-10-13
 status: Active (amends ADR-0028)
 ---
 
-# ADR-0071: Sign-out revokes the refresh token, names the session it ends, wipes the outbox, and needs a connection
+# ADR-0073: Sign-out revokes the refresh token, names the session it ends, wipes the outbox, and needs a connection
 
 ## Context
 
