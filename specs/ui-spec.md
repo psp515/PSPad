@@ -1417,7 +1417,7 @@ charts has a `mud-sr-only` table like Statistics; the ranking has none (its
 bars are `aria-hidden`, the names and amounts are visible text). No FAB;
 works offline.
 
-**Budget sharing** (`adr/0064`; full design `specs/budget-sharing-design.md` §4).
+**Budget sharing** (`adr/0066`; full design `specs/budget-sharing-design.md` §4).
 A shared budget's view row gains a **Members** `MudIconButton` (`People`,
 `aria-label` "Members, N people") inside a `MudBadge` with the head count,
 before the gear (`.pspad-budget-members-button`). Settings gains a

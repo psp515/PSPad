@@ -493,7 +493,7 @@ Each slice ships green on its own:
 
 ## 9. Sharing a budget
 
-Built in #121: `specs/budget-sharing-design.md` (`adr/0064`). It needed
+Built in #121: `specs/budget-sharing-design.md` (`adr/0066`). It needed
 nothing beyond what §3.2 already fixed: owner-keyed `UserId`, `BudgetId` on
 everything, and one access function, now split into `BudgetAccess.To`
 (owner or member) and `BudgetAccess.Owned`.

@@ -1,6 +1,6 @@
 # Budget Sharing — design
 
-Status: Built. Issue #121. Decision of record: `adr/0064`. Builds on
+Status: Built. Issue #121. Decision of record: `adr/0066`. Builds on
 `specs/money-design.md` (the module), `specs/sharing-spec.md` (list
 sharing, whose mechanics this copies) and `adr/0054`, `adr/0057`,
 `adr/0059`, `adr/0063`.
@@ -342,7 +342,7 @@ Every class tagged `[UnitTest]` or `[IntegrationTest]`.
 
 ## 8. Docs and records
 
-- **ADR-0064** — budgets are shared by membership; invite rules move to
+- **ADR-0066** — budgets are shared by membership; invite rules move to
   Abstractions. Extends `adr/0054`, `adr/0057`, `adr/0059`, `adr/0063`. Mockups: the "PSPad Budget Sharing"
 design canvas (https://claude.ai/artifact/WZJqhSGw6eqrqHTg391UAg).
 - `AGENTS.md`: AD-12 covers budgets; §3 points here.
