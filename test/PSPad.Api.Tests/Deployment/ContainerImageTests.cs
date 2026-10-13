@@ -15,7 +15,7 @@ public partial class ContainerImageTests
 
     [Theory]
     [MemberData(nameof(PulledImages))]
-    public void EveryPulledImageIsPinnedToAVersionAndADigest(string image)
+    public void EveryPulledImageIsPinnedToAnExactVersionTag(string image)
     {
         Assert.Matches(PinnedImage(), image);
     }
@@ -39,7 +39,7 @@ public partial class ContainerImageTests
     [Fact]
     public void TheBundledKeycloakIsTheReleaseProductionRuns()
     {
-        Assert.Contains(ComposeImages(), image => image.StartsWith("quay.io/keycloak/keycloak:26.7.4@", StringComparison.Ordinal));
+        Assert.Contains("quay.io/keycloak/keycloak:26.7.4", ComposeImages());
     }
 
     static IEnumerable<string> BaseImages(string dockerfile) =>
@@ -56,6 +56,6 @@ public partial class ContainerImageTests
     [GeneratedRegex(@"^\s+image:\s+(\S+)", RegexOptions.Multiline)]
     private static partial Regex ImageLine();
 
-    [GeneratedRegex(@"^[^:@\s]+:\d[^@\s]*@sha256:[0-9a-f]{64}$")]
+    [GeneratedRegex(@"^[^:@\s]+:\d+\.\d+\.\d+[^:@\s]*$")]
     private static partial Regex PinnedImage();
 }

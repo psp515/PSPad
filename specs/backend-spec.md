@@ -877,7 +877,8 @@ repo root as context.
   dropped at build.
 
 Every base image — and every image `docker/compose.yaml` pulls — is pinned
-to a version and a digest. Package versions live once, in
+to an exact version tag (`major.minor.patch`), never `latest`, a bare major
+or a digest. Package versions live once, in
 `Directory.Packages.props` (central package management); no `.csproj`
 carries a `Version`. `.github/dependabot.yml` proposes NuGet, Dockerfile,
 compose and GitHub Actions updates weekly, minor and patch grouped
@@ -916,14 +917,12 @@ itself. Fonts are bundled (`wwwroot/fonts/roboto`, SIL OFL 1.1); the page
 loads nothing from another origin. HSTS belongs to the TLS-terminating proxy.
 
 `docker/compose.yaml` is the self-hosting stack: api, app, mongo and
-keycloak, plus a one-shot `mongo-app-user` service. MongoDB's root user
-(`pspad`, `MONGO_PASSWORD`) serves only the healthcheck, that service and
-backups; the API signs in as `pspad-api` (`MONGO_APP_PASSWORD`), which holds
-`readWrite` on `MONGO_DATABASE` and nothing else. `mongo-app-user` runs
-`docker/mongo-app-user.js` once mongo is healthy: it waits for a writable
-primary, then creates the user or resets its password and roles, so an
-already-initialised volume gets the user too and the API starts only after
-it succeeds. Integration tests never touch the stack — they start their own
+keycloak. The API signs in as MongoDB's root user (`pspad`,
+`MONGO_PASSWORD`). `docker/mongo-app-user.js` is an optional hardening
+example, run by hand as root: it waits up to 60 seconds for a writable
+primary, then creates a user holding `readWrite` on one database only, or
+resets its password and roles; the install guide shows the compose override
+that points the API at it (ADR-0071). Integration tests never touch the stack — they start their own
 MongoDB via Testcontainers. TLS belongs to a reverse proxy in front of it.
 
 ---
