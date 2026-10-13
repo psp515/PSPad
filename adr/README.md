@@ -62,7 +62,7 @@ the old one's status line to point at the new number.
 | [0045](0045-each-integration-is-its-own-module.md) | Each integration is its own module, driving Tasks through server-only commands | Proposed | 2026-09-28 | architecture, modularity, integrations, domain |
 | [0046](0046-github-app-read-only-tokens-outside-the-log.md) | Connect GitHub through a read-only GitHub App; tokens live outside the event log, encrypted | Proposed | 2026-09-28 | integrations, security, identity, persistence |
 | [0047](0047-reference-items-are-their-own-aggregate.md) | Reference lists hold ReferenceItems, a separate aggregate, not a kind of task | Active (extends [0042](0042-deleting-a-container-cascades-to-its-children.md)'s cascade to reference items) | 2026-09-28 | domain, aggregates, ui |
-| [0048](0048-descriptions-are-markdown.md) | Descriptions are Markdown, rendered client-side with raw HTML disabled | Active | 2026-09-28 | domain, ui, security |
+| [0048](0048-descriptions-are-markdown.md) | Descriptions are Markdown, rendered client-side with raw HTML disabled | Active (amended by [0067](0067-markdown-makes-no-automatic-requests.md)) | 2026-09-28 | domain, ui, security |
 | [0049](0049-a-replica-that-learns-a-new-collection-pulls-from-zero.md) | A replica that learns a new collection pulls from zero, once | Active | 2026-09-28 | sync, offline |
 | [0050](0050-phones-navigate-from-a-bottom-bar.md) | Phones navigate from a bottom bar, not a drawer | Active (amends [0022](0022-drawer-cleanup-settings-and-app-info-in-sidebar-area-fab.md) and [0023](0023-sidebar-search-removed-footer-added.md) below `md`; amended by [0060](0060-budgets-take-the-statistics-slot-and-sidebar-groups-collapse.md)) | 2026-09-29 | ui, navigation, mobile |
 | [0051](0051-presentation-module-per-user-views.md) | A Presentation module holds per-user views of shared data | Active | 2026-09-30 | architecture, modularity, domain, ui, sync |
@@ -82,6 +82,7 @@ the old one's status line to point at the new number.
 | [0065](0065-a-goal-holds-its-own-task-links.md) | A goal holds its own task links; a task names no goal | Active (amends [0008](0008-aggregate-boundaries.md)) | 2026-10-12 | architecture, domain, aggregates, security, sharing, statistics |
 | [0066](0066-budgets-are-shared-by-membership.md) | Share budgets by membership on the Budget, with invite rules in Abstractions | Active (extends [0054](0054-lists-are-shared-by-membership.md), [0057](0057-invites-need-a-link-and-a-code.md), [0059](0059-money-is-its-own-wasm-safe-module.md)) | 2026-10-12 | architecture, sharing, money, sync, security |
 | [0067](0067-lost-access-rejections-are-final-and-a-stuck-change-can-be-discarded.md) | Rejections for a gone or foreign target are final, and a stuck change can be discarded | Active (amends [0021](0021-drop-structurally-rejected-outbox-commands.md)) | 2026-10-13 | offline, sync, contracts, sharing |
+| [0067](0067-markdown-makes-no-automatic-requests.md) | Rendered Markdown makes no automatic requests; images show as links | Active (amends [0048](0048-descriptions-are-markdown.md)) | 2026-10-13 | ui, security, privacy, sharing |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

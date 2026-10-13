@@ -8,8 +8,6 @@ namespace PSPad.App.Markdown;
 
 public static class MarkdownRenderer
 {
-    static readonly string[] ImageSchemes = ["http", "https"];
-
     static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .DisableHtml()
         .UsePipeTables()
@@ -28,13 +26,19 @@ public static class MarkdownRenderer
 
         foreach (var link in document.Descendants<LinkInline>().ToArray())
         {
-            if (LinkSafety.IsSafe(link.Url, link.IsImage ? ImageSchemes : LinkSafety.LinkSchemes))
+            if (link.IsImage && IsInsideALink(link))
             {
-                if (!link.IsImage)
+                link.ReplaceBy(new LiteralInline(""));
+            }
+            else if (LinkSafety.IsSafe(link.Url, LinkSafety.LinkSchemes))
+            {
+                if (link.IsImage)
                 {
-                    link.GetAttributes().AddPropertyIfNotExist("target", "_blank");
-                    link.GetAttributes().AddPropertyIfNotExist("rel", "noopener noreferrer");
+                    ShowImageAsLink(link);
                 }
+
+                link.GetAttributes().AddPropertyIfNotExist("target", "_blank");
+                link.GetAttributes().AddPropertyIfNotExist("rel", "noopener noreferrer");
             }
             else
             {
@@ -62,5 +66,27 @@ public static class MarkdownRenderer
         Pipeline.Setup(renderer);
         renderer.Render(document);
         return writer.ToString();
+    }
+
+    static void ShowImageAsLink(LinkInline image)
+    {
+        image.IsImage = false;
+        if (image.FirstChild is null)
+        {
+            image.AppendChild(new LiteralInline(image.Url!));
+        }
+    }
+
+    static bool IsInsideALink(Inline inline)
+    {
+        for (var parent = inline.Parent; parent is not null; parent = parent.Parent)
+        {
+            if (parent is LinkInline)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
