@@ -34,6 +34,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.Audience = builder.Configuration["Keycloak:Audience"];
         options.RequireHttpsMetadata = builder.Configuration.GetValue<bool?>("Keycloak:RequireHttpsMetadata") ?? !builder.Environment.IsDevelopment();
         options.MapInboundClaims = false;
+        options.Events = AuthenticationLogging.Events();
     });
 builder.Services.AddAuthorization();
 
