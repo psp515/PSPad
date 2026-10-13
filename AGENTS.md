@@ -38,6 +38,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Recurrence lead time, yearly repeats | `specs/recurrence-lead-time-design.md` |
 | Phone navigation | `specs/mobile-navigation-design.md` |
 | Budgets, expenses, balances, NBP rates | `specs/money-design.md` |
+| Budget CSV import | `specs/budget-import-design.md` |
 | Sharing a budget | `specs/budget-sharing-design.md` |
 | Length and count limits on user content | `specs/content-limits-design.md` |
 | Why a decision was made | `adr/README.md` index → the `Active` record |
