@@ -8,6 +8,8 @@ FROM nginx:alpine
 RUN apk add --no-cache gettext
 COPY --from=build /app/wwwroot /usr/share/nginx/html
 COPY docker/nginx/pspad.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx/security-headers.inc.template /etc/nginx/templates/security-headers.inc.template
+COPY --chmod=755 docker/nginx/19-pspad-csp.envsh /docker-entrypoint.d/19-pspad-csp.envsh
 COPY src/PSPad.App/docker-entrypoint.sh /docker-entrypoint.d/pspad.sh
 RUN chmod +x /docker-entrypoint.d/pspad.sh
 EXPOSE 8080

@@ -14,7 +14,8 @@ public sealed class ApiFactory(
     MongoFixture fixture,
     IKeycloakAdminClient? keycloakAdminClient = null,
     IReadOnlyDictionary<string, string?>? configuration = null,
-    Action<IServiceCollection>? testServices = null)
+    Action<IServiceCollection>? testServices = null,
+    string? environment = null)
     : WebApplicationFactory<Program>
 {
     protected override IHost CreateHost(IHostBuilder builder)
@@ -43,7 +44,13 @@ public sealed class ApiFactory(
         return base.CreateHost(builder);
     }
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder) =>
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        if (environment is not null)
+        {
+            builder.UseEnvironment(environment);
+        }
+
         builder.ConfigureTestServices(services =>
         {
             services.AddAuthentication(TestAuthenticationHandler.Scheme)
@@ -57,6 +64,7 @@ public sealed class ApiFactory(
 
             testServices?.Invoke(services);
         });
+    }
 
     public HttpClient ClientFor(
         string subject, string zone = "Etc/UTC", string? name = null, string? email = null)

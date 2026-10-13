@@ -186,10 +186,30 @@ cd PSPad</code></pre>
         Keep port <code>5000</code> off the internet: bind it to <code>127.0.0.1</code> or close
         it at the firewall, so the proxy is the only way in.
       </li>
+      <li>
+        <strong>Turn on HSTS at the proxy.</strong> The client sends its own
+        <code>Content-Security-Policy</code>, <code>X-Content-Type-Options</code>,
+        <code>Referrer-Policy</code> and <code>Permissions-Policy</code>, but it serves plain
+        HTTP, so <code>Strict-Transport-Security</code> is the proxy's job (on Cloudflare:
+        SSL/TLS → Edge Certificates → HSTS). Don't add a second
+        <code>Content-Security-Policy</code> at the proxy — the browser enforces both, and
+        anything only one of them allows is blocked.
+      </li>
       <li>Recreate the stack:
         <pre><code>docker compose -f docker/compose.yaml up -d --force-recreate</code></pre>
       </li>
     </ol>
+    <Callout kind="warning" title="The client only talks to the origins in .env">
+      <p>
+        Its content security policy is built when the <code>app</code> container starts,
+        from <code>API_BASE_ADDRESS</code> and <code>KEYCLOAK_AUTHORITY</code>. If the browser
+        reaches the API or Keycloak at any other address, it refuses the request — sign-in
+        or sync fails with a "Refused to connect" error in the browser console. Fix the
+        value and recreate <code>app</code>. Likewise the API accepts cross-origin calls
+        only from <code>APP_BASE_ADDRESS</code> — compose always passes it to the API, so
+        leave it empty and every browser call to the API is refused.
+      </p>
+    </Callout>
     <p>MongoDB publishes no port — it's reachable only from the other containers.</p>
 
     <h2>Backups</h2>

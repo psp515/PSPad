@@ -86,6 +86,7 @@ the old one's status line to point at the new number.
 | [0072](0072-account-deletion-needs-a-fresh-sign-in.md) | Account deletion needs a sign-in from the last five minutes | Active (amends [0034](0034-account-deletion-bypasses-the-command-pipeline.md)) | 2026-10-13 | identity, security, http |
 | [0073](0073-sign-out-revokes-and-needs-a-connection.md) | Sign-out revokes the refresh token, names the session it ends, wipes the outbox, and needs a connection | Active (amends [0028](0028-sign-out-ends-the-keycloak-session-directly.md)) | 2026-10-13 | identity, offline, security, ui |
 | [0069](0069-trust-forwarded-headers-only-from-named-proxies.md) | Trust forwarded client addresses only from named proxies | Active | 2026-10-13 | http, security, deployment |
+| [0070](0070-the-client-ships-a-strict-content-security-policy.md) | The client ships a strict content security policy, and the API allows named origins only | Active | 2026-10-13 | architecture, security, containers, identity |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

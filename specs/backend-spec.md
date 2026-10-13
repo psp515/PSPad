@@ -850,6 +850,15 @@ believe any caller. Compose maps `API_TRUSTED_PROXY_NETWORK` to
 every caller. The `public` limiter and the `join` limiter's anonymous
 fallback both partition by the resolved `RemoteIpAddress`.
 
+Browsers reach the API cross-origin, so `UseCors` runs first with one policy
+(`CorsRegistration`) built from `Cors:AllowedOrigins` when the options are
+first resolved, wildcard subdomains allowed. `appsettings.json` allows
+`https://*.psplace.dev`, `appsettings.Development.json` (and so hosted tests)
+`http://localhost:5001`. Compose always sets the first entry to
+`APP_BASE_ADDRESS`, so under compose the wildcard default never applies and
+an empty `APP_BASE_ADDRESS` denies every origin; the wildcard is the fallback
+for deployments that set no `Cors__AllowedOrigins__0`. Any other origin gets no `Access-Control-Allow-Origin`.
+
 ---
 
 ## 8. Containers
@@ -880,6 +889,20 @@ other script, stylesheet and JSON file (`js/replica.js` included) is served
 still opens a database a newer build already upgraded at its existing
 version (stores are only ever added) and closes its connection on
 `versionchange`, so one tab never blocks another tab's upgrade.
+
+Every client response carries a content security policy,
+`X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and a
+`Permissions-Policy` denying camera, microphone and geolocation (ADR-0070).
+`docker/nginx/19-pspad-csp.envsh`, sourced by the nginx entrypoint before its
+template step, takes the API and Keycloak origins from `API_BASE_ADDRESS` and
+`KEYCLOAK_AUTHORITY` and adds a `sha256` hash for every inline script of the
+served `index.html` (the boot scripts and the publish-filled importmap);
+`security-headers.inc.template` becomes the include that the server block and
+every location with its own `add_header` pull in — nginx drops inherited
+headers from a location that adds any. `frame-ancestors` is `'self'` because
+the OIDC silent sign-in lands the login callback in an iframe of the app
+itself. Fonts are bundled (`wwwroot/fonts/roboto`, SIL OFL 1.1); the page
+loads nothing from another origin. HSTS belongs to the TLS-terminating proxy.
 
 `docker/compose.yaml` runs MongoDB and Keycloak for development.
 Integration tests never touch it — they start their own MongoDB via

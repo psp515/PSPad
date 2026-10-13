@@ -1,0 +1,41 @@
+#!/bin/sh
+pspad_origin() {
+    printf '%s' "$1" | sed -E 's#^([A-Za-z][A-Za-z0-9+.-]*://[^/?#]+).*#\1#'
+}
+
+pspad_inline_script_hashes() {
+    pspad_scripts=$(mktemp -d)
+    awk -v dir="$pspad_scripts" '
+        { sub(/\r$/, ""); page = page (NR > 1 ? "\n" : "") $0 }
+        END {
+            count = 0
+            while ((open = index(page, "<script")) > 0) {
+                page = substr(page, open)
+                tag = substr(page, 1, index(page, ">"))
+                page = substr(page, length(tag) + 1)
+                close_at = index(page, "</script>")
+                body = substr(page, 1, close_at - 1)
+                page = substr(page, close_at + 9)
+                if (tag !~ /[[:space:]]src[[:space:]]*=/) {
+                    count++
+                    file = sprintf("%s/%03d", dir, count)
+                    printf "%s", body > file
+                    close(file)
+                }
+            }
+        }' "$1"
+    for pspad_script in "$pspad_scripts"/*; do
+        [ -f "$pspad_script" ] || continue
+        printf " 'sha256-%s'" "$(sha256sum "$pspad_script" | cut -d' ' -f1 | xxd -r -p | base64)"
+    done
+    rm -rf "$pspad_scripts"
+}
+
+pspad_api=$(pspad_origin "${API_BASE_ADDRESS:-}")
+pspad_keycloak=$(pspad_origin "${KEYCLOAK_AUTHORITY:-}")
+pspad_hashes=$(pspad_inline_script_hashes /usr/share/nginx/html/index.html)
+
+PSPAD_CONTENT_SECURITY_POLICY="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'${pspad_hashes}; style-src 'self' 'unsafe-inline'; connect-src 'self' ${pspad_api} ${pspad_keycloak}; img-src 'self' data:; font-src 'self'; object-src 'none'; frame-src 'self' ${pspad_keycloak}; frame-ancestors 'self'; base-uri 'self'; form-action 'self' ${pspad_keycloak}"
+export PSPAD_CONTENT_SECURITY_POLICY
+
+unset pspad_api pspad_keycloak pspad_hashes pspad_scripts pspad_script
