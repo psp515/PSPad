@@ -5,7 +5,7 @@ date: 2026-10-13
 status: Active
 ---
 
-# ADR-0067: Account deletion needs a sign-in from the last five minutes
+# ADR-0072: Account deletion needs a sign-in from the last five minutes
 
 > Amends [ADR-0034](0034-account-deletion-bypasses-the-command-pipeline.md).
 

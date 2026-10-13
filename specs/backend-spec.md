@@ -744,7 +744,7 @@ directly in `PSPad.Api`:
    confirmation is a typed-email match, not a password prompt. That is a UX
    safeguard against misclicks, not the authorization boundary — the caller's
    own validated JWT `sub` is, and the handler only ever deletes that id.
-   Before step 1 the handler also requires a recent sign-in (`adr/0067`):
+   Before step 1 the handler also requires a recent sign-in (`adr/0072`):
    the access token's `auth_time` must be no older than
    `AccountDeletion:MaxAuthenticationAge` (default 5 minutes). Otherwise —
    including a token with no `auth_time` — nothing is deleted and the answer
@@ -781,7 +781,7 @@ directly in `PSPad.Api`:
 | `GET` | `/api/money/nbp-rate?currency=&date=` | NBP table A mid rate for one currency: the last one on or before `date` (7-day lookback). `200 NbpRateView(Currency, Rate, EffectiveDate)`; `404` for an unknown currency, a date before 2002-01-02, no rate or an NBP 4xx; `502` when NBP fails (5xx, network, bad JSON) or takes over 5 s. PLN answers 1 without calling NBP. Successes cached in memory per (code, date): 24 h for past dates, 1 h otherwise. Online-only, not a command (`adr/0059`) |
 | `GET` | `/api/me` | Current user; provisions on first call, heals display name |
 | `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only) |
-| `DELETE` | `/api/account` | Delete the caller's account: every Mongo document scoped to their `userId`, then their Keycloak user. Needs a sign-in from the last 5 minutes, else `401` step-up challenge (`adr/0067`). Not a command — see §6 |
+| `DELETE` | `/api/account` | Delete the caller's account: every Mongo document scoped to their `userId`, then their Keycloak user. Needs a sign-in from the last 5 minutes, else `401` step-up challenge (`adr/0072`). Not a command — see §6 |
 | `POST` | `/api/lists/{id}/snapshots` | Owner only. Publish a frozen copy; `{expiresAt}` → `{id, token, expiresAt}`. Online-only, like `/api/me/timezone` (`adr/0056`) |
 | `GET` | `/api/lists/{id}/snapshots` | Owner only. That list's active (unexpired) snapshots |
 | `DELETE` | `/api/snapshots/{id}` | Owner only. Revoke a snapshot |

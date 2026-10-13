@@ -1524,7 +1524,7 @@ store/tokens — composing the three existing `IReplica`/`IOutbox`/
 `ILocalSessionStore.ClearAsync()` calls rather than adding new storage
 interop — then lands on `/welcome`, same destination as sign-out.
 When the server answers the step-up challenge (sign-in older than five
-minutes, `adr/0067`), the dialog deletes nothing locally and instead says a
+minutes, `adr/0072`), the dialog deletes nothing locally and instead says a
 fresh sign-in is needed, with a "Sign in again" button (`pspad-reauthenticate`)
 that starts an interactive Keycloak login with `prompt=login` and `max_age=0`.
 The login returns to `/settings?deleteAccount=confirm`; Settings replaces that
