@@ -57,10 +57,14 @@
     static string RowClass(EntryPreview row, int _) =>
         row.Status == ImportStatus.Error ? "pspad-import-row pspad-import-row-error" : "pspad-import-row";
 
-    static string RateText(EntryPreview row) =>
-        row.Money is not { Currency: not "PLN" } money
+    static string RateText(EntryPreview row) => RateSource(row.Row?.Rate, row.Money);
+
+    public static string RateSource(decimal? fileRate, PSPad.Module.Money.Money? money) =>
+        money is not { Currency: not "PLN" } known
             ? ""
-            : $"{money.RateToPln.ToString(CultureInfo.InvariantCulture)} ({(row.Row?.Rate is null ? "NBP " : "")}{money.RateDate:yyyy-MM-dd})";
+            : fileRate is null
+                ? $"{known.RateToPln.ToString(CultureInfo.InvariantCulture)} (NBP {known.RateDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)})"
+                : $"{known.RateToPln.ToString(CultureInfo.InvariantCulture)} (file)";
 
     public static string StatusText(ImportStatus status) => status switch
     {

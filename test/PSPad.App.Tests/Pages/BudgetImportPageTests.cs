@@ -114,4 +114,77 @@ public class BudgetImportPageTests : Bunit.TestContext
         Assert.NotNull(page.Find(".pspad-archived-banner"));
         Assert.Empty(page.FindComponents<InputFile>());
     }
+
+    [Fact]
+    public void OverlappingRateFetchesResolvingInReverseOrderLeaveNoRowWaiting()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var nbp = (AppTestHost.FakeNbpRates)Services.GetRequiredService<INbpRates>();
+        nbp.GatesByCurrency["EUR"] = new TaskCompletionSource<NbpRateView?>();
+        nbp.GatesByCurrency["USD"] = new TaskCompletionSource<NbpRateView?>();
+        var page = Open(budget);
+
+        Upload(page, 1, "month,holding,type,amount,currency\n2026-09,Wallet,cash,10,USD\n");
+        Upload(page, 0, "kind,date,name,category,amount,currency\nexpense,2026-09-05,Steam,PC,19.99,EUR\n");
+        nbp.GatesByCurrency["EUR"].SetResult(new NbpRateView("EUR", 4.25m, new DateOnly(2026, 9, 4)));
+        nbp.GatesByCurrency["USD"].SetResult(new NbpRateView("USD", 3.9m, new DateOnly(2026, 9, 29)));
+
+        page.WaitForAssertion(() => Assert.False(page.Find(".pspad-import-run").HasAttribute("disabled")));
+        Assert.DoesNotContain("Fetching rate", page.Markup);
+    }
+
+    [Fact]
+    public void AThrowingRateServiceMarksTheRowsFailedAndKeepsRetryAvailable()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        Services.AddSingleton<INbpRates>(new ThrowingRates());
+        var page = Open(budget);
+
+        Upload(page, 0, "kind,date,name,category,amount,currency\nexpense,2026-09-05,Steam,PC,19.99,EUR\n");
+
+        page.WaitForAssertion(() =>
+            Assert.Contains("Couldn't fetch the NBP rate.", page.Find(".pspad-import-row-error").TextContent));
+        Assert.False(page.Find(".pspad-import-retry").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void RateSourceIsShownAndTheNbpChipCountsRowsNotRequests()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var nbp = (AppTestHost.FakeNbpRates)Services.GetRequiredService<INbpRates>();
+        nbp.Next = new NbpRateView("EUR", 4.25m, new DateOnly(2026, 9, 4));
+        var page = Open(budget);
+
+        Upload(page, 0, "kind,date,name,category,amount,currency,rate\n" +
+                        "expense,2026-09-05,Steam,PC,19.99,EUR,\n" +
+                        "expense,2026-09-06,Game,PC,5,EUR,\n" +
+                        "expense,2026-09-07,Own,PC,5,EUR,4.5\n");
+
+        page.WaitForAssertion(() => Assert.Equal(3, page.FindAll(".pspad-import-row").Count));
+        page.WaitForAssertion(() => Assert.Contains("4.25 (NBP 2026-09-04)", page.Markup));
+        Assert.Contains("4.5 (file)", page.Markup);
+        Assert.Contains("Rates from NBP 2", page.Find(".pspad-import-chips").TextContent);
+    }
+
+    [Fact]
+    public void BalancesAreGroupedUnderTheirMonthAndFilterable()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Open(budget);
+
+        Upload(page, 1, "month,holding,type,amount\n2026-08,Wallet,cash,10\n2026-09,Wallet,cash,20\n");
+
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-import-month").Count));
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll("table").Count));
+        Assert.Contains("Errors", page.Markup);
+    }
+
+    sealed class ThrowingRates : INbpRates
+    {
+        public Task<NbpRateView?> RateAsync(string currency, DateOnly date) => throw new InvalidOperationException("boom");
+    }
 }

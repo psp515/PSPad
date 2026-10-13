@@ -60,7 +60,7 @@ else
                     <MudChip T="string" Size="Size.Small" Color="Color.Error">Errors @Errors</MudChip>
                     <MudChip T="string" Size="Size.Small">Already in budget @_preview.Entries.Count(row => row.Status == ImportStatus.AlreadyInBudget)</MudChip>
                     <MudChip T="string" Size="Size.Small">New categories @(_preview.NewExpenseCategories.Count + _preview.NewIncomeCategories.Count)</MudChip>
-                    <MudChip T="string" Size="Size.Small">Rates from NBP @_preview.MissingRates.Count</MudChip>
+                    <MudChip T="string" Size="Size.Small">Rates from NBP @FromNbp</MudChip>
                 </div>
 
                 @if (_preview.NewExpenseCategories.Count > 0)
@@ -90,7 +90,7 @@ else
                 @if (_rates.Failed.Count > 0)
                 {
                     <MudButton Class="pspad-import-retry mt-2" Variant="Variant.Text" Color="Color.Primary"
-                               Disabled="@_fetching" OnClick="@RetryRatesAsync">Retry rates</MudButton>
+                               Disabled="@Fetching" OnClick="@RetryRatesAsync">Retry rates</MudButton>
                 }
 
                 @if (_running)
@@ -118,7 +118,8 @@ else
     RateBook _rates = RateBook.Empty;
     MoneyImportPreview? _preview;
     readonly HashSet<int> _toggled = [];
-    bool _fetching;
+    int _fetching;
+    readonly HashSet<RateRequest> _inFlight = [];
     bool _running;
     int _done;
     int _total;
@@ -134,7 +135,16 @@ else
         : _preview.Entries.Count(row => row.Status == ImportStatus.Error) +
           _preview.Holdings.Count(row => row.Status == ImportStatus.Error);
 
-    bool CanImport => _preview is { IsWaitingForRates: false } && !_fetching && !_running && Ready > 0;
+    bool Fetching => _fetching > 0;
+
+    int FromNbp => _preview is null
+        ? 0
+        : _preview.Entries.Count(row => row.Row is { Rate: null } parsed && IsForeign(row.Money?.Currency ?? parsed.Currency)) +
+          _preview.Holdings.Count(row => row.Row is { Rate: null } parsed && IsForeign(row.Money?.Currency ?? parsed.Currency));
+
+    bool IsForeign(string? currency) => (currency ?? _context!.DefaultCurrency) != Currencies.Pln;
+
+    bool CanImport => _preview is { IsWaitingForRates: false } && !Fetching && !_running && Ready > 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -173,7 +183,7 @@ else
         }
 
         Rebuild();
-        _ = FetchRatesAsync(_preview!.MissingRates.Where(request => !_rates.Failed.ContainsKey(request)).ToArray());
+        _ = FetchRatesAsync(_preview!.MissingRates.Where(request => !_rates.Failed.ContainsKey(request) && !_inFlight.Contains(request)).ToArray());
         return Task.CompletedTask;
     }
 
@@ -186,10 +196,42 @@ else
             return;
         }
 
-        _fetching = true;
+        _fetching++;
+        _inFlight.UnionWith(requests);
         StateHasChanged();
-        _rates = await ImportRates.FetchAsync(Nbp, Connectivity.IsOnline, requests, _rates);
-        _fetching = false;
+        RateBook fetched;
+
+        try
+        {
+            fetched = await ImportRates.FetchAsync(Nbp, Connectivity.IsOnline, requests, RateBook.Empty);
+        }
+        catch (Exception)
+        {
+            fetched = new RateBook(new Dictionary<RateRequest, ImportRate>(),
+                requests.ToDictionary(request => request, _ => "Couldn't fetch the NBP rate."));
+        }
+
+        var known = new Dictionary<RateRequest, ImportRate>(_rates.Known);
+        var failed = new Dictionary<RateRequest, string>(_rates.Failed);
+
+        foreach (var request in requests)
+        {
+            failed.Remove(request);
+            _inFlight.Remove(request);
+        }
+
+        foreach (var (request, rate) in fetched.Known)
+        {
+            known[request] = rate;
+        }
+
+        foreach (var (request, message) in fetched.Failed)
+        {
+            failed[request] = message;
+        }
+
+        _rates = new RateBook(known, failed);
+        _fetching--;
         Rebuild();
         await InvokeAsync(StateHasChanged);
     }
@@ -217,9 +259,15 @@ else
             StateHasChanged();
         });
 
-        var results = await Sender.SendManyAsync([.. plan.Select(planned => planned.Command)], progress, CancellationToken.None);
-        _running = false;
-        _outcome = MoneyImportOutcome.From(plan, results);
+        try
+        {
+            var results = await Sender.SendManyAsync([.. plan.Select(planned => planned.Command)], progress, CancellationToken.None);
+            _outcome = MoneyImportOutcome.From(plan, results);
+        }
+        finally
+        {
+            _running = false;
+        }
     }
 
     void ConfirmLeave(LocationChangingContext context)

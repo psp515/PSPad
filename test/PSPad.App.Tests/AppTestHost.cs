@@ -168,12 +168,14 @@ public static class AppTestHost
 
         public TaskCompletionSource<NbpRateView?>? Gate { get; set; }
 
+        public Dictionary<string, TaskCompletionSource<NbpRateView?>> GatesByCurrency { get; } = [];
+
         public List<(string Currency, DateOnly Date)> Asked { get; } = [];
 
         public Task<NbpRateView?> RateAsync(string currency, DateOnly date)
         {
             Asked.Add((currency, date));
-            return Gate?.Task ?? Task.FromResult(ByCurrency.TryGetValue(currency, out var rate) ? rate : Next);
+            return GatesByCurrency.TryGetValue(currency, out var gate) ? gate.Task : Gate?.Task ?? Task.FromResult(ByCurrency.TryGetValue(currency, out var rate) ? rate : Next);
         }
     }
 
