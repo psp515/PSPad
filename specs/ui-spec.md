@@ -1102,6 +1102,15 @@ click blurs the field first, so an open edit is saved rather than dropped.
 `ReadOnly` and `Disabled` never edit: a filled value shows rendered, an
 empty one reads "No description".
 
+**Rendered Markdown never makes the browser fetch anything** (`adr/0068`) —
+it holds text, links and disabled checkboxes, never an `<img>`, frame, media,
+stylesheet or inline style, in every place it shows (owner panels, shared
+lists, the public snapshot page). An image `![alt](url)` renders as a plain
+link to `url` labelled by its alt text (the URL when the alt is empty), under
+the same scheme filter as links; an image with any other scheme, `data:`
+included, shows its alt text only; an image inside a link becomes that link's
+label. Clicking a link is the only way a description reaches another host.
+
 **Field display kinds are detected, not chosen by default, and stay a
 client-side hint.** `State/FieldDisplay.Of(field)` reads the field's stored
 `Display` hint if present and valid, otherwise detects one from the value:

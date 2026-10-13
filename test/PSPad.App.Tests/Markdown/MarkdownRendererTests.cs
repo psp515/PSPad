@@ -144,4 +144,56 @@ public class MarkdownRendererTests
 
         Assert.DoesNotContain("src=\"mailto", html, StringComparison.OrdinalIgnoreCase);
     }
+    [Theory]
+    [InlineData("![pixel](https://attacker.example/p.gif?u=1)")]
+    [InlineData("![pixel](http://attacker.example/p.gif)")]
+    [InlineData("![pixel](//attacker.example/p.gif)")]
+    [InlineData("![pixel](/p.gif)")]
+    [InlineData("![pixel](data:image/gif;base64,R0lGODlhAQABAAAAACw=)")]
+    [InlineData("![pixel][p]\n\n[p]: https://attacker.example/p.gif")]
+    [InlineData("[![pixel](https://attacker.example/p.gif)](https://example.com)")]
+    [InlineData("<img src=\"https://attacker.example/p.gif\">")]
+    [InlineData("<iframe src=\"https://attacker.example\"></iframe>")]
+    [InlineData("<video src=\"https://attacker.example/v.mp4\"></video>")]
+    [InlineData("<audio src=\"https://attacker.example/a.mp3\"></audio>")]
+    [InlineData("<object data=\"https://attacker.example/o\"></object>")]
+    [InlineData("<embed src=\"https://attacker.example/e\">")]
+    [InlineData("<link rel=\"stylesheet\" href=\"https://attacker.example/s.css\">")]
+    [InlineData("<style>@import url(https://attacker.example/s.css);</style>")]
+    [InlineData("<p style=\"background:url(https://attacker.example/b.png)\">x</p>")]
+    [InlineData("<picture><source srcset=\"https://attacker.example/p.gif\"></picture>")]
+    [InlineData("| a |\n|---|\n| ![pixel](https://attacker.example/p.gif) |")]
+    [InlineData("- [x] ![pixel](https://attacker.example/p.gif)")]
+    public void NothingFetchesAResource(string markdown)
+    {
+        var html = MarkdownRenderer.ToHtml(markdown);
+
+        foreach (var fetching in new[] { "<img", "src=\"", "srcset=\"", "data=\"", "style=\"", "<iframe", "<video", "<audio", "<source", "<object", "<embed", "<link", "<style", "<picture" })
+        {
+            Assert.DoesNotContain(fetching, html, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void SafeImageBecomesALinkLabelledByItsAltText()
+    {
+        var html = MarkdownRenderer.ToHtml("![diagram](https://example.com/d.png)");
+
+        Assert.Contains("<a href=\"https://example.com/d.png\"", html);
+        Assert.Contains(">diagram</a>", html);
+        Assert.Contains("target=\"_blank\"", html);
+        Assert.Contains("noopener", html);
+    }
+
+    [Fact]
+    public void ImageWithoutAltTextIsLabelledByItsUrl() =>
+        Assert.Contains(">https://example.com/d.png</a>", MarkdownRenderer.ToHtml("![](https://example.com/d.png)"));
+
+    [Fact]
+    public void ImageWithUnsafeSchemeShowsOnlyItsAltText() =>
+        Assert.Contains("<p>pixel</p>", MarkdownRenderer.ToHtml("![pixel](data:image/gif;base64,R0lGODlhAQABAAAAACw=)"));
+
+    [Fact]
+    public void ImageInsideALinkShowsItsAltTextAsTheLinkLabel() =>
+        Assert.Equal("<p><a href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">pixel</a></p>\n", MarkdownRenderer.ToHtml("[![pixel](https://attacker.example/p.gif)](https://example.com)"));
 }

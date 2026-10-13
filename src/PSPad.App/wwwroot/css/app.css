@@ -1022,10 +1022,6 @@ button.pspad-heatmap-cell:focus-visible {
     padding: .35em .6em;
 }
 
-.pspad-markdown-view img {
-    max-width: 100%;
-}
-
 .pspad-markdown-view blockquote {
     border-left: 4px solid var(--mud-palette-lines-default);
     padding-left: .75em;
