@@ -102,6 +102,44 @@ public class CommandSenderTests
         Assert.Equal(nameof(StagingCommand), entry.Envelope.Type);
     }
 
+    [Fact]
+    public async Task SendingManyFiresSentAndSyncOnceAndReportsProgress()
+    {
+        var sync = new FakeSyncTrigger();
+        var sender = new CommandSender(new FakeServiceProvider(new FakeCommandHandler(CommandResult.Ok())), Work(), sync);
+        var fires = 0;
+        sender.Sent += () => fires++;
+        var reported = new List<int>();
+
+        var results = await sender.SendManyAsync(
+            [new FakeCommand(Guid.NewGuid(), Guid.NewGuid()), new FakeCommand(Guid.NewGuid(), Guid.NewGuid())],
+            new SyncProgress(reported), TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal([1, 2], reported);
+        Assert.Equal(1, fires);
+        Assert.Equal(1, sync.Calls);
+    }
+
+    [Fact]
+    public async Task SendingManyCollectsRejectionsAndGoesOn()
+    {
+        var sync = new FakeSyncTrigger();
+        var sender = new CommandSender(new FakeServiceProvider(new FakeCommandHandler(CommandResult.Rejected("nope"))), Work(), sync);
+
+        var results = await sender.SendManyAsync(
+            [new FakeCommand(Guid.NewGuid(), Guid.NewGuid()), new FakeCommand(Guid.NewGuid(), Guid.NewGuid())],
+            null, TestContext.Current.CancellationToken);
+
+        Assert.All(results, result => Assert.Equal("nope", result.Rejection));
+        Assert.Equal(0, sync.Calls);
+    }
+
+    sealed class SyncProgress(List<int> reported) : IProgress<int>
+    {
+        public void Report(int value) => reported.Add(value);
+    }
+
     static ReplicaUnitOfWork Work() => new(new InMemoryReplica(), new InMemoryOutbox());
 
     sealed record FakeCommand(Guid CommandId, Guid UserId) : ICommand;

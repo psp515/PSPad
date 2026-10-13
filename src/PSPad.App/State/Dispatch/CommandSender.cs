@@ -1,3 +1,5 @@
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using PSPad.Abstractions;
 using PSPad.App.Sync;
 
@@ -12,32 +14,73 @@ public sealed class CommandSender(IServiceProvider services, ReplicaUnitOfWork w
     public async Task<CommandResult> SendAsync<TCommand>(TCommand command, CancellationToken ct = default)
         where TCommand : ICommand
     {
-        var handler = services.GetService(typeof(ICommandHandler<TCommand>)) as ICommandHandler<TCommand>;
+        var result = await RunAsync(command, ct);
+
+        if (result.Accepted)
+        {
+            Announce();
+        }
+
+        return result;
+    }
+
+    public async Task<IReadOnlyList<CommandResult>> SendManyAsync(
+        IReadOnlyList<ICommand> commands, IProgress<int>? progress, CancellationToken ct)
+    {
+        var results = new List<CommandResult>(commands.Count);
+
+        try
+        {
+            foreach (var command in commands)
+            {
+                ct.ThrowIfCancellationRequested();
+                results.Add(await RunAsync(command, ct));
+                progress?.Report(results.Count);
+            }
+        }
+        finally
+        {
+            if (results.Any(result => result.Accepted))
+            {
+                Announce();
+            }
+        }
+
+        return results;
+    }
+
+    async Task<CommandResult> RunAsync(ICommand command, CancellationToken ct)
+    {
+        var contract = typeof(ICommandHandler<>).MakeGenericType(command.GetType());
+        var handler = services.GetService(contract);
 
         if (handler is null)
         {
-            return CommandResult.Rejected($"No handler for {typeof(TCommand).Name}.");
+            return CommandResult.Rejected($"No handler for {command.GetType().Name}.");
         }
 
-        CommandResult result;
         await _oneAtATime.WaitAsync(ct);
         try
         {
             work.Queue(command);
-            result = await handler.HandleAsync(command, ct);
+            var handle = contract.GetMethod(nameof(ICommandHandler<ICommand>.HandleAsync))!;
+            return await (Task<CommandResult>)handle.Invoke(handler, [command, ct])!;
+        }
+        catch (TargetInvocationException invocation) when (invocation.InnerException is not null)
+        {
+            ExceptionDispatchInfo.Capture(invocation.InnerException).Throw();
+            throw;
         }
         finally
         {
             work.Discard();
             _oneAtATime.Release();
         }
+    }
 
-        if (result.Accepted)
-        {
-            Sent?.Invoke();
-            _ = sync.SyncNowAsync();
-        }
-
-        return result;
+    void Announce()
+    {
+        Sent?.Invoke();
+        _ = sync.SyncNowAsync();
     }
 }
