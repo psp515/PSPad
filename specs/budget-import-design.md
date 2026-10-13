@@ -108,10 +108,14 @@ Every parsed row gets exactly one status:
 
 | Status | Meaning | Ticked |
 |---|---|---|
-| To import | valid; produces commands | yes, can be unticked |
+| To import | valid; produces commands | yes; an entry can be unticked |
 | Error | breaks a rule; the message says which | never |
 | Already in budget | entries only; matches a live entry | no, can be ticked |
 | Unchanged | balances only; the holding already holds these values | n/a, no command |
+| Waiting for rate | an NBP rate is still being fetched | n/a; Import waits |
+
+Balance rows are never ticked or unticked: a month is applied as a whole, so
+a new month can hold exactly the file's rows.
 
 ### 3.2 Entries
 
@@ -241,14 +245,19 @@ never sees bytes.
      and `AddHolding`. Unchanged holdings produce nothing.
   2. Entries in file order: `RecordExpense` or `RecordIncome`.
 
-  `newId` is a `Func<Guid>` so tests get stable ids.
+  Each command comes as a `PlannedCommand(ICommand Command, int? Line)` so a
+  rejection can name its CSV line. `newId` is a `Func<Guid>` so tests get
+  stable ids. `MoneyImportOutcome.From(plan, results)` counts what landed
+  for the result line.
 
 No command, event, aggregate or rule changes.
 
 ### 5.2 Client (`PSPad.App`)
 
 - `Pages/BudgetImportPage.razor` and the components `ImportFilePicker`,
-  `ImportPreviewTable` and `ImportSummary`.
+  `ImportEntriesTable`, `ImportBalancesTable` and `ImportSummary`.
+- `ImportRates`: asks NBP for the missing pairs, four at a time, and turns
+  the answers into a `RateBook`.
 - Decoding: strict UTF-8 first, Windows-1250 through
   `CodePagesEncodingProvider` on failure.
 - `CommandSender.SendManyAsync(IReadOnlyList<ICommand>, IProgress<int>, CancellationToken)`.
