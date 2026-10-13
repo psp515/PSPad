@@ -2,6 +2,7 @@ using MongoDB.Driver;
 using PSPad.Abstractions;
 using PSPad.Api.Commands;
 using PSPad.Api.Identity;
+using PSPad.Api.Security;
 using PSPad.Api.Sync;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
@@ -15,7 +16,7 @@ public static class ListEndpoints
     {
         app.MapPost("lists/join", async (
             JoinListRequest request, MongoContext context, CommandDispatcher dispatcher,
-            SyncReader reader, ICurrentUser user, IClock clock, CancellationToken ct) =>
+            SyncReader reader, ICurrentUser user, IClock clock, HttpContext http, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.Code))
             {
@@ -42,6 +43,7 @@ public static class ListEndpoints
                 case InviteCheck.Expired:
                     return Results.StatusCode(StatusCodes.Status410Gone);
                 case InviteCheck.WrongCode:
+                    SecurityLog.For(http).WrongInviteCode(user.UserId, "list", list.Id);
                     await dispatcher.RunAsync(Join(list, request, user), ct);
                     return Results.NotFound();
             }

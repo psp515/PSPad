@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using PSPad.Abstractions;
 using PSPad.Api.Commands;
 using PSPad.Infrastructure.Mongo;
@@ -27,7 +28,7 @@ public class ConflictRetryTests
     {
         var handler = new ConflictingHandler(conflicts);
         var services = new ServiceCollection().AddSingleton<ICommandHandler<Touch>>(handler).BuildServiceProvider();
-        return (new CommandDispatcher(services), handler);
+        return (new CommandDispatcher(services, NullLogger<CommandDispatcher>.Instance), handler);
     }
 
     [Fact]

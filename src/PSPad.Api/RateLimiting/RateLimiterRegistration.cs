@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
+using PSPad.Api.Security;
 
 namespace PSPad.Api.RateLimiting;
 
@@ -22,6 +23,9 @@ public static class RateLimiterRegistration
                     context.HttpContext.Response.Headers.RetryAfter =
                         ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
                 }
+
+                SecurityLog.For(context.HttpContext).RateLimited(
+                    Subject(context.HttpContext.User) ?? "anonymous", context.HttpContext.Request.Path);
 
                 return ValueTask.CompletedTask;
             };

@@ -859,6 +859,19 @@ first resolved, wildcard subdomains allowed. `appsettings.json` allows
 an empty `APP_BASE_ADDRESS` denies every origin; the wildcard is the fallback
 for deployments that set no `Cors__AllowedOrigins__0`. Any other origin gets no `Access-Control-Allow-Origin`.
 
+Refusals that point at probing are logged at `Warning` through `SecurityLog`
+(`PSPad.Api.Security`), each under a stable event id to alert on:
+
+| Event id | Logged when | Fields |
+|----------|-------------|--------|
+| 4001 | `/api/commands` refuses an envelope: unknown type, malformed payload, another user's id, server-only command, no handler | command type (cut to 100 chars), caller's user id, reason |
+| 4002 | JWT bearer rejects a token | path, exception type |
+| 4003 | JWT bearer forbids a request | subject, path |
+| 4004 | `/api/lists/join` or `/api/budgets/join` gets a wrong invite code | caller's user id, `list` or `budget`, its id |
+| 4005 | any rate limiter answers `429` | subject or `anonymous`, path |
+
+Payloads, tokens, invite codes and exception messages are never logged.
+
 ---
 
 ## 8. Containers
