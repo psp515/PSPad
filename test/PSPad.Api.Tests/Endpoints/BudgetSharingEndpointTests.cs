@@ -246,7 +246,9 @@ public class BudgetSharingEndpointTests(MongoFixture fixture)
             JsonSerializer.SerializeToElement(Expense(pair.MemberId, budgetId))) };
         var results = await (await pair.Member.PostAsJsonAsync("/api/commands", envelopes, ct))
             .Content.ReadFromJsonAsync<CommandResponse[]>(ct);
-        Assert.False(Assert.Single(results!).Accepted);
+        var result = Assert.Single(results!);
+        Assert.False(result.Accepted);
+        Assert.True(result.Unrecoverable);
     }
 
     [Fact]

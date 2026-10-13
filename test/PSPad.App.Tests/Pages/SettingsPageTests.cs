@@ -301,6 +301,30 @@ public class SettingsPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AChangeHoldingUpTheQueueCanBeDiscardedFromTheSyncCard()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var sync = new GatedSyncTrigger { LastRejections = ["That budget does not exist."], HasStuckChange = true };
+        Services.AddSingleton<ISyncStatus>(sync);
+        var page = Render<SettingsPage>();
+
+        page.Find("#sync .pspad-discard-stuck").Click();
+
+        Assert.Equal(1, sync.Discards);
+    }
+
+    [Fact]
+    public void ARejectionAlreadyDroppedOffersNoDiscard()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        Services.AddSingleton<ISyncStatus>(new GatedSyncTrigger { LastRejections = ["That budget does not exist."] });
+
+        var page = Render<SettingsPage>();
+
+        Assert.Empty(page.FindAll(".pspad-discard-stuck"));
+    }
+
+    [Fact]
     public void RejectionsArrivingLaterShowUp()
     {
         Arrange(displayName: "Ada", email: "ada@example.com");

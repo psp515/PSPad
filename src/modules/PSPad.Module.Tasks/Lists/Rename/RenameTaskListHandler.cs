@@ -19,7 +19,7 @@ public sealed class RenameTaskListHandler(IDocumentStore<TaskList> store, IUnitO
         }
         catch (DomainRejectedException rejection)
         {
-            return CommandResult.Rejected(rejection.Message);
+            return CommandResult.Rejected(rejection);
         }
     }
 }

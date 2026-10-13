@@ -19,7 +19,7 @@ public sealed class SetGoalDueDateHandler(IDocumentStore<Goal> store, IUnitOfWor
         }
         catch (DomainRejectedException rejection)
         {
-            return CommandResult.Rejected(rejection.Message);
+            return CommandResult.Rejected(rejection);
         }
     }
 }

@@ -20,7 +20,7 @@ public sealed class RenameBudgetHandler(IDocumentStore<Budget> store, IUnitOfWor
         }
         catch (DomainRejectedException rejection)
         {
-            return CommandResult.Rejected(rejection.Message);
+            return CommandResult.Rejected(rejection);
         }
     }
 }

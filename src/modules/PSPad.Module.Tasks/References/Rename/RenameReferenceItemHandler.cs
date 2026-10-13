@@ -24,7 +24,7 @@ public sealed class RenameReferenceItemHandler(
         }
         catch (DomainRejectedException rejection)
         {
-            return CommandResult.Rejected(rejection.Message);
+            return CommandResult.Rejected(rejection);
         }
     }
 }

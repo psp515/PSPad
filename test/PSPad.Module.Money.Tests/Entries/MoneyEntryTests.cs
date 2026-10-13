@@ -251,6 +251,16 @@ public class MoneyEntryTests
     }
 
     [Fact]
+    public void EditingAnEntrySomeoneDeletedIsRejectedForGood()
+    {
+        var budget = ABudget();
+        var entry = Delete(AnExpense(budget), budget);
+
+        Assert.True(Assert.Throws<DomainRejectedException>(
+            () => MoneyEntry.Decide(entry, budget, Edit(entry, name: "Other"), Now)).Unrecoverable);
+    }
+
+    [Fact]
     public void DeletingAMissingEntryIsRejected() =>
         Assert.Equal("That entry does not exist.",
             Rejection(null, ABudget(), new DeleteEntry(Guid.NewGuid(), Owner, Guid.NewGuid())));

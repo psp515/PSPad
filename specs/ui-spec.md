@@ -324,7 +324,12 @@ border.
 
 `AppShell` raises Update and Offline; `SyncCoordinator` raises Rejected and
 keeps the messages of the last sync that had rejections in `ISyncStatus.LastRejections` (a clean sync keeps them), which the
-Settings Sync card (`id="sync"`) lists under "Couldn’t be saved".
+Settings Sync card (`id="sync"`) lists under "Couldn’t be saved". When the
+rejected change is still queued and holding back the rest
+(`ISyncStatus.HasStuckChange`, `adr/0067`), the card adds a caption ("It
+holds back every change made after it. Discarding it puts the saved version
+back.") and an outlined error button "Discard this change"
+(`.pspad-discard-stuck`), which calls `DiscardStuckChangeAsync`.
 `PublicLayout` shows neither state, so it has no stack.
 
 **Small messages.** One action's outcome ("Couldn't star the item.",

@@ -15,5 +15,5 @@ public static class BudgetAccess
     public static Budget Writable(Budget budget) =>
         budget.IsArchived ? throw new DomainRejectedException("This budget is archived.") : budget;
 
-    static DomainRejectedException Missing() => new("That budget does not exist.");
+    static DomainRejectedException Missing() => new("That budget does not exist.", Unrecoverable: true);
 }

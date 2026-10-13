@@ -43,18 +43,20 @@ public class ListAccessTests
     public void AMemberHasAccessOnTheOwnersBehalf() => Assert.Equal(new ListAccess(Owner, Member), ListAccess.To(WithMember(), Member));
 
     [Fact]
-    public void AStrangerIsRejected() => Assert.Throws<DomainRejectedException>(() => ListAccess.To(WithMember(), Stranger));
+    public void AStrangerIsRejectedForGood() =>
+        Assert.True(Assert.Throws<DomainRejectedException>(() => ListAccess.To(WithMember(), Stranger)).Unrecoverable);
 
     [Fact]
     public void ADeletedListIsRejected()
     {
         var list = WithMember();
         list.ApplyAll(TaskList.Decide(list, new DeleteTaskList(Guid.NewGuid(), Owner, list.Id), Now));
-        Assert.Throws<DomainRejectedException>(() => ListAccess.To(list, Owner));
+        Assert.True(Assert.Throws<DomainRejectedException>(() => ListAccess.To(list, Owner)).Unrecoverable);
     }
 
     [Fact]
-    public void AMissingListIsRejected() => Assert.Throws<DomainRejectedException>(() => ListAccess.To(null, Owner));
+    public void AMissingListIsRejectedForGood() =>
+        Assert.True(Assert.Throws<DomainRejectedException>(() => ListAccess.To(null, Owner)).Unrecoverable);
 
     [Fact]
     public void OwnerAccessIsByTheOwner() => Assert.True(ListAccess.Owner(Owner).ByOwner);

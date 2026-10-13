@@ -19,7 +19,7 @@ public sealed class StopSharingTaskListHandler(IDocumentStore<TaskList> store, I
         }
         catch (DomainRejectedException rejection)
         {
-            return CommandResult.Rejected(rejection.Message);
+            return CommandResult.Rejected(rejection);
         }
     }
 }

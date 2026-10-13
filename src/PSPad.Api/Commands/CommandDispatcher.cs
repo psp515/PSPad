@@ -42,7 +42,7 @@ public sealed class CommandDispatcher(IServiceProvider services)
         }
 
         var result = await RunAsync(command, ct);
-        return new CommandResponse(command.CommandId, result.Accepted, result.Rejection);
+        return new CommandResponse(command.CommandId, result.Accepted, result.Rejection, result.Unrecoverable);
     }
 
     static object? Deserialize(JsonElement payload, Type type)

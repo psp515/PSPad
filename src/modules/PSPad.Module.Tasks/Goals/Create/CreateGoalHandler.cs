@@ -20,7 +20,7 @@ public sealed class CreateGoalHandler(IDocumentStore<Goal> store, IUnitOfWork wo
         }
         catch (DomainRejectedException rejection)
         {
-            return CommandResult.Rejected(rejection.Message);
+            return CommandResult.Rejected(rejection);
         }
     }
 }

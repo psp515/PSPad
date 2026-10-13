@@ -543,6 +543,18 @@ aggregate; the loser gets a rejection carrying a reason. The outbox ships
 in order and stops on the first rejection, so a failed command can't be
 overtaken by one that depended on it.
 
+A rejection is final (`Unrecoverable: true`) when retrying can never
+succeed (`adr/0021`, `adr/0067`): the four structural ones in
+`CommandDispatcher`, and a domain rejection thrown with
+`DomainRejectedException(reason, Unrecoverable: true)` — the target list,
+budget, task, reference item or money entry is missing, deleted, or not the
+caller's (`ListAccess.To`, `TaskList.Require`, `BudgetAccess.To`/`Owned`).
+The client surfaces a final rejection once and drops it from the outbox.
+Any other domain rejection stays queued and is retried; while it sits at the
+head of the outbox, `ISyncStatus.HasStuckChange` is true and Settings →
+Sync can discard it (`DiscardStuckChangeAsync`: removes that entry, clears
+the Rejected belt, resets the replica marker to 0 for a full pull, syncs).
+
 On the server every save is conditional on the version the handler loaded
 (`adr/0063`): `MongoUnitOfWork` replaces with `_id == id && version ==
 loaded` (loaded = version minus the staged events) and inserts a new

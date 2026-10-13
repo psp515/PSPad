@@ -12,11 +12,11 @@ public sealed record ListAccess(Guid OwnerId, Guid ActorId)
     {
         if (list is null || list.Deleted)
         {
-            throw new DomainRejectedException("That list no longer exists.");
+            throw new DomainRejectedException("That list no longer exists.", Unrecoverable: true);
         }
 
         return list.UserId == actorId || list.HasMember(actorId)
             ? new ListAccess(list.UserId, actorId)
-            : throw new DomainRejectedException("That list belongs to somebody else.");
+            : throw new DomainRejectedException("That list belongs to somebody else.", Unrecoverable: true);
     }
 }

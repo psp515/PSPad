@@ -16,6 +16,10 @@ public sealed class GatedSyncTrigger : ISyncTrigger, ISyncStatus
 
     public IReadOnlyList<string> LastRejections { get; set; } = [];
 
+    public bool HasStuckChange { get; set; }
+
+    public int Discards { get; private set; }
+
     public event Action? Changed;
 
     public void Hold() => _gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -23,6 +27,12 @@ public sealed class GatedSyncTrigger : ISyncTrigger, ISyncStatus
     public void Release() => _gate?.SetResult();
 
     public void Announce() => Changed?.Invoke();
+
+    public Task DiscardStuckChangeAsync()
+    {
+        Discards++;
+        return Task.CompletedTask;
+    }
 
     public async Task SyncNowAsync()
     {

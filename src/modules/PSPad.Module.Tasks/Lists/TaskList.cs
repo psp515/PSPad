@@ -210,7 +210,7 @@ public sealed class TaskList : Aggregate
     {
         if (list is null || list.Deleted)
         {
-            throw new DomainRejectedException("That list no longer exists.");
+            throw new DomainRejectedException("That list no longer exists.", Unrecoverable: true);
         }
 
         return list;
@@ -221,7 +221,7 @@ public sealed class TaskList : Aggregate
         var existing = Live(list);
         if (existing.UserId != userId)
         {
-            throw new DomainRejectedException("That list belongs to somebody else.");
+            throw new DomainRejectedException("That list belongs to somebody else.", Unrecoverable: true);
         }
 
         return existing;

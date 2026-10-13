@@ -257,6 +257,10 @@ public static class AppTestHost
 
         public IReadOnlyList<string> LastRejections => [];
 
+        public bool HasStuckChange => false;
+
+        public Task DiscardStuckChangeAsync() => Task.CompletedTask;
+
 #pragma warning disable CS0067
         public event Action? Changed;
 #pragma warning restore CS0067

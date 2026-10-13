@@ -20,7 +20,7 @@ public sealed class SetDefaultCurrencyHandler(IDocumentStore<MoneyPreferences> s
         }
         catch (DomainRejectedException rejection)
         {
-            return CommandResult.Rejected(rejection.Message);
+            return CommandResult.Rejected(rejection);
         }
     }
 }

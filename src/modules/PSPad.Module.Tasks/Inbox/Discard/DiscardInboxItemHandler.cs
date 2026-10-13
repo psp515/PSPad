@@ -19,7 +19,7 @@ public sealed class DiscardInboxItemHandler(IDocumentStore<Inbox> store, IUnitOf
         }
         catch (DomainRejectedException rejection)
         {
-            return CommandResult.Rejected(rejection.Message);
+            return CommandResult.Rejected(rejection);
         }
     }
 }

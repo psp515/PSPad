@@ -18,6 +18,25 @@ public class BudgetMemberAccessTests
     static Money Pln(decimal amount) => new(amount, "PLN", 1m, Given.Today);
 
     [Fact]
+    public void SomeoneWhoIsNotAMemberIsRejectedForGood() =>
+        Assert.True(Assert.Throws<DomainRejectedException>(
+            () => BudgetAccess.To(SharedWithMember(), Given.Stranger)).Unrecoverable);
+
+    [Fact]
+    public void AMissingBudgetIsRejectedForGood() =>
+        Assert.True(Assert.Throws<DomainRejectedException>(() => BudgetAccess.To(null, Member)).Unrecoverable);
+
+    [Fact]
+    public void AMemberTryingAnOwnerCommandIsRejectedForGood() =>
+        Assert.True(Assert.Throws<DomainRejectedException>(
+            () => BudgetAccess.Owned(SharedWithMember(), Member)).Unrecoverable);
+
+    [Fact]
+    public void AnArchivedBudgetCanStillBeRestoredSoItsRejectionIsNotFinal() =>
+        Assert.False(Assert.Throws<DomainRejectedException>(
+            () => BudgetAccess.Writable(Given.Archive(SharedWithMember()))).Unrecoverable);
+
+    [Fact]
     public void AMemberRecordsAnExpenseOwnedByTheBudgetOwner()
     {
         var budget = SharedWithMember();
