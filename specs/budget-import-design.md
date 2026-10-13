@@ -210,8 +210,14 @@ not-found state, and no pickers.
 3. **Import.** **Import N rows** sits under the table. It is disabled while
    rates are loading and when nothing is ticked. Pressing it builds the plan
    (§5.2) and runs it with a `MudProgressLinear` showing commands done out of
-   total. Navigation is blocked until the run finishes, so the plan always
-   completes and its commands stay queued in the outbox.
+   total. Commands already run stay queued in the outbox.
+   - **Leaving the page.** Once a file is picked and until the import has
+     finished, leaving asks first with a `ConfirmDialog`: "Leave the import?
+     The files you picked won't be imported.", or while a run is going: "The
+     import is still running. Leave anyway? Rows already imported stay."
+     Before any file is picked, and after the result shows, leaving asks
+     nothing. Reloading or closing the tab in that window gets the browser's
+     own prompt.
 4. **Result.** "Imported 1,240 entries and 18 holdings in 6 months." Commands
    rejected locally are listed with their line number and message, and a link
    leads back to the budget's Month tab. Later server rejections surface the

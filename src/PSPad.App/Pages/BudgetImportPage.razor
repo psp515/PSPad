@@ -20,6 +20,7 @@
 @inject CommandSender Sender
 @inject INbpRates Nbp
 @inject IConnectivity Connectivity
+@inject IDialogService Dialogs
 
 @if (!_loaded)
 {
@@ -106,7 +107,7 @@ else
             }
         }
     </div>
-    <NavigationLock ConfirmExternalNavigation="@_running" OnBeforeInternalNavigation="@ConfirmLeave" />
+    <NavigationLock ConfirmExternalNavigation="@HasUnimportedData" OnBeforeInternalNavigation="@ConfirmLeaveAsync" />
 }
 
 @code {
@@ -284,9 +285,26 @@ else
         }
     }
 
-    void ConfirmLeave(LocationChangingContext context)
+    bool HasUnimportedData => (_entries is not null || _balances is not null) && _outcome is null;
+
+    async Task ConfirmLeaveAsync(LocationChangingContext context)
     {
-        if (_running)
+        if (!HasUnimportedData)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, _running
+                ? "The import is still running. Leave anyway? Rows already imported stay."
+                : "Leave the import? The files you picked won’t be imported." },
+            { dialog => dialog.ConfirmText, "Leave" }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Leave import", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
         {
             context.PreventNavigation();
         }

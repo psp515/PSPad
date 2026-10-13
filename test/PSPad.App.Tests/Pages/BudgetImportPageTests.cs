@@ -1,6 +1,9 @@
 using Bunit;
+using Bunit.Rendering;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using PSPad.App.Api;
 using PSPad.App.Pages;
 using PSPad.App.State.Outbox;
@@ -182,6 +185,92 @@ public class BudgetImportPageTests : Bunit.TestContext
         page.WaitForAssertion(() => Assert.Equal(2, page.FindAll("table").Count));
         Assert.Contains("Errors", page.Markup);
     }
+
+    [Fact]
+    public void LeavingBeforeAnyFileIsPickedAsksNothing()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var host = RenderWithDialogs(budget);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/budgets");
+
+        host.WaitForAssertion(() => Assert.EndsWith("/budgets", navigation.Uri));
+        Assert.Empty(host.FindAll("div.mud-dialog"));
+    }
+
+    [Fact]
+    public void LeavingWithPickedDataAsksAndCancelStays()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var host = RenderWithDialogs(budget);
+        var page = host.FindComponent<BudgetImportPage>();
+        page.WaitForAssertion(() => Assert.Contains("Import", page.Markup));
+        Upload(page, 0, Entries);
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-import-row").Count));
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        var before = navigation.Uri;
+
+        navigation.NavigateTo("/budgets");
+
+        host.WaitForAssertion(() => Assert.Equal("Leave the import? The files you picked won’t be imported.",
+            host.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim()));
+        host.FindAll("div.mud-dialog button").First().Click();
+        host.WaitForAssertion(() => Assert.Empty(host.FindAll("div.mud-dialog")));
+        Assert.Equal(before, navigation.Uri);
+    }
+
+    [Fact]
+    public void LeavingWithPickedDataAndConfirmingLeaves()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var host = RenderWithDialogs(budget);
+        var page = host.FindComponent<BudgetImportPage>();
+        page.WaitForAssertion(() => Assert.Contains("Import", page.Markup));
+        Upload(page, 0, Entries);
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-import-row").Count));
+        var navigation = Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/budgets");
+        host.WaitForAssertion(() => Assert.NotEmpty(host.FindAll("div.mud-dialog")));
+        host.FindAll("div.mud-dialog button").Last().Click();
+
+        host.WaitForAssertion(() => Assert.EndsWith("/budgets", navigation.Uri));
+    }
+
+    [Fact]
+    public void LeavingAfterTheImportFinishedAsksNothing()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var host = RenderWithDialogs(budget);
+        var page = host.FindComponent<BudgetImportPage>();
+        page.WaitForAssertion(() => Assert.Contains("Import", page.Markup));
+        Upload(page, 0, Entries);
+        page.WaitForAssertion(() => Assert.False(page.Find(".pspad-import-run").HasAttribute("disabled")));
+        page.Find(".pspad-import-run").Click();
+        page.WaitForAssertion(() => Assert.NotNull(page.Find(".pspad-import-summary")));
+        var navigation = Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/budgets");
+
+        host.WaitForAssertion(() => Assert.EndsWith("/budgets", navigation.Uri));
+        Assert.Empty(host.FindAll("div.mud-dialog"));
+    }
+
+    IRenderedComponent<ContainerFragment> RenderWithDialogs(Budget budget) => Render(builder =>
+    {
+        builder.OpenComponent<MudPopoverProvider>(0);
+        builder.CloseComponent();
+        builder.OpenComponent<MudDialogProvider>(1);
+        builder.CloseComponent();
+        builder.OpenComponent<BudgetImportPage>(2);
+        builder.AddAttribute(3, nameof(BudgetImportPage.BudgetId), budget.Id);
+        builder.CloseComponent();
+    });
 
     sealed class ThrowingRates : INbpRates
     {
