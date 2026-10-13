@@ -240,7 +240,7 @@ Shared by tasks, reference items, and later mirrored GitHub tasks.
   `DisableHtml()` — raw HTML is escaped. Links whose scheme is not `http`,
   `https` or `mailto` render as plain text. Task-list and pipe-table
   extensions on; rendered checkboxes are disabled.
-- No automatic requests (`adr/0067`): an image renders as a link to its URL
+- No automatic requests (`adr/0069`): an image renders as a link to its URL
   labelled by its alt text, never as `<img>`.
 
 ### 4.6 Tasks
