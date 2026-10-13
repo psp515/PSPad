@@ -892,7 +892,7 @@ version (stores are only ever added) and closes its connection on
 
 Every client response carries a content security policy,
 `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and a
-`Permissions-Policy` denying camera, microphone and geolocation (ADR-0068).
+`Permissions-Policy` denying camera, microphone and geolocation (ADR-0070).
 `docker/nginx/19-pspad-csp.envsh`, sourced by the nginx entrypoint before its
 template step, takes the API and Keycloak origins from `API_BASE_ADDRESS` and
 `KEYCLOAK_AUTHORITY` and adds a `sha256` hash for every inline script of the

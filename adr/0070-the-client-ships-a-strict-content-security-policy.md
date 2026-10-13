@@ -5,7 +5,7 @@ date: 2026-10-13
 status: Active
 ---
 
-# ADR-0068: The client ships a strict content security policy, and the API allows named origins only
+# ADR-0070: The client ships a strict content security policy, and the API allows named origins only
 
 > Status: Active
 
