@@ -836,7 +836,7 @@ default for tests, not a documented self-hoster setting) rather than by
 authentication, since there is no caller identity to limit by. Behind a
 reverse proxy every visitor would share the proxy's address, so
 `UseForwardedHeaders` runs first in the pipeline, ahead of `UseRateLimiter`,
-with options built from the `Proxy` section (`ProxyRegistration`, ADR-0066):
+with options built from the `Proxy` section (`ProxyRegistration`, ADR-0069):
 `KnownNetworks` (CIDRs) and `KnownProxies` (addresses) name the proxies whose
 headers are believed, `ClientIpHeader` names the header carrying the visitor
 (`X-Forwarded-For` by default, `CF-Connecting-IP` behind a Cloudflare Tunnel only,

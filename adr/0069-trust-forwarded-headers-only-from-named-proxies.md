@@ -5,7 +5,7 @@ date: 2026-10-13
 status: Active
 ---
 
-# ADR-0066: Trust forwarded client addresses only from named proxies
+# ADR-0069: Trust forwarded client addresses only from named proxies
 
 ## Context
 
