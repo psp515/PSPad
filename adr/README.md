@@ -85,7 +85,7 @@ the old one's status line to point at the new number.
 | [0068](0068-markdown-makes-no-automatic-requests.md) | Rendered Markdown makes no automatic requests; images show as links | Active (amends [0048](0048-descriptions-are-markdown.md)) | 2026-10-13 | ui, security, privacy, sharing |
 | [0072](0072-account-deletion-needs-a-fresh-sign-in.md) | Account deletion needs a sign-in from the last five minutes | Active (amends [0034](0034-account-deletion-bypasses-the-command-pipeline.md)) | 2026-10-13 | identity, security, http |
 | [0073](0073-sign-out-revokes-and-needs-a-connection.md) | Sign-out revokes the refresh token, names the session it ends, wipes the outbox, and needs a connection | Active (amends [0028](0028-sign-out-ends-the-keycloak-session-directly.md)) | 2026-10-13 | identity, offline, security, ui |
-| [0074](0074-budget-csv-import-runs-on-the-client.md) | Budget CSV import runs on the client as ordinary commands | Proposed | 2026-10-13 | architecture, contracts, offline, money |
+| [0074](0074-budget-csv-import-runs-on-the-client.md) | Budget CSV import runs on the client as ordinary commands | Active | 2026-10-13 | architecture, contracts, offline, money |
 | [0069](0069-trust-forwarded-headers-only-from-named-proxies.md) | Trust forwarded client addresses only from named proxies | Active | 2026-10-13 | http, security, deployment |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design

@@ -2,12 +2,12 @@
 title: Budget CSV import runs on the client as ordinary commands
 tags: [architecture, contracts, offline, money]
 date: 2026-10-13
-status: Proposed
+status: Active
 ---
 
 # ADR-0074: Budget CSV import runs on the client as ordinary commands
 
-> Status: Proposed
+> Status: Active
 
 ## Context
 

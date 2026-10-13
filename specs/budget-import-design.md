@@ -1,6 +1,6 @@
 # Budget CSV import — design
 
-Status: Designed, not built. Extends `specs/money-design.md`; the reasoning
+Status: Built. Extends `specs/money-design.md`; the reasoning
 is in `adr/0074-budget-csv-import-runs-on-the-client.md`.
 
 ## 1. Problem and scope
