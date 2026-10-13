@@ -881,7 +881,7 @@ to a version and a digest. Package versions live once, in
 `Directory.Packages.props` (central package management); no `.csproj`
 carries a `Version`. `.github/dependabot.yml` proposes NuGet, Dockerfile,
 compose and GitHub Actions updates weekly, minor and patch grouped
-(ADR-0070). `ContainerImageTests` and `CentralPackageTests` guard all of it.
+(ADR-0071). `ContainerImageTests` and `CentralPackageTests` guard all of it.
 
 The client is static, so its API base URL and Keycloak settings can't be
 baked in — the image ships `wwwroot/appsettings.json` as a template plus an

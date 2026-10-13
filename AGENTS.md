@@ -60,7 +60,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 12 | Lists and budgets shared by membership | 0054, 0057, 0066 |
 | 13 | Public snapshots, server-only module | 0056, 0064 |
 | 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount | 0059 |
-| 15 | Containers non-root on version+digest-pinned images; central package versions; Dependabot weekly | 0070 |
+| 15 | Containers non-root on version+digest-pinned images; central package versions; Dependabot weekly | 0071 |
 
 Stack: .NET 10, MongoDB 8 replica set `rs0`, Blazor WASM PWA + MudBlazor,
 IndexedDB replica and outbox, Keycloak OIDC/JWT, Docker Compose, no messaging bus.

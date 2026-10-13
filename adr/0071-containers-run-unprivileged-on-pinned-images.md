@@ -5,7 +5,7 @@ date: 2026-10-13
 status: Active
 ---
 
-# ADR-0070: Containers run unprivileged on pinned images, package versions are central, and Dependabot keeps both current
+# ADR-0071: Containers run unprivileged on pinned images, package versions are central, and Dependabot keeps both current
 
 > Status: Active
 
