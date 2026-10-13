@@ -6,5 +6,7 @@ public static class BudgetLinks
 
     public static string For(Guid budgetId) => $"/budgets/{budgetId}";
 
+    public static string ForImport(Guid budgetId) => $"/budgets/{budgetId}/import";
+
     public static string ForTab(Guid budgetId, string tab) => $"/budgets/{budgetId}/{tab}";
 }

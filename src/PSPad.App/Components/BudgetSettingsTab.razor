@@ -36,6 +36,21 @@
                         : $"Only {Budget.OwnerName} can rename, archive or invite.")
                 </MudText>
             </MudPaper>
+            @if (!Budget.IsArchived)
+            {
+                <MudPaper Outlined="true" Class="pa-4 pspad-budget-import-card">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Import</MudText>
+                    <MudText Typo="Typo.body2" Class="pspad-muted mb-2">
+                        Bring expenses, incomes and monthly balances from CSV files, for example saved from Excel.
+                    </MudText>
+                    <div class="d-flex flex-wrap gap-3 mb-2">
+                        <MudLink Href="templates/pspad-entries.csv" download="pspad-entries.csv" Typo="Typo.body2">Entries template</MudLink>
+                        <MudLink Href="templates/pspad-balances.csv" download="pspad-balances.csv" Typo="Typo.body2">Balances template</MudLink>
+                    </div>
+                    <MudButton Class="pspad-budget-import-open" Variant="Variant.Outlined" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Outlined.UploadFile" OnClick="@OnImport">Import from CSV</MudButton>
+                </MudPaper>
+            }
             <MudPaper Outlined="true" Class="pa-4 pspad-budget-card-settings">
                 <MudText Typo="Typo.subtitle2" Class="mb-3">Budget</MudText>
                 @if (!IsMine)
@@ -83,6 +98,8 @@
 
     [Parameter] public Func<(CategoryKind Kind, string Name), Task<bool>> OnRemoveCategory { get; set; } =
         _ => Task.FromResult(true);
+
+    [Parameter] public EventCallback OnImport { get; set; }
 
     [Parameter] public EventCallback OnRename { get; set; }
 

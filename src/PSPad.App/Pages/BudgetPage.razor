@@ -90,6 +90,7 @@ else
                                OnRenameCategory="@RenameCategoryAsync" OnMergeCategory="@MergeCategoryAsync"
                                OnRemoveCategory="@RemoveCategoryAsync"
                                OnRename="@(() => Navigation.NavigateTo(BudgetQuery.For(Navigation.Uri, _budget.Id)))"
+                               OnImport="@(() => Navigation.NavigateTo(BudgetLinks.ForImport(BudgetId)))"
                                OnArchive="@ArchiveAsync" OnRestore="@RestoreAsync" />
             break;
     }

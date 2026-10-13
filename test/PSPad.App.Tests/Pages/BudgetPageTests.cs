@@ -548,4 +548,31 @@ public class BudgetPageTests : Bunit.TestContext
         Assert.Equal("Previous month", page.Find(".pspad-month-previous").GetAttribute("aria-label"));
         Assert.Equal("Next month", page.Find(".pspad-month-next").GetAttribute("aria-label"));
     }
+
+    [Fact]
+    public void SettingsOfferImportAndLinkTheTemplates()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "settings"));
+        page.WaitForAssertion(() => Assert.Contains("Eating Out", page.Markup));
+
+        var card = page.Find(".pspad-budget-import-card");
+        Assert.Contains("templates/pspad-entries.csv", card.InnerHtml);
+        Assert.Contains("templates/pspad-balances.csv", card.InnerHtml);
+        page.Find(".pspad-budget-import-open").Click();
+
+        Assert.EndsWith($"/budgets/{budget.Id}/import", Services.GetRequiredService<NavigationManager>().Uri);
+    }
+
+    [Fact]
+    public void AnArchivedBudgetHidesTheImportCard()
+    {
+        var budget = BudgetsPageTests.Named("Old", archived: true);
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "settings"));
+        page.WaitForAssertion(() => Assert.Contains("Eating Out", page.Markup));
+
+        Assert.Empty(page.FindAll(".pspad-budget-import-card"));
+    }
 }
