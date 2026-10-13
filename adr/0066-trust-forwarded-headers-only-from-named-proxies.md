@@ -30,7 +30,11 @@ configuration section and call `UseForwardedHeaders` first in the pipeline:
   only callers whose forwarded headers are believed. With neither set, no
   header is forwarded at all.
 - `Proxy:ClientIpHeader` names the header carrying the visitor's address:
-  `X-Forwarded-For` by default, `CF-Connecting-IP` behind Cloudflare.
+  `X-Forwarded-For` by default, `CF-Connecting-IP` behind a Cloudflare
+  Tunnel only. Behind the orange-cloud proxy and a host proxy, nothing
+  overwrites `CF-Connecting-IP` after Cloudflare, so a caller reaching the
+  origin directly could forge it; there the host proxy appends
+  `X-Forwarded-For` instead.
 - `ForwardLimit = 1`: only the hop the trusted proxy added counts.
 - The API refuses to start when `ASPNETCORE_FORWARDEDHEADERS_ENABLED` is
   true, since that switch trusts any caller and adds a second pass.

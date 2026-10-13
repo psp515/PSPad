@@ -839,7 +839,8 @@ reverse proxy every visitor would share the proxy's address, so
 with options built from the `Proxy` section (`ProxyRegistration`, ADR-0066):
 `KnownNetworks` (CIDRs) and `KnownProxies` (addresses) name the proxies whose
 headers are believed, `ClientIpHeader` names the header carrying the visitor
-(`X-Forwarded-For` by default, `CF-Connecting-IP` behind Cloudflare), and
+(`X-Forwarded-For` by default, `CF-Connecting-IP` behind a Cloudflare Tunnel only,
+since nothing overwrites it after Cloudflare on any other path), and
 `ForwardLimit = 1` takes only the hop the trusted proxy added. With no trusted
 proxy configured nothing is forwarded, since the middleware would otherwise
 believe any caller. Compose maps `API_TRUSTED_PROXY_NETWORK` to

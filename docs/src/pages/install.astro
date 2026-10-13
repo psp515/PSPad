@@ -141,8 +141,7 @@ cd PSPad</code></pre>
     <p>
       Point three hostnames at the published ports — client <code>5001</code>, API
       <code>5000</code>, Keycloak <code>8080</code> — terminate TLS at the proxy, and forward
-      <code>X-Forwarded-For</code> and <code>X-Forwarded-Proto</code> (Cloudflare sends
-      <code>CF-Connecting-IP</code> as well).
+      <code>X-Forwarded-For</code> and <code>X-Forwarded-Proto</code>.
     </p>
     <ol>
       <li>
@@ -169,10 +168,19 @@ cd PSPad</code></pre>
         the range may name the visitor; anyone else's forwarded headers are ignored.
       </li>
       <li>
-        Behind Cloudflare — a Cloudflare Tunnel (<code>cloudflared</code>) or the orange-cloud
-        proxy — also set <code>API_CLIENT_IP_HEADER=CF-Connecting-IP</code>. Cloudflare puts
-        the visitor's address there; other proxies use the default
-        <code>X-Forwarded-For</code>, of which the API believes only the last hop.
+        Behind a Cloudflare Tunnel (<code>cloudflared</code>), also set
+        <code>API_CLIENT_IP_HEADER=CF-Connecting-IP</code>: the tunnel is the origin's only way
+        in, and Cloudflare puts the visitor's address there. Don't use it for the orange-cloud
+        proxy in front of your own nginx or Caddy — nothing overwrites
+        <code>CF-Connecting-IP</code> after Cloudflare, so anyone reaching the origin directly
+        could send their own. There, keep the default <code>X-Forwarded-For</code>, have the
+        host proxy append the caller (nginx:
+        <code>proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;</code>), and the
+        API believes only that last hop. That hop is Cloudflare's edge unless the host proxy
+        first restores the visitor from Cloudflare's own ranges (nginx's realip module:
+        <code>set_real_ip_from</code> for each Cloudflare range,
+        <code>real_ip_header CF-Connecting-IP;</code>). If Cloudflare should be the only way
+        in, allow just Cloudflare's IP ranges at the origin's firewall.
       </li>
       <li>
         Keep port <code>5000</code> off the internet: bind it to <code>127.0.0.1</code> or close
