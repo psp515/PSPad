@@ -834,14 +834,21 @@ exception: they sit in their own `AllowAnonymous` route group
 by default, overridable through `Sharing:PublicRequestsPerMinute` — a code
 default for tests, not a documented self-hoster setting) rather than by
 authentication, since there is no caller identity to limit by. Behind a
-reverse proxy every visitor would share the proxy's address, so the API
-relies on ASP.NET Core's built-in `ASPNETCORE_FORWARDEDHEADERS_ENABLED`
-(compose maps it from `API_BEHIND_PROXY`, default `false`): the host's
-startup filter puts `UseForwardedHeaders` (`X-Forwarded-For`,
-`X-Forwarded-Proto`, any proxy trusted, last hop only) ahead of the whole
-pipeline, `UseRateLimiter` included, so `RemoteIpAddress` is the visitor's.
-Off by default because with port 5000 open directly a caller could forge the
-header.
+reverse proxy every visitor would share the proxy's address, so
+`UseForwardedHeaders` runs first in the pipeline, ahead of `UseRateLimiter`,
+with options built from the `Proxy` section (`ProxyRegistration`, ADR-0069):
+`KnownNetworks` (CIDRs) and `KnownProxies` (addresses) name the proxies whose
+headers are believed, `ClientIpHeader` names the header carrying the visitor
+(`X-Forwarded-For` by default, `CF-Connecting-IP` behind a Cloudflare Tunnel only,
+since nothing overwrites it after Cloudflare on any other path), and
+`ForwardLimit = 1` takes only the hop the trusted proxy added. With no trusted
+proxy configured nothing is forwarded, since the middleware would otherwise
+believe any caller. Compose maps `API_TRUSTED_PROXY_NETWORK` to
+`Proxy__KnownNetworks__0` and `API_CLIENT_IP_HEADER` to
+`Proxy__ClientIpHeader`. The API refuses to start when
+`ASPNETCORE_FORWARDEDHEADERS_ENABLED` is set, because that switch trusts
+every caller. The `public` limiter and the `join` limiter's anonymous
+fallback both partition by the resolved `RemoteIpAddress`.
 
 ---
 

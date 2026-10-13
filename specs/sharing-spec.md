@@ -473,10 +473,11 @@ for members through §3.2.
 No new service, port or secret. `Sharing:PublicRequestsPerMinute` is a
 configuration key with a code default (60), there for tests, not a
 documented self-hoster setting. One self-hoster variable did come with the
-final review: `API_BEHIND_PROXY` (maps to
-`ASPNETCORE_FORWARDEDHEADERS_ENABLED`) so the public rate limit sees each
-visitor's address behind a reverse proxy; `.env.example` and the install
-docs cover it.
+final review: `API_BEHIND_PROXY` so the public rate limit sees each
+visitor's address behind a reverse proxy. ADR-0069 replaced it with
+`API_TRUSTED_PROXY_NETWORK` and `API_CLIENT_IP_HEADER`, which trust only the
+named proxy (`specs/backend-spec.md` §7); `.env.example` and the install docs
+cover them.
 
 ## 9. Docs and records
 

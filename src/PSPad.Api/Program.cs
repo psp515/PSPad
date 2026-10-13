@@ -5,6 +5,7 @@ using PSPad.Api.Commands;
 using PSPad.Api.Endpoints;
 using PSPad.Api.Identity;
 using PSPad.Api.Presentation;
+using PSPad.Api.Proxy;
 using PSPad.Api.Rates;
 using PSPad.Api.RateLimiting;
 using PSPad.Api.Snapshots;
@@ -36,6 +37,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+builder.Services.AddPSPadForwardedHeaders();
 builder.Services.AddPSPadRateLimiter(builder.Configuration);
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
@@ -87,6 +89,7 @@ builder.Services.AddHttpClient<NbpRateClient>(client =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseCors("AppClient");
 app.UseAuthentication();
 app.UseAuthorization();

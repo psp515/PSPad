@@ -158,11 +158,33 @@ cd PSPad</code></pre>
         automatically (it's <code>+</code>, unless you've changed it).
       </li>
       <li>
-        Set <code>API_BEHIND_PROXY=true</code> in <code>docker/.env</code>. Public snapshot
-        links are rate-limited per visitor address; without it every visitor arrives from the
-        proxy's address and they all share one limit. Only do this once port <code>5000</code>
-        is no longer reachable except through the proxy — otherwise a caller can forge
-        <code>X-Forwarded-For</code>.
+        Tell the API which proxy to believe. Public snapshot links are rate-limited per visitor
+        address; without this every visitor arrives from the proxy's address and they all
+        share one limit. Set <code>API_TRUSTED_PROXY_NETWORK</code> in <code>docker/.env</code>
+        to the address range the proxy connects from — usually the stack's Docker network:
+        <pre><code>{"docker network inspect pspad_pspad --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'"}</code></pre>
+        A proxy on the host that reaches the published port <code>5000</code> also arrives
+        from this network's gateway, so the same range covers it. Only requests from inside
+        the range may name the visitor; anyone else's forwarded headers are ignored.
+      </li>
+      <li>
+        Behind a Cloudflare Tunnel (<code>cloudflared</code>), also set
+        <code>API_CLIENT_IP_HEADER=CF-Connecting-IP</code>: the tunnel is the origin's only way
+        in, and Cloudflare puts the visitor's address there. Don't use it for the orange-cloud
+        proxy in front of your own nginx or Caddy — nothing overwrites
+        <code>CF-Connecting-IP</code> after Cloudflare, so anyone reaching the origin directly
+        could send their own. There, keep the default <code>X-Forwarded-For</code>, have the
+        host proxy append the caller (nginx:
+        <code>proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;</code>), and the
+        API believes only that last hop. That hop is Cloudflare's edge unless the host proxy
+        first restores the visitor from Cloudflare's own ranges (nginx's realip module:
+        <code>set_real_ip_from</code> for each Cloudflare range,
+        <code>real_ip_header CF-Connecting-IP;</code>). If Cloudflare should be the only way
+        in, allow just Cloudflare's IP ranges at the origin's firewall.
+      </li>
+      <li>
+        Keep port <code>5000</code> off the internet: bind it to <code>127.0.0.1</code> or close
+        it at the firewall, so the proxy is the only way in.
       </li>
       <li>Recreate the stack:
         <pre><code>docker compose -f docker/compose.yaml up -d --force-recreate</code></pre>
