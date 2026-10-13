@@ -15,8 +15,9 @@ const entries = parseEnvExample(readRepoFile('docker/.env.example'))
   <div class="wrap prose">
     <h1>Install</h1>
     <p>
-      Four containers — API, client, MongoDB, Keycloak — one Compose file. Budget a
-      few minutes for the first build.
+      Four containers — API, client, MongoDB, Keycloak — plus a one-shot job that sets up
+      the API's database user, all in one Compose file. Budget a few minutes for the first
+      build.
     </p>
 
     <h2>Before you start</h2>
@@ -41,8 +42,9 @@ cd PSPad</code></pre>
       <pre><code>cp docker/.env.example docker/.env</code></pre>
       <p>
         Do this first, or the stack starts with empty values. Defaults work on
-        <code>localhost</code> — change <code>MONGO_PASSWORD</code> and
-        <code>KEYCLOAK_ADMIN_PASSWORD</code> before it's reachable from anywhere else.
+        <code>localhost</code> — change <code>MONGO_PASSWORD</code>,
+        <code>MONGO_APP_PASSWORD</code> and <code>KEYCLOAK_ADMIN_PASSWORD</code> before it's
+        reachable from anywhere else.
       </p>
       <EnvTable entries={entries} />
       <Callout kind="warning" title="Two Keycloak URLs">
@@ -51,6 +53,16 @@ cd PSPad</code></pre>
           <code>KEYCLOAK_INTERNAL_AUTHORITY</code> is for the <strong>API container</strong> —
           they reach Keycloak by different names, so <code>localhost</code> means something
           different to each. Running an external Keycloak? Set both to the same address.
+        </p>
+      </Callout>
+      <Callout title="Two MongoDB users">
+        <p>
+          <code>MONGO_PASSWORD</code> belongs to <code>pspad</code>, the MongoDB root user,
+          which only the healthcheck, the setup job and your backups use. The API signs in as
+          <code>pspad-api</code> with <code>MONGO_APP_PASSWORD</code>, and that user can read
+          and write <code>MONGO_DATABASE</code> and nothing else. The
+          <code>mongo-app-user</code> job creates it — or resets its password to the value in
+          <code>.env</code> — every time the stack starts, before the API does.
         </p>
       </Callout>
       <Callout kind="warning" title="The admin credentials apply once to Keycloak, but the API keeps reading them">
@@ -73,7 +85,9 @@ cd PSPad</code></pre>
       <pre><code>docker compose -f docker/compose.yaml ps</code></pre>
       <p>
         <code>api</code>, <code>app</code> and <code>keycloak</code> show a bare
-        <code>Up</code> forever — that's normal. Confirm the API is actually answering:
+        <code>Up</code> forever, and <code>mongo-app-user</code> shows
+        <code>Exited (0)</code> once it has set up the API's database user — that's normal.
+        Confirm the API is actually answering:
       </p>
       <pre><code>curl -s -o /dev/null -w "%{'{'}http_code{'}'}\n" http://localhost:5000/api/today</code></pre>
       <p><code>401</code> is correct — you're just not signed in yet. Anything else means the stack didn't come up cleanly.</p>
@@ -211,8 +225,14 @@ cd PSPad</code></pre>
       </p>
     </Callout>
     <p>MongoDB publishes no port — it's reachable only from the other containers.</p>
+    <p>
+      None of the PSPad containers runs as root: the API runs as the .NET image's
+      <code>app</code> user (UID 1654) and the client is served by unprivileged nginx
+      (UID 101), both listening on <code>8080</code> inside their containers. The published
+      ports above don't change.
+    </p>
 
-    <h2>Backups</h2>
+    <h2 id="backups">Backups</h2>
     <p>Three volumes hold everything:</p>
     <ul>
       <li><code>pspad_mongo-data</code> — areas, lists, tasks, the event log.</li>
@@ -243,6 +263,37 @@ docker compose -f docker/compose.yaml up -d --build</code></pre>
       Volumes survive — only <code>down -v</code> destroys them. Give Mongo 10–30 seconds to
       report healthy again before assuming something's broken.
     </p>
+    <p>
+      Every image is pinned to a version and digest, so an upgrade changes MongoDB, Keycloak
+      or nginx only when <code>compose.yaml</code> or a <code>Dockerfile</code> in the
+      release does.
+    </p>
+    <Callout kind="warning" title="Upgrading an install from before the pspad-api user">
+      <p>
+        Older releases connected the API as the MongoDB root user. Before you run
+        <code>up</code> on the new release:
+      </p>
+      <ol>
+        <li>
+          Add <code>MONGO_APP_PASSWORD</code> to <code>docker/.env</code> — Compose refuses to
+          start without it.
+        </li>
+        <li>
+          Take a <a href="#backups">database dump</a> and export the <strong>psplace</strong>
+          realm: the release moves MongoDB to the pinned 8.3 image and Keycloak from 26.0 to
+          26.7.4, which migrates its embedded database on first start.
+        </li>
+        <li>
+          <code>docker compose -f docker/compose.yaml up -d --build</code>. The
+          <code>mongo-app-user</code> job creates <code>pspad-api</code> in your existing
+          database — it doesn't rely on MongoDB's first-start init scripts, so an
+          already-initialised volume works. Check it with
+          <code>docker compose -f docker/compose.yaml logs mongo-app-user</code>: it prints
+          <code>created pspad-api on &lt;database&gt;</code>.
+        </li>
+      </ol>
+      <p>Nothing else changes: same ports, same volumes, and none of them needs new file permissions.</p>
+    </Callout>
 
     <h2>Two things worth knowing</h2>
     <Callout kind="warning" title="Keycloak runs in development mode">

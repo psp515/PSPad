@@ -7,7 +7,7 @@ services:
       dockerfile: src/PSPad.Api/Dockerfile
     image: pspad-api:local
     environment:
-      Mongo__ConnectionString: mongodb://pspad:${MONGO_PASSWORD}@mongo:27017/${MONGO_DATABASE}?authSource=admin&directConnection=true
+      Mongo__ConnectionString: mongodb://pspad-api:${MONGO_APP_PASSWORD:?set MONGO_APP_PASSWORD in docker/.env}@mongo:27017/${MONGO_DATABASE}?directConnection=true
       Mongo__Database: ${MONGO_DATABASE}
       Keycloak__Authority: ${KEYCLOAK_INTERNAL_AUTHORITY}
       Keycloak__Audience: ${KEYCLOAK_AUDIENCE}
@@ -20,8 +20,8 @@ services:
     ports:
       - "5000:8080"
     depends_on:
-      mongo:
-        condition: service_healthy
+      mongo-app-user:
+        condition: service_completed_successfully
     networks: [pspad]
 
   app:
@@ -41,7 +41,7 @@ services:
     networks: [pspad]
 
   mongo:
-    image: mongo:8
+    image: mongo:8.3.11@sha256:d731d77bfd7afd66bd487bdf627b5bf7ce4c3602ec461d635977021db529ebbc
     entrypoint: ["bash", "/mongo-entrypoint.sh"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: pspad
@@ -58,8 +58,24 @@ services:
       start_period: 10s
     networks: [pspad]
 
+  mongo-app-user:
+    image: mongo:8.3.11@sha256:d731d77bfd7afd66bd487bdf627b5bf7ce4c3602ec461d635977021db529ebbc
+    command: ["sh", "-c", "mongosh --quiet --host mongo -u pspad -p \"$$MONGO_ROOT_PASSWORD\" --authenticationDatabase admin /mongo-app-user.js"]
+    environment:
+      MONGO_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_DATABASE: ${MONGO_DATABASE}
+      MONGO_APP_USER: pspad-api
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?set MONGO_APP_PASSWORD in docker/.env}
+    volumes:
+      - ./mongo-app-user.js:/mongo-app-user.js:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+    user: mongodb
+    networks: [pspad]
+
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0
+    image: quay.io/keycloak/keycloak:26.7.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c
     command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER}

@@ -18,7 +18,7 @@ public sealed class FrontendContainer : IAsyncLifetime
             "<script type=\"importmap\">{\r\n  \"imports\": {\r\n    \"./_framework/dotnet.js\": \"./_framework/dotnet.abc123.js\"\r\n  }\r\n}</script>",
             StringComparison.Ordinal);
 
-    readonly IContainer _container = new ContainerBuilder("nginx:alpine")
+    readonly IContainer _container = new ContainerBuilder(RepositoryPaths.ServingImage)
         .WithResourceMapping(Nginx("pspad.conf"), "/etc/nginx/conf.d/default.conf")
         .WithResourceMapping(Nginx("security-headers.inc.template"), "/etc/nginx/templates/security-headers.inc.template")
         .WithResourceMapping(Nginx("19-pspad-csp.envsh"), "/docker-entrypoint.d/19-pspad-csp.envsh", fileMode: Executable)
@@ -39,6 +39,9 @@ public sealed class FrontendContainer : IAsyncLifetime
         await _container.StartAsync();
         Client = new HttpClient { BaseAddress = new Uri($"http://{_container.Hostname}:{_container.GetMappedPublicPort(8080)}") };
     }
+
+    public Task<ExecResult> ExecAsync(IList<string> command) =>
+        _container.ExecAsync(command, TestContext.Current.CancellationToken);
 
     public async ValueTask DisposeAsync()
     {
