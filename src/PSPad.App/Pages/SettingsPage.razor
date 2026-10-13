@@ -156,6 +156,18 @@
         ? $"Last synced {RelativeTime.Describe(at, Clock.UtcNow)}"
         : "Not synced yet";
 
+    [SupplyParameterFromQuery(Name = StepUpSignIn.DeleteAccountQuery)]
+    public string? DeleteAccount { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && DeleteAccount is not null)
+        {
+            Navigation.NavigateTo("settings", replace: true);
+            await OpenDeleteAccountDialogAsync();
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         Sender.Sent += OnCommandSent;

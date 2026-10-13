@@ -48,32 +48,55 @@ public class PSPadApiClientTests
             BaseAddress = new Uri("http://localhost")
         });
 
-        var result = await client.DeleteAccountAsync();
+        var outcome = await client.DeleteAccountAsync();
 
-        Assert.NotNull(result);
-        Assert.True(result!.KeycloakRemoved);
+        Assert.True(Assert.IsType<AccountDeletionOutcome.Deleted>(outcome).KeycloakRemoved);
     }
 
     [Fact]
-    public async Task DeleteAccountAsyncReturnsNullOnFailureStatus()
+    public async Task DeleteAccountAsyncFailsOnAFailureStatus()
     {
         var client = new PSPadApiClient(new HttpClient(new DeleteAccountHandler(HttpStatusCode.InternalServerError, ""))
         {
             BaseAddress = new Uri("http://localhost")
         });
 
-        Assert.Null(await client.DeleteAccountAsync());
+        Assert.IsType<AccountDeletionOutcome.Failed>(await client.DeleteAccountAsync());
     }
 
     [Fact]
-    public async Task DeleteAccountAsyncReturnsNullWhenOffline()
+    public async Task DeleteAccountAsyncFailsWhenOffline()
     {
         var client = new PSPadApiClient(new HttpClient(new ThrowingHandler())
         {
             BaseAddress = new Uri("http://localhost")
         });
 
-        Assert.Null(await client.DeleteAccountAsync());
+        Assert.IsType<AccountDeletionOutcome.Failed>(await client.DeleteAccountAsync());
+    }
+
+    [Fact]
+    public async Task DeleteAccountAsyncAsksToSignInAgainWhenTheServerChallengesForAFresherSignIn()
+    {
+        var client = new PSPadApiClient(new HttpClient(new DeleteAccountHandler(HttpStatusCode.Unauthorized, "",
+            """Bearer error="insufficient_user_authentication", max_age=300"""))
+        {
+            BaseAddress = new Uri("http://localhost")
+        });
+
+        Assert.IsType<AccountDeletionOutcome.ReauthenticationRequired>(await client.DeleteAccountAsync());
+    }
+
+    [Fact]
+    public async Task DeleteAccountAsyncFailsOnAnUnauthorizedAnswerThatIsNoStepUpChallenge()
+    {
+        var client = new PSPadApiClient(new HttpClient(new DeleteAccountHandler(HttpStatusCode.Unauthorized, "",
+            """Bearer error="invalid_token" """))
+        {
+            BaseAddress = new Uri("http://localhost")
+        });
+
+        Assert.IsType<AccountDeletionOutcome.Failed>(await client.DeleteAccountAsync());
     }
 
     [Theory]
@@ -208,11 +231,20 @@ public class PSPadApiClientTests
         }
     }
 
-    sealed class DeleteAccountHandler(HttpStatusCode status, string body) : HttpMessageHandler
+    sealed class DeleteAccountHandler(HttpStatusCode status, string body, string? challenge = null)
+        : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body) });
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var response = new HttpResponseMessage(status) { Content = new StringContent(body) };
+            if (challenge is not null)
+            {
+                response.Headers.TryAddWithoutValidation("WWW-Authenticate", challenge);
+            }
+
+            return Task.FromResult(response);
+        }
     }
 
     sealed class ThrowingHandler : HttpMessageHandler

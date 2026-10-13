@@ -1,9 +1,17 @@
+@using PSPad.App.Api
+@using PSPad.App.Auth
 <MudDialog>
     <DialogContent>
         @if (_keycloakOrphaned)
         {
             <MudText Typo="Typo.body1" Class="pspad-delete-partial">
                 Your data is gone. Removing your sign-in still needs an administrator.
+            </MudText>
+        }
+        else if (_reauthenticate)
+        {
+            <MudText Typo="Typo.body1">
+                Deleting your account needs a fresh sign-in. Sign in again, then confirm the deletion.
             </MudText>
         }
         else
@@ -30,6 +38,14 @@
                 Continue
             </MudButton>
         }
+        else if (_reauthenticate)
+        {
+            <MudButton OnClick="@Cancel">Cancel</MudButton>
+            <MudButton Class="pspad-reauthenticate" Color="Color.Primary" Variant="Variant.Filled"
+                       OnClick="@SignInAgain">
+                Sign in again
+            </MudButton>
+        }
         else
         {
             <MudButton OnClick="@Cancel" Disabled="@_deleting">Cancel</MudButton>
@@ -46,12 +62,15 @@
 
     [Parameter] public string Email { get; set; } = "";
 
-    [Inject] PSPad.App.Api.PSPadApiClient Api { get; set; } = null!;
+    [Inject] PSPadApiClient Api { get; set; } = null!;
+
+    [Inject] NavigationManager Navigation { get; set; } = null!;
 
     string _confirmation = "";
     bool _deleting;
     bool _error;
     bool _keycloakOrphaned;
+    bool _reauthenticate;
 
     bool Confirmed => Email.Length > 0 && string.Equals(_confirmation.Trim(), Email, StringComparison.OrdinalIgnoreCase);
 
@@ -60,24 +79,27 @@
         _deleting = true;
         _error = false;
 
-        var response = await Api.DeleteAccountAsync();
-
-        if (response is null)
+        switch (await Api.DeleteAccountAsync())
         {
-            _deleting = false;
-            _error = true;
-            return;
+            case AccountDeletionOutcome.Deleted { KeycloakRemoved: true }:
+                Dialog.Close(DialogResult.Ok(true));
+                return;
+            case AccountDeletionOutcome.Deleted:
+                _deleting = false;
+                _keycloakOrphaned = true;
+                return;
+            case AccountDeletionOutcome.ReauthenticationRequired:
+                _deleting = false;
+                _reauthenticate = true;
+                return;
+            default:
+                _deleting = false;
+                _error = true;
+                return;
         }
-
-        if (response.KeycloakRemoved)
-        {
-            Dialog.Close(DialogResult.Ok(true));
-            return;
-        }
-
-        _deleting = false;
-        _keycloakOrphaned = true;
     }
+
+    void SignInAgain() => StepUpSignIn.Begin(Navigation, StepUpSignIn.DeleteAccountReturn);
 
     void Cancel() => Dialog.Cancel();
 }
