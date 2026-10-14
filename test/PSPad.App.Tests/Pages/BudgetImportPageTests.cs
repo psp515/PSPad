@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.App.Api;
 using PSPad.App.Pages;
+using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.Sync;
 using PSPad.Contracts;
@@ -22,15 +23,15 @@ public class BudgetImportPageTests : Bunit.TestContext
                            "expense,2026-09-03,Bread,Food,4.50,,,\n" +
                            "refund,2026-09-03,Oops,Food,1,,,\n";
 
-    IRenderedComponent<BudgetImportPage> Open(Budget budget)
+    IRenderedComponent<BudgetImportPage> Open(Budget budget, string kind = BudgetLinks.EntriesImport)
     {
-        var page = Render<BudgetImportPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id));
+        var page = Render<BudgetImportPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Kind, kind));
         page.WaitForAssertion(() => Assert.Contains("Import", page.Markup));
         return page;
     }
 
-    static void Upload(IRenderedComponent<BudgetImportPage> page, int picker, string text) =>
-        page.FindComponents<InputFile>()[picker].UploadFiles(InputFileContent.CreateFromText(text, "file.csv"));
+    static void Upload(IRenderedComponent<BudgetImportPage> page, string text) =>
+        Assert.Single(page.FindComponents<InputFile>()).UploadFiles(InputFileContent.CreateFromText(text, "file.csv"));
 
     [Fact]
     public void AnEntriesFileShowsReadyAndErrorRows()
@@ -39,7 +40,7 @@ public class BudgetImportPageTests : Bunit.TestContext
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
         var page = Open(budget);
 
-        Upload(page, 0, Entries);
+        Upload(page, Entries);
 
         page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-import-row").Count));
         Assert.Contains("Kind must be expense or income.", page.Find(".pspad-import-row-error").TextContent);
@@ -52,7 +53,7 @@ public class BudgetImportPageTests : Bunit.TestContext
         var budget = BudgetsPageTests.Named("Personal");
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
         var page = Open(budget);
-        Upload(page, 0, Entries);
+        Upload(page, Entries);
         page.WaitForAssertion(() => Assert.False(page.Find(".pspad-import-run").HasAttribute("disabled")));
 
         page.Find(".pspad-import-run").Click();
@@ -67,12 +68,12 @@ public class BudgetImportPageTests : Bunit.TestContext
     {
         var budget = BudgetsPageTests.Named("Personal");
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
-        var page = Open(budget);
+        var page = Open(budget, BudgetLinks.BalancesImport);
 
-        Upload(page, 1, "month,holding,type\n2026-09,Wallet,cash\n");
+        Upload(page, "month,holding,type\n2026-09,Wallet,cash\n");
 
         page.WaitForAssertion(() =>
-            Assert.Equal("The file has no amount column.", page.Find(".pspad-import-balances .pspad-import-file-error").TextContent.Trim()));
+            Assert.Equal("The file has no amount column.", page.Find(".pspad-import-file-error").TextContent.Trim()));
     }
 
     [Fact]
@@ -84,7 +85,7 @@ public class BudgetImportPageTests : Bunit.TestContext
         nbp.Gate = new TaskCompletionSource<NbpRateView?>();
         var page = Open(budget);
 
-        Upload(page, 0, "kind,date,name,category,amount,currency\nexpense,2026-09-05,Steam,PC,19.99,EUR\n");
+        Upload(page, "kind,date,name,category,amount,currency\nexpense,2026-09-05,Steam,PC,19.99,EUR\n");
 
         page.WaitForAssertion(() => Assert.True(page.Find(".pspad-import-run").HasAttribute("disabled")));
         nbp.Gate.SetResult(new NbpRateView("EUR", 4.25m, new DateOnly(2026, 9, 4)));
@@ -100,7 +101,7 @@ public class BudgetImportPageTests : Bunit.TestContext
         Services.AddSingleton<IConnectivity>(new AppTestHost.Offline());
         var page = Open(budget);
 
-        Upload(page, 0, "kind,date,name,category,amount,currency\nexpense,2026-09-05,Steam,PC,19.99,EUR\n");
+        Upload(page, "kind,date,name,category,amount,currency\nexpense,2026-09-05,Steam,PC,19.99,EUR\n");
 
         page.WaitForAssertion(() =>
             Assert.Contains("Needs a rate: go online or fill the rate column.", page.Find(".pspad-import-row-error").TextContent));
@@ -128,8 +129,9 @@ public class BudgetImportPageTests : Bunit.TestContext
         nbp.GatesByCurrency["USD"] = new TaskCompletionSource<NbpRateView?>();
         var page = Open(budget);
 
-        Upload(page, 1, "month,holding,type,amount,currency\n2026-09,Wallet,cash,10,USD\n");
-        Upload(page, 0, "kind,date,name,category,amount,currency\nexpense,2026-09-05,Steam,PC,19.99,EUR\n");
+        Upload(page, "kind,date,name,category,amount,currency\n" +
+                     "expense,2026-09-05,Steam,PC,19.99,EUR\n" +
+                     "expense,2026-09-29,Amazon,PC,10,USD\n");
         nbp.GatesByCurrency["EUR"].SetResult(new NbpRateView("EUR", 4.25m, new DateOnly(2026, 9, 4)));
         nbp.GatesByCurrency["USD"].SetResult(new NbpRateView("USD", 3.9m, new DateOnly(2026, 9, 29)));
 
@@ -145,7 +147,7 @@ public class BudgetImportPageTests : Bunit.TestContext
         Services.AddSingleton<INbpRates>(new ThrowingRates());
         var page = Open(budget);
 
-        Upload(page, 0, "kind,date,name,category,amount,currency\nexpense,2026-09-05,Steam,PC,19.99,EUR\n");
+        Upload(page, "kind,date,name,category,amount,currency\nexpense,2026-09-05,Steam,PC,19.99,EUR\n");
 
         page.WaitForAssertion(() =>
             Assert.Contains("Couldn't fetch the NBP rate.", page.Find(".pspad-import-row-error").TextContent));
@@ -161,7 +163,7 @@ public class BudgetImportPageTests : Bunit.TestContext
         nbp.Next = new NbpRateView("EUR", 4.25m, new DateOnly(2026, 9, 4));
         var page = Open(budget);
 
-        Upload(page, 0, "kind,date,name,category,amount,currency,rate\n" +
+        Upload(page, "kind,date,name,category,amount,currency,rate\n" +
                         "expense,2026-09-05,Steam,PC,19.99,EUR,\n" +
                         "expense,2026-09-06,Game,PC,5,EUR,\n" +
                         "expense,2026-09-07,Own,PC,5,EUR,4.5\n");
@@ -177,13 +179,68 @@ public class BudgetImportPageTests : Bunit.TestContext
     {
         var budget = BudgetsPageTests.Named("Personal");
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
-        var page = Open(budget);
+        var page = Open(budget, BudgetLinks.BalancesImport);
 
-        Upload(page, 1, "month,holding,type,amount\n2026-08,Wallet,cash,10\n2026-09,Wallet,cash,20\n");
+        Upload(page, "month,holding,type,amount\n2026-08,Wallet,cash,10\n2026-09,Wallet,cash,20\n");
 
         page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-import-month").Count));
         page.WaitForAssertion(() => Assert.Equal(2, page.FindAll("table").Count));
         Assert.Contains("Errors", page.Markup);
+    }
+
+    [Fact]
+    public void TheEntriesPageWaitsOnADropZoneAndLinksItsTemplate()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Open(budget);
+
+        Assert.Contains("Import entries into Personal", page.Find("h1").TextContent);
+        Assert.Contains("templates/pspad-entries.csv", page.Find(".pspad-import-template").GetAttribute("href"));
+        Assert.Empty(page.FindAll(".pspad-import-row"));
+        page.Find(".pspad-import-drop button.mud-file-upload-dragarea").Click();
+
+        JSInterop.VerifyInvoke("mudFileUpload.openFilePicker");
+    }
+
+    [Fact]
+    public void TheBalancesPageShowsOnlyBalances()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Open(budget, BudgetLinks.BalancesImport);
+
+        Upload(page, "month,holding,type,amount\n2026-09,Wallet,cash,20\n");
+
+        page.WaitForAssertion(() => Assert.Single(page.FindAll(".pspad-import-month")));
+        Assert.Contains("Import balances into Personal", page.Find("h1").TextContent);
+        Assert.Contains("templates/pspad-balances.csv", page.Find(".pspad-import-template").GetAttribute("href"));
+        Assert.Empty(page.FindAll(".mud-tabs"));
+        Assert.DoesNotContain("New categories", page.Markup);
+    }
+
+    [Fact]
+    public void AnEntriesFileShowsNoTabs()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Open(budget);
+
+        Upload(page, Entries);
+
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-import-row").Count));
+        Assert.Empty(page.FindAll(".mud-tabs"));
+    }
+
+    [Fact]
+    public void AnUnknownKindIsNotFound()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Render<BudgetImportPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Kind, "receipts"));
+
+        page.WaitForAssertion(() => Assert.Contains("That import does not exist.", page.Markup));
+        Assert.Empty(page.FindComponents<InputFile>());
     }
 
     [Fact]
@@ -208,14 +265,14 @@ public class BudgetImportPageTests : Bunit.TestContext
         var host = RenderWithDialogs(budget);
         var page = host.FindComponent<BudgetImportPage>();
         page.WaitForAssertion(() => Assert.Contains("Import", page.Markup));
-        Upload(page, 0, Entries);
+        Upload(page, Entries);
         page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-import-row").Count));
         var navigation = Services.GetRequiredService<NavigationManager>();
         var before = navigation.Uri;
 
         navigation.NavigateTo("/budgets");
 
-        host.WaitForAssertion(() => Assert.Equal("Leave the import? The files you picked won’t be imported.",
+        host.WaitForAssertion(() => Assert.Equal("Leave the import? The file you picked won’t be imported.",
             host.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim()));
         host.FindAll("div.mud-dialog button").First().Click();
         host.WaitForAssertion(() => Assert.Empty(host.FindAll("div.mud-dialog")));
@@ -230,7 +287,7 @@ public class BudgetImportPageTests : Bunit.TestContext
         var host = RenderWithDialogs(budget);
         var page = host.FindComponent<BudgetImportPage>();
         page.WaitForAssertion(() => Assert.Contains("Import", page.Markup));
-        Upload(page, 0, Entries);
+        Upload(page, Entries);
         page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-import-row").Count));
         var navigation = Services.GetRequiredService<NavigationManager>();
 
@@ -252,7 +309,7 @@ public class BudgetImportPageTests : Bunit.TestContext
         var host = RenderWithDialogs(budget);
         var page = host.FindComponent<BudgetImportPage>();
         page.WaitForAssertion(() => Assert.Contains("Import", page.Markup));
-        Upload(page, 0, Entries);
+        Upload(page, Entries);
         page.WaitForAssertion(() => Assert.False(page.Find(".pspad-import-run").HasAttribute("disabled")));
         page.Find(".pspad-import-run").Click();
         page.WaitForAssertion(() => Assert.NotNull(page.Find(".pspad-import-summary")));
@@ -272,6 +329,7 @@ public class BudgetImportPageTests : Bunit.TestContext
         builder.CloseComponent();
         builder.OpenComponent<BudgetImportPage>(2);
         builder.AddAttribute(3, nameof(BudgetImportPage.BudgetId), budget.Id);
+        builder.AddAttribute(4, nameof(BudgetImportPage.Kind), BudgetLinks.EntriesImport);
         builder.CloseComponent();
     });
 

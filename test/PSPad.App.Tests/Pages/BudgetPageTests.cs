@@ -557,12 +557,15 @@ public class BudgetPageTests : Bunit.TestContext
         var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "settings"));
         page.WaitForAssertion(() => Assert.Contains("Eating Out", page.Markup));
 
-        var card = page.Find(".pspad-budget-import-card");
-        Assert.Contains("templates/pspad-entries.csv", card.InnerHtml);
-        Assert.Contains("templates/pspad-balances.csv", card.InnerHtml);
-        page.Find(".pspad-budget-import-open").Click();
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        Assert.Contains("templates/pspad-entries.csv", page.Find(".pspad-budget-import-entries").InnerHtml);
+        Assert.Contains("templates/pspad-balances.csv", page.Find(".pspad-budget-import-balances").InnerHtml);
 
-        Assert.EndsWith($"/budgets/{budget.Id}/import", Services.GetRequiredService<NavigationManager>().Uri);
+        page.Find(".pspad-budget-import-entries .pspad-budget-import-open").Click();
+        Assert.EndsWith($"/budgets/{budget.Id}/import/entries", navigation.Uri);
+
+        page.Find(".pspad-budget-import-balances .pspad-budget-import-open").Click();
+        Assert.EndsWith($"/budgets/{budget.Id}/import/balances", navigation.Uri);
     }
 
     [Fact]
@@ -574,5 +577,6 @@ public class BudgetPageTests : Bunit.TestContext
         page.WaitForAssertion(() => Assert.Contains("Eating Out", page.Markup));
 
         Assert.Empty(page.FindAll(".pspad-budget-import-card"));
+        Assert.Empty(page.FindAll(".pspad-budget-import-open"));
     }
 }

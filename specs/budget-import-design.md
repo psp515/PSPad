@@ -178,34 +178,37 @@ from the domain.
 
 ### 4.1 Settings tab
 
-The budget's Settings tab gets an **Import** card under the category lists:
-one line of text, links to both templates, and an **Import from CSV** button
-to `/budgets/{id}/import`. The owner and members both see it, since both
-may add entries and balances. The card is hidden while the budget is
-archived.
+The budget's Settings tab gets two cards under the category lists, one per
+file: **Import entries** and **Import balances**. Each has one line of text,
+a link to its template, and an **Upload entries** or **Upload balances**
+button to `/budgets/{id}/import/entries` or `/budgets/{id}/import/balances`.
+The owner and members both see them, since both may add entries and
+balances. The cards are hidden while the budget is archived.
 
-### 4.2 `/budgets/{id}/import` (`Pages/BudgetImportPage.razor`)
+### 4.2 `/budgets/{id}/import/{entries|balances}` (`Pages/BudgetImportPage.razor`)
 
 A page, not a side panel: side panels edit one thing (`adr/0052`), and the
 preview is a wide table of up to 10,000 rows. The page is at most 960px wide,
 like `BudgetPage`, and its heading has a back arrow to the Settings tab. An
 archived or missing budget shows the archived banner, or the usual
-not-found state, and no pickers.
+not-found state, and no drop zone; any other last segment shows "That import
+does not exist." The heading names the kind: "Import entries into Personal".
+One page imports one file kind, so a year's entries and balances are two runs.
 
-1. **Pick files.** Two `MudFileUpload` buttons: **Entries (.csv)** and
-   **Balances (.csv)**. Either or both. A file error shows under its picker
-   and leaves the other file usable. Picking a file again replaces it and
+1. **Pick a file.** A line of text with the page's template link, and under
+   it MudBlazor's own drag-and-drop area (`MudFileUpload DragAndDrop`): drop a
+   CSV file on it or click it to open the file picker. The picked file's name
+   and any file error show under it. Picking a file again replaces it and
    rebuilds the preview.
 2. **Preview.**
-   - A row of `MudChip`s: To import, Errors, Already in budget, New
-     categories, Rates from NBP.
+   - A row of `MudChip`s: To import, Errors, Rates from NBP, and on the
+     entries page also Already in budget and New categories.
    - New categories are listed per kind above the table.
-   - Under them, a `MudTabs` with one tab per picked file. Each tab holds a
-     virtualized `MudTable` filtered by status (All, To import, Errors,
-     Already in budget). A row shows its line number, its parsed values, the
+   - Under them, the file's virtualized `MudTable` filtered by status (All,
+     To import, Errors, Already in budget). A row shows its line number, its parsed values, the
      rate with its source (file, NBP with its effective date), and its status
      or error message. A checkbox ticks or unticks rows that allow it.
-   - The balances tab groups rows under a month header: "New month: N
+   - The balances table groups rows under a month header: "New month: N
      holdings" or "Existing month: updates N, adds N, unchanged N".
 3. **Import.** **Import N rows** sits under the table. It is disabled while
    rates are loading and when nothing is ticked. Pressing it builds the plan
@@ -213,7 +216,7 @@ not-found state, and no pickers.
    total. Commands already run stay queued in the outbox.
    - **Leaving the page.** Once a file is picked and until the import has
      finished, leaving asks first with a `ConfirmDialog`: "Leave the import?
-     The files you picked won't be imported.", or while a run is going: "The
+     The file you picked won't be imported.", or while a run is going: "The
      import is still running. Leave anyway? Rows already imported stay."
      Before any file is picked, and after the result shows, leaving asks
      nothing. Reloading or closing the tab in that window gets the browser's
@@ -348,6 +351,6 @@ other work in progress. The plan lives in `.superpowers/sdd/csv-import/`
 2. `MoneyCsv` parsing and templates.
 3. `MoneyImportPreview`, then `MoneyImportPlan` and the round-trip test.
 4. `CommandSender.SendManyAsync` and the decoding.
-5. `BudgetImportPage`, its components and the Settings card.
+5. `BudgetImportPage`, its components and the Settings cards.
 6. Integration test, `money-design.md` §1, `features.astro` and the landing
    page.

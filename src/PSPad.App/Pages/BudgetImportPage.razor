@@ -1,4 +1,4 @@
-@page "/budgets/{BudgetId:guid}/import"
+@page "/budgets/{BudgetId:guid}/import/{Kind}"
 @attribute [Authorize]
 @using PSPad.Abstractions
 @using PSPad.App.Api
@@ -31,10 +31,15 @@ else if (_context is null)
     <PageHeading Title="Import" Icon="@Icons.Material.Outlined.UploadFile" BackHref="@BudgetLinks.Index" />
     <MudAlert Severity="Severity.Warning">That budget does not exist.</MudAlert>
 }
+else if (!IsEntries && !IsBalances)
+{
+    <PageHeading Title="Import" Icon="@Icons.Material.Outlined.UploadFile" BackHref="@BudgetLinks.ForTab(BudgetId, "settings")" BackLabel="Back to settings" />
+    <MudAlert Severity="Severity.Warning">That import does not exist.</MudAlert>
+}
 else
 {
     <div class="pspad-budget-page pspad-budget-import">
-        <PageHeading Title="@($"Import into {_context.Budget.Name}")" Icon="@Icons.Material.Outlined.UploadFile"
+        <PageHeading Title="@($"Import {Kind} into {_context.Budget.Name}")" Icon="@Icons.Material.Outlined.UploadFile"
                      BackHref="@BudgetLinks.ForTab(BudgetId, "settings")" BackLabel="Back to settings" />
 
         @if (_context.Budget.IsArchived)
@@ -47,12 +52,13 @@ else
         }
         else
         {
-            <div class="d-flex flex-wrap gap-6 mb-4">
-                <ImportFilePicker Label="Entries (.csv)" Class="pspad-import-entries" FileName="@_entriesName"
-                                  Error="@_entries?.FileError" Disabled="@_running" OnPicked="@(file => PickAsync(file, entries: true))" />
-                <ImportFilePicker Label="Balances (.csv)" Class="pspad-import-balances" FileName="@_balancesName"
-                                  Error="@_balances?.FileError" Disabled="@_running" OnPicked="@(file => PickAsync(file, entries: false))" />
-            </div>
+            <MudText Typo="Typo.body2" Class="pspad-muted mb-2">
+                Drop a CSV file below or click to choose one. Need the columns?
+                <MudLink Class="pspad-import-template" Href="@($"templates/pspad-{Kind}.csv")" download="@($"pspad-{Kind}.csv")"
+                         Typo="Typo.body2">Download the template</MudLink>.
+            </MudText>
+            <ImportFilePicker Class="mb-4" FileName="@_fileName" Error="@(IsEntries ? _entries?.FileError : _balances?.FileError)"
+                              Disabled="@_running" OnPicked="@PickAsync" />
 
             @if (_preview is not null)
             {
@@ -61,8 +67,11 @@ else
                     <div class="d-flex flex-wrap gap-2 mb-3 pspad-import-chips">
                         <MudChip T="string" Size="Size.Small" Color="Color.Primary">To import @Ready</MudChip>
                         <MudChip T="string" Size="Size.Small" Color="Color.Error">Errors @Errors</MudChip>
-                        <MudChip T="string" Size="Size.Small">Already in budget @_preview.Entries.Count(row => row.Status == ImportStatus.AlreadyInBudget)</MudChip>
-                        <MudChip T="string" Size="Size.Small">New categories @(_preview.NewExpenseCategories.Count + _preview.NewIncomeCategories.Count)</MudChip>
+                        @if (IsEntries)
+                        {
+                            <MudChip T="string" Size="Size.Small">Already in budget @_preview.Entries.Count(row => row.Status == ImportStatus.AlreadyInBudget)</MudChip>
+                            <MudChip T="string" Size="Size.Small">New categories @(_preview.NewExpenseCategories.Count + _preview.NewIncomeCategories.Count)</MudChip>
+                        }
                         <MudChip T="string" Size="Size.Small">Rates from NBP @FromNbp</MudChip>
                     </div>
 
@@ -75,20 +84,14 @@ else
                         <MudText Typo="Typo.body2">New income categories: @string.Join(", ", _preview.NewIncomeCategories)</MudText>
                     }
 
-                    <MudTabs Elevation="0" Class="mt-2">
-                        @if (_entries is { FileError: null })
-                        {
-                            <MudTabPanel Text="Entries">
-                                <ImportEntriesTable Rows="@_preview.Entries" Toggled="@_toggled" OnToggle="@Toggle" />
-                            </MudTabPanel>
-                        }
-                        @if (_balances is { FileError: null })
-                        {
-                            <MudTabPanel Text="Balances">
-                                <ImportBalancesTable Rows="@_preview.Holdings" Months="@_preview.Months" />
-                            </MudTabPanel>
-                        }
-                    </MudTabs>
+                    @if (_entries is { FileError: null })
+                    {
+                        <ImportEntriesTable Rows="@_preview.Entries" Toggled="@_toggled" OnToggle="@Toggle" />
+                    }
+                    @if (_balances is { FileError: null })
+                    {
+                        <ImportBalancesTable Rows="@_preview.Holdings" Months="@_preview.Months" />
+                    }
                 }
 
                 @if (_rates.Failed.Count > 0)
@@ -113,12 +116,13 @@ else
 @code {
     [Parameter] public Guid BudgetId { get; set; }
 
+    [Parameter] public string Kind { get; set; } = "";
+
     bool _loaded;
     ImportContext? _context;
     CsvParse<ParsedEntryRow>? _entries;
     CsvParse<ParsedHoldingRow>? _balances;
-    string? _entriesName;
-    string? _balancesName;
+    string? _fileName;
     RateBook _rates = RateBook.Empty;
     MoneyImportPreview? _preview;
     readonly HashSet<int> _toggled = [];
@@ -148,6 +152,10 @@ else
 
     bool IsForeign(string? currency) => (currency ?? _context!.DefaultCurrency) != Currencies.Pln;
 
+    bool IsEntries => Kind == BudgetLinks.EntriesImport;
+
+    bool IsBalances => Kind == BudgetLinks.BalancesImport;
+
     bool CanImport => _preview is { IsWaitingForRates: false } && !Fetching && !_running && Ready > 0;
 
     protected override async Task OnInitializedAsync()
@@ -174,13 +182,13 @@ else
             preferences?.DefaultCurrency ?? Currencies.Pln);
     }
 
-    async Task PickAsync((string Name, byte[]? Bytes) file, bool entries)
+    async Task PickAsync((string Name, byte[]? Bytes) file)
     {
         _context = await LoadContextAsync() ?? _context;
+        _fileName = file.Name;
 
-        if (entries)
+        if (IsEntries)
         {
-            _entriesName = file.Name;
             _entries = file.Bytes is null
                 ? CsvParse<ParsedEntryRow>.Failed("The file is larger than 2 MB.")
                 : MoneyCsv.ParseEntries(CsvText.Decode(file.Bytes));
@@ -188,7 +196,6 @@ else
         }
         else
         {
-            _balancesName = file.Name;
             _balances = file.Bytes is null
                 ? CsvParse<ParsedHoldingRow>.Failed("The file is larger than 2 MB.")
                 : MoneyCsv.ParseBalances(CsvText.Decode(file.Bytes));
@@ -298,7 +305,7 @@ else
         {
             { dialog => dialog.Message, _running
                 ? "The import is still running. Leave anyway? Rows already imported stay."
-                : "Leave the import? The files you picked won’t be imported." },
+                : "Leave the import? The file you picked won’t be imported." },
             { dialog => dialog.ConfirmText, "Leave" }
         };
         var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Leave import", parameters);
