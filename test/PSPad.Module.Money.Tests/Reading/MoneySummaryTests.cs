@@ -353,4 +353,63 @@ public class MoneySummaryTests
         Assert.Same(october, summary.Latest);
         Assert.Equal(120m, summary.LatestNetWorth);
     }
+
+    [Fact]
+    public void PerMonthCarriesEveryMonthOfTheRangeWithItsTotals()
+    {
+        var budget = ABudget();
+
+        var summary = MoneySummary.For(
+        [
+            AnIncome(budget, amount: 1000m, date: On(1, 5)),
+            AnExpense(budget, amount: 200m, date: On(1, 6)),
+            AnExpense(budget, amount: 50m, date: On(3, 2))
+        ], [], YearStart, new DateOnly(2026, 3, 31));
+
+        Assert.Equal([January, February, March], summary.PerMonth.Select(month => month.Month));
+        Assert.Equal([1000m, 0m, 0m], summary.PerMonth.Select(month => month.Income));
+        Assert.Equal([200m, 0m, 50m], summary.PerMonth.Select(month => month.Expenses));
+        Assert.Equal(800m, summary.PerMonth[0].Net);
+    }
+
+    [Fact]
+    public void AveragesDivideByTheMonthsThatHaveEntries()
+    {
+        var budget = ABudget();
+
+        var summary = MoneySummary.For(
+        [
+            AnIncome(budget, amount: 1000m, date: On(1, 5)),
+            AnExpense(budget, amount: 200m, date: On(1, 6)),
+            AnExpense(budget, amount: 100m, date: On(3, 2))
+        ], [], YearStart, new DateOnly(2026, 3, 31));
+
+        Assert.Equal(2, summary.SampledMonths);
+        Assert.Equal(500m, summary.AverageIncome);
+        Assert.Equal(150m, summary.AverageExpenses);
+        Assert.Equal(350m, summary.AverageSaved);
+    }
+
+    [Fact]
+    public void AveragesRoundToWholeGrosze()
+    {
+        var budget = ABudget();
+
+        var summary = MoneySummary.For(
+            [AnExpense(budget, amount: 10m, date: On(1, 6)), AnExpense(budget, amount: 0.01m, date: On(2, 6)), AnExpense(budget, amount: 0m + 0.01m, date: On(3, 6))],
+            [], YearStart, new DateOnly(2026, 3, 31));
+
+        Assert.Equal(3.34m, summary.AverageExpenses);
+    }
+
+    [Fact]
+    public void WithoutEntriesThereAreNoAverages()
+    {
+        var summary = MoneySummary.For([], [], YearStart, YearEnd);
+
+        Assert.Equal(0, summary.SampledMonths);
+        Assert.Null(summary.AverageIncome);
+        Assert.Null(summary.AverageExpenses);
+        Assert.Null(summary.AverageSaved);
+    }
 }
