@@ -223,7 +223,7 @@ public class BudgetImportPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void LeavingWithPickedDataAndConfirmingLeaves()
+    public async Task LeavingWithPickedDataAndConfirmingLeaves()
     {
         var budget = BudgetsPageTests.Named("Personal");
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
@@ -238,7 +238,10 @@ public class BudgetImportPageTests : Bunit.TestContext
         host.WaitForAssertion(() => Assert.NotEmpty(host.FindAll("div.mud-dialog")));
         host.FindAll("div.mud-dialog button").Last().Click();
 
-        host.WaitForAssertion(() => Assert.EndsWith("/budgets", navigation.Uri));
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (!navigation.Uri.EndsWith("/budgets") && DateTime.UtcNow < deadline)
+            await Task.Delay(20, Xunit.TestContext.Current.CancellationToken);
+        Assert.EndsWith("/budgets", navigation.Uri);
     }
 
     [Fact]
