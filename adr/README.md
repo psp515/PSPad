@@ -90,6 +90,7 @@ the old one's status line to point at the new number.
 | [0073](0073-sign-out-revokes-and-needs-a-connection.md) | Sign-out revokes the refresh token, names the session it ends, wipes the outbox, and needs a connection | Active (amends [0028](0028-sign-out-ends-the-keycloak-session-directly.md)) | 2026-10-13 | identity, offline, security, ui |
 | [0074](0074-budget-csv-import-runs-on-the-client.md) | Budget CSV import runs on the client as ordinary commands | Active | 2026-10-13 | architecture, contracts, offline, money |
 | [0075](0075-language-on-the-user-and-resx-localization.md) | Store the user's language on the User aggregate and localize with .NET resources | Active | 2026-10-18 | identity, ui, offline, localization |
+| [0075](0075-open-clients-get-a-sync-nudge-over-sse.md) | Open clients get a data-free sync nudge over Server-Sent Events, fanned out from commit | Proposed | 2026-10-14 | architecture, sync, http, sharing, deployment |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
