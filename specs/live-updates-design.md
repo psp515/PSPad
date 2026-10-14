@@ -217,9 +217,10 @@ pull. That is harmless and not filtered.
    missed while disconnected.
 3. Silence: no frame for 60 s means the stream is dead; drop it and reconnect.
 4. Going offline or hidden cancels the open stream.
-5. A clean end (server closed the stream) reconnects at once and resets the
-   failure count. A failure (exception, non-success status, silence) waits
-   the backoff first.
+5. A clean end after `ready` (the server closed the stream) reconnects at
+   once and resets the failure count. A stream that ends without reaching
+   `ready`, an exception, a non-success status, or silence is a failure and
+   waits the backoff first.
 
 ### 5.3 Backoff
 

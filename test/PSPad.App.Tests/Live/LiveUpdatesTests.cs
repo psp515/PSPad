@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using PSPad.App.Live;
 using PSPad.TestInfrastructure;
 
@@ -15,13 +17,14 @@ public class LiveUpdatesTests
     readonly SwitchableVisibility _visibility = new();
     readonly List<TimeSpan> _waits = [];
 
-    LiveUpdates Live(TimeSpan? silence = null) => new(
+    LiveUpdates Live(TimeSpan? silence = null, ILogger<LiveUpdates>? logger = null) => new(
         _stream, _sync, _connectivity, _visibility,
         new LiveTiming(silence ?? TimeSpan.FromMinutes(1), () => 1.0, (delay, _) =>
         {
             _waits.Add(delay);
             return Task.CompletedTask;
-        }));
+        }),
+        logger ?? NullLogger<LiveUpdates>.Instance);
 
     static async Task Until(Func<bool> condition)
     {
@@ -186,17 +189,52 @@ public class LiveUpdatesTests
     }
 
     [Fact]
-    public async Task ACleanEndBeforeReadyResetsTheBackoff()
+    public async Task ACleanEndBeforeReadyBacksOff()
     {
-        var empty = new FeedStream();
-        empty.End();
-        _stream.ThenFail().ThenFeed(empty).ThenFail();
+        var first = new FeedStream();
+        first.End();
+        var second = new FeedStream();
+        second.End();
+        _stream.ThenFeed(first).ThenFeed(second);
         await using var live = Live();
 
         live.Start();
 
         await Until(() => _waits.Count == 2);
-        Assert.Equal(new[] { 1, 1 }.Select(seconds => TimeSpan.FromSeconds(seconds)), _waits);
+        Assert.Equal(new[] { 1, 2 }.Select(seconds => TimeSpan.FromSeconds(seconds)), _waits);
+    }
+
+    [Fact]
+    public async Task AnUnexpectedErrorIsLoggedAsAWarning()
+    {
+        var error = new InvalidOperationException("no access token");
+        _stream.Then(_ => Task.FromException<Stream>(error)).ThenFeed(Feed(Ready));
+        var logger = new RecordingLogger<LiveUpdates>();
+        await using var live = Live(logger: logger);
+
+        live.Start();
+
+        await Until(() => _sync.Calls == 1);
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Same(error, entry.Exception);
+        Assert.Equal([TimeSpan.FromSeconds(1)], _waits);
+    }
+
+    [Fact]
+    public async Task ExpectedFailuresAreNotLogged()
+    {
+        var dropped = Feed(Ready);
+        _stream.ThenFail().ThenFeed(dropped);
+        var logger = new RecordingLogger<LiveUpdates>();
+        await using var live = Live(logger: logger);
+
+        live.Start();
+        await Until(() => _sync.Calls == 1);
+        dropped.Fail();
+        await Until(() => _stream.Opens == 3);
+
+        Assert.Empty(logger.Entries);
     }
 
     [Fact]
@@ -217,11 +255,11 @@ public class LiveUpdatesTests
     {
         var feed = Feed(Ready);
         _stream.ThenFeed(feed);
-        await using var live = Live(silence: TimeSpan.FromMilliseconds(300));
+        await using var live = Live(silence: TimeSpan.FromSeconds(1));
 
         live.Start();
         await Until(() => _sync.Calls == 1);
-        for (var i = 0; i < 6; i++)
+        for (var i = 0; i < 15; i++)
         {
             await Task.Delay(100, TestContext.Current.CancellationToken);
             feed.Send(": ping\n\n");

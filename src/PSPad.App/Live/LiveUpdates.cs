@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using PSPad.App.Sync;
 
 namespace PSPad.App.Live;
@@ -7,7 +8,8 @@ public sealed class LiveUpdates(
     ISyncTrigger sync,
     IConnectivity connectivity,
     IPageVisibility visibility,
-    LiveTiming timing) : IAsyncDisposable
+    LiveTiming timing,
+    ILogger<LiveUpdates> logger) : IAsyncDisposable
 {
     readonly CancellationTokenSource _stopping = new();
     TaskCompletionSource _wake = NewWake();
@@ -62,8 +64,12 @@ public sealed class LiveUpdates(
                 await ListenAsync(connection.Token, () => reachedReady = true);
                 cleanEnd = true;
             }
-            catch (Exception)
+            catch (Exception exception) when (exception is HttpRequestException or IOException or OperationCanceledException)
             {
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(exception, "The live stream failed unexpectedly.");
             }
             finally
             {
@@ -71,12 +77,12 @@ public sealed class LiveUpdates(
                 connection.Dispose();
             }
 
-            if (reachedReady || cleanEnd)
+            if (reachedReady)
             {
                 failures = 0;
             }
 
-            if (_stopping.IsCancellationRequested || cleanEnd || !CanConnect)
+            if (_stopping.IsCancellationRequested || !CanConnect || cleanEnd && reachedReady)
             {
                 continue;
             }
