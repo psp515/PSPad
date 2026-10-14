@@ -195,7 +195,7 @@ public class BudgetImportPageTests : Bunit.TestContext
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
         var page = Open(budget);
 
-        Assert.Contains("Import entries into Personal", page.Find("h1").TextContent);
+        Assert.Contains("Import expenses and incomes into Personal", page.Find("h1").TextContent);
         Assert.Contains("templates/pspad-entries.csv", page.Find(".pspad-import-template").GetAttribute("href"));
         Assert.Empty(page.FindAll(".pspad-import-row"));
         page.Find(".pspad-import-drop button.mud-file-upload-dragarea").Click();

@@ -39,7 +39,7 @@ else if (!IsEntries && !IsBalances)
 else
 {
     <div class="pspad-budget-page pspad-budget-import">
-        <PageHeading Title="@($"Import {Kind} into {_context.Budget.Name}")" Icon="@Icons.Material.Outlined.UploadFile"
+        <PageHeading Title="@($"Import {KindLabel} into {_context.Budget.Name}")" Icon="@Icons.Material.Outlined.UploadFile"
                      BackHref="@BudgetLinks.ForTab(BudgetId, "settings")" BackLabel="Back to settings" />
 
         @if (_context.Budget.IsArchived)
@@ -167,6 +167,8 @@ else
     bool IsEntries => Kind == BudgetLinks.EntriesImport;
 
     bool IsBalances => Kind == BudgetLinks.BalancesImport;
+
+    string KindLabel => IsEntries ? "expenses and incomes" : "balances";
 
     bool CanImport => _preview is { IsWaitingForRates: false } && !Fetching && !_running && Ready > 0;
 

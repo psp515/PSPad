@@ -559,6 +559,9 @@ public class BudgetPageTests : Bunit.TestContext
 
         var navigation = Services.GetRequiredService<NavigationManager>();
         Assert.Contains("templates/pspad-entries.csv", page.Find(".pspad-budget-import-entries").InnerHtml);
+        Assert.Contains("Import expenses and incomes", page.Find(".pspad-budget-import-entries").TextContent);
+        Assert.Contains("Fills the Month tab", page.Find(".pspad-budget-import-entries").TextContent);
+        Assert.Contains("Fills the Balance tab", page.Find(".pspad-budget-import-balances").TextContent);
         Assert.Contains("templates/pspad-balances.csv", page.Find(".pspad-budget-import-balances").InnerHtml);
 
         page.Find(".pspad-budget-import-entries .pspad-budget-import-open").Click();

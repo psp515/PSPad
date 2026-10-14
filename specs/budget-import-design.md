@@ -182,9 +182,9 @@ from the domain.
 ### 4.1 Settings tab
 
 The budget's Settings tab gets two cards under the category lists, one per
-file: **Import entries** and **Import balances**. Each has one line of text,
-a link to its template, and an **Upload entries** or **Upload balances**
-button to `/budgets/{id}/import/entries` or `/budgets/{id}/import/balances`.
+file: **Import expenses and incomes** and **Import balances**. Each says
+which tab it fills (Month or Balance), links its template, and has an
+**Upload expenses and incomes** or **Upload balances** button to `/budgets/{id}/import/entries` or `/budgets/{id}/import/balances`.
 The owner and members both see them, since both may add entries and
 balances. The cards are hidden while the budget is archived.
 
@@ -195,7 +195,7 @@ preview is a wide table of up to 10,000 rows. The page is at most 960px wide,
 like `BudgetPage`, and its heading has a back arrow to the Settings tab. An
 archived or missing budget shows the archived banner, or the usual
 not-found state, and no drop zone; any other last segment shows "That import
-does not exist." The heading names the kind: "Import entries into Personal".
+does not exist." The heading names the kind: "Import expenses and incomes into Personal".
 One page imports one file kind, so a year's entries and balances are two runs.
 
 1. **Pick a file.** A line of text with the page's template link, and under
