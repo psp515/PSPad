@@ -850,6 +850,28 @@ believe any caller. Compose maps `API_TRUSTED_PROXY_NETWORK` to
 every caller. The `public` limiter and the `join` limiter's anonymous
 fallback both partition by the resolved `RemoteIpAddress`.
 
+Browsers reach the API cross-origin, so `UseCors` runs first with one policy
+(`CorsRegistration`) built from `Cors:AllowedOrigins` when the options are
+first resolved, wildcard subdomains allowed. `appsettings.json` allows
+`https://*.psplace.dev`, `appsettings.Development.json` (and so hosted tests)
+`http://localhost:5001`. Compose always sets the first entry to
+`APP_BASE_ADDRESS`, so under compose the wildcard default never applies and
+an empty `APP_BASE_ADDRESS` denies every origin; the wildcard is the fallback
+for deployments that set no `Cors__AllowedOrigins__0`. Any other origin gets no `Access-Control-Allow-Origin`.
+
+Refusals that point at probing are logged at `Warning` through `SecurityLog`
+(`PSPad.Api.Security`), each under a stable event id to alert on:
+
+| Event id | Logged when | Fields |
+|----------|-------------|--------|
+| 4001 | `/api/commands` refuses an envelope: unknown type, malformed payload, another user's id, server-only command, no handler | command type (cut to 100 chars), caller's user id, reason |
+| 4002 | JWT bearer rejects a token | path, exception type |
+| 4003 | JWT bearer forbids a request | subject, path |
+| 4004 | `/api/lists/join` or `/api/budgets/join` gets a wrong invite code | caller's user id, `list` or `budget`, its id |
+| 4005 | any rate limiter answers `429` | subject or `anonymous`, path |
+
+Payloads, tokens, invite codes and exception messages are never logged.
+
 ---
 
 ## 8. Containers
@@ -857,11 +879,23 @@ fallback both partition by the resolved `RemoteIpAddress`.
 Two images, each with a `Dockerfile` beside its `.csproj`, built with the
 repo root as context.
 
-- `src/PSPad.Api/Dockerfile` — ASP.NET runtime, port 8080.
+- `src/PSPad.Api/Dockerfile` — ASP.NET runtime, port 8080, runs as the
+  image's non-root `app` user (`USER $APP_UID`, UID 1654).
 - `src/PSPad.App/Dockerfile` — publishes the WASM output into
-  `nginx:alpine`; nginx serves pre-compressed assets, sets the
-  `application/wasm` MIME type, falls back to `/index.html` for client
-  routes.
+  `nginxinc/nginx-unprivileged` (UID 101, port 8080); nginx serves
+  pre-compressed assets, sets the `application/wasm` MIME type, falls back
+  to `/index.html` for client routes. The served files stay root-owned;
+  only `appsettings.json` and `appsettings.json.gz`, which the entrypoint
+  rewrites, belong to nginx, and the publish-time `appsettings.json.br` is
+  dropped at build.
+
+Every base image — and every image `docker/compose.yaml` pulls — is pinned
+to an exact version tag (`major.minor.patch`), never `latest`, a bare major
+or a digest. Package versions live once, in
+`Directory.Packages.props` (central package management); no `.csproj`
+carries a `Version`. `.github/dependabot.yml` proposes NuGet, Dockerfile,
+compose and GitHub Actions updates weekly, minor and patch grouped
+(ADR-0071). `ContainerImageTests` and `CentralPackageTests` guard all of it.
 
 The client is static, so its API base URL and Keycloak settings can't be
 baked in — the image ships `wwwroot/appsettings.json` as a template plus an
@@ -881,10 +915,28 @@ still opens a database a newer build already upgraded at its existing
 version (stores are only ever added) and closes its connection on
 `versionchange`, so one tab never blocks another tab's upgrade.
 
-`docker/compose.yaml` runs MongoDB and Keycloak for development.
-Integration tests never touch it — they start their own MongoDB via
-Testcontainers. `docker/compose.prod.yaml` runs api, app, mongo and
-keycloak behind a reverse proxy terminating TLS.
+Every client response carries a content security policy,
+`X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and a
+`Permissions-Policy` denying camera, microphone and geolocation (ADR-0070).
+`docker/nginx/19-pspad-csp.envsh`, sourced by the nginx entrypoint before its
+template step, takes the API and Keycloak origins from `API_BASE_ADDRESS` and
+`KEYCLOAK_AUTHORITY` and adds a `sha256` hash for every inline script of the
+served `index.html` (the boot scripts and the publish-filled importmap);
+`security-headers.inc.template` becomes the include that the server block and
+every location with its own `add_header` pull in — nginx drops inherited
+headers from a location that adds any. `frame-ancestors` is `'self'` because
+the OIDC silent sign-in lands the login callback in an iframe of the app
+itself. Fonts are bundled (`wwwroot/fonts/roboto`, SIL OFL 1.1); the page
+loads nothing from another origin. HSTS belongs to the TLS-terminating proxy.
+
+`docker/compose.yaml` is the self-hosting stack: api, app, mongo and
+keycloak. The API signs in as MongoDB's root user (`pspad`,
+`MONGO_PASSWORD`). `docker/mongo-app-user.js` is an optional hardening
+example, run by hand as root: it waits up to 60 seconds for a writable
+primary, then creates a user holding `readWrite` on one database only, or
+resets its password and roles; the install guide shows the compose override
+that points the API at it (ADR-0071). Integration tests never touch the stack — they start their own
+MongoDB via Testcontainers. TLS belongs to a reverse proxy in front of it.
 
 ---
 

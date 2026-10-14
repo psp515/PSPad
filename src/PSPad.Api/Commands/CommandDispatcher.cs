@@ -1,12 +1,14 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PSPad.Abstractions;
+using PSPad.Api.Security;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
 
 namespace PSPad.Api.Commands;
 
-public sealed class CommandDispatcher(IServiceProvider services)
+public sealed class CommandDispatcher(IServiceProvider services, ILogger<CommandDispatcher> logger)
 {
     public const int MostAttempts = 5;
 
@@ -18,26 +20,31 @@ public sealed class CommandDispatcher(IServiceProvider services)
         var type = CommandCatalogue.Resolve(envelope.Type);
         if (type is null)
         {
+            logger.CommandRefused(envelope.Type, userId, "unknown command");
             return new CommandResponse(Guid.Empty, false, $"Unknown command {envelope.Type}.", Unrecoverable: true);
         }
 
         if (Deserialize(envelope.Payload, type) is not ICommand command)
         {
+            logger.CommandRefused(envelope.Type, userId, "malformed payload");
             return new CommandResponse(Guid.Empty, false, $"Malformed payload for {envelope.Type}.", Unrecoverable: true);
         }
 
         if (command.UserId != userId)
         {
+            logger.CommandRefused(envelope.Type, userId, "addressed to a different user");
             return new CommandResponse(command.CommandId, false, "That command is for a different user.", Unrecoverable: true);
         }
 
         if (command is IServerOnlyCommand)
         {
+            logger.CommandRefused(envelope.Type, userId, "server-only command");
             return new CommandResponse(command.CommandId, false, $"{envelope.Type} cannot be sent from a client.", Unrecoverable: true);
         }
 
         if (services.GetService(typeof(ICommandHandler<>).MakeGenericType(type)) is null)
         {
+            logger.CommandRefused(envelope.Type, userId, "no handler");
             return new CommandResponse(command.CommandId, false, $"No handler for {envelope.Type}.", Unrecoverable: true);
         }
 

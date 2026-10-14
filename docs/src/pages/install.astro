@@ -186,13 +186,39 @@ cd PSPad</code></pre>
         Keep port <code>5000</code> off the internet: bind it to <code>127.0.0.1</code> or close
         it at the firewall, so the proxy is the only way in.
       </li>
+      <li>
+        <strong>Turn on HSTS at the proxy.</strong> The client sends its own
+        <code>Content-Security-Policy</code>, <code>X-Content-Type-Options</code>,
+        <code>Referrer-Policy</code> and <code>Permissions-Policy</code>, but it serves plain
+        HTTP, so <code>Strict-Transport-Security</code> is the proxy's job (on Cloudflare:
+        SSL/TLS → Edge Certificates → HSTS). Don't add a second
+        <code>Content-Security-Policy</code> at the proxy — the browser enforces both, and
+        anything only one of them allows is blocked.
+      </li>
       <li>Recreate the stack:
         <pre><code>docker compose -f docker/compose.yaml up -d --force-recreate</code></pre>
       </li>
     </ol>
+    <Callout kind="warning" title="The client only talks to the origins in .env">
+      <p>
+        Its content security policy is built when the <code>app</code> container starts,
+        from <code>API_BASE_ADDRESS</code> and <code>KEYCLOAK_AUTHORITY</code>. If the browser
+        reaches the API or Keycloak at any other address, it refuses the request — sign-in
+        or sync fails with a "Refused to connect" error in the browser console. Fix the
+        value and recreate <code>app</code>. Likewise the API accepts cross-origin calls
+        only from <code>APP_BASE_ADDRESS</code> — compose always passes it to the API, so
+        leave it empty and every browser call to the API is refused.
+      </p>
+    </Callout>
     <p>MongoDB publishes no port — it's reachable only from the other containers.</p>
+    <p>
+      None of the PSPad containers runs as root: the API runs as the .NET image's
+      <code>app</code> user (UID 1654) and the client is served by unprivileged nginx
+      (UID 101), both listening on <code>8080</code> inside their containers. The published
+      ports above don't change.
+    </p>
 
-    <h2>Backups</h2>
+    <h2 id="backups">Backups</h2>
     <p>Three volumes hold everything:</p>
     <ul>
       <li><code>pspad_mongo-data</code> — areas, lists, tasks, the event log.</li>
@@ -222,6 +248,51 @@ docker compose -f docker/compose.yaml up -d --build</code></pre>
     <p>
       Volumes survive — only <code>down -v</code> destroys them. Give Mongo 10–30 seconds to
       report healthy again before assuming something's broken.
+    </p>
+    <p>
+      Every image is pinned to an exact version, so an upgrade changes MongoDB, Keycloak
+      or nginx only when <code>compose.yaml</code> or a <code>Dockerfile</code> in the
+      release does.
+    </p>
+    <Callout kind="warning" title="Upgrading from a release with floating images">
+      <p>
+        Older releases pulled <code>mongo:8</code> and Keycloak 26.0. This release pins
+        MongoDB 8.3.11 and Keycloak 26.7.4, which migrates its embedded database on first
+        start. Before you run <code>up</code>, take a <a href="#backups">database dump</a> and
+        export the <strong>psplace</strong> realm. Nothing else changes: same
+        <code>.env</code>, same ports, same volumes, and none of them needs new file
+        permissions.
+      </p>
+    </Callout>
+
+    <h2 id="database-user">Optional: give the API its own database user</h2>
+    <p>
+      Out of the box the API signs in to MongoDB as the root user <code>pspad</code>. To
+      limit what a leaked connection string can do, create a user that can read and write
+      <code>MONGO_DATABASE</code> and nothing else, using the example script
+      <code>docker/mongo-app-user.js</code>. Run it as root inside the running
+      <code>mongo</code> container (use your own database name and a password of letters,
+      digits and <code>- . _ ~</code>):
+    </p>
+    <pre><code>docker compose -f docker/compose.yaml cp docker/mongo-app-user.js mongo:/tmp/mongo-app-user.js
+docker compose -f docker/compose.yaml exec \
+  -e MONGO_DATABASE=pspad -e MONGO_APP_USER=pspad-api -e MONGO_APP_PASSWORD='&lt;app password&gt;' \
+  mongo sh -c 'mongosh --quiet -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin /tmp/mongo-app-user.js'</code></pre>
+    <p>
+      It prints <code>created pspad-api on pspad</code>; running it again resets the password
+      and roles. Then point the API at the new user with an override file next to
+      <code>compose.yaml</code>, say <code>docker/compose.db-user.yaml</code>:
+    </p>
+    <pre><code>services:
+  api:
+    environment:
+      Mongo__ConnectionString: mongodb://pspad-api:&lt;app password&gt;@mongo:27017/pspad?directConnection=true</code></pre>
+    <pre><code>docker compose -f docker/compose.yaml -f docker/compose.db-user.yaml up -d</code></pre>
+    <p>
+      Pass both files on every later <code>up</code>, or the API goes back to the root user.
+      The root user stays for the healthcheck, the script and your backups. Running PSPad
+      against your own MongoDB or Atlas? Give its user only <code>readWrite</code> on the
+      PSPad database.
     </p>
 
     <h2>Two things worth knowing</h2>

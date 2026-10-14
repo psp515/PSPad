@@ -2,6 +2,7 @@ using PSPad.Api.Tests.Sync;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using PSPad.Abstractions;
 using PSPad.Api.Commands;
 using PSPad.Contracts;
@@ -30,7 +31,7 @@ public class CommandDispatcherTests
         var envelope = new CommandEnvelope(
             nameof(CreateArea), JsonSerializer.SerializeToElement(command));
 
-        var response = await new CommandDispatcher(services).DispatchAsync(
+        var response = await new CommandDispatcher(services, NullLogger<CommandDispatcher>.Instance).DispatchAsync(
             envelope, user, CancellationToken.None);
 
         Assert.True(response.Accepted);
@@ -46,7 +47,7 @@ public class CommandDispatcherTests
             JsonSerializer.SerializeToElement(
                 new CreateArea(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Home", 0)));
 
-        var response = await new CommandDispatcher(services).DispatchAsync(
+        var response = await new CommandDispatcher(services, NullLogger<CommandDispatcher>.Instance).DispatchAsync(
             envelope, Guid.NewGuid(), CancellationToken.None);
 
         Assert.False(response.Accepted);
@@ -58,7 +59,7 @@ public class CommandDispatcherTests
     {
         var services = new ServiceCollection().AddPSPadCommands().BuildServiceProvider();
 
-        var response = await new CommandDispatcher(services).DispatchAsync(
+        var response = await new CommandDispatcher(services, NullLogger<CommandDispatcher>.Instance).DispatchAsync(
             new CommandEnvelope("DropDatabase", JsonSerializer.SerializeToElement(new { })),
             Guid.NewGuid(),
             CancellationToken.None);
@@ -73,7 +74,7 @@ public class CommandDispatcherTests
         var services = new ServiceCollection().AddPSPadCommands().BuildServiceProvider();
         var envelope = new CommandEnvelope(nameof(CreateArea), JsonSerializer.SerializeToElement<object?>(null));
 
-        var response = await new CommandDispatcher(services).DispatchAsync(
+        var response = await new CommandDispatcher(services, NullLogger<CommandDispatcher>.Instance).DispatchAsync(
             envelope, Guid.NewGuid(), CancellationToken.None);
 
         Assert.False(response.Accepted);
@@ -89,7 +90,7 @@ public class CommandDispatcherTests
             commandId = Guid.NewGuid(), userId = Guid.NewGuid(), areaId = "not-a-guid", name = "Home", position = 0
         });
 
-        var response = await new CommandDispatcher(services).DispatchAsync(
+        var response = await new CommandDispatcher(services, NullLogger<CommandDispatcher>.Instance).DispatchAsync(
             new CommandEnvelope(nameof(CreateArea), payload), Guid.NewGuid(), CancellationToken.None);
 
         Assert.False(response.Accepted);
@@ -102,7 +103,7 @@ public class CommandDispatcherTests
     {
         var services = new ServiceCollection().AddPSPadCommands().BuildServiceProvider();
 
-        var response = await new CommandDispatcher(services).DispatchAsync(
+        var response = await new CommandDispatcher(services, NullLogger<CommandDispatcher>.Instance).DispatchAsync(
             new CommandEnvelope(nameof(CreateArea), default), Guid.NewGuid(), CancellationToken.None);
 
         Assert.False(response.Accepted);
@@ -118,7 +119,7 @@ public class CommandDispatcherTests
             nameof(CreateArea),
             JsonSerializer.SerializeToElement(new CreateArea(Guid.NewGuid(), user, Guid.NewGuid(), "Home", 0)));
 
-        var response = await new CommandDispatcher(services).DispatchAsync(
+        var response = await new CommandDispatcher(services, NullLogger<CommandDispatcher>.Instance).DispatchAsync(
             envelope, user, CancellationToken.None);
 
         Assert.False(response.Accepted);
@@ -139,7 +140,7 @@ public class CommandDispatcherTests
         var command = new CreateArea(Guid.NewGuid(), user, Guid.NewGuid(), "Home", 0);
         var envelope = new CommandEnvelope(nameof(CreateArea), JsonSerializer.SerializeToElement(command));
 
-        var response = await new CommandDispatcher(services).DispatchAsync(
+        var response = await new CommandDispatcher(services, NullLogger<CommandDispatcher>.Instance).DispatchAsync(
             envelope, user, CancellationToken.None);
 
         Assert.True(response.Accepted);
