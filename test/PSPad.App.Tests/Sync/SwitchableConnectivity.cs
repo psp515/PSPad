@@ -17,4 +17,10 @@ public sealed class SwitchableConnectivity : IConnectivity
         IsOnline = true;
         Changed?.Invoke();
     }
+
+    public void GoOffline()
+    {
+        IsOnline = false;
+        Changed?.Invoke();
+    }
 }
