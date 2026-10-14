@@ -104,6 +104,7 @@ app.MapGet("/health", () => "healthy");
 var api = app.MapGroup("/api").RequireAuthorization();
 api.MapCommandEndpoints();
 api.MapSyncEndpoints();
+api.MapLiveEndpoints();
 api.MapListEndpoints();
 api.MapBudgetEndpoints();
 api.MapTodayEndpoints();
