@@ -42,16 +42,30 @@ public class NginxProxyTests(MongoFixture fixture)
         });
         factory.UseKestrel(apiPort);
         factory.StartServer();
-        await TestcontainersSettings.ExposeHostPortsAsync((ushort)apiPort, ct);
+        IContainer? nginx = null;
+        try
+        {
+            await TestcontainersSettings.ExposeHostPortsAsync((ushort)apiPort, ct);
 
-        var nginx = new ContainerBuilder(Image)
-            .WithPortBinding(8080, true)
-            .WithResourceMapping(Encoding.UTF8.GetBytes(StockConfig(apiPort)), "/etc/nginx/conf.d/default.conf")
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(request => request.ForPort(8080).ForPath("/health")))
-            .Build();
-        await nginx.StartAsync(ct);
+            nginx = new ContainerBuilder(Image)
+                .WithPortBinding(8080, true)
+                .WithResourceMapping(Encoding.UTF8.GetBytes(StockConfig(apiPort)), "/etc/nginx/conf.d/default.conf")
+                .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(request => request.ForPort(8080).ForPath("/health")))
+                .Build();
+            await nginx.StartAsync(ct);
 
-        return (factory, nginx, new Uri($"http://{nginx.Hostname}:{nginx.GetMappedPublicPort(8080)}"));
+            return (factory, nginx, new Uri($"http://{nginx.Hostname}:{nginx.GetMappedPublicPort(8080)}"));
+        }
+        catch
+        {
+            if (nginx is not null)
+            {
+                await nginx.DisposeAsync();
+            }
+
+            await factory.DisposeAsync();
+            throw;
+        }
     }
 
     static HttpClient ThroughProxy(Uri proxy, string subject)
@@ -67,8 +81,8 @@ public class NginxProxyTests(MongoFixture fixture)
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         var (factory, nginx, proxy) = await StartAsync(ct);
-        await using var _ = factory;
-        await using var __ = nginx;
+        await using var api = factory;
+        await using var proxyContainer = nginx;
         var subject = Guid.NewGuid().ToString();
         using var client = ThroughProxy(proxy, subject);
         var userId = await Sharing.SignInAsync(client, ct);
@@ -84,8 +98,8 @@ public class NginxProxyTests(MongoFixture fixture)
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         var (factory, nginx, proxy) = await StartAsync(ct);
-        await using var _ = factory;
-        await using var __ = nginx;
+        await using var api = factory;
+        await using var proxyContainer = nginx;
         using var client = ThroughProxy(proxy, Guid.NewGuid().ToString());
         await Sharing.SignInAsync(client, ct);
         await using var live = await LiveListener.OpenAsync(client, ct);
