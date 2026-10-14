@@ -64,7 +64,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 13 | Public snapshots, server-only module | 0056, 0064 |
 | 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount | 0059 |
 | 15 | Containers non-root on exact-version-tagged images; central package versions; Dependabot weekly | 0071 |
-| 15 | Open clients get a data-free sync nudge over SSE, fanned out from commit | 0075 |
+| 16 | Open clients get a data-free sync nudge over SSE, fanned out from commit | 0075 |
 
 Stack: .NET 10, MongoDB 8 replica set `rs0`, Blazor WASM PWA + MudBlazor,
 IndexedDB replica and outbox, Keycloak OIDC/JWT, Docker Compose, no messaging bus.
