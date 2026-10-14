@@ -1,0 +1,66 @@
+@using PSPad.App.State
+@using PSPad.Module.Money.Reading
+
+<div class="@($"pspad-overview {Class}")">
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-2 pspad-overview-day">@MoneyText.MonthTitle(Pace.Month) · day @Pace.Day of @Pace.DaysInMonth</MudText>
+    <MudGrid Spacing="4">
+        <MudItem xs="12">
+            <MoneyHero Class="pspad-overview-hero" HeadlineClass="pspad-overview-net" Label="Net so far"
+                       Text="@MoneyText.SignedPln(Pace.Totals.Net)" Negative="@(Pace.Totals.Net < 0)">
+                <ChildContent>
+                    <div class="d-flex flex-column pspad-overview-income">
+                        <MoneyFigure Label="Income" Text="@MoneyText.Pln(Pace.Totals.Income)" />
+                        @if (Pace.ExpectedIncomeByNow is { } incomeByNow)
+                        {
+                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-overview-income-usual">usual by now @MoneyText.Pln(incomeByNow)</MudText>
+                        }
+                    </div>
+                    <div class="d-flex flex-column pspad-overview-expenses">
+                        <MoneyFigure Label="Expenses" Text="@MoneyText.Pln(Pace.Totals.Expenses)" />
+                        @if (Pace.ExpectedExpensesByNow is { } expensesByNow)
+                        {
+                            var delta = Pace.Totals.Expenses - expensesByNow;
+                            <MudText Typo="Typo.caption" Color="@(delta > 0 ? Color.Error : Color.Default)"
+                                     Class="@(delta > 0 ? "pspad-overview-expenses-delta" : "pspad-muted pspad-overview-expenses-delta")">@MoneyText.SignedPln(delta) vs usual by now</MudText>
+                        }
+                    </div>
+                    @if (!Pace.Usual.IsEmpty)
+                    {
+                        <div class="d-flex flex-column pspad-overview-expected">
+                            <MoneyFigure Label="Expected month end" Text="@($"≈ {MoneyText.Pln(Pace.Usual.Expenses)}")" />
+                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-overview-expected-caption">avg of last @Pace.Usual.SampledMonths months</MudText>
+                        </div>
+                    }
+                </ChildContent>
+                <Footer>
+                    @if (Pace.Usual.IsEmpty)
+                    {
+                        <MudText Typo="Typo.body2" Class="pspad-muted pspad-overview-no-usual">Averages appear after a full month of entries.</MudText>
+                    }
+                    else if (Pace.ShareOfUsualSpent is { } share)
+                    {
+                        <div class="d-flex flex-column gap-1">
+                            <MudProgressLinear Class="pspad-overview-pace" Color="@(share > 1 ? Color.Error : Color.Primary)" Rounded="true"
+                                               Min="0" Max="100" Value="@Math.Min(100d, (double)(share * 100))" UserAttributes="@HiddenFromReaders" />
+                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-overview-pace-caption">Spent @MoneyText.Percent(share) of a usual month · @MoneyText.Percent(Pace.ShareOfMonthPassed) of the month passed</MudText>
+                        </div>
+                    }
+                    @if (Pace.Totals.ExpensesByCategory.Count > 0)
+                    {
+                        <CategoryBar Class="mt-2" Totals="@Pace.Totals.ExpensesByCategory" />
+                    }
+                </Footer>
+            </MoneyHero>
+        </MudItem>
+    </MudGrid>
+</div>
+
+@code {
+    static readonly Dictionary<string, object> HiddenFromReaders = new() { ["aria-hidden"] = "true" };
+
+    [Parameter, EditorRequired] public MonthPace Pace { get; set; } = default!;
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+}

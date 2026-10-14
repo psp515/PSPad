@@ -315,13 +315,8 @@ public partial class StylesheetRulesTests
         Assert.Contains("text-transform: none", Declarations(".pspad-budget-views .mud-toggle-item"));
 
     [Fact]
-    public void TheBudgetPageStopsAtNineHundredSixtyPixels()
-    {
-        var page = Declarations(".pspad-budget-page");
-
-        Assert.Contains("max-width: 960px", page);
-        Assert.Contains("margin-inline: auto", page);
-    }
+    public void TheBudgetPageTakesTheFullWidth() =>
+        Assert.Contains("width: 100%", Declarations(".pspad-budget-page"));
 
     [Fact]
     public void OnAPhoneTheMonthSwitcherTakesItsOwnLine() =>
@@ -329,7 +324,7 @@ public partial class StylesheetRulesTests
 
     [Fact]
     public void OnDesktopTheViewsAreNotStretched() =>
-        Assert.Contains("max-width: 420px", DeclarationsInMedia("min-width: 960px", ".pspad-budget-views"));
+        Assert.Contains("max-width: 560px", DeclarationsInMedia("min-width: 960px", ".pspad-budget-views"));
 
     [Fact]
     public void OnDesktopTheHeroFiguresSitBesideTheHeadline() =>

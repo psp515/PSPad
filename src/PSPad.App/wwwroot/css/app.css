@@ -1429,8 +1429,7 @@ button.pspad-heatmap-cell:focus-visible {
 }
 
 .pspad-budget-page {
-    max-width: 960px;
-    margin-inline: auto;
+    width: 100%;
 }
 
 .pspad-budget-nav {
@@ -1455,7 +1454,7 @@ button.pspad-heatmap-cell:focus-visible {
 
 @media (min-width: 960px) {
     .pspad-budget-views {
-        max-width: 420px;
+        max-width: 560px;
     }
 
     .pspad-budget-nav .pspad-month-switcher {
@@ -1749,5 +1748,12 @@ button.pspad-heatmap-cell:focus-visible {
 
     .pspad-money-hero-value {
         font-size: 2rem;
+    }
+
+    .pspad-budget-views .mud-toggle-item {
+        flex-direction: column;
+        gap: 2px;
+        padding: 6px 4px;
+        font-size: 0.75rem;
     }
 }
