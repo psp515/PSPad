@@ -42,6 +42,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Sharing a budget | `specs/budget-sharing-design.md` |
 | Budget page views: Overview, Entries, Stats, forecast, insights | `specs/budget-overview-design.md` |
 | Length and count limits on user content | `specs/content-limits-design.md` |
+| Live updates (sync nudges over SSE, proxies) | `specs/live-updates-design.md` |
 | Why a decision was made | `adr/README.md` index → the `Active` record |
 
 Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither silently.
@@ -63,6 +64,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 13 | Public snapshots, server-only module | 0056, 0064 |
 | 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount | 0059 |
 | 15 | Containers non-root on exact-version-tagged images; central package versions; Dependabot weekly | 0071 |
+| 15 | Open clients get a data-free sync nudge over SSE, fanned out from commit | 0075 |
 
 Stack: .NET 10, MongoDB 8 replica set `rs0`, Blazor WASM PWA + MudBlazor,
 IndexedDB replica and outbox, Keycloak OIDC/JWT, Docker Compose, no messaging bus.
