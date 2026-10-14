@@ -394,12 +394,17 @@ public class MoneySummaryTests
     public void AveragesRoundToWholeGrosze()
     {
         var budget = ABudget();
+        var to = new DateOnly(2026, 3, 31);
 
-        var summary = MoneySummary.For(
-            [AnExpense(budget, amount: 10m, date: On(1, 6)), AnExpense(budget, amount: 0.01m, date: On(2, 6)), AnExpense(budget, amount: 0m + 0.01m, date: On(3, 6))],
-            [], YearStart, new DateOnly(2026, 3, 31));
+        var repeating = MoneySummary.For(
+            [AnExpense(budget, amount: 10m, date: On(1, 6)), AnExpense(budget, amount: 2m, date: On(2, 6)), AnExpense(budget, amount: 1m, date: On(3, 6))],
+            [], YearStart, to);
+        var midpoint = MoneySummary.For(
+            [AnExpense(budget, amount: 0.01m, date: On(1, 6)), AnExpense(budget, amount: 0.02m, date: On(2, 6))],
+            [], YearStart, to);
 
-        Assert.Equal(3.34m, summary.AverageExpenses);
+        Assert.Equal(4.33m, repeating.AverageExpenses);
+        Assert.Equal(0.02m, midpoint.AverageExpenses);
     }
 
     [Fact]
