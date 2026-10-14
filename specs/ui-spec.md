@@ -1398,7 +1398,7 @@ show the current month's income, expenses and net in PLN, and the latest net
 worth or a "Start {month}" link to the Balance tab. The whole card is the
 link to the budget (the name's link covers the card; the Start link sits above
 it); hover outlines it in the primary and tints its chevron.
-`/budgets/{id}/{tab}` is at most 960px wide and centred, has a back arrow to
+(views redesigned in `specs/budget-overview-design.md`, which wins where this paragraph differs: Overview · Entries · Balance · Stats, settings gear, full width) `/budgets/{id}/{tab}` is at most 960px wide and centred, has a back arrow to
 `/budgets` and no subtitle, and one row of a three-view
 `MudToggleGroup` (Month, Balance, Summary; at most 420px from 960px up) plus a
 Settings gear button; on Month and Balance the `MonthSwitcher` (with Balance's

@@ -51,7 +51,7 @@ Values/         Currencies.cs, YearMonth.cs, YearMonthJsonConverter.cs, Money.cs
                 PSPad.Module.Money: a type named Money under …Money.Values would be shadowed
                 by the namespace)
 Reading/        RateSuggestion.cs, MonthTotals.cs, CategoryTotal.cs, EntryDay.cs, BalanceTotals.cs,
-                MoneySummary.cs, CumulativeMonth.cs, CategorySeries.cs, NetWorthMonth.cs
+                MoneySummary.cs, MonthFigure.cs, UsualMonth.cs, CategoryUsual.cs, MonthPace.cs, CategoryPace.cs, Insight.cs, InsightKind.cs, Insights.cs, CategorySeries.cs, NetWorthMonth.cs
 ```
 
 ## 3. Domain model
@@ -239,8 +239,7 @@ documents.
   month to `to`'s. A range that ends before it starts is rejected.
 - Income, expenses, saved (income − expenses), and savings rate (saved ÷
   income; `null` when income is 0, negative when spending exceeds income).
-- Cumulative income and expenses per month (`CumulativeMonth`), running from
-  0 at the first month.
+- Income and expenses per month (`MonthFigure`), the count of months with entries (`SampledMonths`) and per-month averages (`AverageIncome`, `AverageExpenses`, `AverageSaved`; `null` without a sampled month).
 - Expenses per month per category (`CategorySeries`): the top 4 categories in
   the range keep their own series, and the rest go into "Other" (into the
   top-4 category itself when one is called "Other").
@@ -290,6 +289,8 @@ zone, never machine-local (the AGENTS.md §2 invariant).
   env var or port. This gets a note in `docs/src/pages/install.astro`.
 
 ## 6. Screens
+
+The budget page's views were redesigned in `specs/budget-overview-design.md`; that document wins for Month/Summary wording below.
 
 The canvas holds the mockups; this section is the contract. Everything uses
 MudBlazor, edits happen in side panels (`adr/0052`), and each page has one
