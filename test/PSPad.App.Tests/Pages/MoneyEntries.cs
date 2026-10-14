@@ -8,19 +8,19 @@ namespace PSPad.App.Tests.Pages;
 internal static class MoneyEntries
 {
     public static MoneyEntry Expense(Budget budget, string name, string category, decimal amount, DateOnly date,
-        string currency = "PLN", decimal rate = 1m) =>
+        string currency = "PLN", decimal rate = 1m, DateTimeOffset? at = null) =>
         Recorded(budget, new RecordExpense(Guid.NewGuid(), budget.UserId, Guid.NewGuid(), budget.Id, name, category,
-            new Money(amount, currency, rate, date), date, null));
+            new Money(amount, currency, rate, date), date, null), at ?? DateTimeOffset.UnixEpoch);
 
     public static MoneyEntry Income(Budget budget, string name, string category, decimal amount, DateOnly date,
-        string currency = "PLN", decimal rate = 1m) =>
+        string currency = "PLN", decimal rate = 1m, DateTimeOffset? at = null) =>
         Recorded(budget, new RecordIncome(Guid.NewGuid(), budget.UserId, Guid.NewGuid(), budget.Id, name, category,
-            new Money(amount, currency, rate, date), date, null));
+            new Money(amount, currency, rate, date), date, null), at ?? DateTimeOffset.UnixEpoch);
 
-    static MoneyEntry Recorded(Budget budget, ICommand command)
+    static MoneyEntry Recorded(Budget budget, ICommand command, DateTimeOffset at)
     {
         var entry = new MoneyEntry();
-        entry.ApplyAll(MoneyEntry.Decide(null, budget, command, DateTimeOffset.UnixEpoch));
+        entry.ApplyAll(MoneyEntry.Decide(null, budget, command, at));
         return entry;
     }
 }

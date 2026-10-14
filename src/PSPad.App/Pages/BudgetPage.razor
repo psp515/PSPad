@@ -84,7 +84,11 @@ else
     @switch (TabIndex)
     {
         case OverviewTab:
-            <BudgetOverviewTab Pace="@Pace" ReadOnly="@_budget.IsArchived" />
+            <BudgetOverviewTab Pace="@Pace" Entries="@_entries" Snapshots="@_snapshots" ReadOnly="@_budget.IsArchived"
+                               Zone="@LocalToday.Zone(State.TimeZone)" Today="@State.Today"
+                               OnOpenCategory="@ShowCategory" OnOpenEntry="@OpenEntry"
+                               OnOpenEntries="@(() => { _month = Current; SelectTab(EntriesTab); })"
+                               OnStartMonth="@StartCurrentMonthAsync" />
             break;
         case EntriesTab:
             <BudgetMonthTab Month="@_month" Totals="@MonthTotals.For(_entries, _month)"
@@ -243,6 +247,10 @@ else
         Navigation.NavigateTo(HoldingQuery.For(Navigation.Uri, Balance.Snapshot!.Id, holding.HoldingId));
 
     void NewHolding() => Navigation.NavigateTo(HoldingQuery.ForNew(Navigation.Uri, Balance.Snapshot!.Id));
+
+    async Task StartCurrentMonthAsync() =>
+        Surface(await Sender.SendAsync(new StartBalanceMonth(Guid.NewGuid(), State.UserId, BudgetId, Current)),
+            "Couldn't start the month.");
 
     async Task StartMonthAsync() =>
         Surface(await Sender.SendAsync(new StartBalanceMonth(Guid.NewGuid(), State.UserId, BudgetId, _month)),
