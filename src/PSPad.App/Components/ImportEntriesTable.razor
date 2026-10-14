@@ -5,11 +5,12 @@
           RowClassFunc="@RowClass">
     <ToolBarContent>
         <MudChipSet T="ImportFilter" SelectedValue="@_filter" SelectedValueChanged="@(value => _filter = value)"
-                    SelectionMode="SelectionMode.SingleSelection" Size="Size.Small">
-            <MudChip Value="@ImportFilter.All" Text="All" />
-            <MudChip Value="@ImportFilter.ToImport" Text="To import" />
-            <MudChip Value="@ImportFilter.Errors" Text="Errors" />
-            <MudChip Value="@ImportFilter.AlreadyInBudget" Text="Already in budget" />
+                    SelectionMode="SelectionMode.SingleSelection" CheckMark="false" Color="Color.Primary" Variant="Variant.Outlined"
+                    SelectedColor="Color.Primary" Size="Size.Small" Class="pspad-import-filter">
+            <MudChip Value="@ImportFilter.All" aria-pressed="@Pressed(ImportFilter.All)" Text="All" />
+            <MudChip Value="@ImportFilter.ToImport" aria-pressed="@Pressed(ImportFilter.ToImport)" Text="To import" />
+            <MudChip Value="@ImportFilter.Errors" aria-pressed="@Pressed(ImportFilter.Errors)" Text="Errors" />
+            <MudChip Value="@ImportFilter.AlreadyInBudget" aria-pressed="@Pressed(ImportFilter.AlreadyInBudget)" Text="Already in budget" />
         </MudChipSet>
     </ToolBarContent>
     <HeaderContent>
@@ -31,7 +32,7 @@
         <MudTd>@context.Row?.Category</MudTd>
         <MudTd>@(context.Row is { } row ? $"{row.Amount.ToString("0.00", CultureInfo.InvariantCulture)} {context.Money?.Currency ?? row.Currency}" : "")</MudTd>
         <MudTd>@RateText(context)</MudTd>
-        <MudTd>@(context.Error ?? StatusText(context.Status))</MudTd>
+        <MudTd Class="@StatusClass(context.Status)">@(context.Error ?? StatusText(context.Status))</MudTd>
     </RowTemplate>
 </MudTable>
 
@@ -39,6 +40,8 @@
     public enum ImportFilter { All, ToImport, Errors, AlreadyInBudget }
 
     ImportFilter _filter = ImportFilter.All;
+
+    string Pressed(ImportFilter filter) => filter == _filter ? "true" : "false";
 
     [Parameter, EditorRequired] public IReadOnlyList<EntryPreview> Rows { get; set; } = [];
 
@@ -65,6 +68,8 @@
             : fileRate is null
                 ? $"{known.RateToPln.ToString(CultureInfo.InvariantCulture)} (NBP {known.RateDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)})"
                 : $"{known.RateToPln.ToString(CultureInfo.InvariantCulture)} (file)";
+
+    public static string StatusClass(ImportStatus status) => status == ImportStatus.Error ? "mud-error-text" : "";
 
     public static string StatusText(ImportStatus status) => status switch
     {

@@ -233,6 +233,23 @@ public class BudgetImportPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheErrorsFilterShowsOnlyErrorRowsInTheErrorColour()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Open(budget);
+        Upload(page, Entries);
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-import-row").Count));
+
+        page.FindAll(".pspad-import-filter .mud-chip").Single(chip => chip.TextContent.Trim() == "Errors").Click();
+
+        page.WaitForAssertion(() => Assert.Single(page.FindAll(".pspad-import-row")));
+        Assert.Contains("Kind must be expense or income.", page.Find(".pspad-import-row-error .mud-error-text").TextContent);
+        Assert.Equal("true", page.FindAll(".pspad-import-filter .mud-chip")
+            .Single(chip => chip.TextContent.Trim() == "Errors").GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
     public void AnUnknownKindIsNotFound()
     {
         var budget = BudgetsPageTests.Named("Personal");

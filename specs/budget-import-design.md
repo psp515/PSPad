@@ -166,6 +166,9 @@ earlier month for the months after it.
   pairs only.
 - Offline, those rows are errors: "Needs a rate: go online or fill the rate
   column." Going online does not refetch until **Retry rates** is pressed.
+- A date after today in the user's time zone is never asked for, since NBP
+  has not published it: "2026-10-31 is in the future, so NBP has no USD rate
+  for it yet. Fill the rate column or change the date."
 
 ### 3.5 Rules shared with the commands
 
@@ -207,7 +210,9 @@ One page imports one file kind, so a year's entries and balances are two runs.
    - Under them, the file's virtualized `MudTable` filtered by status (All,
      To import, Errors, Already in budget). A row shows its line number, its parsed values, the
      rate with its source (file, NBP with its effective date), and its status
-     or error message. A checkbox ticks or unticks rows that allow it.
+     or error message, the error in the theme's error colour. A checkbox
+     ticks or unticks rows that allow it. The selected filter chip is filled,
+     like the Month tab's filter.
    - The balances table groups rows under a month header: "New month: N
      holdings" or "Existing month: updates N, adds N, unchanged N".
 3. **Import.** **Import N rows** sits under the table. It is disabled while

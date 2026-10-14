@@ -2,10 +2,11 @@
 @using PSPad.Module.Money.Import
 
 <MudChipSet T="ImportEntriesTable.ImportFilter" SelectedValue="@_filter" SelectedValueChanged="@(value => _filter = value)"
-            SelectionMode="SelectionMode.SingleSelection" Size="Size.Small" Class="mb-2">
-    <MudChip Value="@ImportEntriesTable.ImportFilter.All" Text="All" />
-    <MudChip Value="@ImportEntriesTable.ImportFilter.ToImport" Text="To import" />
-    <MudChip Value="@ImportEntriesTable.ImportFilter.Errors" Text="Errors" />
+            SelectionMode="SelectionMode.SingleSelection" CheckMark="false" Color="Color.Primary" Variant="Variant.Outlined"
+            SelectedColor="Color.Primary" Size="Size.Small" Class="mb-2 pspad-import-filter">
+    <MudChip Value="@ImportEntriesTable.ImportFilter.All" aria-pressed="@Pressed(ImportEntriesTable.ImportFilter.All)" Text="All" />
+    <MudChip Value="@ImportEntriesTable.ImportFilter.ToImport" aria-pressed="@Pressed(ImportEntriesTable.ImportFilter.ToImport)" Text="To import" />
+    <MudChip Value="@ImportEntriesTable.ImportFilter.Errors" aria-pressed="@Pressed(ImportEntriesTable.ImportFilter.Errors)" Text="Errors" />
 </MudChipSet>
 
 @foreach (var month in Months)
@@ -41,6 +42,8 @@
 @code {
     ImportEntriesTable.ImportFilter _filter = ImportEntriesTable.ImportFilter.All;
 
+    string Pressed(ImportEntriesTable.ImportFilter filter) => filter == _filter ? "true" : "false";
+
     [Parameter, EditorRequired] public IReadOnlyList<HoldingPreview> Rows { get; set; } = [];
 
     [Parameter, EditorRequired] public IReadOnlyList<MonthPreview> Months { get; set; } = [];
@@ -67,6 +70,6 @@
         <MudTd>@row.Row?.Type</MudTd>
         <MudTd>@(row.Row is { } parsed ? $"{parsed.Amount.ToString("0.00", CultureInfo.InvariantCulture)} {row.Money?.Currency ?? parsed.Currency}" : "")</MudTd>
         <MudTd>@ImportEntriesTable.RateSource(row.Row?.Rate, row.Money)</MudTd>
-        <MudTd>@(row.Error ?? ImportEntriesTable.StatusText(row.Status))</MudTd>
+        <MudTd Class="@ImportEntriesTable.StatusClass(row.Status)">@(row.Error ?? ImportEntriesTable.StatusText(row.Status))</MudTd>
     </text>;
 }
