@@ -488,4 +488,46 @@ public class EntryPanelTests : Bunit.TestContext
         public event Action? Changed;
 #pragma warning restore CS0067
     }
+
+    IRenderedComponent<EntryPanel> NewExpenseIn(Budget budget, YearMonth month) =>
+        Render<EntryPanel>(parameters => parameters
+            .Add(p => p.NewInBudget, (Guid?)budget.Id)
+            .Add(p => p.NewKind, CategoryKind.Expense)
+            .Add(p => p.NewMonth, (YearMonth?)month));
+
+    static DateTime? PickedDate(IRenderedComponent<EntryPanel> panel) =>
+        panel.FindComponent<MudDatePicker>().Instance.Date;
+
+    [Fact]
+    public void ANewEntryInAPastMonthDefaultsToItsLastDay()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var panel = NewExpenseIn(budget, new YearMonth(2026, 9));
+
+        panel.WaitForAssertion(() => Assert.Equal(new DateTime(2026, 9, 30), PickedDate(panel)));
+    }
+
+    [Fact]
+    public void ANewEntryInAFutureMonthDefaultsToItsFirstDay()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var panel = NewExpenseIn(budget, new YearMonth(2026, 11));
+
+        panel.WaitForAssertion(() => Assert.Equal(new DateTime(2026, 11, 1), PickedDate(panel)));
+    }
+
+    [Fact]
+    public void ANewEntryInTheCurrentMonthDefaultsToToday()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var panel = NewExpenseIn(budget, new YearMonth(2026, 10));
+
+        panel.WaitForAssertion(() => Assert.Equal(new DateTime(2026, 10, 9), PickedDate(panel)));
+    }
 }

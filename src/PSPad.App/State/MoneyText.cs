@@ -75,4 +75,24 @@ public static class MoneyText
 
         return labels;
     }
+
+    public static string Recorded(DateTimeOffset at, TimeZoneInfo zone, DateOnly today)
+    {
+        var local = TimeZoneInfo.ConvertTime(at, zone);
+        var day = DateOnly.FromDateTime(local.DateTime);
+        var time = local.ToString("HH:mm", CultureInfo.InvariantCulture);
+
+        if (day == today)
+        {
+            return $"today {time}";
+        }
+
+        if (day == today.AddDays(-1))
+        {
+            return $"yesterday {time}";
+        }
+
+        var format = day.Year == today.Year ? "d MMM" : "d MMM yyyy";
+        return $"{day.ToString(format, CultureInfo.InvariantCulture)} {time}";
+    }
 }

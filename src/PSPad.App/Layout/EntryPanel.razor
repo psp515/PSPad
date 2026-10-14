@@ -47,6 +47,7 @@
     [Parameter] public Guid? NewInBudget { get; set; }
 
     [Parameter] public CategoryKind NewKind { get; set; }
+    [Parameter] public YearMonth? NewMonth { get; set; }
 
     [Parameter] public bool Disabled { get; set; }
 
@@ -69,6 +70,7 @@
     string? _note;
     bool _saving;
     CategoryKind _loadedKind;
+    YearMonth? _loadedMonth;
 
     bool IsNew => _entry is null;
 
@@ -101,7 +103,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_loadedOnce && _loadedEntry == EntryId && _loadedBudget == NewInBudget && _loadedKind == NewKind)
+        if (_loadedOnce && _loadedEntry == EntryId && _loadedBudget == NewInBudget && _loadedKind == NewKind && _loadedMonth == NewMonth)
         {
             return;
         }
@@ -110,6 +112,7 @@
         _loadedEntry = EntryId;
         _loadedBudget = NewInBudget;
         _loadedKind = NewKind;
+        _loadedMonth = NewMonth;
         await LoadAsync();
     }
 
@@ -153,6 +156,14 @@
         _note = entry.Note;
     }
 
+    DateOnly DefaultDate() => NewMonth switch
+    {
+        null => State.Today,
+        { } month when month.Contains(State.Today) => State.Today,
+        { } month when month < YearMonth.Of(State.Today) => month.LastDay,
+        { } month => month.FirstDay
+    };
+
     async Task StartNewAsync()
     {
         var preferences = await Preferences.LoadAsync(MoneyPreferences.IdFor(State.UserId), CancellationToken.None);
@@ -160,7 +171,7 @@
         _category = "";
         _amount = null;
         _note = null;
-        _date = State.Today.ToDateTime(TimeOnly.MinValue);
+        _date = DefaultDate().ToDateTime(TimeOnly.MinValue);
         Suggest(preferences?.DefaultCurrency ?? Currencies.Pln);
     }
 
