@@ -24,7 +24,9 @@ public class EntryFiltersTests
         var rolls = Pages.MoneyEntries.Expense(budget, "Rolls", "Food", 3m, Today);
         var pay = Pages.MoneyEntries.Income(budget, "Pay", "Salary", 3000m, Today);
 
-        Assert.False(EntryFilters.None with { Kind = EntryFilter.Income } is var income && income.Shows(rolls));
+        var income = EntryFilters.None with { Kind = EntryFilter.Income };
+
+        Assert.False(income.Shows(rolls));
         Assert.True(income.Shows(pay));
         Assert.True((EntryFilters.None with { Category = "food" }).Shows(rolls));
         Assert.False((EntryFilters.None with { Category = "food" }).Shows(pay));

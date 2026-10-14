@@ -60,6 +60,57 @@ public class BudgetEntriesTests : Bunit.TestContext
     }
 
     [Fact]
+    public void RowsShowCategoryForeignAmountAvatarAndSignedAmount()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, [budget, .. October(budget)]);
+
+        var page = Entries(budget);
+
+        Assert.Equal(["Car", "Food", "Salary"], page.FindAll(".pspad-entry-category").Select(category => category.TextContent.Trim()));
+        Assert.Equal("10.00 EUR @ 4.3000", Assert.Single(page.FindAll(".pspad-entry-foreign")).TextContent.Trim());
+        Assert.Equal(["C", "F", "S"], page.FindAll(".pspad-entry-avatar").Select(avatar => avatar.TextContent.Trim()));
+        Assert.Single(page.FindAll(".pspad-entry-avatar.pspad-entry-income"));
+        Assert.Equal(["−43.00", "−100.00", "+1,000.00"], page.FindAll(".pspad-entry-amount").Select(amount => amount.TextContent.Trim()));
+    }
+
+    [Fact]
+    public void OpeningACategoryClearsTheKindAndSearch()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, [budget, .. October(budget)]);
+        var page = Entries(budget);
+        Chip(page, "Income").Click();
+        page.Find(".pspad-entries-search input").Input("sal");
+
+        page.Render(parameters => parameters.Add(p => p.Tab, "overview"));
+        page.WaitForAssertion(() => page.Find(".pspad-overview"));
+        page.FindAll(".pspad-category-open").Single(button => button.TextContent.Trim() == "Food").Click();
+        page.Render(parameters => parameters.Add(p => p.Tab, "entries"));
+
+        page.WaitForAssertion(() => Assert.Equal(["Groceries"], Names(page)));
+        Assert.Equal("Food", Text(page, ".pspad-entries-category"));
+        Assert.Equal("true", Chip(page, "All").GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
+    public void TheCategoryChipClearsInAMonthWithNoEntries()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, [budget, .. October(budget)]);
+        var page = Entries(budget);
+        page.FindAll(".pspad-entry-category-open").Single(button => button.TextContent.Trim() == "Food").Click();
+
+        page.Find(".pspad-month-previous").Click();
+        page.Find(".pspad-month-previous").Click();
+
+        Assert.Equal("No entries in August 2026.", Text(page, ".pspad-entries-caption"));
+        page.Find(".pspad-entries-category .mud-chip-close-button").Click();
+
+        Assert.Empty(page.FindAll(".pspad-entries-category"));
+    }
+
+    [Fact]
     public void TheKindChipsNarrowTheListAndTheCaption()
     {
         var budget = BudgetsPageTests.Named("Personal");

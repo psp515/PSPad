@@ -5,29 +5,35 @@
 @using PSPad.Module.Money.Values
 
 <div class="@($"pspad-entries {Class}")">
-    @if (InMonth.Count > 0)
+    @if (InMonth.Count > 0 || Filters.Category is not null)
     {
         <div class="d-flex align-center flex-wrap gap-2 mb-2 pspad-entries-toolbar">
-            <MudChipSet T="EntryFilter" SelectedValue="@Filters.Kind" SelectedValueChanged="@(kind => Change(Filters with { Kind = kind }))"
-                        Class="pspad-entry-filter" SelectionMode="SelectionMode.SingleSelection" CheckMark="false" Color="Color.Primary"
-                        Variant="Variant.Outlined" SelectedColor="Color.Primary" Size="Size.Small">
-                <MudChip Value="EntryFilter.All" aria-pressed="@Pressed(EntryFilter.All)" Text="All" />
-                <MudChip Value="EntryFilter.Expenses" aria-pressed="@Pressed(EntryFilter.Expenses)" Text="Expenses" />
-                <MudChip Value="EntryFilter.Income" aria-pressed="@Pressed(EntryFilter.Income)" Text="Income" />
-            </MudChipSet>
+            @if (InMonth.Count > 0)
+            {
+                <MudChipSet T="EntryFilter" SelectedValue="@Filters.Kind" SelectedValueChanged="@(kind => Change(Filters with { Kind = kind }))"
+                            Class="pspad-entry-filter" SelectionMode="SelectionMode.SingleSelection" CheckMark="false" Color="Color.Primary"
+                            Variant="Variant.Outlined" SelectedColor="Color.Primary" Size="Size.Small">
+                    <MudChip Value="EntryFilter.All" aria-pressed="@Pressed(EntryFilter.All)" Text="All" />
+                    <MudChip Value="EntryFilter.Expenses" aria-pressed="@Pressed(EntryFilter.Expenses)" Text="Expenses" />
+                    <MudChip Value="EntryFilter.Income" aria-pressed="@Pressed(EntryFilter.Income)" Text="Income" />
+                </MudChipSet>
+            }
             @if (Filters.Category is { } category)
             {
                 <MudChip T="string" Class="pspad-entries-category" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled"
                          OnClose="@(() => Change(Filters with { Category = null }))">@category</MudChip>
             }
-            <MudTextField T="string" Class="pspad-entries-search flex-grow-1" Value="@Filters.Search" ValueChanged="@(text => Change(Filters with { Search = text ?? "" }))"
-                          Immediate="true" Clearable="true" Placeholder="Search name or note" Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
-            <MudSelect T="EntrySort" Class="pspad-entries-sort" Value="@Filters.Sort" ValueChanged="@(sort => Change(Filters with { Sort = sort }))"
-                       Label="Sort" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
-                <MudSelectItem T="EntrySort" Value="EntrySort.EntryDate">Entry date</MudSelectItem>
-                <MudSelectItem T="EntrySort" Value="EntrySort.Recorded">Recorded</MudSelectItem>
-            </MudSelect>
+            @if (InMonth.Count > 0)
+            {
+                <MudTextField T="string" Class="pspad-entries-search flex-grow-1" Value="@Filters.Search" ValueChanged="@(text => Change(Filters with { Search = text ?? "" }))"
+                              Immediate="true" Clearable="true" Placeholder="Search name or note" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+                <MudSelect T="EntrySort" Class="pspad-entries-sort" Value="@Filters.Sort" ValueChanged="@(sort => Change(Filters with { Sort = sort }))"
+                           Label="Sort" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                    <MudSelectItem T="EntrySort" Value="EntrySort.EntryDate">Entry date</MudSelectItem>
+                    <MudSelectItem T="EntrySort" Value="EntrySort.Recorded">Recorded</MudSelectItem>
+                </MudSelect>
+            }
         </div>
     }
 

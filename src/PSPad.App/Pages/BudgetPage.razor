@@ -228,7 +228,7 @@ else
 
     void ShowCategory(string category)
     {
-        _filters = _filters with { Category = category };
+        _filters = _filters with { Category = category, Kind = EntryFilter.All, Search = "" };
         SelectTab(EntriesTab);
     }
 
