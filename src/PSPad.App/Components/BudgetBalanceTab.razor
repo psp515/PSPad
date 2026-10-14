@@ -47,36 +47,12 @@
                     </Footer>
                 </MoneyHero>
             }
-            @if (History.NetWorth.Any(month => !month.IsGap))
+            @if (_history.NetWorth.Any(month => !month.IsGap))
             {
                 <MudPaper Outlined="true" Class="pa-3 mt-4 pspad-balance-history">
                     <SectionHeading Title="Last 12 months" Hint="by holding type" />
-                    <MudChart Class="pspad-balance-history-chart" ChartType="ChartType.StackedBar" ChartSeries="@_history" ChartLabels="@_historyLabels"
-                              ChartOptions="@_historyOptions" Width="100%" Height="200px" />
-                    <table class="mud-sr-only">
-                        <caption>Net worth by holding type, last 12 months</caption>
-                        <thead>
-                            <tr>
-                                <th scope="col">Month</th>
-                                <th scope="col">Cash</th>
-                                <th scope="col">Savings</th>
-                                <th scope="col">Investment</th>
-                                <th scope="col">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var month in History.NetWorth)
-                            {
-                                <tr>
-                                    <td>@MoneyText.MonthTitle(month.Month)</td>
-                                    <td>@PlnOrGap(month.Cash)</td>
-                                    <td>@PlnOrGap(month.Savings)</td>
-                                    <td>@PlnOrGap(month.Investment)</td>
-                                    <td>@PlnOrGap(month.Total)</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                    <NetWorthByTypeChart Class="pspad-balance-history-chart" Months="@_history.NetWorth" Labels="@_historyLabels"
+                                         Height="200px" Caption="Net worth by holding type, last 12 months" />
                 </MudPaper>
             }
         </MudItem>
@@ -139,9 +115,8 @@
     readonly Dictionary<string, decimal> _todayRates = [];
     readonly HashSet<string> _asked = [];
     bool _disposed;
-    List<ChartSeries<double>> _history = [];
+    MoneySummary _history = default!;
     string[] _historyLabels = [];
-    StackedBarChartOptions _historyOptions = new();
 
     [Parameter, EditorRequired] public YearMonth Month { get; set; }
 
@@ -204,30 +179,12 @@
             ? MoneyText.SignedPln(value - holding.Money.InPln)
             : "—";
 
-    MoneySummary History => MoneySummary.For([], Snapshots, YearMonth.Of(Current.FirstDay.AddMonths(-11)).FirstDay, Current.LastDay);
-
     protected override async Task OnParametersSetAsync()
     {
-        var history = History;
-        _historyLabels = MoneyText.MonthAxis(history.Months);
-        _history =
-        [
-            Series("Cash", history.NetWorth.Select(month => month.Cash ?? 0m)),
-            Series("Savings", history.NetWorth.Select(month => month.Savings ?? 0m)),
-            Series("Investment", history.NetWorth.Select(month => month.Investment ?? 0m))
-        ];
-        _historyOptions = new StackedBarChartOptions
-        {
-            YAxisTicks = ChartAxis.Step((double)history.NetWorth.Select(month => month.Total ?? 0m).DefaultIfEmpty(0m).Max()),
-            MaxNumYAxisTicks = ChartAxis.MaxTicks
-        };
+        _history = MoneySummary.For([], Snapshots, YearMonth.Of(Current.FirstDay.AddMonths(-11)).FirstDay, Current.LastDay);
+        _historyLabels = MoneyText.MonthAxis(_history.Months);
         await LookUpAsync();
     }
-
-    static ChartSeries<double> Series(string name, IEnumerable<decimal> values) =>
-        new() { Name = name, Data = values.Select(value => (double)value).ToArray() };
-
-    static string PlnOrGap(decimal? value) => value is { } pln ? MoneyText.Pln(pln) : "—";
 
     async Task LookUpAsync()
     {
