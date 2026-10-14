@@ -89,6 +89,6 @@ public class ProvisioningTests(MongoFixture fixture)
             new MongoDocumentStore<User>(context),
             new MongoDocumentStore<Area>(context),
             new MongoDocumentStore<Inbox>(context),
-            new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance),
+            new MongoUnitOfWork(context, new NoDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance),
             new SystemClock());
 }

@@ -6,7 +6,10 @@ using PSPad.Abstractions;
 namespace PSPad.Infrastructure.Mongo;
 
 public sealed class MongoUnitOfWork(
-    MongoContext context, IDomainEventDispatcher dispatcher, ILogger<MongoUnitOfWork> logger)
+    MongoContext context,
+    IDomainEventDispatcher dispatcher,
+    ICommitObserver observer,
+    ILogger<MongoUnitOfWork> logger)
     : IUnitOfWork
 {
     readonly List<(Aggregate Aggregate, IReadOnlyList<DomainEvent> Events)> _staged = [];
@@ -97,6 +100,21 @@ public sealed class MongoUnitOfWork(
                     exception,
                     "Publishing {Count} committed domain events failed for command {CommandId}; the next start replays them from the projection marker.",
                     published.Count,
+                    commandId);
+            }
+
+            try
+            {
+                await observer.CommittedAsync(
+                    userId,
+                    [.. _staged.Select(staged => new CommittedChange(staged.Aggregate, staged.Events))],
+                    CancellationToken.None);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Nudging open clients after command {CommandId} failed; they catch up on their next poll.",
                     commandId);
             }
         }

@@ -69,5 +69,5 @@ public class DomainEventPublishingTests(MongoFixture fixture)
     }
 
     MongoUnitOfWork NewUnitOfWork(IDomainEventDispatcher dispatcher) =>
-        new(TestContext.For(fixture), dispatcher, NullLogger<MongoUnitOfWork>.Instance);
+        new(TestContext.For(fixture), dispatcher, new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
 }
