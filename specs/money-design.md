@@ -319,7 +319,7 @@ Settings (`aria-pressed` on the settings route, where no view is selected).
 Four tabs never fit a phone; the gear keeps the row to three. The view lives
 in the URL.
 
-- **Month switcher** (`MonthSwitcher`, in the view row on Month and
+- **Month switcher** (`MonthSwitcher`, in the view row on Entries and
   Balance; its own line below 960px; Balance adds its "Month actions" menu): one
   pill, ‹ month ›, with the month title in the middle as a button; full width
   on a phone, 280px at the right of the view row from 960px. The title opens a
@@ -328,7 +328,7 @@ in the URL.
   (the current month in the user's time zone) and Cancel. Picking a month
   closes the sheet.
 
-- **Month**
+- **Month** (superseded by `budget-overview-design.md` — Entries / Stats)
   - Month switcher.
   - One totals card (`MoneyHero`): Net large, Income and Expenses under it,
     and the stacked bar of expenses by category with its legend.
@@ -356,7 +356,7 @@ in the URL.
   - A second save is ignored while one is sending. For an archived budget the
     panel is read-only.
 - **Balance**
-  - Month switcher, shared with the Month tab.
+  - Month switcher, shared with the Entries tab.
   - With no snapshot: a "{Month yyyy} has no balance yet" banner with a
     "Start {Month yyyy}" button (no button when archived), and no FAB.
   - A totals card: Net worth large; "vs {Month yyyy}" against the latest
@@ -398,7 +398,7 @@ in the URL.
     holding that opens.
   - Read-only for an archived budget. A second save is ignored while one is
     sending.
-- **Summary**
+- **Summary** (superseded by `budget-overview-design.md` — Entries / Stats)
   - Computed in the browser from the replica, so it works offline. No FAB,
     no writes; an archived budget shows the same Summary.
   - Range presets as single-select chips in one row that scrolls sideways

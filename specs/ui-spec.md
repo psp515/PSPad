@@ -1398,38 +1398,33 @@ show the current month's income, expenses and net in PLN, and the latest net
 worth or a "Start {month}" link to the Balance tab. The whole card is the
 link to the budget (the name's link covers the card; the Start link sits above
 it); hover outlines it in the primary and tints its chevron.
-(views redesigned in `specs/budget-overview-design.md`, which wins where this paragraph differs: Overview · Entries · Balance · Stats, settings gear, full width) `/budgets/{id}/{tab}` is at most 960px wide and centred, has a back arrow to
-`/budgets` and no subtitle, and one row of a three-view
-`MudToggleGroup` (Month, Balance, Summary; at most 420px from 960px up) plus a
-Settings gear button; on Month and Balance the `MonthSwitcher` (with Balance's
-"Month actions" menu) shares that row from 960px up and takes its own line
-below. The view lives in the URL (`month`, `balance`, `summary`, `settings`). The shared
-`MonthSwitcher` is one pill, ‹ month ›, the month title in the middle a button
-opening a bottom-sheet month grid with ‹ year ›, This month and Cancel. Month (default;
-month switcher, a `MoneyHero` totals card with Net large, Income/Expenses under
-it and the stacked category bar, entries by day, FAB menu Add expense / Add
-income) and Settings (category lists with add, rename, merge and remove — remove
-disabled while a category has entries — and Archive/Restore). `EntryPanel` opens
-from `?entry={id}`, `?expense={budgetId}` or `?income={budgetId}`; its rate
-field is hidden for PLN and its NBP button is disabled offline. Settings holds
-the default currency select. Balance (`BudgetBalanceTab`): the shared month
-switcher, a "{Month} has no balance yet" banner with a Start button (none when
-archived), a `MoneyHero` card (Net worth; vs previous, At NBP today, Currency difference; a by-type bar)
-(the NBP pair online only), holdings grouped by type as button rows that line
-up as columns from 960px, an Add holding FAB and a
-"Month actions" menu with Delete month. `HoldingPanel` opens from
+`/budgets/{id}/{tab}` (contract: `specs/budget-overview-design.md`) is full
+width with a back arrow to `/budgets`. Its view row is a `MudToggleGroup` of
+four icon tabs (Overview, Entries, Balance, Stats; `CheckMark="true"` draws the
+icons, stacked over the labels on a phone) plus a Settings gear; the view lives
+in the URL (`overview` default, `entries`, `balance`, `stats`, `settings`;
+`month` and `summary` are aliases of `entries` and `stats`). On Overview and
+Entries the Expense / Income quick actions sit in the row from 960px, a FAB
+menu below. Overview is the current month at a glance (pace hero, insights,
+where money went, recent entries, net worth); Entries is one month's entries
+with kind, category, search and sort; Stats is a ranged view with averages, a
+forecast and monthly charts. The shared `MonthSwitcher` shows on Entries and
+Balance (with Balance's "Month actions" menu) and is one pill, ‹ month ›, the
+month title in the middle a button opening a bottom-sheet month grid with
+‹ year ›, This month and Cancel. Settings holds the category lists (add,
+rename, merge, remove — disabled while a category has entries), the default
+currency, Archive/Restore and the import cards. `EntryPanel` opens from
+`?entry={id}`, `?expense={budgetId}` or `?income={budgetId}`; its rate field
+is hidden for PLN and its NBP button is disabled offline. Balance
+(`BudgetBalanceTab`): a "{Month} has no balance yet" banner with a Start
+button (none when archived), a `MoneyHero` card (Net worth; vs previous, At
+NBP today, Currency difference — the NBP pair online only; a by-type bar), a
+twelve-month net-worth-by-type history, holdings grouped by type as button
+rows that line up as columns from 960px, an Add holding FAB and a "Month
+actions" menu with Delete month. `HoldingPanel` opens from
 `?balance={snapshotId}&holding={id|new}`: name, a Cash/Savings/Investment
-`MudToggleGroup`, amount, currency, rate with NBP,
-In PLN, Remove. Summary (`BudgetSummaryTab`): This year / Last 12 months /
-Last year / Custom presets (a `MudDateRangePicker` for Custom; the range is
-not in the URL) as one sideways-scrolling row of single-select chips, a
-`MoneyHero` card (Saved large; Income / Expenses / Savings rate) and a Net worth tile,
-and `BudgetSummaryCharts`: cumulative income vs expenses (line), expenses by
-month (stacked bar, top 4 categories + Other), net worth by holding type
-(stacked bar) and a `MudProgressLinear` category ranking. Each of the three
-charts has a `mud-sr-only` table like Statistics; the ranking has none (its
-bars are `aria-hidden`, the names and amounts are visible text). No FAB;
-works offline.
+`MudToggleGroup`, amount, currency, rate with NBP, In PLN, Remove. Every
+chart has a `mud-sr-only` table; everything works offline.
 
 **Budget sharing** (`adr/0066`; full design `specs/budget-sharing-design.md` §4).
 A shared budget's view row gains a **Members** `MudIconButton` (`People`,
