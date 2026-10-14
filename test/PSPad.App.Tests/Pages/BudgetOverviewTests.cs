@@ -91,6 +91,9 @@ public class BudgetOverviewTests : Bunit.TestContext
         insights[0].Click();
 
         Assert.EndsWith($"/budgets/{budget.Id}/entries", navigation.Uri);
+        page.Render(parameters => parameters.Add(p => p.Tab, "entries"));
+
+        page.WaitForAssertion(() => Assert.Equal("Food", Text(page, ".pspad-entries-category")));
     }
 
     [Fact]
@@ -124,6 +127,9 @@ public class BudgetOverviewTests : Bunit.TestContext
         rows[1].QuerySelector(".pspad-category-open")!.Click();
 
         Assert.EndsWith($"/budgets/{budget.Id}/entries", navigation.Uri);
+        page.Render(parameters => parameters.Add(p => p.Tab, "entries"));
+
+        page.WaitForAssertion(() => Assert.Equal("Car", Text(page, ".pspad-entries-category")));
     }
 
     [Fact]

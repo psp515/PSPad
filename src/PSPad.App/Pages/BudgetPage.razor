@@ -91,8 +91,8 @@ else
                                OnStartMonth="@StartCurrentMonthAsync" />
             break;
         case EntriesTab:
-            <BudgetMonthTab Month="@_month" Totals="@MonthTotals.For(_entries, _month)"
-                            OnOpen="@OpenEntry" />
+            <BudgetEntriesTab Month="@_month" Entries="@_entries" Filters="@_filters" FiltersChanged="@(filters => _filters = filters)"
+                              Zone="@LocalToday.Zone(State.TimeZone)" Today="@State.Today" OnOpen="@OpenEntry" OnOpenCategory="@ShowCategory" />
             break;
         case BalanceTab:
             <BudgetBalanceTab Month="@_month" Totals="@Balance" ReadOnly="@_budget.IsArchived"
@@ -159,7 +159,7 @@ else
     IReadOnlyList<MoneyEntry> _entries = [];
     IReadOnlyList<BalanceSnapshot> _snapshots = [];
     YearMonth _month;
-    string? _category;
+    EntryFilters _filters = EntryFilters.None;
 
     int TabIndex
     {
@@ -197,7 +197,7 @@ else
 
         if (_renderedId != BudgetId)
         {
-            _category = null;
+            _filters = EntryFilters.None;
         }
 
         _rendered = SyncRevision;
@@ -228,7 +228,7 @@ else
 
     void ShowCategory(string category)
     {
-        _category = category;
+        _filters = _filters with { Category = category };
         SelectTab(EntriesTab);
     }
 

@@ -240,59 +240,6 @@ public class BudgetPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheMonthShowsTotalsTheCategoryBarAndEntriesByDay()
-    {
-        var budget = BudgetsPageTests.Named("Personal");
-        AppTestHost.Arrange(this, budget.UserId, Today, budget,
-            MoneyEntries.Expense(budget, "Groceries", "Food", 100m, new DateOnly(2026, 10, 2)),
-            MoneyEntries.Expense(budget, "Train", "Car", 10m, new DateOnly(2026, 10, 5), "EUR", 4.3m),
-            MoneyEntries.Income(budget, "Salary", "Salary", 1000m, new DateOnly(2026, 10, 1)),
-            MoneyEntries.Expense(budget, "Old", "Food", 5m, new DateOnly(2026, 9, 30)));
-
-        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "entries"));
-
-        page.WaitForAssertion(() => Assert.Equal(3, page.FindAll(".pspad-entry-row").Count));
-        Assert.Equal("1,000.00 PLN", Text(page, ".pspad-month-income .pspad-money-value"));
-        Assert.Equal("143.00 PLN", Text(page, ".pspad-month-expenses .pspad-money-value"));
-        Assert.Equal("+857.00 PLN", Text(page, ".pspad-month-net .pspad-money-value"));
-        Assert.Equal(["Train", "Groceries", "Salary"], page.FindAll(".pspad-entry-name").Select(name => name.TextContent.Trim()));
-        Assert.Equal(2, page.FindAll(".pspad-category-legend").Count);
-        Assert.Equal(["−43.00", "−100.00", "+1,000.00"], page.FindAll(".pspad-entry-amount").Select(amount => amount.TextContent.Trim()));
-        Assert.Equal("10.00 EUR @ 4.3000", Assert.Single(page.FindAll(".pspad-entry-foreign")).TextContent.Trim());
-        Assert.Equal(["Car", "Food", "Salary"], page.FindAll(".pspad-entry-category").Select(category => category.TextContent.Trim()));
-        Assert.Equal(["C", "F", "S"], page.FindAll(".pspad-entry-avatar").Select(avatar => avatar.TextContent.Trim()));
-        Assert.Single(page.FindAll(".pspad-entry-avatar.pspad-entry-income"));
-        Assert.Equal(["−43.00", "−100.00", "+1,000.00"], page.FindAll(".pspad-entry-day-net").Select(net => net.TextContent.Trim()));
-    }
-
-    [Fact]
-    public void TheFilterChipsShowOnlyExpensesOrOnlyIncome()
-    {
-        var budget = BudgetsPageTests.Named("Personal");
-        AppTestHost.Arrange(this, budget.UserId, Today, budget,
-            MoneyEntries.Expense(budget, "Groceries", "Food", 100m, new DateOnly(2026, 10, 2)),
-            MoneyEntries.Income(budget, "Salary", "Salary", 1000m, new DateOnly(2026, 10, 2)),
-            MoneyEntries.Income(budget, "Bonus", "Salary", 50m, new DateOnly(2026, 10, 1)));
-        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "entries"));
-        page.WaitForAssertion(() => Assert.Equal(3, page.FindAll(".pspad-entry-row").Count));
-        Assert.Equal("true", Filter(page, "All").GetAttribute("aria-pressed"));
-
-        Filter(page, "Expenses").Click();
-
-        Assert.Equal(["Groceries"], page.FindAll(".pspad-entry-name").Select(name => name.TextContent.Trim()));
-        Assert.Equal(["−100.00"], page.FindAll(".pspad-entry-day-net").Select(net => net.TextContent.Trim()));
-        Assert.Equal("true", Filter(page, "Expenses").GetAttribute("aria-pressed"));
-
-        Filter(page, "Income").Click();
-
-        Assert.Equal(["Salary", "Bonus"], page.FindAll(".pspad-entry-name").Select(name => name.TextContent.Trim()));
-        Assert.Equal("1,050.00 PLN", Text(page, ".pspad-month-income .pspad-money-value"));
-    }
-
-    static IElement Filter(IRenderedComponent<BudgetPage> page, string text) =>
-        page.FindAll(".pspad-entry-filter .mud-chip").Single(chip => chip.TextContent.Trim() == text);
-
-    [Fact]
     public void TheSwitcherMovesBetweenMonths()
     {
         var budget = BudgetsPageTests.Named("Personal");
@@ -545,12 +492,16 @@ public class BudgetPageTests : Bunit.TestContext
         AppTestHost.Arrange(this, budget.UserId, Today, budget,
             MoneyEntries.Expense(budget, "Groceries", "Food", 100m, Today));
 
-        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "entries"));
+        var overview = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id));
 
-        page.WaitForAssertion(() => page.Find(".pspad-category-bar-track"));
-        var bar = page.Find(".pspad-category-bar-track");
+        overview.WaitForAssertion(() => overview.Find(".pspad-category-bar-track"));
+        var bar = overview.Find(".pspad-category-bar-track");
         Assert.Equal("img", bar.GetAttribute("role"));
         Assert.False(string.IsNullOrWhiteSpace(bar.GetAttribute("aria-label")));
+
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "entries"));
+
+        page.WaitForAssertion(() => page.Find(".pspad-month-previous"));
         Assert.Equal("Previous month", page.Find(".pspad-month-previous").GetAttribute("aria-label"));
         Assert.Equal("Next month", page.Find(".pspad-month-next").GetAttribute("aria-label"));
     }

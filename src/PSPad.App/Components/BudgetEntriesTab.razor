@@ -1,0 +1,112 @@
+@using PSPad.App.State
+@using PSPad.Module.Money.Budgets
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Reading
+@using PSPad.Module.Money.Values
+
+<div class="@($"pspad-entries {Class}")">
+    @if (InMonth.Count > 0)
+    {
+        <div class="d-flex align-center flex-wrap gap-2 mb-2 pspad-entries-toolbar">
+            <MudChipSet T="EntryFilter" SelectedValue="@Filters.Kind" SelectedValueChanged="@(kind => Change(Filters with { Kind = kind }))"
+                        Class="pspad-entry-filter" SelectionMode="SelectionMode.SingleSelection" CheckMark="false" Color="Color.Primary"
+                        Variant="Variant.Outlined" SelectedColor="Color.Primary" Size="Size.Small">
+                <MudChip Value="EntryFilter.All" aria-pressed="@Pressed(EntryFilter.All)" Text="All" />
+                <MudChip Value="EntryFilter.Expenses" aria-pressed="@Pressed(EntryFilter.Expenses)" Text="Expenses" />
+                <MudChip Value="EntryFilter.Income" aria-pressed="@Pressed(EntryFilter.Income)" Text="Income" />
+            </MudChipSet>
+            @if (Filters.Category is { } category)
+            {
+                <MudChip T="string" Class="pspad-entries-category" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled"
+                         OnClose="@(() => Change(Filters with { Category = null }))">@category</MudChip>
+            }
+            <MudTextField T="string" Class="pspad-entries-search flex-grow-1" Value="@Filters.Search" ValueChanged="@(text => Change(Filters with { Search = text ?? "" }))"
+                          Immediate="true" Clearable="true" Placeholder="Search name or note" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+            <MudSelect T="EntrySort" Class="pspad-entries-sort" Value="@Filters.Sort" ValueChanged="@(sort => Change(Filters with { Sort = sort }))"
+                       Label="Sort" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                <MudSelectItem T="EntrySort" Value="EntrySort.EntryDate">Entry date</MudSelectItem>
+                <MudSelectItem T="EntrySort" Value="EntrySort.Recorded">Recorded</MudSelectItem>
+            </MudSelect>
+        </div>
+    }
+
+    <MudText Typo="Typo.caption" Class="d-block mb-1 pspad-muted pspad-entries-caption">@Caption</MudText>
+
+    @foreach (var day in Days)
+    {
+        <section @key="@((day.Date, Filters.Sort))" class="pspad-entry-day">
+            <div class="d-flex align-baseline px-1 pt-3 pb-1">
+                <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-entry-day-title">@(Filters.Sort == EntrySort.Recorded ? "Recorded " : "")@MoneyText.Day(day.Date)</MudText>
+                <MudText Typo="Typo.caption" Class="pspad-muted pspad-entry-day-net">@MoneyText.SignedAmount(day.Net)</MudText>
+            </div>
+            <MudPaper Outlined="true" Class="pspad-entry-day-list">
+                <MudList T="MoneyEntry" Dense="true" Class="py-0">
+                    @foreach (var entry in day.Entries)
+                    {
+                        <EntryRow @key="entry.Id" Entry="@entry" Recorded="@MoneyText.Recorded(entry.RecordedAt, Zone, Today)"
+                                  OnOpen="@OnOpen" OnOpenCategory="@OnOpenCategory" />
+                    }
+                </MudList>
+            </MudPaper>
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public YearMonth Month { get; set; }
+
+    [Parameter, EditorRequired] public IReadOnlyList<MoneyEntry> Entries { get; set; } = [];
+
+    [Parameter, EditorRequired] public EntryFilters Filters { get; set; } = EntryFilters.None;
+
+    [Parameter] public EventCallback<EntryFilters> FiltersChanged { get; set; }
+
+    [Parameter, EditorRequired] public TimeZoneInfo Zone { get; set; } = TimeZoneInfo.Utc;
+
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback<MoneyEntry> OnOpen { get; set; }
+
+    [Parameter] public EventCallback<string> OnOpenCategory { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+
+    IReadOnlyList<MoneyEntry> InMonth => [.. Entries.Where(entry => !entry.Deleted && Month.Contains(entry.Date))];
+
+    IReadOnlyList<MoneyEntry> Shown => [.. InMonth.Where(Filters.Shows)];
+
+    IReadOnlyList<EntryDay> Days => Filters.Sort == EntrySort.Recorded
+        ?
+        [
+            .. Shown.GroupBy(entry => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(entry.RecordedAt, Zone).DateTime))
+                .OrderByDescending(group => group.Key)
+                .Select(group => new EntryDay(group.Key, [.. group.OrderByDescending(entry => entry.RecordedAt)]))
+        ]
+        : [.. MonthTotals.For(Shown, Month).Days];
+
+    string Caption
+    {
+        get
+        {
+            if (InMonth.Count == 0)
+            {
+                return $"No entries in {MoneyText.MonthTitle(Month)}.";
+            }
+
+            if (Shown.Count == 0)
+            {
+                return "No entries match.";
+            }
+
+            var income = Shown.Where(entry => entry.Kind == CategoryKind.Income).Sum(entry => entry.Money.InPln);
+            var expenses = Shown.Where(entry => entry.Kind == CategoryKind.Expense).Sum(entry => entry.Money.InPln);
+            var count = Shown.Count == 1 ? "1 entry" : $"{Shown.Count} entries";
+            return $"{count} · income {MoneyText.Amount(income)} · expenses {MoneyText.Amount(expenses)} · net {MoneyText.SignedPln(income - expenses)}";
+        }
+    }
+
+    string Pressed(EntryFilter filter) => filter == Filters.Kind ? "true" : "false";
+
+    Task Change(EntryFilters filters) => FiltersChanged.InvokeAsync(filters);
+}
