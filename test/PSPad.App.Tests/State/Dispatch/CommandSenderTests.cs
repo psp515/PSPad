@@ -102,6 +102,120 @@ public class CommandSenderTests
         Assert.Equal(nameof(StagingCommand), entry.Envelope.Type);
     }
 
+    [Fact]
+    public async Task SendingManyFiresSentAndSyncOnceAndReportsProgress()
+    {
+        var sync = new FakeSyncTrigger();
+        var sender = new CommandSender(new FakeServiceProvider(new FakeCommandHandler(CommandResult.Ok())), Work(), sync);
+        var fires = 0;
+        sender.Sent += () => fires++;
+        var reported = new List<int>();
+
+        var results = await sender.SendManyAsync(
+            [new FakeCommand(Guid.NewGuid(), Guid.NewGuid()), new FakeCommand(Guid.NewGuid(), Guid.NewGuid())],
+            new SyncProgress(reported), TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal([1, 2], reported);
+        Assert.Equal(1, fires);
+        Assert.Equal(1, sync.Calls);
+    }
+
+    [Fact]
+    public async Task SendingManyCollectsRejectionsAndGoesOn()
+    {
+        var sync = new FakeSyncTrigger();
+        var sender = new CommandSender(new FakeServiceProvider(new FakeCommandHandler(CommandResult.Rejected("nope"))), Work(), sync);
+
+        var results = await sender.SendManyAsync(
+            [new FakeCommand(Guid.NewGuid(), Guid.NewGuid()), new FakeCommand(Guid.NewGuid(), Guid.NewGuid())],
+            null, TestContext.Current.CancellationToken);
+
+        Assert.All(results, result => Assert.Equal("nope", result.Rejection));
+        Assert.Equal(0, sync.Calls);
+    }
+
+    [Fact]
+    public async Task SendingManyTurnsAThrowingHandlerIntoARejectionAndGoesOn()
+    {
+        var sync = new FakeSyncTrigger();
+        var handler = new ScriptedHandler(CommandResult.Ok(), null, CommandResult.Ok());
+        var sender = new CommandSender(new ScriptedProvider(handler), Work(), sync);
+        var fires = 0;
+        sender.Sent += () => fires++;
+
+        var results = await sender.SendManyAsync(
+            [new FakeCommand(Guid.NewGuid(), Guid.NewGuid()), new FakeCommand(Guid.NewGuid(), Guid.NewGuid()),
+             new FakeCommand(Guid.NewGuid(), Guid.NewGuid())],
+            null, TestContext.Current.CancellationToken);
+
+        Assert.Equal([true, false, true], results.Select(result => result.Accepted));
+        Assert.Equal("boom", results[1].Rejection);
+        Assert.Equal(3, handler.Calls);
+        Assert.Equal(1, fires);
+        Assert.Equal(1, sync.Calls);
+    }
+
+    [Fact]
+    public async Task SendingManyWithMixedResultsFiresSentOnce()
+    {
+        var sync = new FakeSyncTrigger();
+        var sender = new CommandSender(
+            new ScriptedProvider(new ScriptedHandler(CommandResult.Ok(), CommandResult.Rejected("nope"), CommandResult.Ok())),
+            Work(), sync);
+        var fires = 0;
+        sender.Sent += () => fires++;
+
+        await sender.SendManyAsync(
+            [new FakeCommand(Guid.NewGuid(), Guid.NewGuid()), new FakeCommand(Guid.NewGuid(), Guid.NewGuid()),
+             new FakeCommand(Guid.NewGuid(), Guid.NewGuid())],
+            null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, fires);
+        Assert.Equal(1, sync.Calls);
+    }
+
+    [Fact]
+    public async Task CancellingASendingManyThrowsButStillAnnouncesWhatWasAccepted()
+    {
+        using var cts = new CancellationTokenSource();
+        var sync = new FakeSyncTrigger();
+        var sender = new CommandSender(new FakeServiceProvider(new FakeCommandHandler(CommandResult.Ok())), Work(), sync);
+        var fires = 0;
+        sender.Sent += () => fires++;
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => sender.SendManyAsync(
+            [new FakeCommand(Guid.NewGuid(), Guid.NewGuid()), new FakeCommand(Guid.NewGuid(), Guid.NewGuid())],
+            new CancelAfterFirst(cts), cts.Token));
+
+        Assert.Equal(1, fires);
+        Assert.Equal(1, sync.Calls);
+    }
+
+    sealed class CancelAfterFirst(CancellationTokenSource cts) : IProgress<int>
+    {
+        public void Report(int value) => cts.Cancel();
+    }
+
+    sealed class ScriptedHandler(params CommandResult?[] script) : ICommandHandler<FakeCommand>
+    {
+        public int Calls { get; private set; }
+
+        public Task<CommandResult> HandleAsync(FakeCommand command, CancellationToken ct) =>
+            script[Calls++] is { } result ? Task.FromResult(result) : throw new InvalidOperationException("boom");
+    }
+
+    sealed class ScriptedProvider(object handler) : IServiceProvider
+    {
+        public object? GetService(Type serviceType) =>
+            serviceType == typeof(ICommandHandler<FakeCommand>) ? handler : null;
+    }
+
+    sealed class SyncProgress(List<int> reported) : IProgress<int>
+    {
+        public void Report(int value) => reported.Add(value);
+    }
+
     static ReplicaUnitOfWork Work() => new(new InMemoryReplica(), new InMemoryOutbox());
 
     sealed record FakeCommand(Guid CommandId, Guid UserId) : ICommand;

@@ -20,6 +20,7 @@ In:
 - Month, Balance, Summary and Settings tabs; charts on Summary.
 - Default currency per user, set in Settings.
 - Budgets in the sidebar and in the phone bottom bar.
+- CSV import of entries and balances (`specs/budget-import-design.md`).
 
 Out (each its own issue):
 

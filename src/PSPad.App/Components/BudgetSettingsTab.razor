@@ -1,3 +1,4 @@
+@using PSPad.App.State
 @using PSPad.Abstractions
 @using PSPad.Module.Money.Budgets
 @using PSPad.Module.Money.Entries
@@ -36,6 +37,29 @@
                         : $"Only {Budget.OwnerName} can rename, archive or invite.")
                 </MudText>
             </MudPaper>
+            @if (!Budget.IsArchived)
+            {
+                <MudPaper Outlined="true" Class="pa-4 pspad-budget-import-card pspad-budget-import-entries">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Import expenses and incomes</MudText>
+                    <MudText Typo="Typo.body2" Class="pspad-muted mb-2">
+                        Fills the Month tab. Bring expenses and incomes from a CSV file, for example saved from Excel.
+                    </MudText>
+                    <MudLink Href="templates/pspad-entries.csv" download="pspad-entries.csv" Typo="Typo.body2" Class="d-block mb-2">Expenses and incomes template</MudLink>
+                    <MudButton Class="pspad-budget-import-open" Variant="Variant.Outlined" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Outlined.UploadFile"
+                               OnClick="@(() => OnImport.InvokeAsync(BudgetLinks.EntriesImport))">Upload expenses and incomes</MudButton>
+                </MudPaper>
+                <MudPaper Outlined="true" Class="pa-4 pspad-budget-import-card pspad-budget-import-balances">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Import balances</MudText>
+                    <MudText Typo="Typo.body2" Class="pspad-muted mb-2">
+                        Fills the Balance tab. Bring monthly holding balances from a CSV file, for example saved from Excel.
+                    </MudText>
+                    <MudLink Href="templates/pspad-balances.csv" download="pspad-balances.csv" Typo="Typo.body2" Class="d-block mb-2">Balances template</MudLink>
+                    <MudButton Class="pspad-budget-import-open" Variant="Variant.Outlined" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Outlined.UploadFile"
+                               OnClick="@(() => OnImport.InvokeAsync(BudgetLinks.BalancesImport))">Upload balances</MudButton>
+                </MudPaper>
+            }
             <MudPaper Outlined="true" Class="pa-4 pspad-budget-card-settings">
                 <MudText Typo="Typo.subtitle2" Class="mb-3">Budget</MudText>
                 @if (!IsMine)
@@ -83,6 +107,8 @@
 
     [Parameter] public Func<(CategoryKind Kind, string Name), Task<bool>> OnRemoveCategory { get; set; } =
         _ => Task.FromResult(true);
+
+    [Parameter] public EventCallback<string> OnImport { get; set; }
 
     [Parameter] public EventCallback OnRename { get; set; }
 

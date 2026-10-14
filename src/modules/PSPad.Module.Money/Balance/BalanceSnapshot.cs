@@ -168,7 +168,7 @@ public sealed class BalanceSnapshot : Aggregate
     static HoldingType RequireType(HoldingType type) =>
         Enum.IsDefined(type) ? type : throw new DomainRejectedException("That holding type does not exist.");
 
-    static string RequireName(string name)
+    internal static string RequireName(string name)
     {
         var trimmed = name.Trim();
 

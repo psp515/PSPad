@@ -1,0 +1,333 @@
+@page "/budgets/{BudgetId:guid}/import/{Kind}"
+@attribute [Authorize]
+@using PSPad.Abstractions
+@using PSPad.App.Api
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.App.Sync
+@using PSPad.Module.Money.Balance
+@using PSPad.Module.Money.Budgets
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Import
+@using PSPad.Module.Money.Preferences
+@using PSPad.Module.Money.Values
+@inject IDocumentStore<Budget> BudgetStore
+@inject IDocumentStore<MoneyEntry> EntryStore
+@inject IDocumentStore<BalanceSnapshot> SnapshotStore
+@inject IDocumentStore<MoneyPreferences> PreferencesStore
+@inject AppState State
+@inject CommandSender Sender
+@inject INbpRates Nbp
+@inject IConnectivity Connectivity
+@inject IDialogService Dialogs
+
+@if (!_loaded)
+{
+    <CardSkeleton Count="2" />
+}
+else if (_context is null)
+{
+    <PageHeading Title="Import" Icon="@Icons.Material.Outlined.UploadFile" BackHref="@BudgetLinks.Index" />
+    <MudAlert Severity="Severity.Warning">That budget does not exist.</MudAlert>
+}
+else if (!IsEntries && !IsBalances)
+{
+    <PageHeading Title="Import" Icon="@Icons.Material.Outlined.UploadFile" BackHref="@BudgetLinks.ForTab(BudgetId, "settings")" BackLabel="Back to settings" />
+    <MudAlert Severity="Severity.Warning">That import does not exist.</MudAlert>
+}
+else
+{
+    <div class="pspad-budget-page pspad-budget-import">
+        <PageHeading Title="@($"Import {KindLabel} into {_context.Budget.Name}")" Icon="@Icons.Material.Outlined.UploadFile"
+                     BackHref="@BudgetLinks.ForTab(BudgetId, "settings")" BackLabel="Back to settings" />
+
+        @if (_context.Budget.IsArchived)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4 pspad-archived-banner">This budget is archived. It is read-only.</MudAlert>
+        }
+        else if (_outcome is not null)
+        {
+            <ImportSummary Outcome="@_outcome" BudgetId="@BudgetId" />
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Class="pspad-muted mb-2">
+                Drop a CSV file below or click to choose one. Need the columns?
+                <MudLink Class="pspad-import-template" Href="@($"templates/pspad-{Kind}.csv")" download="@($"pspad-{Kind}.csv")"
+                         Typo="Typo.body2">Download the template</MudLink>.
+            </MudText>
+            <ImportFilePicker Class="mb-4" FileName="@_fileName" Error="@(IsEntries ? _entries?.FileError : _balances?.FileError)"
+                              Disabled="@_running" OnPicked="@PickAsync" />
+
+            @if (_preview is not null)
+            {
+                @if (!_running)
+                {
+                    <div class="d-flex flex-wrap gap-2 mb-3 pspad-import-chips">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">To import @Ready</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error">Errors @Errors</MudChip>
+                        @if (IsEntries)
+                        {
+                            <MudChip T="string" Size="Size.Small">Already in budget @_preview.Entries.Count(row => row.Status == ImportStatus.AlreadyInBudget)</MudChip>
+                            <MudChip T="string" Size="Size.Small">New categories @(_preview.NewExpenseCategories.Count + _preview.NewIncomeCategories.Count)</MudChip>
+                        }
+                        <MudChip T="string" Size="Size.Small">Rates from NBP @FromNbp</MudChip>
+                    </div>
+
+                    @if (_preview.NewExpenseCategories.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="pspad-muted d-block">New expense categories</MudText>
+                        <div class="d-flex flex-wrap gap-1 mb-2 pspad-import-new-expense">
+                            @foreach (var category in _preview.NewExpenseCategories)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0" Text="@category" />
+                            }
+                        </div>
+                    }
+                    @if (_preview.NewIncomeCategories.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="pspad-muted d-block">New income categories</MudText>
+                        <div class="d-flex flex-wrap gap-1 mb-2 pspad-import-new-income">
+                            @foreach (var category in _preview.NewIncomeCategories)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0" Text="@category" />
+                            }
+                        </div>
+                    }
+
+                    @if (_entries is { FileError: null })
+                    {
+                        <ImportEntriesTable Rows="@_preview.Entries" Toggled="@_toggled" OnToggle="@Toggle" />
+                    }
+                    @if (_balances is { FileError: null })
+                    {
+                        <ImportBalancesTable Rows="@_preview.Holdings" Months="@_preview.Months" />
+                    }
+                }
+
+                @if (_rates.Failed.Count > 0)
+                {
+                    <MudButton Class="pspad-import-retry mt-2" Variant="Variant.Text" Color="Color.Primary"
+                               Disabled="@(Fetching || _running)" OnClick="@RetryRatesAsync">Retry rates</MudButton>
+                }
+
+                @if (_running)
+                {
+                    <MudProgressLinear Class="mt-3" Color="Color.Primary" Value="@_done" Max="@_total" />
+                }
+
+                <MudButton Class="pspad-import-run mt-3" Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="@(!CanImport)" OnClick="@ImportAsync">@($"Import {Ready} rows")</MudButton>
+            }
+        }
+    </div>
+    <NavigationLock ConfirmExternalNavigation="@HasUnimportedData" OnBeforeInternalNavigation="@ConfirmLeaveAsync" />
+}
+
+@code {
+    [Parameter] public Guid BudgetId { get; set; }
+
+    [Parameter] public string Kind { get; set; } = "";
+
+    bool _loaded;
+    ImportContext? _context;
+    CsvParse<ParsedEntryRow>? _entries;
+    CsvParse<ParsedHoldingRow>? _balances;
+    string? _fileName;
+    RateBook _rates = RateBook.Empty;
+    MoneyImportPreview? _preview;
+    readonly HashSet<int> _toggled = [];
+    int _fetching;
+    readonly HashSet<RateRequest> _inFlight = [];
+    bool _running;
+    int _done;
+    int _total;
+    MoneyImportOutcome? _outcome;
+
+    int Ready => _preview is null
+        ? 0
+        : _preview.Entries.Count(row => MoneyImportPlan.Includes(row, _toggled)) +
+          _preview.Holdings.Count(row => row.Status == ImportStatus.ToImport);
+
+    int Errors => _preview is null
+        ? 0
+        : _preview.Entries.Count(row => row.Status == ImportStatus.Error) +
+          _preview.Holdings.Count(row => row.Status == ImportStatus.Error);
+
+    bool Fetching => _fetching > 0;
+
+    int FromNbp => _preview is null
+        ? 0
+        : _preview.Entries.Count(row => row.Row is { Rate: null } parsed && IsForeign(row.Money?.Currency ?? parsed.Currency)) +
+          _preview.Holdings.Count(row => row.Row is { Rate: null } parsed && IsForeign(row.Money?.Currency ?? parsed.Currency));
+
+    bool IsForeign(string? currency) => (currency ?? _context!.DefaultCurrency) != Currencies.Pln;
+
+    bool IsEntries => Kind == BudgetLinks.EntriesImport;
+
+    bool IsBalances => Kind == BudgetLinks.BalancesImport;
+
+    string KindLabel => IsEntries ? "expenses and incomes" : "balances";
+
+    bool CanImport => _preview is { IsWaitingForRates: false } && !Fetching && !_running && Ready > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _context = await LoadContextAsync();
+        _loaded = true;
+    }
+
+    async Task<ImportContext?> LoadContextAsync()
+    {
+        var budget = await BudgetStore.LoadAsync(BudgetId, CancellationToken.None);
+
+        if (budget is null || !budget.Admits(State.UserId))
+        {
+            return null;
+        }
+
+        var entries = await EntryStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var snapshots = await SnapshotStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var preferences = await PreferencesStore.LoadAsync(MoneyPreferences.IdFor(State.UserId), CancellationToken.None);
+        return new ImportContext(budget,
+            [.. entries.Where(entry => entry.BudgetId == BudgetId)],
+            [.. snapshots.Where(snapshot => snapshot.BudgetId == BudgetId)],
+            preferences?.DefaultCurrency ?? Currencies.Pln);
+    }
+
+    async Task PickAsync((string Name, byte[]? Bytes) file)
+    {
+        _context = await LoadContextAsync() ?? _context;
+        _fileName = file.Name;
+
+        if (IsEntries)
+        {
+            _entries = file.Bytes is null
+                ? CsvParse<ParsedEntryRow>.Failed("The file is larger than 2 MB.")
+                : MoneyCsv.ParseEntries(CsvText.Decode(file.Bytes));
+            _toggled.Clear();
+        }
+        else
+        {
+            _balances = file.Bytes is null
+                ? CsvParse<ParsedHoldingRow>.Failed("The file is larger than 2 MB.")
+                : MoneyCsv.ParseBalances(CsvText.Decode(file.Bytes));
+        }
+
+        Rebuild();
+        _ = FetchRatesAsync(_preview!.MissingRates.Where(request => !_rates.Failed.ContainsKey(request) && !_inFlight.Contains(request)).ToArray());
+    }
+
+    async Task RetryRatesAsync() => await FetchRatesAsync([.. _rates.Failed.Keys]);
+
+    async Task FetchRatesAsync(IReadOnlyCollection<RateRequest> requests)
+    {
+        if (requests.Count == 0)
+        {
+            return;
+        }
+
+        _fetching++;
+        _inFlight.UnionWith(requests);
+        StateHasChanged();
+        RateBook fetched;
+
+        try
+        {
+            fetched = await ImportRates.FetchAsync(Nbp, Connectivity.IsOnline, State.Today, requests, RateBook.Empty);
+        }
+        catch (Exception)
+        {
+            fetched = new RateBook(new Dictionary<RateRequest, ImportRate>(),
+                requests.ToDictionary(request => request, _ => "Couldn't fetch the NBP rate."));
+        }
+
+        var known = new Dictionary<RateRequest, ImportRate>(_rates.Known);
+        var failed = new Dictionary<RateRequest, string>(_rates.Failed);
+
+        foreach (var request in requests)
+        {
+            failed.Remove(request);
+            _inFlight.Remove(request);
+        }
+
+        foreach (var (request, rate) in fetched.Known)
+        {
+            known[request] = rate;
+        }
+
+        foreach (var (request, message) in fetched.Failed)
+        {
+            failed[request] = message;
+        }
+
+        _rates = new RateBook(known, failed);
+        _fetching--;
+        Rebuild();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    void Rebuild() =>
+        _preview = MoneyImportPreview.Build(Usable(_entries), Usable(_balances), _context!, _rates, Guid.NewGuid);
+
+    static CsvParse<TRow>? Usable<TRow>(CsvParse<TRow>? parse) => parse is { FileError: null } ? parse : null;
+
+    void Toggle(int line)
+    {
+        if (!_toggled.Remove(line))
+        {
+            _toggled.Add(line);
+        }
+    }
+
+    async Task ImportAsync()
+    {
+        var plan = MoneyImportPlan.Build(_preview!, _toggled, State.UserId, Guid.NewGuid);
+        (_running, _done, _total) = (true, 0, plan.Count);
+        var progress = new Progress<int>(done =>
+        {
+            _done = done;
+
+            if (ImportProgress.IsDue(done, _total))
+            {
+                StateHasChanged();
+            }
+        });
+
+        try
+        {
+            var results = await Sender.SendManyAsync([.. plan.Select(planned => planned.Command)], progress, CancellationToken.None);
+            _outcome = MoneyImportOutcome.From(plan, results);
+        }
+        finally
+        {
+            _running = false;
+        }
+    }
+
+    bool HasUnimportedData => (_entries is not null || _balances is not null) && _outcome is null;
+
+    async Task ConfirmLeaveAsync(LocationChangingContext context)
+    {
+        if (!HasUnimportedData)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, _running
+                ? "The import is still running. Leave anyway? Rows already imported stay."
+                : "Leave the import? The file you picked won’t be imported." },
+            { dialog => dialog.ConfirmText, "Leave" }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Leave import", parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            context.PreventNavigation();
+        }
+    }
+}

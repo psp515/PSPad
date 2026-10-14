@@ -548,4 +548,38 @@ public class BudgetPageTests : Bunit.TestContext
         Assert.Equal("Previous month", page.Find(".pspad-month-previous").GetAttribute("aria-label"));
         Assert.Equal("Next month", page.Find(".pspad-month-next").GetAttribute("aria-label"));
     }
+
+    [Fact]
+    public void SettingsOfferImportAndLinkTheTemplates()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "settings"));
+        page.WaitForAssertion(() => Assert.Contains("Eating Out", page.Markup));
+
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        Assert.Contains("templates/pspad-entries.csv", page.Find(".pspad-budget-import-entries").InnerHtml);
+        Assert.Contains("Import expenses and incomes", page.Find(".pspad-budget-import-entries").TextContent);
+        Assert.Contains("Fills the Month tab", page.Find(".pspad-budget-import-entries").TextContent);
+        Assert.Contains("Fills the Balance tab", page.Find(".pspad-budget-import-balances").TextContent);
+        Assert.Contains("templates/pspad-balances.csv", page.Find(".pspad-budget-import-balances").InnerHtml);
+
+        page.Find(".pspad-budget-import-entries .pspad-budget-import-open").Click();
+        Assert.EndsWith($"/budgets/{budget.Id}/import/entries", navigation.Uri);
+
+        page.Find(".pspad-budget-import-balances .pspad-budget-import-open").Click();
+        Assert.EndsWith($"/budgets/{budget.Id}/import/balances", navigation.Uri);
+    }
+
+    [Fact]
+    public void AnArchivedBudgetHidesTheImportCard()
+    {
+        var budget = BudgetsPageTests.Named("Old", archived: true);
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "settings"));
+        page.WaitForAssertion(() => Assert.Contains("Eating Out", page.Markup));
+
+        Assert.Empty(page.FindAll(".pspad-budget-import-card"));
+        Assert.Empty(page.FindAll(".pspad-budget-import-open"));
+    }
 }
