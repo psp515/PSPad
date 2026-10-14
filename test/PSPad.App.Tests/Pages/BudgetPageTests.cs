@@ -597,4 +597,21 @@ public class BudgetPageTests : Bunit.TestContext
         page.WaitForAssertion(() => page.Find(".pspad-overview-day"));
         Assert.Empty(page.FindAll(".pspad-budget-quick"));
     }
+
+    [Fact]
+    public void TappingACategoryNameInSettingsOpensItsEntries()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, MoneyEntries.Expense(budget, "Rolls", "Food", 3m, Today));
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/budgets/{budget.Id}/settings");
+        var page = Settings(budget);
+
+        Row(page, "expense", "Food").QuerySelector(".pspad-category-open")!.Click();
+
+        Assert.EndsWith($"/budgets/{budget.Id}/entries", navigation.Uri);
+        page.Render(parameters => parameters.Add(p => p.Tab, "entries"));
+        page.WaitForAssertion(() => Assert.Equal("Food", Text(page, ".pspad-entries-category")));
+        Assert.Equal(["Rolls"], page.FindAll(".pspad-entry-name").Select(name => name.TextContent.Trim()));
+    }
 }

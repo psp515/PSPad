@@ -36,7 +36,8 @@
                 else
                 {
                     <div class="d-flex align-center gap-1">
-                        <MudText Typo="Typo.body2" Class="flex-grow-1 pspad-category-name">@name</MudText>
+                        <MudButton Class="flex-grow-1 justify-start pspad-category-name pspad-category-open" Variant="Variant.Text" Color="Color.Default"
+                                   Size="Size.Small" OnClick="@(() => OnOpen.InvokeAsync(name))" style="text-transform:none">@name</MudButton>
                         @if (used > 0)
                         {
                             <MudText Typo="Typo.caption" Class="pspad-muted pspad-category-usage">@(used == 1 ? "1 entry" : $"{used} entries")</MudText>
@@ -75,6 +76,8 @@
     [Parameter] public string Class { get; set; } = "";
 
     [Parameter] public IReadOnlyDictionary<string, int> Usage { get; set; } = new Dictionary<string, int>();
+
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
 
     [Parameter] public Func<string, Task<bool>> OnAdd { get; set; } = _ => Task.FromResult(true);
 

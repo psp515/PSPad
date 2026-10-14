@@ -102,7 +102,7 @@ else
             <BudgetStatsTab Entries="@_entries" Snapshots="@_snapshots" Current="@Current" OnOpenCategory="@ShowCategory" />
             break;
         default:
-            <BudgetSettingsTab Budget="@_budget" Entries="@_entries" Viewer="@State.UserId" OnOpenMembers="@OpenMembers"
+            <BudgetSettingsTab Budget="@_budget" Entries="@_entries" Viewer="@State.UserId" OnOpenMembers="@OpenMembers" OnOpenCategory="@ShowCategory"
                                OnAddCategory="@AddCategoryAsync"
                                OnRenameCategory="@RenameCategoryAsync" OnMergeCategory="@MergeCategoryAsync"
                                OnRemoveCategory="@RemoveCategoryAsync"
