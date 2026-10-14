@@ -206,7 +206,8 @@ One page imports one file kind, so a year's entries and balances are two runs.
 2. **Preview.**
    - A row of `MudChip`s: To import, Errors, Rates from NBP, and on the
      entries page also Already in budget and New categories.
-   - New categories are listed per kind above the table.
+   - New categories show above the table as outlined chips, under a caption
+     per kind (New expense categories, New income categories).
    - Under them, the file's virtualized `MudTable` filtered by status (All,
      To import, Errors, Already in budget). A row shows its line number, its parsed values, the
      rate with its source (file, NBP with its effective date), and its status

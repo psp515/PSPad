@@ -250,6 +250,25 @@ public class BudgetImportPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void NewCategoriesShowAsChipsPerKind()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Open(budget);
+
+        Upload(page, "kind,date,name,category,amount\n" +
+                     "expense,2026-09-03,Lego,Hobby,10\n" +
+                     "expense,2026-09-04,Steam,Gry,20\n" +
+                     "income,2026-09-05,Dividend,Przychody,5\n");
+
+        page.WaitForAssertion(() => Assert.Equal(3, page.FindAll(".pspad-import-row").Count));
+        Assert.Equal(["Hobby", "Gry"],
+            page.FindAll(".pspad-import-new-expense .mud-chip").Select(chip => chip.TextContent.Trim()));
+        Assert.Equal(["Przychody"],
+            page.FindAll(".pspad-import-new-income .mud-chip").Select(chip => chip.TextContent.Trim()));
+    }
+
+    [Fact]
     public void AnUnknownKindIsNotFound()
     {
         var budget = BudgetsPageTests.Named("Personal");

@@ -77,11 +77,23 @@ else
 
                     @if (_preview.NewExpenseCategories.Count > 0)
                     {
-                        <MudText Typo="Typo.body2">New expense categories: @string.Join(", ", _preview.NewExpenseCategories)</MudText>
+                        <MudText Typo="Typo.caption" Class="pspad-muted d-block">New expense categories</MudText>
+                        <div class="d-flex flex-wrap gap-1 mb-2 pspad-import-new-expense">
+                            @foreach (var category in _preview.NewExpenseCategories)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0" Text="@category" />
+                            }
+                        </div>
                     }
                     @if (_preview.NewIncomeCategories.Count > 0)
                     {
-                        <MudText Typo="Typo.body2">New income categories: @string.Join(", ", _preview.NewIncomeCategories)</MudText>
+                        <MudText Typo="Typo.caption" Class="pspad-muted d-block">New income categories</MudText>
+                        <div class="d-flex flex-wrap gap-1 mb-2 pspad-import-new-income">
+                            @foreach (var category in _preview.NewIncomeCategories)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0" Text="@category" />
+                            }
+                        </div>
                     }
 
                     @if (_entries is { FileError: null })
