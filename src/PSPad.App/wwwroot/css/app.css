@@ -1421,6 +1421,10 @@ button.pspad-heatmap-cell:focus-visible {
     background: var(--mud-palette-lines-default);
 }
 
+.pspad-category-open {
+    text-transform: none;
+}
+
 .pspad-category-swatch {
     display: inline-block;
     width: 10px;
@@ -1762,9 +1766,16 @@ button.pspad-heatmap-cell:focus-visible {
     }
 
     .pspad-budget-views .mud-toggle-item {
+        padding: 6px 4px;
+    }
+
+    .pspad-budget-views .mud-toggle-item .mud-button-label {
         flex-direction: column;
         gap: 2px;
-        padding: 6px 4px;
         font-size: 0.75rem;
+    }
+
+    .pspad-budget-views .mud-toggle-item .mud-toggle-item-check-icon {
+        margin: 0;
     }
 }

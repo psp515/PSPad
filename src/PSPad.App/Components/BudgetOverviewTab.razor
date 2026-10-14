@@ -30,7 +30,7 @@
                     {
                         <div class="d-flex flex-column pspad-overview-expected">
                             <MoneyFigure Label="Expected month end" Text="@($"≈ {MoneyText.Pln(Pace.Usual.Expenses)}")" />
-                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-overview-expected-caption">avg of last @Pace.Usual.SampledMonths months</MudText>
+                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-overview-expected-caption">avg of last @MoneyText.MonthCount(Pace.Usual.SampledMonths)</MudText>
                         </div>
                     }
                 </ChildContent>
@@ -66,12 +66,27 @@
                     <MudList T="Insight" Dense="true" Class="py-0">
                         @foreach (var insight in Found)
                         {
-                            <MudListItem T="Insight" @key="@((insight.Kind, insight.Category))" Class="pspad-insight" data-kind="@Kind(insight.Kind)"
-                                         Icon="@Icon(insight.Kind)" IconColor="@(insight.Kind is InsightKind.PastUsual or InsightKind.RunningHigh ? Color.Error : insight.Kind == InsightKind.OnTrack ? Color.Success : Color.Info)"
-                                         OnClick="@(insight.Kind == InsightKind.IncomeExpected ? default : EventCallback.Factory.Create(this, () => OnOpenCategory.InvokeAsync(insight.Category)))">
-                                <MudText Typo="Typo.body2" Class="pspad-insight-title">@InsightText.Title(insight)</MudText>
-                                <MudText Typo="Typo.caption" Class="pspad-muted pspad-insight-caption">@InsightText.Caption(insight)</MudText>
-                            </MudListItem>
+                            if (insight.Kind == InsightKind.IncomeExpected)
+                            {
+                                <div @key="@((insight.Kind, insight.Category))" class="mud-list-item mud-list-item-dense mud-list-item-gutters pspad-insight" data-kind="@Kind(insight.Kind)">
+                                    <div class="mud-list-item-icon">
+                                        <MudIcon Icon="@Icon(insight.Kind)" Color="@IconColor(insight.Kind)" />
+                                    </div>
+                                    <div class="mud-list-item-text">
+                                        <MudText Typo="Typo.body2" Class="pspad-insight-title">@InsightText.Title(insight)</MudText>
+                                        <MudText Typo="Typo.caption" Class="pspad-muted pspad-insight-caption">@InsightText.Caption(insight)</MudText>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <MudListItem T="Insight" @key="@((insight.Kind, insight.Category))" Class="pspad-insight" data-kind="@Kind(insight.Kind)"
+                                             Icon="@Icon(insight.Kind)" IconColor="@IconColor(insight.Kind)"
+                                             OnClick="@(() => OnOpenCategory.InvokeAsync(insight.Category))">
+                                    <MudText Typo="Typo.body2" Class="pspad-insight-title">@InsightText.Title(insight)</MudText>
+                                    <MudText Typo="Typo.caption" Class="pspad-muted pspad-insight-caption">@InsightText.Caption(insight)</MudText>
+                                </MudListItem>
+                            }
                         }
                     </MudList>
                 }
@@ -192,6 +207,13 @@
         InsightKind.RunningHigh => "running-high",
         InsightKind.IncomeExpected => "income-expected",
         _ => "on-track"
+    };
+
+    static Color IconColor(InsightKind kind) => kind switch
+    {
+        InsightKind.PastUsual or InsightKind.RunningHigh => Color.Error,
+        InsightKind.OnTrack => Color.Success,
+        _ => Color.Info
     };
 
     static string Icon(InsightKind kind) => kind switch

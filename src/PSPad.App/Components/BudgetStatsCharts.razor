@@ -68,7 +68,7 @@
     </MudItem>
     <MudItem xs="12" md="5">
         <MudPaper Outlined="true" Class="pa-3 pspad-stats-ranking">
-            <SectionHeading Title="Category ranking" />
+            <SectionHeading Title="Where money goes" />
             @if (Summary.Ranking.Count == 0)
             {
                 <MudText Typo="Typo.body2" Class="pspad-muted pspad-stats-no-ranking">No expenses in this range.</MudText>
@@ -142,32 +142,7 @@
             }
             else
             {
-                <MudChart ChartType="ChartType.StackedBar" ChartSeries="@_netWorth" ChartLabels="@_labels"
-                          ChartOptions="@_netWorthOptions" Width="100%" Height="260px" />
-                <table class="mud-sr-only">
-                    <caption>Net worth by holding type</caption>
-                    <thead>
-                        <tr>
-                            <th scope="col">Month</th>
-                            <th scope="col">Cash</th>
-                            <th scope="col">Savings</th>
-                            <th scope="col">Investment</th>
-                            <th scope="col">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var month in Summary.NetWorth)
-                        {
-                            <tr>
-                                <td>@MoneyText.MonthTitle(month.Month)</td>
-                                <td>@PlnOrGap(month.Cash)</td>
-                                <td>@PlnOrGap(month.Savings)</td>
-                                <td>@PlnOrGap(month.Investment)</td>
-                                <td>@PlnOrGap(month.Total)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <NetWorthByTypeChart Months="@Summary.NetWorth" Labels="@_labels" Caption="Net worth by holding type" />
             }
         </MudPaper>
     </MudItem>
@@ -179,8 +154,6 @@
     BarChartOptions _perMonthOptions = new();
     List<ChartSeries<double>> _byCategory = [];
     StackedBarChartOptions _byCategoryOptions = new();
-    List<ChartSeries<double>> _netWorth = [];
-    StackedBarChartOptions _netWorthOptions = new();
     double _rankingMax = 1d;
     double _forecastMax = 1d;
     static readonly Dictionary<string, object> HiddenFromReaders = new() { ["aria-hidden"] = "true" };
@@ -195,7 +168,7 @@
 
     string? ForecastHint => Usual.IsEmpty
         ? null
-        : Usual.SampledMonths == 1 ? "avg of last 1 month" : $"avg of last {Usual.SampledMonths} months";
+        : $"avg of last {MoneyText.MonthCount(Usual.SampledMonths)}";
 
     protected override void OnParametersSet()
     {
@@ -219,18 +192,6 @@
             MaxNumYAxisTicks = ChartAxis.MaxTicks
         };
 
-        _netWorth =
-        [
-            Series("Cash", Summary.NetWorth.Select(month => month.Cash ?? 0m)),
-            Series("Savings", Summary.NetWorth.Select(month => month.Savings ?? 0m)),
-            Series("Investment", Summary.NetWorth.Select(month => month.Investment ?? 0m))
-        ];
-        _netWorthOptions = new StackedBarChartOptions
-        {
-            YAxisTicks = Step(Summary.NetWorth.Select(month => month.Total ?? 0m)),
-            MaxNumYAxisTicks = ChartAxis.MaxTicks
-        };
-
         _rankingMax = Summary.Ranking.Count == 0 ? 1d : Math.Max((double)Summary.Ranking[0].Pln, 1d);
         _forecastMax = Usual.ExpenseCategories.Count == 0 ? 1d : Math.Max((double)Usual.ExpenseCategories[0].Average, 1d);
     }
@@ -239,6 +200,4 @@
         new() { Name = name, Data = values.Select(value => (double)value).ToArray() };
 
     static int Step(IEnumerable<decimal> values) => ChartAxis.Step((double)values.DefaultIfEmpty(0m).Max());
-
-    static string PlnOrGap(decimal? value) => value is { } pln ? MoneyText.Pln(pln) : "—";
 }

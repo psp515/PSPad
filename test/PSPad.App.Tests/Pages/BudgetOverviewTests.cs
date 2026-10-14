@@ -45,7 +45,7 @@ public class BudgetOverviewTests : Bunit.TestContext
         Assert.Equal("300.00 PLN", Text(page, ".pspad-overview-expenses .pspad-money-value"));
         Assert.Equal("+100.00 PLN vs usual by now", Text(page, ".pspad-overview-expenses-delta"));
         Assert.Equal("≈ 620.00 PLN", Text(page, ".pspad-overview-expected .pspad-money-value"));
-        Assert.Equal("avg of last 1 months", Text(page, ".pspad-overview-expected-caption"));
+        Assert.Equal("avg of last 1 month", Text(page, ".pspad-overview-expected-caption"));
         Assert.Equal("Spent 48% of a usual month · 32% of the month passed", Text(page, ".pspad-overview-pace-caption"));
         Assert.Single(page.FindAll(".pspad-category-legend"));
     }
@@ -87,6 +87,8 @@ public class BudgetOverviewTests : Bunit.TestContext
         Assert.Equal(["Food already past a usual month", "Salary usually lands around the 28th"],
             insights.Select(insight => insight.QuerySelector(".pspad-insight-title")!.TextContent.Trim()));
         Assert.Equal(["past-usual", "income-expected"], insights.Select(insight => insight.GetAttribute("data-kind")));
+        Assert.DoesNotContain("mud-list-item-clickable", insights[1].ClassName ?? "");
+        Assert.Null(insights[1].GetAttribute("tabindex"));
 
         insights[0].Click();
 

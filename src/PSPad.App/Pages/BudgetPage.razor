@@ -41,7 +41,7 @@ else
 
     <div class="d-flex align-center gap-2 mb-4 pspad-budget-nav">
         <MudToggleGroup T="int" Class="flex-grow-1 pspad-budget-views" Color="Color.Primary" Size="Size.Small"
-                        SelectionMode="SelectionMode.SingleSelection" Value="@TabIndex" ValueChanged="@SelectTab">
+                        SelectionMode="SelectionMode.SingleSelection" CheckMark="true" Value="@TabIndex" ValueChanged="@SelectTab">
             <MudToggleItem Value="@OverviewTab" Text="Overview" UnselectedIcon="@Icons.Material.Outlined.Dashboard" SelectedIcon="@Icons.Material.Filled.Dashboard" />
             <MudToggleItem Value="@EntriesTab" Text="Entries" UnselectedIcon="@Icons.Material.Outlined.List" SelectedIcon="@Icons.Material.Filled.List" />
             <MudToggleItem Value="@BalanceTab" Text="Balance" UnselectedIcon="@Icons.Material.Outlined.AccountBalance" SelectedIcon="@Icons.Material.Filled.AccountBalance" />

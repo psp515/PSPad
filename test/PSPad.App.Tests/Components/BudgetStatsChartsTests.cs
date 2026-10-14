@@ -154,6 +154,7 @@ public class BudgetStatsChartsTests : Bunit.TestContext
             MoneyEntries.Expense(budget, "Bread", "Food", 400m, On(2, 3))
         ], []);
 
+        Assert.Contains("Where money goes", charts.Find(".pspad-stats-ranking").TextContent);
         Assert.Equal(["Home", "Food", "Bike"],
             charts.FindAll(".pspad-stats-ranking .pspad-category-open").Select(name => name.TextContent.Trim()));
         Assert.Equal(["500.00 PLN", "400.00 PLN", "50.00 PLN"],

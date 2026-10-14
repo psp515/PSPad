@@ -37,7 +37,7 @@
                 {
                     <div class="d-flex align-center gap-1">
                         <MudButton Class="flex-grow-1 justify-start pspad-category-name pspad-category-open" Variant="Variant.Text" Color="Color.Default"
-                                   Size="Size.Small" OnClick="@(() => OnOpen.InvokeAsync(name))" style="text-transform:none">@name</MudButton>
+                                   Size="Size.Small" OnClick="@(() => OnOpen.InvokeAsync(name))">@name</MudButton>
                         @if (used > 0)
                         {
                             <MudText Typo="Typo.caption" Class="pspad-muted pspad-category-usage">@(used == 1 ? "1 entry" : $"{used} entries")</MudText>

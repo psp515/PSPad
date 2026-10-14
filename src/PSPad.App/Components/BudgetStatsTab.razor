@@ -41,7 +41,7 @@
             <MudPaper Outlined="true" Class="pa-3 pspad-money-tile pspad-stats-avg-saved">
                 <MudText Typo="Typo.h6" Color="@(_summary.AverageSaved < 0 ? Color.Error : Color.Primary)" Class="pspad-money-value">@SignedPlnOrDash(_summary.AverageSaved)</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">Avg saved / month</MudText>
-                <MudText Typo="Typo.caption" Class="d-block pspad-muted pspad-stats-kpi-caption">saved in @Saving of @MonthCount(_summary.SampledMonths)</MudText>
+                <MudText Typo="Typo.caption" Class="d-block pspad-muted pspad-stats-kpi-caption">@SavedIn</MudText>
             </MudPaper>
         </MudItem>
         <MudItem xs="6" md="3">
@@ -76,9 +76,9 @@
 
     int Saving => _summary.PerMonth.Count(figure => figure.HasEntries && figure.Net > 0);
 
-    static string MonthCount(int months) => months == 1 ? "1 month" : $"{months} months";
+    static string MonthsWithEntries(int months) => $"{MoneyText.MonthCount(months)} with entries";
 
-    static string MonthsWithEntries(int months) => $"{MonthCount(months)} with entries";
+    string SavedIn => _summary.SampledMonths == 0 ? "—" : $"saved in {Saving} of {MoneyText.MonthCount(_summary.SampledMonths)}";
 
     static string PlnOrDash(decimal? value) => value is { } pln ? MoneyText.Pln(pln) : "—";
 

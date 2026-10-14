@@ -83,6 +83,7 @@ public class BudgetStatsTests : Bunit.TestContext
 
         Assert.Equal("—", Tile(page, "avg-income"));
         Assert.Equal("—", Tile(page, "avg-saved"));
+        Assert.Equal("—", Text(page, ".pspad-stats-avg-saved .pspad-stats-kpi-caption"));
         Assert.Equal("—", Tile(page, "rate"));
     }
 

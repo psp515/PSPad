@@ -311,6 +311,20 @@ public partial class StylesheetRulesTests
     }
 
     [Fact]
+    public void OnAPhoneEachViewStacksItsIconOverItsLabel()
+    {
+        var label = DeclarationsInMedia("max-width: 599.98px", ".pspad-budget-views .mud-toggle-item .mud-button-label");
+        var icon = DeclarationsInMedia("max-width: 599.98px", ".pspad-budget-views .mud-toggle-item .mud-toggle-item-check-icon");
+
+        Assert.Contains("flex-direction: column", label);
+        Assert.Contains("margin: 0", icon);
+    }
+
+    [Fact]
+    public void TheCategoryNamesKeepTheirCase() =>
+        Assert.Contains("text-transform: none", Declarations(".pspad-category-open"));
+
+    [Fact]
     public void TheBudgetViewsKeepTheirCase() =>
         Assert.Contains("text-transform: none", Declarations(".pspad-budget-views .mud-toggle-item"));
 

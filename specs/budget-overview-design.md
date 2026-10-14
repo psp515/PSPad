@@ -160,12 +160,15 @@ follow the existing naming. Edits happen in side panels, one FAB per page.
 - View row: `MudToggleGroup` with Overview, Entries, Balance, Stats, each
   `MudToggleItem` with `UnselectedIcon`/`SelectedIcon` (Outlined/Filled
   `Dashboard`, `List`, `AccountBalance`, `BarChart`) and `Text`; the gear stays
-  the Settings button. Below 600px the items stack icon over text
-  (`.pspad-budget-views` CSS only). From 960px the group is at most 560px.
+  the Settings button. The group has `CheckMark="true"`: in MudBlazor 9.11
+  that is what makes the item icons render (as `svg.mud-toggle-item-check-icon`
+  inside `.mud-button-label`). Below 600px the items stack icon over text
+  (`.pspad-budget-views .mud-toggle-item .mud-button-label` CSS only, the icon's
+  side margin removed). From 960px the group is at most 560px.
 - Quick actions `.pspad-budget-quick` (two `MudButton`s, "Expense" with the
   `Remove` icon outlined, "Income" with `Add` filled) sit at the right end of
-  the view row on Overview and Entries, hidden below 960px by CSS; the FAB
-  menu on those views gets `.pspad-fab-phone`, hidden from 960px by CSS. Both
+  the view row on Overview and Entries with Mud's `d-none d-md-flex` (shown from
+  960px); the FAB menu on those views has `d-md-none` (hidden from 960px). Both
   are absent on an archived budget. On Overview they open `EntryPanel` for
   today; on Entries for the shown month (§3.3).
 - URL tabs: `overview`, `entries`, `balance`, `stats`, `settings`; `month` is
@@ -188,7 +191,7 @@ Always the current month (`State.Today`). `MudGrid Spacing="4"`:
   `.pspad-overview-income-usual` "usual by now {X}"), Expenses (caption
   `.pspad-overview-expenses-delta` "+{Δ} vs usual by now" red when over, "−{Δ}"
   otherwise), "Expected month end" (`≈ {Usual.Expenses}`, caption "avg of last
-  {SampledMonths} months"). Footer: a `MudProgressLinear`
+  {MoneyText.MonthCount(SampledMonths)}" — "1 month", "6 months"). Footer: a `MudProgressLinear`
   (`.pspad-overview-pace`, `aria-hidden`) with Value = `ShareOfUsualSpent × 100`
   capped at 100 and a caption line "Spent {P}% of a usual month · {Q}% of the
   month passed", then the `CategoryBar`. A heading caption above the hero reads
@@ -202,11 +205,13 @@ Always the current month (`State.Today`). `MudGrid Spacing="4"`:
   for PastUsual and RunningHigh, Info for IncomeExpected, Check for OnTrack),
   a title and a caption:
   - PastUsual: "{Category} already past a usual month" / "{Amount} vs {Usual} average"
-  - RunningHigh: "{Category} is running high" / "{Amount} by day {Day}, {Amount−Usual} more than usual at this point"
+  - RunningHigh: "{Category} is running high" / "{Amount} so far, {Amount−Usual} more than usual at this point"
+    (`Insight.Day` is 0 for this kind)
   - IncomeExpected: "{Category} usually lands around the {Day}" / "{Amount} on average; nothing yet this month"
   - OnTrack: "{Category} on track" / "{Amount}, close to usual"
   Clicking an insight with an expense category opens Entries filtered to it;
-  IncomeExpected rows are not buttons. Without insights: "Nothing unusual so far." (`.pspad-overview-quiet`).
+  IncomeExpected rows are plain `div.pspad-insight` rows with the list item's
+  look, not clickable and not focusable. Without insights: "Nothing unusual so far." (`.pspad-overview-quiet`).
 - **Where money went** (`xs=12 md=5`, `.pspad-overview-categories`): one row
   per `CategoryPace` with `Spent > 0` (`.pspad-category-pace`): a `MudButton`
   (Variant Text, `.pspad-category-open`) with the name, a `MudProgressLinear`
@@ -275,16 +280,17 @@ Renamed from Summary (`BudgetSummaryTab` → `BudgetStatsTab`,
 
 - Presets: **Last 6 months** (default; `SummaryPreset.LastSixMonths`:
   `(current−6).FirstDay` to `(current−1).LastDay`), This year, Last 12 months,
-  Last year, Custom. The caption shows the range plus " · {SampledMonths}
-  months with entries".
+  Last year, Custom. The caption shows the range plus " · {MonthCount(SampledMonths)}
+  with entries".
 - KPI row (`.pspad-stats-kpis`, four `MoneyTile`s): "Avg income / month"
   (`.pspad-stats-avg-income`), "Avg expenses / month" (`.pspad-stats-avg-expenses`),
   "Avg saved / month" (`.pspad-stats-avg-saved`, red when negative), "Savings rate"
-  (`.pspad-stats-rate`). Each average tile's caption shows "lowest {min} ·
-  highest {max}" over `PerMonth` months with entries; "—" when `SampledMonths`
-  is 0.
+  (`.pspad-stats-rate`). The income and expenses tiles' captions show "lowest
+  {min} · highest {max}" over `PerMonth` months with entries; the saved tile's
+  caption is "saved in {N} of {M} months" (N months with a positive net, M =
+  `SampledMonths`). With no sampled months every caption is "—".
 - **Forecast** (`.pspad-stats-forecast`, `xs=12 md=5`): "{Next month yyyy}
-  forecast", hint "avg of last {SampledMonths} months"; figures Expected
+  forecast", hint "avg of last {MonthCount(SampledMonths)}"; figures Expected
   expenses, Expected income, Expected saved from `UsualMonth.For(entries,
   current)` (always the six-month window, independent of the preset); then
   one row per `ExpenseCategories` item with a `MudProgressLinear` and the
@@ -293,13 +299,14 @@ Renamed from Summary (`BudgetSummaryTab` → `BudgetStatsTab`,
 - **Income vs expenses by month** (`xs=12 md=7`, `.pspad-stats-by-month`):
   `MudChart` `ChartType.Bar` with series Income and Expenses from `PerMonth`,
   and the `mud-sr-only` table (Month, Income, Expenses, Net).
-- **Where money goes** (`xs=12 md=5`, `.pspad-stats-ranking`): the ranking as
-  today plus a share caption "{P}%" of `Expenses` per row; names are
+- **Where money goes** (`xs=12 md=5`, `.pspad-stats-ranking`, card title
+  "Where money goes"): the ranking as today plus a share caption "{P}%" of `Expenses` per row; names are
   `.pspad-category-open` buttons.
 - **Spend by category per month** (`xs=12 md=7`, `.pspad-stats-categories`):
   the existing stacked bar (top 4 + Other).
 - **Net worth by holding type** (`xs=12`, `.pspad-stats-net-worth-chart`): the
-  existing stacked bar.
+  existing stacked bar, drawn by the shared `NetWorthByTypeChart` (Balance's
+  history card uses it too, at 200px).
 - The Saved hero and the Net worth tile of the old Summary are removed
   (Overview carries net worth; the KPI row carries saved).
 

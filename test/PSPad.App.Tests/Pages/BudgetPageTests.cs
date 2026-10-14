@@ -179,6 +179,18 @@ public class BudgetPageTests : Bunit.TestContext
         Assert.EndsWith($"/budgets/{budget.Id}/settings", navigation.Uri);
     }
 
+    [Fact]
+    public void EveryViewCarriesItsIcon()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id));
+        page.WaitForAssertion(() => page.Find(".pspad-overview-day"));
+
+        Assert.Equal(4, page.FindAll(".pspad-budget-views svg.mud-toggle-item-check-icon").Count);
+    }
+
     static IReadOnlyList<IElement> Views(IRenderedComponent<BudgetPage> page) =>
         page.FindAll(".pspad-budget-views .mud-toggle-item");
 

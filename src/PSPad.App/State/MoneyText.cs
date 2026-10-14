@@ -39,6 +39,8 @@ public static class MoneyText
     public static string Range(DateOnly from, DateOnly to) =>
         $"{from.ToString("d MMM yyyy", CultureInfo.InvariantCulture)} – {to.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}";
 
+    public static string MonthCount(int months) => months == 1 ? "1 month" : $"{months.ToString(CultureInfo.InvariantCulture)} months";
+
     public static string Percent(decimal? share)
     {
         if (share is not { } value)

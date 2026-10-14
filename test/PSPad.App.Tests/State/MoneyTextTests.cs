@@ -76,6 +76,12 @@ public class MoneyTextTests
             MoneyText.MonthAxis(months));
     }
 
+    [Theory]
+    [InlineData(0, "0 months")]
+    [InlineData(1, "1 month")]
+    [InlineData(6, "6 months")]
+    public void AMonthCountAgreesWithItsNumber(int months, string expected) => Assert.Equal(expected, MoneyText.MonthCount(months));
+
     [Fact]
     public void NoMonthsHaveNoLabels() => Assert.Empty(MoneyText.MonthAxis([]));
 
