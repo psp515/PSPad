@@ -1,5 +1,6 @@
 @using PSPad.App.Api
 @using PSPad.App.State
+@using PSPad.App.Statistics
 @using PSPad.App.Sync
 @using PSPad.Module.Money.Balance
 @using PSPad.Module.Money.Reading
@@ -23,84 +24,132 @@
             </div>
         </MudAlert>
     }
-    else
-    {
-        <MoneyHero Class="mb-2" HeadlineClass="pspad-balance-net-worth" Label="Net worth" Text="@MoneyText.Pln(Totals.NetWorth)">
-            <ChildContent>
-                <MoneyFigure Class="pspad-balance-change" Label="@ChangeLabel" Text="@ChangeText" Negative="@(Totals.Change < 0)" />
-                @if (AtToday is { } atToday)
-                {
-                    <MoneyFigure Class="pspad-balance-at-nbp" Label="At NBP today" Text="@MoneyText.Pln(atToday)" />
-                    <MoneyFigure Class="pspad-balance-currency" Label="Currency difference"
-                                 Text="@MoneyText.SignedPln(atToday - Totals.NetWorth)" Negative="@(atToday < Totals.NetWorth)" />
-                }
-            </ChildContent>
-            <Footer>
-                @if (ByType.Count > 0)
-                {
-                    <CategoryBar Class="pspad-balance-types" Totals="@TypeTotals" />
-                }
-            </Footer>
-        </MoneyHero>
 
-        @if (Snapshot.Holdings.Count == 0)
-        {
-            <MudText Typo="Typo.body2" Class="pspad-muted pspad-balance-empty">No holdings in @MoneyText.MonthTitle(Month).</MudText>
-        }
-        else
-        {
-            <div class="pspad-holdings">
-                <div class="pspad-holdings-head" aria-hidden="true">
-                    <span>Holding</span>
-                    <span class="pspad-holding-cell">Amount</span>
-                    <span class="pspad-holding-cell">Rate</span>
-                    <span>In PLN</span>
-                    <span>vs NBP today</span>
-                </div>
-                @foreach (var group in ByType)
-                {
-                    <section @key="group.Type" class="pspad-holding-group">
-                        <div class="d-flex align-baseline px-1 pt-3 pb-1">
-                            <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-holding-group-name">@group.Type</MudText>
-                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-holding-group-total">@MoneyText.Pln(group.Pln)</MudText>
-                        </div>
-                        <MudPaper Outlined="true" Class="pspad-holding-list">
-                            @foreach (var holding in group.Holdings)
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="4">
+            @if (Snapshot is not null)
+            {
+                <MoneyHero Class="mb-2" HeadlineClass="pspad-balance-net-worth" Label="Net worth" Text="@MoneyText.Pln(Totals.NetWorth)">
+                    <ChildContent>
+                        <MoneyFigure Class="pspad-balance-change" Label="@ChangeLabel" Text="@ChangeText" Negative="@(Totals.Change < 0)" />
+                        @if (AtToday is { } atToday)
+                        {
+                            <MoneyFigure Class="pspad-balance-at-nbp" Label="At NBP today" Text="@MoneyText.Pln(atToday)" />
+                            <MoneyFigure Class="pspad-balance-currency" Label="Currency difference"
+                                         Text="@MoneyText.SignedPln(atToday - Totals.NetWorth)" Negative="@(atToday < Totals.NetWorth)" />
+                        }
+                    </ChildContent>
+                    <Footer>
+                        @if (ByType.Count > 0)
+                        {
+                            <CategoryBar Class="pspad-balance-types" Totals="@TypeTotals" />
+                        }
+                    </Footer>
+                </MoneyHero>
+            }
+            @if (History.NetWorth.Any(month => !month.IsGap))
+            {
+                <MudPaper Outlined="true" Class="pa-3 mt-4 pspad-balance-history">
+                    <SectionHeading Title="Last 12 months" Hint="by holding type" />
+                    <MudChart Class="pspad-balance-history-chart" ChartType="ChartType.StackedBar" ChartSeries="@_history" ChartLabels="@_historyLabels"
+                              ChartOptions="@_historyOptions" Width="100%" Height="200px" />
+                    <table class="mud-sr-only">
+                        <caption>Net worth by holding type, last 12 months</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">Month</th>
+                                <th scope="col">Cash</th>
+                                <th scope="col">Savings</th>
+                                <th scope="col">Investment</th>
+                                <th scope="col">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var month in History.NetWorth)
                             {
-                                <button @key="holding.HoldingId" type="button" class="pspad-holding-row" @onclick="@(() => OnOpen.InvokeAsync(holding))">
-                                    <span class="d-flex align-center gap-3 pspad-holding-main">
-                                        <span class="@($"pspad-holding-icon pspad-holding-icon-{group.Type.ToString().ToLowerInvariant()}")" aria-hidden="true">
-                                            <MudIcon Icon="@TypeIcon(group.Type)" Size="Size.Small" />
-                                        </span>
-                                        <span class="d-flex flex-column pspad-holding-text">
-                                            <span class="pspad-holding-name">@holding.Name</span>
-                                            <span class="pspad-holding-sub">@SubText(holding)</span>
-                                        </span>
-                                    </span>
-                                    <span class="pspad-holding-cell pspad-holding-amount">@MoneyText.Amount(holding.Money.Amount) @holding.Money.Currency</span>
-                                    <span class="pspad-holding-cell pspad-holding-rate">@MoneyText.Rate(holding.Money.RateToPln)</span>
-                                    <span class="pspad-holding-values">
-                                        <span class="pspad-holding-pln">@MoneyText.Pln(holding.Money.InPln)</span>
-                                        <span class="pspad-holding-today">@TodayText(holding)</span>
-                                    </span>
-                                </button>
+                                <tr>
+                                    <td>@MoneyText.MonthTitle(month.Month)</td>
+                                    <td>@PlnOrGap(month.Cash)</td>
+                                    <td>@PlnOrGap(month.Savings)</td>
+                                    <td>@PlnOrGap(month.Investment)</td>
+                                    <td>@PlnOrGap(month.Total)</td>
+                                </tr>
                             }
-                        </MudPaper>
-                    </section>
+                        </tbody>
+                    </table>
+                </MudPaper>
+            }
+        </MudItem>
+        <MudItem xs="12" md="8">
+            @if (Snapshot is not null)
+            {
+                if (Snapshot.Holdings.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="pspad-muted pspad-balance-empty">No holdings in @MoneyText.MonthTitle(Month).</MudText>
                 }
-            </div>
-        }
-    }
+                else
+                {
+                    <div class="pspad-holdings">
+                        <div class="pspad-holdings-head" aria-hidden="true">
+                            <span>Holding</span>
+                            <span class="pspad-holding-cell">Amount</span>
+                            <span class="pspad-holding-cell">Rate</span>
+                            <span>In PLN</span>
+                            <span>vs NBP today</span>
+                        </div>
+                        @foreach (var group in ByType)
+                        {
+                            <section @key="group.Type" class="pspad-holding-group">
+                                <div class="d-flex align-baseline px-1 pt-3 pb-1">
+                                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-holding-group-name">@group.Type</MudText>
+                                    <MudText Typo="Typo.caption" Class="pspad-muted pspad-holding-group-total">@MoneyText.Pln(group.Pln)</MudText>
+                                </div>
+                                <MudPaper Outlined="true" Class="pspad-holding-list">
+                                    @foreach (var holding in group.Holdings)
+                                    {
+                                        <button @key="holding.HoldingId" type="button" class="pspad-holding-row" @onclick="@(() => OnOpen.InvokeAsync(holding))">
+                                            <span class="d-flex align-center gap-3 pspad-holding-main">
+                                                <span class="@($"pspad-holding-icon pspad-holding-icon-{group.Type.ToString().ToLowerInvariant()}")" aria-hidden="true">
+                                                    <MudIcon Icon="@TypeIcon(group.Type)" Size="Size.Small" />
+                                                </span>
+                                                <span class="d-flex flex-column pspad-holding-text">
+                                                    <span class="pspad-holding-name">@holding.Name</span>
+                                                    <span class="pspad-holding-sub">@SubText(holding)</span>
+                                                </span>
+                                            </span>
+                                            <span class="pspad-holding-cell pspad-holding-amount">@MoneyText.Amount(holding.Money.Amount) @holding.Money.Currency</span>
+                                            <span class="pspad-holding-cell pspad-holding-rate">@MoneyText.Rate(holding.Money.RateToPln)</span>
+                                            <span class="pspad-holding-values">
+                                                <span class="pspad-holding-pln">@MoneyText.Pln(holding.Money.InPln)</span>
+                                                <span class="pspad-holding-today">@TodayText(holding)</span>
+                                            </span>
+                                        </button>
+                                    }
+                                </MudPaper>
+                            </section>
+                        }
+                    </div>
+                }
+            }
+        </MudItem>
+    </MudGrid>
 </div>
 
 @code {
     readonly Dictionary<string, decimal> _todayRates = [];
     readonly HashSet<string> _asked = [];
     bool _disposed;
+    List<ChartSeries<double>> _history = [];
+    string[] _historyLabels = [];
+    StackedBarChartOptions _historyOptions = new();
 
     [Parameter, EditorRequired] public YearMonth Month { get; set; }
 
     [Parameter, EditorRequired] public BalanceTotals Totals { get; set; } = default!;
+
+    [Parameter, EditorRequired] public IReadOnlyList<BalanceSnapshot> Snapshots { get; set; } = [];
+
+    [Parameter, EditorRequired] public YearMonth Current { get; set; }
 
     [Parameter] public bool ReadOnly { get; set; }
 
@@ -155,7 +204,30 @@
             ? MoneyText.SignedPln(value - holding.Money.InPln)
             : "—";
 
-    protected override Task OnParametersSetAsync() => LookUpAsync();
+    MoneySummary History => MoneySummary.For([], Snapshots, YearMonth.Of(Current.FirstDay.AddMonths(-11)).FirstDay, Current.LastDay);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var history = History;
+        _historyLabels = MoneyText.MonthAxis(history.Months);
+        _history =
+        [
+            Series("Cash", history.NetWorth.Select(month => month.Cash ?? 0m)),
+            Series("Savings", history.NetWorth.Select(month => month.Savings ?? 0m)),
+            Series("Investment", history.NetWorth.Select(month => month.Investment ?? 0m))
+        ];
+        _historyOptions = new StackedBarChartOptions
+        {
+            YAxisTicks = ChartAxis.Step((double)history.NetWorth.Select(month => month.Total ?? 0m).DefaultIfEmpty(0m).Max()),
+            MaxNumYAxisTicks = ChartAxis.MaxTicks
+        };
+        await LookUpAsync();
+    }
+
+    static ChartSeries<double> Series(string name, IEnumerable<decimal> values) =>
+        new() { Name = name, Data = values.Select(value => (double)value).ToArray() };
+
+    static string PlnOrGap(decimal? value) => value is { } pln ? MoneyText.Pln(pln) : "—";
 
     async Task LookUpAsync()
     {

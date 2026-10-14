@@ -403,4 +403,36 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         page.WaitForAssertion(() => page.Find(".pspad-balance-missing"));
     }
+
+    [Fact]
+    public void TheHistoryChartStacksTheLastTwelveMonthsByType()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            Balances.Started(budget, August, Balances.AHolding("Wallet", 80m), Balances.AHolding("Bank", 20m, type: HoldingType.Savings)),
+            Balances.Started(budget, October, Balances.AHolding("Wallet", 100m)));
+
+        var page = BalanceTab(budget);
+
+        var chart = page.FindComponents<MudChart<double>>().Single(chart => chart.Instance.Class?.Contains("pspad-balance-history-chart") == true);
+        Assert.Equal(ChartType.StackedBar, chart.Instance.ChartType);
+        Assert.Equal(12, chart.Instance.ChartLabels.Length);
+        var cash = chart.Instance.ChartSeries.Single(series => series.Name == "Cash").Data.Values.ToArray();
+        Assert.Equal(80d, cash[9]);
+        Assert.Equal(0d, cash[10]);
+        Assert.Equal(100d, cash[11]);
+        Assert.Equal(["Month", "Cash", "Savings", "Investment", "Total"],
+            page.FindAll(".pspad-balance-history table.mud-sr-only thead th").Select(cell => cell.TextContent.Trim()));
+    }
+
+    [Fact]
+    public void WithoutAnyBalanceThereIsNoHistoryChart()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var page = BalanceTab(budget);
+
+        Assert.Empty(page.FindAll(".pspad-balance-history"));
+    }
 }

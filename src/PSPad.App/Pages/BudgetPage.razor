@@ -95,7 +95,7 @@ else
                               Zone="@LocalToday.Zone(State.TimeZone)" Today="@State.Today" OnOpen="@OpenEntry" OnOpenCategory="@ShowCategory" />
             break;
         case BalanceTab:
-            <BudgetBalanceTab Month="@_month" Totals="@Balance" ReadOnly="@_budget.IsArchived"
+            <BudgetBalanceTab Month="@_month" Totals="@Balance" Snapshots="@_snapshots" Current="@Current" ReadOnly="@_budget.IsArchived"
                               OnStart="@StartMonthAsync" OnOpen="@OpenHolding" />
             break;
         case StatsTab:
