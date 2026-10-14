@@ -4,6 +4,8 @@ public sealed record SummaryRange(DateOnly From, DateOnly To)
 {
     public static SummaryRange For(SummaryPreset preset, DateOnly today) => preset switch
     {
+        SummaryPreset.LastSixMonths => new SummaryRange(
+            new DateOnly(today.Year, today.Month, 1).AddMonths(-6), new DateOnly(today.Year, today.Month, 1).AddDays(-1)),
         SummaryPreset.ThisYear => new SummaryRange(new DateOnly(today.Year, 1, 1), today),
         SummaryPreset.Last12Months => new SummaryRange(new DateOnly(today.Year, today.Month, 1).AddMonths(-11), today),
         SummaryPreset.LastYear => new SummaryRange(new DateOnly(today.Year - 1, 1, 1), new DateOnly(today.Year - 1, 12, 31)),

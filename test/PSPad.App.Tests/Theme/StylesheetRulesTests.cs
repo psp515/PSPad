@@ -304,7 +304,7 @@ public partial class StylesheetRulesTests
     [Fact]
     public void TheSummaryPresetsScrollSidewaysInsteadOfWrapping()
     {
-        var presets = Declarations(".pspad-summary-presets");
+        var presets = Declarations(".pspad-stats-presets");
 
         Assert.Contains("flex-wrap: nowrap", presets);
         Assert.Contains("overflow-x: auto", presets);

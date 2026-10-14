@@ -1737,14 +1737,14 @@ button.pspad-heatmap-cell:focus-visible {
     letter-spacing: -0.5px;
 }
 
-.pspad-summary-presets {
+.pspad-stats-presets {
     display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
 }
 
-.pspad-summary-presets .mud-chip {
+.pspad-stats-presets .mud-chip {
     flex-shrink: 0;
 }
 

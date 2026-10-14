@@ -99,7 +99,7 @@ else
                               OnStart="@StartMonthAsync" OnOpen="@OpenHolding" />
             break;
         case StatsTab:
-            <BudgetSummaryTab Entries="@_entries" Snapshots="@_snapshots" />
+            <BudgetStatsTab Entries="@_entries" Snapshots="@_snapshots" Current="@Current" OnOpenCategory="@ShowCategory" />
             break;
         default:
             <BudgetSettingsTab Budget="@_budget" Entries="@_entries" Viewer="@State.UserId" OnOpenMembers="@OpenMembers"

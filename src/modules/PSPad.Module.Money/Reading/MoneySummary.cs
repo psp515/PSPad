@@ -10,7 +10,6 @@ public sealed record MoneySummary(
     decimal Expenses,
     IReadOnlyList<YearMonth> Months,
     IReadOnlyList<MonthFigure> PerMonth,
-    IReadOnlyList<CumulativeMonth> Cumulative,
     IReadOnlyList<CategorySeries> ExpensesByMonth,
     IReadOnlyList<NetWorthMonth> NetWorth,
     IReadOnlyList<CategoryTotal> Ranking,
@@ -59,7 +58,6 @@ public sealed record MoneySummary(
             expenses.Sum(entry => entry.Money.InPln),
             months,
             figures,
-            CumulativeOf(months, incomes, expenses),
             ByMonth(months, expenses, ranking),
             [.. months.Select(month => NetWorthMonth.Of(month, live.FirstOrDefault(snapshot => snapshot.Month == month)))],
             ranking,
@@ -75,24 +73,6 @@ public sealed record MoneySummary(
         }
 
         return [.. months];
-    }
-
-    static CumulativeMonth[] CumulativeOf(IReadOnlyList<YearMonth> months, MoneyEntry[] incomes, MoneyEntry[] expenses)
-    {
-        var incomePerMonth = TotalsPerMonth(months, incomes);
-        var spentPerMonth = TotalsPerMonth(months, expenses);
-        var cumulative = new CumulativeMonth[months.Count];
-        var income = 0m;
-        var spent = 0m;
-
-        for (var index = 0; index < months.Count; index++)
-        {
-            income += incomePerMonth[index];
-            spent += spentPerMonth[index];
-            cumulative[index] = new CumulativeMonth(months[index], income, spent);
-        }
-
-        return cumulative;
     }
 
     static CategorySeries[] ByMonth(IReadOnlyList<YearMonth> months, MoneyEntry[] expenses, CategoryTotal[] ranking)

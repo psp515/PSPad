@@ -1,0 +1,129 @@
+@using PSPad.App.State
+@using PSPad.Module.Money.Balance
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Reading
+@using PSPad.Module.Money.Values
+@inject AppState State
+
+<div class="@($"pspad-stats {Class}")">
+    <MudChipSet T="SummaryPreset" SelectedValue="@_preset" SelectedValueChanged="@Choose" Class="pspad-stats-presets"
+                SelectionMode="SelectionMode.SingleSelection" CheckMark="false" Color="Color.Primary" Variant="Variant.Outlined"
+                SelectedColor="Color.Primary">
+        <MudChip Value="SummaryPreset.LastSixMonths" aria-pressed="@Pressed(SummaryPreset.LastSixMonths)" Text="Last 6 months" />
+        <MudChip Value="SummaryPreset.ThisYear" aria-pressed="@Pressed(SummaryPreset.ThisYear)" Text="This year" />
+        <MudChip Value="SummaryPreset.Last12Months" aria-pressed="@Pressed(SummaryPreset.Last12Months)" Text="Last 12 months" />
+        <MudChip Value="SummaryPreset.LastYear" aria-pressed="@Pressed(SummaryPreset.LastYear)" Text="Last year" />
+        <MudChip Value="SummaryPreset.Custom" aria-pressed="@Pressed(SummaryPreset.Custom)" Text="Custom" />
+    </MudChipSet>
+    @if (_preset == SummaryPreset.Custom)
+    {
+        <MudDateRangePicker Class="mt-2 pspad-stats-picker" Label="Range" Variant="Variant.Outlined" Margin="Margin.Dense"
+                            DateRange="@Picked" DateRangeChanged="@Pick" />
+    }
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mt-1 mb-4 pspad-stats-range">@MoneyText.Range(_range.From, _range.To) · @MonthsWithEntries(_summary.SampledMonths)</MudText>
+
+    <MudGrid Spacing="4" Class="mb-4 pspad-stats-kpis">
+        <MudItem xs="6" md="3">
+            <MudPaper Outlined="true" Class="pa-3 pspad-money-tile pspad-stats-avg-income">
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="pspad-money-value">@PlnOrDash(_summary.AverageIncome)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Avg income / month</MudText>
+                <MudText Typo="Typo.caption" Class="d-block pspad-muted pspad-stats-kpi-caption">@LowHigh(figure => figure.Income)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudPaper Outlined="true" Class="pa-3 pspad-money-tile pspad-stats-avg-expenses">
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="pspad-money-value">@PlnOrDash(_summary.AverageExpenses)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Avg expenses / month</MudText>
+                <MudText Typo="Typo.caption" Class="d-block pspad-muted pspad-stats-kpi-caption">@LowHigh(figure => figure.Expenses)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudPaper Outlined="true" Class="pa-3 pspad-money-tile pspad-stats-avg-saved">
+                <MudText Typo="Typo.h6" Color="@(_summary.AverageSaved < 0 ? Color.Error : Color.Primary)" Class="pspad-money-value">@SignedPlnOrDash(_summary.AverageSaved)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Avg saved / month</MudText>
+                <MudText Typo="Typo.caption" Class="d-block pspad-muted pspad-stats-kpi-caption">saved in @Saving of @MonthCount(_summary.SampledMonths)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudPaper Outlined="true" Class="pa-3 pspad-money-tile pspad-stats-rate">
+                <MudText Typo="Typo.h6" Color="@(MoneyText.PercentIsNegative(_summary.SavingsRate) ? Color.Error : Color.Primary)" Class="pspad-money-value">@MoneyText.Percent(_summary.SavingsRate)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Savings rate</MudText>
+                <MudText Typo="Typo.caption" Class="d-block pspad-muted pspad-stats-kpi-caption">of income kept</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <BudgetStatsCharts Summary="@_summary" Usual="@_usual" Next="@Current.Next()" OnOpenCategory="@OnOpenCategory" />
+</div>
+
+@code {
+    SummaryPreset _preset = SummaryPreset.LastSixMonths;
+    SummaryRange _range = default!;
+    MoneySummary _summary = default!;
+    UsualMonth _usual = default!;
+
+    [Parameter, EditorRequired] public IReadOnlyList<MoneyEntry> Entries { get; set; } = [];
+
+    [Parameter, EditorRequired] public IReadOnlyList<BalanceSnapshot> Snapshots { get; set; } = [];
+
+    [Parameter, EditorRequired] public YearMonth Current { get; set; }
+
+    [Parameter] public EventCallback<string> OnOpenCategory { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+
+    DateRange Picked => new(_range.From.ToDateTime(TimeOnly.MinValue), _range.To.ToDateTime(TimeOnly.MinValue));
+
+    int Saving => _summary.PerMonth.Count(figure => figure.HasEntries && figure.Net > 0);
+
+    static string MonthCount(int months) => months == 1 ? "1 month" : $"{months} months";
+
+    static string MonthsWithEntries(int months) => $"{MonthCount(months)} with entries";
+
+    static string PlnOrDash(decimal? value) => value is { } pln ? MoneyText.Pln(pln) : "—";
+
+    static string SignedPlnOrDash(decimal? value) => value is { } pln ? MoneyText.SignedPln(pln) : "—";
+
+    string LowHigh(Func<MonthFigure, decimal> of)
+    {
+        var sampled = _summary.PerMonth.Where(figure => figure.HasEntries).Select(of).ToArray();
+        return sampled.Length == 0 ? "—" : $"lowest {MoneyText.Amount(sampled.Min())} · highest {MoneyText.Amount(sampled.Max())}";
+    }
+
+    protected override void OnInitialized() => _range = SummaryRange.For(_preset, State.Today);
+
+    protected override void OnParametersSet()
+    {
+        _usual = UsualMonth.For(Entries, Current);
+        Summarise();
+    }
+
+    void Summarise() => _summary = MoneySummary.For(Entries, Snapshots, _range.From, _range.To);
+
+    string Pressed(SummaryPreset preset) => preset == _preset ? "true" : "false";
+
+    void Choose(SummaryPreset preset)
+    {
+        if (preset == _preset)
+        {
+            return;
+        }
+
+        _preset = preset;
+
+        if (preset != SummaryPreset.Custom)
+        {
+            _range = SummaryRange.For(preset, State.Today);
+            Summarise();
+        }
+    }
+
+    void Pick(DateRange? picked)
+    {
+        if (SummaryRange.Picked(picked?.Start, picked?.End) is { } range)
+        {
+            _range = range;
+            Summarise();
+        }
+    }
+}

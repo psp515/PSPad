@@ -1,0 +1,244 @@
+@using PSPad.App.State
+@using PSPad.App.Statistics
+@using PSPad.Module.Money.Reading
+@using PSPad.Module.Money.Values
+
+<MudGrid Spacing="4" Class="mb-4">
+    <MudItem xs="12" md="5">
+        <MudPaper Outlined="true" Class="pa-3 pspad-stats-forecast">
+            <SectionHeading Title="@($"{MoneyText.MonthTitle(Next)} forecast")" Hint="@ForecastHint" />
+            @if (Usual.IsEmpty)
+            {
+                <MudText Typo="Typo.body2" Class="pspad-muted pspad-stats-forecast-empty">A forecast needs at least one full month of entries.</MudText>
+            }
+            else
+            {
+                <div class="d-flex flex-wrap gap-4 mb-3">
+                    <MoneyFigure Class="pspad-stats-forecast-expenses" Label="Expected expenses" Text="@($"≈ {MoneyText.Pln(Usual.Expenses)}")" />
+                    <MoneyFigure Class="pspad-stats-forecast-income" Label="Expected income" Text="@($"≈ {MoneyText.Pln(Usual.Income)}")" />
+                    <MoneyFigure Class="pspad-stats-forecast-saved" Label="Expected saved" Text="@($"≈ {MoneyText.SignedPln(Usual.Saved)}")"
+                                 Negative="@(Usual.Saved < 0)" />
+                </div>
+                <MudStack Spacing="2">
+                    @foreach (var usual in Usual.ExpenseCategories)
+                    {
+                        <div @key="usual.Category" class="pspad-stats-forecast-row">
+                            <div class="d-flex align-center gap-2 mb-1">
+                                <MudButton Class="pspad-category-open" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                           OnClick="@(() => OnOpenCategory.InvokeAsync(usual.Category))">@usual.Category</MudButton>
+                                <MudSpacer />
+                                <MudText Typo="Typo.body2" Class="pspad-stats-forecast-amount">@MoneyText.Pln(usual.Average)</MudText>
+                            </div>
+                            <MudProgressLinear Color="Color.Primary" Rounded="true" Min="0" Max="@_forecastMax"
+                                               Value="@((double)usual.Average)" UserAttributes="@HiddenFromReaders" />
+                        </div>
+                    }
+                </MudStack>
+            }
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="7">
+        <MudPaper Outlined="true" Class="pa-3 pspad-stats-by-month">
+            <SectionHeading Title="Income vs expenses by month" />
+            <MudChart ChartType="ChartType.Bar" ChartSeries="@_perMonth" ChartLabels="@_labels"
+                      ChartOptions="@_perMonthOptions" Width="100%" Height="260px" />
+            <table class="mud-sr-only">
+                <caption>Income vs expenses by month</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Month</th>
+                        <th scope="col">Income</th>
+                        <th scope="col">Expenses</th>
+                        <th scope="col">Net</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var figure in Summary.PerMonth)
+                    {
+                        <tr>
+                            <td>@MoneyText.MonthTitle(figure.Month)</td>
+                            <td>@MoneyText.Pln(figure.Income)</td>
+                            <td>@MoneyText.Pln(figure.Expenses)</td>
+                            <td>@MoneyText.SignedPln(figure.Net)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="5">
+        <MudPaper Outlined="true" Class="pa-3 pspad-stats-ranking">
+            <SectionHeading Title="Category ranking" />
+            @if (Summary.Ranking.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="pspad-muted pspad-stats-no-ranking">No expenses in this range.</MudText>
+            }
+            else
+            {
+                <MudStack Spacing="3">
+                    @foreach (var total in Summary.Ranking)
+                    {
+                        <div @key="total.Category" class="pspad-stats-ranking-row">
+                            <div class="d-flex align-center gap-2 mb-1">
+                                <MudButton Class="pspad-category-open" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                           OnClick="@(() => OnOpenCategory.InvokeAsync(total.Category))">@total.Category</MudButton>
+                                <MudSpacer />
+                                <MudText Typo="Typo.caption" Class="pspad-muted pspad-stats-ranking-share">@MoneyText.Percent(Summary.Expenses == 0 ? null : total.Pln / Summary.Expenses)</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pspad-stats-ranking-pln">@MoneyText.Pln(total.Pln)</MudText>
+                            </div>
+                            <MudProgressLinear Color="Color.Primary" Rounded="true" Min="0" Max="@_rankingMax"
+                                               Value="@((double)total.Pln)" UserAttributes="@HiddenFromReaders" />
+                        </div>
+                    }
+                </MudStack>
+            }
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="7">
+        <MudPaper Outlined="true" Class="pa-3 pspad-stats-categories">
+            <SectionHeading Title="Spend by category per month" />
+            @if (Summary.ExpensesByMonth.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="pspad-muted pspad-stats-no-expenses">No expenses in this range.</MudText>
+            }
+            else
+            {
+                <MudChart ChartType="ChartType.StackedBar" ChartSeries="@_byCategory" ChartLabels="@_labels"
+                          ChartOptions="@_byCategoryOptions" Width="100%" Height="260px" />
+                <table class="mud-sr-only">
+                    <caption>Spend by category per month</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Month</th>
+                            @foreach (var series in Summary.ExpensesByMonth)
+                            {
+                                <th scope="col">@series.Category</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var index = 0; index < Summary.Months.Count; index++)
+                        {
+                            var month = index;
+                            <tr>
+                                <td>@MoneyText.MonthTitle(Summary.Months[month])</td>
+                                @foreach (var series in Summary.ExpensesByMonth)
+                                {
+                                    <td>@MoneyText.Pln(series.PerMonth[month])</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12">
+        <MudPaper Outlined="true" Class="pa-3 pspad-stats-net-worth-chart">
+            <SectionHeading Title="Net worth by holding type" />
+            @if (Summary.NetWorth.All(month => month.IsGap))
+            {
+                <MudText Typo="Typo.body2" Class="pspad-muted pspad-stats-no-balances">No balances in this range.</MudText>
+            }
+            else
+            {
+                <MudChart ChartType="ChartType.StackedBar" ChartSeries="@_netWorth" ChartLabels="@_labels"
+                          ChartOptions="@_netWorthOptions" Width="100%" Height="260px" />
+                <table class="mud-sr-only">
+                    <caption>Net worth by holding type</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Month</th>
+                            <th scope="col">Cash</th>
+                            <th scope="col">Savings</th>
+                            <th scope="col">Investment</th>
+                            <th scope="col">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var month in Summary.NetWorth)
+                        {
+                            <tr>
+                                <td>@MoneyText.MonthTitle(month.Month)</td>
+                                <td>@PlnOrGap(month.Cash)</td>
+                                <td>@PlnOrGap(month.Savings)</td>
+                                <td>@PlnOrGap(month.Investment)</td>
+                                <td>@PlnOrGap(month.Total)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    string[] _labels = [];
+    List<ChartSeries<double>> _perMonth = [];
+    BarChartOptions _perMonthOptions = new();
+    List<ChartSeries<double>> _byCategory = [];
+    StackedBarChartOptions _byCategoryOptions = new();
+    List<ChartSeries<double>> _netWorth = [];
+    StackedBarChartOptions _netWorthOptions = new();
+    double _rankingMax = 1d;
+    double _forecastMax = 1d;
+    static readonly Dictionary<string, object> HiddenFromReaders = new() { ["aria-hidden"] = "true" };
+
+    [Parameter, EditorRequired] public MoneySummary Summary { get; set; } = default!;
+
+    [Parameter, EditorRequired] public UsualMonth Usual { get; set; } = default!;
+
+    [Parameter, EditorRequired] public YearMonth Next { get; set; }
+
+    [Parameter] public EventCallback<string> OnOpenCategory { get; set; }
+
+    string? ForecastHint => Usual.IsEmpty
+        ? null
+        : Usual.SampledMonths == 1 ? "avg of last 1 month" : $"avg of last {Usual.SampledMonths} months";
+
+    protected override void OnParametersSet()
+    {
+        _labels = MoneyText.MonthAxis(Summary.Months);
+
+        _perMonth =
+        [
+            Series("Income", Summary.PerMonth.Select(figure => figure.Income)),
+            Series("Expenses", Summary.PerMonth.Select(figure => figure.Expenses))
+        ];
+        _perMonthOptions = new BarChartOptions
+        {
+            YAxisTicks = Step(Summary.PerMonth.Select(figure => Math.Max(figure.Income, figure.Expenses))),
+            MaxNumYAxisTicks = ChartAxis.MaxTicks
+        };
+
+        _byCategory = [.. Summary.ExpensesByMonth.Select(series => Series(series.Category, series.PerMonth))];
+        _byCategoryOptions = new StackedBarChartOptions
+        {
+            YAxisTicks = Step(Summary.Months.Select((_, index) => Summary.ExpensesByMonth.Sum(series => series.PerMonth[index]))),
+            MaxNumYAxisTicks = ChartAxis.MaxTicks
+        };
+
+        _netWorth =
+        [
+            Series("Cash", Summary.NetWorth.Select(month => month.Cash ?? 0m)),
+            Series("Savings", Summary.NetWorth.Select(month => month.Savings ?? 0m)),
+            Series("Investment", Summary.NetWorth.Select(month => month.Investment ?? 0m))
+        ];
+        _netWorthOptions = new StackedBarChartOptions
+        {
+            YAxisTicks = Step(Summary.NetWorth.Select(month => month.Total ?? 0m)),
+            MaxNumYAxisTicks = ChartAxis.MaxTicks
+        };
+
+        _rankingMax = Summary.Ranking.Count == 0 ? 1d : Math.Max((double)Summary.Ranking[0].Pln, 1d);
+        _forecastMax = Usual.ExpenseCategories.Count == 0 ? 1d : Math.Max((double)Usual.ExpenseCategories[0].Average, 1d);
+    }
+
+    static ChartSeries<double> Series(string name, IEnumerable<decimal> values) =>
+        new() { Name = name, Data = values.Select(value => (double)value).ToArray() };
+
+    static int Step(IEnumerable<decimal> values) => ChartAxis.Step((double)values.DefaultIfEmpty(0m).Max());
+
+    static string PlnOrGap(decimal? value) => value is { } pln ? MoneyText.Pln(pln) : "—";
+}
