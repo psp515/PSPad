@@ -493,6 +493,26 @@ public class BudgetPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void SettingsPairsTheCardsUnderTheListsUntilWide()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var page = Settings(budget);
+
+        Assert.Contains("mud-grid-item-lg-7", page.Find(".pspad-settings-lists").ClassList);
+        Assert.DoesNotContain("mud-grid-item-md-7", page.Find(".pspad-settings-lists").ClassList);
+        Assert.Contains("mud-grid-item-lg-5", page.Find(".pspad-settings-cards").ClassList);
+        var cards = page.FindAll(".pspad-settings-card");
+        Assert.Equal(4, cards.Count);
+        Assert.All(cards, card =>
+        {
+            Assert.Contains("mud-grid-item-sm-6", card.ClassList);
+            Assert.Contains("mud-grid-item-lg-12", card.ClassList);
+        });
+    }
+
+    [Fact]
     public async Task ArchivingSendsArchiveBudget()
     {
         var budget = BudgetsPageTests.Named("Personal");

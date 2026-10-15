@@ -5,7 +5,7 @@
 @inject IClock Clock
 
 <MudGrid Spacing="4" Class="@Class">
-    <MudItem xs="12" md="7">
+    <MudItem xs="12" lg="7" Class="pspad-settings-lists">
         <MudGrid Spacing="4">
             <MudItem xs="12" sm="6">
                 <CategoryList Title="Expense categories" Names="@Budget.ExpenseCategories" ReadOnly="@Budget.IsArchived"
@@ -25,8 +25,9 @@
             </MudItem>
         </MudGrid>
     </MudItem>
-    <MudItem xs="12" md="5">
-        <div class="d-flex flex-column gap-4">
+    <MudItem xs="12" lg="5" Class="pspad-settings-cards">
+        <MudGrid Spacing="4">
+            <MudItem xs="12" sm="6" lg="12" Class="pspad-settings-card">
             <MudPaper Outlined="true" Class="pa-4 pspad-budget-card-settings">
                 <MudText Typo="Typo.subtitle2" Class="mb-3">Budget</MudText>
                 @if (!IsMine)
@@ -49,6 +50,8 @@
                                OnClick="@OnArchive">Archive budget</MudButton>
                 }
             </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" lg="12" Class="pspad-settings-card">
             <MudPaper Outlined="true" Class="pa-4 pspad-budget-sharing">
                 <MudText Typo="Typo.subtitle2" Class="mb-2">Sharing</MudText>
                 <MudButton Class="pspad-budget-sharing-open" FullWidth="true" Variant="Variant.Text" Color="Color.Default"
@@ -65,8 +68,10 @@
                         : $"Only {Budget.OwnerName} can rename, archive or invite.")
                 </MudText>
             </MudPaper>
+            </MudItem>
             @if (!Budget.IsArchived)
             {
+                <MudItem xs="12" sm="6" lg="12" Class="pspad-settings-card">
                 <MudPaper Outlined="true" Class="pa-4 pspad-budget-import-card pspad-budget-import-entries">
                     <MudText Typo="Typo.subtitle2" Class="mb-2">Import expenses and incomes</MudText>
                     <MudText Typo="Typo.body2" Class="pspad-muted mb-2">
@@ -77,6 +82,8 @@
                                StartIcon="@Icons.Material.Outlined.UploadFile"
                                OnClick="@(() => OnImport.InvokeAsync(BudgetLinks.EntriesImport))">Upload expenses and incomes</MudButton>
                 </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" lg="12" Class="pspad-settings-card">
                 <MudPaper Outlined="true" Class="pa-4 pspad-budget-import-card pspad-budget-import-balances">
                     <MudText Typo="Typo.subtitle2" Class="mb-2">Import balances</MudText>
                     <MudText Typo="Typo.body2" Class="pspad-muted mb-2">
@@ -87,8 +94,9 @@
                                StartIcon="@Icons.Material.Outlined.UploadFile"
                                OnClick="@(() => OnImport.InvokeAsync(BudgetLinks.BalancesImport))">Upload balances</MudButton>
                 </MudPaper>
+                </MudItem>
             }
-        </div>
+        </MudGrid>
     </MudItem>
 </MudGrid>
 
