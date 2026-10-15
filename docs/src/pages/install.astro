@@ -210,6 +210,55 @@ cd PSPad</code></pre>
         leave it empty and every browser call to the API is refused.
       </p>
     </Callout>
+    <h3>Live updates</h3>
+    <p>
+      An open app holds one long-lived request, <code>GET /api/live</code>, a Server-Sent
+      Events stream that tells it to sync the moment something changes. With stock settings
+      nothing changes. The headers and the 25-second heartbeat are chosen so stock proxy
+      settings carry the stream.
+    </p>
+    <p>
+      <strong>Cloudflare (proxied DNS or Tunnel): no change required.</strong> Cloudflare
+      streams <code>text/event-stream</code> unbuffered. It drops an origin connection silent
+      for 100 s (error 524); the 25 s heartbeat keeps it far below that. Browsers talk HTTP/2
+      to Cloudflare, so a stream does not use up the per-host connection limit. Only if a
+      Cache Rule caches the API hostname, exclude <code>/api/live</code> (better: never cache
+      the API).
+    </p>
+    <p>
+      <strong>nginx in front of the API: no change required with stock directives.</strong>
+      Change only if the config has one of these:
+    </p>
+    <table>
+      <thead>
+        <tr><th>If your config has</th><th>Change it to</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>proxy_read_timeout</code> below 30s</td><td>≥ 60s, at least for <code>location /api/live</code></td></tr>
+        <tr><td><code>proxy_ignore_headers X-Accel-Buffering</code></td><td>remove it, or add <code>proxy_buffering off;</code> in <code>location /api/live</code></td></tr>
+        <tr><td><code>proxy_cache</code> on the API</td><td><code>proxy_cache off;</code> for <code>/api/live</code></td></tr>
+        <tr><td><code>gzip_types</code> including <code>text/event-stream</code></td><td>remove it</td></tr>
+        <tr><td>TLS without <code>http2</code> and no Cloudflare in front</td><td><code>http2 on;</code> — on HTTP/1.1 each open tab holds one of the browser's six connections to the API</td></tr>
+      </tbody>
+    </table>
+    <p>An explicit block that does not rely on the response headers:</p>
+    <pre><code>{`location /api/live {
+    proxy_pass http://<api-upstream>;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 1h;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+}`}</code></pre>
+    <p>
+      <strong>Caddy: no change required.</strong> It flushes <code>text/event-stream</code>
+      immediately.
+    </p>
+    <p>
+      An integration test runs the stream through stock nginx with a plain
+      <code>proxy_pass</code> block.
+    </p>
+
     <p>MongoDB publishes no port — it's reachable only from the other containers.</p>
     <p>
       None of the PSPad containers runs as root: the API runs as the .NET image's

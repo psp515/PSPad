@@ -3,6 +3,7 @@
 @using PSPad.App.Api
 @using PSPad.App.Auth
 @using PSPad.App.Components
+@using PSPad.App.Live
 @using PSPad.App.Localization
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
@@ -19,6 +20,7 @@
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Today
 @inject SyncCoordinator Coordinator
+@inject LiveUpdates Live
 @inject ISyncTrigger Trigger
 @inject AppState State
 @inject PSPadApiClient Api
@@ -178,6 +180,11 @@
         }
 
         Coordinator.Start();
+        if (session is not null)
+        {
+            Live.Start();
+        }
+
         _ = WatchForMidnightAsync();
 
         if (nothingLocalYet)

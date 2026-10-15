@@ -1,6 +1,6 @@
 # Live updates — design
 
-Status: Designed (issue #105). The reasoning is in
+Status: Built (issue #105). The reasoning is in
 `adr/0075-open-clients-get-a-sync-nudge-over-sse.md`.
 
 ## 1. Problem and scope

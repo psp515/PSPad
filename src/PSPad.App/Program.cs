@@ -8,6 +8,7 @@ using PSPad.Abstractions;
 using PSPad.App;
 using PSPad.App.Api;
 using PSPad.App.Auth;
+using PSPad.App.Live;
 using PSPad.App.Localization;
 using PSPad.App.State;
 using PSPad.App.State.Dispatch;
@@ -96,6 +97,15 @@ builder.Services.AddHttpClient<PublicSnapshotsClient>(client => client.BaseAddre
     .AddHttpMessageHandler<ServerReachabilityHandler>()
     .AddHttpMessageHandler(() => new StalledRequestHandler(stalledRequestLimit));
 
+builder.Services.AddHttpClient<ILiveStream, LiveStreamClient>(client =>
+    {
+        client.BaseAddress = new Uri(apiBaseAddress);
+        client.Timeout = Timeout.InfiniteTimeSpan;
+    })
+    .AddHttpMessageHandler<ServerReachabilityHandler>()
+    .AddHttpMessageHandler<SessionAuthorizationHandler>()
+    .AddHttpMessageHandler(() => new StalledRequestHandler(stalledRequestLimit));
+
 // An unreachable server is a supported state here, not a fault worth a stack trace per request.
 builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
 
@@ -123,6 +133,9 @@ builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<SyncCoordinator>();
 builder.Services.AddScoped<ISyncTrigger>(sp => sp.GetRequiredService<SyncCoordinator>());
 builder.Services.AddScoped<ISyncStatus>(sp => sp.GetRequiredService<SyncCoordinator>());
+builder.Services.AddScoped<IPageVisibility, BrowserPageVisibility>();
+builder.Services.AddSingleton(LiveTiming.Default);
+builder.Services.AddScoped<LiveUpdates>();
 
 var host = builder.Build();
 var bootLogger = host.Services.GetRequiredService<ILogger<Program>>();
