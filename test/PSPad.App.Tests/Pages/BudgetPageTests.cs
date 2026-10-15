@@ -129,7 +129,7 @@ public class BudgetPageTests : Bunit.TestContext
         builder.CloseComponent();
     };
 
-    static string Text(IRenderedComponent<BudgetPage> page, string selector) => page.Find(selector).TextContent.Trim();
+    static string Text(IRenderedComponent<IComponent> page, string selector) => page.Find(selector).TextContent.Trim();
 
     [Fact]
     public void TheOverviewIsTheDefaultAndShowsTheCurrentMonth()
@@ -340,16 +340,38 @@ public class BudgetPageTests : Bunit.TestContext
         Assert.Empty(page.FindAll(".pspad-fab"));
     }
 
-    IRenderedComponent<BudgetPage> Settings(Budget budget)
+    IRenderedComponent<IComponent> Settings(Budget budget)
     {
-        var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "settings"));
+        var page = Render(builder =>
+        {
+            builder.OpenComponent<MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<BudgetPage>(1);
+            builder.AddAttribute(2, nameof(BudgetPage.BudgetId), budget.Id);
+            builder.AddAttribute(3, nameof(BudgetPage.Tab), "settings");
+            builder.CloseComponent();
+        });
         page.WaitForAssertion(() => page.Find(".pspad-category-list"));
         return page;
     }
 
-    static IElement Row(IRenderedComponent<BudgetPage> page, string list, string name) =>
+    static IElement Row(IRenderedComponent<IComponent> page, string list, string name) =>
         page.FindAll($".pspad-category-list-{list} .pspad-category-row")
             .Single(row => row.QuerySelector(".pspad-category-name")?.TextContent.Trim() == name);
+
+    static IElement MenuItem(IRenderedComponent<IComponent> page, string list, string name, string action)
+    {
+        Row(page, list, name).QuerySelector(".pspad-category-menu button")!.Click();
+        return page.WaitForElement($".pspad-category-{action}");
+    }
+
+    static void CloseMenu(IRenderedComponent<IComponent> page, string list, string name)
+    {
+        Row(page, list, name).QuerySelector(".pspad-category-menu button")!.Click();
+        page.WaitForAssertion(() => Assert.Empty(page.FindAll(".pspad-category-remove")));
+    }
+
+    static bool IsDisabled(IElement item) => item.HasAttribute("disabled") || item.ClassList.Contains("mud-disabled");
 
     Task<T> SentAsync<T>() => AppTestHost.SentAsync<T>(this);
 
@@ -361,7 +383,7 @@ public class BudgetPageTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, budget.UserId, Today, budget, rolls);
         var page = Settings(budget);
 
-        Row(page, "expense", "Food").QuerySelector(".pspad-category-rename")!.Click();
+        MenuItem(page, "expense", "Food", "rename").Click();
         page.Find(".pspad-category-list-expense .pspad-category-rename-input input").Input("Groceries");
         page.Find(".pspad-category-list-expense .pspad-category-rename-input input").KeyDown("Enter");
 
@@ -378,7 +400,7 @@ public class BudgetPageTests : Bunit.TestContext
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
         var page = Settings(budget);
 
-        Row(page, "expense", "Home").QuerySelector(".pspad-category-rename")!.Click();
+        MenuItem(page, "expense", "Home", "rename").Click();
         page.Find(".pspad-category-list-expense .pspad-category-rename-input input").Input("food");
         page.Find(".pspad-category-list-expense .pspad-category-rename-input input").KeyDown("Enter");
 
@@ -395,7 +417,7 @@ public class BudgetPageTests : Bunit.TestContext
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
         var page = Settings(budget);
 
-        Row(page, "expense", "Bike").QuerySelector(".pspad-category-merge")!.Click();
+        MenuItem(page, "expense", "Bike", "merge").Click();
         var target = page.FindComponents<MudSelect<string>>().Single(select => select.Instance.Class!.Contains("pspad-category-merge-target"));
         await page.InvokeAsync(() => target.Instance.ValueChanged.InvokeAsync("Car"));
 
@@ -412,7 +434,7 @@ public class BudgetPageTests : Bunit.TestContext
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
         var page = Settings(budget);
 
-        Row(page, "income", "Other").QuerySelector(".pspad-category-remove")!.Click();
+        MenuItem(page, "income", "Other", "remove").Click();
 
         var sent = await SentAsync<RemoveCategory>();
         Assert.Equal((CategoryKind.Income, "Other"), (sent.Kind, sent.Name));
@@ -429,11 +451,31 @@ public class BudgetPageTests : Bunit.TestContext
             MoneyEntries.Expense(budget, "Lamp", "Home", 40m, Today));
         var page = Settings(budget);
 
-        Assert.Contains("2 entries", Row(page, "expense", "Food").TextContent);
-        Assert.Contains("1 entry", Row(page, "expense", "Home").TextContent);
-        Assert.True(Row(page, "expense", "Food").QuerySelector(".pspad-category-remove")!.HasAttribute("disabled"));
-        Assert.False(Row(page, "expense", "Car").QuerySelector(".pspad-category-remove")!.HasAttribute("disabled"));
+        Assert.Equal("2 entries", Text(Row(page, "expense", "Food"), ".pspad-category-open .pspad-category-usage"));
+        Assert.Equal("1 entry", Text(Row(page, "expense", "Home"), ".pspad-category-open .pspad-category-usage"));
         Assert.Null(Row(page, "expense", "Car").QuerySelector(".pspad-category-usage"));
+        Assert.True(IsDisabled(MenuItem(page, "expense", "Food", "remove")));
+        CloseMenu(page, "expense", "Food");
+        Assert.False(IsDisabled(MenuItem(page, "expense", "Car", "remove")));
+    }
+
+    static string Text(IElement row, string selector) => row.QuerySelector(selector)!.TextContent.Trim();
+
+    [Fact]
+    public void EachCategoryRowHasOneMenuWithRenameMergeAndRemove()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+        var page = Settings(budget);
+
+        var row = Row(page, "expense", "Food");
+        Assert.Empty(row.QuerySelectorAll(".mud-icon-button").Skip(1));
+        Assert.Equal("Actions for Food", row.QuerySelector(".pspad-category-menu button")!.GetAttribute("aria-label"));
+        MenuItem(page, "expense", "Food", "rename");
+
+        Assert.Equal(["Rename", "Merge", "Remove"],
+            page.FindAll(".mud-menu-item").Select(item => item.TextContent.Trim()));
+        Assert.False(IsDisabled(page.Find(".pspad-category-merge")));
     }
 
     [Fact]
@@ -444,6 +486,7 @@ public class BudgetPageTests : Bunit.TestContext
 
         var page = Settings(budget);
 
+        Assert.Empty(page.FindAll(".pspad-category-menu"));
         Assert.Empty(page.FindAll(".pspad-category-rename"));
         Assert.Empty(page.FindAll(".pspad-category-merge"));
         Assert.Empty(page.FindAll(".pspad-category-remove"));
@@ -623,7 +666,7 @@ public class BudgetPageTests : Bunit.TestContext
         Row(page, "expense", "Food").QuerySelector(".pspad-category-open")!.Click();
 
         Assert.EndsWith($"/budgets/{budget.Id}/entries", navigation.Uri);
-        page.Render(parameters => parameters.Add(p => p.Tab, "entries"));
+        page.FindComponent<BudgetPage>().Render(parameters => parameters.Add(p => p.Tab, "entries"));
         page.WaitForAssertion(() => Assert.Equal("Food", Text(page, ".pspad-entries-category")));
         Assert.Equal(["Rolls"], page.FindAll(".pspad-entry-name").Select(name => name.TextContent.Trim()));
     }

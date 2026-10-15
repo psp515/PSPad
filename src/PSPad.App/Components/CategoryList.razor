@@ -36,22 +36,25 @@
                 else
                 {
                     <div class="d-flex align-center gap-1">
-                        <MudButton Class="flex-grow-1 justify-start pspad-category-name pspad-category-open" Variant="Variant.Text" Color="Color.Default"
-                                   Size="Size.Small" OnClick="@(() => OnOpen.InvokeAsync(name))">@name</MudButton>
-                        @if (used > 0)
-                        {
-                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-category-usage">@(used == 1 ? "1 entry" : $"{used} entries")</MudText>
-                        }
+                        <MudButton Class="flex-grow-1 justify-start pspad-category-open" Variant="Variant.Text" Color="Color.Default"
+                                   Size="Size.Small" OnClick="@(() => OnOpen.InvokeAsync(name))">
+                            <span class="pspad-category-name">@name</span>
+                            @if (used > 0)
+                            {
+                                <span class="pspad-muted pspad-category-usage">@(used == 1 ? "1 entry" : $"{used} entries")</span>
+                            }
+                        </MudButton>
                         @if (!ReadOnly)
                         {
-                            <MudIconButton Class="pspad-category-rename" Size="Size.Small" Icon="@Icons.Material.Outlined.Edit"
-                                           aria-label="@($"Rename {name}")" OnClick="@(() => StartRenaming(name))" />
-                            <MudIconButton Class="pspad-category-merge" Size="Size.Small" Icon="@Icons.Material.Outlined.MergeType"
-                                           aria-label="@($"Merge {name}")" Disabled="@(Names.Count < 2)"
-                                           OnClick="@(() => StartMerging(name))" />
-                            <MudIconButton Class="pspad-category-remove" Size="Size.Small" Icon="@Icons.Material.Outlined.Delete"
-                                           aria-label="@($"Remove {name}")" Disabled="@(used > 0 || _busy)"
-                                           OnClick="@(() => RemoveAsync(name))" />
+                            <MudMenu Class="pspad-category-menu" Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true"
+                                     AriaLabel="@($"Actions for {name}")" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                                <MudMenuItem Class="pspad-category-rename" Icon="@Icons.Material.Outlined.Edit"
+                                             OnClick="@(() => StartRenaming(name))">Rename</MudMenuItem>
+                                <MudMenuItem Class="pspad-category-merge" Icon="@Icons.Material.Outlined.MergeType" Disabled="@(Names.Count < 2)"
+                                             OnClick="@(() => StartMerging(name))">Merge</MudMenuItem>
+                                <MudMenuItem Class="pspad-category-remove" Icon="@Icons.Material.Outlined.Delete" Disabled="@(used > 0 || _busy)"
+                                             OnClick="@(() => RemoveAsync(name))">Remove</MudMenuItem>
+                            </MudMenu>
                         }
                     </div>
                 }
