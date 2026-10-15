@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.App.Api;
 using PSPad.App.Pages;
+using PSPad.App.State.Outbox;
 using PSPad.App.Sync;
 using PSPad.Contracts;
 using PSPad.Module.Money.Balance;
@@ -34,9 +35,11 @@ public class BudgetBalanceTests : Bunit.TestContext
     {
         builder.OpenComponent<MudPopoverProvider>(0);
         builder.CloseComponent();
-        builder.OpenComponent<BudgetPage>(1);
-        builder.AddAttribute(2, nameof(BudgetPage.BudgetId), budgetId);
-        builder.AddAttribute(3, nameof(BudgetPage.Tab), "balance");
+        builder.OpenComponent<MudDialogProvider>(1);
+        builder.CloseComponent();
+        builder.OpenComponent<BudgetPage>(2);
+        builder.AddAttribute(3, nameof(BudgetPage.BudgetId), budgetId);
+        builder.AddAttribute(4, nameof(BudgetPage.Tab), "balance");
         builder.CloseComponent();
     };
 
@@ -367,10 +370,34 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         page.Find(".pspad-fab .mud-fab-menu-button").Click();
         page.Find(".pspad-delete-month").Click();
+        page.WaitForAssertion(() => page.Find("div.mud-dialog"));
+        Assert.Equal("Delete the October 2026 balance and its holdings? This can’t be undone.",
+            page.Find("div.mud-dialog .mud-dialog-content").TextContent.Trim());
+        Assert.Equal("Delete month", page.FindAll("div.mud-dialog button").Last().TextContent.Trim());
+        page.FindAll("div.mud-dialog button").Last().Click();
 
         var sent = await SentAsync<DeleteBalanceMonth>();
         Assert.Equal((budget.Id, October), (sent.BudgetId, sent.Month));
         page.WaitForAssertion(() => page.Find(".pspad-balance-missing"));
+    }
+
+    [Fact]
+    public async Task CancellingTheDeleteKeepsTheMonth()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            Balances.Started(budget, October, Balances.AHolding("Wallet", 100m)));
+        var page = Render(WithPopovers(budget.Id));
+        page.WaitForAssertion(() => page.Find(".pspad-fab .mud-fab-menu-button"));
+
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        page.Find(".pspad-delete-month").Click();
+        page.WaitForAssertion(() => page.Find("div.mud-dialog"));
+        page.FindAll("div.mud-dialog button").First().Click();
+
+        page.WaitForAssertion(() => Assert.Empty(page.FindAll("div.mud-dialog")));
+        Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
+        Assert.NotNull(page.Find(".pspad-holding-row"));
     }
 
     [Fact]

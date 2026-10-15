@@ -17,6 +17,7 @@
 @inject CommandSender Sender
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject IDialogService Dialogs
 @implements IDisposable
 
 @if (!_loaded)
@@ -32,7 +33,13 @@ else
 {
     <div class="pspad-budget-page">
     <PageHeading Title="@_budget.Name" Icon="@Icons.Material.Outlined.AccountBalanceWallet" BackHref="@BudgetLinks.Index"
-                 BackLabel="Back to budgets" />
+                 BackLabel="Back to budgets">
+        <Actions>
+            <MudIconButton Class="pspad-budget-settings" Icon="@Icons.Material.Outlined.Settings" aria-label="Budget settings"
+                           aria-pressed="@(TabIndex == SettingsTab ? "true" : "false")"
+                           Color="@(TabIndex == SettingsTab ? Color.Primary : Color.Default)" OnClick="@(() => SelectTab(SettingsTab))" />
+        </Actions>
+    </PageHeading>
 
     @if (_budget.IsArchived)
     {
@@ -131,8 +138,6 @@ else
             </MudTooltip>
         </MudFabMenu>
     }
-    <MudFab Class="pspad-budget-settings pspad-fab-settings" Size="Size.Small" Color="Color.Default" StartIcon="@Icons.Material.Outlined.Settings"
-            OnClick="@(() => SelectTab(SettingsTab))" UserAttributes="@SettingsAttributes" />
 }
 
 @code {
@@ -149,9 +154,6 @@ else
     static readonly Dictionary<string, object> AddHoldingAttributes = new() { ["aria-label"] = "Add holding" };
     static readonly Dictionary<string, object> MonthActionsAttributes = new() { ["aria-label"] = "Month actions" };
     static readonly Dictionary<string, object> DeleteMonthAttributes = new() { ["aria-label"] = "Delete month" };
-
-    Dictionary<string, object> SettingsAttributes =>
-        new() { ["aria-label"] = "Budget settings", ["aria-pressed"] = TabIndex == SettingsTab ? "true" : "false" };
 
     IReadOnlySet<YearMonth> MarkedMonths =>
         TabIndex == BalanceTab
@@ -268,9 +270,23 @@ else
         Surface(await Sender.SendAsync(new StartBalanceMonth(Guid.NewGuid(), State.UserId, BudgetId, _month)),
             "Couldn't start the month.");
 
-    async Task DeleteMonthAsync() =>
+    async Task DeleteMonthAsync()
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, $"Delete the {MoneyText.MonthTitle(_month)} balance and its holdings? This can’t be undone." },
+            { dialog => dialog.ConfirmText, "Delete month" }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete month", parameters);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
         Surface(await Sender.SendAsync(new DeleteBalanceMonth(Guid.NewGuid(), State.UserId, BudgetId, _month)),
             "Couldn't delete the month.");
+    }
 
     async Task<bool> AddCategoryAsync((CategoryKind Kind, string Name) category) =>
         Surface(await Sender.SendAsync(new AddCategory(Guid.NewGuid(), State.UserId, BudgetId, category.Kind, category.Name)),

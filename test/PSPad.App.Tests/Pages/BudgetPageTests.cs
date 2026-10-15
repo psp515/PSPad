@@ -608,18 +608,19 @@ public class BudgetPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheSettingsButtonFloatsOutsideTheViewRow()
+    public void TheSettingsButtonSitsInThePageHeadingAndReachesThePhoneBar()
     {
         var budget = BudgetsPageTests.Named("Personal");
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
 
         var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id));
 
-        page.WaitForAssertion(() => page.Find(".pspad-budget-settings"));
+        page.WaitForAssertion(() => page.Find(".pspad-page-heading .pspad-budget-settings"));
         Assert.Empty(page.FindAll(".pspad-budget-nav .pspad-budget-settings"));
-        Assert.Contains("pspad-fab-settings", page.Find(".pspad-budget-settings").ClassList);
+        Assert.Empty(page.FindAll(".mud-fab.pspad-budget-settings"));
         Assert.Equal("Budget settings", page.Find(".pspad-budget-settings").GetAttribute("aria-label"));
         Assert.Equal("false", page.Find(".pspad-budget-settings").GetAttribute("aria-pressed"));
+        Assert.NotNull(Services.GetRequiredService<PageHeader>().Actions);
     }
 
     [Fact]

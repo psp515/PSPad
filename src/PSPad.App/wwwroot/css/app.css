@@ -1488,29 +1488,28 @@ button.pspad-heatmap-cell:focus-visible {
     min-width: 0;
 }
 
-/* Right-to-left with the newest chip first in the DOM: a scrolling strip then opens at the
-   newest month without script, and "safe center" centres the chips once they fit. */
+/* Newest chip first in the DOM, laid out right to left on one line: the strip renders as many
+   whole months as its measured width fits, and any rounding surplus wraps out of sight on
+   the old end instead of clipping the current month. */
 .pspad-month-strip-scroll {
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
+    flex-direction: row-reverse;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 4px;
-    padding: 2px;
-    overflow-x: auto;
-    direction: rtl;
-    justify-content: safe center;
-    scrollbar-width: none;
-}
-
-.pspad-month-strip-scroll::-webkit-scrollbar {
-    display: none;
+    height: 40px;
+    padding: 2px 0;
+    overflow: hidden;
 }
 
 .pspad-month-chip {
-    direction: ltr;
     flex: 0 0 auto;
+    width: 56px;
+    height: 36px;
     min-width: 0;
-    padding: 3px 12px 2px;
+    padding: 0;
     border-radius: 999px;
     text-transform: none;
     letter-spacing: 0;
@@ -1551,35 +1550,9 @@ button.pspad-heatmap-cell:focus-visible {
     box-shadow: inset 0 0 0 1px var(--mud-palette-primary);
 }
 
-.pspad-fab-settings {
-    position: fixed;
-    bottom: 24px;
-    left: 24px;
-    z-index: 1200;
-}
-
-@media (max-width: 599.98px) {
-    .pspad-entry-filter {
-        width: 100%;
-    }
-
-    .pspad-entry-filter .mud-toggle-item {
-        flex: 1 1 0;
-    }
-
-    .pspad-fab-settings {
-        bottom: calc(72px + 16px);
-        left: 16px;
-    }
-}
-
 @media (min-width: 960px) {
     .pspad-budget-views {
         max-width: 560px;
-    }
-
-    body:has(.mud-drawer-persistent.mud-drawer--open) .pspad-fab-settings {
-        left: calc(var(--mud-drawer-width-left) + 24px);
     }
 
     .pspad-money-hero-top {

@@ -177,28 +177,33 @@ follow the existing naming. Edits happen in side panels, one FAB per page.
   directly under the view row (`mb-3`) holding `MonthStrip`, which fills the
   row. The view row never holds a month control.
 - `MonthStrip` (replaces `MonthSwitcher`): `.pspad-month-strip-scroll` is a
-  horizontally scrolling row of `MudButton` chips `.pspad-month-chip`, one per
-  month from the current month back eleven months, newest at the right edge.
-  The row is laid out `direction: rtl` with the chips newest-first in the
-  DOM, so a scrolling strip opens at the newest month without script; chips
-  are `direction: ltr`. When the chips fit, `justify-content: safe center`
-  centres them. Each chip shows the three-letter month and, on January and
+  single line of `MudButton` chips `.pspad-month-chip` (56px wide, 4px gap),
+  newest at the right edge, showing as many whole months as its width fits:
+  `js/month-strip.js` watches the row with a `ResizeObserver` and calls
+  `Resized(width)`, which sets the count to `max(3, floor((width + 4) / 60))`
+  (12 before the first measurement). The chips are newest-first in the DOM
+  on a `row-reverse`, centred, wrapping row of fixed height with hidden
+  overflow, so any rounding surplus drops off the old end, never the current
+  month. `.pspad-month-today` (`Today` icon, "This month", disabled on the
+  current month) sits at the left of the row and shows the current month in
+  one tap. Each chip shows the three-letter month and, on January and
   on the oldest chip, the year (`.pspad-month-chip-year`); `aria-label` is
   the full "September 2026". The shown month is `Variant.Filled` with
   `aria-pressed="true"`; the current month has `.pspad-month-chip-current`
   (a primary ring) and `aria-current="date"`; months in `Marked` (entries on
   Entries, live snapshots on Balance, computed by `BudgetPage`) have
   `.pspad-month-chip-marked`, which shows the dot `.pspad-month-chip-dot`.
-  A shown month outside the window gets one extra chip at its end of the
-  strip. `.pspad-month-more` (`CalendarMonth`, "Pick another month") opens
+  The window ends at the current month unless the shown month is older than
+  it holds, when it slides back just far enough to keep the shown month as
+  its oldest chip, or newer, when the shown month leads it. `.pspad-month-more` (`CalendarMonth`, "Pick another month") opens
   the existing month sheet (`.pspad-month-sheet`, year arrows, twelve
   months, "This month", "Cancel").
-- Settings button: `MudFab` `.pspad-budget-settings.pspad-fab-settings`
-  (`Size.Small`, `Color.Default`, `Settings` icon, aria-label "Budget
-  settings", `aria-pressed` on the settings view) fixed bottom-left, 24px
-  from the edges, offset by the open drawer from 960px like the snackbar;
-  16px and above the phone navigation bar under 600px. The view row holds
-  only the views, the members badge and the quick actions.
+- Settings button: a `MudIconButton` `.pspad-budget-settings` (`Settings`
+  icon, aria-label "Budget settings", `aria-pressed` and primary colour on
+  the settings view) passed to `PageHeading`'s new `Actions` fragment, which
+  renders it after the sync button on desktop and hands it to `PageHeader`
+  so `MobileTopBar` shows it after the sync button on phones. The view row
+  holds only the views, the members badge and the quick actions.
 - `BudgetPage` keeps one `_category` filter in memory (`string?`). `ShowCategory(name)`
   sets it and navigates to Entries. It is cleared by the chip on Entries and
   when the budget id changes. It is not in the URL.
@@ -260,9 +265,9 @@ Always the current month (`State.Today`). `MudGrid Spacing="4"`:
 
 Replaces `BudgetMonthTab`. The month row (§3.1) sits above the toolbar.
 
-- Toolbar `.pspad-entries-toolbar`, one line from 600px: the kind switch
-  `.pspad-entry-filter` (a `MudToggleGroup` of All / Expenses / Income, small,
-  primary, same look as the view switch; full width under 600px), the category chip `.pspad-entries-category` (a `MudChip` with
+- Toolbar `.pspad-entries-toolbar`, one line from 600px: the kind select
+  `.pspad-entry-filter` (a dense outlined `MudSelect` labelled "Kind" with
+  All / Expenses / Income, matching the sort select), the category chip `.pspad-entries-category` (a `MudChip` with
   `OnClose` that clears the filter; shown only when set), a `MudTextField`
   `.pspad-entries-search` (Placeholder "Search name or note", Immediate,
   Clearable, Adornment Search), and a `MudSelect<EntrySort>`
@@ -310,7 +315,10 @@ column shows `.pspad-balance-empty` "No holdings in {Month}.".
 The FAB on Balance is a `MudFabMenu` `.pspad-fab` (activator "Month actions")
 with "Add holding" (`.pspad-fab-add-holding`) and "Delete month"
 (`.pspad-delete-month`, error colour), shown only with a snapshot on a live
-budget. There is no month menu in the month row.
+budget. Delete month first opens `ConfirmDialog` ("Delete month"; "Delete
+the {Month} balance and its holdings? This can’t be undone."; confirm text
+"Delete month") and sends `DeleteBalanceMonth` only when confirmed. There
+is no month menu in the month row.
 
 Holdings columns follow the holdings box, not the viewport: `.pspad-holdings`
 is `container-type: inline-size`; `@container (min-width: 640px)` lays
@@ -336,20 +344,25 @@ Renamed from Summary (`BudgetSummaryTab` → `BudgetStatsTab`,
   {min} · highest {max}" over `PerMonth` months with entries; the saved tile's
   caption is "saved in {N} of {M} months" (N months with a positive net, M =
   `SampledMonths`). With no sampled months every caption is "—".
-- **Forecast** (`.pspad-stats-forecast`, `xs=12 md=5`): "{Next month yyyy}
+- The cards below the KPI row pack into two columns so a long category list
+  never leaves a gap beside a short chart: `MudItem xs=12 md=5` holds a
+  `.pspad-stats-column` stack (`d-flex flex-column gap-4`) of the forecast
+  and "Where money goes"; `MudItem xs=12 md=7` holds a second stack of the
+  two charts; the net-worth chart spans `xs=12` below.
+- **Forecast** (`.pspad-stats-forecast`, in the left column): "{Next month yyyy}
   forecast", hint "avg of last {MonthCount(SampledMonths)}"; figures Expected
   expenses, Expected income, Expected saved from `UsualMonth.For(entries,
   current)` (always the six-month window, independent of the preset); then
   one row per `ExpenseCategories` item with a `MudProgressLinear` and the
   average, the name a `.pspad-category-open` button. Empty baseline: "A
   forecast needs at least one full month of entries."
-- **Income vs expenses by month** (`xs=12 md=7`, `.pspad-stats-by-month`):
+- **Income vs expenses by month** (right column, `.pspad-stats-by-month`):
   `MudChart` `ChartType.Bar` with series Income and Expenses from `PerMonth`,
   and the `mud-sr-only` table (Month, Income, Expenses, Net).
-- **Where money goes** (`xs=12 md=5`, `.pspad-stats-ranking`, card title
+- **Where money goes** (left column, `.pspad-stats-ranking`, card title
   "Where money goes"): the ranking as today plus a share caption "{P}%" of `Expenses` per row; names are
   `.pspad-category-open` buttons.
-- **Spend by category per month** (`xs=12 md=7`, `.pspad-stats-categories`):
+- **Spend by category per month** (right column, `.pspad-stats-categories`):
   the existing stacked bar (top 4 + Other).
 - **Net worth by holding type** (`xs=12`, `.pspad-stats-net-worth-chart`): the
   existing stacked bar, drawn by the shared `NetWorthByTypeChart` (Balance's

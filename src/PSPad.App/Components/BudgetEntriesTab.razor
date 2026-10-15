@@ -10,12 +10,12 @@
         <div class="d-flex align-center flex-wrap gap-2 mb-2 pspad-entries-toolbar">
             @if (InMonth.Count > 0)
             {
-                <MudToggleGroup T="EntryFilter" Value="@Filters.Kind" ValueChanged="@(kind => Change(Filters with { Kind = kind }))"
-                                Class="pspad-entry-filter" SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary" Size="Size.Small">
-                    <MudToggleItem Value="EntryFilter.All" Text="All" />
-                    <MudToggleItem Value="EntryFilter.Expenses" Text="Expenses" />
-                    <MudToggleItem Value="EntryFilter.Income" Text="Income" />
-                </MudToggleGroup>
+                <MudSelect T="EntryFilter" Class="pspad-entry-filter" Value="@Filters.Kind" ValueChanged="@(kind => Change(Filters with { Kind = kind }))"
+                           Label="Kind" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                    <MudSelectItem T="EntryFilter" Value="EntryFilter.All">All</MudSelectItem>
+                    <MudSelectItem T="EntryFilter" Value="EntryFilter.Expenses">Expenses</MudSelectItem>
+                    <MudSelectItem T="EntryFilter" Value="EntryFilter.Income">Income</MudSelectItem>
+                </MudSelect>
             }
             @if (Filters.Category is { } category)
             {

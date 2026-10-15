@@ -32,8 +32,10 @@ public class BudgetEntriesTests : Bunit.TestContext
     static string[] Names(IRenderedComponent<BudgetPage> page) =>
         [.. page.FindAll(".pspad-entry-name").Select(name => name.TextContent.Trim())];
 
-    static IElement Chip(IRenderedComponent<BudgetPage> page, string text) =>
-        page.FindAll(".pspad-entry-filter .mud-toggle-item").Single(item => item.TextContent.Trim() == text);
+    static MudSelect<EntryFilter> Kind(IRenderedComponent<BudgetPage> page) => page.FindComponent<MudSelect<EntryFilter>>().Instance;
+
+    static Task Choose(IRenderedComponent<BudgetPage> page, EntryFilter kind) =>
+        page.InvokeAsync(() => Kind(page).ValueChanged.InvokeAsync(kind));
 
     static MoneyEntry[] October(Budget budget) =>
     [
@@ -75,12 +77,12 @@ public class BudgetEntriesTests : Bunit.TestContext
     }
 
     [Fact]
-    public void OpeningACategoryClearsTheKindAndSearch()
+    public async Task OpeningACategoryClearsTheKindAndSearch()
     {
         var budget = BudgetsPageTests.Named("Personal");
         AppTestHost.Arrange(this, budget.UserId, Today, [budget, .. October(budget)]);
         var page = Entries(budget);
-        Chip(page, "Income").Click();
+        await Choose(page, EntryFilter.Income);
         page.Find(".pspad-entries-search input").Input("sal");
 
         page.Render(parameters => parameters.Add(p => p.Tab, "overview"));
@@ -90,7 +92,7 @@ public class BudgetEntriesTests : Bunit.TestContext
 
         page.WaitForAssertion(() => Assert.Equal(["Groceries"], Names(page)));
         Assert.Equal("Food", Text(page, ".pspad-entries-category"));
-        Assert.Contains("mud-toggle-item-selected", Chip(page, "All").ClassList);
+        Assert.Equal("All", page.Find(".pspad-entry-filter input").GetAttribute("value"));
     }
 
     [Fact]
@@ -110,13 +112,13 @@ public class BudgetEntriesTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheKindChipsNarrowTheListAndTheCaption()
+    public async Task TheKindSelectNarrowsTheListAndTheCaption()
     {
         var budget = BudgetsPageTests.Named("Personal");
         AppTestHost.Arrange(this, budget.UserId, Today, [budget, .. October(budget)]);
         var page = Entries(budget);
 
-        Chip(page, "Income").Click();
+        await Choose(page, EntryFilter.Income);
 
         Assert.Equal(["Salary"], Names(page));
         Assert.Equal("1 entry · income 1,000.00 · expenses 0.00 · net +1,000.00 PLN", Text(page, ".pspad-entries-caption"));

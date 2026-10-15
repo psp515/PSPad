@@ -5,6 +5,7 @@
 
 <MudGrid Spacing="4" Class="mb-4">
     <MudItem xs="12" md="5">
+        <div class="d-flex flex-column gap-4 pspad-stats-column">
         <MudPaper Outlined="true" Class="pa-3 pspad-stats-forecast">
             <SectionHeading Title="@($"{MoneyText.MonthTitle(Next)} forecast")" Hint="@ForecastHint" />
             @if (Usual.IsEmpty)
@@ -36,8 +37,36 @@
                 </MudStack>
             }
         </MudPaper>
+        <MudPaper Outlined="true" Class="pa-3 pspad-stats-ranking">
+            <SectionHeading Title="Where money goes" />
+            @if (Summary.Ranking.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="pspad-muted pspad-stats-no-ranking">No expenses in this range.</MudText>
+            }
+            else
+            {
+                <MudStack Spacing="3">
+                    @foreach (var total in Summary.Ranking)
+                    {
+                        <div @key="total.Category" class="pspad-stats-ranking-row">
+                            <div class="d-flex align-center gap-2 mb-1">
+                                <MudButton Class="pspad-category-open" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                           OnClick="@(() => OnOpenCategory.InvokeAsync(total.Category))">@total.Category</MudButton>
+                                <MudSpacer />
+                                <MudText Typo="Typo.caption" Class="pspad-muted pspad-stats-ranking-share">@MoneyText.Percent(Summary.Expenses == 0 ? null : total.Pln / Summary.Expenses)</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pspad-stats-ranking-pln">@MoneyText.Pln(total.Pln)</MudText>
+                            </div>
+                            <MudProgressLinear Color="Color.Primary" Rounded="true" Min="0" Max="@_rankingMax"
+                                               Value="@((double)total.Pln)" UserAttributes="@HiddenFromReaders" />
+                        </div>
+                    }
+                </MudStack>
+            }
+        </MudPaper>
+        </div>
     </MudItem>
     <MudItem xs="12" md="7">
+        <div class="d-flex flex-column gap-4 pspad-stats-column">
         <MudPaper Outlined="true" Class="pa-3 pspad-stats-by-month">
             <SectionHeading Title="Income vs expenses by month" />
             <MudChart ChartType="ChartType.Bar" ChartSeries="@_perMonth" ChartLabels="@_labels"
@@ -65,36 +94,6 @@
                 </tbody>
             </table>
         </MudPaper>
-    </MudItem>
-    <MudItem xs="12" md="5">
-        <MudPaper Outlined="true" Class="pa-3 pspad-stats-ranking">
-            <SectionHeading Title="Where money goes" />
-            @if (Summary.Ranking.Count == 0)
-            {
-                <MudText Typo="Typo.body2" Class="pspad-muted pspad-stats-no-ranking">No expenses in this range.</MudText>
-            }
-            else
-            {
-                <MudStack Spacing="3">
-                    @foreach (var total in Summary.Ranking)
-                    {
-                        <div @key="total.Category" class="pspad-stats-ranking-row">
-                            <div class="d-flex align-center gap-2 mb-1">
-                                <MudButton Class="pspad-category-open" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
-                                           OnClick="@(() => OnOpenCategory.InvokeAsync(total.Category))">@total.Category</MudButton>
-                                <MudSpacer />
-                                <MudText Typo="Typo.caption" Class="pspad-muted pspad-stats-ranking-share">@MoneyText.Percent(Summary.Expenses == 0 ? null : total.Pln / Summary.Expenses)</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pspad-stats-ranking-pln">@MoneyText.Pln(total.Pln)</MudText>
-                            </div>
-                            <MudProgressLinear Color="Color.Primary" Rounded="true" Min="0" Max="@_rankingMax"
-                                               Value="@((double)total.Pln)" UserAttributes="@HiddenFromReaders" />
-                        </div>
-                    }
-                </MudStack>
-            }
-        </MudPaper>
-    </MudItem>
-    <MudItem xs="12" md="7">
         <MudPaper Outlined="true" Class="pa-3 pspad-stats-categories">
             <SectionHeading Title="Spend by category per month" />
             @if (Summary.ExpensesByMonth.Count == 0)
@@ -132,6 +131,7 @@
                 </table>
             }
         </MudPaper>
+        </div>
     </MudItem>
     <MudItem xs="12">
         <MudPaper Outlined="true" Class="pa-3 pspad-stats-net-worth-chart">

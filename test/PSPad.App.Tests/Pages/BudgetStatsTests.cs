@@ -37,6 +37,22 @@ public class BudgetStatsTests : Bunit.TestContext
         page.FindAll(".pspad-stats-presets .mud-chip").Single(item => item.TextContent.Trim() == text);
 
     [Fact]
+    public void TheListsAndTheChartsPackIntoTwoColumns()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget, MoneyEntries.Expense(budget, "Rolls", "Food", 3m, Today));
+
+        var page = StatsTab(budget);
+
+        var columns = page.FindAll(".pspad-stats-column");
+        Assert.Equal(2, columns.Count);
+        Assert.NotNull(columns[0].QuerySelector(".pspad-stats-forecast"));
+        Assert.NotNull(columns[0].QuerySelector(".pspad-stats-ranking"));
+        Assert.NotNull(columns[1].QuerySelector(".pspad-stats-by-month"));
+        Assert.NotNull(columns[1].QuerySelector(".pspad-stats-categories"));
+    }
+
+    [Fact]
     public void TheLastSixMonthsAreTheDefaultRange()
     {
         var budget = BudgetsPageTests.Named("Personal");

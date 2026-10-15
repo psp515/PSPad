@@ -279,14 +279,18 @@ public partial class StylesheetRulesTests
         Assert.Contains("flex: 1 1 0", Declarations(".pspad-budget-views .mud-toggle-item"));
 
     [Fact]
-    public void TheMonthStripFillsItsRowAndOpensAtTheNewestMonth()
+    public void TheMonthStripFillsItsRowWithWholeChipsCentred()
     {
         Assert.Contains("flex: 1 1 auto", Declarations(".pspad-month-strip"));
         var scroll = Declarations(".pspad-month-strip-scroll");
-        Assert.Contains("overflow-x: auto", scroll);
-        Assert.Contains("direction: rtl", scroll);
-        Assert.Contains("justify-content: safe center", scroll);
-        Assert.Contains("direction: ltr", Declarations(".pspad-month-chip"));
+        Assert.Contains("flex-direction: row-reverse", scroll);
+        Assert.Contains("flex-wrap: wrap", scroll);
+        Assert.Contains("justify-content: center", scroll);
+        Assert.Contains("overflow: hidden", scroll);
+        Assert.Contains("height: 40px", scroll);
+        var chip = Declarations(".pspad-month-chip");
+        Assert.Contains("width: 56px", chip);
+        Assert.Contains("height: 36px", chip);
     }
 
     [Fact]
@@ -346,21 +350,8 @@ public partial class StylesheetRulesTests
         Assert.Contains("width: 100%", Declarations(".pspad-budget-page"));
 
     [Fact]
-    public void TheSettingsFabSitsBottomLeft()
-    {
-        var fab = Declarations(".pspad-fab-settings");
-
-        Assert.Contains("position: fixed", fab);
-        Assert.Contains("left: 24px", fab);
-        Assert.Contains("bottom: 24px", fab);
-        Assert.Contains("left: calc(var(--mud-drawer-width-left) + 24px)",
-            DeclarationsInMedia("min-width: 960px", "body:has(.mud-drawer-persistent.mud-drawer--open) .pspad-fab-settings"));
-        Assert.Contains("left: 16px", DeclarationsInMedia("max-width: 599.98px", ".pspad-fab-settings"));
-    }
-
-    [Fact]
-    public void OnAPhoneTheKindSwitchFillsItsLine() =>
-        Assert.Contains("flex: 1 1 0", DeclarationsInMedia("max-width: 599.98px", ".pspad-entry-filter .mud-toggle-item"));
+    public void NothingFloatsBottomLeft() =>
+        Assert.DoesNotContain(".pspad-fab-settings", Css);
 
     [Fact]
     public void OnDesktopTheViewsAreNotStretched() =>

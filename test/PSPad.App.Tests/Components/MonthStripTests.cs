@@ -43,8 +43,11 @@ public class MonthStripTests : Bunit.TestContext
     static string[] Labels(IRenderedComponent<ContainerFragment> strip, string selector = ".pspad-month-chip") =>
         [.. strip.FindAll(selector).Select(chip => chip.GetAttribute("aria-label")!)];
 
+    static void Resize(IRenderedComponent<ContainerFragment> strip, double width) =>
+        strip.InvokeAsync(() => strip.FindComponent<MonthStrip>().Instance.Resized(width)).GetAwaiter().GetResult();
+
     [Fact]
-    public void TheStripListsTheLastTwelveMonthsNewestFirst()
+    public void BeforeItIsMeasuredTheStripListsTwelveMonthsNewestFirst()
     {
         var strip = Strip(October);
 
@@ -55,6 +58,21 @@ public class MonthStripTests : Bunit.TestContext
         ], Labels(strip));
         Assert.Equal(["Oct", "Sep", "Aug", "Jul", "Jun", "May", "Apr", "Mar", "Feb", "Jan", "Dec", "Nov"],
             strip.FindAll(".pspad-month-chip-label").Select(label => label.TextContent.Trim()));
+    }
+
+    [Theory]
+    [InlineData(1200, 20)]
+    [InlineData(599, 10)]
+    [InlineData(300, 5)]
+    [InlineData(60, 3)]
+    public void TheStripShowsAsManyWholeMonthsAsFitItsWidth(double width, int chips)
+    {
+        var strip = Strip(October);
+
+        Resize(strip, width);
+
+        Assert.Equal(chips, strip.FindAll(".pspad-month-chip").Count);
+        Assert.Equal("October 2026", strip.FindAll(".pspad-month-chip")[0].GetAttribute("aria-label"));
     }
 
     [Fact]
@@ -98,24 +116,56 @@ public class MonthStripTests : Bunit.TestContext
     }
 
     [Fact]
-    public void AnOlderMonthOutsideTheWindowGetsItsOwnChipAtTheOldEnd()
+    public void TheTodayButtonJumpsToTheCurrentMonth()
     {
-        var strip = Strip(new YearMonth(2024, 6));
+        var strip = Strip(new YearMonth(2026, 3));
+        Assert.Equal("This month", strip.Find(".pspad-month-today").GetAttribute("aria-label"));
+        Assert.False(strip.Find(".pspad-month-today").HasAttribute("disabled"));
 
-        Assert.Equal(13, strip.FindAll(".pspad-month-chip").Count);
-        Assert.Equal("June 2024", strip.FindAll(".pspad-month-chip")[^1].GetAttribute("aria-label"));
-        Assert.Equal(["June 2024"], Labels(strip, ".pspad-month-chip[aria-pressed='true']"));
-        Assert.Equal(["2026", "2024"], strip.FindAll(".pspad-month-chip-year").Select(year => year.TextContent.Trim()));
+        strip.Find(".pspad-month-today").Click();
+
+        Assert.Equal(October, _picked);
     }
 
     [Fact]
-    public void AFutureMonthGetsItsOwnChipAtTheNewEnd()
+    public void TheTodayButtonRestsOnTheCurrentMonth()
+    {
+        var strip = Strip(October);
+
+        Assert.True(strip.Find(".pspad-month-today").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void AnOlderMonthAnchorsTheStripSoItStaysVisibleAtTheOldEnd()
+    {
+        var strip = Strip(new YearMonth(2024, 6));
+
+        Assert.Equal(12, strip.FindAll(".pspad-month-chip").Count);
+        Assert.Equal("May 2025", strip.FindAll(".pspad-month-chip")[0].GetAttribute("aria-label"));
+        Assert.Equal("June 2024", strip.FindAll(".pspad-month-chip")[^1].GetAttribute("aria-label"));
+        Assert.Equal(["June 2024"], Labels(strip, ".pspad-month-chip[aria-pressed='true']"));
+        Assert.Equal(["2025", "2024"], strip.FindAll(".pspad-month-chip-year").Select(year => year.TextContent.Trim()));
+        Assert.Empty(strip.FindAll(".pspad-month-chip-current"));
+    }
+
+    [Fact]
+    public void AMonthJustOutsideTheWindowShiftsItByOnlyWhatItNeeds()
+    {
+        var strip = Strip(new YearMonth(2025, 10));
+
+        Assert.Equal("September 2026", strip.FindAll(".pspad-month-chip")[0].GetAttribute("aria-label"));
+        Assert.Equal("October 2025", strip.FindAll(".pspad-month-chip")[^1].GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public void AFutureMonthLeadsTheStrip()
     {
         var strip = Strip(new YearMonth(2027, 1));
 
-        Assert.Equal(13, strip.FindAll(".pspad-month-chip").Count);
+        Assert.Equal(12, strip.FindAll(".pspad-month-chip").Count);
         Assert.Equal("January 2027", strip.FindAll(".pspad-month-chip")[0].GetAttribute("aria-label"));
         Assert.Equal(["January 2027"], Labels(strip, ".pspad-month-chip[aria-pressed='true']"));
+        Assert.Equal(["October 2026"], Labels(strip, ".pspad-month-chip-current"));
     }
 
     [Fact]
@@ -147,7 +197,7 @@ public class MonthStripTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ThisMonthJumpsBackToTheCurrentMonth()
+    public void ThisMonthInTheSheetJumpsBackToTheCurrentMonth()
     {
         var strip = Strip(new YearMonth(2024, 6));
         strip.Find(".pspad-month-more").Click();
