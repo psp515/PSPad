@@ -1,3 +1,4 @@
+using PSPad.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using PSPad.Abstractions;
 using PSPad.Infrastructure.Mongo;

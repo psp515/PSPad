@@ -28,10 +28,10 @@ public sealed class LiveAudience(IContainerMembers containers)
                     audience.UnionWith(events.OfType<ListMemberRemoved>().Select(removed => removed.MemberId));
                     break;
                 case TodoTask task:
-                    AddList(listIds, task.ListId, task.PreviousListId);
+                    AddList(listIds, task.ListId, task.PreviousListId, events.OfType<TaskMovedToList>().Any());
                     break;
                 case ReferenceItem item:
-                    AddList(listIds, item.ListId, item.PreviousListId);
+                    AddList(listIds, item.ListId, item.PreviousListId, events.OfType<ReferenceItemMovedToList>().Any());
                     break;
                 case Budget budget:
                     audience.UnionWith(budget.Members.Select(member => member.UserId));
@@ -60,10 +60,10 @@ public sealed class LiveAudience(IContainerMembers containers)
         return audience;
     }
 
-    static void AddList(HashSet<Guid> listIds, Guid listId, Guid? previousListId)
+    static void AddList(HashSet<Guid> listIds, Guid listId, Guid? previousListId, bool moved)
     {
         listIds.Add(listId);
-        if (previousListId is { } previous)
+        if (moved && previousListId is { } previous)
         {
             listIds.Add(previous);
         }

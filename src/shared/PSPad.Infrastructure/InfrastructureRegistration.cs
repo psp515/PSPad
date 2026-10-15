@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using PSPad.Abstractions;
 using PSPad.Infrastructure.Events;
 using PSPad.Infrastructure.Mongo;
@@ -30,6 +31,7 @@ public static class InfrastructureRegistration
         services.AddScoped(typeof(IDocumentStore<>), typeof(MongoDocumentStore<>));
         services.AddScoped<IUnitOfWork, MongoUnitOfWork>();
         services.AddSingleton<IClock, SystemClock>();
+        services.TryAddScoped<ICommitObserver, NoCommitObserver>();
 
         return services;
     }

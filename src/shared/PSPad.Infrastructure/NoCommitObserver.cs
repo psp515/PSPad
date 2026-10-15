@@ -1,6 +1,6 @@
 using PSPad.Abstractions;
 
-namespace PSPad.Api.Tests.Persistence;
+namespace PSPad.Infrastructure;
 
 public sealed class NoCommitObserver : ICommitObserver
 {

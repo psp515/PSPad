@@ -1,3 +1,4 @@
+using PSPad.Infrastructure;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Driver;

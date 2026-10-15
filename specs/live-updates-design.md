@@ -101,14 +101,14 @@ The stack serves plain HTTP; the self-hoster's own proxy sits in front of the
 API (`docs/src/pages/install.astro`, "Putting it behind a proxy"). The headers
 and heartbeat in §2 are chosen so stock proxy settings carry the stream.
 
-**Cloudflare (proxied DNS or Tunnel): no change required.** Cloudflare streams
-`text/event-stream` unbuffered. It drops an origin connection silent for 100 s
-(error 524); the 25 s heartbeat keeps it far below that. Browsers talk HTTP/2
-to Cloudflare, so a stream does not use up the per-host connection limit. Only
-if a Cache Rule caches the API hostname, exclude `/api/live` (better: never
-cache the API).
+**Cloudflare (proxied DNS or Tunnel): expected to need no change; not tested
+here.** Per its documented behaviour Cloudflare streams `text/event-stream`
+unbuffered and drops an origin connection silent for 100 s (error 524); the
+25 s heartbeat stays under that. Browsers talk HTTP/2 to Cloudflare, so a
+stream does not use up the per-host connection limit. Only if a Cache Rule
+caches the API hostname, exclude `/api/live` (better: never cache the API).
 
-**nginx in front of the API: no change required with stock directives.**
+**nginx in front of the API: stock settings were tested and need no change.**
 Change only if the config has one of these:
 
 | If your config has | Change it to |
@@ -117,7 +117,7 @@ Change only if the config has one of these:
 | `proxy_ignore_headers X-Accel-Buffering` | remove it, or add `proxy_buffering off;` in `location /api/live` |
 | `proxy_cache` on the API | `proxy_cache off;` for `/api/live` |
 | `gzip_types` including `text/event-stream` | remove it |
-| TLS without `http2` and no Cloudflare in front | `http2 on;` — on HTTP/1.1 each open tab holds one of the browser's six connections to the API |
+| TLS without `http2` and no Cloudflare in front | `http2 on;` — on HTTP/1.1 each visible tab holds one of the browser's six connections to the API (hidden tabs drop their stream); the default proxy-less `http://localhost:5000` is HTTP/1.1 too |
 
 An explicit block that does not rely on the response headers:
 
@@ -132,11 +132,13 @@ location /api/live {
 }
 ```
 
-**Caddy: no change required.** It flushes `text/event-stream` immediately.
+**Caddy: expected to need no change; not tested here.** Per its documented
+behaviour it flushes `text/event-stream` immediately.
 
-`install.astro` carries this section verbatim. An integration test runs the
-stream through `nginxinc/nginx-unprivileged:1.31.6-alpine` with a stock
-`proxy_pass` block (§7). The Cloudflare path is checked by hand on a real
+`install.astro` carries this guidance. An integration test runs the stream
+through `nginxinc/nginx-unprivileged:1.31.6-alpine` with a stock `proxy_pass`
+block and a short `proxy_read_timeout` (§7); it passes even without
+`X-Accel-Buffering`. Cloudflare and Caddy are not tested. The Cloudflare path is checked by hand on a real
 deployment before merge.
 
 ## 4. Fan-out
@@ -170,7 +172,7 @@ must change the audience too.
 |---|---|
 | any | the actor, and the aggregate's `UserId` (owner) |
 | `TaskList` | + its current members, + `MemberId` of any `ListMemberRemoved` in the commit |
-| `TodoTask`, `ReferenceItem` | + owner and members of the list `ListId` names, and of `PreviousListId` |
+| `TodoTask`, `ReferenceItem` | + owner and members of the list `ListId` names, and of `PreviousListId` when the commit moves it |
 | `Budget` | + its current members, + `MemberId` of any `BudgetMemberRemoved` in the commit |
 | `MoneyEntry`, `BalanceSnapshot` | + owner and members of the budget `BudgetId` names |
 
