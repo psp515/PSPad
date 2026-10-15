@@ -227,7 +227,7 @@ public class BudgetPageTests : Bunit.TestContext
     [InlineData("stats", false)]
     [InlineData("summary", false)]
     [InlineData("settings", false)]
-    public void TheMonthSwitcherSharesTheViewRowOnlyForEntriesAndBalance(string tab, bool shown)
+    public void TheMonthRowShowsOnlyForEntriesAndBalance(string tab, bool shown)
     {
         var budget = BudgetsPageTests.Named("Personal");
         AppTestHost.Arrange(this, budget.UserId, Today, budget);
@@ -235,7 +235,8 @@ public class BudgetPageTests : Bunit.TestContext
         var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, tab));
 
         page.WaitForAssertion(() => page.Find(".pspad-budget-nav"));
-        Assert.Equal(shown ? 1 : 0, page.FindAll(".pspad-budget-nav .pspad-month-switcher").Count);
+        Assert.Empty(page.FindAll(".pspad-budget-nav .pspad-month-switcher"));
+        Assert.Equal(shown ? 1 : 0, page.FindAll(".pspad-month-row .pspad-month-switcher").Count);
         Assert.Equal(shown ? 1 : 0, page.FindAll(".pspad-month-switcher").Count);
     }
 

@@ -1446,28 +1446,25 @@ button.pspad-heatmap-cell:focus-visible {
     text-transform: none;
 }
 
-@media (max-width: 959.98px) {
-    .pspad-budget-nav .pspad-month-switcher {
-        flex-basis: 100%;
+@media (max-width: 599.98px) {
+    .pspad-month-row .pspad-month-switcher {
+        flex: 1 1 auto;
     }
 
-    .pspad-budget-nav .pspad-month-control {
+    .pspad-month-row .pspad-month-control {
         flex: 1 1 auto;
+    }
+}
+
+@media (min-width: 600px) {
+    .pspad-month-row .pspad-month-control {
+        width: 280px;
     }
 }
 
 @media (min-width: 960px) {
     .pspad-budget-views {
         max-width: 560px;
-    }
-
-    .pspad-budget-nav .pspad-month-switcher {
-        flex: 1 1 auto;
-        justify-content: flex-end;
-    }
-
-    .pspad-budget-nav .pspad-month-control {
-        width: 280px;
     }
 
     .pspad-money-hero-top {

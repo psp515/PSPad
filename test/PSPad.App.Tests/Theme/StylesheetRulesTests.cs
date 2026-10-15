@@ -333,8 +333,15 @@ public partial class StylesheetRulesTests
         Assert.Contains("width: 100%", Declarations(".pspad-budget-page"));
 
     [Fact]
-    public void OnAPhoneTheMonthSwitcherTakesItsOwnLine() =>
-        Assert.Contains("flex-basis: 100%", DeclarationsInMedia("max-width: 959.98px", ".pspad-budget-nav .pspad-month-switcher"));
+    public void OnAPhoneTheMonthControlFillsItsRow()
+    {
+        Assert.Contains("flex: 1 1 auto", DeclarationsInMedia("max-width: 599.98px", ".pspad-month-row .pspad-month-control"));
+        Assert.Contains("flex: 1 1 auto", DeclarationsInMedia("max-width: 599.98px", ".pspad-month-row .pspad-month-switcher"));
+    }
+
+    [Fact]
+    public void FromATabletTheMonthControlIsFixedWidth() =>
+        Assert.Contains("width: 280px", DeclarationsInMedia("min-width: 600px", ".pspad-month-row .pspad-month-control"));
 
     [Fact]
     public void OnDesktopTheViewsAreNotStretched() =>

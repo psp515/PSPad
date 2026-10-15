@@ -58,18 +58,6 @@ else
         <MudIconButton Class="pspad-budget-settings" Icon="@Icons.Material.Outlined.Settings" aria-label="Budget settings"
                        aria-pressed="@(TabIndex == SettingsTab ? "true" : "false")"
                        Color="@(TabIndex == SettingsTab ? Color.Primary : Color.Default)" OnClick="@(() => SelectTab(SettingsTab))" />
-        @if (TabIndex is EntriesTab or BalanceTab)
-        {
-            <MonthSwitcher Month="@_month" Current="@Current" OnMonthChanged="@ShowMonth">
-                @if (TabIndex == BalanceTab && Balance.Snapshot is not null && !_budget.IsArchived)
-                {
-                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" AriaLabel="Month actions" Class="pspad-balance-menu" Dense="true"
-                             AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                        <MudMenuItem Class="pspad-delete-month" OnClick="@DeleteMonthAsync">Delete month</MudMenuItem>
-                    </MudMenu>
-                }
-            </MonthSwitcher>
-        }
         @if ((TabIndex is OverviewTab or EntriesTab) && !_budget.IsArchived)
         {
             <div class="d-none d-md-flex gap-2 pspad-budget-quick">
@@ -80,6 +68,20 @@ else
             </div>
         }
     </div>
+
+    @if (TabIndex is EntriesTab or BalanceTab)
+    {
+        <div class="d-flex align-center gap-2 mb-3 pspad-month-row">
+            <MonthSwitcher Month="@_month" Current="@Current" OnMonthChanged="@ShowMonth" />
+            @if (TabIndex == BalanceTab && Balance.Snapshot is not null && !_budget.IsArchived)
+            {
+                <MudMenu Icon="@Icons.Material.Filled.MoreVert" AriaLabel="Month actions" Class="ml-auto pspad-balance-menu" Dense="true"
+                         AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                    <MudMenuItem Class="pspad-delete-month" OnClick="@DeleteMonthAsync">Delete month</MudMenuItem>
+                </MudMenu>
+            }
+        </div>
+    }
 
     @switch (TabIndex)
     {

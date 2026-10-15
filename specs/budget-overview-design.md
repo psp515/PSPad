@@ -173,7 +173,12 @@ follow the existing naming. Edits happen in side panels, one FAB per page.
   today; on Entries for the shown month (§3.3).
 - URL tabs: `overview`, `entries`, `balance`, `stats`, `settings`; `month` is
   read as `entries`, `summary` as `stats`. `BudgetLinks.ForTab` is unchanged.
-- The month switcher shows on Entries and Balance as today (Month → Entries).
+- Month row `.pspad-month-row`: on Entries and Balance only, a flex row
+  directly under the view row (`mb-3`) holding `MonthSwitcher` at its left
+  edge and, on Balance with a snapshot on a live budget, the month menu
+  (`.pspad-balance-menu`, "Delete month") pushed right with `ml-auto`. The
+  view row never holds the switcher. Under 600px `.pspad-month-control`
+  stretches (`flex: 1 1 auto`); from 600px it is 280px wide.
 - `BudgetPage` keeps one `_category` filter in memory (`string?`). `ShowCategory(name)`
   sets it and navigates to Entries. It is cleared by the chip on Entries and
   when the budget id changes. It is not in the URL.
@@ -233,7 +238,7 @@ Always the current month (`State.Today`). `MudGrid Spacing="4"`:
 
 ### 3.3 Entries (`BudgetEntriesTab`, `.pspad-entries`)
 
-Replaces `BudgetMonthTab`. The month switcher stays in the view row.
+Replaces `BudgetMonthTab`. The month row (§3.1) sits above the toolbar.
 
 - Toolbar `.pspad-entries-toolbar`: the kind chips (All / Expenses / Income,
   as today), the category chip `.pspad-entries-category` (a `MudChip` with
@@ -265,12 +270,22 @@ Replaces `BudgetMonthTab`. The month switcher stays in the view row.
 
 ### 3.4 Balance (`BudgetBalanceTab`)
 
-Unchanged behaviour; the layout becomes `MudGrid`: the hero and, under it,
-a new `MudPaper` `.pspad-balance-history` ("Last 12 months", a `MudChart`
+Unchanged behaviour; the layout becomes `MudGrid`: the hero and a new
+`MudPaper` `.pspad-balance-history` ("Last 12 months", a `MudChart`
 StackedBar of `MoneySummary.For([], snapshots, (current−11).FirstDay,
 current.LastDay).NetWorth` by type with the `mud-sr-only` table as in
-`BudgetSummaryCharts`; hidden when every month is a gap) in `xs=12 md=4`;
-the holdings in `xs=12 md=8`. The "no balance yet" banner spans `xs=12`.
+`BudgetSummaryCharts`; hidden when every month is a gap) in `xs=12 lg=4`;
+the holdings in `xs=12 lg=8`. Inside the `lg=4` column an inner `MudGrid`
+puts the hero in `xs=12 md=5 lg=12` and the history in `xs=12 md=7 lg=12`,
+so between 960px and 1279px they sit side by side above the holdings. The
+"no balance yet" banner spans `xs=12`.
+
+Holdings columns follow the holdings box, not the viewport: `.pspad-holdings`
+is `container-type: inline-size`; `@container (min-width: 640px)` lays
+`.pspad-holdings-head` and `.pspad-holding-row` out as the five-column grid
+(`minmax(0, 2fr) repeat(4, minmax(0, 1fr))`), `@container (max-width: 639.98px)`
+hides `.pspad-holding-cell` and keeps the stacked phone row. The head cells
+are `white-space: nowrap`.
 
 ### 3.5 Stats (`BudgetStatsTab`, `.pspad-stats`)
 
@@ -312,17 +327,29 @@ Renamed from Summary (`BudgetSummaryTab` → `BudgetStatsTab`,
 
 ### 3.6 Settings (`BudgetSettingsTab`)
 
-`MudGrid`: `xs=12 md=7` holds the two `CategoryList`s side by side from 960px
-(`MudGrid` inside, `sm=6` each); `xs=12 md=5` stacks Budget, Sharing and the
-two Import cards (Budget first). `CategoryList` names become `.pspad-category-open`
-buttons calling `OnOpen(name)`; the tab forwards expense names to
-`OnOpenCategory` (income names open Entries filtered too — the filter matches
-either kind by name).
+`MudGrid`: `xs=12 lg=7` holds the two `CategoryList`s side by side from 600px
+(`MudGrid` inside, `sm=6` each); `xs=12 lg=5` holds Budget, Sharing and the
+two Import cards (Budget first) in an inner `MudGrid` of `xs=12 sm=6 lg=12`
+items, so below 1280px the cards pair up under the lists. `CategoryList`
+names become `.pspad-category-open` buttons calling `OnOpen(name)`; the tab
+forwards expense names to `OnOpenCategory` (income names open Entries
+filtered too — the filter matches either kind by name).
+
+A `CategoryList` row (`.pspad-category-row`) is the `.pspad-category-open`
+button holding `.pspad-category-name` and, when the category has entries, a
+caption line `.pspad-category-usage` ("1 entry" / "N entries") under the
+name, followed by one `MudMenu` `.pspad-category-menu` (`MoreVert`,
+aria-label "Actions for {name}") with `MudMenuItem`s `.pspad-category-rename`,
+`.pspad-category-merge` (disabled with fewer than two categories) and
+`.pspad-category-remove` (disabled while the category has entries). The
+menu is absent on an archived budget. Rename and merge still swap the row
+for the inline input or select as before.
 
 ### 3.7 Phone
 
 Cards stack (`xs=12`). The view row stacks icons over labels under 600px.
-The FAB menu stays. Nothing else changes.
+The month control fills its row under 600px. The FAB menu stays. Nothing
+else changes.
 
 ## 4. Testing
 
@@ -345,6 +372,11 @@ Every class `[UnitTest]`. Fixtures: `Given` (module), `MoneyEntries`,
   `BudgetStatsTests` (default preset, KPIs, forecast, bar chart data, share
   captions), `BudgetBalanceTests` (history chart present / hidden),
   `BudgetPageTests` settings category click, `MoneyTextTests` (`Recorded`).
+- Layout follow-up: `BudgetPageTests` (month row holds the switcher, the
+  view row does not; category menu opens rename, merge, remove; remove
+  disabled while used; `lg` grid classes on Settings), `BudgetBalanceTests`
+  (`lg` grid classes, month menu in the month row), `StylesheetRulesTests`
+  (holdings container query, month-control widths, nowrap head).
 - `StylesheetRulesTests` if it asserts on budget CSS.
 
 ## 5. Docs
