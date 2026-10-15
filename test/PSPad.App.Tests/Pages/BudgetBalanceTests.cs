@@ -435,4 +435,24 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         Assert.Empty(page.FindAll(".pspad-balance-history"));
     }
+
+    [Fact]
+    public void TheNetWorthColumnSitsBesideTheHoldingsOnlyWhenWide()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            Balances.Started(budget, October, Balances.AHolding("Wallet", 100m)));
+
+        var page = BalanceTab(budget);
+
+        page.WaitForAssertion(() => page.Find(".pspad-holding-row"));
+        Assert.Contains("mud-grid-item-lg-4", page.Find(".pspad-balance-aside").ClassList);
+        Assert.DoesNotContain("mud-grid-item-md-4", page.Find(".pspad-balance-aside").ClassList);
+        Assert.Contains("mud-grid-item-lg-8", page.Find(".pspad-balance-holdings").ClassList);
+        Assert.Contains("mud-grid-item-md-5", page.Find(".pspad-balance-hero-item").ClassList);
+        Assert.Contains("mud-grid-item-lg-12", page.Find(".pspad-balance-hero-item").ClassList);
+        Assert.Contains("mud-grid-item-md-7", page.Find(".pspad-balance-history-item").ClassList);
+        Assert.Contains("mud-grid-item-lg-12", page.Find(".pspad-balance-history-item").ClassList);
+        Assert.NotNull(page.Find(".pspad-balance-history-item .pspad-balance-history"));
+    }
 }

@@ -26,10 +26,12 @@
     }
 
     <MudGrid Spacing="4">
-        <MudItem xs="12" md="4">
+        <MudItem xs="12" lg="4" Class="pspad-balance-aside">
+            <MudGrid Spacing="4">
             @if (Snapshot is not null)
             {
-                <MoneyHero Class="mb-2" HeadlineClass="pspad-balance-net-worth" Label="Net worth" Text="@MoneyText.Pln(Totals.NetWorth)">
+                <MudItem xs="12" md="5" lg="12" Class="pspad-balance-hero-item">
+                <MoneyHero HeadlineClass="pspad-balance-net-worth" Label="Net worth" Text="@MoneyText.Pln(Totals.NetWorth)">
                     <ChildContent>
                         <MoneyFigure Class="pspad-balance-change" Label="@ChangeLabel" Text="@ChangeText" Negative="@(Totals.Change < 0)" />
                         @if (AtToday is { } atToday)
@@ -46,17 +48,21 @@
                         }
                     </Footer>
                 </MoneyHero>
+                </MudItem>
             }
             @if (_history.NetWorth.Any(month => !month.IsGap))
             {
-                <MudPaper Outlined="true" Class="pa-3 mt-4 pspad-balance-history">
+                <MudItem xs="12" md="7" lg="12" Class="pspad-balance-history-item">
+                <MudPaper Outlined="true" Class="pa-3 pspad-balance-history">
                     <SectionHeading Title="Last 12 months" Hint="by holding type" />
                     <NetWorthByTypeChart Class="pspad-balance-history-chart" Months="@_history.NetWorth" Labels="@_historyLabels"
                                          Height="200px" Caption="Net worth by holding type, last 12 months" />
                 </MudPaper>
+                </MudItem>
             }
+            </MudGrid>
         </MudItem>
-        <MudItem xs="12" md="8">
+        <MudItem xs="12" lg="8" Class="pspad-balance-holdings">
             @if (Snapshot is not null)
             {
                 if (Snapshot.Holdings.Count == 0)

@@ -383,13 +383,24 @@ public partial class StylesheetRulesTests
     }
 
     [Fact]
-    public void OnDesktopHoldingsLineUpInColumns() =>
-        Assert.Contains("grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr))",
-            DeclarationsInMedia("min-width: 960px", ".pspad-holding-row"));
+    public void TheHoldingsBoxMeasuresItself() =>
+        Assert.Contains("container-type: inline-size", Declarations(".pspad-holdings"));
 
     [Fact]
-    public void OnAPhoneHoldingsHideTheirTableCells() =>
-        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-holding-row .pspad-holding-cell"));
+    public void HoldingsLineUpInColumnsWhenTheirBoxIsWide()
+    {
+        Assert.Contains("grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr))",
+            DeclarationsInContainer("min-width: 640px", ".pspad-holding-row"));
+        Assert.Empty(DeclarationsInMedia("min-width: 960px", ".pspad-holding-row"));
+    }
+
+    [Fact]
+    public void TheHoldingsHeadDoesNotWrap() =>
+        Assert.Contains("white-space: nowrap", DeclarationsInContainer("min-width: 640px", ".pspad-holdings-head"));
+
+    [Fact]
+    public void HoldingsHideTheirTableCellsInANarrowBox() =>
+        Assert.Contains("display: none", DeclarationsInContainer("max-width: 639.98px", ".pspad-holding-row .pspad-holding-cell"));
 
     [Fact]
     public void LongEntryNamesEndInAnEllipsis() =>
@@ -401,8 +412,14 @@ public partial class StylesheetRulesTests
             .Select(rule => rule.Groups["body"].Value.Trim()));
 
     static string DeclarationsInMedia(string condition, string selector) =>
-        string.Join("\n", Regex.Matches(Css, @"@media \(" + Regex.Escape(condition) + @"\) \{(?<body>(?:[^{}]*\{[^{}]*\})*[^{}]*)\}")
-            .SelectMany(media => Rule().Matches(media.Groups["body"].Value))
+        DeclarationsInAtRule("@media", condition, selector);
+
+    static string DeclarationsInContainer(string condition, string selector) =>
+        DeclarationsInAtRule("@container", condition, selector);
+
+    static string DeclarationsInAtRule(string atRule, string condition, string selector) =>
+        string.Join("\n", Regex.Matches(Css, atRule + @" \(" + Regex.Escape(condition) + @"\) \{(?<body>(?:[^{}]*\{[^{}]*\})*[^{}]*)\}")
+            .SelectMany(block => Rule().Matches(block.Groups["body"].Value))
             .Where(rule => SelectorsOf(rule).Contains(selector))
             .Select(rule => rule.Groups["body"].Value.Trim()));
 

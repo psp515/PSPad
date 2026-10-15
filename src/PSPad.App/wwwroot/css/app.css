@@ -1694,13 +1694,17 @@ button.pspad-heatmap-cell:focus-visible {
     font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 959.98px) {
+.pspad-holdings {
+    container-type: inline-size;
+}
+
+@container (max-width: 639.98px) {
     .pspad-holding-row .pspad-holding-cell {
         display: none;
     }
 }
 
-@media (min-width: 960px) {
+@container (min-width: 640px) {
     .pspad-holdings-head,
     .pspad-holding-row {
         display: grid;
@@ -1712,6 +1716,7 @@ button.pspad-heatmap-cell:focus-visible {
         padding: 0 17px;
         font-size: 0.75rem;
         color: var(--mud-palette-text-secondary);
+        white-space: nowrap;
     }
 
     .pspad-holdings-head > span:not(:first-child),
