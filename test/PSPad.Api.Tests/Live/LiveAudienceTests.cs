@@ -85,6 +85,65 @@ public class LiveAudienceTests
     }
 
     [Fact]
+    public async Task ALaterEditOfAMovedTaskDoesNotReachThePreviousList()
+    {
+        var listId = Guid.NewGuid();
+        var previousId = Guid.NewGuid();
+        var previousMember = Guid.NewGuid();
+        _containers.Lists[listId] = new ContainerMembers(_owner, [_member]);
+        _containers.Lists[previousId] = new ContainerMembers(_owner, [previousMember]);
+        var task = new TodoTask();
+        task.ApplyAll([
+            new TaskCreated(Guid.NewGuid(), _member, At, previousId, "Read"),
+            new TaskMovedToList(Guid.NewGuid(), _member, At, listId, "Read")
+        ]);
+        var rename = Change(task, new TaskRenamed(task.Id, _member, At, "Read more"));
+
+        var audience = await Audience.ForAsync(_member, [rename], CancellationToken.None);
+
+        Assert.DoesNotContain(previousMember, audience);
+        Assert.Equal(new[] { _owner, _member }.Order(), audience.Order());
+    }
+
+    [Fact]
+    public async Task AMovedReferenceItemReachesTheMembersOfItsPreviousList()
+    {
+        var listId = Guid.NewGuid();
+        var previousId = Guid.NewGuid();
+        var previousMember = Guid.NewGuid();
+        _containers.Lists[listId] = new ContainerMembers(_owner, [_member]);
+        _containers.Lists[previousId] = new ContainerMembers(_owner, [previousMember]);
+        var item = new ReferenceItem();
+        item.ApplyAll([new ReferenceItemCreated(Guid.NewGuid(), _member, At, previousId, "Dune", 0)]);
+        var move = Change(item, new ReferenceItemMovedToList(item.Id, _member, At, listId));
+
+        var audience = await Audience.ForAsync(_member, [move], CancellationToken.None);
+
+        Assert.Equal(new[] { _owner, _member, previousMember }.Order(), audience.Order());
+    }
+
+    [Fact]
+    public async Task ALaterEditOfAMovedReferenceItemDoesNotReachThePreviousList()
+    {
+        var listId = Guid.NewGuid();
+        var previousId = Guid.NewGuid();
+        var previousMember = Guid.NewGuid();
+        _containers.Lists[listId] = new ContainerMembers(_owner, [_member]);
+        _containers.Lists[previousId] = new ContainerMembers(_owner, [previousMember]);
+        var item = new ReferenceItem();
+        item.ApplyAll([
+            new ReferenceItemCreated(Guid.NewGuid(), _member, At, previousId, "Dune", 0),
+            new ReferenceItemMovedToList(Guid.NewGuid(), _member, At, listId)
+        ]);
+        var rename = Change(item, new ReferenceItemRenamed(item.Id, _member, At, "Dune II"));
+
+        var audience = await Audience.ForAsync(_member, [rename], CancellationToken.None);
+
+        Assert.DoesNotContain(previousMember, audience);
+        Assert.Equal(new[] { _owner, _member }.Order(), audience.Order());
+    }
+
+    [Fact]
     public async Task AReferenceItemReachesTheOwnerAndMembersOfItsList()
     {
         var listId = Guid.NewGuid();

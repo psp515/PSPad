@@ -78,19 +78,25 @@ update within a round trip instead of up to a minute. Sync, the replica and
 the outbox are unchanged; a client with live updates broken behaves exactly
 as before.
 
-Self-hosters change nothing with stock Cloudflare, nginx or Caddy settings:
-the response sends `Cache-Control: no-cache, no-transform` and
-`X-Accel-Buffering: no`, and the heartbeat stays under every default idle
-timeout. A proxy with a read timeout under 30 s, ignored accel headers,
+Stock nginx settings were tested and need no change; Cloudflare and Caddy are
+expected to need none from their documented SSE behaviour but were not tested.
+The response sends `Cache-Control: no-cache, no-transform` and
+`X-Accel-Buffering: no`, and the heartbeat stays under Cloudflare's 100 s idle
+limit. A proxy with a read timeout under 30 s, ignored accel headers,
 caching on the API, gzip for `text/event-stream`, or HTTP/1.1-only TLS needs
 the change listed in the spec and `install.astro`.
 
-Each open tab holds one long-lived request. On an HTTP/1.1-only proxy that is
-one of the browser's six connections per host.
+Each visible tab holds one long-lived request (hidden tabs drop their stream).
+On an HTTP/1.1-only proxy that is one of the browser's six connections per
+host.
+
+There is no global cap on open streams. The exposure is authenticated users ×
+`Live:MaxStreamsPerUser`, which is acceptable for a self-hosted install.
 
 The audience is a second statement of who can read what, beside `SyncReader`.
-A change to visibility must change both; the tests per aggregate type are the
-guard.
+The audience tests are hand-written expectations, not a derivation from
+`SyncReader`; a visibility change must update `LiveAudience` and its tests
+together with `SyncReader`.
 
 Former members after a stop-sharing (the event carries no member list),
 account deletion, and backfills nudge nobody; those clients catch up on the
