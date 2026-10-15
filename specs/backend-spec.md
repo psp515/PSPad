@@ -511,6 +511,8 @@ a replica holds one user's whole visible world, not only what that user
 owns — and `IReplica.RemoveAsync` deletes one row; `replica.js`'s `getAll`
 reads a type's rows with the key range `bound([type], [type, []])`.
 
+Open clients also hold `GET /api/live`, a Server-Sent Events stream of data-free `sync` nudges fanned out from `MongoUnitOfWork.CommitAsync` through `ICommitObserver`; see `specs/live-updates-design.md`.
+
 `POST /api/lists/join {token, code}` resolves an invite token to a list,
 checks the code with `TaskList.CheckInvite`, runs `JoinTaskList` through the
 normal pipeline as the caller, and on acceptance returns
