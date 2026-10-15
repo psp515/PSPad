@@ -11,24 +11,24 @@
 @implements IDisposable
 
 <div class="@Class">
-    @if (Snapshot is null)
-    {
-        <MudAlert Severity="Severity.Info" Class="pspad-balance-missing">
-            <div class="d-flex align-center flex-wrap gap-3">
-                <span>@MoneyText.MonthTitle(Month) has no balance yet</span>
-                @if (!ReadOnly)
-                {
-                    <MudButton Class="pspad-start-month" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                               OnClick="@OnStart">Start @MoneyText.MonthTitle(Month)</MudButton>
-                }
-            </div>
-        </MudAlert>
-    }
-
     <MudGrid Spacing="4">
         <MudItem xs="12" lg="4" Class="pspad-balance-aside">
             <MudGrid Spacing="4">
-            @if (Snapshot is not null)
+            @if (Snapshot is null)
+            {
+                <MudItem xs="12" md="5" lg="12" Class="pspad-balance-hero-item">
+                <MudPaper Outlined="true" Class="pa-4 pspad-balance-missing">
+                    <MudText Typo="Typo.subtitle2">@MoneyText.MonthTitle(Month) has no balance yet</MudText>
+                    <MudText Typo="Typo.body2" Class="pspad-muted mt-1 mb-3">@StartHint</MudText>
+                    @if (!ReadOnly)
+                    {
+                        <MudButton Class="pspad-start-month" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                   OnClick="@OnStart">Start @MoneyText.MonthTitle(Month)</MudButton>
+                    }
+                </MudPaper>
+                </MudItem>
+            }
+            else
             {
                 <MudItem xs="12" md="5" lg="12" Class="pspad-balance-hero-item">
                 <MoneyHero HeadlineClass="pspad-balance-net-worth" Label="Net worth" Text="@MoneyText.Pln(Totals.NetWorth)">
@@ -63,7 +63,11 @@
             </MudGrid>
         </MudItem>
         <MudItem xs="12" lg="8" Class="pspad-balance-holdings">
-            @if (Snapshot is not null)
+            @if (Snapshot is null)
+            {
+                <MudText Typo="Typo.body2" Class="pspad-muted pspad-balance-empty">No holdings in @MoneyText.MonthTitle(Month).</MudText>
+            }
+            else
             {
                 if (Snapshot.Holdings.Count == 0)
                 {
@@ -141,6 +145,11 @@
     [Parameter] public string Class { get; set; } = "";
 
     BalanceSnapshot? Snapshot => Totals.Snapshot;
+
+    string StartHint =>
+        Totals.Previous is { } previous
+            ? $"Starting it copies the holdings from {MoneyText.MonthTitle(previous.Month)}."
+            : "Start it and add your holdings.";
 
     IReadOnlyList<HoldingTypeTotal> ByType => Snapshot is null ? [] : BalanceTotals.ByType(Snapshot);
 

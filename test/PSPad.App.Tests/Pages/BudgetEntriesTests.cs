@@ -33,7 +33,7 @@ public class BudgetEntriesTests : Bunit.TestContext
         [.. page.FindAll(".pspad-entry-name").Select(name => name.TextContent.Trim())];
 
     static IElement Chip(IRenderedComponent<BudgetPage> page, string text) =>
-        page.FindAll(".pspad-entry-filter .mud-chip").Single(chip => chip.TextContent.Trim() == text);
+        page.FindAll(".pspad-entry-filter .mud-toggle-item").Single(item => item.TextContent.Trim() == text);
 
     static MoneyEntry[] October(Budget budget) =>
     [
@@ -90,7 +90,7 @@ public class BudgetEntriesTests : Bunit.TestContext
 
         page.WaitForAssertion(() => Assert.Equal(["Groceries"], Names(page)));
         Assert.Equal("Food", Text(page, ".pspad-entries-category"));
-        Assert.Equal("true", Chip(page, "All").GetAttribute("aria-pressed"));
+        Assert.Contains("mud-toggle-item-selected", Chip(page, "All").ClassList);
     }
 
     [Fact]
@@ -101,8 +101,7 @@ public class BudgetEntriesTests : Bunit.TestContext
         var page = Entries(budget);
         page.FindAll(".pspad-entry-category-open").Single(button => button.TextContent.Trim() == "Food").Click();
 
-        page.Find(".pspad-month-previous").Click();
-        page.Find(".pspad-month-previous").Click();
+        page.Find(".pspad-month-chip[aria-label='August 2026']").Click();
 
         Assert.Equal("No entries in August 2026.", Text(page, ".pspad-entries-caption"));
         page.Find(".pspad-entries-category .mud-chip-close-button").Click();
@@ -192,7 +191,7 @@ public class BudgetEntriesTests : Bunit.TestContext
         navigation.NavigateTo($"/budgets/{budget.Id}/entries");
         var page = Entries(budget);
 
-        page.Find(".pspad-month-previous").Click();
+        page.Find(".pspad-month-chip[aria-label='September 2026']").Click();
         page.Find(".pspad-budget-quick-expense").Click();
 
         Assert.EndsWith($"/budgets/{budget.Id}/entries?expense={budget.Id}&month=2026-09", navigation.Uri);

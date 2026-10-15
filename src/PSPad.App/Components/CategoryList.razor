@@ -36,14 +36,13 @@
                 else
                 {
                     <div class="d-flex align-center gap-1">
-                        <MudButton Class="flex-grow-1 justify-start pspad-category-open" Variant="Variant.Text" Color="Color.Default"
-                                   Size="Size.Small" OnClick="@(() => OnOpen.InvokeAsync(name))">
+                        <button type="button" class="pspad-category-open" @onclick="@(() => OnOpen.InvokeAsync(name))">
                             <span class="pspad-category-name">@name</span>
                             @if (used > 0)
                             {
                                 <span class="pspad-muted pspad-category-usage">@(used == 1 ? "1 entry" : $"{used} entries")</span>
                             }
-                        </MudButton>
+                        </button>
                         @if (!ReadOnly)
                         {
                             <MudMenu Class="pspad-category-menu" Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true"

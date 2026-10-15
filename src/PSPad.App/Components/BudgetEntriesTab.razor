@@ -10,13 +10,12 @@
         <div class="d-flex align-center flex-wrap gap-2 mb-2 pspad-entries-toolbar">
             @if (InMonth.Count > 0)
             {
-                <MudChipSet T="EntryFilter" SelectedValue="@Filters.Kind" SelectedValueChanged="@(kind => Change(Filters with { Kind = kind }))"
-                            Class="pspad-entry-filter" SelectionMode="SelectionMode.SingleSelection" CheckMark="false" Color="Color.Primary"
-                            Variant="Variant.Outlined" SelectedColor="Color.Primary" Size="Size.Small">
-                    <MudChip Value="EntryFilter.All" aria-pressed="@Pressed(EntryFilter.All)" Text="All" />
-                    <MudChip Value="EntryFilter.Expenses" aria-pressed="@Pressed(EntryFilter.Expenses)" Text="Expenses" />
-                    <MudChip Value="EntryFilter.Income" aria-pressed="@Pressed(EntryFilter.Income)" Text="Income" />
-                </MudChipSet>
+                <MudToggleGroup T="EntryFilter" Value="@Filters.Kind" ValueChanged="@(kind => Change(Filters with { Kind = kind }))"
+                                Class="pspad-entry-filter" SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary" Size="Size.Small">
+                    <MudToggleItem Value="EntryFilter.All" Text="All" />
+                    <MudToggleItem Value="EntryFilter.Expenses" Text="Expenses" />
+                    <MudToggleItem Value="EntryFilter.Income" Text="Income" />
+                </MudToggleGroup>
             }
             @if (Filters.Category is { } category)
             {
@@ -111,8 +110,6 @@
             return $"{count} · income {MoneyText.Amount(income)} · expenses {MoneyText.Amount(expenses)} · net {MoneyText.SignedPln(income - expenses)}";
         }
     }
-
-    string Pressed(EntryFilter filter) => filter == Filters.Kind ? "true" : "false";
 
     Task Change(EntryFilters filters) => FiltersChanged.InvokeAsync(filters);
 }

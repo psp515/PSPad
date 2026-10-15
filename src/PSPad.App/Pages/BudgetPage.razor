@@ -55,9 +55,6 @@ else
                                OnClick="@OpenMembers" />
             </MudBadge>
         }
-        <MudIconButton Class="pspad-budget-settings" Icon="@Icons.Material.Outlined.Settings" aria-label="Budget settings"
-                       aria-pressed="@(TabIndex == SettingsTab ? "true" : "false")"
-                       Color="@(TabIndex == SettingsTab ? Color.Primary : Color.Default)" OnClick="@(() => SelectTab(SettingsTab))" />
         @if ((TabIndex is OverviewTab or EntriesTab) && !_budget.IsArchived)
         {
             <div class="d-none d-md-flex gap-2 pspad-budget-quick">
@@ -72,14 +69,7 @@ else
     @if (TabIndex is EntriesTab or BalanceTab)
     {
         <div class="d-flex align-center gap-2 mb-3 pspad-month-row">
-            <MonthSwitcher Month="@_month" Current="@Current" OnMonthChanged="@ShowMonth" />
-            @if (TabIndex == BalanceTab && Balance.Snapshot is not null && !_budget.IsArchived)
-            {
-                <MudMenu Icon="@Icons.Material.Filled.MoreVert" AriaLabel="Month actions" Class="ml-auto pspad-balance-menu" Dense="true"
-                         AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                    <MudMenuItem Class="pspad-delete-month" OnClick="@DeleteMonthAsync">Delete month</MudMenuItem>
-                </MudMenu>
-            }
+            <MonthStrip Month="@_month" Current="@Current" Marked="@MarkedMonths" OnMonthChanged="@ShowMonth" />
         </div>
     }
 
@@ -130,9 +120,19 @@ else
     }
     else if (TabIndex == BalanceTab && !_budget.IsArchived && Balance.Snapshot is not null)
     {
-        <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@NewHolding"
-                UserAttributes="@AddHoldingAttributes" />
+        <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@MonthActionsAttributes">
+            <MudTooltip Text="Add holding">
+                <MudFabMenuItem Class="pspad-fab-add-holding" OnClick="@NewHolding" StartIcon="@Icons.Material.Filled.Add"
+                                Color="Color.Primary" Size="Size.Small" UserAttributes="@AddHoldingAttributes" />
+            </MudTooltip>
+            <MudTooltip Text="Delete month">
+                <MudFabMenuItem Class="pspad-delete-month" OnClick="@DeleteMonthAsync" StartIcon="@Icons.Material.Outlined.Delete"
+                                Color="Color.Error" Size="Size.Small" UserAttributes="@DeleteMonthAttributes" />
+            </MudTooltip>
+        </MudFabMenu>
     }
+    <MudFab Class="pspad-budget-settings pspad-fab-settings" Size="Size.Small" Color="Color.Default" StartIcon="@Icons.Material.Outlined.Settings"
+            OnClick="@(() => SelectTab(SettingsTab))" UserAttributes="@SettingsAttributes" />
 }
 
 @code {
@@ -147,6 +147,16 @@ else
     static readonly Dictionary<string, object> AddExpenseAttributes = new() { ["aria-label"] = "Add expense" };
     static readonly Dictionary<string, object> AddIncomeAttributes = new() { ["aria-label"] = "Add income" };
     static readonly Dictionary<string, object> AddHoldingAttributes = new() { ["aria-label"] = "Add holding" };
+    static readonly Dictionary<string, object> MonthActionsAttributes = new() { ["aria-label"] = "Month actions" };
+    static readonly Dictionary<string, object> DeleteMonthAttributes = new() { ["aria-label"] = "Delete month" };
+
+    Dictionary<string, object> SettingsAttributes =>
+        new() { ["aria-label"] = "Budget settings", ["aria-pressed"] = TabIndex == SettingsTab ? "true" : "false" };
+
+    IReadOnlySet<YearMonth> MarkedMonths =>
+        TabIndex == BalanceTab
+            ? _snapshots.Where(snapshot => !snapshot.Deleted).Select(snapshot => snapshot.Month).ToHashSet()
+            : _entries.Select(entry => YearMonth.Of(entry.Date)).ToHashSet();
 
     [Parameter] public Guid BudgetId { get; set; }
 

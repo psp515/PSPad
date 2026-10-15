@@ -174,11 +174,31 @@ follow the existing naming. Edits happen in side panels, one FAB per page.
 - URL tabs: `overview`, `entries`, `balance`, `stats`, `settings`; `month` is
   read as `entries`, `summary` as `stats`. `BudgetLinks.ForTab` is unchanged.
 - Month row `.pspad-month-row`: on Entries and Balance only, a flex row
-  directly under the view row (`mb-3`) holding `MonthSwitcher` at its left
-  edge and, on Balance with a snapshot on a live budget, the month menu
-  (`.pspad-balance-menu`, "Delete month") pushed right with `ml-auto`. The
-  view row never holds the switcher. Under 600px `.pspad-month-control`
-  stretches (`flex: 1 1 auto`); from 600px it is 280px wide.
+  directly under the view row (`mb-3`) holding `MonthStrip`, which fills the
+  row. The view row never holds a month control.
+- `MonthStrip` (replaces `MonthSwitcher`): `.pspad-month-strip-scroll` is a
+  horizontally scrolling row of `MudButton` chips `.pspad-month-chip`, one per
+  month from the current month back eleven months, newest at the right edge.
+  The row is laid out `direction: rtl` with the chips newest-first in the
+  DOM, so a scrolling strip opens at the newest month without script; chips
+  are `direction: ltr`. When the chips fit, `justify-content: safe center`
+  centres them. Each chip shows the three-letter month and, on January and
+  on the oldest chip, the year (`.pspad-month-chip-year`); `aria-label` is
+  the full "September 2026". The shown month is `Variant.Filled` with
+  `aria-pressed="true"`; the current month has `.pspad-month-chip-current`
+  (a primary ring) and `aria-current="date"`; months in `Marked` (entries on
+  Entries, live snapshots on Balance, computed by `BudgetPage`) have
+  `.pspad-month-chip-marked`, which shows the dot `.pspad-month-chip-dot`.
+  A shown month outside the window gets one extra chip at its end of the
+  strip. `.pspad-month-more` (`CalendarMonth`, "Pick another month") opens
+  the existing month sheet (`.pspad-month-sheet`, year arrows, twelve
+  months, "This month", "Cancel").
+- Settings button: `MudFab` `.pspad-budget-settings.pspad-fab-settings`
+  (`Size.Small`, `Color.Default`, `Settings` icon, aria-label "Budget
+  settings", `aria-pressed` on the settings view) fixed bottom-left, 24px
+  from the edges, offset by the open drawer from 960px like the snackbar;
+  16px and above the phone navigation bar under 600px. The view row holds
+  only the views, the members badge and the quick actions.
 - `BudgetPage` keeps one `_category` filter in memory (`string?`). `ShowCategory(name)`
   sets it and navigates to Entries. It is cleared by the chip on Entries and
   when the budget id changes. It is not in the URL.
@@ -240,8 +260,9 @@ Always the current month (`State.Today`). `MudGrid Spacing="4"`:
 
 Replaces `BudgetMonthTab`. The month row (§3.1) sits above the toolbar.
 
-- Toolbar `.pspad-entries-toolbar`: the kind chips (All / Expenses / Income,
-  as today), the category chip `.pspad-entries-category` (a `MudChip` with
+- Toolbar `.pspad-entries-toolbar`, one line from 600px: the kind switch
+  `.pspad-entry-filter` (a `MudToggleGroup` of All / Expenses / Income, small,
+  primary, same look as the view switch; full width under 600px), the category chip `.pspad-entries-category` (a `MudChip` with
   `OnClose` that clears the filter; shown only when set), a `MudTextField`
   `.pspad-entries-search` (Placeholder "Search name or note", Immediate,
   Clearable, Adornment Search), and a `MudSelect<EntrySort>`
@@ -277,8 +298,19 @@ current.LastDay).NetWorth` by type with the `mud-sr-only` table as in
 `BudgetSummaryCharts`; hidden when every month is a gap) in `xs=12 lg=4`;
 the holdings in `xs=12 lg=8`. Inside the `lg=4` column an inner `MudGrid`
 puts the hero in `xs=12 md=5 lg=12` and the history in `xs=12 md=7 lg=12`,
-so between 960px and 1279px they sit side by side above the holdings. The
-"no balance yet" banner spans `xs=12`.
+so between 960px and 1279px they sit side by side above the holdings.
+
+A month without a snapshot keeps the same layout, with no banner: the hero
+slot holds `MudPaper` `.pspad-balance-missing` ("{Month} has no balance yet",
+then "Starting it copies the holdings from {month of `Totals.Previous`}." or
+"Start it and add your holdings." when there is none, then the
+`.pspad-start-month` button "Start {Month}" unless read-only); the holdings
+column shows `.pspad-balance-empty` "No holdings in {Month}.".
+
+The FAB on Balance is a `MudFabMenu` `.pspad-fab` (activator "Month actions")
+with "Add holding" (`.pspad-fab-add-holding`) and "Delete month"
+(`.pspad-delete-month`, error colour), shown only with a snapshot on a live
+budget. There is no month menu in the month row.
 
 Holdings columns follow the holdings box, not the viewport: `.pspad-holdings`
 is `container-type: inline-size`; `@container (min-width: 640px)` lays
@@ -335,10 +367,12 @@ names become `.pspad-category-open` buttons calling `OnOpen(name)`; the tab
 forwards expense names to `OnOpenCategory` (income names open Entries
 filtered too — the filter matches either kind by name).
 
-A `CategoryList` row (`.pspad-category-row`) is the `.pspad-category-open`
-button holding `.pspad-category-name` and, when the category has entries, a
-caption line `.pspad-category-usage` ("1 entry" / "N entries") under the
-name, followed by one `MudMenu` `.pspad-category-menu` (`MoreVert`,
+A `CategoryList` row (`.pspad-category-row`) is a plain `<button>`
+`.pspad-category-open` styled like `.pspad-holding-row` (no button chrome,
+hover tint on the row, name and caption stacked left) holding
+`.pspad-category-name` and, when the category has entries, a caption line
+`.pspad-category-usage` ("1 entry" / "N entries") under the name, followed by
+one `MudMenu` `.pspad-category-menu` (`MoreVert`,
 aria-label "Actions for {name}") with `MudMenuItem`s `.pspad-category-rename`,
 `.pspad-category-merge` (disabled with fewer than two categories) and
 `.pspad-category-remove` (disabled while the category has entries). The
@@ -348,8 +382,8 @@ for the inline input or select as before.
 ### 3.7 Phone
 
 Cards stack (`xs=12`). The view row stacks icons over labels under 600px.
-The month control fills its row under 600px. The FAB menu stays. Nothing
-else changes.
+The month strip swipes sideways. The FAB menu stays; the settings FAB sits
+bottom-left. Nothing else changes.
 
 ## 4. Testing
 

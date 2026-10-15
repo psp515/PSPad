@@ -2,16 +2,25 @@
 @using PSPad.App.State
 @using PSPad.Module.Money.Values
 
-<div class="@($"d-flex align-center gap-1 pspad-month-switcher {Class}")">
-    <div class="d-flex align-center pspad-month-control">
-        <MudIconButton Class="pspad-month-previous" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous month" Size="Size.Small"
-                       OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Previous()))" />
-        <MudButton Class="pspad-month-title" Variant="Variant.Text" EndIcon="@Icons.Material.Filled.ArrowDropDown"
-                   aria-label="@($"Choose month, {MoneyText.MonthTitle(Month)}")" OnClick="@Open">@MoneyText.MonthTitle(Month)</MudButton>
-        <MudIconButton Class="pspad-month-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next month" Size="Size.Small"
-                       OnClick="@(() => OnMonthChanged.InvokeAsync(Month.Next()))" />
+<div class="@($"d-flex align-center gap-1 pspad-month-strip {Class}")">
+    <div class="pspad-month-strip-scroll" role="group" aria-label="Month">
+        @foreach (var month in _chips)
+        {
+            <MudButton @key="month" Class="@ChipClass(month)" Variant="@(month == Month ? Variant.Filled : Variant.Text)"
+                       Color="@(month == Month ? Color.Primary : Color.Default)" Size="Size.Small"
+                       aria-pressed="@(month == Month ? "true" : "false")" aria-current="@(month == Current ? "date" : null)"
+                       aria-label="@MoneyText.MonthTitle(month)" OnClick="@(() => OnMonthChanged.InvokeAsync(month))">
+                <span class="pspad-month-chip-label">@Abbreviation(month.Month)</span>
+                @if (ShowsYear(month))
+                {
+                    <small class="pspad-month-chip-year">@month.Year</small>
+                }
+                <i class="pspad-month-chip-dot" aria-hidden="true"></i>
+            </MudButton>
+        }
     </div>
-    @ChildContent
+    <MudIconButton Class="pspad-month-more" Icon="@Icons.Material.Outlined.CalendarMonth" aria-label="Pick another month"
+                   Size="Size.Small" OnClick="@Open" />
 </div>
 
 <MudDialog @bind-Visible="_picking" Class="pspad-month-sheet" Options="@SheetOptions">
@@ -41,24 +50,59 @@
 </MudDialog>
 
 @code {
+    const int Window = 12;
+
     static readonly DialogOptions SheetOptions = new()
     {
         CloseOnEscapeKey = true, BackdropClick = true, NoHeader = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true,
         Position = DialogPosition.BottomCenter
     };
 
-    bool _picking;
-    int _year;
-
     [Parameter, EditorRequired] public YearMonth Month { get; set; }
 
     [Parameter, EditorRequired] public YearMonth Current { get; set; }
 
+    [Parameter] public IReadOnlySet<YearMonth> Marked { get; set; } = new HashSet<YearMonth>();
+
     [Parameter] public EventCallback<YearMonth> OnMonthChanged { get; set; }
 
-    [Parameter] public RenderFragment? ChildContent { get; set; }
-
     [Parameter] public string Class { get; set; } = "";
+
+    IReadOnlyList<YearMonth> _chips = [];
+    bool _picking;
+    int _year;
+
+    protected override void OnParametersSet() => _chips = NewestFirst();
+
+    IReadOnlyList<YearMonth> NewestFirst()
+    {
+        var chips = new List<YearMonth>();
+        if (Month > Current)
+        {
+            chips.Add(Month);
+        }
+
+        var month = Current;
+        for (var back = 0; back < Window; back++)
+        {
+            chips.Add(month);
+            month = month.Previous();
+        }
+
+        if (Month < chips[^1])
+        {
+            chips.Add(Month);
+        }
+
+        return chips;
+    }
+
+    bool ShowsYear(YearMonth month) => month.Month == 1 || month == _chips[^1];
+
+    string ChipClass(YearMonth month) =>
+        "pspad-month-chip"
+        + (Marked.Contains(month) ? " pspad-month-chip-marked" : "")
+        + (month == Current ? " pspad-month-chip-current" : "");
 
     static string Abbreviation(int month) => CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(month);
 

@@ -279,12 +279,25 @@ public partial class StylesheetRulesTests
         Assert.Contains("flex: 1 1 0", Declarations(".pspad-budget-views .mud-toggle-item"));
 
     [Fact]
-    public void TheMonthTitleReadsAsAHeadingNotAButtonLabel()
+    public void TheMonthStripFillsItsRowAndOpensAtTheNewestMonth()
     {
-        var title = Declarations(".pspad-month-switcher .pspad-month-title");
+        Assert.Contains("flex: 1 1 auto", Declarations(".pspad-month-strip"));
+        var scroll = Declarations(".pspad-month-strip-scroll");
+        Assert.Contains("overflow-x: auto", scroll);
+        Assert.Contains("direction: rtl", scroll);
+        Assert.Contains("justify-content: safe center", scroll);
+        Assert.Contains("direction: ltr", Declarations(".pspad-month-chip"));
+    }
 
-        Assert.Contains("text-transform: none", title);
-        Assert.Contains("font-weight: 700", title);
+    [Fact]
+    public void MonthChipsStackTheLabelOverTheDot()
+    {
+        var label = Declarations(".pspad-month-chip .mud-button-label");
+
+        Assert.Contains("flex-direction: column", label);
+        Assert.Contains("opacity: 0", Declarations(".pspad-month-chip-dot"));
+        Assert.Contains("opacity: 0.8", Declarations(".pspad-month-chip-marked .pspad-month-chip-dot"));
+        Assert.Contains("var(--mud-palette-primary)", Declarations(".pspad-month-chip-current"));
     }
 
     [Fact]
@@ -333,15 +346,21 @@ public partial class StylesheetRulesTests
         Assert.Contains("width: 100%", Declarations(".pspad-budget-page"));
 
     [Fact]
-    public void OnAPhoneTheMonthControlFillsItsRow()
+    public void TheSettingsFabSitsBottomLeft()
     {
-        Assert.Contains("flex: 1 1 auto", DeclarationsInMedia("max-width: 599.98px", ".pspad-month-row .pspad-month-control"));
-        Assert.Contains("flex: 1 1 auto", DeclarationsInMedia("max-width: 599.98px", ".pspad-month-row .pspad-month-switcher"));
+        var fab = Declarations(".pspad-fab-settings");
+
+        Assert.Contains("position: fixed", fab);
+        Assert.Contains("left: 24px", fab);
+        Assert.Contains("bottom: 24px", fab);
+        Assert.Contains("left: calc(var(--mud-drawer-width-left) + 24px)",
+            DeclarationsInMedia("min-width: 960px", "body:has(.mud-drawer-persistent.mud-drawer--open) .pspad-fab-settings"));
+        Assert.Contains("left: 16px", DeclarationsInMedia("max-width: 599.98px", ".pspad-fab-settings"));
     }
 
     [Fact]
-    public void FromATabletTheMonthControlIsFixedWidth() =>
-        Assert.Contains("width: 280px", DeclarationsInMedia("min-width: 600px", ".pspad-month-row .pspad-month-control"));
+    public void OnAPhoneTheKindSwitchFillsItsLine() =>
+        Assert.Contains("flex: 1 1 0", DeclarationsInMedia("max-width: 599.98px", ".pspad-entry-filter .mud-toggle-item"));
 
     [Fact]
     public void OnDesktopTheViewsAreNotStretched() =>
@@ -374,12 +393,14 @@ public partial class StylesheetRulesTests
     }
 
     [Fact]
-    public void TheMonthControlIsOnePill()
+    public void CategoryRowsReadAsListRowsNotButtons()
     {
-        var control = Declarations(".pspad-month-control");
+        var open = Declarations(".pspad-category-open");
 
-        Assert.Contains("border-radius: 22px", control);
-        Assert.Contains("border: 1px solid var(--mud-palette-lines-default)", control);
+        Assert.Contains("border: 0", open);
+        Assert.Contains("background: none", open);
+        Assert.Contains("text-align: left", open);
+        Assert.Contains("background-color: var(--mud-palette-action-default-hover)", Declarations(".pspad-category-open:hover"));
     }
 
     [Fact]
@@ -424,7 +445,11 @@ public partial class StylesheetRulesTests
             .Select(rule => rule.Groups["body"].Value.Trim()));
 
     static IEnumerable<string> SelectorsOf(Match rule) =>
-        TopLevelCommas().Split(rule.Groups["selectors"].Value).Select(selector => Whitespace().Replace(selector, " ").Trim());
+        TopLevelCommas().Split(Comment().Replace(rule.Groups["selectors"].Value, ""))
+            .Select(selector => Whitespace().Replace(selector, " ").Trim());
+
+    [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline)]
+    private static partial Regex Comment();
 
     static string StylesheetPath()
     {

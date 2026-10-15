@@ -21,10 +21,12 @@ public class BudgetBalanceTests : Bunit.TestContext
     static readonly YearMonth September = new(2026, 9);
     static readonly YearMonth October = new(2026, 10);
 
+    static string ShownMonth(IRenderedComponent<BudgetPage> page) => page.Find(".pspad-month-chip[aria-pressed='true']").GetAttribute("aria-label")!;
+
     IRenderedComponent<BudgetPage> BalanceTab(Budget budget)
     {
         var page = Render<BudgetPage>(parameters => parameters.Add(p => p.BudgetId, budget.Id).Add(p => p.Tab, "balance"));
-        page.WaitForAssertion(() => page.Find(".pspad-month-title"));
+        page.WaitForAssertion(() => page.Find(".pspad-month-strip"));
         return page;
     }
 
@@ -134,8 +136,8 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         var page = BalanceTab(budget);
         page.WaitForAssertion(() => page.Find(".pspad-balance-net-worth"));
-        page.Find(".pspad-month-previous").Click();
-        page.Find(".pspad-month-next").Click();
+        page.Find(".pspad-month-chip[aria-label='September 2026']").Click();
+        page.Find(".pspad-month-chip[aria-label='October 2026']").Click();
 
         page.WaitForAssertion(() => page.Find(".pspad-balance-net-worth"));
         Assert.Empty(page.FindAll(".pspad-balance-at-nbp"));
@@ -185,7 +187,7 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         var page = BalanceTab(budget);
 
-        Assert.Equal("October 2026", Text(page, ".pspad-month-title"));
+        Assert.Equal("October 2026", ShownMonth(page));
         Assert.Contains("October 2026 has no balance yet", Text(page, ".pspad-balance-missing"));
         Assert.Equal("Start October 2026", Text(page, ".pspad-start-month"));
         Assert.Empty(page.FindAll(".pspad-fab"));
@@ -315,10 +317,43 @@ public class BudgetBalanceTests : Bunit.TestContext
         var page = BalanceTab(budget);
         page.WaitForAssertion(() => page.Find(".pspad-fab"));
 
-        Assert.Equal("Add holding", page.Find(".pspad-fab").GetAttribute("aria-label"));
-        page.Find(".pspad-fab").Click();
+        Assert.Equal("Month actions", page.Find(".pspad-fab[aria-label]").GetAttribute("aria-label"));
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
+        var items = page.FindAll(".mud-fab-menu-item");
+        Assert.Equal(["Add holding", "Delete month"], items.Select(item => item.GetAttribute("aria-label")));
+        page.Find(".pspad-fab-add-holding").Click();
 
         Assert.EndsWith($"/budgets/{budget.Id}/balance?balance={october.Id}&holding=new", navigation.Uri);
+    }
+
+    [Fact]
+    public void AMonthWithoutABalanceKeepsTheLayoutAndSaysWhatStartingDoes()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget,
+            Balances.Started(budget, September, Balances.AHolding("Wallet", 100m)));
+
+        var page = BalanceTab(budget);
+
+        Assert.Empty(page.FindAll(".mud-alert"));
+        Assert.NotNull(page.Find(".pspad-balance-hero-item .pspad-balance-missing"));
+        Assert.Contains("October 2026 has no balance yet", Text(page, ".pspad-balance-missing"));
+        Assert.Contains("copies the holdings from September 2026", Text(page, ".pspad-balance-missing"));
+        Assert.Equal("Start October 2026", Text(page, ".pspad-balance-missing .pspad-start-month"));
+        Assert.Equal("No holdings in October 2026.", Text(page, ".pspad-balance-holdings .pspad-balance-empty"));
+        Assert.NotNull(page.Find(".pspad-balance-history"));
+    }
+
+    [Fact]
+    public void AFirstMonthWithoutABalanceAsksForHoldings()
+    {
+        var budget = BudgetsPageTests.Named("Personal");
+        AppTestHost.Arrange(this, budget.UserId, Today, budget);
+
+        var page = BalanceTab(budget);
+
+        Assert.Contains("Start it and add your holdings.", Text(page, ".pspad-balance-missing"));
+        Assert.Empty(page.FindAll(".pspad-balance-history"));
     }
 
     [Fact]
@@ -328,9 +363,9 @@ public class BudgetBalanceTests : Bunit.TestContext
         AppTestHost.Arrange(this, budget.UserId, Today, budget,
             Balances.Started(budget, October, Balances.AHolding("Wallet", 100m)));
         var page = Render(WithPopovers(budget.Id));
-        page.WaitForAssertion(() => page.Find(".pspad-balance-menu button"));
+        page.WaitForAssertion(() => page.Find(".pspad-fab .mud-fab-menu-button"));
 
-        page.Find(".pspad-balance-menu button").Click();
+        page.Find(".pspad-fab .mud-fab-menu-button").Click();
         page.Find(".pspad-delete-month").Click();
 
         var sent = await SentAsync<DeleteBalanceMonth>();
@@ -385,9 +420,9 @@ public class BudgetBalanceTests : Bunit.TestContext
             Balances.Started(budget, September, Balances.AHolding("Wallet", 75m)));
         var page = BalanceTab(budget);
 
-        page.Find(".pspad-month-previous").Click();
+        page.Find(".pspad-month-chip[aria-label='September 2026']").Click();
 
-        page.WaitForAssertion(() => Assert.Equal("September 2026", Text(page, ".pspad-month-title")));
+        page.WaitForAssertion(() => Assert.Equal("September 2026", ShownMonth(page)));
         Assert.Equal("75.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-value"));
     }
 

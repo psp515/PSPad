@@ -1422,15 +1422,30 @@ button.pspad-heatmap-cell:focus-visible {
 }
 
 .pspad-category-open {
-    text-transform: none;
+    flex: 1 1 auto;
     min-width: 0;
-}
-
-.pspad-category-open .mud-button-label {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    min-width: 0;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-transform: none;
+    cursor: pointer;
+}
+
+.pspad-category-open:hover,
+.pspad-category-open:focus-visible {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.pspad-category-open:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
 }
 
 .pspad-category-name,
@@ -1468,25 +1483,103 @@ button.pspad-heatmap-cell:focus-visible {
     text-transform: none;
 }
 
-@media (max-width: 599.98px) {
-    .pspad-month-row .pspad-month-switcher {
-        flex: 1 1 auto;
-    }
-
-    .pspad-month-row .pspad-month-control {
-        flex: 1 1 auto;
-    }
+.pspad-month-strip {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
-@media (min-width: 600px) {
-    .pspad-month-row .pspad-month-control {
-        width: 280px;
+/* Right-to-left with the newest chip first in the DOM: a scrolling strip then opens at the
+   newest month without script, and "safe center" centres the chips once they fit. */
+.pspad-month-strip-scroll {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    gap: 4px;
+    padding: 2px;
+    overflow-x: auto;
+    direction: rtl;
+    justify-content: safe center;
+    scrollbar-width: none;
+}
+
+.pspad-month-strip-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.pspad-month-chip {
+    direction: ltr;
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 3px 12px 2px;
+    border-radius: 999px;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1.15;
+}
+
+.pspad-month-chip .mud-button-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+
+.pspad-month-chip-year {
+    font-size: 0.625rem;
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-month-chip-dot {
+    display: block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--mud-palette-primary);
+    opacity: 0;
+}
+
+.pspad-month-chip-marked .pspad-month-chip-dot {
+    opacity: 0.8;
+}
+
+.pspad-month-chip.mud-button-filled .pspad-month-chip-dot {
+    background-color: currentColor;
+}
+
+.pspad-month-chip-current {
+    box-shadow: inset 0 0 0 1px var(--mud-palette-primary);
+}
+
+.pspad-fab-settings {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 1200;
+}
+
+@media (max-width: 599.98px) {
+    .pspad-entry-filter {
+        width: 100%;
+    }
+
+    .pspad-entry-filter .mud-toggle-item {
+        flex: 1 1 0;
+    }
+
+    .pspad-fab-settings {
+        bottom: calc(72px + 16px);
+        left: 16px;
     }
 }
 
 @media (min-width: 960px) {
     .pspad-budget-views {
         max-width: 560px;
+    }
+
+    body:has(.mud-drawer-persistent.mud-drawer--open) .pspad-fab-settings {
+        left: calc(var(--mud-drawer-width-left) + 24px);
     }
 
     .pspad-money-hero-top {
@@ -1529,26 +1622,6 @@ button.pspad-heatmap-cell:focus-visible {
 
 .pspad-budget-card:hover .pspad-budget-card-chevron {
     color: var(--mud-palette-primary);
-}
-
-.pspad-month-control {
-    flex: 0 0 auto;
-    height: 44px;
-    padding: 0 4px;
-    border-radius: 22px;
-    border: 1px solid var(--mud-palette-lines-default);
-    background-color: var(--mud-palette-surface);
-}
-
-.pspad-month-switcher .pspad-month-title {
-    flex: 1 1 auto;
-    min-width: 0;
-    text-transform: none;
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 0;
-    white-space: nowrap;
-    border-radius: 18px;
 }
 
 .pspad-entry-avatar {
