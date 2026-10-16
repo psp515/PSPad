@@ -1,3 +1,4 @@
+using PSPad.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Driver;
 using PSPad.Abstractions;
@@ -23,7 +24,7 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         var user = Guid.NewGuid();
         var context = TestContext.For(fixture);
-        var work = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var work = new MongoUnitOfWork(context, new NoDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
         var commandId = Guid.NewGuid();
         var (area, events) = NewArea(user);
 
@@ -50,11 +51,11 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var (first, firstEvents) = NewArea(user);
         var (second, secondEvents) = NewArea(user);
 
-        var work = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var work = new MongoUnitOfWork(context, new NoDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
         work.Stage(first, firstEvents);
         await work.CommitAsync(Guid.NewGuid(), user, ct);
 
-        var later = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var later = new MongoUnitOfWork(context, new NoDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
         later.Stage(second, secondEvents);
         await later.CommitAsync(Guid.NewGuid(), user, ct);
 
@@ -74,11 +75,11 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var commandId = Guid.NewGuid();
         var (area, events) = NewArea(user);
 
-        var first = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var first = new MongoUnitOfWork(context, new NoDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
         first.Stage(area, events);
         await first.CommitAsync(commandId, user, ct);
 
-        var replay = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var replay = new MongoUnitOfWork(context, new NoDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
         replay.Stage(area, events);
         await replay.CommitAsync(commandId, user, ct);
 
@@ -96,7 +97,7 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var context = TestContext.For(fixture);
         var store = new MongoDocumentStore<Area>(context);
         var (area, events) = NewArea(user);
-        var create = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var create = new MongoUnitOfWork(context, new NoDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
         create.Stage(area, events);
         await create.CommitAsync(Guid.NewGuid(), user, ct);
         var fresh = (await store.LoadAsync(area.Id, ct))!;
@@ -116,13 +117,13 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var user = Guid.NewGuid();
         var context = TestContext.For(fixture);
         var (area, events) = NewArea(user);
-        var first = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var first = new MongoUnitOfWork(context, new NoDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
         first.Stage(area, events);
         await first.CommitAsync(Guid.NewGuid(), user, ct);
         var twin = new Area();
         twin.ApplyAll(events);
 
-        var second = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var second = new MongoUnitOfWork(context, new NoDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
         second.Stage(twin, events);
 
         await Assert.ThrowsAsync<ConcurrencyConflictException>(() => second.CommitAsync(Guid.NewGuid(), user, ct));
@@ -132,7 +133,7 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
     {
         var events = Area.Decide(area, new RenameArea(Guid.NewGuid(), user, area.Id, name), DateTimeOffset.UtcNow);
         area.ApplyAll(events);
-        var work = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var work = new MongoUnitOfWork(context, new NoDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
         work.Stage(area, events);
         await work.CommitAsync(Guid.NewGuid(), user, ct);
     }
@@ -158,14 +159,14 @@ public class MongoUnitOfWorkTests(MongoFixture fixture)
         var user = Guid.NewGuid();
         var context = TestContext.For(fixture);
         var (area, events) = NewArea(user);
-        var created = new MongoUnitOfWork(context, new NoDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var created = new MongoUnitOfWork(context, new NoDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
         created.Stage(area, events);
         await created.CommitAsync(Guid.NewGuid(), user, ct);
         var createdSeq = area.Seq;
 
         var dispatcher = new RecordingDispatcher();
         var commandId = Guid.NewGuid();
-        var touch = new MongoUnitOfWork(context, dispatcher, NullLogger<MongoUnitOfWork>.Instance);
+        var touch = new MongoUnitOfWork(context, dispatcher, new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
         DomainEvent[] touched = [new AreaTouched(area.Id, user, DateTimeOffset.UtcNow)];
         area.ApplyAll(touched);
         touch.Stage(area, touched);

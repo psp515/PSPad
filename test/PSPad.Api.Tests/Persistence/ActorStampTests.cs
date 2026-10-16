@@ -1,3 +1,4 @@
+using PSPad.Infrastructure;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Driver;
@@ -22,7 +23,7 @@ public class ActorStampTests(MongoFixture fixture)
         var list = new TaskList();
         var created = new TaskListCreated(Guid.NewGuid(), owner, DateTimeOffset.UtcNow, Guid.NewGuid(), "Books", ListKind.Tasks);
         list.ApplyAll([created]);
-        var work = new MongoUnitOfWork(context, new NullDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var work = new MongoUnitOfWork(context, new NullDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
 
         work.Stage(list, [created]);
         await work.CommitAsync(Guid.NewGuid(), member, ct);
@@ -43,7 +44,7 @@ public class ActorStampTests(MongoFixture fixture)
         var list = new TaskList();
         var created = new TaskListCreated(Guid.NewGuid(), owner, DateTimeOffset.UtcNow, Guid.NewGuid(), "Books", ListKind.Tasks);
         list.ApplyAll([created]);
-        var work = new MongoUnitOfWork(context, new NullDispatcher(), NullLogger<MongoUnitOfWork>.Instance);
+        var work = new MongoUnitOfWork(context, new NullDispatcher(), new NoCommitObserver(), NullLogger<MongoUnitOfWork>.Instance);
 
         work.Stage(list, [created]);
         await work.CommitAsync(Guid.NewGuid(), owner, ct);
