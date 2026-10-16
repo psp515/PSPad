@@ -42,6 +42,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Sharing a budget | `specs/budget-sharing-design.md` |
 | Budget page views: Overview, Entries, Stats, forecast, insights | `specs/budget-overview-design.md` |
 | Length and count limits on user content | `specs/content-limits-design.md` |
+| List density, row groups, Inbox and goal rows | `specs/grouped-lists-design.md` |
 | Why a decision was made | `adr/README.md` index → the `Active` record |
 
 Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither silently.
