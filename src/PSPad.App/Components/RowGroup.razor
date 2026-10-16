@@ -1,0 +1,9 @@
+<MudPaper Outlined="true" Elevation="0" Class="@($"pspad-row-group {Class}".Trim())">
+    @ChildContent
+</MudPaper>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+}

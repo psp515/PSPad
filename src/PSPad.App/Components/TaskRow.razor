@@ -1,7 +1,17 @@
 @using PSPad.Module.Tasks.Tasks
 @using PSPad.Module.Tasks.Today
 
-<div class="pspad-row d-flex align-center gap-2 px-1 @(Overdue ? "pspad-overdue overdue" : "")">
+<div class="pspad-row d-flex align-center gap-2 pr-1 @(HasMeta ? "pspad-row-has-meta" : "") @(Overdue ? "pspad-overdue overdue" : "")">
+    @if (Task.Priority != Priority.None)
+    {
+        <span class="@($"pspad-priority pspad-priority-{Task.Priority.ToString().ToLowerInvariant()}")" role="img"
+              title="@($"{Task.Priority} priority")" aria-label="@($"{Task.Priority} priority")"></span>
+    }
+    else
+    {
+        <span class="pspad-priority-slot" aria-hidden="true"></span>
+    }
+    @Lead
     <MudCheckBox T="bool" Value="@Done" ValueChanged="@(_ => OnToggle.InvokeAsync(Task))"
                  Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
                  UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" />
@@ -38,11 +48,6 @@
                 {
                     <MudIcon Class="pspad-has-description" Icon="@Icons.Material.Outlined.Notes" Size="Size.Small" />
                 }
-                @if (Task.Priority != Priority.None)
-                {
-                    <MudIcon Class="pspad-priority" Icon="@Icons.Material.Filled.Circle" Color="@PriorityColour"
-                             Title="@($"{Task.Priority} priority")" />
-                }
                 @if (Task.SnapshotMarks.Count > 0)
                 {
                     <SnapshotMarkChip Compact="true" />
@@ -69,6 +74,8 @@
 
     [Parameter] public bool ShowTime { get; set; } = true;
 
+    [Parameter] public RenderFragment? Lead { get; set; }
+
     [Parameter] public string? ListName { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
@@ -84,15 +91,7 @@
     bool HasDescription => Task.Description.Length > 0;
 
     bool HasMeta => ListName is not null || Task.Steps.Count > 0 || Task.DueOn is not null
-        || (ShowTime && Task.EffectiveTime is not null) || Task.IsRecurring || HasDescription || Task.Priority != Priority.None || Task.SnapshotMarks.Count > 0;
-
-
-    Color PriorityColour => Task.Priority switch
-    {
-        Priority.High => Color.Error,
-        Priority.Medium => Color.Warning,
-        _ => Color.Default
-    };
+        || (ShowTime && Task.EffectiveTime is not null) || Task.IsRecurring || HasDescription || Task.SnapshotMarks.Count > 0;
 
     public static bool IsOverdue(TodoTask task, DateOnly today) =>
         TodayRule.Select([task], today).FirstOrDefault()?.Overdue == true;

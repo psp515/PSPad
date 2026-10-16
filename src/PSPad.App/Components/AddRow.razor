@@ -1,0 +1,21 @@
+<div class="@($"pspad-row pspad-row-add {Class}".Trim())" role="button" tabindex="0" @onclick="@OnClick"
+     @onkeydown="@KeyAsync">
+    <span class="pspad-row-add-icon"><MudIcon Icon="@Icons.Material.Filled.Add" Color="Color.Primary" Size="Size.Small" /></span>
+    <MudText Typo="Typo.body2" Color="Color.Primary">@Text</MudText>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+
+    [Parameter] public string Class { get; set; } = "";
+
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    async Task KeyAsync(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or " ")
+        {
+            await OnClick.InvokeAsync();
+        }
+    }
+}

@@ -279,8 +279,8 @@ public class ListPageTests : Bunit.TestContext
 
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
-        Assert.Contains("Completed (1)", page.Markup);
-        Assert.DoesNotContain(page.FindAll(".mud-grid").First().QuerySelectorAll(".pspad-task-name"),
+        Assert.Contains("Completed · 1", page.Markup);
+        Assert.DoesNotContain(page.FindAll(".pspad-row-group").First().QuerySelectorAll(".pspad-task-name"),
             name => name.TextContent.Contains("Read a book"));
     }
 
@@ -345,14 +345,27 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ItLaysOpenTasksOutInTheGrid()
+    public void ItLaysOpenTasksOutInOneRowGroup()
     {
         var list = NewList("Zakupy");
         Arrange(list, NewTask(list.Id, "Mleko"), NewTask(list.Id, "Chleb"));
 
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
-        page.Find(".mud-grid");
+        page.Find(".pspad-row-group");
+        Assert.Empty(page.FindAll(".pspad-task-card"));
+    }
+
+    [Fact]
+    public void AnAddTaskRowClosesTheGroupAndOpensTheNewTaskPanel()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, NewTask(list.Id, "Mleko"));
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+        page.Find(".pspad-row-group > .pspad-row-add").Click();
+
+        Assert.Contains("new", Services.GetRequiredService<NavigationManager>().Uri, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -523,15 +536,15 @@ public class ListPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void EachTaskIsItsOwnCard()
+    public void EachTaskIsARowInTheGroup()
     {
         var list = NewList("Zakupy");
         Arrange(list, NewTask(list.Id, "Mleko"), NewTask(list.Id, "Chleb"));
 
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
-        var cards = page.FindAll(".mud-grid-item > .pspad-task-card");
-        Assert.Equal(2, cards.Count);
+        var rows = page.FindAll(".pspad-row-group > .pspad-row:not(.pspad-row-add)");
+        Assert.Equal(2, rows.Count);
     }
 
     [Fact]

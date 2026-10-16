@@ -196,10 +196,10 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        Assert.Contains("Completed (1)", page.Markup);
+        Assert.Contains("Completed · 1", page.Markup);
         Assert.Contains("Masło", page.Markup);
 
-        var beforeCompletedSection = page.Markup[..page.Markup.IndexOf("Completed (1)")];
+        var beforeCompletedSection = page.Markup[..page.Markup.IndexOf("Completed · 1")];
         Assert.DoesNotContain("Masło", beforeCompletedSection);
         Assert.Contains("Mleko", beforeCompletedSection);
     }
@@ -256,18 +256,18 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
-    public void EachTaskIsItsOwnCard()
+    public void EachTaskIsARowInASectionGroup()
     {
         var list = NewList("Zakupy");
         Arrange(list, Due(list.Id, "Mleko", Today), Due(list.Id, "Chleb", Today), Due(list.Id, "Jutro", Today.AddDays(1)));
 
         var page = Render<Today>();
 
-        Assert.Equal(3, page.FindAll(".mud-grid-item > .pspad-day-task .pspad-task-name").Count);
+        Assert.Equal(3, page.FindAll(".pspad-row-group .pspad-task-name").Count);
     }
 
     [Fact]
-    public void ItLaysTodaysTasksOutInTheGrid()
+    public void ItLaysTodaysTasksOutInOneRowGroup()
     {
         var list = NewList("Zakupy");
         Arrange(
@@ -279,7 +279,7 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        page.Find(".mud-grid");
+        Assert.Single(page.FindAll(".pspad-day-anytime .pspad-row-group"));
     }
 
     [Fact]
@@ -354,6 +354,31 @@ public class TodayTests : Bunit.TestContext
         Assert.Contains("Today, any time", page.Find(".pspad-day-anytime").TextContent);
         Assert.Contains("Mleko", page.Find(".pspad-day-anytime").TextContent);
         Assert.True(page.Markup.IndexOf("pspad-day-schedule") < page.Markup.IndexOf("pspad-day-anytime"));
+    }
+
+    [Fact]
+    public void TheScheduleIsOneGroupWithTheTimeInsideEachRow()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Timed(Due(list.Id, "Sprint planning", Today), 9, 30, 11, 0), Timed(Due(list.Id, "Standup", Today), 12, 0, 12, 15));
+
+        var page = Render<Today>();
+
+        var group = page.Find(".pspad-day-schedule .pspad-row-group.pspad-schedule");
+        Assert.Equal(2, group.QuerySelectorAll(".pspad-row > .pspad-schedule-time").Length);
+    }
+
+    [Fact]
+    public void ComingUpGroupsEachDayUnderASubheaderInOneGroup()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Jutro", Today.AddDays(1)), Due(list.Id, "Pojutrze", Today.AddDays(2)));
+
+        var page = Render<Today>();
+
+        var group = page.Find(".pspad-day-comingup .pspad-row-group");
+        Assert.Equal(2, group.QuerySelectorAll(".pspad-row-subhead").Length);
+        Assert.Equal("Tomorrow", group.QuerySelector(".pspad-row-subhead")!.TextContent.Trim());
     }
 
     [Fact]

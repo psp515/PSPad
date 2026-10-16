@@ -1,23 +1,28 @@
 @using PSPad.Module.Tasks.Inbox
 
-<MudPaper Outlined="true" Class="pspad-inbox-card">
-    <div class="pspad-inbox-item pspad-row d-flex align-center gap-2 px-1" @onclick="@(() => OnOpen.InvokeAsync(Item))">
-        <span class="pspad-row-lead">
-            <MudIcon Icon="@Icons.Material.Outlined.Inbox" Size="Size.Small" Class="pspad-muted" />
-        </span>
-        <div class="pspad-row-body">
-            <MudText Typo="Typo.body2" Class="pspad-row-name" title="@Item.Text">@Item.Text</MudText>
-            <div class="pspad-row-meta">
-                <MudText Typo="Typo.caption" Class="pspad-inbox-item-captured pspad-muted">
-                    @Item.CapturedAt.ToLocalTime().ToString("d MMM, HH:mm")
-                </MudText>
-            </div>
-        </div>
-    </div>
-</MudPaper>
+<div class="pspad-inbox-item pspad-row d-flex align-center gap-2 pr-3" role="button" tabindex="0"
+     @onclick="@(() => OnOpen.InvokeAsync(Item))" @onkeydown="@KeyAsync">
+    <span class="pspad-row-lead">
+        <MudIcon Icon="@Icons.Material.Outlined.Inbox" Size="Size.Small" Class="pspad-muted" />
+    </span>
+    <MudText Typo="Typo.body2" Class="pspad-inbox-item-text flex-grow-1" title="@Item.Text">@Item.Text</MudText>
+    <MudText Typo="Typo.caption" Class="pspad-inbox-item-captured pspad-muted flex-shrink-0">@Time</MudText>
+</div>
 
 @code {
     [Parameter, EditorRequired] public InboxItem Item { get; set; } = null!;
 
+    [Parameter] public TimeZoneInfo Zone { get; set; } = TimeZoneInfo.Utc;
+
     [Parameter] public EventCallback<InboxItem> OnOpen { get; set; }
+
+    string Time => TimeZoneInfo.ConvertTime(Item.CapturedAt, Zone).ToString("HH:mm");
+
+    async Task KeyAsync(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or " ")
+        {
+            await OnOpen.InvokeAsync(Item);
+        }
+    }
 }

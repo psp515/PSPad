@@ -45,23 +45,26 @@ public class InboxPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void EachItemIsItsOwnCard()
+    public void EachItemIsARowInOneSharedGroup()
     {
         Arrange(NewInbox("Pierwsze", "Drugie"));
 
         var page = Render<InboxPage>();
 
-        Assert.Equal(2, page.FindComponents<InboxItemCard>().Count);
+        Assert.Equal(2, page.FindComponents<InboxItemRow>().Count);
+        Assert.Single(page.FindAll(".pspad-row-group"));
     }
 
     [Fact]
-    public void ItLaysCapturedItemsOutInTheGrid()
+    public void ItGroupsCapturedItemsUnderTheirDayAndOffersACaptureRow()
     {
         Arrange(NewInbox("Pierwsze", "Drugie"));
 
         var page = Render<InboxPage>();
 
-        page.Find(".mud-grid");
+        Assert.Single(page.FindAll(".pspad-row-subhead"));
+        page.Find(".pspad-inbox-capture");
+        Assert.Contains("2 to process", page.Markup);
     }
 
     [Fact]
