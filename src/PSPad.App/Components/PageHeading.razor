@@ -23,6 +23,7 @@
         <MudSpacer />
         <SyncStamp />
         <SyncButton />
+        @Actions
     </div>
 }
 
@@ -41,5 +42,7 @@
 
     [Parameter] public string? IconLabel { get; set; }
 
-    protected override void OnParametersSet() => Header.Set(Title, Subtitle, BackHref, BackLabel, Icon);
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    protected override void OnParametersSet() => Header.Set(Title, Subtitle, BackHref, BackLabel, Icon, Actions);
 }

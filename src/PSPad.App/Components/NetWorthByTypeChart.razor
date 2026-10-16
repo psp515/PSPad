@@ -1,0 +1,65 @@
+@using PSPad.App.State
+@using PSPad.App.Statistics
+@using PSPad.Module.Money.Reading
+
+<MudChart Class="@Class" ChartType="ChartType.StackedBar" ChartSeries="@_series" ChartLabels="@Labels"
+          ChartOptions="@_options" Width="100%" Height="@Height" />
+<table class="mud-sr-only">
+    <caption>@Caption</caption>
+    <thead>
+        <tr>
+            <th scope="col">Month</th>
+            <th scope="col">Cash</th>
+            <th scope="col">Savings</th>
+            <th scope="col">Investment</th>
+            <th scope="col">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var month in Months)
+        {
+            <tr>
+                <td>@MoneyText.MonthTitle(month.Month)</td>
+                <td>@PlnOrGap(month.Cash)</td>
+                <td>@PlnOrGap(month.Savings)</td>
+                <td>@PlnOrGap(month.Investment)</td>
+                <td>@PlnOrGap(month.Total)</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    List<ChartSeries<double>> _series = [];
+    StackedBarChartOptions _options = new();
+
+    [Parameter, EditorRequired] public IReadOnlyList<NetWorthMonth> Months { get; set; } = [];
+
+    [Parameter, EditorRequired] public string[] Labels { get; set; } = [];
+
+    [Parameter] public string Height { get; set; } = "260px";
+
+    [Parameter, EditorRequired] public string Caption { get; set; } = "";
+
+    [Parameter] public string Class { get; set; } = "";
+
+    protected override void OnParametersSet()
+    {
+        _series =
+        [
+            Series("Cash", Months.Select(month => month.Cash ?? 0m)),
+            Series("Savings", Months.Select(month => month.Savings ?? 0m)),
+            Series("Investment", Months.Select(month => month.Investment ?? 0m))
+        ];
+        _options = new StackedBarChartOptions
+        {
+            YAxisTicks = ChartAxis.Step((double)Months.Select(month => month.Total ?? 0m).DefaultIfEmpty(0m).Max()),
+            MaxNumYAxisTicks = ChartAxis.MaxTicks
+        };
+    }
+
+    static ChartSeries<double> Series(string name, IEnumerable<decimal> values) =>
+        new() { Name = name, Data = values.Select(value => (double)value).ToArray() };
+
+    static string PlnOrGap(decimal? value) => value is { } pln ? MoneyText.Pln(pln) : "—";
+}

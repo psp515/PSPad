@@ -10,10 +10,21 @@
         <div class="d-flex flex-column flex-grow-1 pspad-entry-main">
             <MudText Typo="Typo.body1" Class="pspad-entry-name">@Entry.Name</MudText>
             <MudText Typo="Typo.caption" Class="pspad-entry-sub">
-                <span class="pspad-entry-category">@Entry.Category</span>
+                @if (OnOpenCategory.HasDelegate)
+                {
+                    <button type="button" class="pspad-entry-category pspad-entry-category-open" @onclick="@(() => OnOpenCategory.InvokeAsync(Entry.Category))" @onclick:stopPropagation="true">@Entry.Category</button>
+                }
+                else
+                {
+                    <span class="pspad-entry-category">@Entry.Category</span>
+                }
                 @if (Entry.Money.Currency != Currencies.Pln)
                 {
                     <span> · </span><span class="pspad-entry-foreign">@MoneyText.Amount(Entry.Money.Amount) @Entry.Money.Currency @@ @MoneyText.Rate(Entry.Money.RateToPln)</span>
+                }
+                @if (Recorded is not null)
+                {
+                    <span> · </span><span class="pspad-entry-recorded">recorded @Recorded</span>
                 }
             </MudText>
         </div>
@@ -26,6 +37,10 @@
     [Parameter, EditorRequired] public MoneyEntry Entry { get; set; } = default!;
 
     [Parameter] public EventCallback<MoneyEntry> OnOpen { get; set; }
+
+    [Parameter] public string? Recorded { get; set; }
+
+    [Parameter] public EventCallback<string> OnOpenCategory { get; set; }
 
     bool IsIncome => Entry.Kind == CategoryKind.Income;
 

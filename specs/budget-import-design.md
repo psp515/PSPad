@@ -213,7 +213,7 @@ One page imports one file kind, so a year's entries and balances are two runs.
      rate with its source (file, NBP with its effective date), and its status
      or error message, the error in the theme's error colour. A checkbox
      ticks or unticks rows that allow it. The selected filter chip is filled,
-     like the Month tab's filter.
+     like the Entries tab's filter.
    - The balances table groups rows under a month header: "New month: N
      holdings" or "Existing month: updates N, adds N, unchanged N".
 3. **Import.** **Import N rows** sits under the table. It is disabled while
@@ -228,8 +228,8 @@ One page imports one file kind, so a year's entries and balances are two runs.
      nothing. Reloading or closing the tab in that window gets the browser's
      own prompt.
 4. **Result.** "Imported 1,240 entries and 18 holdings in 6 months." Commands
-   rejected locally are listed with their line number and message, and a link
-   leads back to the budget's Month tab. Later server rejections surface the
+   rejected locally are listed with their line number and message, and an "Open the
+   budget" link leads back to the budget, landing on its Overview. Later server rejections surface the
    usual way (AD-5, `adr/0021`).
 
 The flow works offline except for NBP lookups.

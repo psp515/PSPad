@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components;
+
 namespace PSPad.App.State;
 
 public sealed class PageHeader
@@ -12,11 +14,15 @@ public sealed class PageHeader
 
     public string? Icon { get; private set; }
 
+    public RenderFragment? Actions { get; private set; }
+
     public event Action? Changed;
 
-    public void Set(string title, string? subtitle, string? backHref, string? backLabel = null, string? icon = null)
+    public void Set(string title, string? subtitle, string? backHref, string? backLabel = null, string? icon = null,
+        RenderFragment? actions = null)
     {
-        if (title == Title && subtitle == Subtitle && backHref == BackHref && backLabel == BackLabel && icon == Icon)
+        if (title == Title && subtitle == Subtitle && backHref == BackHref && backLabel == BackLabel && icon == Icon
+            && actions is null && Actions is null)
         {
             return;
         }
@@ -26,6 +32,7 @@ public sealed class PageHeader
         BackHref = backHref;
         BackLabel = backLabel;
         Icon = icon;
+        Actions = actions;
         Changed?.Invoke();
     }
 }

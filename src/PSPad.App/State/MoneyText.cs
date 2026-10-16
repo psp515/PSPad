@@ -39,6 +39,8 @@ public static class MoneyText
     public static string Range(DateOnly from, DateOnly to) =>
         $"{from.ToString("d MMM yyyy", CultureInfo.InvariantCulture)} – {to.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}";
 
+    public static string MonthCount(int months) => months == 1 ? "1 month" : $"{months.ToString(CultureInfo.InvariantCulture)} months";
+
     public static string Percent(decimal? share)
     {
         if (share is not { } value)
@@ -74,5 +76,25 @@ public static class MoneyText
         }
 
         return labels;
+    }
+
+    public static string Recorded(DateTimeOffset at, TimeZoneInfo zone, DateOnly today)
+    {
+        var local = TimeZoneInfo.ConvertTime(at, zone);
+        var day = DateOnly.FromDateTime(local.DateTime);
+        var time = local.ToString("HH:mm", CultureInfo.InvariantCulture);
+
+        if (day == today)
+        {
+            return $"today {time}";
+        }
+
+        if (day == today.AddDays(-1))
+        {
+            return $"yesterday {time}";
+        }
+
+        var format = day.Year == today.Year ? "d MMM" : "d MMM yyyy";
+        return $"{day.ToString(format, CultureInfo.InvariantCulture)} {time}";
     }
 }

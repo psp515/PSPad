@@ -1,0 +1,197 @@
+@using System.Globalization
+@using Microsoft.JSInterop
+@using PSPad.App.State
+@using PSPad.Module.Money.Values
+@inject IJSRuntime Js
+@inject ILogger<MonthStrip> Logger
+@implements IAsyncDisposable
+
+<div class="@($"d-flex align-center gap-1 pspad-month-strip {Class}")">
+    <MudIconButton Class="pspad-month-today" Icon="@Icons.Material.Outlined.Today" aria-label="This month" Size="Size.Small"
+                   Disabled="@(Month == Current)" OnClick="@(() => OnMonthChanged.InvokeAsync(Current))" />
+    <div @ref="_scroll" class="pspad-month-strip-scroll" role="group" aria-label="Month">
+        @foreach (var month in _chips)
+        {
+            <MudButton @key="month" Class="@ChipClass(month)" Variant="@(month == Month ? Variant.Filled : Variant.Text)"
+                       Color="@(month == Month ? Color.Primary : Color.Default)" Size="Size.Small"
+                       aria-pressed="@(month == Month ? "true" : "false")" aria-current="@(month == Current ? "date" : null)"
+                       aria-label="@MoneyText.MonthTitle(month)" OnClick="@(() => OnMonthChanged.InvokeAsync(month))">
+                <span class="pspad-month-chip-label">@Abbreviation(month.Month)</span>
+                @if (ShowsYear(month))
+                {
+                    <small class="pspad-month-chip-year">@month.Year</small>
+                }
+                <i class="pspad-month-chip-dot" aria-hidden="true"></i>
+            </MudButton>
+        }
+    </div>
+    <MudIconButton Class="pspad-month-more" Icon="@Icons.Material.Outlined.CalendarMonth" aria-label="Pick another month"
+                   Size="Size.Small" OnClick="@Open" />
+</div>
+
+<MudDialog @bind-Visible="_picking" Class="pspad-month-sheet" Options="@SheetOptions">
+    <DialogContent>
+        <div class="d-flex align-center mb-3">
+            <MudIconButton Class="pspad-month-sheet-previous" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous year"
+                           OnClick="@(() => _year--)" />
+            <MudText Typo="Typo.h6" Align="Align.Center" Class="flex-grow-1 pspad-month-sheet-year">@_year</MudText>
+            <MudIconButton Class="pspad-month-sheet-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next year"
+                           OnClick="@(() => _year++)" />
+        </div>
+        <div class="pspad-month-sheet-grid">
+            @for (var number = 1; number <= 12; number++)
+            {
+                var month = new YearMonth(_year, number);
+                var label = Abbreviation(number);
+                <MudButton @key="number" Class="pspad-month-sheet-month" Variant="@(month == Month ? Variant.Filled : Variant.Text)"
+                           Color="@(month == Month ? Color.Primary : Color.Default)" aria-current="@(month == Month ? "date" : null)"
+                           OnClick="@(() => PickAsync(month))">@label</MudButton>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Class="pspad-month-sheet-current" Color="Color.Primary" OnClick="@(() => PickAsync(Current))">This month</MudButton>
+        <MudButton Color="Color.Primary" OnClick="@(() => _picking = false)">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    public const int DefaultCount = 12;
+    const int FewestChips = 3;
+    const double ChipWidth = 56;
+    const double ChipGap = 4;
+
+    static readonly DialogOptions SheetOptions = new()
+    {
+        CloseOnEscapeKey = true, BackdropClick = true, NoHeader = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true,
+        Position = DialogPosition.BottomCenter
+    };
+
+    [Parameter, EditorRequired] public YearMonth Month { get; set; }
+
+    [Parameter, EditorRequired] public YearMonth Current { get; set; }
+
+    [Parameter] public IReadOnlySet<YearMonth> Marked { get; set; } = new HashSet<YearMonth>();
+
+    [Parameter] public EventCallback<YearMonth> OnMonthChanged { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+
+    ElementReference _scroll;
+    IJSObjectReference? _module;
+    IJSObjectReference? _observer;
+    DotNetObjectReference<MonthStrip>? _self;
+    IReadOnlyList<YearMonth> _chips = [];
+    int _count = DefaultCount;
+    bool _picking;
+    int _year;
+
+    protected override void OnParametersSet() => _chips = NewestFirst();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            _module = await Js.InvokeAsync<IJSObjectReference>("import", "./js/month-strip.js");
+            if (_module is null)
+            {
+                return;
+            }
+
+            _self = DotNetObjectReference.Create(this);
+            _observer = await _module.InvokeAsync<IJSObjectReference>("observe", _scroll, _self);
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Month strip keeps its default width");
+        }
+    }
+
+    [JSInvokable]
+    public void Resized(double width)
+    {
+        var count = Math.Max(FewestChips, (int)Math.Floor((width + ChipGap) / (ChipWidth + ChipGap)));
+        if (count == _count)
+        {
+            return;
+        }
+
+        _count = count;
+        _chips = NewestFirst();
+        StateHasChanged();
+    }
+
+    IReadOnlyList<YearMonth> NewestFirst()
+    {
+        var chips = new List<YearMonth>(_count);
+        var month = Newest();
+        for (var back = 0; back < _count; back++)
+        {
+            chips.Add(month);
+            month = month.Previous();
+        }
+
+        return chips;
+    }
+
+    YearMonth Newest()
+    {
+        if (Month > Current)
+        {
+            return Month;
+        }
+
+        var reach = Shift(Month, _count - 1);
+        return reach < Current ? reach : Current;
+    }
+
+    static YearMonth Shift(YearMonth month, int months) => YearMonth.Of(month.FirstDay.AddMonths(months));
+
+    bool ShowsYear(YearMonth month) => month.Month == 1 || month == _chips[^1];
+
+    string ChipClass(YearMonth month) =>
+        "pspad-month-chip"
+        + (Marked.Contains(month) ? " pspad-month-chip-marked" : "")
+        + (month == Current ? " pspad-month-chip-current" : "");
+
+    static string Abbreviation(int month) => CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(month);
+
+    void Open()
+    {
+        _year = Month.Year;
+        _picking = true;
+    }
+
+    async Task PickAsync(YearMonth month)
+    {
+        _picking = false;
+        await OnMonthChanged.InvokeAsync(month);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_observer is not null)
+            {
+                await _observer.InvokeVoidAsync("dispose");
+                await _observer.DisposeAsync();
+            }
+
+            if (_module is not null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+
+        _self?.Dispose();
+    }
+}

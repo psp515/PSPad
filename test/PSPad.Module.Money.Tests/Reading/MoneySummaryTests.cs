@@ -85,7 +85,7 @@ public class MoneySummaryTests
         Assert.Null(summary.SavingsRate);
         Assert.Empty(summary.Ranking);
         Assert.Empty(summary.ExpensesByMonth);
-        Assert.Equal(12, summary.Cumulative.Count);
+        Assert.Equal(12, summary.PerMonth.Count);
         Assert.Null(summary.Latest);
         Assert.Null(summary.LatestNetWorth);
     }
@@ -104,7 +104,7 @@ public class MoneySummaryTests
         ], [], On(3, 15), On(4, 10));
 
         Assert.Equal(6m, summary.Expenses);
-        Assert.Equal([new CumulativeMonth(March, 0m, 2m), new CumulativeMonth(April, 0m, 6m)], summary.Cumulative);
+        Assert.Equal([new MonthFigure(March, 0m, 2m), new MonthFigure(April, 0m, 4m)], summary.PerMonth);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class MoneySummaryTests
             [], YearStart, On(10, 9));
 
         Assert.Equal(2m, summary.Expenses);
-        Assert.Equal(new CumulativeMonth(January, 0m, 2m), summary.Cumulative[0]);
+        Assert.Equal(new MonthFigure(January, 0m, 2m), summary.PerMonth[0]);
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class MoneySummaryTests
         var summary = MoneySummary.For([], [], new DateOnly(2025, 11, 15), new DateOnly(2026, 2, 3));
 
         Assert.Equal([new YearMonth(2025, 11), new YearMonth(2025, 12), January, February], summary.Months);
-        Assert.Equal(summary.Months, summary.Cumulative.Select(month => month.Month));
+        Assert.Equal(summary.Months, summary.PerMonth.Select(month => month.Month));
         Assert.Equal(summary.Months, summary.NetWorth.Select(month => month.Month));
     }
 
@@ -150,27 +150,6 @@ public class MoneySummaryTests
     [Fact]
     public void ARangeThatEndsBeforeItStartsIsRejected() =>
         Assert.Throws<ArgumentOutOfRangeException>(() => MoneySummary.For([], [], On(3, 2), On(3, 1)));
-
-    [Fact]
-    public void IncomeAndExpensesAccumulateMonthByMonth()
-    {
-        var budget = ABudget();
-
-        var summary = MoneySummary.For(
-        [
-            AnIncome(budget, amount: 1000m, date: On(1, 5)),
-            AnExpense(budget, amount: 200m, date: On(1, 6)),
-            AnIncome(budget, amount: 500m, date: On(3, 1)),
-            AnExpense(budget, amount: 300m, date: On(3, 31))
-        ], [], YearStart, On(3, 31));
-
-        Assert.Equal(
-        [
-            new CumulativeMonth(January, 1000m, 200m),
-            new CumulativeMonth(February, 1000m, 200m),
-            new CumulativeMonth(March, 1500m, 500m)
-        ], summary.Cumulative);
-    }
 
     [Fact]
     public void TheTopFourCategoriesKeepTheirOwnSeriesAndTheRestGoIntoOther()
@@ -352,5 +331,69 @@ public class MoneySummaryTests
 
         Assert.Same(october, summary.Latest);
         Assert.Equal(120m, summary.LatestNetWorth);
+    }
+
+    [Fact]
+    public void PerMonthCarriesEveryMonthOfTheRangeWithItsTotals()
+    {
+        var budget = ABudget();
+
+        var summary = MoneySummary.For(
+        [
+            AnIncome(budget, amount: 1000m, date: On(1, 5)),
+            AnExpense(budget, amount: 200m, date: On(1, 6)),
+            AnExpense(budget, amount: 50m, date: On(3, 2))
+        ], [], YearStart, new DateOnly(2026, 3, 31));
+
+        Assert.Equal([January, February, March], summary.PerMonth.Select(month => month.Month));
+        Assert.Equal([1000m, 0m, 0m], summary.PerMonth.Select(month => month.Income));
+        Assert.Equal([200m, 0m, 50m], summary.PerMonth.Select(month => month.Expenses));
+        Assert.Equal(800m, summary.PerMonth[0].Net);
+    }
+
+    [Fact]
+    public void AveragesDivideByTheMonthsThatHaveEntries()
+    {
+        var budget = ABudget();
+
+        var summary = MoneySummary.For(
+        [
+            AnIncome(budget, amount: 1000m, date: On(1, 5)),
+            AnExpense(budget, amount: 200m, date: On(1, 6)),
+            AnExpense(budget, amount: 100m, date: On(3, 2))
+        ], [], YearStart, new DateOnly(2026, 3, 31));
+
+        Assert.Equal(2, summary.SampledMonths);
+        Assert.Equal(500m, summary.AverageIncome);
+        Assert.Equal(150m, summary.AverageExpenses);
+        Assert.Equal(350m, summary.AverageSaved);
+    }
+
+    [Fact]
+    public void AveragesRoundToWholeGrosze()
+    {
+        var budget = ABudget();
+        var to = new DateOnly(2026, 3, 31);
+
+        var repeating = MoneySummary.For(
+            [AnExpense(budget, amount: 10m, date: On(1, 6)), AnExpense(budget, amount: 2m, date: On(2, 6)), AnExpense(budget, amount: 1m, date: On(3, 6))],
+            [], YearStart, to);
+        var midpoint = MoneySummary.For(
+            [AnExpense(budget, amount: 0.01m, date: On(1, 6)), AnExpense(budget, amount: 0.02m, date: On(2, 6))],
+            [], YearStart, to);
+
+        Assert.Equal(4.33m, repeating.AverageExpenses);
+        Assert.Equal(0.02m, midpoint.AverageExpenses);
+    }
+
+    [Fact]
+    public void WithoutEntriesThereAreNoAverages()
+    {
+        var summary = MoneySummary.For([], [], YearStart, YearEnd);
+
+        Assert.Equal(0, summary.SampledMonths);
+        Assert.Null(summary.AverageIncome);
+        Assert.Null(summary.AverageExpenses);
+        Assert.Null(summary.AverageSaved);
     }
 }

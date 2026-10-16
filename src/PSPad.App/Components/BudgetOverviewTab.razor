@@ -1,0 +1,225 @@
+@using PSPad.App.State
+@using PSPad.Module.Money.Balance
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Reading
+
+<div class="@($"pspad-overview {Class}")">
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-2 pspad-overview-day">@MoneyText.MonthTitle(Pace.Month) · day @Pace.Day of @Pace.DaysInMonth</MudText>
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="8">
+            <MoneyHero Class="pspad-overview-hero" HeadlineClass="pspad-overview-net" Label="Net so far"
+                       Text="@MoneyText.SignedPln(Pace.Totals.Net)" Negative="@(Pace.Totals.Net < 0)">
+                <ChildContent>
+                    <div class="d-flex flex-column pspad-overview-income">
+                        <MoneyFigure Label="Income" Text="@MoneyText.Pln(Pace.Totals.Income)" />
+                        @if (Pace.ExpectedIncomeByNow is { } incomeByNow)
+                        {
+                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-overview-income-usual">usual by now @MoneyText.Pln(incomeByNow)</MudText>
+                        }
+                    </div>
+                    <div class="d-flex flex-column pspad-overview-expenses">
+                        <MoneyFigure Label="Expenses" Text="@MoneyText.Pln(Pace.Totals.Expenses)" />
+                        @if (Pace.ExpectedExpensesByNow is { } expensesByNow)
+                        {
+                            var delta = Pace.Totals.Expenses - expensesByNow;
+                            <MudText Typo="Typo.caption" Color="@(delta > 0 ? Color.Error : Color.Default)"
+                                     Class="@(delta > 0 ? "pspad-overview-expenses-delta" : "pspad-muted pspad-overview-expenses-delta")">@MoneyText.SignedPln(delta) vs usual by now</MudText>
+                        }
+                    </div>
+                    @if (!Pace.Usual.IsEmpty)
+                    {
+                        <div class="d-flex flex-column pspad-overview-expected">
+                            <MoneyFigure Label="Expected month end" Text="@($"≈ {MoneyText.Pln(Pace.Usual.Expenses)}")" />
+                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-overview-expected-caption">avg of last @MoneyText.MonthCount(Pace.Usual.SampledMonths)</MudText>
+                        </div>
+                    }
+                </ChildContent>
+                <Footer>
+                    @if (Pace.Usual.IsEmpty)
+                    {
+                        <MudText Typo="Typo.body2" Class="pspad-muted pspad-overview-no-usual">Averages appear after a full month of entries.</MudText>
+                    }
+                    else if (Pace.ShareOfUsualSpent is { } share)
+                    {
+                        <div class="d-flex flex-column gap-1">
+                            <MudProgressLinear Class="pspad-overview-pace" Color="@(share > 1 ? Color.Error : Color.Primary)" Rounded="true"
+                                               Min="0" Max="100" Value="@Math.Min(100d, (double)(share * 100))" UserAttributes="@HiddenFromReaders" />
+                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-overview-pace-caption">Spent @MoneyText.Percent(share) of a usual month · @MoneyText.Percent(Pace.ShareOfMonthPassed) of the month passed</MudText>
+                        </div>
+                    }
+                    @if (Pace.Totals.ExpensesByCategory.Count > 0)
+                    {
+                        <CategoryBar Class="mt-2" Totals="@Pace.Totals.ExpensesByCategory" />
+                    }
+                </Footer>
+            </MoneyHero>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Outlined="true" Class="pa-3 pspad-overview-insights">
+                <SectionHeading Title="Worth a look" Count="@(Found.Count == 0 ? null : Found.Count)" />
+                @if (Found.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="pspad-muted pspad-overview-quiet">Nothing unusual so far.</MudText>
+                }
+                else
+                {
+                    <MudList T="Insight" Dense="true" Class="py-0">
+                        @foreach (var insight in Found)
+                        {
+                            if (insight.Kind == InsightKind.IncomeExpected)
+                            {
+                                <div @key="@((insight.Kind, insight.Category))" class="mud-list-item mud-list-item-dense mud-list-item-gutters pspad-insight" data-kind="@Kind(insight.Kind)">
+                                    <div class="mud-list-item-icon">
+                                        <MudIcon Icon="@Icon(insight.Kind)" Color="@IconColor(insight.Kind)" />
+                                    </div>
+                                    <div class="mud-list-item-text">
+                                        <MudText Typo="Typo.body2" Class="pspad-insight-title">@InsightText.Title(insight)</MudText>
+                                        <MudText Typo="Typo.caption" Class="pspad-muted pspad-insight-caption">@InsightText.Caption(insight)</MudText>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <MudListItem T="Insight" @key="@((insight.Kind, insight.Category))" Class="pspad-insight" data-kind="@Kind(insight.Kind)"
+                                             Icon="@Icon(insight.Kind)" IconColor="@IconColor(insight.Kind)"
+                                             OnClick="@(() => OnOpenCategory.InvokeAsync(insight.Category))">
+                                    <MudText Typo="Typo.body2" Class="pspad-insight-title">@InsightText.Title(insight)</MudText>
+                                    <MudText Typo="Typo.caption" Class="pspad-muted pspad-insight-caption">@InsightText.Caption(insight)</MudText>
+                                </MudListItem>
+                            }
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="5">
+            <MudPaper Outlined="true" Class="pa-3 pspad-overview-categories">
+                <SectionHeading Title="Where money went" Hint="tap a category for its entries" />
+                @if (Spent.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="pspad-muted pspad-overview-no-expenses">No expenses yet in @MoneyText.MonthTitle(Pace.Month).</MudText>
+                }
+                else
+                {
+                    <MudStack Spacing="2">
+                        @foreach (var category in Spent)
+                        {
+                            <div @key="category.Category" class="pspad-category-pace">
+                                <div class="d-flex align-center gap-2 mb-1">
+                                    <MudButton Class="pspad-category-open" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                               OnClick="@(() => OnOpenCategory.InvokeAsync(category.Category))">@category.Category</MudButton>
+                                    <MudSpacer />
+                                    @if (category.Delta is { } delta)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="@(delta > 0 ? Color.Error : Color.Default)" Class="@(delta > 0 ? "pspad-category-delta" : "pspad-muted pspad-category-delta")">@MoneyText.SignedPln(delta)</MudText>
+                                    }
+                                    <MudText Typo="Typo.body2" Class="pspad-money-value pspad-category-spent">@MoneyText.Pln(category.Spent)</MudText>
+                                </div>
+                                <MudProgressLinear Color="Color.Primary" Rounded="true" Min="0" Max="@CategoryMax" Value="@((double)category.Spent)" UserAttributes="@HiddenFromReaders" />
+                            </div>
+                        }
+                    </MudStack>
+                }
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Outlined="true" Class="pa-3 pspad-overview-recent">
+                <SectionHeading Title="Recent entries" Hint="by time recorded" />
+                @if (Recent.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="pspad-muted">No entries yet.</MudText>
+                }
+                else
+                {
+                    <MudList T="MoneyEntry" Dense="true" Class="py-0">
+                        @foreach (var entry in Recent)
+                        {
+                            <EntryRow @key="entry.Id" Entry="@entry" Recorded="@MoneyText.Recorded(entry.RecordedAt, Zone, Today)" OnOpen="@OnOpenEntry" />
+                        }
+                    </MudList>
+                }
+                <MudButton Class="mt-2 pspad-overview-all-entries" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@OnOpenEntries">All @MoneyText.MonthTitle(Pace.Month) entries</MudButton>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudPaper Outlined="true" Class="pa-3 pspad-overview-net-worth">
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pspad-overview-net-worth-label">@(Latest is { } latest ? $"Net worth · {MoneyText.MonthTitle(latest.Month)}" : "Net worth")</MudText>
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="pspad-money-value">@(Latest is { } value ? MoneyText.Pln(BalanceTotals.NetWorthOf(value)) : "—")</MudText>
+                @if (Latest is { } current && BalanceTotals.For(Snapshots, current.Month).Change is { } change)
+                {
+                    <MudText Typo="Typo.caption" Color="@(change < 0 ? Color.Error : Color.Default)" Class="pspad-overview-net-worth-change">@MoneyText.SignedPln(change) vs @MoneyText.MonthTitle(BalanceTotals.For(Snapshots, current.Month).Previous!.Month)</MudText>
+                }
+                @if (Balance.Snapshot is null)
+                {
+                    <MudText Typo="Typo.body2" Class="pspad-muted mt-2 pspad-overview-no-balance">@(Latest is null && ReadOnly ? "No balance yet" : $"{MoneyText.MonthTitle(Pace.Month)} has no balance yet")</MudText>
+                    @if (!ReadOnly)
+                    {
+                        <MudButton Class="mt-1 pspad-overview-start-month" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                                   OnClick="@OnStartMonth">Start @MoneyText.MonthTitle(Pace.Month)</MudButton>
+                    }
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</div>
+
+@code {
+    static readonly Dictionary<string, object> HiddenFromReaders = new() { ["aria-hidden"] = "true" };
+
+    [Parameter, EditorRequired] public MonthPace Pace { get; set; } = default!;
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+
+    [Parameter, EditorRequired] public IReadOnlyList<MoneyEntry> Entries { get; set; } = [];
+
+    [Parameter, EditorRequired] public IReadOnlyList<BalanceSnapshot> Snapshots { get; set; } = [];
+
+    [Parameter, EditorRequired] public TimeZoneInfo Zone { get; set; } = TimeZoneInfo.Utc;
+
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback<string> OnOpenCategory { get; set; }
+
+    [Parameter] public EventCallback<MoneyEntry> OnOpenEntry { get; set; }
+
+    [Parameter] public EventCallback OnOpenEntries { get; set; }
+
+    [Parameter] public EventCallback OnStartMonth { get; set; }
+
+    IReadOnlyList<Insight> Found => Insights.For(Pace);
+
+    IReadOnlyList<CategoryPace> Spent => [.. Pace.Categories.Where(category => category.Spent > 0)];
+
+    double CategoryMax => (double)Math.Max(1m, Pace.Categories.Select(category => Math.Max(category.Spent, category.UsualMonth ?? 0m)).DefaultIfEmpty(1m).Max());
+
+    IReadOnlyList<MoneyEntry> Recent => [.. Entries.Where(entry => !entry.Deleted).OrderByDescending(entry => entry.RecordedAt).Take(5)];
+
+    BalanceTotals Balance => BalanceTotals.For(Snapshots, Pace.Month);
+
+    BalanceSnapshot? Latest => BalanceTotals.Latest(Snapshots, Pace.Month);
+
+    static string Kind(InsightKind kind) => kind switch
+    {
+        InsightKind.PastUsual => "past-usual",
+        InsightKind.RunningHigh => "running-high",
+        InsightKind.IncomeExpected => "income-expected",
+        _ => "on-track"
+    };
+
+    static Color IconColor(InsightKind kind) => kind switch
+    {
+        InsightKind.PastUsual or InsightKind.RunningHigh => Color.Error,
+        InsightKind.OnTrack => Color.Success,
+        _ => Color.Info
+    };
+
+    static string Icon(InsightKind kind) => kind switch
+    {
+        InsightKind.IncomeExpected => Icons.Material.Outlined.Info,
+        InsightKind.OnTrack => Icons.Material.Outlined.Check,
+        _ => Icons.Material.Outlined.TrendingUp
+    };
+}

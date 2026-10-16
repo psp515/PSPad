@@ -1,5 +1,6 @@
 using PSPad.App.State;
 using PSPad.Module.Money.Budgets;
+using PSPad.Module.Money.Values;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.State;
@@ -15,7 +16,7 @@ public class EntryQueryTests
         var uri = EntryQuery.ForNew("http://localhost/budgets/x?task=1", BudgetId, CategoryKind.Expense);
 
         Assert.Equal($"http://localhost/budgets/x?expense={BudgetId}", uri);
-        Assert.Equal((BudgetId, CategoryKind.Expense), EntryQuery.NewFrom(uri));
+        Assert.Equal((BudgetId, CategoryKind.Expense, (YearMonth?)null), EntryQuery.NewFrom(uri));
         Assert.Null(EntryQuery.From(uri));
     }
 
@@ -24,7 +25,7 @@ public class EntryQueryTests
     {
         var uri = EntryQuery.ForNew("http://localhost/budgets/x", BudgetId, CategoryKind.Income);
 
-        Assert.Equal((BudgetId, CategoryKind.Income), EntryQuery.NewFrom(uri));
+        Assert.Equal((BudgetId, CategoryKind.Income, (YearMonth?)null), EntryQuery.NewFrom(uri));
     }
 
     [Fact]
@@ -44,4 +45,18 @@ public class EntryQueryTests
         Assert.Null(EntryQuery.From("http://localhost/budgets?budget=new"));
         Assert.Null(EntryQuery.NewFrom("http://localhost/budgets?expense=nope"));
     }
+
+    [Fact]
+    public void ANewExpenseInAMonthRoundTrips()
+    {
+        var uri = EntryQuery.ForNew("http://localhost/budgets/x/entries", BudgetId, CategoryKind.Expense, new YearMonth(2026, 9));
+
+        Assert.Equal($"http://localhost/budgets/x/entries?expense={BudgetId}&month=2026-09", uri);
+        Assert.Equal((BudgetId, CategoryKind.Expense, new YearMonth(2026, 9)), EntryQuery.NewFrom(uri));
+    }
+
+    [Fact]
+    public void ABadMonthIsIgnored() =>
+        Assert.Equal((BudgetId, CategoryKind.Income, (YearMonth?)null),
+            EntryQuery.NewFrom($"http://localhost/budgets/x?income={BudgetId}&month=nope"));
 }

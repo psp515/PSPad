@@ -23,6 +23,7 @@
     <MudSpacer />
     <ConnectionStatus />
     <SyncButton WithStamp="true" />
+    @Header.Actions
     <MudIconButton Class="pspad-avatar-button" OnClick="@OnAvatar" aria-label="Account">
         <MudAvatar Style="@($"width:36px;height:36px;background:{AvatarColor.For(UserId)};color:#FFFFFF")">
             @AvatarColor.InitialOf(DisplayName.Length > 0 ? DisplayName : Email)

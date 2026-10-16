@@ -76,6 +76,31 @@ public class MoneyTextTests
             MoneyText.MonthAxis(months));
     }
 
+    [Theory]
+    [InlineData(0, "0 months")]
+    [InlineData(1, "1 month")]
+    [InlineData(6, "6 months")]
+    public void AMonthCountAgreesWithItsNumber(int months, string expected) => Assert.Equal(expected, MoneyText.MonthCount(months));
+
     [Fact]
     public void NoMonthsHaveNoLabels() => Assert.Empty(MoneyText.MonthAxis([]));
+
+    static readonly TimeZoneInfo Warsaw = TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw");
+    static readonly DateOnly Today = new(2026, 10, 9);
+
+    [Fact]
+    public void RecordedTodayShowsTheTimeInTheUsersZone() =>
+        Assert.Equal("today 20:40", MoneyText.Recorded(new DateTimeOffset(2026, 10, 9, 18, 40, 0, TimeSpan.Zero), Warsaw, Today));
+
+    [Fact]
+    public void RecordedYesterdaySaysSo() =>
+        Assert.Equal("yesterday 01:14", MoneyText.Recorded(new DateTimeOffset(2026, 10, 7, 23, 14, 0, TimeSpan.Zero), Warsaw, Today));
+
+    [Fact]
+    public void RecordedEarlierThisYearShowsTheDay() =>
+        Assert.Equal("3 Oct 11:00", MoneyText.Recorded(new DateTimeOffset(2026, 10, 3, 9, 0, 0, TimeSpan.Zero), Warsaw, Today));
+
+    [Fact]
+    public void RecordedInAnotherYearShowsTheYear() =>
+        Assert.Equal("3 Oct 2025 11:00", MoneyText.Recorded(new DateTimeOffset(2025, 10, 3, 9, 0, 0, TimeSpan.Zero), Warsaw, Today));
 }

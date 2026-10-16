@@ -279,12 +279,29 @@ public partial class StylesheetRulesTests
         Assert.Contains("flex: 1 1 0", Declarations(".pspad-budget-views .mud-toggle-item"));
 
     [Fact]
-    public void TheMonthTitleReadsAsAHeadingNotAButtonLabel()
+    public void TheMonthStripFillsItsRowWithWholeChipsCentred()
     {
-        var title = Declarations(".pspad-month-switcher .pspad-month-title");
+        Assert.Contains("flex: 1 1 auto", Declarations(".pspad-month-strip"));
+        var scroll = Declarations(".pspad-month-strip-scroll");
+        Assert.Contains("flex-direction: row-reverse", scroll);
+        Assert.Contains("flex-wrap: wrap", scroll);
+        Assert.Contains("justify-content: center", scroll);
+        Assert.Contains("overflow: hidden", scroll);
+        Assert.Contains("height: 40px", scroll);
+        var chip = Declarations(".pspad-month-chip");
+        Assert.Contains("width: 56px", chip);
+        Assert.Contains("height: 36px", chip);
+    }
 
-        Assert.Contains("text-transform: none", title);
-        Assert.Contains("font-weight: 700", title);
+    [Fact]
+    public void MonthChipsStackTheLabelOverTheDot()
+    {
+        var label = Declarations(".pspad-month-chip .mud-button-label");
+
+        Assert.Contains("flex-direction: column", label);
+        Assert.Contains("opacity: 0", Declarations(".pspad-month-chip-dot"));
+        Assert.Contains("opacity: 0.8", Declarations(".pspad-month-chip-marked .pspad-month-chip-dot"));
+        Assert.Contains("var(--mud-palette-primary)", Declarations(".pspad-month-chip-current"));
     }
 
     [Fact]
@@ -304,32 +321,41 @@ public partial class StylesheetRulesTests
     [Fact]
     public void TheSummaryPresetsScrollSidewaysInsteadOfWrapping()
     {
-        var presets = Declarations(".pspad-summary-presets");
+        var presets = Declarations(".pspad-stats-presets");
 
         Assert.Contains("flex-wrap: nowrap", presets);
         Assert.Contains("overflow-x: auto", presets);
     }
 
     [Fact]
+    public void OnAPhoneEachViewStacksItsIconOverItsLabel()
+    {
+        var label = DeclarationsInMedia("max-width: 599.98px", ".pspad-budget-views .mud-toggle-item .mud-button-label");
+        var icon = DeclarationsInMedia("max-width: 599.98px", ".pspad-budget-views .mud-toggle-item .mud-toggle-item-check-icon");
+
+        Assert.Contains("flex-direction: column", label);
+        Assert.Contains("margin: 0", icon);
+    }
+
+    [Fact]
+    public void TheCategoryNamesKeepTheirCase() =>
+        Assert.Contains("text-transform: none", Declarations(".pspad-category-open"));
+
+    [Fact]
     public void TheBudgetViewsKeepTheirCase() =>
         Assert.Contains("text-transform: none", Declarations(".pspad-budget-views .mud-toggle-item"));
 
     [Fact]
-    public void TheBudgetPageStopsAtNineHundredSixtyPixels()
-    {
-        var page = Declarations(".pspad-budget-page");
-
-        Assert.Contains("max-width: 960px", page);
-        Assert.Contains("margin-inline: auto", page);
-    }
+    public void TheBudgetPageTakesTheFullWidth() =>
+        Assert.Contains("width: 100%", Declarations(".pspad-budget-page"));
 
     [Fact]
-    public void OnAPhoneTheMonthSwitcherTakesItsOwnLine() =>
-        Assert.Contains("flex-basis: 100%", DeclarationsInMedia("max-width: 959.98px", ".pspad-budget-nav .pspad-month-switcher"));
+    public void NothingFloatsBottomLeft() =>
+        Assert.DoesNotContain(".pspad-fab-settings", Css);
 
     [Fact]
     public void OnDesktopTheViewsAreNotStretched() =>
-        Assert.Contains("max-width: 420px", DeclarationsInMedia("min-width: 960px", ".pspad-budget-views"));
+        Assert.Contains("max-width: 560px", DeclarationsInMedia("min-width: 960px", ".pspad-budget-views"));
 
     [Fact]
     public void OnDesktopTheHeroFiguresSitBesideTheHeadline() =>
@@ -358,22 +384,35 @@ public partial class StylesheetRulesTests
     }
 
     [Fact]
-    public void TheMonthControlIsOnePill()
+    public void CategoryRowsReadAsListRowsNotButtons()
     {
-        var control = Declarations(".pspad-month-control");
+        var open = Declarations(".pspad-category-open");
 
-        Assert.Contains("border-radius: 22px", control);
-        Assert.Contains("border: 1px solid var(--mud-palette-lines-default)", control);
+        Assert.Contains("border: 0", open);
+        Assert.Contains("background: none", open);
+        Assert.Contains("text-align: left", open);
+        Assert.Contains("background-color: var(--mud-palette-action-default-hover)", Declarations(".pspad-category-open:hover"));
     }
 
     [Fact]
-    public void OnDesktopHoldingsLineUpInColumns() =>
-        Assert.Contains("grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr))",
-            DeclarationsInMedia("min-width: 960px", ".pspad-holding-row"));
+    public void TheHoldingsBoxMeasuresItself() =>
+        Assert.Contains("container-type: inline-size", Declarations(".pspad-holdings"));
 
     [Fact]
-    public void OnAPhoneHoldingsHideTheirTableCells() =>
-        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-holding-row .pspad-holding-cell"));
+    public void HoldingsLineUpInColumnsWhenTheirBoxIsWide()
+    {
+        Assert.Contains("grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr))",
+            DeclarationsInContainer("min-width: 640px", ".pspad-holding-row"));
+        Assert.Empty(DeclarationsInMedia("min-width: 960px", ".pspad-holding-row"));
+    }
+
+    [Fact]
+    public void TheHoldingsHeadDoesNotWrap() =>
+        Assert.Contains("white-space: nowrap", DeclarationsInContainer("min-width: 640px", ".pspad-holdings-head"));
+
+    [Fact]
+    public void HoldingsHideTheirTableCellsInANarrowBox() =>
+        Assert.Contains("display: none", DeclarationsInContainer("max-width: 639.98px", ".pspad-holding-row .pspad-holding-cell"));
 
     [Fact]
     public void LongEntryNamesEndInAnEllipsis() =>
@@ -385,13 +424,23 @@ public partial class StylesheetRulesTests
             .Select(rule => rule.Groups["body"].Value.Trim()));
 
     static string DeclarationsInMedia(string condition, string selector) =>
-        string.Join("\n", Regex.Matches(Css, @"@media \(" + Regex.Escape(condition) + @"\) \{(?<body>(?:[^{}]*\{[^{}]*\})*[^{}]*)\}")
-            .SelectMany(media => Rule().Matches(media.Groups["body"].Value))
+        DeclarationsInAtRule("@media", condition, selector);
+
+    static string DeclarationsInContainer(string condition, string selector) =>
+        DeclarationsInAtRule("@container", condition, selector);
+
+    static string DeclarationsInAtRule(string atRule, string condition, string selector) =>
+        string.Join("\n", Regex.Matches(Css, atRule + @" \(" + Regex.Escape(condition) + @"\) \{(?<body>(?:[^{}]*\{[^{}]*\})*[^{}]*)\}")
+            .SelectMany(block => Rule().Matches(block.Groups["body"].Value))
             .Where(rule => SelectorsOf(rule).Contains(selector))
             .Select(rule => rule.Groups["body"].Value.Trim()));
 
     static IEnumerable<string> SelectorsOf(Match rule) =>
-        TopLevelCommas().Split(rule.Groups["selectors"].Value).Select(selector => Whitespace().Replace(selector, " ").Trim());
+        TopLevelCommas().Split(Comment().Replace(rule.Groups["selectors"].Value, ""))
+            .Select(selector => Whitespace().Replace(selector, " ").Trim());
+
+    [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline)]
+    private static partial Regex Comment();
 
     static string StylesheetPath()
     {

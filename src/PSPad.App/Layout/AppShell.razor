@@ -11,6 +11,7 @@
 @using PSPad.App.Updates
 @using PSPad.Contracts
 @using PSPad.Module.Money.Budgets
+@using PSPad.Module.Money.Values
 @using PSPad.Module.Presentation.AreaViews
 @using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
@@ -91,7 +92,7 @@
     <GoalDetailPanel GoalId="@_openGoal" IsNew="@_newGoal" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <BudgetPanel BudgetId="@_openBudget" IsNew="@_newBudget" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <BudgetMembersPanel BudgetId="@_budgetMembers" OnClose="@ClosePanel" Disabled="@(!_ready)" />
-    <EntryPanel EntryId="@_openEntry" NewInBudget="@_newEntry?.BudgetId" NewKind="@(_newEntry?.Kind ?? CategoryKind.Expense)"
+    <EntryPanel EntryId="@_openEntry" NewInBudget="@_newEntry?.BudgetId" NewKind="@(_newEntry?.Kind ?? CategoryKind.Expense)" NewMonth="@_newEntry?.Month"
                 OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <HoldingPanel SnapshotId="@_openHolding?.SnapshotId" HoldingId="@_openHolding?.HoldingId"
                   OnClose="@ClosePanel" Disabled="@(!_ready)" />
@@ -123,7 +124,7 @@
     bool _newBudget;
     Guid? _budgetMembers;
     Guid? _openEntry;
-    (Guid BudgetId, CategoryKind Kind)? _newEntry;
+    (Guid BudgetId, CategoryKind Kind, YearMonth? Month)? _newEntry;
     (Guid SnapshotId, Guid? HoldingId)? _openHolding;
     bool _newGoal;
     Guid? _openInboxItem;
