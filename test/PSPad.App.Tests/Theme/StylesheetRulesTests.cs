@@ -33,12 +33,6 @@ public partial class StylesheetRulesTests
         Assert.Contains("box-shadow: none", strip);
     }
 
-    [Theory]
-    [InlineData(".mud-paper.pspad-goal-summary:hover")]
-    [InlineData(".mud-paper.pspad-goal-summary:focus-visible")]
-    public void TheGoalSummaryWashOutranksTheCardGround(string selector) =>
-        Assert.Contains("background-color: var(--mud-palette-action-default-hover)", Declarations(selector));
-
     [Fact]
     public void WeekDaysAndShowAllKeepTheirOwnShapeInsteadOfThePill() =>
         Assert.Contains("border-radius: 999px", Declarations(".mud-button-root:not(.mud-icon-button, .pspad-week-day, .pspad-show-all)"));
@@ -58,19 +52,39 @@ public partial class StylesheetRulesTests
         Assert.Contains("box-shadow: none", inDrawer);
     }
 
-    [Theory]
-    [InlineData("pspad-day-task")]
-    [InlineData("pspad-task-card")]
-    [InlineData("pspad-goal-card")]
-    [InlineData("pspad-inbox-card")]
-    public void AClickableCardShowsKeyboardFocusLikeHover(string card)
+    [Fact]
+    public void RowsInAGroupAreSeparatedByAnInsetDivider()
     {
-        var hover = Declarations($".mud-paper-outlined.{card}:hover");
+        var divider = Declarations(".pspad-row-group .pspad-row + .pspad-row::before");
 
-        Assert.NotEmpty(hover);
-        Assert.Equal(hover, Declarations($".mud-paper-outlined.{card}:focus-visible"));
-        Assert.Equal(hover, Declarations($".mud-paper-outlined.{card}:has(:focus-visible)"));
+        Assert.Contains("border-top: 1px solid var(--pspad-line)", divider);
+        Assert.Contains("left: 44px", divider);
     }
+
+    [Fact]
+    public void RowsInsideAnAreaCardGetTheSameDivider() =>
+        Assert.Contains("border-top: 1px solid var(--pspad-line)", Declarations(".pspad-card-body .pspad-row + .pspad-row::before"));
+
+    [Fact]
+    public void AnEmptyStarIsHiddenUntilHoverOnlyWhereHoverExists()
+    {
+        Assert.Contains("opacity: 0", DeclarationsInMedia("hover: hover", ".pspad-row .pspad-row-star.pspad-muted"));
+        Assert.Contains("opacity: .7", DeclarationsInMedia("hover: hover", ".pspad-row:hover .pspad-row-star.pspad-muted"));
+    }
+
+    [Fact]
+    public void ARowNoLongerHasAFixedHeight()
+    {
+        var row = Declarations(".pspad-row");
+
+        Assert.DoesNotContain("height: 60px", row);
+        Assert.Contains("min-height: 44px", row);
+        Assert.Contains("min-height: 54px", Declarations(".pspad-row.pspad-row-has-meta"));
+    }
+
+    [Fact]
+    public void AFocusableRowShowsKeyboardFocus() =>
+        Assert.Contains("outline: 2px solid var(--mud-palette-primary)", Declarations(".pspad-row[tabindex]:focus-visible"));
 
     [Fact]
     public void ARowShowsKeyboardFocusLikeHover()

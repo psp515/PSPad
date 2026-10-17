@@ -13,7 +13,7 @@ public class SkeletonTests : Bunit.TestContext
     {
         var skeleton = Render<RowSkeleton>(parameters => parameters.Add(row => row.Count, 4));
 
-        Assert.Equal(4, skeleton.FindAll(".mud-grid-item").Count);
+        Assert.Equal(4, skeleton.FindAll(".pspad-row").Count);
     }
 
     [Fact]
@@ -25,18 +25,18 @@ public class SkeletonTests : Bunit.TestContext
     }
 
     [Fact]
-    public void BothSitInsideTheGrid()
+    public void ARowSkeletonSitsInsideOneRowGroupAndACardSkeletonInsideTheGrid()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
 
-        Assert.NotNull(Render<RowSkeleton>().Find(".mud-grid .mud-grid-item"));
+        Assert.NotNull(Render<RowSkeleton>().Find(".pspad-row-group .pspad-row"));
         Assert.NotNull(Render<CardSkeleton>().Find(".mud-grid .mud-grid-item"));
     }
 
     [Fact]
     public void ARowSkeletonMarksItselfAsALiveLoadingRegion()
     {
-        var root = Render<RowSkeleton>().Find(".mud-grid");
+        var root = Render<RowSkeleton>().Find("[role=status]");
 
         Assert.Equal("status", root.GetAttribute("role"));
         Assert.Equal("true", root.GetAttribute("aria-busy"));
