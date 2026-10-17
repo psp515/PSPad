@@ -1,10 +1,10 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.402 AS build
 WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props ./
 COPY src/ src/
 RUN dotnet publish src/PSPad.Api/PSPad.Api.csproj -c Release -o /app
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.12
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.13
 WORKDIR /app
 COPY --from=build /app .
 EXPOSE 8080
