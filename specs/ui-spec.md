@@ -200,10 +200,14 @@ own card), `AreaBoard` (list cards, masonry) and `CardSkeleton`.
 
 **Row groups.** `GoalsPage`, `Today`, `InboxPage`, `ListPage` and `GoalPage`
 do not draw a card per row. Each section is one `Components/RowGroup`: a single
-outlined `MudPaper` (`pspad-row-group`, 12px radius, at most 760px wide) whose
-rows are separated by a 1px `--pspad-line` divider inset 44px (12px in the My Day
-Schedule, 48px for goal rows). A `pspad-row-subhead` inside a group labels a day
-(Coming up, Inbox). `RowSkeleton` is one `RowGroup` of 44px rows. Design and
+outlined `MudPaper` (`pspad-row-group`, 12px radius, the content width) whose
+rows are separated by a 1px `--pspad-line` divider inset to the name (55px for
+task, reference and inbox rows, 48px for goal rows). `Columns="true"`
+(`pspad-row-group-cols`: list, inbox, goals, goal tasks) flows the rows into
+2 columns from `md` and 3 from `xl`, each row drawing its own bottom divider
+and a left hairline. `pspad-row-ledger` (My Day) puts the meta line beside the
+name in a fixed right column from `md`. A `pspad-row-subhead` inside a group
+labels a day (Inbox). `RowSkeleton` is one `RowGroup` of 44px rows. Design and
 reasoning: `specs/grouped-lists-design.md`.
 
 **Spacing scale.**
@@ -212,7 +216,7 @@ reasoning: `specs/grouped-lists-design.md`.
 |---|---|
 | Grid gap between cards/rows | `Spacing="4"` on `MudGrid` |
 | Card interior padding | `pa-3` |
-| Row height | min 44px, 54px with a meta line; divider inset 44px |
+| Row height | min 44px, 54px with a meta line; 4px side padding; divider inset 55px |
 | Space below a page title | `mb-4` |
 | Space between stacked sections | `mt-4` / `mb-4` |
 
@@ -443,36 +447,49 @@ malformed `day` falls back to today. Arrows, days, swipes and the picker navigat
 `Without` keep `day` (opening a task gives `?day=…&task=…`, closing the
 panel keeps the day); `ForNewTask` does not.
 
-Sections, top to bottom, each hidden when empty:
+The day is two parts inside `pspad-day`: the task sections
+(`pspad-day-lists`) and the Schedule (`pspad-day-schedule`). From `md` they
+are a grid, sections on the left and a 380px schedule column on the right.
+Below `md` a tab bar under the week strip (`pspad-day-tabs`: **Tasks** and
+**Schedule · N**, N the pending scheduled count) picks one; the bar exists
+only when the day has a schedule, `pspad-day` carries
+`pspad-day-tab-tasks` or `pspad-day-tab-schedule`, and the page opens on
+Tasks.
+
+Task sections, top to bottom, each hidden when empty:
 
 1. **Overdue** (`Color.Error` heading) — today only.
-2. **Schedule** (`Color.Primary` heading) — tasks with a time, one column,
-   max 760px: a time gutter, then the `TaskRow` card. Desktop gutter 132px,
-   `09:30–11:00` on one line (`nowrap`); below `md` 52px, start over end.
-   An overnight time (end before start) adds a muted `(+1)`
-   (`pspad-schedule-nextday`) after the end on desktop, under it in a smaller
-   size below `md`; the task stays on its start day, ordered by start. Overlapping
-   tasks simply follow each other. `TaskRow` there hides its own time.
+2. **Starred** — `SectionHeading` with `Hint` "· when you have time".
 3. **{Day}, any time** — "Today, any time", "Tomorrow, any time", "Fri, 9
-   Oct, any time" (`DueDateRow.Describe`): the untimed tasks in the card
-   grid. When Schedule and this section are both empty (and Overdue on
-   today) it stays with "Nothing planned for today." / "…for Fri, 9 Oct."
-4. **Starred** — `SectionHeading` with `Hint` "· when you have time"; card grid.
-5. **Coming up** — today only; card grid grouped under a muted caption per
-   day (`DueDateRow.Describe`), shown open.
-6. **Completed (N)** — a collapsed `MudExpansionPanel` on today and future
+   Oct, any time" (`DueDateRow.Describe`): the untimed tasks. When Schedule
+   and this section are both empty (and Overdue on today) it stays with
+   "Nothing planned for today." / "…for Fri, 9 Oct."
+4. **Completed · N** — a collapsed `MudExpansionPanel` on today and future
    days. On a past day it is the only section, a plain open section with
    "Nothing completed on Wed, 7 Oct." when empty.
 
-Each section is one `RowGroup` of `TaskRow`s; the Schedule puts the time
-gutter inside the row (`TaskRow.Lead`), and Coming up labels each day with a
-`pspad-row-subhead` inside one group. Membership comes from
-`TodayRule.Plan`, never from the page. Coming up's reach is per task: its
-lead time, one week by default (`adr/0053`). The goals summary is not on
-the page.
+Each section is one `RowGroup` of `TaskRow`s with `pspad-row-ledger`, so
+from `md` a row is one line with its details in a right-hand column.
 
-Ticking: a recurring row ticks the occurrence on the day shown (a Coming up
-row, its own day). A one-time row completes now, so a future task ticked
+**Schedule** (`Color.Primary` heading, only with timed tasks) is
+`Components/DayTimeline`: a vertical timeline from the floor of the first
+start to the ceiling of the last end, 56px per hour, hour labels in a 52px
+gutter, a dashed half-hour line. Each task is a block placed by its time
+(`pspad-timeline-task`; a task without an end takes 30 minutes; an
+overnight end counts as 24:00 and adds the muted `(+1)`,
+`pspad-schedule-nextday`), holding its checkbox, `09:30–11:00`
+(`pspad-schedule-time`, `-start`, `-dash`, `-end`), its name and list name;
+overlapping tasks share the width side by side. On today a red line
+(`pspad-timeline-now`) marks the current time in the user's zone. Ticking a
+block ticks the task like a row does.
+
+Membership comes from `TodayRule.Plan`, never from the page. The page does
+not show Coming up; the lead-time rule (`adr/0053`) stays in the domain and
+still feeds the sidebar count and the rule's tests. The goals summary is not
+on the page.
+
+Ticking: a recurring row ticks the occurrence on the day shown. A one-time
+row completes now, so a future task ticked
 from its day lands in today's Completed. The page re-plans on
 `SyncRevision` and on day change; the sidebar's My Day count stays today's
 `Select`.
@@ -480,18 +497,18 @@ from its day lands in today's Completed. The page re-plans on
 **Goal screen.** `/goals/{goalId}` mirrors the list screen: back arrow to
 `/goals`, the goal's name as title with a small outlined status `MudChip`
 (In progress / Achieved — `Color.Success` — / Not achieved) and its due
-date as a caption under it. Tasks come first: every open task as its own
-card (list name on each row), then a collapsed **Completed (N)**. Its tasks are
-the goal's `TaskIds` the replica holds and has not deleted, shared tasks
-included. The charts are a separate section at the bottom (`mt-8`, their own
-`MudGrid`): the **Progress** card and, for dated goals, the **Pace** card,
-each half width from `md` up. Tasks and charts never share a grid. With
-no open tasks it shows an `EmptyState` "No open tasks." with no create
-action — a task is created in a list, not a goal.
+date as a caption under it. Order: the summary card
+(`pspad-goal-summary-card`: status chip, the due text with "N days left", a
+progress bar with "{done} of {total} done"), the charts (`pspad-goal-charts`,
+their own `MudGrid`: the **Progress** card and, for dated goals, the **Pace**
+card, each half width from `md` up), a `SectionHeading` **Tasks** with the
+open count, the open tasks in one `RowGroup Columns` (list name on each row),
+then a collapsed **Completed · N**. Its tasks are the goal's `TaskIds` the
+replica holds and has not deleted, shared tasks included. Tasks and charts
+never share a grid. With no open tasks it shows an `EmptyState` "No open
+tasks." with no create action — a task is created in a list, not a goal.
 Every `GoalListRow` on the Goals page leads here, so a closed goal's tasks
-stay reachable. A summary card above the tasks (`pspad-goal-summary-card`)
-shows the status chip, the due text with "N days left", and a progress bar
-with "{done} of {total} done".
+stay reachable.
 
 **Goal progress chart.** An outlined `MudPaper` in a half-width `MudItem`
 (`xs="12" md="6"`) holding a `MudChart` line chart with two series: **On

@@ -20,6 +20,15 @@ public class RowGroupTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ColumnsMarkTheGroupSoRowsFlowIntoColumnsOnWideScreens()
+    {
+        var group = Render<RowGroup>(parameters => parameters.Add(p => p.Columns, true));
+
+        Assert.Contains("pspad-row-group-cols", group.Find(".pspad-row-group").ClassList);
+        Assert.DoesNotContain("pspad-row-group-cols", Render<RowGroup>().Find(".pspad-row-group").ClassList);
+    }
+
+    [Fact]
     public void ItTakesAnExtraClass()
     {
         var group = Render<RowGroup>(parameters => parameters.Add(p => p.Class, "pspad-schedule"));

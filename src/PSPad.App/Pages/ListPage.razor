@@ -47,7 +47,7 @@ else if (_list is not null)
         }
         else
         {
-            <RowGroup>
+            <RowGroup Columns="true">
                 @foreach (var item in _items)
                 {
                     <ReferenceRow @key="item.Id" Item="@item" OnStar="@StarItemAsync" OnOpen="@OpenItem" />
@@ -67,7 +67,7 @@ else if (_list is not null)
     }
     else
     {
-        <RowGroup>
+        <RowGroup Columns="true">
             @foreach (var task in _open)
             {
                 <TaskRow @key="task.Id" Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
@@ -81,7 +81,7 @@ else if (_list is not null)
     {
         <MudExpansionPanels Elevation="0" Class="pspad-completed mt-2">
             <MudExpansionPanel Text="@($"Completed · {_done.Count}")">
-                <RowGroup>
+                <RowGroup Columns="true">
                     @foreach (var task in _done)
                     {
                         <TaskRow @key="task.Id" Task="@task" Today="@State.Today" OnToggle="@ToggleAsync"

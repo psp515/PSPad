@@ -59,7 +59,7 @@ else
 
         <section class="@($"{css} {(spaced ? "mt-6" : "")}".Trim())">
             @SectionHeader(title, goals.Count)
-            <RowGroup>
+            <RowGroup Columns="true">
                 @foreach (var goal in goals)
                 {
                     <GoalListRow @key="goal.Id" Goal="@goal" Tasks="@TasksOf(goal.Id)" Today="@State.Today"

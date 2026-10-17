@@ -58,12 +58,68 @@ public partial class StylesheetRulesTests
         var divider = Declarations(".pspad-row-group .pspad-row + .pspad-row::before");
 
         Assert.Contains("border-top: 1px solid var(--pspad-line)", divider);
-        Assert.Contains("left: 44px", divider);
+        Assert.Contains("left: 55px", divider);
     }
 
     [Fact]
-    public void RowsInsideAnAreaCardGetTheSameDivider() =>
-        Assert.Contains("border-top: 1px solid var(--pspad-line)", Declarations(".pspad-card-body .pspad-row + .pspad-row::before"));
+    public void RowsInsideAnAreaCardGetTheSameDivider()
+    {
+        var divider = Declarations(".pspad-card-body .pspad-row + .pspad-row::before");
+
+        Assert.Contains("border-top: 1px solid var(--pspad-line)", divider);
+        Assert.Contains("left: 55px", divider);
+    }
+
+    [Fact]
+    public void ARowHasTheSamePaddingOnBothSides() =>
+        Assert.Contains("padding-inline: 4px", Declarations(".pspad-row"));
+
+    [Fact]
+    public void AGroupSpansTheContentWidth() =>
+        Assert.DoesNotContain("max-width", Declarations(".pspad-row-group.mud-paper-outlined"));
+
+    [Fact]
+    public void AColumnGroupFlowsRowsIntoTwoThenThreeColumns()
+    {
+        Assert.Contains("grid-template-columns: repeat(2, minmax(0, 1fr))", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols"));
+        Assert.Contains("grid-template-columns: repeat(3, minmax(0, 1fr))", DeclarationsInMedia("min-width: 1920px", ".pspad-row-group-cols"));
+    }
+
+    [Fact]
+    public void RowsInAColumnGroupDrawTheirOwnBottomDividerAndLeftHairline()
+    {
+        var wide = DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row::after");
+        Assert.Contains("border-top: 1px solid var(--pspad-line)", wide);
+        Assert.Contains("left: 55px", wide);
+        Assert.Contains("display: none", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row:last-child::after"));
+        Assert.Contains("display: none", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row + .pspad-row::before"));
+        Assert.Contains("box-shadow: -1px 0 0 var(--pspad-line)", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row"));
+        Assert.Contains("grid-column: 1 / -1", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row-subhead"));
+        Assert.Contains("grid-column: 1 / -1", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row-add"));
+    }
+
+    [Fact]
+    public void ALedgerRowPutsItsMetaInAFixedColumnOnDesktop()
+    {
+        Assert.Contains("flex-direction: row", DeclarationsInMedia("min-width: 960px", ".pspad-row-ledger .pspad-row-body"));
+        Assert.Contains("width: 280px", DeclarationsInMedia("min-width: 960px", ".pspad-row-ledger .pspad-row-meta"));
+    }
+
+    [Fact]
+    public void MyDayIsTwoPanesOnDesktopAndTabsOnAPhone()
+    {
+        Assert.Contains("grid-template-columns: minmax(0, 1fr) 380px", DeclarationsInMedia("min-width: 960px", ".pspad-day"));
+        Assert.Contains("display: none", DeclarationsInMedia("min-width: 960px", ".pspad-day-tabs"));
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-day-tab-tasks .pspad-day-schedule"));
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-day-tab-schedule .pspad-day-lists"));
+    }
+
+    [Fact]
+    public void TheTimelineIsOnAnHourScaleWithANowLine()
+    {
+        Assert.Contains("height: 56px", Declarations(".pspad-timeline-hour"));
+        Assert.Contains("border-top: 2px solid var(--mud-palette-error)", Declarations(".pspad-timeline-now"));
+    }
 
     [Fact]
     public void AnEmptyStarIsHiddenUntilHoverOnlyWhereHoverExists()

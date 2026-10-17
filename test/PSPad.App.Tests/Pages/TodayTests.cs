@@ -81,19 +81,6 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ATaskDueTomorrowIsComingUp()
-    {
-        var list = NewList("Zakupy");
-        Arrange(list, Due(list.Id, "Later", Today.AddDays(1)), Due(list.Id, "Now", Today));
-
-        var page = Render<Today>();
-
-        var upcoming = page.Find(".pspad-day-comingup");
-        Assert.Contains("Later", upcoming.TextContent);
-        Assert.DoesNotContain("Now", upcoming.TextContent);
-    }
-
-    [Fact]
     public void StarredTasksNotDueYetGetTheirOwnSectionAfterToday()
     {
         var list = NewList("Zakupy");
@@ -112,8 +99,7 @@ public class TodayTests : Bunit.TestContext
         Assert.Contains("Important", starred);
         Assert.Contains("Important later", starred);
         Assert.DoesNotContain("Important", page.Find(".pspad-day-anytime").TextContent);
-        Assert.Empty(page.FindAll(".pspad-day-comingup"));
-        Assert.True(page.Markup.IndexOf("pspad-day-anytime") < page.Markup.IndexOf("pspad-day-starred"));
+        Assert.True(page.Markup.IndexOf("pspad-day-starred") < page.Markup.IndexOf("pspad-day-anytime"));
     }
 
     [Fact]
@@ -125,63 +111,6 @@ public class TodayTests : Bunit.TestContext
         var page = Render<Today>();
 
         Assert.Empty(page.FindAll(".pspad-day-starred"));
-    }
-
-    [Fact]
-    public void TheUpcomingSectionIsAbsentWhenNothingIsComingUp()
-    {
-        var list = NewList("Zakupy");
-        Arrange(list, Due(list.Id, "Now", Today));
-
-        var page = Render<Today>();
-
-        Assert.Empty(page.FindAll(".pspad-day-comingup"));
-    }
-
-    [Fact]
-    public void UpcomingListsTheRestOfTheWeekGroupedByDay()
-    {
-        var list = NewList("Zakupy");
-        Arrange(
-            list,
-            Due(list.Id, "Dentist", Today.AddDays(3)),
-            Due(list.Id, "Tomorrowish", Today.AddDays(1)),
-            Due(list.Id, "Next month", Today.AddDays(8)));
-
-        var page = Render<Today>();
-
-        var upcoming = page.Find(".pspad-day-comingup");
-                Assert.Contains("Tue, 15 Sep", upcoming.TextContent);
-        Assert.Contains("Dentist", upcoming.TextContent);
-        Assert.Contains("Tomorrowish", upcoming.TextContent);
-        Assert.DoesNotContain("Next month", page.Markup);
-    }
-
-    [Fact]
-    public void ADailyTaskShowsTodayAndAgainTomorrow()
-    {
-        var list = NewList("Regularne");
-        Arrange(list, Recurring(list.Id, "Read a book", Today.AddDays(-7)));
-
-        var page = Render<Today>();
-
-        Assert.Contains("Read a book", page.Find(".pspad-day-anytime").TextContent);
-        Assert.Contains("Read a book", page.Find(".pspad-day-comingup").TextContent);
-    }
-
-    [Fact]
-    public async Task TickingTomorrowsOccurrenceCompletesTomorrowNotToday()
-    {
-        var list = NewList("Regularne");
-        var task = Recurring(list.Id, "Read a book", Today.AddDays(-7));
-        var replica = Arrange(list, task);
-
-        var page = Render<Today>();
-        page.Find(".pspad-day-comingup input.mud-checkbox-input").Change(true);
-
-        var stored = await replica.LoadAsync<TodoTask>(task.Id);
-        Assert.Contains(Today.AddDays(1), stored!.CompletedDays);
-        Assert.DoesNotContain(Today, stored.CompletedDays);
     }
 
     [Fact]
@@ -263,7 +192,8 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        Assert.Equal(3, page.FindAll(".pspad-row-group .pspad-task-name").Count);
+        Assert.Equal(2, page.FindAll(".pspad-row-group .pspad-task-name").Count);
+        Assert.DoesNotContain("Jutro", page.Markup);
     }
 
     [Fact]
@@ -339,6 +269,85 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ATaskDueTomorrowIsNotOnTodaysPage()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Later", Today.AddDays(1)), Due(list.Id, "Now", Today));
+
+        var page = Render<Today>();
+
+        Assert.DoesNotContain("Later", page.Markup);
+        Assert.Empty(page.FindAll(".pspad-day-comingup"));
+    }
+
+    [Fact]
+    public void TheScheduleIsAVerticalTimelineBesideTheTaskSections()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Timed(Due(list.Id, "Sprint planning", Today), 9, 30, 11, 0), Timed(Due(list.Id, "Standup", Today), 12, 0, 12, 15));
+
+        var page = Render<Today>();
+
+        var day = page.Find(".pspad-day");
+        Assert.NotNull(day.QuerySelector(".pspad-day-lists"));
+        var timeline = page.FindComponent<DayTimeline>();
+        Assert.Equal(2, day.QuerySelectorAll(".pspad-day-schedule .pspad-timeline-task").Length);
+        Assert.Equal(new TimeOnly(0, 0), timeline.Instance.Now);
+    }
+
+    [Fact]
+    public void TheNowLineIsOnlyOnToday()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Timed(Due(list.Id, "Sprint planning", Today.AddDays(1)), 9, 30, 11, 0));
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"/?day={Today.AddDays(1):yyyy-MM-dd}");
+
+        var page = Render<Today>();
+
+        Assert.Null(page.FindComponent<DayTimeline>().Instance.Now);
+    }
+
+    [Fact]
+    public void TheTabBarExistsOnlyWithASchedule()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Due(list.Id, "Mleko", Today));
+
+        var page = Render<Today>();
+
+        Assert.Empty(page.FindAll(".pspad-day-tabs"));
+        Assert.Empty(page.FindAll(".pspad-day-schedule"));
+        Assert.Contains("pspad-day-tab-tasks", page.Find(".pspad-day").ClassList);
+    }
+
+    [Fact]
+    public void TheScheduleTabShowsThePendingCountAndSwitchesTheDay()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Timed(Due(list.Id, "Sprint planning", Today), 9, 30, 11, 0), Due(list.Id, "Mleko", Today));
+
+        var page = Render<Today>();
+        var tabs = page.Find(".pspad-day-tabs");
+        Assert.Contains("pspad-day-tab-tasks", page.Find(".pspad-day").ClassList);
+        Assert.Contains("Schedule · 1", tabs.TextContent);
+
+        page.Find(".pspad-day-tab-schedule-button").Click();
+
+        Assert.Contains("pspad-day-tab-schedule", page.Find(".pspad-day").ClassList);
+    }
+
+    [Fact]
+    public void TaskSectionsAreLedgerGroups()
+    {
+        var list = NewList("Zakupy");
+        Arrange(list, Due(list.Id, "Mleko", Today));
+
+        var page = Render<Today>();
+
+        Assert.Contains("pspad-row-ledger", page.Find(".pspad-day-anytime .pspad-row-group").ClassList);
+    }
+
+    [Fact]
     public void TimedTasksAreScheduledBeforeAnyTime()
     {
         var list = NewList("Praca");
@@ -346,39 +355,14 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        var schedule = page.Find(".pspad-day-schedule").TextContent;
+        var schedule = page.Find(".pspad-day .pspad-day-schedule").TextContent;
         Assert.Equal("09:30", page.Find(".pspad-schedule-start").TextContent);
         Assert.Equal("11:00", page.Find(".pspad-schedule-end").TextContent);
         Assert.Equal("09:30–11:00", page.Find(".pspad-schedule-time").TextContent.Trim());
         Assert.Contains("Sprint planning", schedule);
         Assert.Contains("Today, any time", page.Find(".pspad-day-anytime").TextContent);
         Assert.Contains("Mleko", page.Find(".pspad-day-anytime").TextContent);
-        Assert.True(page.Markup.IndexOf("pspad-day-schedule") < page.Markup.IndexOf("pspad-day-anytime"));
-    }
-
-    [Fact]
-    public void TheScheduleIsOneGroupWithTheTimeInsideEachRow()
-    {
-        var list = NewList("Praca");
-        Arrange(list, Timed(Due(list.Id, "Sprint planning", Today), 9, 30, 11, 0), Timed(Due(list.Id, "Standup", Today), 12, 0, 12, 15));
-
-        var page = Render<Today>();
-
-        var group = page.Find(".pspad-day-schedule .pspad-row-group.pspad-schedule");
-        Assert.Equal(2, group.QuerySelectorAll(".pspad-row > .pspad-schedule-time").Length);
-    }
-
-    [Fact]
-    public void ComingUpGroupsEachDayUnderASubheaderInOneGroup()
-    {
-        var list = NewList("Zakupy");
-        Arrange(list, Due(list.Id, "Jutro", Today.AddDays(1)), Due(list.Id, "Pojutrze", Today.AddDays(2)));
-
-        var page = Render<Today>();
-
-        var group = page.Find(".pspad-day-comingup .pspad-row-group");
-        Assert.Equal(2, group.QuerySelectorAll(".pspad-row-subhead").Length);
-        Assert.Equal("Tomorrow", group.QuerySelector(".pspad-row-subhead")!.TextContent.Trim());
+        Assert.DoesNotContain("Sprint planning", page.Find(".pspad-day-lists").TextContent);
     }
 
     [Fact]

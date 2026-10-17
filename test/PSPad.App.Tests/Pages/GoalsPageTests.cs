@@ -192,7 +192,7 @@ public class GoalsPageTests : Bunit.TestContext
 
         var page = Render<GoalsPage>();
 
-        Assert.Single(page.FindAll(".pspad-goals-in-progress .pspad-row-group .pspad-goal-list-row"));
+        Assert.Single(page.FindAll(".pspad-goals-in-progress .pspad-row-group.pspad-row-group-cols .pspad-goal-list-row"));
         Assert.Single(page.FindAll(".pspad-goals-achieved .pspad-row-group .pspad-goal-list-row"));
         Assert.Empty(page.FindAll(".mud-grid-item"));
     }

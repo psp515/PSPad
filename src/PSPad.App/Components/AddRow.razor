@@ -1,5 +1,6 @@
-<div class="@($"pspad-row pspad-row-add {Class}".Trim())" role="button" tabindex="0" @onclick="@OnClick"
+<div class="@($"pspad-row pspad-row-add d-flex align-center gap-2 {Class}".Trim())" role="button" tabindex="0" @onclick="@OnClick"
      @onkeydown="@KeyAsync">
+    <span class="pspad-priority-slot" aria-hidden="true"></span>
     <span class="pspad-row-add-icon"><MudIcon Icon="@Icons.Material.Filled.Add" Color="Color.Primary" Size="Size.Small" /></span>
     <MudText Typo="Typo.body2" Color="Color.Primary">@Text</MudText>
 </div>

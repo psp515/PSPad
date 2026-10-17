@@ -125,7 +125,7 @@ public class GoalPageTests : Bunit.TestContext
 
         var page = RenderPage(goal.Id);
 
-        page.Find(".pspad-row-group");
+        Assert.Contains("pspad-row-group-cols", page.Find(".pspad-row-group").ClassList);
         Assert.Equal(2, page.FindAll(".pspad-row-group > .pspad-row").Count);
     }
 
@@ -410,7 +410,7 @@ public class GoalPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ChartsAreTheirOwnSectionBelowTheTasks()
+    public void ChartsSitBetweenTheSummaryAndTheTasks()
     {
         var goal = NewGoal("Eat healthier", dueOn: Today.AddDays(12));
         var list = NewList("Health");
@@ -425,8 +425,11 @@ public class GoalPageTests : Bunit.TestContext
         Assert.NotNull(charts.QuerySelector(".pspad-goal-progress"));
         Assert.NotNull(charts.QuerySelector(".pspad-goal-pace"));
         Assert.Null(charts.QuerySelector(".pspad-row"));
-        Assert.True(markup.IndexOf("pspad-row-group", StringComparison.Ordinal) < markup.IndexOf("pspad-goal-charts", StringComparison.Ordinal));
-        Assert.True(markup.IndexOf("Completed · 1", StringComparison.Ordinal) < markup.IndexOf("pspad-goal-charts", StringComparison.Ordinal));
+        Assert.True(markup.IndexOf("pspad-goal-summary-card", StringComparison.Ordinal) < markup.IndexOf("pspad-goal-charts", StringComparison.Ordinal));
+        Assert.True(markup.IndexOf("pspad-goal-charts", StringComparison.Ordinal) < markup.IndexOf("pspad-row-group", StringComparison.Ordinal));
+        Assert.True(markup.IndexOf("pspad-row-group", StringComparison.Ordinal) < markup.IndexOf("Completed · 1", StringComparison.Ordinal));
+        var heading = page.FindAll(".pspad-section-heading").Single(h => h.TextContent.StartsWith("Tasks"));
+        Assert.Equal("1", heading.QuerySelector(".pspad-section-count")!.TextContent.Trim());
     }
 
     IRenderedComponent<GoalPage> RenderPage(Guid goalId) =>

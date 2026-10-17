@@ -52,18 +52,18 @@ public class InboxPageTests : Bunit.TestContext
         var page = Render<InboxPage>();
 
         Assert.Equal(2, page.FindComponents<InboxItemRow>().Count);
-        Assert.Single(page.FindAll(".pspad-row-group"));
+        Assert.Contains("pspad-row-group-cols", Assert.Single(page.FindAll(".pspad-row-group")).ClassList);
     }
 
     [Fact]
-    public void ItGroupsCapturedItemsUnderTheirDayAndOffersACaptureRow()
+    public void ItGroupsCapturedItemsUnderTheirDayAndLeavesCapturingToTheFab()
     {
         Arrange(NewInbox("Pierwsze", "Drugie"));
 
         var page = Render<InboxPage>();
 
         Assert.Single(page.FindAll(".pspad-row-subhead"));
-        page.Find(".pspad-inbox-capture");
+        Assert.Empty(page.FindAll(".pspad-row-add"));
         Assert.Contains("2 to process", page.Markup);
     }
 

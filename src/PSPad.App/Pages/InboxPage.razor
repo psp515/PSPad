@@ -30,8 +30,7 @@ else
     }
     else
     {
-        <RowGroup>
-            <AddRow Class="pspad-inbox-capture" Text="Capture a thought" OnClick="@Capture" />
+        <RowGroup Columns="true">
             @foreach (var day in Days)
             {
                 <div class="pspad-row-subhead">@DueDateRow.Describe(day.Key, State.Today)</div>

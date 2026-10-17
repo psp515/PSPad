@@ -352,7 +352,7 @@ public class ListPageTests : Bunit.TestContext
 
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
-        page.Find(".pspad-row-group");
+        Assert.Contains("pspad-row-group-cols", page.Find(".pspad-row-group").ClassList);
         Assert.Empty(page.FindAll(".pspad-task-card"));
     }
 
