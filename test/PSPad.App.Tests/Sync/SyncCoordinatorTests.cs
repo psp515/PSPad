@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
 using PSPad.App.Api;
+using PSPad.App.Localization;
+using PSPad.App.Tests.Localization;
 using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
@@ -22,6 +24,8 @@ public class SyncCoordinatorTests : Bunit.TestContext
     readonly StatusBelts _belts = new();
     readonly InMemoryOutbox _rejectingOutbox = new();
     RejectingApi _rejecting = new();
+    readonly FakeLanguageApi _languageApi = new();
+    readonly LanguagePreference _languages = new(new FakeStorageJsRuntime());
 
     NavigationManager Navigation => Services.GetRequiredService<NavigationManager>();
 
@@ -140,7 +144,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var replica = new InMemoryReplica();
         return new SyncCoordinator(
             new SyncService(_rejecting, replica, _rejectingOutbox), new FixedConnectivity(true), _rejectingOutbox,
-            _belts, Navigation, replica, new StoppedClock(Noon));
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi);
     }
 
     Task QueueACommandAsync() =>
@@ -371,7 +375,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var api = new StuckApi(unrecoverable);
         var coordinator = new SyncCoordinator(
             new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, replica, new StoppedClock(Noon));
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi);
         return (coordinator, outbox, api, replica);
     }
 
@@ -406,7 +410,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var replica = new InMemoryReplica();
         var coordinator = new SyncCoordinator(
             new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, replica, new StoppedClock(Noon));
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi);
         var changes = 0;
         coordinator.Changed += () => changes++;
 
@@ -436,7 +440,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
             _belts,
             Navigation,
             new InMemoryReplica(),
-            new StoppedClock(Noon));
+            new StoppedClock(Noon), _languages, _languageApi);
 
         var first = coordinator.SyncNowAsync();
         var second = coordinator.SyncNowAsync();
@@ -448,6 +452,54 @@ public class SyncCoordinatorTests : Bunit.TestContext
         await first;
 
         Assert.Equal(2, api.SyncCalls);
+    }
+
+    [Fact]
+    public async Task APendingLanguageIsSentAfterASyncThatReachedTheServer()
+    {
+        await _languages.ChooseAsync("pl");
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"));
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Equal(["pl"], _languageApi.Sent);
+        Assert.False(_languages.HasPendingWrite);
+    }
+
+    [Fact]
+    public async Task APendingLanguageStaysPendingWhenTheServerDoesNotConfirmIt()
+    {
+        await _languages.ChooseAsync("pl");
+        _languageApi.Confirms = false;
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"));
+
+        await coordinator.SyncNowAsync();
+
+        Assert.True(_languages.HasPendingWrite);
+    }
+
+    [Fact]
+    public async Task NothingIsSentWhenNoLanguageIsPending()
+    {
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"));
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Empty(_languageApi.Sent);
+    }
+
+    sealed class FakeLanguageApi : ILanguageApi
+    {
+        public List<string> Sent { get; } = [];
+
+        public bool Confirms { get; set; } = true;
+
+        public Task<MeResponse?> SetLanguageAsync(string language)
+        {
+            Sent.Add(language);
+            return Task.FromResult<MeResponse?>(
+                Confirms ? new MeResponse(User, "Ada", "ada@example.com", "UTC", language) : null);
+        }
     }
 
     static SyncResponse AnAreaCalled(string name)
@@ -475,7 +527,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         Services.AddMudServices();
         return new SyncCoordinator(
             new SyncService(new FakeApi(null, failure), local, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, local, new StoppedClock(Noon));
+            _belts, Navigation, local, new StoppedClock(Noon), _languages, _languageApi);
     }
 
     SyncCoordinator CoordinatorFor(ISyncApi api)
@@ -485,7 +537,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var outbox = new InMemoryOutbox();
         return new SyncCoordinator(
             new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, replica, new StoppedClock(Noon));
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi);
     }
 
     SyncCoordinator CoordinatorFor(SyncResponse? pull, bool online = true, InMemoryReplica? replica = null)
@@ -502,7 +554,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
             _belts,
             Navigation,
             replica,
-            new StoppedClock(Noon));
+            new StoppedClock(Noon), _languages, _languageApi);
     }
 
     static readonly DateTimeOffset Noon = new(2026, 10, 7, 12, 0, 0, TimeSpan.Zero);

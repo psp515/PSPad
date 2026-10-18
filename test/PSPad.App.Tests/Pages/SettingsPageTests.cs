@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
 using PSPad.App.Api;
+using PSPad.App.Localization;
 using PSPad.App.Statistics;
 using PSPad.App.Sync;
 using PSPad.App.Auth;
@@ -39,6 +40,58 @@ public class SettingsPageTests : Bunit.TestContext
     InMemoryReplica? _replica;
     LocalAuthenticationStateProvider? _authProvider;
     RevocationEndpoint? _revocation;
+    readonly List<HttpRequestMessage> _requests = [];
+
+    [Fact]
+    public async Task ChoosingALanguageCachesItSendsItAndReloads()
+    {
+        var state = Arrange(displayName: "Ada", email: "ada@example.com");
+        var page = Render<SettingsPage>();
+
+        await page.InvokeAsync(() => page.Instance.ApplyLanguageAsync("pl"));
+
+        var preference = Services.GetRequiredService<LanguagePreference>();
+        Assert.Equal("pl", preference.Language);
+        Assert.False(preference.HasPendingWrite);
+        Assert.Equal("pl", state.Language);
+        Assert.Contains("/api/me/language", _requests.Select(request => request.RequestUri!.PathAndQuery));
+        Assert.True(ReloadRequested);
+    }
+
+    [Fact]
+    public async Task WhenTheServerIsUnreachableTheChoiceStaysPending()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com", serverDown: true);
+        var page = Render<SettingsPage>();
+
+        await page.InvokeAsync(() => page.Instance.ApplyLanguageAsync("pl"));
+
+        var preference = Services.GetRequiredService<LanguagePreference>();
+        Assert.Equal("pl", preference.Language);
+        Assert.True(preference.HasPendingWrite);
+        Assert.True(ReloadRequested);
+    }
+
+    [Fact]
+    public async Task TheLanguageSelectListsEveryLanguageByNativeName()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var popovers = Render<MudPopoverProvider>();
+        var page = Render<SettingsPage>();
+
+        var select = page.FindComponents<MudSelect<string>>().Single(c => c.Instance.Class!.Contains("pspad-language"));
+        await page.InvokeAsync(() => select.Instance.OpenMenu());
+
+        popovers.WaitForAssertion(() =>
+        {
+            Assert.Contains("English", popovers.Markup);
+            Assert.Contains("Polski", popovers.Markup);
+        });
+    }
+
+    bool ReloadRequested =>
+        Services.GetRequiredService<NavigationManager>() is Bunit.TestDoubles.BunitNavigationManager navigation
+        && navigation.History.Any(entry => entry.Options.ForceLoad);
 
     [Fact]
     public void ItShowsTheAccountName()
@@ -910,7 +963,7 @@ public class SettingsPageTests : Bunit.TestContext
     AppState Arrange(
         string displayName, string email, bool respondWithNullTimeZone = false, bool online = true,
         bool accountDeleteFails = false, bool keycloakRemoved = true, bool accountDeleteNeedsFreshSignIn = false,
-        bool keycloakReachable = true)
+        bool keycloakReachable = true, bool serverDown = false)
     {
         _replica = AppTestHost.Arrange(this, User, Today);
         Services.AddSingleton<IConnectivity>(new FixedConnectivity(online));
@@ -945,7 +998,7 @@ public class SettingsPageTests : Bunit.TestContext
         Services.AddSingleton(new PSPadApiClient(
             new HttpClient(new StubApiHandler(
                 User, displayName, email, respondWithNullTimeZone, accountDeleteFails, keycloakRemoved,
-                accountDeleteNeedsFreshSignIn))
+                accountDeleteNeedsFreshSignIn, _requests, serverDown))
         {
             BaseAddress = new Uri("http://localhost/")
         }));
@@ -1000,12 +1053,29 @@ public class SettingsPageTests : Bunit.TestContext
 
     sealed class StubApiHandler(
         Guid userId, string displayName, string email, bool respondWithNullTimeZone, bool accountDeleteFails,
-        bool keycloakRemoved = true, bool accountDeleteNeedsFreshSignIn = false)
+        bool keycloakRemoved = true, bool accountDeleteNeedsFreshSignIn = false,
+        List<HttpRequestMessage>? requests = null, bool serverDown = false)
         : HttpMessageHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            requests?.Add(request);
+
+            if (request.RequestUri!.AbsolutePath == "/api/me/language")
+            {
+                if (serverDown)
+                {
+                    throw new HttpRequestException("Server is down.");
+                }
+
+                var language = await request.Content!.ReadFromJsonAsync<SetLanguageRequest>(cancellationToken);
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(new MeResponse(userId, displayName, email, "UTC", language!.Language))
+                };
+            }
+
             if (request.Method == HttpMethod.Delete && accountDeleteNeedsFreshSignIn)
             {
                 var challenge = new HttpResponseMessage(HttpStatusCode.Unauthorized);

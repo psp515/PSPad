@@ -111,6 +111,7 @@ builder.Services.AddScoped<StatusBelts>();
 builder.Services.AddScoped<StatisticsCache>();
 builder.Services.AddScoped<IStatisticsSource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
+builder.Services.AddScoped<ILanguageApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISnapshotsApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<INbpRates>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IListSharingApi>(sp => sp.GetRequiredService<PSPadApiClient>());

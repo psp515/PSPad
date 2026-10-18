@@ -4,6 +4,8 @@
 @using PSPad.App.Api
 @using PSPad.App.Auth
 @using PSPad.App.Components
+@using PSPad.App.Localization
+@using PSPad.App.Resources
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.App.State.Outbox
@@ -17,6 +19,8 @@
 @inject IConnectivity Connectivity
 @inject PSPadApiClient Api
 @inject AppState State
+@inject LanguagePreference Languages
+@inject IStringLocalizer<SettingsStrings> T
 @inject ThemePreference Preference
 @inject IOutbox Outbox
 @inject CommandSender Sender
@@ -73,6 +77,15 @@
             {
                 <MudText Typo="Typo.caption" Color="Color.Error">That change did not go through.</MudText>
             }
+            <MudSelect T="string" Class="pspad-language mt-3" Label="@T["Language"]"
+                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                       Value="@Languages.Language" ValueChanged="@ApplyLanguageAsync">
+                @foreach (var language in SupportedLanguages.All)
+                {
+                    <MudSelectItem T="string" Value="@language">@NativeName(language)</MudSelectItem>
+                }
+            </MudSelect>
+            <MudText Typo="Typo.caption">@T["LanguageReloads"]</MudText>
             <MudSelect T="string" Class="pspad-default-currency mt-3" Label="Default currency"
                        Variant="Variant.Outlined" Margin="Margin.Dense"
                        Value="@_defaultCurrency" ValueChanged="@ApplyDefaultCurrencyAsync">
@@ -286,6 +299,26 @@
         State.TimeZone = me.TimeZone;
         State.Today = LocalToday.In(Clock.UtcNow, me.TimeZone);
         StateHasChanged();
+    }
+
+    static string NativeName(string language) => language switch
+    {
+        "pl" => "Polski",
+        _ => "English"
+    };
+
+    public async Task ApplyLanguageAsync(string language)
+    {
+        await Languages.ChooseAsync(language);
+        State.Language = language;
+
+        var me = (await Api.SetLanguageAsync(language)).Sanitized();
+        if (me is not null && me.Language == language)
+        {
+            await Languages.ClearPendingAsync();
+        }
+
+        Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
     }
 
     public Task SelectThemeAsync(ThemeMode mode) => Preference.SetAsync(mode);

@@ -8,7 +8,7 @@ using PSPad.Contracts;
 
 namespace PSPad.App.Api;
 
-public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ISnapshotsApi, INbpRates, IListSharingApi,
+public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ILanguageApi,ISnapshotsApi, INbpRates, IListSharingApi,
     IBudgetSharingApi
 {
     static readonly TimeSpan DefaultRetryAfter = TimeSpan.FromSeconds(5);

@@ -716,6 +716,7 @@ public class AppShellTests : Bunit.TestContext
         Services.AddSingleton<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
         Services.AddSingleton<IConnectivity>(new SpyConnectivity());
         Services.AddScoped<SyncService>();
+        Services.AddSingleton<ILanguageApi>(sp => sp.GetRequiredService<PSPadApiClient>());
         Services.AddScoped<SyncCoordinator>();
 
         var authStateTask = AuthenticatedAs(displayName, emailClaim);

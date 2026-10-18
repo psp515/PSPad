@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using PSPad.Abstractions;
 using PSPad.App.Api;
+using PSPad.App.Localization;
 using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
@@ -14,7 +15,9 @@ public sealed class SyncCoordinator(
     StatusBelts belts,
     NavigationManager navigation,
     IReplica replica,
-    IClock clock)
+    IClock clock,
+    LanguagePreference languages,
+    ILanguageApi api)
     : ISyncTrigger, ISyncStatus
 {
     static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(60);
@@ -139,6 +142,7 @@ public sealed class SyncCoordinator(
                 {
                     LastSyncedAt = clock.UtcNow;
                     await replica.SetLastSyncedAtAsync(LastSyncedAt.Value);
+                    await RetryPendingLanguageAsync();
                 }
 
                 if (outcome.Pulled > 0)
@@ -167,6 +171,20 @@ public sealed class SyncCoordinator(
 
         PendingCount = await outbox.CountAsync();
         Changed?.Invoke();
+    }
+
+    async Task RetryPendingLanguageAsync()
+    {
+        if (!languages.HasPendingWrite)
+        {
+            return;
+        }
+
+        var me = await api.SetLanguageAsync(languages.Language);
+        if (me is not null && me.Language == languages.Language)
+        {
+            await languages.ClearPendingAsync();
+        }
     }
 
     public async Task DiscardStuckChangeAsync()
