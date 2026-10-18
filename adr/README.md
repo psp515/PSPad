@@ -89,6 +89,7 @@ the old one's status line to point at the new number.
 | [0072](0072-account-deletion-needs-a-fresh-sign-in.md) | Account deletion needs a sign-in from the last five minutes | Active (amends [0034](0034-account-deletion-bypasses-the-command-pipeline.md)) | 2026-10-13 | identity, security, http |
 | [0073](0073-sign-out-revokes-and-needs-a-connection.md) | Sign-out revokes the refresh token, names the session it ends, wipes the outbox, and needs a connection | Active (amends [0028](0028-sign-out-ends-the-keycloak-session-directly.md)) | 2026-10-13 | identity, offline, security, ui |
 | [0074](0074-budget-csv-import-runs-on-the-client.md) | Budget CSV import runs on the client as ordinary commands | Active | 2026-10-13 | architecture, contracts, offline, money |
+| [0075](0075-language-on-the-user-and-resx-localization.md) | Store the user's language on the User aggregate and localize with .NET resources | Proposed | 2026-10-18 | identity, ui, offline, localization |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
