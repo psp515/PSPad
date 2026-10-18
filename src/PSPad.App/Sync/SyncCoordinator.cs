@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 using PSPad.Abstractions;
 using PSPad.App.Api;
 using PSPad.App.Localization;
+using PSPad.App.Resources;
 using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
@@ -17,7 +19,8 @@ public sealed class SyncCoordinator(
     IReplica replica,
     IClock clock,
     LanguagePreference languages,
-    ILanguageApi api)
+    ILanguageApi api,
+    IStringLocalizer<ShellStrings> text)
     : ISyncTrigger, ISyncStatus
 {
     static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(60);
@@ -44,8 +47,7 @@ public sealed class SyncCoordinator(
 
     public bool HasStuckChange => _stuckCommand is not null;
 
-    public static string RejectedText(int count) =>
-        count == 1 ? "1 change couldn’t be saved." : $"{count} changes couldn’t be saved.";
+    public string RejectedText(int count) => text.Plural(count, "RejectedChanges");
 
     public event Action? Changed;
 
@@ -233,7 +235,7 @@ public sealed class SyncCoordinator(
         }
 
         LastRejections = [.. outcome.Rejections];
-        belts.Show(BeltKind.Rejected, RejectedText(outcome.Rejections.Count), "Details", OpenDetailsAsync);
+        belts.Show(BeltKind.Rejected, RejectedText(outcome.Rejections.Count), text["Details"], OpenDetailsAsync);
     }
 
     Task OpenDetailsAsync()

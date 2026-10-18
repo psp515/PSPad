@@ -4,6 +4,8 @@
 @using PSPad.Module.Tasks.Areas
 @inject SidebarCounts Counts
 @inject NavigationManager Navigation
+@inject IStringLocalizer<ShellStrings> T
+@inject IStringLocalizer<SharedStrings> S
 @implements IDisposable
 
 <div class="d-flex flex-column pspad-nav" style="height:100%">
@@ -11,26 +13,26 @@
 
     <MudNavMenu>
         <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.WbSunny">
-            My Day@(Count(Counts.Today))
+            @S["MyDay"]@(Count(Counts.Today))
         </MudNavLink>
         <MudNavLink Href="/inbox" Icon="@Icons.Material.Outlined.Inbox">
-            Inbox@(Count(Counts.Inbox))
+            @S["Inbox"]@(Count(Counts.Inbox))
         </MudNavLink>
         <MudNavLink Href="/goals" Icon="@Icons.Material.Outlined.Flag">
-            Goals
+            @S["Goals"]
         </MudNavLink>
         <MudNavLink Href="/statistics" Icon="@Icons.Material.Outlined.History">
-            Statistics
+            @S["Statistics"]
         </MudNavLink>
         <MudNavLink Href="/snapshots" Icon="@Icons.Material.Outlined.Link">
-            List snapshots
+            @T["ListSnapshots"]
         </MudNavLink>
     </MudNavMenu>
 
     <MudDivider Class="my-2" Style="flex-grow:0" />
 
     <MudNavMenu>
-        @GroupHeader(NavGroupState.Budgets, "Budgets", BudgetLinks.Index, ActiveBudgets.Count)
+        @GroupHeader(NavGroupState.Budgets, S["Budgets"], T["CollapseBudgets"], T["ExpandBudgets"], BudgetLinks.Index, ActiveBudgets.Count)
         @if (Groups.IsExpanded(NavGroupState.Budgets))
         {
             @foreach (var budget in ActiveBudgets)
@@ -42,7 +44,7 @@
                         @if (budget.IsShared)
                         {
                             <MudIcon Class="pspad-budget-shared" Icon="@Icons.Material.Outlined.People" Size="Size.Small"
-                                     aria-label="@(budget.UserId == UserId ? "Shared" : "Shared with you")" />
+                                     aria-label="@(budget.UserId == UserId ? T["BudgetShared"] : T["BudgetSharedWithYou"])" />
                         }
                     </span>
                 </MudNavLink>
@@ -50,7 +52,7 @@
 
             <MudNavLink Icon="@Icons.Material.Outlined.Add" Class="pspad-new-budget"
                         Disabled="@Disabled" OnClick="@OnNewBudgetClick">
-                New budget
+                @T["NewBudget"]
             </MudNavLink>
         }
     </MudNavMenu>
@@ -58,7 +60,7 @@
     <MudDivider Class="my-2" Style="flex-grow:0" />
 
     <MudNavMenu>
-        @GroupHeader(NavGroupState.Areas, "Areas", null, Areas.Count)
+        @GroupHeader(NavGroupState.Areas, S["Areas"], T["CollapseAreas"], T["ExpandAreas"], null, Areas.Count)
         @if (Groups.IsExpanded(NavGroupState.Areas))
         {
             @if (!AreasLoaded)
@@ -88,7 +90,7 @@
 
             <MudNavLink Icon="@Icons.Material.Outlined.Add" Class="pspad-new-area"
                         Disabled="@Disabled" OnClick="@OnNewAreaClick">
-                New area
+                @T["NewArea"]
             </MudNavLink>
         }
     </MudNavMenu>
@@ -97,10 +99,10 @@
 
     <MudNavMenu>
         <MudNavLink Href="/settings" Icon="@Icons.Material.Outlined.Settings">
-            Settings
+            @S["Settings"]
         </MudNavLink>
         <MudNavLink Href="/app-info" Icon="@Icons.Material.Outlined.Info">
-            App info
+            @T["AppInfo"]
         </MudNavLink>
     </MudNavMenu>
 
@@ -141,23 +143,23 @@
 
     protected override Task OnInitializedAsync() => Groups.LoadAsync();
 
-    RenderFragment GroupHeader(string group, string label, string? href, int count) =>
+    RenderFragment GroupHeader(string group, string label, string collapseLabel, string expandLabel, string? href, int count) =>
         @<div class="d-flex align-center px-4 pt-2 pb-1 pspad-nav-group">
             @if (href is null)
             {
                 <MudText Typo="Typo.caption" Class="pspad-nav-caption pspad-muted flex-grow-1">
-                    @(Groups.IsExpanded(group) ? label : $"{label} · {count}")
+                    @(Groups.IsExpanded(group) ? label : T["GroupCollapsedHeader", label, count].Value)
                 </MudText>
             }
             else
             {
                 <MudLink Href="@href" Typo="Typo.caption" Class="pspad-nav-caption flex-grow-1">
-                    @(Groups.IsExpanded(group) ? label : $"{label} · {count}")
+                    @(Groups.IsExpanded(group) ? label : T["GroupCollapsedHeader", label, count].Value)
                 </MudLink>
             }
             <MudIconButton Size="Size.Small"
                            Icon="@(Groups.IsExpanded(group) ? Icons.Material.Outlined.ExpandMore : Icons.Material.Outlined.ChevronRight)"
-                           aria-label="@($"{(Groups.IsExpanded(group) ? "Collapse" : "Expand")} {label.ToLowerInvariant()}")"
+                           aria-label="@(Groups.IsExpanded(group) ? collapseLabel : expandLabel)"
                            aria-expanded="@(Groups.IsExpanded(group) ? "true" : "false")"
                            OnClick="@(() => Groups.SetAsync(group, !Groups.IsExpanded(group)))" />
         </div>;

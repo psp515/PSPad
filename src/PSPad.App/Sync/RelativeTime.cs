@@ -1,28 +1,30 @@
+using Microsoft.Extensions.Localization;
+using PSPad.App.Localization;
+using PSPad.App.Resources;
+
 namespace PSPad.App.Sync;
 
 public static class RelativeTime
 {
-    public static string Describe(DateTimeOffset then, DateTimeOffset now)
+    public static string Describe(DateTimeOffset then, DateTimeOffset now, IStringLocalizer<ShellStrings> text)
     {
         var elapsed = now - then;
 
         if (elapsed < TimeSpan.FromMinutes(1))
         {
-            return "just now";
+            return text["TimeJustNow"];
         }
 
         if (elapsed < TimeSpan.FromHours(1))
         {
-            return $"{(int)elapsed.TotalMinutes} min ago";
+            return text["TimeMinutesAgo", (int)elapsed.TotalMinutes];
         }
 
         if (elapsed < TimeSpan.FromDays(1))
         {
-            return Plural((int)elapsed.TotalHours, "hour");
+            return text.Plural((int)elapsed.TotalHours, "TimeHoursAgo");
         }
 
-        return Plural((int)elapsed.TotalDays, "day");
+        return text.Plural((int)elapsed.TotalDays, "TimeDaysAgo");
     }
-
-    static string Plural(int count, string unit) => count == 1 ? $"1 {unit} ago" : $"{count} {unit}s ago";
 }

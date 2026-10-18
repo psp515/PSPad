@@ -48,4 +48,37 @@
   <data name="ThatChangeDidNotGoThrough" xml:space="preserve">
     <value>Ta zmiana nie została zapisana.</value>
   </data>
+  <data name="MyDay" xml:space="preserve">
+    <value>Mój dzień</value>
+  </data>
+  <data name="Inbox" xml:space="preserve">
+    <value>Skrzynka</value>
+  </data>
+  <data name="Goals" xml:space="preserve">
+    <value>Cele</value>
+  </data>
+  <data name="Budgets" xml:space="preserve">
+    <value>Budżety</value>
+  </data>
+  <data name="Areas" xml:space="preserve">
+    <value>Obszary</value>
+  </data>
+  <data name="Statistics" xml:space="preserve">
+    <value>Statystyki</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Ustawienia</value>
+  </data>
+  <data name="Account" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>Wstecz</value>
+  </data>
+  <data name="Apply" xml:space="preserve">
+    <value>Zastosuj</value>
+  </data>
+  <data name="Continue" xml:space="preserve">
+    <value>Dalej</value>
+  </data>
 </root>

@@ -43,6 +43,8 @@
 @inject StatusBelts Belts
 @inject IAppUpdates Updates
 @inject ILogger<AppShell> Logger
+@inject IStringLocalizer<ShellStrings> T
+@inject IStringLocalizer<SharedStrings> S
 @implements IDisposable
 @implements IAsyncDisposable
 
@@ -431,8 +433,8 @@
         {
             Belts.Show(
                 BeltKind.Offline,
-                "Can’t reach the server — working from local data. Changes sync when you’re back.",
-                "Retry",
+                T["ServerUnreachableBelt"],
+                S["Retry"],
                 Trigger.SyncNowAsync);
         }
 
@@ -442,7 +444,7 @@
     void OnUpdateAvailable() => InvokeAsync(OfferUpdate);
 
     void OfferUpdate() =>
-        Belts.Show(BeltKind.Update, "A new version of PSPad is ready.", "Reload", Updates.ApplyAsync);
+        Belts.Show(BeltKind.Update, T["UpdateReady"], T["Reload"], Updates.ApplyAsync);
 
     void OnCommandSent() => InvokeAsync(ReloadAreasAndCountsAsync);
 

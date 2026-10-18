@@ -1,4 +1,7 @@
+using Microsoft.Extensions.Localization;
+using PSPad.App.Resources;
 using PSPad.App.Sync;
+using PSPad.App.Tests.Localization;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Sync;
@@ -6,6 +9,7 @@ namespace PSPad.App.Tests.Sync;
 [UnitTest]
 public class RelativeTimeTests
 {
+    static readonly IStringLocalizer<ShellStrings> Text = TestLocalizers.For<ShellStrings>();
     static readonly DateTimeOffset Now = new(2026, 10, 7, 12, 0, 0, TimeSpan.Zero);
 
     [Theory]
@@ -19,9 +23,9 @@ public class RelativeTimeTests
     [InlineData(24 * 60 * 60, "1 day ago")]
     [InlineData(3 * 24 * 60 * 60, "3 days ago")]
     public void ItDescribesHowLongAgo(int secondsAgo, string expected) =>
-        Assert.Equal(expected, RelativeTime.Describe(Now.AddSeconds(-secondsAgo), Now));
+        Assert.Equal(expected, RelativeTime.Describe(Now.AddSeconds(-secondsAgo), Now, Text));
 
     [Fact]
     public void ATimeInTheFutureReadsAsJustNow() =>
-        Assert.Equal("just now", RelativeTime.Describe(Now.AddMinutes(5), Now));
+        Assert.Equal("just now", RelativeTime.Describe(Now.AddMinutes(5), Now, Text));
 }

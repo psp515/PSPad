@@ -18,4 +18,151 @@
   <data name="LanguageReloads" xml:space="preserve">
     <value>Zmiana języka przeładowuje aplikację.</value>
   </data>
+  <data name="SettingsSubtitle" xml:space="preserve">
+    <value>Konto, wygląd i synchronizacja</value>
+  </data>
+  <data name="ChangePassword" xml:space="preserve">
+    <value>Zmień hasło</value>
+  </data>
+  <data name="SignOut" xml:space="preserve">
+    <value>Wyloguj się</value>
+  </data>
+  <data name="SignOutNeedsConnection" xml:space="preserve">
+    <value>Jesteś offline, więc to urządzenie nie może zostać bezpiecznie wylogowane. Połącz się z internetem, żeby się wylogować.</value>
+  </data>
+  <data name="SignOutServerUnreachable" xml:space="preserve">
+    <value>Nie udało się połączyć z serwerem logowania, więc nadal jesteś zalogowany. Spróbuj ponownie, gdy będziesz online.</value>
+  </data>
+  <data name="UnsyncedChanges.One" xml:space="preserve">
+    <value>{0} niezsynchronizowana zmiana nie dotarła jeszcze na serwer. Wylogowanie usunie ją z tego urządzenia.</value>
+  </data>
+  <data name="UnsyncedChanges.Few" xml:space="preserve">
+    <value>{0} niezsynchronizowane zmiany nie dotarły jeszcze na serwer. Wylogowanie usunie je z tego urządzenia.</value>
+  </data>
+  <data name="UnsyncedChanges.Many" xml:space="preserve">
+    <value>{0} niezsynchronizowanych zmian nie dotarło jeszcze na serwer. Wylogowanie usunie je z tego urządzenia.</value>
+  </data>
+  <data name="ApplicationSettings" xml:space="preserve">
+    <value>Ustawienia aplikacji</value>
+  </data>
+  <data name="TimeZone" xml:space="preserve">
+    <value>Strefa czasowa</value>
+  </data>
+  <data name="TimeZoneNeedsConnection" xml:space="preserve">
+    <value>Strefa czasowa jest zapisywana na serwerze, więc wymaga połączenia.</value>
+  </data>
+  <data name="DefaultCurrency" xml:space="preserve">
+    <value>Domyślna waluta</value>
+  </data>
+  <data name="Theme" xml:space="preserve">
+    <value>Motyw</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>Systemowy</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Jasny</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Ciemny</value>
+  </data>
+  <data name="Accent" xml:space="preserve">
+    <value>Kolor akcentu</value>
+  </data>
+  <data name="Sync" xml:space="preserve">
+    <value>Synchronizacja</value>
+  </data>
+  <data name="Syncing" xml:space="preserve">
+    <value>Synchronizowanie…</value>
+  </data>
+  <data name="SyncFailed" xml:space="preserve">
+    <value>Nie udało się zsynchronizować.</value>
+  </data>
+  <data name="SyncFailedPending" xml:space="preserve">
+    <value>Nie udało się zsynchronizować. Oczekujące: {0}</value>
+  </data>
+  <data name="SyncedEverything" xml:space="preserve">
+    <value>Wszystko jest zsynchronizowane.</value>
+  </data>
+  <data name="SyncPending" xml:space="preserve">
+    <value>Oczekujące: {0}</value>
+  </data>
+  <data name="LastSynced" xml:space="preserve">
+    <value>Ostatnia synchronizacja: {0}</value>
+  </data>
+  <data name="CouldNotBeSaved" xml:space="preserve">
+    <value>Nie udało się zapisać</value>
+  </data>
+  <data name="StuckChangeHoldsBack" xml:space="preserve">
+    <value>Blokuje każdą zmianę wprowadzoną po niej. Odrzucenie jej przywraca zapisaną wersję.</value>
+  </data>
+  <data name="DiscardChange" xml:space="preserve">
+    <value>Odrzuć tę zmianę</value>
+  </data>
+  <data name="DangerZone" xml:space="preserve">
+    <value>Strefa zagrożenia</value>
+  </data>
+  <data name="DeleteAccountWarning" xml:space="preserve">
+    <value>Trwale usuwa twoje konto i wszystko, co w nim jest.</value>
+  </data>
+  <data name="DeleteAccount" xml:space="preserve">
+    <value>Usuń konto</value>
+  </data>
+  <data name="RequiresConnection" xml:space="preserve">
+    <value>Wymaga połączenia.</value>
+  </data>
+  <data name="DeleteDataGone" xml:space="preserve">
+    <value>Twoje dane zostały usunięte. Usunięcie logowania wymaga jeszcze administratora.</value>
+  </data>
+  <data name="DeleteNeedsFreshSignIn" xml:space="preserve">
+    <value>Usunięcie konta wymaga ponownego zalogowania. Zaloguj się jeszcze raz, a potem potwierdź usunięcie.</value>
+  </data>
+  <data name="DeleteConfirm" xml:space="preserve">
+    <value>To trwale usuwa twoje konto i wszystko, co w nim jest. Wpisz &lt;strong&gt;{0}&lt;/strong&gt;, żeby potwierdzić.</value>
+  </data>
+  <data name="Email" xml:space="preserve">
+    <value>E-mail</value>
+  </data>
+  <data name="DeleteFailed" xml:space="preserve">
+    <value>Coś poszło nie tak. Twoje dane mogły już zostać usunięte — spróbuj ponownie albo skontaktuj się z administratorem.</value>
+  </data>
+  <data name="SignInAgain" xml:space="preserve">
+    <value>Zaloguj się ponownie</value>
+  </data>
+  <data name="Deleting" xml:space="preserve">
+    <value>Usuwanie…</value>
+  </data>
+  <data name="AccentColour" xml:space="preserve">
+    <value>Kolor akcentu</value>
+  </data>
+  <data name="AccentGreen" xml:space="preserve">
+    <value>Akcent zielony</value>
+  </data>
+  <data name="AccentTeal" xml:space="preserve">
+    <value>Akcent morski</value>
+  </data>
+  <data name="AccentBlue" xml:space="preserve">
+    <value>Akcent niebieski</value>
+  </data>
+  <data name="AccentIndigo" xml:space="preserve">
+    <value>Akcent indygo</value>
+  </data>
+  <data name="AccentPurple" xml:space="preserve">
+    <value>Akcent fioletowy</value>
+  </data>
+  <data name="AccentPink" xml:space="preserve">
+    <value>Akcent różowy</value>
+  </data>
+  <data name="AccentOrange" xml:space="preserve">
+    <value>Akcent pomarańczowy</value>
+  </data>
+  <data name="CustomAccent" xml:space="preserve">
+    <value>Własny akcent</value>
+  </data>
+  <data name="AccentReadabilityHint" xml:space="preserve">
+    <value>Tryb jasny i ciemny przyciemnia lub rozjaśnia ten kolor tylko tyle, ile trzeba, żeby tekst na nim pozostał czytelny.</value>
+  </data>
+  <data name="NotSyncedYet" xml:space="preserve">
+    <value>Jeszcze nie zsynchronizowano</value>
+  </data>
 </root>

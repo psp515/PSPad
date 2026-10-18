@@ -2,28 +2,29 @@
 @attribute [Authorize]
 @using System.Reflection
 @using PSPad.App.Components
+@inject IStringLocalizer<ShellStrings> T
 
-<PageHeading Title="App info" />
+<PageHeading Title="@T["AppInfo"]" />
 
 <MudPaper Outlined="true" Class="pa-4 mb-4">
     <MudText Typo="Typo.subtitle2" Class="mb-3">PSPad</MudText>
-    <MudText Typo="Typo.body2">Version @Version</MudText>
+    <MudText Typo="Typo.body2">@T["AppVersion", Version]</MudText>
 </MudPaper>
 
 <MudPaper Outlined="true" Class="pa-4 mb-4">
-    <MudText Typo="Typo.subtitle2" Class="mb-3">License</MudText>
-    <MudText Typo="Typo.body2">Free software, licensed under the GNU General Public License v3.</MudText>
+    <MudText Typo="Typo.subtitle2" Class="mb-3">@T["License"]</MudText>
+    <MudText Typo="Typo.body2">@T["LicenseText"]</MudText>
 </MudPaper>
 
 <MudPaper Outlined="true" Class="pa-4">
-    <MudText Typo="Typo.subtitle2" Class="mb-3">Links</MudText>
-    <MudLink Href="https://github.com/psp515/PSPad" Target="_blank">Source on GitHub</MudLink>
+    <MudText Typo="Typo.subtitle2" Class="mb-3">@T["Links"]</MudText>
+    <MudLink Href="https://github.com/psp515/PSPad" Target="_blank">@T["SourceOnGitHub"]</MudLink>
     <br />
-    <MudLink Href="https://psp515.github.io" Target="_blank">Documentation</MudLink>
+    <MudLink Href="https://psp515.github.io" Target="_blank">@T["Documentation"]</MudLink>
 </MudPaper>
 
 @code {
-    static string Version =>
+    string Version =>
         typeof(AppInfoPage).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-            ?.InformationalVersion ?? "unknown";
+            ?.InformationalVersion ?? T["VersionUnknown"];
 }

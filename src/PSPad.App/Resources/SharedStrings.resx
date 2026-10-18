@@ -48,4 +48,37 @@
   <data name="ThatChangeDidNotGoThrough" xml:space="preserve">
     <value>That change did not go through.</value>
   </data>
+  <data name="MyDay" xml:space="preserve">
+    <value>My Day</value>
+  </data>
+  <data name="Inbox" xml:space="preserve">
+    <value>Inbox</value>
+  </data>
+  <data name="Goals" xml:space="preserve">
+    <value>Goals</value>
+  </data>
+  <data name="Budgets" xml:space="preserve">
+    <value>Budgets</value>
+  </data>
+  <data name="Areas" xml:space="preserve">
+    <value>Areas</value>
+  </data>
+  <data name="Statistics" xml:space="preserve">
+    <value>Statistics</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Continue" xml:space="preserve">
+    <value>Continue</value>
+  </data>
 </root>

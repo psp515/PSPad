@@ -218,6 +218,7 @@ public class AuthenticationTests : Bunit.TestContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.Options = new ServiceProviderOptions { ValidateScopes = false };
+        Services.AddLocalization();
         Services.RemoveAll<AuthenticationStateProvider>();
 
         JSInterop.Setup<RemoteAuthenticationResult<RemoteAuthenticationState>>(

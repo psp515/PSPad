@@ -8,6 +8,8 @@
 @using PSPad.Module.Tasks.Tasks
 @inject NavigationManager Navigation
 @inject IClock Clock
+@inject IStringLocalizer<AuthStrings> T
+@inject IStringLocalizer<SharedStrings> S
 
 <div class="pspad-welcome">
     <div class="pspad-welcome-content">
@@ -15,21 +17,21 @@
             <div class="pspad-welcome-icon">
                 <BrandMark />
             </div>
-            <h1>Your day, planned.</h1>
+            <h1>@T["WelcomeHeadline"]</h1>
             <a class="pspad-welcome-tagline" href="https://en.wikipedia.org/wiki/Getting_Things_Done"
                target="_blank" rel="noopener noreferrer">
-                An approach for GTD techniques
+                @T["WelcomeTagline"]
             </a>
             <p class="pspad-welcome-actions">
-                <a class="pspad-welcome-button pspad-welcome-login" href="@LoginUrl">Log in</a>
+                <a class="pspad-welcome-button pspad-welcome-login" href="@LoginUrl">@T["LogIn"]</a>
                 <a class="pspad-welcome-button pspad-welcome-docs" href="https://psp515.com/pspad">
-                    Docs
+                    @T["Docs"]
                 </a>
             </p>
         </header>
 
         <section class="pspad-welcome-demo">
-            <MudText Typo="Typo.subtitle1" Class="mb-2">My Day</MudText>
+            <MudText Typo="Typo.subtitle1" Class="mb-2">@S["MyDay"]</MudText>
             <MudPaper Outlined="true">
                 @foreach (var task in DemoTasks)
                 {
@@ -65,16 +67,16 @@
         var user = Guid.NewGuid();
         var now = Clock.UtcNow;
 
-        var renewDomain = NewTask(listId, user, now, "Renew the domain");
+        var renewDomain = NewTask(listId, user, now, T["DemoRenewDomain"]);
         Due(renewDomain, user, now, Today.AddDays(-1));
 
-        var draftReleaseNotes = NewTask(listId, user, now, "Draft the release notes");
+        var draftReleaseNotes = NewTask(listId, user, now, T["DemoDraftReleaseNotes"]);
         Due(draftReleaseNotes, user, now, Today);
 
-        var readABook = NewTask(listId, user, now, "Read a book");
+        var readABook = NewTask(listId, user, now, T["DemoReadABook"]);
         Recur(readABook, user, now, Today.AddDays(-30));
 
-        var waterThePlants = NewTask(listId, user, now, "Water the plants");
+        var waterThePlants = NewTask(listId, user, now, T["DemoWaterThePlants"]);
         Due(waterThePlants, user, now, Today);
 
         return [renewDomain, draftReleaseNotes, readABook, waterThePlants];

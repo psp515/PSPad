@@ -1,21 +1,23 @@
 @using PSPad.App.State
 @inject NavigationManager Navigation
 @inject SidebarCounts Counts
+@inject IStringLocalizer<ShellStrings> T
+@inject IStringLocalizer<SharedStrings> S
 @implements IDisposable
 
 <MudAppBar Bottom="true" Elevation="1" Class="d-md-none pspad-bottom-nav">
-    <nav class="pspad-bottom-nav-slots" aria-label="Main">
-        @Tab(NavTab.Inbox, "/inbox", Icons.Material.Filled.Inbox, "Inbox", Counts.Inbox)
-        @Tab(NavTab.Areas, "/areas", Icons.Material.Filled.Folder, "Areas", 0)
+    <nav class="pspad-bottom-nav-slots" aria-label="@T["MainNavigation"]">
+        @Tab(NavTab.Inbox, "/inbox", Icons.Material.Filled.Inbox, S["Inbox"], Counts.Inbox)
+        @Tab(NavTab.Areas, "/areas", Icons.Material.Filled.Folder, S["Areas"], 0)
         <a href="/" class="@($"pspad-tab-myday {(Active == NavTab.MyDay ? "pspad-tab-active" : "")}")"
-           aria-label="My Day"
+           aria-label="@S["MyDay"]"
            aria-current="@(Active == NavTab.MyDay ? "page" : null)">
             <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.WbSunny"
                     Class="pspad-myday-fab" UserAttributes="@MyDayFabAttributes" />
-            <span class="pspad-tab-label" aria-hidden="true">My Day</span>
+            <span class="pspad-tab-label" aria-hidden="true">@S["MyDay"]</span>
         </a>
-        @Tab(NavTab.Goals, "/goals", Icons.Material.Filled.Flag, "Goals", 0)
-        @Tab(NavTab.Budgets, "/budgets", Icons.Material.Filled.AccountBalanceWallet, "Budgets", 0)
+        @Tab(NavTab.Goals, "/goals", Icons.Material.Filled.Flag, S["Goals"], 0)
+        @Tab(NavTab.Budgets, "/budgets", Icons.Material.Filled.AccountBalanceWallet, S["Budgets"], 0)
     </nav>
 </MudAppBar>
 

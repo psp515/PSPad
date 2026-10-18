@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="LoadingPSPad" xml:space="preserve">
+    <value>Wczytywanie PSPad</value>
+  </data>
+  <data name="WelcomeHeadline" xml:space="preserve">
+    <value>Twój dzień, zaplanowany.</value>
+  </data>
+  <data name="WelcomeTagline" xml:space="preserve">
+    <value>Podejście do technik GTD</value>
+  </data>
+  <data name="LogIn" xml:space="preserve">
+    <value>Zaloguj się</value>
+  </data>
+  <data name="Docs" xml:space="preserve">
+    <value>Dokumentacja</value>
+  </data>
+  <data name="DemoRenewDomain" xml:space="preserve">
+    <value>Odnów domenę</value>
+  </data>
+  <data name="DemoDraftReleaseNotes" xml:space="preserve">
+    <value>Napisz notatki do wydania</value>
+  </data>
+  <data name="DemoReadABook" xml:space="preserve">
+    <value>Przeczytaj książkę</value>
+  </data>
+  <data name="DemoWaterThePlants" xml:space="preserve">
+    <value>Podlej rośliny</value>
+  </data>
+</root>

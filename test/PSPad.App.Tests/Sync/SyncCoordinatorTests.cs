@@ -1,10 +1,12 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor;
 using MudBlazor.Services;
 using PSPad.App.Api;
 using PSPad.App.Localization;
+using PSPad.App.Resources;
 using PSPad.App.Tests.Localization;
 using PSPad.App.State;
 using PSPad.App.State.Outbox;
@@ -25,6 +27,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
     readonly InMemoryOutbox _rejectingOutbox = new();
     RejectingApi _rejecting = new();
     readonly FakeLanguageApi _languageApi = new();
+    static readonly IStringLocalizer<ShellStrings> Text = TestLocalizers.For<ShellStrings>();
     readonly LanguagePreference _languages = new(new FakeStorageJsRuntime());
 
     NavigationManager Navigation => Services.GetRequiredService<NavigationManager>();
@@ -47,7 +50,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
     [InlineData(1, "1 change couldn’t be saved.")]
     [InlineData(2, "2 changes couldn’t be saved.")]
     public void TheBeltCountsTheRejectedChanges(int count, string text) =>
-        Assert.Equal(text, SyncCoordinator.RejectedText(count));
+        Assert.Equal(text, CoordinatorFor(AnAreaCalled("Dom")).RejectedText(count));
 
     [Fact]
     public async Task DetailsOpensTheSyncCardInSettings()
@@ -144,7 +147,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var replica = new InMemoryReplica();
         return new SyncCoordinator(
             new SyncService(_rejecting, replica, _rejectingOutbox), new FixedConnectivity(true), _rejectingOutbox,
-            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi);
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, Text);
     }
 
     Task QueueACommandAsync() =>
@@ -375,7 +378,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var api = new StuckApi(unrecoverable);
         var coordinator = new SyncCoordinator(
             new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi);
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, Text);
         return (coordinator, outbox, api, replica);
     }
 
@@ -410,7 +413,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var replica = new InMemoryReplica();
         var coordinator = new SyncCoordinator(
             new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi);
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, Text);
         var changes = 0;
         coordinator.Changed += () => changes++;
 
@@ -440,7 +443,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
             _belts,
             Navigation,
             new InMemoryReplica(),
-            new StoppedClock(Noon), _languages, _languageApi);
+            new StoppedClock(Noon), _languages, _languageApi, Text);
 
         var first = coordinator.SyncNowAsync();
         var second = coordinator.SyncNowAsync();
@@ -527,7 +530,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         Services.AddMudServices();
         return new SyncCoordinator(
             new SyncService(new FakeApi(null, failure), local, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, local, new StoppedClock(Noon), _languages, _languageApi);
+            _belts, Navigation, local, new StoppedClock(Noon), _languages, _languageApi, Text);
     }
 
     SyncCoordinator CoordinatorFor(ISyncApi api)
@@ -537,7 +540,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var outbox = new InMemoryOutbox();
         return new SyncCoordinator(
             new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi);
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, Text);
     }
 
     SyncCoordinator CoordinatorFor(SyncResponse? pull, bool online = true, InMemoryReplica? replica = null)
@@ -554,7 +557,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
             _belts,
             Navigation,
             replica,
-            new StoppedClock(Noon), _languages, _languageApi);
+            new StoppedClock(Noon), _languages, _languageApi, Text);
     }
 
     static readonly DateTimeOffset Noon = new(2026, 10, 7, 12, 0, 0, TimeSpan.Zero);

@@ -18,4 +18,151 @@
   <data name="LanguageReloads" xml:space="preserve">
     <value>Changing the language reloads the app.</value>
   </data>
+  <data name="SettingsSubtitle" xml:space="preserve">
+    <value>Account, appearance and sync</value>
+  </data>
+  <data name="ChangePassword" xml:space="preserve">
+    <value>Change password</value>
+  </data>
+  <data name="SignOut" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="SignOutNeedsConnection" xml:space="preserve">
+    <value>You're offline, so this device can't be signed out securely. Connect to sign out.</value>
+  </data>
+  <data name="SignOutServerUnreachable" xml:space="preserve">
+    <value>Couldn't reach the sign-in server, so you're still signed in. Try again when you're connected.</value>
+  </data>
+  <data name="UnsyncedChanges.One" xml:space="preserve">
+    <value>{0} unsynced change hasn't reached the server yet. Signing out removes it from this device.</value>
+  </data>
+  <data name="UnsyncedChanges.Few" xml:space="preserve">
+    <value>{0} unsynced changes haven't reached the server yet. Signing out removes them from this device.</value>
+  </data>
+  <data name="UnsyncedChanges.Many" xml:space="preserve">
+    <value>{0} unsynced changes haven't reached the server yet. Signing out removes them from this device.</value>
+  </data>
+  <data name="ApplicationSettings" xml:space="preserve">
+    <value>Application settings</value>
+  </data>
+  <data name="TimeZone" xml:space="preserve">
+    <value>Time zone</value>
+  </data>
+  <data name="TimeZoneNeedsConnection" xml:space="preserve">
+    <value>The time zone is saved on the server, so it needs a connection.</value>
+  </data>
+  <data name="DefaultCurrency" xml:space="preserve">
+    <value>Default currency</value>
+  </data>
+  <data name="Theme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="Accent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="Sync" xml:space="preserve">
+    <value>Sync</value>
+  </data>
+  <data name="Syncing" xml:space="preserve">
+    <value>Syncing…</value>
+  </data>
+  <data name="SyncFailed" xml:space="preserve">
+    <value>Couldn't sync.</value>
+  </data>
+  <data name="SyncFailedPending" xml:space="preserve">
+    <value>Couldn't sync. {0} pending</value>
+  </data>
+  <data name="SyncedEverything" xml:space="preserve">
+    <value>Everything is synced.</value>
+  </data>
+  <data name="SyncPending" xml:space="preserve">
+    <value>{0} pending</value>
+  </data>
+  <data name="LastSynced" xml:space="preserve">
+    <value>Last synced {0}</value>
+  </data>
+  <data name="CouldNotBeSaved" xml:space="preserve">
+    <value>Couldn’t be saved</value>
+  </data>
+  <data name="StuckChangeHoldsBack" xml:space="preserve">
+    <value>It holds back every change made after it. Discarding it puts the saved version back.</value>
+  </data>
+  <data name="DiscardChange" xml:space="preserve">
+    <value>Discard this change</value>
+  </data>
+  <data name="DangerZone" xml:space="preserve">
+    <value>Danger zone</value>
+  </data>
+  <data name="DeleteAccountWarning" xml:space="preserve">
+    <value>Permanently deletes your account and everything in it.</value>
+  </data>
+  <data name="DeleteAccount" xml:space="preserve">
+    <value>Delete account</value>
+  </data>
+  <data name="RequiresConnection" xml:space="preserve">
+    <value>Requires a connection.</value>
+  </data>
+  <data name="DeleteDataGone" xml:space="preserve">
+    <value>Your data is gone. Removing your sign-in still needs an administrator.</value>
+  </data>
+  <data name="DeleteNeedsFreshSignIn" xml:space="preserve">
+    <value>Deleting your account needs a fresh sign-in. Sign in again, then confirm the deletion.</value>
+  </data>
+  <data name="DeleteConfirm" xml:space="preserve">
+    <value>This permanently deletes your account and everything in it. Type &lt;strong&gt;{0}&lt;/strong&gt; to confirm.</value>
+  </data>
+  <data name="Email" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="DeleteFailed" xml:space="preserve">
+    <value>Something went wrong. Your data may already be gone — try again, or contact your administrator.</value>
+  </data>
+  <data name="SignInAgain" xml:space="preserve">
+    <value>Sign in again</value>
+  </data>
+  <data name="Deleting" xml:space="preserve">
+    <value>Deleting…</value>
+  </data>
+  <data name="AccentColour" xml:space="preserve">
+    <value>Accent colour</value>
+  </data>
+  <data name="AccentGreen" xml:space="preserve">
+    <value>Green accent</value>
+  </data>
+  <data name="AccentTeal" xml:space="preserve">
+    <value>Teal accent</value>
+  </data>
+  <data name="AccentBlue" xml:space="preserve">
+    <value>Blue accent</value>
+  </data>
+  <data name="AccentIndigo" xml:space="preserve">
+    <value>Indigo accent</value>
+  </data>
+  <data name="AccentPurple" xml:space="preserve">
+    <value>Purple accent</value>
+  </data>
+  <data name="AccentPink" xml:space="preserve">
+    <value>Pink accent</value>
+  </data>
+  <data name="AccentOrange" xml:space="preserve">
+    <value>Orange accent</value>
+  </data>
+  <data name="CustomAccent" xml:space="preserve">
+    <value>Custom accent</value>
+  </data>
+  <data name="AccentReadabilityHint" xml:space="preserve">
+    <value>Light and dark mode deepen or lighten this colour only as far as text on it needs to stay readable.</value>
+  </data>
+  <data name="NotSyncedYet" xml:space="preserve">
+    <value>Not synced yet</value>
+  </data>
 </root>
