@@ -31,7 +31,7 @@
     <value>Jesteś offline, więc to urządzenie nie może zostać bezpiecznie wylogowane. Połącz się z internetem, żeby się wylogować.</value>
   </data>
   <data name="SignOutServerUnreachable" xml:space="preserve">
-    <value>Nie udało się połączyć z serwerem logowania, więc nadal jesteś zalogowany. Spróbuj ponownie, gdy będziesz online.</value>
+    <value>Nie udało się połączyć z serwerem logowania, więc sesja na tym urządzeniu nadal jest aktywna. Spróbuj ponownie, gdy będziesz online.</value>
   </data>
   <data name="UnsyncedChanges.One" xml:space="preserve">
     <value>{0} niezsynchronizowana zmiana nie dotarła jeszcze na serwer. Wylogowanie usunie ją z tego urządzenia.</value>
@@ -94,7 +94,7 @@
     <value>Nie udało się zapisać</value>
   </data>
   <data name="StuckChangeHoldsBack" xml:space="preserve">
-    <value>Blokuje każdą zmianę wprowadzoną po niej. Odrzucenie jej przywraca zapisaną wersję.</value>
+    <value>Ta zmiana blokuje wszystkie zmiany wprowadzone po niej. Odrzucenie jej przywraca zapisaną wersję.</value>
   </data>
   <data name="DiscardChange" xml:space="preserve">
     <value>Odrzuć tę zmianę</value>
@@ -112,7 +112,7 @@
     <value>Wymaga połączenia.</value>
   </data>
   <data name="DeleteDataGone" xml:space="preserve">
-    <value>Twoje dane zostały usunięte. Usunięcie logowania wymaga jeszcze administratora.</value>
+    <value>Twoje dane zostały usunięte. Konto logowania musi jeszcze usunąć administrator.</value>
   </data>
   <data name="DeleteNeedsFreshSignIn" xml:space="preserve">
     <value>Usunięcie konta wymaga ponownego zalogowania. Zaloguj się jeszcze raz, a potem potwierdź usunięcie.</value>
@@ -136,31 +136,31 @@
     <value>Kolor akcentu</value>
   </data>
   <data name="AccentGreen" xml:space="preserve">
-    <value>Akcent zielony</value>
+    <value>Zielony akcent</value>
   </data>
   <data name="AccentTeal" xml:space="preserve">
-    <value>Akcent morski</value>
+    <value>Turkusowy akcent</value>
   </data>
   <data name="AccentBlue" xml:space="preserve">
-    <value>Akcent niebieski</value>
+    <value>Niebieski akcent</value>
   </data>
   <data name="AccentIndigo" xml:space="preserve">
-    <value>Akcent indygo</value>
+    <value>Indygowy akcent</value>
   </data>
   <data name="AccentPurple" xml:space="preserve">
-    <value>Akcent fioletowy</value>
+    <value>Fioletowy akcent</value>
   </data>
   <data name="AccentPink" xml:space="preserve">
-    <value>Akcent różowy</value>
+    <value>Różowy akcent</value>
   </data>
   <data name="AccentOrange" xml:space="preserve">
-    <value>Akcent pomarańczowy</value>
+    <value>Pomarańczowy akcent</value>
   </data>
   <data name="CustomAccent" xml:space="preserve">
     <value>Własny akcent</value>
   </data>
   <data name="AccentReadabilityHint" xml:space="preserve">
-    <value>Tryb jasny i ciemny przyciemnia lub rozjaśnia ten kolor tylko tyle, ile trzeba, żeby tekst na nim pozostał czytelny.</value>
+    <value>Tryb jasny i ciemny dopasowują ten kolor tylko na tyle, by tekst na nim pozostał czytelny.</value>
   </data>
   <data name="NotSyncedYet" xml:space="preserve">
     <value>Jeszcze nie zsynchronizowano</value>

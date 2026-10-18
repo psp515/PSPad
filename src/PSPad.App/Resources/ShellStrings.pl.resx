@@ -28,7 +28,7 @@
     <value>Udostępniony</value>
   </data>
   <data name="BudgetSharedWithYou" xml:space="preserve">
-    <value>Udostępniony tobie</value>
+    <value>Udostępniony ci</value>
   </data>
   <data name="GroupCollapsedHeader" xml:space="preserve">
     <value>{0} · {1}</value>
@@ -106,7 +106,7 @@
     <value>Szczegóły</value>
   </data>
   <data name="Dismiss" xml:space="preserve">
-    <value>Ukryj</value>
+    <value>Zamknij</value>
   </data>
   <data name="Reload" xml:space="preserve">
     <value>Przeładuj</value>
@@ -124,7 +124,7 @@
     <value>Nie znaleziono</value>
   </data>
   <data name="NotFoundMessage" xml:space="preserve">
-    <value>Przepraszamy, strona, której szukasz, nie istnieje.</value>
+    <value>Przepraszamy, ale to, czego szukasz, nie istnieje.</value>
   </data>
   <data name="AppVersion" xml:space="preserve">
     <value>Wersja {0}</value>
