@@ -1,21 +1,22 @@
 @using System.Globalization
 @using PSPad.Module.Tasks.Tasks
+@inject IStringLocalizer<TasksStrings> T
 
 <div class="pspad-property-row pspad-task-time d-flex align-start">
     <div class="pspad-time-head d-flex align-center flex-shrink-0">
         <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" Class="pspad-time-icon mr-3" />
-        <MudText Typo="Typo.body2" Class="pspad-property-label">Time</MudText>
+        <MudText Typo="Typo.body2" Class="pspad-property-label">@T["Time"]</MudText>
     </div>
     <div class="pspad-time-lines d-flex flex-column flex-grow-1">
         <div class="pspad-time-line d-flex align-center">
-            <span class="pspad-time-line-label">From</span>
-            <MudTimePicker Class="pspad-time-start pspad-time-input" Placeholder="Start" aria-label="Start" Time="@AsSpan(Value?.Start)" TimeChanged="@StartChangedAsync"
+            <span class="pspad-time-line-label">@T["TimeFrom"]</span>
+            <MudTimePicker Class="pspad-time-start pspad-time-input" Placeholder="@T["TimeStart"]" aria-label="@T["TimeStart"]" Time="@AsSpan(Value?.Start)" TimeChanged="@StartChangedAsync"
                            AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true" Disabled="@Disabled"
-                           Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="Pick start time" />
+                           Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="@T["PickStartTime"]" />
             @if (Value is not null && !Disabled)
             {
                 <MudIconButton Class="pspad-property-clear pspad-time-clear" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                               aria-label="Clear time" OnClick="@(() => SendAsync(null))" />
+                               aria-label="@T["ClearTime"]" OnClick="@(() => SendAsync(null))" />
             }
             else
             {
@@ -25,11 +26,11 @@
         @if (Value is not null)
         {
             <div class="pspad-time-line pspad-time-line-end d-flex align-center">
-                <span class="pspad-time-line-label">To</span>
-                <MudTimePicker Class="pspad-time-end pspad-time-input" Placeholder="End" aria-label="End" Time="@(_end ?? AsSpan(Value?.End))" TimeChanged="@EndChangedAsync"
+                <span class="pspad-time-line-label">@T["TimeTo"]</span>
+                <MudTimePicker Class="pspad-time-end pspad-time-input" Placeholder="@T["TimeEnd"]" aria-label="@T["TimeEnd"]" Time="@(_end ?? AsSpan(Value?.End))" TimeChanged="@EndChangedAsync"
                                AmPm="false" Variant="Variant.Outlined" Margin="Margin.Dense" Editable="true"
                                Disabled="@Disabled" Error="@(_error is not null)"
-                               Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="Pick end time" />
+                               Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="@T["PickEndTime"]" />
             </div>
         }
     </div>
@@ -40,7 +41,7 @@
 }
 else if (Value is { Overnight: true })
 {
-    <MudText Typo="Typo.caption" Class="pspad-time-hint pspad-time-note pspad-muted d-block">Ends the next day (+1)</MudText>
+    <MudText Typo="Typo.caption" Class="pspad-time-hint pspad-time-note pspad-muted d-block">@T["EndsNextDay"]</MudText>
 }
 
 @code {
@@ -90,7 +91,7 @@ else if (Value is { Overnight: true })
         if (end == start)
         {
             _end = typedEnd;
-            _error = "End must differ from start";
+            _error = T["EndMustDiffer"];
             StateHasChanged();
             return;
         }

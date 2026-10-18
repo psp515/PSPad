@@ -19,24 +19,26 @@
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<TasksStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
 
 <DetailPanel Open="@(Mode != PanelMode.Closed)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose"
-             OnSave="@SaveCallback" SaveText="Add task" CanSave="@(!_creating && !string.IsNullOrWhiteSpace(_draft.Name))"
+             OnSave="@SaveCallback" SaveText="@T["AddTask"]" CanSave="@(!_creating && !string.IsNullOrWhiteSpace(_draft.Name))"
              Disabled="@Disabled">
     <HeaderActions>
         <MudIconButton Class="pspad-task-star" Color="Color.Primary" Disabled="@Disabled"
                        Icon="@(Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                       aria-label="@(Starred ? "Unstar" : "Star")" OnClick="@ToggleStarAsync" />
+                       aria-label="@(Starred ? T["Unstar"] : T["Star"])" OnClick="@ToggleStarAsync" />
     </HeaderActions>
     <ChildContent>
         <div class="d-flex align-center gap-1 px-2 pt-3 pb-1">
             @if (_task is not null)
             {
                 <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync"
-                             Color="Color.Primary" Disabled="@Disabled" aria-label="Done" />
+                             Color="Color.Primary" Disabled="@Disabled" aria-label="@Shared["Done"]" />
             }
             <MudTextField T="string" Class="@($"pspad-task-name-field flex-grow-1 {(_task is null ? "px-2" : "")}")"
-                          Value="@Name" ValueChanged="@NameChangedAsync" Placeholder="Task name" MaxLength="@ContentLimits.Name"
+                          Value="@Name" ValueChanged="@NameChangedAsync" Placeholder="@T["TaskName"]" MaxLength="@ContentLimits.Name"
                           Typo="Typo.h6" Underline="false" Immediate="@(Mode == PanelMode.Add)"
                           AutoFocus="@(Mode == PanelMode.Add)" Disabled="@Disabled"
                           OnKeyDown="@AddOnEnterAsync"
@@ -55,8 +57,8 @@
         <div class="py-2 px-2 d-flex flex-column gap-1">
             <MudToggleGroup T="bool" Value="@Repeats" ValueChanged="@KindAsync" Class="pspad-task-kind mx-2 mb-1"
                             Color="Color.Primary" Outlined="true" Size="Size.Small" Disabled="@Disabled">
-                <MudToggleItem Value="false" Text="One-time" />
-                <MudToggleItem Value="true" Text="Repeating" />
+                <MudToggleItem Value="false" Text="@T["OneTime"]" />
+                <MudToggleItem Value="true" Text="@T["Repeating"]" />
             </MudToggleGroup>
 
             @if (Repeats)
@@ -66,7 +68,7 @@
             }
 
             <DueDateRow Value="@DueOn" ValueChanged="@DueDateAsync" Today="@State.Today" Disabled="@Disabled"
-                        Label="@(Repeats ? "Until" : "Due")" EmptyText="@(Repeats ? "No end date" : "No due date")"
+                        Label="@(Repeats ? T["Until"] : T["Due"])" EmptyText="@(Repeats ? T["NoEndDate"] : T["NoDueDate"])"
                         FlagsPast="@(!Repeats)" />
 
             @if (Repeats || DueOn is not null)
@@ -88,7 +90,7 @@
 
         @if (_task is not null)
         {
-            <PanelSection Title="Description" Class="pspad-task-description">
+            <PanelSection Title="@T["Description"]" Class="pspad-task-description">
                 <MarkdownField @key="_task.Id" Value="@_task.Description" OnSave="@SaveDescriptionAsync"
                                Disabled="@Disabled" />
             </PanelSection>
@@ -96,7 +98,7 @@
 
         @if (_task is not null && _task.SnapshotMarks.Count > 0)
         {
-            <PanelSection Title="Snapshot marks" Class="pspad-task-snapshot-marks">
+            <PanelSection Title="@T["SnapshotMarks"]" Class="pspad-task-snapshot-marks">
                 <div class="d-flex align-center gap-2">
                     <SnapshotMarkChip />
                     <MudText Typo="Typo.caption" Class="pspad-muted">
@@ -105,7 +107,7 @@
                     <MudSpacer />
                     <MudButton Class="pspad-task-snapshot-dismiss" Variant="Variant.Text" Disabled="@Disabled"
                                OnClick="@DismissSnapshotMarksAsync">
-                        Dismiss
+                        @T["SnapshotDismiss"]
                     </MudButton>
                 </div>
             </PanelSection>
@@ -117,9 +119,9 @@
             <div class="d-flex align-center pspad-task-footer">
                 <MudText Typo="Typo.caption" Class="pspad-muted">@CreatedText</MudText>
                 <MudSpacer />
-                <MudTooltip Text="Delete task">
+                <MudTooltip Text="@T["DeleteTask"]">
                     <MudIconButton Class="pspad-task-delete" Icon="@Icons.Material.Outlined.Delete"
-                                   Color="Color.Error" aria-label="Delete task" Disabled="@Disabled"
+                                   Color="Color.Error" aria-label="@T["DeleteTask"]" Disabled="@Disabled"
                                    OnClick="@DeleteAsync" />
                 </MudTooltip>
             </div>
@@ -156,9 +158,9 @@
 
     string Title => Mode switch
     {
-        PanelMode.Add => PathOf(NewInList!.Value) is { } path ? $"New task · {path}" : "New task",
+        PanelMode.Add => PathOf(NewInList!.Value) is { } path ? T["NewTaskIn", path] : T["NewTask"],
         PanelMode.Closed => "",
-        _ => PathOf(_task!.ListId) ?? "Task"
+        _ => PathOf(_task!.ListId) ?? T["TaskTitle"]
     };
 
     EventCallback SaveCallback => Mode == PanelMode.Add
@@ -188,7 +190,7 @@
         ? _task.EndedBy(State.Today) || _task.CompletedDays.Contains(State.Today)
         : _task.CompletedAt is not null);
 
-    string CreatedText => _task?.CreatedAt is { } created ? $"Created {created:ddd, d MMM yyyy}" : "";
+    string CreatedText => _task?.CreatedAt is { } created ? T["Created", created.ToString("ddd, d MMM yyyy")] : "";
 
     string? PathOf(Guid listId) => ListRow.PathOf(listId, _placement, _lists);
 
@@ -337,7 +339,7 @@
 
         if (!result.Accepted)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't save the description.", Severity.Warning);
+            Snackbar.Add(result.Rejection ?? T["DescriptionNotSaved"], Severity.Warning);
             return false;
         }
 
@@ -572,9 +574,9 @@
 
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{_task.Name}”?" }
+            { dialog => dialog.Message, T["DeleteTaskConfirm", _task.Name].Value }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete task", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["DeleteTask"], parameters);
         var result = await dialog.Result;
 
         if (result is null || result.Canceled)

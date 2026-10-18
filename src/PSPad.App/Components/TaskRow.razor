@@ -1,11 +1,12 @@
 @using PSPad.Module.Tasks.Tasks
 @using PSPad.Module.Tasks.Today
+@inject IStringLocalizer<TasksStrings> T
 
 <div class="pspad-row d-flex align-center gap-2 pr-1 @(HasMeta ? "pspad-row-has-meta" : "") @(Overdue ? "pspad-overdue overdue" : "")">
     @if (Task.Priority != Priority.None)
     {
         <span class="@($"pspad-priority pspad-priority-{Task.Priority.ToString().ToLowerInvariant()}")" role="img"
-              title="@($"{Task.Priority} priority")" aria-label="@($"{Task.Priority} priority")"></span>
+              title="@T[$"PriorityLabel{Task.Priority}"]" aria-label="@T[$"PriorityLabel{Task.Priority}"]"></span>
     }
     else
     {
@@ -30,7 +31,7 @@
                 @if (Task.DueOn is { } due)
                 {
                     <MudText Typo="Typo.caption" Class="pspad-due" Color="@(Overdue ? Color.Error : Color.Inherit)">
-                        @(Task.IsRecurring ? $"Until {due:d MMM}" : due.ToString("d MMM"))
+                        @(Task.IsRecurring ? T["UntilDate", due.ToString("d MMM")] : due.ToString("d MMM"))
                     </MudText>
                 }
                 @if (Task.Steps.Count > 0)
@@ -63,7 +64,7 @@
     <MudIconButton Class="@(Task.Starred ? "pspad-row-star" : "pspad-row-star pspad-muted")" Size="Size.Small"
                    Color="@(Task.Starred ? Color.Primary : Color.Default)"
                    Icon="@(Task.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                   aria-label="@(Task.Starred ? "Unstar" : "Star")"
+                   aria-label="@(Task.Starred ? T["Unstar"] : T["Star"])"
                    OnClick="@(() => OnStar.InvokeAsync(Task))" />
 </div>
 

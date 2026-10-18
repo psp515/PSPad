@@ -1,3 +1,5 @@
+@inject IStringLocalizer<TasksStrings> T
+
 <div class="@($"pspad-property-row d-flex align-center {Class}")">
     <MudMenu Class="flex-grow-1" FullWidth="true" Dense="true" Disabled="@Disabled"
              AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
@@ -24,7 +26,7 @@
     @if (OnClear.HasDelegate && HasValue && !Disabled)
     {
         <MudIconButton Class="pspad-property-clear" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                       aria-label="@($"Clear {Label.ToLowerInvariant()}")" OnClick="@OnClear" />
+                       aria-label="@T["ClearProperty", Label.ToLower()]" OnClick="@OnClear" />
     }
 </div>
 

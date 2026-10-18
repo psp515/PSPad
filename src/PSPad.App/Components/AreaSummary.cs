@@ -1,14 +1,17 @@
 using System.Globalization;
+using Microsoft.Extensions.Localization;
+using PSPad.App.Resources;
 
 namespace PSPad.App.Components;
 
 public static class AreaSummary
 {
-    public static string Describe(int taskLists, int referenceLists, int openTasks, int items)
+    public static string Describe(
+        int taskLists, int referenceLists, int openTasks, int items, IStringLocalizer<TasksStrings> localizer)
     {
         if (referenceLists == 0)
         {
-            return $"{Counted(taskLists, "list", "lists")} · {OpenTaskCount.Describe(openTasks)}";
+            return $"{Counted(taskLists, "list", "lists")} · {OpenTaskCount.Describe(openTasks, localizer)}";
         }
 
         if (taskLists == 0)
@@ -20,7 +23,7 @@ public static class AreaSummary
 
         if (openTasks > 0 || items == 0)
         {
-            parts.Add(OpenTaskCount.Describe(openTasks));
+            parts.Add(OpenTaskCount.Describe(openTasks, localizer));
         }
 
         if (items > 0)

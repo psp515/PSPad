@@ -1,4 +1,6 @@
 using PSPad.App.Components;
+using PSPad.App.Resources;
+using PSPad.App.Tests.Localization;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -10,7 +12,7 @@ public class LeadTimeRowTests
     [Fact]
     public void WithNoLeadTimeItReadsTheDefaultWeek()
     {
-        Assert.Equal("1 week before", LeadTimeRow.Describe(null));
+        Assert.Equal("1 week before", LeadTimeRow.Describe(null, TestLocalizers.For<TasksStrings>()));
     }
 
     [Theory]
@@ -22,6 +24,6 @@ public class LeadTimeRowTests
     [InlineData(6, LeadUnit.Months, "6 months before")]
     public void ItReadsTheAmountAndUnit(int amount, LeadUnit unit, string expected)
     {
-        Assert.Equal(expected, LeadTimeRow.Describe(new LeadTime(amount, unit)));
+        Assert.Equal(expected, LeadTimeRow.Describe(new LeadTime(amount, unit), TestLocalizers.For<TasksStrings>()));
     }
 }

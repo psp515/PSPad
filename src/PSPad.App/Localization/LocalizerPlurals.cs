@@ -5,7 +5,10 @@ namespace PSPad.App.Localization;
 
 public static class LocalizerPlurals
 {
-    public static string Plural(this IStringLocalizer localizer, int count, string key)
+    public static string Plural(this IStringLocalizer localizer, int count, string key) =>
+        localizer.Plural(count, key, []);
+
+    public static string Plural(this IStringLocalizer localizer, int count, string key, params object[] arguments)
     {
         if (count == 0)
         {
@@ -23,6 +26,6 @@ public static class LocalizerPlurals
             chosen = localizer[key + ".Many"];
         }
 
-        return string.Format(CultureInfo.CurrentCulture, chosen.Value, count);
+        return string.Format(CultureInfo.CurrentCulture, chosen.Value, [count, .. arguments]);
     }
 }

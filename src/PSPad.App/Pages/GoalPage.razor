@@ -15,6 +15,7 @@
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedStrings> Shared
 @implements IDisposable
 
 @if (!_loaded)
@@ -154,7 +155,7 @@ else
 
     string DueText(DateOnly due)
     {
-        var text = $"Due {DueDateRow.Describe(due, State.Today)}";
+        var text = $"Due {DueDateRow.Describe(due, State.Today, Shared)}";
         var days = due.DayNumber - State.Today.DayNumber;
 
         return _goal?.Status == GoalStatus.InProgress && days > 0

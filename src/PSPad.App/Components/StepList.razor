@@ -1,6 +1,7 @@
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Tasks.Tasks
 @inject IServiceProvider Services
+@inject IStringLocalizer<TasksStrings> T
 
 <div class="pspad-steps d-flex flex-column">
     @if (Draft is not null)
@@ -15,7 +16,7 @@
                 </span>
                 <MudText Typo="Typo.body2" Class="flex-grow-1 pspad-step-name">@name</MudText>
                 <MudIconButton Class="pspad-step-remove" Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
-                               aria-label="@($"Remove {name}")" Disabled="@Disabled"
+                               aria-label="@T["RemoveStep", name]" Disabled="@Disabled"
                                OnClick="@(() => Draft.RemoveAt(position))" />
             </div>
         }
@@ -34,7 +35,7 @@
                 <SnapshotMarkChip />
             }
             <MudIconButton Class="pspad-step-remove" Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
-                           aria-label="@($"Remove {step.Name}")" Disabled="@Disabled"
+                           aria-label="@T["RemoveStep", step.Name]" Disabled="@Disabled"
                            OnClick="@(() => RemoveAsync(step))" />
         </div>
     }
@@ -44,7 +45,7 @@
             <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary" />
         </span>
         <MudTextField T="string" Class="pspad-step-add flex-grow-1 mt-0" @bind-Value="_newStep"
-                      Placeholder="@(StepCount == 0 ? "Add step" : "Next step")" Underline="false" MaxLength="@ContentLimits.Name"
+                      Placeholder="@(StepCount == 0 ? T["AddStep"] : T["NextStep"])" Underline="false" MaxLength="@ContentLimits.Name"
                       Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
     </div>
 </div>

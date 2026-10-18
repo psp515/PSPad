@@ -35,6 +35,18 @@ public class LocalizerPluralsTests
     }
 
     [Fact]
+    public void ExtraArgumentsFollowTheCountInTheSentence()
+    {
+        var strings = new FakeLocalizer(new()
+        {
+            ["Every.One"] = "Every week on {1}",
+            ["Every.Many"] = "Every {0} weeks on {1}"
+        });
+
+        Assert.Equal("Every 3 weeks on Mon", strings.Plural(3, "Every", "Mon"));
+    }
+
+    [Fact]
     public void AMissingFewFallsBackToMany()
     {
         var strings = new FakeLocalizer(new()

@@ -1,5 +1,6 @@
 @using PSPad.App.State.Viewport
 @inject IViewport Viewport
+@inject IStringLocalizer<SharedStrings> Shared
 @implements IAsyncDisposable
 
 <MudDrawer Open="@Open" OpenChanged="@OnOpenChanged" Anchor="Anchor.Right"
@@ -12,12 +13,12 @@
                 @if (OnBack.HasDelegate)
                 {
                     <MudIconButton Class="pspad-panel-back" Icon="@Icons.Material.Filled.ArrowBack"
-                                   aria-label="Back" OnClick="@OnBack" />
+                                   aria-label="@Shared["Back"]" OnClick="@OnBack" />
                 }
                 else
                 {
                     <MudIconButton Class="pspad-panel-close" Icon="@Icons.Material.Filled.Close"
-                                   aria-label="Close" OnClick="@OnClose" />
+                                   aria-label="@Shared["Close"]" OnClick="@OnClose" />
                 }
                 <MudText Class="pspad-panel-title" Typo="@(TitleTypo ?? (_isDesktop ? Typo.h5 : Typo.h6))">@Title</MudText>
                 <MudSpacer />
@@ -25,7 +26,7 @@
                 @if (OnBack.HasDelegate)
                 {
                     <MudIconButton Class="pspad-panel-close" Icon="@Icons.Material.Filled.Close"
-                                   aria-label="Close" OnClick="@OnClose" />
+                                   aria-label="@Shared["Close"]" OnClick="@OnClose" />
                 }
             </div>
 
@@ -56,7 +57,7 @@
                             {
                                 <MudButton Class="pspad-panel-save" Variant="Variant.Filled" Color="Color.Primary"
                                            Disabled="@(Disabled || !CanSave)" OnClick="@OnSave">
-                                    @SaveText
+                                    @(SaveText ?? Shared["Save"])
                                 </MudButton>
                             }
                             <MudSpacer />
@@ -65,7 +66,7 @@
                                 <MudButton Class="pspad-panel-delete" Variant="Variant.Text" Color="Color.Error"
                                            StartIcon="@Icons.Material.Filled.Delete" Disabled="@Disabled"
                                            OnClick="@OnDelete">
-                                    @DeleteText
+                                    @(DeleteText ?? Shared["Delete"])
                                 </MudButton>
                             }
                         </div>
@@ -99,9 +100,9 @@
 
     [Parameter] public EventCallback OnDelete { get; set; }
 
-    [Parameter] public string SaveText { get; set; } = "Save";
+    [Parameter] public string? SaveText { get; set; }
 
-    [Parameter] public string DeleteText { get; set; } = "Delete";
+    [Parameter] public string? DeleteText { get; set; }
 
     [Parameter] public bool CanSave { get; set; } = true;
 

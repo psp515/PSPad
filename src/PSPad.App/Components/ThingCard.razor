@@ -2,6 +2,7 @@
 @using PSPad.App.State
 @using PSPad.Module.Tasks.Tasks
 @inject CardCollapseState Collapse
+@inject IStringLocalizer<TasksStrings> T
 
 <MudPaper Elevation="0" Outlined="true">
     <div class="pspad-card-header d-flex align-center gap-2 px-3 py-2">
@@ -13,7 +14,7 @@
             <MudLink Class="@TitleClass" Href="@Href" Typo="Typo.subtitle2" Color="Color.Inherit" Underline="Underline.None">@Name</MudLink>
             @Subtitle
         </div>
-        <span class="pspad-open-count flex-shrink-0">@Count.ToString(CultureInfo.InvariantCulture)<span class="pspad-sr-only"> open</span></span>
+        <span class="pspad-open-count flex-shrink-0">@Count.ToString(CultureInfo.InvariantCulture)<span class="pspad-sr-only">@T.Plural(Count, "ThingOpen")</span></span>
         @Actions
     </div>
 
@@ -25,12 +26,12 @@
         else if (Count == 0 && Rows is null)
         {
             <div class="pspad-card-empty pspad-muted d-flex align-center px-3 py-2">
-                <MudText Typo="Typo.body2" Color="Color.Inherit">No open tasks</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Inherit">@T["NoOpenTasks"]</MudText>
                 @if (OnAdd.HasDelegate)
                 {
                     <span class="pspad-card-empty-separator mx-1" aria-hidden="true">·</span>
                     <MudButton Class="pspad-card-empty-add" Variant="Variant.Text" Color="Color.Primary"
-                               Size="Size.Small" OnClick="@OnAdd" aria-label="@($"Add a task to {Name}")">Add one</MudButton>
+                               Size="Size.Small" OnClick="@OnAdd" aria-label="@T["AddTaskTo", Name]">@T["AddOne"]</MudButton>
                 }
             </div>
         }
@@ -51,7 +52,7 @@
         @if (Count > Preview)
         {
             <MudButton Class="pspad-show-all ma-1" Href="@Href" Variant="Variant.Text" Color="Color.Primary">
-                @($"Show all {Count}")
+                @T["ShowAll", Count]
             </MudButton>
         }
     </MudCollapse>
@@ -103,7 +104,7 @@
             var attributes = new Dictionary<string, object>
             {
                 ["aria-expanded"] = Collapsed ? "false" : "true",
-                ["aria-label"] = $"{(Collapsed ? "Expand" : "Collapse")} {Name}"
+                ["aria-label"] = T[Collapsed ? "ExpandCard" : "CollapseCard", Name].Value
             };
             if (IconTitle is not null) attributes["title"] = IconTitle;
             return attributes;

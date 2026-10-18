@@ -24,6 +24,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject LastArea Remembered
+@inject IStringLocalizer<TasksStrings> TaskText
 @implements IDisposable
 
 @if (!_loaded)
@@ -177,7 +178,7 @@ else
         get
         {
             var referenceLists = _lists.Count(list => list.Kind == ListKind.Reference);
-            return AreaSummary.Describe(_lists.Count - referenceLists, referenceLists, OpenTasks, Items);
+            return AreaSummary.Describe(_lists.Count - referenceLists, referenceLists, OpenTasks, Items, TaskText);
         }
     }
 

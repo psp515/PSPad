@@ -9,6 +9,7 @@
 @inject AppState State
 @inject CommandSender Sender
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedStrings> Shared
 @implements IDisposable
 
 <PageHeading Title="Inbox" Subtitle="@Subtitle" />
@@ -33,7 +34,7 @@ else
         <RowGroup Columns="true">
             @foreach (var day in Days)
             {
-                <div class="pspad-row-subhead">@DueDateRow.Describe(day.Key, State.Today)</div>
+                <div class="pspad-row-subhead">@DueDateRow.Describe(day.Key, State.Today, Shared)</div>
                 @foreach (var item in day)
                 {
                     <InboxItemRow @key="item.Id" Item="@item" Zone="@Zone" OnOpen="@Open" />

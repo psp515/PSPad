@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Completed" xml:space="preserve">
+    <value>Ukończone</value>
+  </data>
+  <data name="CompletedCount" xml:space="preserve">
+    <value>Ukończone · {0}</value>
+  </data>
+  <data name="NothingCompletedOn" xml:space="preserve">
+    <value>Nic nie ukończono w dniu {0}.</value>
+  </data>
+  <data name="Tasks" xml:space="preserve">
+    <value>Zadania</value>
+  </data>
+  <data name="Schedule" xml:space="preserve">
+    <value>Harmonogram</value>
+  </data>
+  <data name="ScheduleCount" xml:space="preserve">
+    <value>Harmonogram · {0}</value>
+  </data>
+  <data name="Overdue" xml:space="preserve">
+    <value>Zaległe</value>
+  </data>
+  <data name="Starred" xml:space="preserve">
+    <value>Z gwiazdką</value>
+  </data>
+  <data name="StarredHint" xml:space="preserve">
+    <value>· gdy znajdzie się chwila</value>
+  </data>
+  <data name="AnyTime" xml:space="preserve">
+    <value>{0}, bez godziny</value>
+  </data>
+  <data name="NothingPlannedToday" xml:space="preserve">
+    <value>Na dziś nic nie zaplanowano.</value>
+  </data>
+  <data name="NothingPlannedOn" xml:space="preserve">
+    <value>Na {0} nic nie zaplanowano.</value>
+  </data>
+  <data name="ScheduleEmptyToday" xml:space="preserve">
+    <value>Dziś w harmonogramie pusto.</value>
+  </data>
+  <data name="ScheduleEmptyOn" xml:space="preserve">
+    <value>Harmonogram na {0} jest pusty.</value>
+  </data>
+  <data name="PreviousWeek" xml:space="preserve">
+    <value>Poprzedni tydzień</value>
+  </data>
+  <data name="NextWeek" xml:space="preserve">
+    <value>Następny tydzień</value>
+  </data>
+  <data name="PickADate" xml:space="preserve">
+    <value>Wybierz datę</value>
+  </data>
+  <data name="WeekMeta" xml:space="preserve">
+    <value>Tydzień {0} · {1}</value>
+  </data>
+</root>

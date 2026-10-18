@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Completed" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="CompletedCount" xml:space="preserve">
+    <value>Completed · {0}</value>
+  </data>
+  <data name="NothingCompletedOn" xml:space="preserve">
+    <value>Nothing completed on {0}.</value>
+  </data>
+  <data name="Tasks" xml:space="preserve">
+    <value>Tasks</value>
+  </data>
+  <data name="Schedule" xml:space="preserve">
+    <value>Schedule</value>
+  </data>
+  <data name="ScheduleCount" xml:space="preserve">
+    <value>Schedule · {0}</value>
+  </data>
+  <data name="Overdue" xml:space="preserve">
+    <value>Overdue</value>
+  </data>
+  <data name="Starred" xml:space="preserve">
+    <value>Starred</value>
+  </data>
+  <data name="StarredHint" xml:space="preserve">
+    <value>· when you have time</value>
+  </data>
+  <data name="AnyTime" xml:space="preserve">
+    <value>{0}, any time</value>
+  </data>
+  <data name="NothingPlannedToday" xml:space="preserve">
+    <value>Nothing planned for today.</value>
+  </data>
+  <data name="NothingPlannedOn" xml:space="preserve">
+    <value>Nothing planned for {0}.</value>
+  </data>
+  <data name="ScheduleEmptyToday" xml:space="preserve">
+    <value>Schedule empty for today.</value>
+  </data>
+  <data name="ScheduleEmptyOn" xml:space="preserve">
+    <value>Schedule empty for {0}.</value>
+  </data>
+  <data name="PreviousWeek" xml:space="preserve">
+    <value>Previous week</value>
+  </data>
+  <data name="NextWeek" xml:space="preserve">
+    <value>Next week</value>
+  </data>
+  <data name="PickADate" xml:space="preserve">
+    <value>Pick a date</value>
+  </data>
+  <data name="WeekMeta" xml:space="preserve">
+    <value>Week {0} · {1}</value>
+  </data>
+</root>

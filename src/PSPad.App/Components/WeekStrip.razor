@@ -1,10 +1,12 @@
 @using System.Globalization
+@inject IStringLocalizer<TodayStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
 
 <MudPaper Outlined="true" Class="pspad-week-strip">
     <MudText Typo="Typo.subtitle2" Class="pspad-week-month">@Day.ToString("MMMM yyyy", Invariant)</MudText>
 
     <div class="pspad-week-row d-flex align-center">
-        <MudIconButton Class="pspad-week-prev" Size="Size.Small" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous week"
+        <MudIconButton Class="pspad-week-prev" Size="Size.Small" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="@T["PreviousWeek"]"
                        OnClick="@(() => DayChanged.InvokeAsync(Day.AddDays(-7)))" />
         <div class="pspad-week-days d-flex flex-grow-1" @ontouchstart="@TouchStarted" @ontouchend="@TouchEndedAsync">
             @foreach (var day in Week)
@@ -24,7 +26,7 @@
                 </MudButton>
             }
         </div>
-        <MudIconButton Class="pspad-week-next" Size="Size.Small" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next week"
+        <MudIconButton Class="pspad-week-next" Size="Size.Small" Icon="@Icons.Material.Filled.ChevronRight" aria-label="@T["NextWeek"]"
                        OnClick="@(() => DayChanged.InvokeAsync(Day.AddDays(7)))" />
     </div>
 
@@ -37,9 +39,9 @@
         @if (Day != Today)
         {
             <MudButton Class="pspad-week-today" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                       OnClick="@(() => DayChanged.InvokeAsync(Today))">Today</MudButton>
+                       OnClick="@(() => DayChanged.InvokeAsync(Today))">@Shared["Today"]</MudButton>
         }
-        <MudIconButton Class="pspad-week-pick" Icon="@Icons.Material.Outlined.CalendarMonth" aria-label="Pick a date"
+        <MudIconButton Class="pspad-week-pick" Icon="@Icons.Material.Outlined.CalendarMonth" aria-label="@T["PickADate"]"
                        OnClick="@(() => _picking = true)" />
     </div>
 </MudPaper>
@@ -50,8 +52,8 @@
                        DateChanged="@PickedAsync" />
     </DialogContent>
     <DialogActions>
-        <MudButton Class="pspad-day-dialog-today" Color="Color.Primary" OnClick="@(() => PickedAsync(Today.ToDateTime(TimeOnly.MinValue)))">Today</MudButton>
-        <MudButton Color="Color.Primary" OnClick="@(() => _picking = false)">Cancel</MudButton>
+        <MudButton Class="pspad-day-dialog-today" Color="Color.Primary" OnClick="@(() => PickedAsync(Today.ToDateTime(TimeOnly.MinValue)))">@Shared["Today"]</MudButton>
+        <MudButton Color="Color.Primary" OnClick="@(() => _picking = false)">@Shared["Cancel"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -87,10 +89,10 @@
     bool IsRelative => Math.Abs(Day.DayNumber - Today.DayNumber) <= 1;
 
     string Label => IsRelative
-        ? $"{DueDateRow.Describe(Day, Today)} · {Day.ToString("ddd, d MMM", Invariant)}"
+        ? $"{DueDateRow.Describe(Day, Today, Shared)} · {Day.ToString("ddd, d MMM", Invariant)}"
         : Day.ToString(Day.Year == Today.Year ? "ddd, d MMM" : "ddd, d MMM yyyy", Invariant);
 
-    string Meta => $"Week {ISOWeek.GetWeekOfYear(Day.ToDateTime(TimeOnly.MinValue))} · {Day.ToString("MMMM yyyy", Invariant)}";
+    string Meta => T["WeekMeta", ISOWeek.GetWeekOfYear(Day.ToDateTime(TimeOnly.MinValue)), Day.ToString("MMMM yyyy", Invariant)];
 
     string DayClass(DateOnly day) =>
         $"pspad-week-day{(day == Today ? " pspad-week-day-today" : "")}{(day == Day ? " pspad-week-day-picked" : "")}";

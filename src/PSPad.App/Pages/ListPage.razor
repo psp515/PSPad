@@ -21,6 +21,7 @@
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject IStringLocalizer<TasksStrings> TaskText
 @implements IDisposable
 
 @if (!_loaded)
@@ -193,7 +194,7 @@ else
 
     string Summary => _list is { Kind: ListKind.Reference }
         ? _areaName ?? ""
-        : string.Join(" · ", new[] { _areaName, OpenTaskCount.Describe(_open.Count) }.Where(part => !string.IsNullOrEmpty(part)));
+        : string.Join(" · ", new[] { _areaName, OpenTaskCount.Describe(_open.Count, TaskText) }.Where(part => !string.IsNullOrEmpty(part)));
 
     bool IsDone(TodoTask task) => task.CompletedAt is not null || task.EndedBy(State.Today);
 

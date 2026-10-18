@@ -1,10 +1,12 @@
+@inject IStringLocalizer<SharedStrings> Shared
+
 <MudMenu Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" Dense="true"
          AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="@Class">
-    <MudMenuItem OnClick="@OnEdit">Edit</MudMenuItem>
+    <MudMenuItem OnClick="@OnEdit">@Shared["Edit"]</MudMenuItem>
     @Extra
     @if (OnDelete.HasDelegate)
     {
-        <MudMenuItem OnClick="@OnDelete">Delete</MudMenuItem>
+        <MudMenuItem OnClick="@OnDelete">@Shared["Delete"]</MudMenuItem>
     }
 </MudMenu>
 

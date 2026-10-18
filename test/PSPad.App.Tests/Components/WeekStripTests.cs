@@ -8,6 +8,7 @@ using PSPad.TestInfrastructure;
 namespace PSPad.App.Tests.Components;
 
 [UnitTest]
+[Collection("Culture")]
 public class WeekStripTests : Bunit.TestContext
 {
     static readonly DateOnly Thursday = new(2026, 10, 8);
@@ -16,6 +17,7 @@ public class WeekStripTests : Bunit.TestContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddMudServices();
+        Services.AddLocalization();
     }
 
     [Fact]
@@ -138,7 +140,7 @@ public class WeekStripTests : Bunit.TestContext
     }
 
     [Theory]
-    [InlineData(2026, 10, 9, "Tomorrow · Fri, 9 Oct")]
+    [InlineData(2026, 10, 9, "Jutro · Fri, 9 Oct")]
     [InlineData(2026, 11, 2, "Mon, 2 Nov")]
     [InlineData(2027, 1, 4, "Mon, 4 Jan 2027")]
     public void EverythingTheStripSaysIsInOneCulture(int year, int month, int day, string label)

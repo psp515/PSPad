@@ -424,6 +424,7 @@ public class TaskRowTests : Bunit.TestContext
     {
         JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
         Services.AddMudServices();
+        Services.AddLocalization();
     }
 
     static TodoTask Task(string name)

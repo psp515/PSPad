@@ -1,5 +1,6 @@
 @using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Tasks
+@inject IStringLocalizer<SharedStrings> Shared
 
 <div class="pspad-row pspad-goal-list-row d-flex align-start gap-3 pl-3 pr-1" role="link" tabindex="0"
      aria-label="@Goal.Name" @onclick="@OnOpen" @onkeydown="@OpenOnKeyAsync">
@@ -84,7 +85,7 @@
 
     string DueText(DateOnly due) => Overdue
         ? $"Overdue · {due:d MMM}"
-        : $"Due {DueDateRow.Describe(due, Today)}";
+        : $"Due {DueDateRow.Describe(due, Today, Shared)}";
 
     async Task OpenOnKeyAsync(KeyboardEventArgs args)
     {
