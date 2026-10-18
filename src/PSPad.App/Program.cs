@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using MudBlazor;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App;
@@ -26,6 +27,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddMudServices(config => SmallMessages.Configure(config.SnackbarConfiguration));
 builder.Services.AddLocalization();
+builder.Services.AddTransient<MudLocalizer, PSPadMudLocalizer>();
 builder.Services.AddSingleton<LanguagePreference>();
 
 builder.Services.AddOidcAuthentication(options =>

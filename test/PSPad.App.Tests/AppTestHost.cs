@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App.Api;
+using PSPad.App.Localization;
 using PSPad.App.State;
 using PSPad.Contracts;
 using PSPad.App.State.Dispatch;
@@ -34,6 +35,8 @@ public static class AppTestHost
         context.JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
         context.Services.Options = new ServiceProviderOptions { ValidateScopes = false };
         context.Services.AddMudServices();
+        context.Services.AddLocalization();
+        context.Services.AddSingleton(new LanguagePreference(context.JSInterop.JSRuntime));
 
         var replica = new InMemoryReplica();
         replica.SetOwnerAsync(userId).GetAwaiter().GetResult();

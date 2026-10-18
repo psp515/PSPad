@@ -693,7 +693,6 @@ public class AppShellTests : Bunit.TestContext
         var today = new DateOnly(2026, 9, 12);
         var replica = AppTestHost.Arrange(this, User, today, documents);
         Services.AddSingleton(new ThemePreference(JSInterop.JSRuntime));
-        Services.AddSingleton(new LanguagePreference(JSInterop.JSRuntime));
         Services.AddSingleton(new SidebarCounts(
             new ReplicaDocumentStore<Module.Tasks.Tasks.TodoTask>(replica),
             new ReplicaDocumentStore<Module.Tasks.Inbox.Inbox>(replica),
