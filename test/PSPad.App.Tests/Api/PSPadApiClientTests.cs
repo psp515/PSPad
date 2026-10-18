@@ -41,6 +41,36 @@ public class PSPadApiClientTests
     }
 
     [Fact]
+    public async Task ItPutsTheLanguageAndReturnsTheUpdatedUser()
+    {
+        var handler = new StubHandler(new MeResponse(
+            Guid.NewGuid(), "Ada Lovelace", "ada@example.com", "Europe/Warsaw", "pl"));
+        var client = new PSPadApiClient(new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost")
+        });
+
+        var me = await client.SetLanguageAsync("pl");
+
+        Assert.Equal("pl", me!.Language);
+        Assert.Equal(HttpMethod.Put, handler.LastRequest!.Method);
+        Assert.EndsWith("api/me/language", handler.LastRequest.RequestUri!.ToString());
+        Assert.Equal("""{"language":"pl"}""", await handler.LastRequest.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ItReturnsNullWhenTheServerRejectsTheLanguage()
+    {
+        var handler = new StubHandler(HttpStatusCode.BadRequest);
+        var client = new PSPadApiClient(new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost")
+        });
+
+        Assert.Null(await client.SetLanguageAsync("de"));
+    }
+
+    [Fact]
     public async Task DeleteAccountAsyncReturnsTheParsedResponseOnSuccess()
     {
         var client = new PSPadApiClient(new HttpClient(new DeleteAccountHandler(HttpStatusCode.OK, """{"keycloakRemoved":true}"""))

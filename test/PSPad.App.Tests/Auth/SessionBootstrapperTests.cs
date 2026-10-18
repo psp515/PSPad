@@ -101,7 +101,7 @@ public class SessionBootstrapperTests
             authentication ?? new LocalAuthenticationStateProvider(sessions));
 
     static LocalSession Session(DateTimeOffset lastContact) =>
-        new(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "refresh", lastContact);
+        new(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "en", "refresh", lastContact);
 
     sealed class FixedClock(DateTimeOffset now) : IClock
     {

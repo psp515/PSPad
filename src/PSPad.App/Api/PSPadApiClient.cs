@@ -32,6 +32,23 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
         }
     }
 
+    public async Task<MeResponse?> SetLanguageAsync(string language)
+    {
+        try
+        {
+            var response = await http.PutAsJsonAsync(
+                "api/me/language", new SetLanguageRequest(language));
+
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<MeResponse>()
+                : null;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+    }
+
     public async Task<AccountDeletionOutcome> DeleteAccountAsync()
     {
         try

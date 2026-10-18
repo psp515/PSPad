@@ -192,7 +192,7 @@ public class AuthenticationTests : Bunit.TestContext
     public async Task ACompletedLogOutClearsTheLocalSessionAndTheReplica()
     {
         var sessions = new InMemoryLocalSessionStore(
-            new LocalSession(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "r0", DateTimeOffset.UtcNow));
+            new LocalSession(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "en", "r0", DateTimeOffset.UtcNow));
         Arrange(sessions, new StubMeHandler(HttpStatusCode.NotFound, null));
         JSInterop.Setup<RemoteAuthenticationResult<RemoteAuthenticationState>>(
                 "AuthenticationService.completeSignOut", _ => true)

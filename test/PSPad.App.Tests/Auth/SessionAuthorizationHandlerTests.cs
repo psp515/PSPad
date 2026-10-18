@@ -260,7 +260,7 @@ public class SessionAuthorizationHandlerTests
     }
 
     static LocalSession Session() =>
-        new(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "refresh", Now);
+        new(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "en", "refresh", Now);
 
     sealed class CapturingHandler : HttpMessageHandler
     {

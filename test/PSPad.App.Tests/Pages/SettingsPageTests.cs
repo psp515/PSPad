@@ -922,7 +922,7 @@ public class SettingsPageTests : Bunit.TestContext
             })
             .Build());
         _sessions = new InMemoryLocalSessionStore(
-            new LocalSession(User, displayName, email, "UTC", "refresh-token", DateTimeOffset.UtcNow, "id-token"));
+            new LocalSession(User, displayName, email, "UTC", "en", "refresh-token", DateTimeOffset.UtcNow, "id-token"));
         _authProvider = new LocalAuthenticationStateProvider(_sessions);
         Services.AddSingleton<ILocalSessionStore>(_sessions);
         Services.AddSingleton(_authProvider);

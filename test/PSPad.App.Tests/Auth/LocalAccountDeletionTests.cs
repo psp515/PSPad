@@ -18,7 +18,7 @@ public class LocalAccountDeletionTests
     public async Task ClearAsyncWipesTheReplicaTheOutboxAndTheSession()
     {
         var sessions = new InMemoryLocalSessionStore(
-            new LocalSession(User, "Ada", "ada@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow));
+            new LocalSession(User, "Ada", "ada@example.com", "UTC", "en", "refresh-token", DateTimeOffset.UtcNow));
         var replica = new InMemoryReplica();
         await replica.SetOwnerAsync(User);
         var outbox = new InMemoryOutbox();
@@ -37,7 +37,7 @@ public class LocalAccountDeletionTests
     public async Task ClearAsyncAnnouncesSignedOut()
     {
         var sessions = new InMemoryLocalSessionStore(
-            new LocalSession(User, "Ada", "ada@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow));
+            new LocalSession(User, "Ada", "ada@example.com", "UTC", "en", "refresh-token", DateTimeOffset.UtcNow));
         var replica = new InMemoryReplica();
         var outbox = new InMemoryOutbox();
         var authProvider = new LocalAuthenticationStateProvider(sessions);
@@ -54,7 +54,7 @@ public class LocalAccountDeletionTests
     public async Task AThrowingReplicaStillLeadsToSignedOutBeingAnnounced()
     {
         var sessions = new InMemoryLocalSessionStore(
-            new LocalSession(User, "Ada", "ada@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow));
+            new LocalSession(User, "Ada", "ada@example.com", "UTC", "en", "refresh-token", DateTimeOffset.UtcNow));
         var outbox = new InMemoryOutbox();
         var authProvider = new LocalAuthenticationStateProvider(sessions);
         var deletion = new LocalAccountDeletion(sessions, new ThrowingReplica(), outbox, authProvider, NullLogger<LocalAccountDeletion>.Instance);
@@ -71,7 +71,7 @@ public class LocalAccountDeletionTests
     public async Task AThrowingOutboxStillLeadsToSignedOutBeingAnnounced()
     {
         var sessions = new InMemoryLocalSessionStore(
-            new LocalSession(User, "Ada", "ada@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow));
+            new LocalSession(User, "Ada", "ada@example.com", "UTC", "en", "refresh-token", DateTimeOffset.UtcNow));
         var replica = new InMemoryReplica();
         await replica.SetOwnerAsync(User);
         var authProvider = new LocalAuthenticationStateProvider(sessions);

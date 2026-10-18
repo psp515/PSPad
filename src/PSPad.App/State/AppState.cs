@@ -10,6 +10,8 @@ public sealed class AppState
 
     public string TimeZone { get; set; } = "Etc/UTC";
 
+    public string Language { get; set; } = "en";
+
     public DateOnly Today { get; set; }
 
     public Guid? LastInboxListId { get; set; }

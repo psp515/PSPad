@@ -308,7 +308,7 @@ public class SnapshotPageTests : Bunit.TestContext
             ]);
 
     static LocalSession SampleSession() =>
-        new(User, "Zoe", "zoe@example.com", "UTC", "refresh", DateTimeOffset.UtcNow);
+        new(User, "Zoe", "zoe@example.com", "UTC", "en", "refresh", DateTimeOffset.UtcNow);
 
     sealed class FakeHandler(SnapshotView? snapshot, bool throwOnGet, bool markSucceeds) : HttpMessageHandler
     {

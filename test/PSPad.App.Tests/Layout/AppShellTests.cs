@@ -13,6 +13,7 @@ using PSPad.App.Api;
 using PSPad.App.Auth;
 using PSPad.App.Components;
 using PSPad.App.Layout;
+using PSPad.App.Localization;
 using PSPad.App.State;
 using PSPad.App.State.Replica;
 using PSPad.App.State.Viewport;
@@ -438,7 +439,7 @@ public class AppShellTests : Bunit.TestContext
         var signedIn = new DateTimeOffset(2026, 9, 15, 8, 0, 0, TimeSpan.Zero);
         var refreshed = new DateTimeOffset(2026, 9, 22, 8, 0, 0, TimeSpan.Zero);
         var store = new InMemoryLocalSessionStore(
-            new LocalSession(User, "Zoe Session", "zoe@example.com", "UTC", "r0", signedIn));
+            new LocalSession(User, "Zoe Session", "zoe@example.com", "UTC", "en", "r0", signedIn));
         Arrange(
             sessionStore: store,
             onMeRequest: () => store.SaveAsync(
@@ -454,7 +455,7 @@ public class AppShellTests : Bunit.TestContext
     public void ItTakesTodayFromTheRegisteredClockAndTheSessionTimeZone()
     {
         var store = new InMemoryLocalSessionStore(new LocalSession(
-            User, "Zoe Session", "zoe@example.com", "Etc/GMT+12", "refresh-token", DateTimeOffset.UtcNow));
+            User, "Zoe Session", "zoe@example.com", "Etc/GMT+12", "en", "refresh-token", DateTimeOffset.UtcNow));
         Arrange(
             sessionStore: store,
             meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Etc/GMT+12", "en"));
@@ -503,7 +504,7 @@ public class AppShellTests : Bunit.TestContext
     public void ItStaysReadyOnATimeZoneTheRuntimeDoesNotCarry()
     {
         var store = new InMemoryLocalSessionStore(new LocalSession(
-            User, "Zoe Session", "zoe@example.com", "Mars/Olympus", "refresh-token", DateTimeOffset.UtcNow));
+            User, "Zoe Session", "zoe@example.com", "Mars/Olympus", "en", "refresh-token", DateTimeOffset.UtcNow));
         Arrange(
             sessionStore: store,
             meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Mars/Olympus", "en"));
@@ -631,7 +632,7 @@ public class AppShellTests : Bunit.TestContext
         await DisposeComponentsAsync();
 
         var session = new LocalSession(
-            User, "Zoe Session", "zoe@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow);
+            User, "Zoe Session", "zoe@example.com", "UTC", "en", "refresh-token", DateTimeOffset.UtcNow);
         await store.SaveAsync(session);
         Services.GetRequiredService<LocalAuthenticationStateProvider>().SignedIn(session);
         var shell = Render<AppShell>();
@@ -692,6 +693,7 @@ public class AppShellTests : Bunit.TestContext
         var today = new DateOnly(2026, 9, 12);
         var replica = AppTestHost.Arrange(this, User, today, documents);
         Services.AddSingleton(new ThemePreference(JSInterop.JSRuntime));
+        Services.AddSingleton(new LanguagePreference(JSInterop.JSRuntime));
         Services.AddSingleton(new SidebarCounts(
             new ReplicaDocumentStore<Module.Tasks.Tasks.TodoTask>(replica),
             new ReplicaDocumentStore<Module.Tasks.Inbox.Inbox>(replica),
@@ -700,7 +702,7 @@ public class AppShellTests : Bunit.TestContext
         Services.AddSingleton<ILocalSessionStore>(sessionStore ?? new InMemoryLocalSessionStore(
             hasSession
                 ? new LocalSession(
-                    User, "Zoe Session", "zoe@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow)
+                    User, "Zoe Session", "zoe@example.com", "UTC", "en", "refresh-token", DateTimeOffset.UtcNow)
                 : null));
         Services.AddSingleton<LocalAuthenticationStateProvider>();
 
