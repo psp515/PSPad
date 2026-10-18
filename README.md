@@ -95,6 +95,15 @@ dotnet test --filter Category=Unit
 dotnet test --filter Category=Integration
 ```
 
+End-to-end scenarios drive the real application in Chromium with Playwright
+against the compose stack (`specs/e2e-testing-design.md`). They run in CI on
+every pull request; locally, with Node 22:
+
+```bash
+docker compose -f docker/compose.yaml -f docker/compose.e2e.yaml --env-file docker/.env.example -p pspad-e2e up -d --build --wait
+cd test/e2e && npm ci && npx playwright install chromium && npm test
+```
+
 Each deployable carries its own `Dockerfile` next to its `.csproj`
 (`src/PSPad.Api`, `src/PSPad.App`), built with the repository root as
 context. `docker/compose.yaml` is both the development and the self-hosting

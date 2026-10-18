@@ -34,6 +34,12 @@ dotnet test
 
 Unit suite must stay under a few seconds. If it needs Docker, it is mislabeled.
 
+**End-to-end** — Playwright in `test/e2e/`, outside the .NET solution, driving
+the real application in Chromium against the compose stack with one Keycloak
+user per test. Whole-scenario journeys only, fifteen of them, under three
+minutes. Design, harness and scenario list: `specs/e2e-testing-design.md`.
+`npm test` in that folder runs it; `dotnet test` never sees it.
+
 ## Testcontainers fixture
 
 One container per test run, shared by an xUnit collection. Not one per test —

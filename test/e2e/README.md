@@ -38,3 +38,16 @@ redirect URI names 5001.
 
 Every test creates its own Keycloak user through the admin API and deletes it
 afterwards, so the realm needs no seeded users.
+
+## Without Chromium's system libraries
+
+When `npx playwright install chromium` cannot be followed by
+`npx playwright install-deps` (no root), run the suite from the official
+Playwright image on the host network, with the stack up as above:
+
+```bash
+cd test/e2e
+docker run --rm --network host -v "$PWD:/work" -w /work -e HOME=/tmp mcr.microsoft.com/playwright:v1.58.2-noble npx playwright test
+```
+
+The image's Playwright version must match `package.json`.

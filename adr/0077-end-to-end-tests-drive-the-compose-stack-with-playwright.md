@@ -5,7 +5,7 @@ date: 2026-10-18
 status: Active
 ---
 
-# ADR-0075: End-to-end tests drive the compose stack with Playwright
+# ADR-0077: End-to-end tests drive the compose stack with Playwright
 
 > Status: Active
 

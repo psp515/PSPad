@@ -26,7 +26,14 @@ export async function closeTask(page: Page) {
 }
 
 export async function completeTaskRow(page: Page, name: string) {
-  await taskRow(page, name).getByRole('checkbox').first().check();
+  const visible = taskRow(page, name).filter({ visible: true });
+  await visible.first().getByRole('checkbox').first().click();
+  await expect(async () => {
+    if ((await visible.count()) === 0) {
+      return;
+    }
+    await expect(visible.first().getByRole('checkbox').first()).toBeChecked({ timeout: 500 });
+  }).toPass();
 }
 
 export async function addStep(page: Page, name: string) {

@@ -1,6 +1,6 @@
 # End-to-end tests — design
 
-Status: Proposed. Issue #107. Decision of record:
+Status: Built. Issue #107. Decision of record:
 `adr/0077-end-to-end-tests-drive-the-compose-stack-with-playwright.md`.
 Extends `specs/testing-spec.md`, which keeps the unit and integration rules.
 
@@ -111,11 +111,13 @@ envelopes (`CommandCatalogue` resolves `type` by class name, e.g.
 
 ### 3.5 Offline
 
-`context.setOffline(true)` drops `navigator.onLine` and fails every fetch;
-the client's `BrowserConnectivity` listens to the `offline` event and the
-status footer shows it. Reloading while offline depends on the service
-worker having cached the whole bundle, which a fresh context cannot
-guarantee inside the budget, so no scenario reloads offline.
+`context.setOffline(true)` drops `navigator.onLine` and fails every fetch
+the page makes; the client's `BrowserConnectivity` then probes the API,
+fails, and the status footer and sync stamp show offline. Chromium's offline
+emulation does not reach requests a service worker makes, and the PWA's
+worker proxies the probe, so the offline scenario's context is created with
+`serviceWorkers: 'block'`. Reloading while offline would need that worker's
+cache, so no scenario reloads offline.
 
 ## 4. Scenarios
 
@@ -227,24 +229,25 @@ A new `e2e` job in `.github/workflows/ci.yml`, after
 
 ```
 test/e2e/
-  package.json  package-lock.json  tsconfig.json  playwright.config.ts
+  package.json  package-lock.json  tsconfig.json  playwright.config.ts  env.ts  global-setup.ts
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
-  helpers/       sign-in.ts  areas.ts  lists.ts  tasks.ts  panels.ts  sync.ts  api.ts  dates.ts
-  data/          entries.csv  balances.csv
+  helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
+                 settings.ts  goals.ts  references.ts  sharing.ts  sync.ts  api.ts  budgets.ts
   scenarios/     01-first-sign-in.spec.ts … 15-search-statistics-settings.spec.ts
-  global-setup.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared
-mutable state between files. `README.md` in the folder says how to run it
-locally.
+mutable state between files. CSV fixtures are built in the import scenario
+so their dates follow the current month. `README.md` in the folder says how
+to run it locally, including from the official Playwright container when
+the host lacks Chromium's libraries.
 
 ## 8. Docs and records
 
 - `specs/testing-spec.md` gains an **End-to-end** category pointing here.
 - `README.md` Development section gets the three commands.
 - `AGENTS.md` §3 table gets the row; §4 gets AD-18 for the ADR.
-- `adr/0075` records the decision and the alternatives (Playwright for
+- `adr/0077` records the decision and the alternatives (Playwright for
   .NET inside the solution; API-only end-to-end tests; storage state reuse).
 
 ## 9. Risks
@@ -259,3 +262,9 @@ locally.
 - **Clock edges.** Tests that depend on "today" compute it in UTC at the
   start and would be wrong across midnight UTC; a run that straddles it is
   rerun, not patched.
+- **Closing drawers and fading menus.** A panel's overlay lingers while it
+  closes and the FAB menu's items are transparent with pointer events off
+  while it is shut, so the helpers wait for the drawer's closed state and
+  the menu's open class instead of visibility. A MudBlazor select's popover
+  also lingers while it closes, so a helper waits for no open popover
+  before opening the next.

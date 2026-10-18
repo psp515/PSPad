@@ -1,13 +1,13 @@
 import { expect, Page } from '@playwright/test';
+import { goTo } from './nav';
 import { panel, savePanel } from './panels';
 
 export async function goToInbox(page: Page) {
-  await page.goto('/inbox');
-  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();
+  await goTo(page, 'Inbox');
 }
 
 export async function capture(page: Page, text: string) {
-  await page.getByRole('button', { name: 'Capture' }).click();
+  await page.getByRole('button', { name: 'Capture' }).first().click();
   await panel(page).getByLabel('Name').fill(text);
   await savePanel(page);
   await expect(inboxItem(page, text)).toBeVisible();
