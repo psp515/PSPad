@@ -1,0 +1,14 @@
+# Layered over compose.yaml by the end-to-end suite (test/e2e). Keycloak moves to
+# port 18080 so the suite can run beside a developer's own Keycloak on 8080; the app
+# and API keep 5001 and 5000 because the realm's redirect URI names 5001.
+services:
+  keycloak:
+    ports: !override
+      - "18080:8080"
+    environment:
+      KC_HOSTNAME: http://localhost:18080
+      JAVA_OPTS_KC_HEAP: -Xms128m -Xmx512m
+
+  app:
+    environment:
+      KEYCLOAK_AUTHORITY: http://localhost:18080/realms/psplace

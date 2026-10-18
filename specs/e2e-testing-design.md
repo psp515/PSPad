@@ -39,15 +39,21 @@ laptop and in CI, excluding the image build.
 - Own `package.json` in `test/e2e/`, outside the .NET solution. `dotnet
   test` never sees it; `npm test` in that folder runs it. Node 22, pinned
   through `engines` and `package-lock.json`.
-- Target: `docker/compose.yaml` with `docker/.env.example`, built from the
-  working tree (`docker compose --env-file docker/.env.example -p pspad-e2e
-  up -d --build`). Project name `pspad-e2e` keeps its volumes apart from the
-  developer stack. Ports are the stack's: app `5001`, API `5000`, Keycloak
-  `8080`. The realm's redirect URI is `http://localhost:5001/*`, so the
-  developer stack must be down while the suite runs; the runner says so when
-  the ports are taken by a different compose project.
+- Target: `docker/compose.yaml` layered with `docker/compose.e2e.yaml`,
+  `docker/.env.example` as the env file, built from the working tree:
+  `docker compose -f docker/compose.yaml -f docker/compose.e2e.yaml
+  --env-file docker/.env.example -p pspad-e2e up -d --build`. Project name
+  `pspad-e2e` keeps its volumes apart from the developer stack. The override
+  moves Keycloak to host port `18080` (its hostname and the app's authority
+  follow), so the suite runs beside a developer's own Keycloak on `8080`.
+  The app stays on `5001` and the API on `5000`, because the realm's
+  redirect URI names `http://localhost:5001/*`; the developer stack's app
+  and API must be down while the suite runs.
 - Before the first test a global setup polls `GET /health` on the API,
-  `GET /` on the app and `GET /realms/psplace` on Keycloak, up to 120 s.
+  `GET /` on the app and `GET /realms/psplace` on Keycloak, up to 180 s.
+- Base addresses come from the environment with those defaults:
+  `E2E_APP_URL`, `E2E_API_URL`, `E2E_KEYCLOAK_URL`, plus
+  `E2E_KEYCLOAK_ADMIN_USER` and `E2E_KEYCLOAK_ADMIN_PASSWORD`.
 
 ## 3. Harness
 
