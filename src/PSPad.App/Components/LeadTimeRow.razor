@@ -29,7 +29,7 @@
                        Variant="Variant.Outlined" Margin="Margin.Dense">
                 @foreach (var unit in Units)
                 {
-                    <MudSelectItem T="LeadUnit" Value="@unit">@UnitOf(unit)</MudSelectItem>
+                    <MudSelectItem T="LeadUnit" Value="@unit">@UnitLabel(unit, _amount, T)</MudSelectItem>
                 }
             </MudSelect>
             <MudText Typo="Typo.body2">@T["LeadBefore"]</MudText>
@@ -78,12 +78,13 @@
         });
     }
 
-    string UnitOf(LeadUnit unit) => unit switch
-    {
-        LeadUnit.Weeks => T["UnitWeeks"],
-        LeadUnit.Months => T["UnitMonths"],
-        _ => T["UnitDays"]
-    };
+    public static string UnitLabel(LeadUnit unit, int amount, IStringLocalizer<TasksStrings> localizer) =>
+        localizer.Plural(amount, unit switch
+        {
+            LeadUnit.Weeks => "UnitWeeks",
+            LeadUnit.Months => "UnitMonths",
+            _ => "UnitDays"
+        });
 
     void OpenCustom()
     {

@@ -31,7 +31,7 @@
     <value>Usuń gwiazdkę</value>
   </data>
   <data name="RemoveStep" xml:space="preserve">
-    <value>Usuń: {0}</value>
+    <value>Usuń krok: {0}</value>
   </data>
   <data name="AddStep" xml:space="preserve">
     <value>Dodaj krok</value>
@@ -52,7 +52,7 @@
     <value>Za 2 dni</value>
   </data>
   <data name="QuickNextWeek" xml:space="preserve">
-    <value>Przyszły tydzień</value>
+    <value>Następny tydzień</value>
   </data>
   <data name="Time" xml:space="preserve">
     <value>Godzina</value>
@@ -95,18 +95,6 @@
   </data>
   <data name="LeadBefore" xml:space="preserve">
     <value>przed</value>
-  </data>
-  <data name="UnitDays" xml:space="preserve">
-    <value>dni</value>
-  </data>
-  <data name="UnitWeeks" xml:space="preserve">
-    <value>tygodni</value>
-  </data>
-  <data name="UnitMonths" xml:space="preserve">
-    <value>miesięcy</value>
-  </data>
-  <data name="UnitYears" xml:space="preserve">
-    <value>lat</value>
   </data>
   <data name="LeadDays.One" xml:space="preserve">
     <value>{0} dzień przed</value>
@@ -169,7 +157,7 @@
     <value>Co tydzień: {0}</value>
   </data>
   <data name="RepeatMonthlyOnDay" xml:space="preserve">
-    <value>Co miesiąc, {0}. dnia</value>
+    <value>Co miesiąc: {0}.</value>
   </data>
   <data name="RepeatYearlyOn" xml:space="preserve">
     <value>Co roku: {0}</value>
@@ -196,13 +184,13 @@
     <value>Co {0} tygodni: {1}</value>
   </data>
   <data name="EveryMonths.One" xml:space="preserve">
-    <value>Co miesiąc, {1}. dnia</value>
+    <value>Co miesiąc: {1}.</value>
   </data>
   <data name="EveryMonths.Few" xml:space="preserve">
-    <value>Co {0} miesiące, {1}. dnia</value>
+    <value>Co {0} miesiące: {1}.</value>
   </data>
   <data name="EveryMonths.Many" xml:space="preserve">
-    <value>Co {0} miesięcy, {1}. dnia</value>
+    <value>Co {0} miesięcy: {1}.</value>
   </data>
   <data name="EveryYears.One" xml:space="preserve">
     <value>Co rok: {1}</value>
@@ -300,15 +288,6 @@
   <data name="DescriptionNotSaved" xml:space="preserve">
     <value>Nie udało się zapisać opisu.</value>
   </data>
-  <data name="ThingOpen.One" xml:space="preserve">
-    <value> otwarte</value>
-  </data>
-  <data name="ThingOpen.Few" xml:space="preserve">
-    <value> otwarte</value>
-  </data>
-  <data name="ThingOpen.Many" xml:space="preserve">
-    <value> otwartych</value>
-  </data>
   <data name="NoOpenTasks" xml:space="preserve">
     <value>Brak otwartych zadań</value>
   </data>
@@ -338,5 +317,41 @@
   </data>
   <data name="OpenTasks.Many" xml:space="preserve">
     <value>{0} otwartych zadań</value>
+  </data>
+  <data name="UnitDays.One" xml:space="preserve">
+    <value>dzień</value>
+  </data>
+  <data name="UnitDays.Few" xml:space="preserve">
+    <value>dni</value>
+  </data>
+  <data name="UnitDays.Many" xml:space="preserve">
+    <value>dni</value>
+  </data>
+  <data name="UnitWeeks.One" xml:space="preserve">
+    <value>tydzień</value>
+  </data>
+  <data name="UnitWeeks.Few" xml:space="preserve">
+    <value>tygodnie</value>
+  </data>
+  <data name="UnitWeeks.Many" xml:space="preserve">
+    <value>tygodni</value>
+  </data>
+  <data name="UnitMonths.One" xml:space="preserve">
+    <value>miesiąc</value>
+  </data>
+  <data name="UnitMonths.Few" xml:space="preserve">
+    <value>miesiące</value>
+  </data>
+  <data name="UnitMonths.Many" xml:space="preserve">
+    <value>miesięcy</value>
+  </data>
+  <data name="UnitYears.One" xml:space="preserve">
+    <value>rok</value>
+  </data>
+  <data name="UnitYears.Few" xml:space="preserve">
+    <value>lata</value>
+  </data>
+  <data name="UnitYears.Many" xml:space="preserve">
+    <value>lat</value>
   </data>
 </root>

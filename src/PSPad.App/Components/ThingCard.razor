@@ -14,7 +14,7 @@
             <MudLink Class="@TitleClass" Href="@Href" Typo="Typo.subtitle2" Color="Color.Inherit" Underline="Underline.None">@Name</MudLink>
             @Subtitle
         </div>
-        <span class="pspad-open-count flex-shrink-0">@Count.ToString(CultureInfo.InvariantCulture)<span class="pspad-sr-only">@T.Plural(Count, "ThingOpen")</span></span>
+        <span class="pspad-open-count flex-shrink-0"><span aria-hidden="true">@Count.ToString(CultureInfo.InvariantCulture)</span><span class="pspad-sr-only">@T.Plural(Count, "OpenTasks")</span></span>
         @Actions
     </div>
 

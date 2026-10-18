@@ -52,7 +52,7 @@
                            Variant="Variant.Outlined" Margin="Margin.Dense">
                     @foreach (var kind in Units)
                     {
-                        <MudSelectItem T="RecurrenceKind" Value="@kind">@UnitOf(kind)</MudSelectItem>
+                        <MudSelectItem T="RecurrenceKind" Value="@kind">@UnitLabel(kind, _every, T)</MudSelectItem>
                     }
                 </MudSelect>
             </MudStack>
@@ -202,13 +202,14 @@
     static string DayList(RecurrenceRule rule) =>
         string.Join(", ", rule.Days.OrderBy(day => ((int)day + 6) % 7).Select(AbbreviatedDay));
 
-    string UnitOf(RecurrenceKind kind) => kind switch
-    {
-        RecurrenceKind.Daily => T["UnitDays"],
-        RecurrenceKind.Weekly => T["UnitWeeks"],
-        RecurrenceKind.Yearly => T["UnitYears"],
-        _ => T["UnitMonths"]
-    };
+    public static string UnitLabel(RecurrenceKind kind, int every, IStringLocalizer<TasksStrings> localizer) =>
+        localizer.Plural(every, kind switch
+        {
+            RecurrenceKind.Daily => "UnitDays",
+            RecurrenceKind.Weekly => "UnitWeeks",
+            RecurrenceKind.Yearly => "UnitYears",
+            _ => "UnitMonths"
+        });
 
     string Label(OccurrenceStatus status) => status switch
     {

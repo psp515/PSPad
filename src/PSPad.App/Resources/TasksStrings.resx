@@ -96,18 +96,6 @@
   <data name="LeadBefore" xml:space="preserve">
     <value>before</value>
   </data>
-  <data name="UnitDays" xml:space="preserve">
-    <value>days</value>
-  </data>
-  <data name="UnitWeeks" xml:space="preserve">
-    <value>weeks</value>
-  </data>
-  <data name="UnitMonths" xml:space="preserve">
-    <value>months</value>
-  </data>
-  <data name="UnitYears" xml:space="preserve">
-    <value>years</value>
-  </data>
   <data name="LeadDays.One" xml:space="preserve">
     <value>{0} day before</value>
   </data>
@@ -300,15 +288,6 @@
   <data name="DescriptionNotSaved" xml:space="preserve">
     <value>Couldn't save the description.</value>
   </data>
-  <data name="ThingOpen.One" xml:space="preserve">
-    <value> open</value>
-  </data>
-  <data name="ThingOpen.Few" xml:space="preserve">
-    <value> open</value>
-  </data>
-  <data name="ThingOpen.Many" xml:space="preserve">
-    <value> open</value>
-  </data>
   <data name="NoOpenTasks" xml:space="preserve">
     <value>No open tasks</value>
   </data>
@@ -338,5 +317,41 @@
   </data>
   <data name="OpenTasks.Many" xml:space="preserve">
     <value>{0} open tasks</value>
+  </data>
+  <data name="UnitDays.One" xml:space="preserve">
+    <value>day</value>
+  </data>
+  <data name="UnitDays.Few" xml:space="preserve">
+    <value>days</value>
+  </data>
+  <data name="UnitDays.Many" xml:space="preserve">
+    <value>days</value>
+  </data>
+  <data name="UnitWeeks.One" xml:space="preserve">
+    <value>week</value>
+  </data>
+  <data name="UnitWeeks.Few" xml:space="preserve">
+    <value>weeks</value>
+  </data>
+  <data name="UnitWeeks.Many" xml:space="preserve">
+    <value>weeks</value>
+  </data>
+  <data name="UnitMonths.One" xml:space="preserve">
+    <value>month</value>
+  </data>
+  <data name="UnitMonths.Few" xml:space="preserve">
+    <value>months</value>
+  </data>
+  <data name="UnitMonths.Many" xml:space="preserve">
+    <value>months</value>
+  </data>
+  <data name="UnitYears.One" xml:space="preserve">
+    <value>year</value>
+  </data>
+  <data name="UnitYears.Few" xml:space="preserve">
+    <value>years</value>
+  </data>
+  <data name="UnitYears.Many" xml:space="preserve">
+    <value>years</value>
   </data>
 </root>
