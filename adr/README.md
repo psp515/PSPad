@@ -91,6 +91,7 @@ the old one's status line to point at the new number.
 | [0074](0074-budget-csv-import-runs-on-the-client.md) | Budget CSV import runs on the client as ordinary commands | Active | 2026-10-13 | architecture, contracts, offline, money |
 | [0075](0075-language-on-the-user-and-resx-localization.md) | Store the user's language on the User aggregate and localize with .NET resources | Active | 2026-10-18 | identity, ui, offline, localization |
 | [0076](0076-open-clients-get-a-sync-nudge-over-sse.md) | Open clients get a data-free sync nudge over Server-Sent Events, fanned out from commit | Active | 2026-10-14 | architecture, sync, http, sharing, deployment |
+| [0077](0077-end-to-end-tests-drive-the-compose-stack-with-playwright.md) | End-to-end tests drive the compose stack with Playwright | Active | 2026-10-18 | testing, architecture, ci |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
