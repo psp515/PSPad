@@ -237,7 +237,7 @@ else
 
         try
         {
-            fetched = await ImportRates.FetchAsync(Nbp, Connectivity.IsOnline, State.Today, requests, RateBook.Empty);
+            fetched = await ImportRates.FetchAsync(Nbp, Connectivity.IsOnline, State.Today, requests, RateBook.Empty, T);
         }
         catch (Exception)
         {

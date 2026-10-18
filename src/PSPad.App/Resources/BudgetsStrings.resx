@@ -804,4 +804,13 @@
   <data name="UnreadableRows" xml:space="preserve">
     <value>Unreadable rows</value>
   </data>
+  <data name="ImportRateOffline" xml:space="preserve">
+    <value>Needs a rate: go online or fill the rate column.</value>
+  </data>
+  <data name="ImportRateInFuture" xml:space="preserve">
+    <value>{0} is in the future, so NBP has no {1} rate for it yet. Fill the rate column or change the date.</value>
+  </data>
+  <data name="ImportRateMissing" xml:space="preserve">
+    <value>No NBP rate for {0} on {1}.</value>
+  </data>
 </root>

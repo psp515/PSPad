@@ -1,17 +1,18 @@
 using System.Globalization;
+using Microsoft.Extensions.Localization;
 using PSPad.App.Api;
+using PSPad.App.Resources;
 using PSPad.Module.Money.Import;
 
 namespace PSPad.App.State;
 
 public static class ImportRates
 {
-    public const string OfflineMessage = "Needs a rate: go online or fill the rate column.";
-
     const int AtOnce = 4;
 
     public static async Task<RateBook> FetchAsync(
-        INbpRates nbp, bool online, DateOnly today, IReadOnlyCollection<RateRequest> requests, RateBook book)
+        INbpRates nbp, bool online, DateOnly today, IReadOnlyCollection<RateRequest> requests, RateBook book,
+        IStringLocalizer<BudgetsStrings> text)
     {
         var known = new Dictionary<RateRequest, ImportRate>(book.Known);
         var failed = new Dictionary<RateRequest, string>(book.Failed);
@@ -20,7 +21,7 @@ public static class ImportRates
         {
             foreach (var request in requests)
             {
-                failed[request] = OfflineMessage;
+                failed[request] = text["ImportRateOffline"];
             }
 
             return new RateBook(known, failed);
@@ -28,8 +29,7 @@ public static class ImportRates
 
         foreach (var request in requests.Where(request => request.Date > today))
         {
-            failed[request] = string.Create(CultureInfo.InvariantCulture,
-                $"{request.Date:yyyy-MM-dd} is in the future, so NBP has no {request.Currency} rate for it yet. Fill the rate column or change the date.");
+            failed[request] = text["ImportRateInFuture", request.Date.ToString("d", CultureInfo.CurrentCulture), request.Currency];
         }
 
         using var gate = new SemaphoreSlim(AtOnce);
@@ -52,8 +52,7 @@ public static class ImportRates
 
             if (view is null)
             {
-                failed[request] = string.Create(CultureInfo.InvariantCulture,
-                    $"No NBP rate for {request.Currency} on {request.Date:yyyy-MM-dd}.");
+                failed[request] = text["ImportRateMissing", request.Currency, request.Date.ToString("d", CultureInfo.CurrentCulture)];
             }
             else
             {
