@@ -28,7 +28,7 @@ public class SyncEndpointTests(MongoFixture fixture)
         var sync = await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
 
         Assert.True(sync!.Marker > 0);
-        Assert.Equal(ProvisioningPlan.SeedAreaNames.Count + 1, sync.Documents["areas"].Length);
+        Assert.Equal(ProvisioningPlan.SeedAreaNames("en").Count + 1, sync.Documents["areas"].Length);
         Assert.False(sync.HasMore);
     }
 

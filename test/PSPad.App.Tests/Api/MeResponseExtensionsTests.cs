@@ -10,7 +10,7 @@ public class MeResponseExtensionsTests
     [Fact]
     public void ANullDisplayNameOrEmailBecomesEmpty()
     {
-        var me = new MeResponse(Guid.NewGuid(), null!, null!, "UTC");
+        var me = new MeResponse(Guid.NewGuid(), null!, null!, "UTC", "en");
 
         var sanitized = me.Sanitized()!;
 
@@ -21,8 +21,8 @@ public class MeResponseExtensionsTests
     [Fact]
     public void ANullOrEmptyTimeZoneFallsBackToUtc()
     {
-        var withNull = new MeResponse(Guid.NewGuid(), "Ada", "ada@example.com", null!);
-        var withEmpty = new MeResponse(Guid.NewGuid(), "Ada", "ada@example.com", "");
+        var withNull = new MeResponse(Guid.NewGuid(), "Ada", "ada@example.com", null!, "en");
+        var withEmpty = new MeResponse(Guid.NewGuid(), "Ada", "ada@example.com", "", "en");
 
         Assert.Equal("Etc/UTC", withNull.Sanitized()!.TimeZone);
         Assert.Equal("Etc/UTC", withEmpty.Sanitized()!.TimeZone);
@@ -31,7 +31,7 @@ public class MeResponseExtensionsTests
     [Fact]
     public void AnEmptyUserIdIsNoAccountAtAll()
     {
-        var me = new MeResponse(Guid.Empty, "Ada", "ada@example.com", "UTC");
+        var me = new MeResponse(Guid.Empty, "Ada", "ada@example.com", "UTC", "en");
 
         Assert.Null(me.Sanitized());
     }
@@ -45,7 +45,7 @@ public class MeResponseExtensionsTests
     [Fact]
     public void ValidFieldsPassThroughUnchanged()
     {
-        var me = new MeResponse(Guid.NewGuid(), "Ada Lovelace", "ada@example.com", "Europe/Warsaw");
+        var me = new MeResponse(Guid.NewGuid(), "Ada Lovelace", "ada@example.com", "Europe/Warsaw", "en");
 
         var sanitized = me.Sanitized()!;
 
@@ -53,5 +53,15 @@ public class MeResponseExtensionsTests
         Assert.Equal("Ada Lovelace", sanitized.DisplayName);
         Assert.Equal("ada@example.com", sanitized.Email);
         Assert.Equal("Europe/Warsaw", sanitized.TimeZone);
+    }
+
+    [Fact]
+    public void AnUnknownOrMissingLanguageFallsBackToEnglish()
+    {
+        var withNull = new MeResponse(Guid.NewGuid(), "Ada", "ada@example.com", "UTC", null!);
+        var withGerman = new MeResponse(Guid.NewGuid(), "Ada", "ada@example.com", "UTC", "de");
+
+        Assert.Equal("en", withNull.Sanitized()!.Language);
+        Assert.Equal("en", withGerman.Sanitized()!.Language);
     }
 }

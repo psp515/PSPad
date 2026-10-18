@@ -156,4 +156,78 @@ public class MeEndpointTests(MongoFixture fixture)
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task TheLanguageCanBeChangedAndIsEchoedBack()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        using var factory = new ApiFactory(fixture);
+        using var client = factory.CreateClient();
+        var subject = Guid.NewGuid().ToString();
+
+        var put = new HttpRequestMessage(HttpMethod.Put, "/api/me/language")
+        {
+            Content = JsonContent.Create(new SetLanguageRequest("pl"))
+        };
+        put.Headers.Add("X-Test-Subject", subject);
+        var response = await client.SendAsync(put, ct);
+        var me = await response.Content.ReadFromJsonAsync<MeResponse>(ct);
+
+        var get = new HttpRequestMessage(HttpMethod.Get, "/api/me");
+        get.Headers.Add("X-Test-Subject", subject);
+        var again = await (await client.SendAsync(get, ct)).Content.ReadFromJsonAsync<MeResponse>(ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("pl", me!.Language);
+        Assert.Equal("pl", again!.Language);
+    }
+
+    [Fact]
+    public async Task AnUnsupportedLanguageIsABadRequest()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        using var factory = new ApiFactory(fixture);
+        using var client = factory.CreateClient();
+
+        var put = new HttpRequestMessage(HttpMethod.Put, "/api/me/language")
+        {
+            Content = JsonContent.Create(new SetLanguageRequest("de"))
+        };
+        put.Headers.Add("X-Test-Subject", Guid.NewGuid().ToString());
+
+        var response = await client.SendAsync(put, ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AFirstSignInWithAPolishBrowserProvisionsPolish()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        using var factory = new ApiFactory(fixture);
+        using var client = factory.CreateClient();
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/me");
+        request.Headers.Add("X-Test-Subject", Guid.NewGuid().ToString());
+        request.Headers.Add("Accept-Language", "pl-PL,pl;q=0.9,en;q=0.8");
+
+        var me = await (await client.SendAsync(request, ct)).Content.ReadFromJsonAsync<MeResponse>(ct);
+
+        Assert.Equal("pl", me!.Language);
+    }
+
+    [Fact]
+    public async Task WithoutAnAcceptLanguageHeaderItProvisionsEnglish()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        using var factory = new ApiFactory(fixture);
+        using var client = factory.CreateClient();
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/me");
+        request.Headers.Add("X-Test-Subject", Guid.NewGuid().ToString());
+
+        var me = await (await client.SendAsync(request, ct)).Content.ReadFromJsonAsync<MeResponse>(ct);
+
+        Assert.Equal("en", me!.Language);
+    }
 }

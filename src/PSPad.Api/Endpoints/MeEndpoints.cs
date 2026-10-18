@@ -12,7 +12,7 @@ public static class MeEndpoints
             ICurrentUser current, UserProvisioner provisioner, ILogger<MeResponse> logger, CancellationToken ct) =>
         {
             var user = await provisioner.EnsureAsync(
-                current.Subject, current.DisplayName, current.TimeZoneHint, ct);
+                current.Subject, current.DisplayName, current.TimeZoneHint, current.LanguageHint, ct);
 
             if (current.DisplayName != current.Subject)
             {
@@ -20,7 +20,7 @@ public static class MeEndpoints
             }
 
             WarnIfUnexpectedlyEmpty(logger, user.Id, user.DisplayName, user.TimeZone);
-            return Results.Ok(new MeResponse(user.Id, user.DisplayName, current.Email, user.TimeZone));
+            return Results.Ok(new MeResponse(user.Id, user.DisplayName, current.Email, user.TimeZone, user.Language));
         });
 
         app.MapPut("me/timezone", async (
@@ -31,7 +31,7 @@ public static class MeEndpoints
             CancellationToken ct) =>
         {
             var user = await provisioner.EnsureAsync(
-                current.Subject, current.DisplayName, current.TimeZoneHint, ct);
+                current.Subject, current.DisplayName, current.TimeZoneHint, current.LanguageHint, ct);
 
             try
             {
@@ -43,7 +43,30 @@ public static class MeEndpoints
             }
 
             WarnIfUnexpectedlyEmpty(logger, user.Id, user.DisplayName, user.TimeZone);
-            return Results.Ok(new MeResponse(user.Id, user.DisplayName, current.Email, user.TimeZone));
+            return Results.Ok(new MeResponse(user.Id, user.DisplayName, current.Email, user.TimeZone, user.Language));
+        });
+
+        app.MapPut("me/language", async (
+            SetLanguageRequest request,
+            ICurrentUser current,
+            UserProvisioner provisioner,
+            ILogger<MeResponse> logger,
+            CancellationToken ct) =>
+        {
+            var user = await provisioner.EnsureAsync(
+                current.Subject, current.DisplayName, current.TimeZoneHint, current.LanguageHint, ct);
+
+            try
+            {
+                user = await provisioner.SetLanguageAsync(user, request.Language, ct);
+            }
+            catch (DomainRejectedException rejected)
+            {
+                return Results.BadRequest(rejected.Message);
+            }
+
+            WarnIfUnexpectedlyEmpty(logger, user.Id, user.DisplayName, user.TimeZone);
+            return Results.Ok(new MeResponse(user.Id, user.DisplayName, current.Email, user.TimeZone, user.Language));
         });
     }
 

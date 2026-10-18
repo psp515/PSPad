@@ -1,3 +1,4 @@
+using PSPad.Abstractions;
 using PSPad.Contracts;
 
 namespace PSPad.App.Api;
@@ -11,6 +12,7 @@ public static class MeResponseExtensions
             {
                 DisplayName = me.DisplayName ?? "",
                 Email = me.Email ?? "",
-                TimeZone = string.IsNullOrEmpty(me.TimeZone) ? "Etc/UTC" : me.TimeZone
+                TimeZone = string.IsNullOrEmpty(me.TimeZone) ? "Etc/UTC" : me.TimeZone,
+                Language = SupportedLanguages.IsSupported(me.Language) ? me.Language : SupportedLanguages.Default
             };
 }

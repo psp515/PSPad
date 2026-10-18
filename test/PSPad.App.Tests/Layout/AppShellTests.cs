@@ -329,7 +329,7 @@ public class AppShellTests : Bunit.TestContext
     [Fact]
     public void ANullDisplayNameOrEmailFromApiMeDoesNotCrashTheShell()
     {
-        Arrange(meResponseOverride: new MeResponse(User, null!, null!, "UTC"));
+        Arrange(meResponseOverride: new MeResponse(User, null!, null!, "UTC", "en"));
         var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
 
         var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
@@ -345,7 +345,7 @@ public class AppShellTests : Bunit.TestContext
     [Fact]
     public void ANullTimeZoneFromApiMeDoesNotCrashTheShell()
     {
-        Arrange(meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", null!));
+        Arrange(meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", null!, "en"));
         var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
 
         var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
@@ -457,7 +457,7 @@ public class AppShellTests : Bunit.TestContext
             User, "Zoe Session", "zoe@example.com", "Etc/GMT+12", "refresh-token", DateTimeOffset.UtcNow));
         Arrange(
             sessionStore: store,
-            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Etc/GMT+12"));
+            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Etc/GMT+12", "en"));
 
         Render<AppShell>();
 
@@ -506,7 +506,7 @@ public class AppShellTests : Bunit.TestContext
             User, "Zoe Session", "zoe@example.com", "Mars/Olympus", "refresh-token", DateTimeOffset.UtcNow));
         Arrange(
             sessionStore: store,
-            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Mars/Olympus"));
+            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Mars/Olympus", "en"));
 
         var shell = Render<AppShell>();
 
@@ -704,7 +704,7 @@ public class AppShellTests : Bunit.TestContext
                 : null));
         Services.AddSingleton<LocalAuthenticationStateProvider>();
 
-        var meResponse = meResponseOverride ?? new MeResponse(User, displayName, email, "UTC");
+        var meResponse = meResponseOverride ?? new MeResponse(User, displayName, email, "UTC", "en");
         HttpMessageHandler handler = accountFetchFails
             ? new ThrowingMeHandler()
             : accountFetchHangs

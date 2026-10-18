@@ -15,7 +15,7 @@ public class PSPadApiClientTests
     public async Task ItPutsTheTimeZoneAndReturnsTheUpdatedUser()
     {
         var handler = new StubHandler(new MeResponse(
-            Guid.NewGuid(), "Ada Lovelace", "ada@example.com", "Europe/Warsaw"));
+            Guid.NewGuid(), "Ada Lovelace", "ada@example.com", "Europe/Warsaw", "en"));
         var client = new PSPadApiClient(new HttpClient(handler)
         {
             BaseAddress = new Uri("http://localhost")

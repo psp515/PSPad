@@ -1030,7 +1030,7 @@ public class SettingsPageTests : Bunit.TestContext
 
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new MeResponse(userId, displayName, email, timeZone))
+                Content = JsonContent.Create(new MeResponse(userId, displayName, email, timeZone, "en"))
             };
         }
     }

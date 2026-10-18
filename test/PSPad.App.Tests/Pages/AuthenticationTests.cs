@@ -68,7 +68,7 @@ public class AuthenticationTests : Bunit.TestContext
         var sessions = new InMemoryLocalSessionStore();
         var authProvider = Arrange(
             sessions,
-            new StubMeHandler(HttpStatusCode.OK, new MeResponse(userId, "Zoe", "zoe@example.com", "Europe/Warsaw")),
+            new StubMeHandler(HttpStatusCode.OK, new MeResponse(userId, "Zoe", "zoe@example.com", "Europe/Warsaw", "en")),
             completeSignInStatus: RemoteAuthenticationStatus.Success,
             refreshToken: "refresh-token-value");
 
@@ -93,7 +93,7 @@ public class AuthenticationTests : Bunit.TestContext
         Arrange(
             sessions,
             new StubMeHandler(
-                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw")),
+                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "en")),
             completeSignInStatus: RemoteAuthenticationStatus.Success,
             refreshToken: "refresh-token-value");
 
@@ -110,7 +110,7 @@ public class AuthenticationTests : Bunit.TestContext
         Arrange(
             sessions,
             new StubMeHandler(
-                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw")),
+                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "en")),
             completeSignInStatus: RemoteAuthenticationStatus.Success,
             refreshToken: "refresh-token-value");
 
@@ -127,7 +127,7 @@ public class AuthenticationTests : Bunit.TestContext
         Arrange(
             sessions,
             new StubMeHandler(
-                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw")),
+                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "en")),
             completeSignInStatus: RemoteAuthenticationStatus.Success,
             refreshToken: "refresh-token-value",
             tokenEndpoint: new UnreachableTokenEndpoint());
@@ -145,7 +145,7 @@ public class AuthenticationTests : Bunit.TestContext
         Arrange(
             sessions,
             new StubMeHandler(
-                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw")),
+                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "en")),
             completeSignInStatus: RemoteAuthenticationStatus.Success,
             refreshToken: null);
 
@@ -178,7 +178,7 @@ public class AuthenticationTests : Bunit.TestContext
         Arrange(
             sessions,
             new StubMeHandler(
-                HttpStatusCode.OK, new MeResponse(Guid.Empty, "Zoe", "zoe@example.com", "Europe/Warsaw")),
+                HttpStatusCode.OK, new MeResponse(Guid.Empty, "Zoe", "zoe@example.com", "Europe/Warsaw", "en")),
             completeSignInStatus: RemoteAuthenticationStatus.Success,
             refreshToken: "refresh-token-value");
 
