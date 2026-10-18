@@ -1,11 +1,13 @@
 @using PSPad.Module.Money.Budgets
+@inject IStringLocalizer<BudgetsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
 <MudPaper Outlined="true" Class="@($"pa-4 pspad-category-list {Class}")">
     <div class="d-flex align-center mb-2">
         <MudText Typo="Typo.subtitle2" Class="flex-grow-1">@Title</MudText>
         @if (!ReadOnly)
         {
             <MudButton Class="pspad-category-add" StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Text"
-                       Color="Color.Primary" OnClick="@(() => _adding = true)">Add</MudButton>
+                       Color="Color.Primary" OnClick="@(() => _adding = true)">@T["Add"]</MudButton>
         }
     </div>
     <MudList T="string" Dense="true">
@@ -22,7 +24,7 @@
                 else if (_merging == name)
                 {
                     <div class="d-flex align-center gap-2">
-                        <MudSelect T="string" Class="pspad-category-merge-target flex-grow-1" Label="@($"Merge {name} into")"
+                        <MudSelect T="string" Class="pspad-category-merge-target flex-grow-1" Label="@T["MergeInto", name]"
                                    Variant="Variant.Outlined" Margin="Margin.Dense"
                                    ValueChanged="@(into => MergeAsync(name, into))">
                             @foreach (var other in Names.Where(other => other != name))
@@ -30,7 +32,7 @@
                                 <MudSelectItem T="string" Value="@other">@other</MudSelectItem>
                             }
                         </MudSelect>
-                        <MudButton Class="pspad-category-merge-cancel" Variant="Variant.Text" OnClick="@StopEditing">Cancel</MudButton>
+                        <MudButton Class="pspad-category-merge-cancel" Variant="Variant.Text" OnClick="@StopEditing">@Shared["Cancel"]</MudButton>
                     </div>
                 }
                 else
@@ -40,19 +42,19 @@
                             <span class="pspad-category-name">@name</span>
                             @if (used > 0)
                             {
-                                <span class="pspad-muted pspad-category-usage">@(used == 1 ? "1 entry" : $"{used} entries")</span>
+                                <span class="pspad-muted pspad-category-usage">@T.Plural(used, "CategoryEntries")</span>
                             }
                         </button>
                         @if (!ReadOnly)
                         {
                             <MudMenu Class="pspad-category-menu" Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true"
-                                     AriaLabel="@($"Actions for {name}")" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                                     AriaLabel="@T["ActionsFor", name]" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
                                 <MudMenuItem Class="pspad-category-rename" Icon="@Icons.Material.Outlined.Edit"
-                                             OnClick="@(() => StartRenaming(name))">Rename</MudMenuItem>
+                                             OnClick="@(() => StartRenaming(name))">@T["Rename"]</MudMenuItem>
                                 <MudMenuItem Class="pspad-category-merge" Icon="@Icons.Material.Outlined.MergeType" Disabled="@(Names.Count < 2)"
-                                             OnClick="@(() => StartMerging(name))">Merge</MudMenuItem>
+                                             OnClick="@(() => StartMerging(name))">@T["Merge"]</MudMenuItem>
                                 <MudMenuItem Class="pspad-category-remove" Icon="@Icons.Material.Outlined.Delete" Disabled="@(used > 0 || _busy)"
-                                             OnClick="@(() => RemoveAsync(name))">Remove</MudMenuItem>
+                                             OnClick="@(() => RemoveAsync(name))">@T["Remove"]</MudMenuItem>
                             </MudMenu>
                         }
                     </div>
@@ -62,7 +64,7 @@
     </MudList>
     @if (_adding && !ReadOnly)
     {
-        <MudTextField T="string" @bind-Value="_draft" Immediate="true" AutoFocus="true" Placeholder="New category" MaxLength="@CategoryName.MaxLength"
+        <MudTextField T="string" @bind-Value="_draft" Immediate="true" AutoFocus="true" Placeholder="@T["NewCategory"]" MaxLength="@CategoryName.MaxLength"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="pspad-category-input mt-2"
                       OnKeyDown="@KeyDownAsync" />
     }

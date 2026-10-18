@@ -1,4 +1,6 @@
 using System.Globalization;
+using Microsoft.Extensions.Localization;
+using PSPad.App.Resources;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Values;
 
@@ -8,7 +10,7 @@ public static class MoneyText
 {
     const string Minus = "−";
 
-    public static string Amount(decimal value) => value.ToString("N2", CultureInfo.InvariantCulture);
+    public static string Amount(decimal value) => value.ToString("N2", CultureInfo.CurrentCulture);
 
     public static string Pln(decimal value) => $"{Amount(value)} {Currencies.Pln}";
 
@@ -29,17 +31,14 @@ public static class MoneyText
     public static string Signed(CategoryKind kind, decimal value, string currency) =>
         $"{(kind == CategoryKind.Expense ? Minus : "+")}{Amount(value)} {currency}";
 
-    public static string Rate(decimal rate) => rate.ToString("0.0000##", CultureInfo.InvariantCulture);
+    public static string Rate(decimal rate) => rate.ToString("0.0000##", CultureInfo.CurrentCulture);
 
-    public static string MonthTitle(YearMonth month) =>
-        month.FirstDay.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+    public static string MonthTitle(YearMonth month) => month.FirstDay.ToString("MMMM yyyy", CultureInfo.CurrentCulture);
 
-    public static string Day(DateOnly date) => date.ToString("dddd, d MMMM", CultureInfo.InvariantCulture);
+    public static string Day(DateOnly date) => date.ToString("dddd, d MMMM", CultureInfo.CurrentCulture);
 
     public static string Range(DateOnly from, DateOnly to) =>
-        $"{from.ToString("d MMM yyyy", CultureInfo.InvariantCulture)} – {to.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}";
-
-    public static string MonthCount(int months) => months == 1 ? "1 month" : $"{months.ToString(CultureInfo.InvariantCulture)} months";
+        $"{from.ToString("d MMM yyyy", CultureInfo.CurrentCulture)} – {to.ToString("d MMM yyyy", CultureInfo.CurrentCulture)}";
 
     public static string Percent(decimal? share)
     {
@@ -50,8 +49,8 @@ public static class MoneyText
 
         var whole = WholePercent(value);
         return whole < 0
-            ? $"{Minus}{(-whole).ToString(CultureInfo.InvariantCulture)}%"
-            : $"{whole.ToString(CultureInfo.InvariantCulture)}%";
+            ? $"{Minus}{(-whole).ToString(CultureInfo.CurrentCulture)}%"
+            : $"{whole.ToString(CultureInfo.CurrentCulture)}%";
     }
 
     public static bool PercentIsNegative(decimal? share) => share is { } value && WholePercent(value) < 0;
@@ -72,29 +71,29 @@ public static class MoneyText
 
         for (var index = 0; index < months.Count; index++)
         {
-            labels[index] = index % step == 0 ? months[index].FirstDay.ToString(format, CultureInfo.InvariantCulture) : "";
+            labels[index] = index % step == 0 ? months[index].FirstDay.ToString(format, CultureInfo.CurrentCulture) : "";
         }
 
         return labels;
     }
 
-    public static string Recorded(DateTimeOffset at, TimeZoneInfo zone, DateOnly today)
+    public static string Recorded(DateTimeOffset at, TimeZoneInfo zone, DateOnly today, IStringLocalizer<BudgetsStrings> text)
     {
         var local = TimeZoneInfo.ConvertTime(at, zone);
         var day = DateOnly.FromDateTime(local.DateTime);
-        var time = local.ToString("HH:mm", CultureInfo.InvariantCulture);
+        var time = local.ToString("HH:mm", CultureInfo.CurrentCulture);
 
         if (day == today)
         {
-            return $"today {time}";
+            return text["RecordedToday", time];
         }
 
         if (day == today.AddDays(-1))
         {
-            return $"yesterday {time}";
+            return text["RecordedYesterday", time];
         }
 
         var format = day.Year == today.Year ? "d MMM" : "d MMM yyyy";
-        return $"{day.ToString(format, CultureInfo.InvariantCulture)} {time}";
+        return $"{day.ToString(format, CultureInfo.CurrentCulture)} {time}";
     }
 }

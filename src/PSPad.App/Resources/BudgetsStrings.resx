@@ -1,0 +1,807 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ShowArchived" xml:space="preserve">
+    <value>Show archived</value>
+  </data>
+  <data name="NoBudgetsYet" xml:space="preserve">
+    <value>No budgets yet.</value>
+  </data>
+  <data name="CreateBudget" xml:space="preserve">
+    <value>Create budget</value>
+  </data>
+  <data name="NewBudget" xml:space="preserve">
+    <value>New budget</value>
+  </data>
+  <data name="BudgetsSubtitle.One" xml:space="preserve">
+    <value>{0} budget · {1} archived · totals in PLN</value>
+  </data>
+  <data name="BudgetsSubtitle.Few" xml:space="preserve">
+    <value>{0} budgets · {1} archived · totals in PLN</value>
+  </data>
+  <data name="BudgetsSubtitle.Many" xml:space="preserve">
+    <value>{0} budgets · {1} archived · totals in PLN</value>
+  </data>
+  <data name="SharedBy" xml:space="preserve">
+    <value>Shared by {0}</value>
+  </data>
+  <data name="Archived" xml:space="preserve">
+    <value>Archived</value>
+  </data>
+  <data name="NoEntriesIn" xml:space="preserve">
+    <value>No entries in {0}</value>
+  </data>
+  <data name="Income" xml:space="preserve">
+    <value>Income</value>
+  </data>
+  <data name="Expenses" xml:space="preserve">
+    <value>Expenses</value>
+  </data>
+  <data name="Net" xml:space="preserve">
+    <value>Net</value>
+  </data>
+  <data name="ExpensesAgainstIncome" xml:space="preserve">
+    <value>Expenses against income</value>
+  </data>
+  <data name="NetWorthMonth" xml:space="preserve">
+    <value>Net worth · {0}</value>
+  </data>
+  <data name="NoBalanceYet" xml:space="preserve">
+    <value>No balance yet</value>
+  </data>
+  <data name="StartMonth" xml:space="preserve">
+    <value>Start {0}</value>
+  </data>
+  <data name="BudgetShared.One" xml:space="preserve">
+    <value>Shared · {0} person</value>
+  </data>
+  <data name="BudgetShared.Few" xml:space="preserve">
+    <value>Shared · {0} people</value>
+  </data>
+  <data name="BudgetShared.Many" xml:space="preserve">
+    <value>Shared · {0} people</value>
+  </data>
+  <data name="RecordedAt" xml:space="preserve">
+    <value>recorded {0}</value>
+  </data>
+  <data name="RecordedToday" xml:space="preserve">
+    <value>today {0}</value>
+  </data>
+  <data name="RecordedYesterday" xml:space="preserve">
+    <value>yesterday {0}</value>
+  </data>
+  <data name="RecordCreated" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="RecordCompleted" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="RecordReopened" xml:space="preserve">
+    <value>Reopened</value>
+  </data>
+  <data name="RecordDeleted" xml:space="preserve">
+    <value>Deleted</value>
+  </data>
+  <data name="RecordMoved" xml:space="preserve">
+    <value>Moved</value>
+  </data>
+  <data name="RecordLinkedToGoal" xml:space="preserve">
+    <value>Linked to goal</value>
+  </data>
+  <data name="RecordTicked" xml:space="preserve">
+    <value>Ticked</value>
+  </data>
+  <data name="RecordUnticked" xml:space="preserve">
+    <value>Unticked</value>
+  </data>
+  <data name="InsightPastUsual" xml:space="preserve">
+    <value>{0} already past a usual month</value>
+  </data>
+  <data name="InsightRunningHigh" xml:space="preserve">
+    <value>{0} is running high</value>
+  </data>
+  <data name="InsightIncomeExpected" xml:space="preserve">
+    <value>{0} usually lands around the {1}</value>
+  </data>
+  <data name="InsightOnTrack" xml:space="preserve">
+    <value>{0} on track</value>
+  </data>
+  <data name="InsightPastUsualCaption" xml:space="preserve">
+    <value>{0} vs {1} average</value>
+  </data>
+  <data name="InsightRunningHighCaption" xml:space="preserve">
+    <value>{0} so far, {1} more than usual at this point</value>
+  </data>
+  <data name="InsightIncomeExpectedCaption" xml:space="preserve">
+    <value>{0} on average; nothing yet this month</value>
+  </data>
+  <data name="InsightOnTrackCaption" xml:space="preserve">
+    <value>{0}, close to usual</value>
+  </data>
+  <data name="OrdinalSt" xml:space="preserve">
+    <value>{0}st</value>
+  </data>
+  <data name="OrdinalNd" xml:space="preserve">
+    <value>{0}nd</value>
+  </data>
+  <data name="OrdinalRd" xml:space="preserve">
+    <value>{0}rd</value>
+  </data>
+  <data name="OrdinalTh" xml:space="preserve">
+    <value>{0}th</value>
+  </data>
+  <data name="OverviewDay" xml:space="preserve">
+    <value>{0} · day {1} of {2}</value>
+  </data>
+  <data name="NetSoFar" xml:space="preserve">
+    <value>Net so far</value>
+  </data>
+  <data name="UsualByNow" xml:space="preserve">
+    <value>usual by now {0}</value>
+  </data>
+  <data name="VsUsualByNow" xml:space="preserve">
+    <value>{0} vs usual by now</value>
+  </data>
+  <data name="ExpectedMonthEnd" xml:space="preserve">
+    <value>Expected month end</value>
+  </data>
+  <data name="AvgOfLast.One" xml:space="preserve">
+    <value>avg of last {0} month</value>
+  </data>
+  <data name="AvgOfLast.Few" xml:space="preserve">
+    <value>avg of last {0} months</value>
+  </data>
+  <data name="AvgOfLast.Many" xml:space="preserve">
+    <value>avg of last {0} months</value>
+  </data>
+  <data name="AveragesAppear" xml:space="preserve">
+    <value>Averages appear after a full month of entries.</value>
+  </data>
+  <data name="SpentOfUsual" xml:space="preserve">
+    <value>Spent {0} of a usual month · {1} of the month passed</value>
+  </data>
+  <data name="WorthALook" xml:space="preserve">
+    <value>Worth a look</value>
+  </data>
+  <data name="NothingUnusual" xml:space="preserve">
+    <value>Nothing unusual so far.</value>
+  </data>
+  <data name="WhereMoneyWent" xml:space="preserve">
+    <value>Where money went</value>
+  </data>
+  <data name="TapCategoryHint" xml:space="preserve">
+    <value>tap a category for its entries</value>
+  </data>
+  <data name="NoExpensesYetIn" xml:space="preserve">
+    <value>No expenses yet in {0}.</value>
+  </data>
+  <data name="RecentEntries" xml:space="preserve">
+    <value>Recent entries</value>
+  </data>
+  <data name="ByTimeRecorded" xml:space="preserve">
+    <value>by time recorded</value>
+  </data>
+  <data name="NoEntriesYet" xml:space="preserve">
+    <value>No entries yet.</value>
+  </data>
+  <data name="AllEntriesOf" xml:space="preserve">
+    <value>All {0} entries</value>
+  </data>
+  <data name="NetWorth" xml:space="preserve">
+    <value>Net worth</value>
+  </data>
+  <data name="ChangeVsMonth" xml:space="preserve">
+    <value>{0} vs {1}</value>
+  </data>
+  <data name="MonthHasNoBalance" xml:space="preserve">
+    <value>{0} has no balance yet</value>
+  </data>
+  <data name="Kind" xml:space="preserve">
+    <value>Kind</value>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="SearchNameOrNote" xml:space="preserve">
+    <value>Search name or note</value>
+  </data>
+  <data name="Sort" xml:space="preserve">
+    <value>Sort</value>
+  </data>
+  <data name="EntryDate" xml:space="preserve">
+    <value>Entry date</value>
+  </data>
+  <data name="Recorded" xml:space="preserve">
+    <value>Recorded</value>
+  </data>
+  <data name="RecordedDay" xml:space="preserve">
+    <value>Recorded {0}</value>
+  </data>
+  <data name="NoEntriesInMonth" xml:space="preserve">
+    <value>No entries in {0}.</value>
+  </data>
+  <data name="NoEntriesMatch" xml:space="preserve">
+    <value>No entries match.</value>
+  </data>
+  <data name="EntriesCaption.One" xml:space="preserve">
+    <value>{0} entry · income {1} · expenses {2} · net {3}</value>
+  </data>
+  <data name="EntriesCaption.Few" xml:space="preserve">
+    <value>{0} entries · income {1} · expenses {2} · net {3}</value>
+  </data>
+  <data name="EntriesCaption.Many" xml:space="preserve">
+    <value>{0} entries · income {1} · expenses {2} · net {3}</value>
+  </data>
+  <data name="Last6Months" xml:space="preserve">
+    <value>Last 6 months</value>
+  </data>
+  <data name="ThisYear" xml:space="preserve">
+    <value>This year</value>
+  </data>
+  <data name="Last12Months" xml:space="preserve">
+    <value>Last 12 months</value>
+  </data>
+  <data name="LastYear" xml:space="preserve">
+    <value>Last year</value>
+  </data>
+  <data name="Custom" xml:space="preserve">
+    <value>Custom</value>
+  </data>
+  <data name="Range" xml:space="preserve">
+    <value>Range</value>
+  </data>
+  <data name="MonthsWithEntries.One" xml:space="preserve">
+    <value>{0} month with entries</value>
+  </data>
+  <data name="MonthsWithEntries.Few" xml:space="preserve">
+    <value>{0} months with entries</value>
+  </data>
+  <data name="MonthsWithEntries.Many" xml:space="preserve">
+    <value>{0} months with entries</value>
+  </data>
+  <data name="AvgIncomePerMonth" xml:space="preserve">
+    <value>Avg income / month</value>
+  </data>
+  <data name="AvgExpensesPerMonth" xml:space="preserve">
+    <value>Avg expenses / month</value>
+  </data>
+  <data name="AvgSavedPerMonth" xml:space="preserve">
+    <value>Avg saved / month</value>
+  </data>
+  <data name="SavingsRate" xml:space="preserve">
+    <value>Savings rate</value>
+  </data>
+  <data name="OfIncomeKept" xml:space="preserve">
+    <value>of income kept</value>
+  </data>
+  <data name="SavedInMonths.One" xml:space="preserve">
+    <value>saved in {1} of {0} month</value>
+  </data>
+  <data name="SavedInMonths.Few" xml:space="preserve">
+    <value>saved in {1} of {0} months</value>
+  </data>
+  <data name="SavedInMonths.Many" xml:space="preserve">
+    <value>saved in {1} of {0} months</value>
+  </data>
+  <data name="LowestHighest" xml:space="preserve">
+    <value>lowest {0} · highest {1}</value>
+  </data>
+  <data name="Forecast" xml:space="preserve">
+    <value>{0} forecast</value>
+  </data>
+  <data name="ForecastNeedsMonth" xml:space="preserve">
+    <value>A forecast needs at least one full month of entries.</value>
+  </data>
+  <data name="ExpectedExpenses" xml:space="preserve">
+    <value>Expected expenses</value>
+  </data>
+  <data name="ExpectedIncome" xml:space="preserve">
+    <value>Expected income</value>
+  </data>
+  <data name="ExpectedSaved" xml:space="preserve">
+    <value>Expected saved</value>
+  </data>
+  <data name="WhereMoneyGoes" xml:space="preserve">
+    <value>Where money goes</value>
+  </data>
+  <data name="NoExpensesInRange" xml:space="preserve">
+    <value>No expenses in this range.</value>
+  </data>
+  <data name="IncomeVsExpensesByMonth" xml:space="preserve">
+    <value>Income vs expenses by month</value>
+  </data>
+  <data name="Month" xml:space="preserve">
+    <value>Month</value>
+  </data>
+  <data name="SpendByCategoryPerMonth" xml:space="preserve">
+    <value>Spend by category per month</value>
+  </data>
+  <data name="NetWorthByHoldingType" xml:space="preserve">
+    <value>Net worth by holding type</value>
+  </data>
+  <data name="NoBalancesInRange" xml:space="preserve">
+    <value>No balances in this range.</value>
+  </data>
+  <data name="HoldingCash" xml:space="preserve">
+    <value>Cash</value>
+  </data>
+  <data name="HoldingSavings" xml:space="preserve">
+    <value>Savings</value>
+  </data>
+  <data name="HoldingInvestment" xml:space="preserve">
+    <value>Investment</value>
+  </data>
+  <data name="Total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="AtNbpToday" xml:space="preserve">
+    <value>At NBP today</value>
+  </data>
+  <data name="CurrencyDifference" xml:space="preserve">
+    <value>Currency difference</value>
+  </data>
+  <data name="ByHoldingType" xml:space="preserve">
+    <value>by holding type</value>
+  </data>
+  <data name="NetWorthByTypeLast12" xml:space="preserve">
+    <value>Net worth by holding type, last 12 months</value>
+  </data>
+  <data name="NoHoldingsIn" xml:space="preserve">
+    <value>No holdings in {0}.</value>
+  </data>
+  <data name="Holding" xml:space="preserve">
+    <value>Holding</value>
+  </data>
+  <data name="Amount" xml:space="preserve">
+    <value>Amount</value>
+  </data>
+  <data name="Rate" xml:space="preserve">
+    <value>Rate</value>
+  </data>
+  <data name="InPln" xml:space="preserve">
+    <value>In PLN</value>
+  </data>
+  <data name="VsNbpToday" xml:space="preserve">
+    <value>vs NBP today</value>
+  </data>
+  <data name="StartCopiesHoldings" xml:space="preserve">
+    <value>Starting it copies the holdings from {0}.</value>
+  </data>
+  <data name="StartAddHoldings" xml:space="preserve">
+    <value>Start it and add your holdings.</value>
+  </data>
+  <data name="VsPreviousMonth" xml:space="preserve">
+    <value>vs previous month</value>
+  </data>
+  <data name="VsMonth" xml:space="preserve">
+    <value>vs {0}</value>
+  </data>
+  <data name="ExpenseCategories" xml:space="preserve">
+    <value>Expense categories</value>
+  </data>
+  <data name="IncomeCategories" xml:space="preserve">
+    <value>Income categories</value>
+  </data>
+  <data name="Budget" xml:space="preserve">
+    <value>Budget</value>
+  </data>
+  <data name="SharedByOwner" xml:space="preserve">
+    <value>Shared by {0}.</value>
+  </data>
+  <data name="RestoreBudget" xml:space="preserve">
+    <value>Restore budget</value>
+  </data>
+  <data name="Rename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="ArchiveExplain" xml:space="preserve">
+    <value>Archiving makes it read-only and hides it from Budgets. Restore it any time.</value>
+  </data>
+  <data name="ArchiveBudget" xml:space="preserve">
+    <value>Archive budget</value>
+  </data>
+  <data name="Sharing" xml:space="preserve">
+    <value>Sharing</value>
+  </data>
+  <data name="MembersSeeEverything" xml:space="preserve">
+    <value>Members see every entry and balance and can add and edit them. Only you can rename, archive or invite.</value>
+  </data>
+  <data name="OnlyOwnerCan" xml:space="preserve">
+    <value>Only {0} can rename, archive or invite.</value>
+  </data>
+  <data name="ImportEntriesTitle" xml:space="preserve">
+    <value>Import expenses and incomes</value>
+  </data>
+  <data name="ImportEntriesBody" xml:space="preserve">
+    <value>Fills the Entries tab. Bring expenses and incomes from a CSV file, for example saved from Excel.</value>
+  </data>
+  <data name="EntriesTemplate" xml:space="preserve">
+    <value>Expenses and incomes template</value>
+  </data>
+  <data name="UploadEntries" xml:space="preserve">
+    <value>Upload expenses and incomes</value>
+  </data>
+  <data name="ImportBalancesTitle" xml:space="preserve">
+    <value>Import balances</value>
+  </data>
+  <data name="ImportBalancesBody" xml:space="preserve">
+    <value>Fills the Balance tab. Bring monthly holding balances from a CSV file, for example saved from Excel.</value>
+  </data>
+  <data name="BalancesTemplate" xml:space="preserve">
+    <value>Balances template</value>
+  </data>
+  <data name="UploadBalances" xml:space="preserve">
+    <value>Upload balances</value>
+  </data>
+  <data name="BudgetPeople.One" xml:space="preserve">
+    <value>{0} person</value>
+  </data>
+  <data name="BudgetPeople.Few" xml:space="preserve">
+    <value>{0} people</value>
+  </data>
+  <data name="BudgetPeople.Many" xml:space="preserve">
+    <value>{0} people</value>
+  </data>
+  <data name="OnlyYou" xml:space="preserve">
+    <value>Only you</value>
+  </data>
+  <data name="ThisMonth" xml:space="preserve">
+    <value>This month</value>
+  </data>
+  <data name="PickAnotherMonth" xml:space="preserve">
+    <value>Pick another month</value>
+  </data>
+  <data name="PreviousYear" xml:space="preserve">
+    <value>Previous year</value>
+  </data>
+  <data name="NextYear" xml:space="preserve">
+    <value>Next year</value>
+  </data>
+  <data name="Currency" xml:space="preserve">
+    <value>Currency</value>
+  </data>
+  <data name="RateToPln" xml:space="preserve">
+    <value>Rate to PLN</value>
+  </data>
+  <data name="NbpRateFailed" xml:space="preserve">
+    <value>Couldn't get the NBP rate. Type the rate instead.</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="MergeInto" xml:space="preserve">
+    <value>Merge {0} into</value>
+  </data>
+  <data name="CategoryEntries.One" xml:space="preserve">
+    <value>{0} entry</value>
+  </data>
+  <data name="CategoryEntries.Few" xml:space="preserve">
+    <value>{0} entries</value>
+  </data>
+  <data name="CategoryEntries.Many" xml:space="preserve">
+    <value>{0} entries</value>
+  </data>
+  <data name="ActionsFor" xml:space="preserve">
+    <value>Actions for {0}</value>
+  </data>
+  <data name="Merge" xml:space="preserve">
+    <value>Merge</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="NewCategory" xml:space="preserve">
+    <value>New category</value>
+  </data>
+  <data name="SharingNeedsConnection" xml:space="preserve">
+    <value>Sharing changes need a connection.</value>
+  </data>
+  <data name="InviteDescription" xml:space="preserve">
+    <value>Create an invite link or QR code. It works for 30 minutes. Whoever opens it in that time sees every entry and balance and can add and edit them.</value>
+  </data>
+  <data name="RestoreToInvite" xml:space="preserve">
+    <value>Restore the budget to invite people.</value>
+  </data>
+  <data name="SharedByLabel" xml:space="preserve">
+    <value>Shared by</value>
+  </data>
+  <data name="YouCanEdit" xml:space="preserve">
+    <value>You can edit</value>
+  </data>
+  <data name="StopSharingEveryone" xml:space="preserve">
+    <value>Stop sharing · remove everyone</value>
+  </data>
+  <data name="MemberExplain" xml:space="preserve">
+    <value>You see every entry and balance in this budget and can add, edit and delete them, and edit its categories. Your default currency stays your own.</value>
+  </data>
+  <data name="LeaveBudget" xml:space="preserve">
+    <value>Leave budget</value>
+  </data>
+  <data name="StopSharing" xml:space="preserve">
+    <value>Stop sharing</value>
+  </data>
+  <data name="StopSharingMessage" xml:space="preserve">
+    <value>The invite link stops working and everyone else loses {0}.</value>
+  </data>
+  <data name="RemoveMember" xml:space="preserve">
+    <value>Remove member</value>
+  </data>
+  <data name="RemoveMemberMessage" xml:space="preserve">
+    <value>Remove {0} from this budget?</value>
+  </data>
+  <data name="LeaveBudgetMessage" xml:space="preserve">
+    <value>Leave {0}? It disappears from your devices.</value>
+  </data>
+  <data name="Leave" xml:space="preserve">
+    <value>Leave</value>
+  </data>
+  <data name="AddBudget" xml:space="preserve">
+    <value>Add budget</value>
+  </data>
+  <data name="BudgetName" xml:space="preserve">
+    <value>Budget name</value>
+  </data>
+  <data name="RenameBudgetFailed" xml:space="preserve">
+    <value>Couldn't rename the budget.</value>
+  </data>
+  <data name="AddBudgetFailed" xml:space="preserve">
+    <value>Couldn't add the budget.</value>
+  </data>
+  <data name="KindExpense" xml:space="preserve">
+    <value>Expense</value>
+  </data>
+  <data name="KindIncome" xml:space="preserve">
+    <value>Income</value>
+  </data>
+  <data name="BudgetMissing" xml:space="preserve">
+    <value>That budget does not exist.</value>
+  </data>
+  <data name="BackToBudgets" xml:space="preserve">
+    <value>Back to budgets</value>
+  </data>
+  <data name="BudgetSettings" xml:space="preserve">
+    <value>Budget settings</value>
+  </data>
+  <data name="TabOverview" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="TabEntries" xml:space="preserve">
+    <value>Entries</value>
+  </data>
+  <data name="TabBalance" xml:space="preserve">
+    <value>Balance</value>
+  </data>
+  <data name="TabStats" xml:space="preserve">
+    <value>Stats</value>
+  </data>
+  <data name="MembersCount.One" xml:space="preserve">
+    <value>Members, {0} person</value>
+  </data>
+  <data name="MembersCount.Few" xml:space="preserve">
+    <value>Members, {0} people</value>
+  </data>
+  <data name="MembersCount.Many" xml:space="preserve">
+    <value>Members, {0} people</value>
+  </data>
+  <data name="AddExpense" xml:space="preserve">
+    <value>Add expense</value>
+  </data>
+  <data name="AddIncome" xml:space="preserve">
+    <value>Add income</value>
+  </data>
+  <data name="AddHolding" xml:space="preserve">
+    <value>Add holding</value>
+  </data>
+  <data name="DeleteMonth" xml:space="preserve">
+    <value>Delete month</value>
+  </data>
+  <data name="AddEntry" xml:space="preserve">
+    <value>Add entry</value>
+  </data>
+  <data name="MonthActions" xml:space="preserve">
+    <value>Month actions</value>
+  </data>
+  <data name="ArchivedReadOnly" xml:space="preserve">
+    <value>This budget is archived. It is read-only.</value>
+  </data>
+  <data name="ArchivedByOwner" xml:space="preserve">
+    <value>{0} archived this budget. It is read-only.</value>
+  </data>
+  <data name="StartMonthFailed" xml:space="preserve">
+    <value>Couldn't start the month.</value>
+  </data>
+  <data name="DeleteMonthMessage" xml:space="preserve">
+    <value>Delete the {0} balance and its holdings? This can’t be undone.</value>
+  </data>
+  <data name="DeleteMonthFailed" xml:space="preserve">
+    <value>Couldn't delete the month.</value>
+  </data>
+  <data name="AddCategoryFailed" xml:space="preserve">
+    <value>Couldn't add the category.</value>
+  </data>
+  <data name="RenameCategoryFailed" xml:space="preserve">
+    <value>Couldn't rename the category.</value>
+  </data>
+  <data name="MergeCategoryFailed" xml:space="preserve">
+    <value>Couldn't merge the categories.</value>
+  </data>
+  <data name="RemoveCategoryFailed" xml:space="preserve">
+    <value>Couldn't remove the category.</value>
+  </data>
+  <data name="ArchiveBudgetFailed" xml:space="preserve">
+    <value>Couldn't archive the budget.</value>
+  </data>
+  <data name="RestoreBudgetFailed" xml:space="preserve">
+    <value>Couldn't restore the budget.</value>
+  </data>
+  <data name="Import" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="BackToSettings" xml:space="preserve">
+    <value>Back to settings</value>
+  </data>
+  <data name="ImportMissing" xml:space="preserve">
+    <value>That import does not exist.</value>
+  </data>
+  <data name="ImportDropHint" xml:space="preserve">
+    <value>Drop a CSV file below or click to choose one. Need the columns?</value>
+  </data>
+  <data name="DownloadTemplate" xml:space="preserve">
+    <value>Download the template</value>
+  </data>
+  <data name="ChipToImport" xml:space="preserve">
+    <value>To import {0}</value>
+  </data>
+  <data name="ChipErrors" xml:space="preserve">
+    <value>Errors {0}</value>
+  </data>
+  <data name="ChipAlreadyInBudget" xml:space="preserve">
+    <value>Already in budget {0}</value>
+  </data>
+  <data name="ChipNewCategories" xml:space="preserve">
+    <value>New categories {0}</value>
+  </data>
+  <data name="ChipRatesFromNbp" xml:space="preserve">
+    <value>Rates from NBP {0}</value>
+  </data>
+  <data name="NewExpenseCategories" xml:space="preserve">
+    <value>New expense categories</value>
+  </data>
+  <data name="NewIncomeCategories" xml:space="preserve">
+    <value>New income categories</value>
+  </data>
+  <data name="RetryRates" xml:space="preserve">
+    <value>Retry rates</value>
+  </data>
+  <data name="ImportRows.One" xml:space="preserve">
+    <value>Import {0} row</value>
+  </data>
+  <data name="ImportRows.Few" xml:space="preserve">
+    <value>Import {0} rows</value>
+  </data>
+  <data name="ImportRows.Many" xml:space="preserve">
+    <value>Import {0} rows</value>
+  </data>
+  <data name="ImportEntriesInto" xml:space="preserve">
+    <value>Import expenses and incomes into {0}</value>
+  </data>
+  <data name="ImportBalancesInto" xml:space="preserve">
+    <value>Import balances into {0}</value>
+  </data>
+  <data name="FileTooLarge" xml:space="preserve">
+    <value>The file is larger than 2 MB.</value>
+  </data>
+  <data name="NbpFetchFailed" xml:space="preserve">
+    <value>Couldn't fetch the NBP rate.</value>
+  </data>
+  <data name="ImportRunningMessage" xml:space="preserve">
+    <value>The import is still running. Leave anyway? Rows already imported stay.</value>
+  </data>
+  <data name="LeaveImportMessage" xml:space="preserve">
+    <value>Leave the import? The file you picked won’t be imported.</value>
+  </data>
+  <data name="LeaveImport" xml:space="preserve">
+    <value>Leave import</value>
+  </data>
+  <data name="Category" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="CreateCategory" xml:space="preserve">
+    <value>Create category "{0}"</value>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Note" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="NewExpense" xml:space="preserve">
+    <value>New expense</value>
+  </data>
+  <data name="NewIncome" xml:space="preserve">
+    <value>New income</value>
+  </data>
+  <data name="SaveEntryFailed" xml:space="preserve">
+    <value>Couldn't save the entry.</value>
+  </data>
+  <data name="DeleteEntryFailed" xml:space="preserve">
+    <value>Couldn't delete the entry.</value>
+  </data>
+  <data name="NewHolding" xml:space="preserve">
+    <value>New holding</value>
+  </data>
+  <data name="SaveHoldingFailed" xml:space="preserve">
+    <value>Couldn't save the holding.</value>
+  </data>
+  <data name="RemoveHoldingFailed" xml:space="preserve">
+    <value>Couldn't remove the holding.</value>
+  </data>
+  <data name="ImportedSummary" xml:space="preserve">
+    <value>Imported {0} entries and {1} holdings in {2} months.</value>
+  </data>
+  <data name="NotImported" xml:space="preserve">
+    <value>Not imported:</value>
+  </data>
+  <data name="LineMessage" xml:space="preserve">
+    <value>Line {0}: {1}</value>
+  </data>
+  <data name="OpenBudget" xml:space="preserve">
+    <value>Open the budget</value>
+  </data>
+  <data name="ImportToImport" xml:space="preserve">
+    <value>To import</value>
+  </data>
+  <data name="ImportErrors" xml:space="preserve">
+    <value>Errors</value>
+  </data>
+  <data name="ImportAlreadyInBudget" xml:space="preserve">
+    <value>Already in budget</value>
+  </data>
+  <data name="ImportUnchanged" xml:space="preserve">
+    <value>Unchanged</value>
+  </data>
+  <data name="ImportFetchingRate" xml:space="preserve">
+    <value>Fetching rate…</value>
+  </data>
+  <data name="ImportError" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="ImportRateNbp" xml:space="preserve">
+    <value>{0} (NBP {1})</value>
+  </data>
+  <data name="ImportRateFile" xml:space="preserve">
+    <value>{0} (file)</value>
+  </data>
+  <data name="Line" xml:space="preserve">
+    <value>Line</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="ImportLine" xml:space="preserve">
+    <value>Import line {0}</value>
+  </data>
+  <data name="NewMonthHoldings" xml:space="preserve">
+    <value>New month: {0} holdings</value>
+  </data>
+  <data name="ExistingMonth" xml:space="preserve">
+    <value>Existing month: updates {0}, adds {1}, unchanged {2}</value>
+  </data>
+  <data name="UnreadableRows" xml:space="preserve">
+    <value>Unreadable rows</value>
+  </data>
+</root>

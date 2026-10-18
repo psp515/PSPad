@@ -9,7 +9,7 @@ namespace PSPad.App.Tests.Pages;
 [UnitTest]
 public class BudgetsPageTests : Bunit.TestContext
 {
-    static readonly Guid User = Guid.NewGuid();
+    internal static readonly Guid User = Guid.NewGuid();
     static readonly DateOnly Today = new(2026, 10, 9);
 
     [Fact]

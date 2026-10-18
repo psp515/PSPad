@@ -3,12 +3,15 @@
 @using PSPad.Module.Money.Budgets
 @using PSPad.Module.Money.Entries
 @inject IClock Clock
+@inject IStringLocalizer<BudgetsStrings> T
+@inject IStringLocalizer<ListsStrings> Lists
+@inject IStringLocalizer<SharedStrings> Shared
 
 <MudGrid Spacing="4" Class="@Class">
     <MudItem xs="12" lg="7" Class="pspad-settings-lists">
         <MudGrid Spacing="4">
             <MudItem xs="12" sm="6">
-                <CategoryList Title="Expense categories" Names="@Budget.ExpenseCategories" ReadOnly="@Budget.IsArchived"
+                <CategoryList Title="@T["ExpenseCategories"]" Names="@Budget.ExpenseCategories" ReadOnly="@Budget.IsArchived"
                               Class="pspad-category-list-expense" Usage="@UsageOf(CategoryKind.Expense)" OnOpen="@OnOpenCategory"
                               OnAdd="@(name => OnAddCategory((CategoryKind.Expense, name)))"
                               OnRename="@(change => OnRenameCategory((CategoryKind.Expense, change.From, change.To)))"
@@ -16,7 +19,7 @@
                               OnRemove="@(name => OnRemoveCategory((CategoryKind.Expense, name)))" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <CategoryList Title="Income categories" Names="@Budget.IncomeCategories" ReadOnly="@Budget.IsArchived"
+                <CategoryList Title="@T["IncomeCategories"]" Names="@Budget.IncomeCategories" ReadOnly="@Budget.IsArchived"
                               Class="pspad-category-list-income" Usage="@UsageOf(CategoryKind.Income)" OnOpen="@OnOpenCategory"
                               OnAdd="@(name => OnAddCategory((CategoryKind.Income, name)))"
                               OnRename="@(change => OnRenameCategory((CategoryKind.Income, change.From, change.To)))"
@@ -29,43 +32,41 @@
         <MudGrid Spacing="4">
             <MudItem xs="12" sm="6" lg="12" Class="pspad-settings-card">
             <MudPaper Outlined="true" Class="pa-4 pspad-budget-card-settings">
-                <MudText Typo="Typo.subtitle2" Class="mb-3">Budget</MudText>
+                <MudText Typo="Typo.subtitle2" Class="mb-3">@T["Budget"]</MudText>
                 @if (!IsMine)
                 {
-                    <MudText Typo="Typo.body2" Class="pspad-budget-shared-by">@($"Shared by {Budget.OwnerName}.")</MudText>
+                    <MudText Typo="Typo.body2" Class="pspad-budget-shared-by">@T["SharedByOwner", Budget.OwnerName ?? ""]</MudText>
                 }
                 else if (Budget.IsArchived)
                 {
                     <MudButton Class="pspad-restore-budget" Variant="Variant.Outlined" Color="Color.Primary"
-                               OnClick="@OnRestore">Restore budget</MudButton>
+                               OnClick="@OnRestore">@T["RestoreBudget"]</MudButton>
                 }
                 else
                 {
                     <MudButton Class="pspad-rename-budget" Variant="Variant.Text" Color="Color.Primary"
-                               OnClick="@OnRename">Rename</MudButton>
+                               OnClick="@OnRename">@T["Rename"]</MudButton>
                     <MudText Typo="Typo.body2" Class="pspad-muted mt-3">
-                        Archiving makes it read-only and hides it from Budgets. Restore it any time.
+                        @T["ArchiveExplain"]
                     </MudText>
                     <MudButton Class="pspad-archive-budget mt-2" Variant="Variant.Outlined" Color="Color.Error"
-                               OnClick="@OnArchive">Archive budget</MudButton>
+                               OnClick="@OnArchive">@T["ArchiveBudget"]</MudButton>
                 }
             </MudPaper>
             </MudItem>
             <MudItem xs="12" sm="6" lg="12" Class="pspad-settings-card">
             <MudPaper Outlined="true" Class="pa-4 pspad-budget-sharing">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Sharing</MudText>
+                <MudText Typo="Typo.subtitle2" Class="mb-2">@T["Sharing"]</MudText>
                 <MudButton Class="pspad-budget-sharing-open" FullWidth="true" Variant="Variant.Text" Color="Color.Default"
                            StartIcon="@Icons.Material.Outlined.People" EndIcon="@Icons.Material.Filled.ChevronRight"
                            OnClick="@OnOpenMembers">
                     <span class="d-flex flex-column align-start flex-grow-1 text-left" style="text-transform:none">
-                        <span>Members</span>
+                        <span>@Lists["Members"]</span>
                         <span class="mud-typography-caption pspad-muted">@SharingSummary</span>
                     </span>
                 </MudButton>
                 <MudText Typo="Typo.body2" Class="pspad-muted mt-2">
-                    @(IsMine
-                        ? "Members see every entry and balance and can add and edit them. Only you can rename, archive or invite."
-                        : $"Only {Budget.OwnerName} can rename, archive or invite.")
+                    @(IsMine ? T["MembersSeeEverything"] : T["OnlyOwnerCan", Budget.OwnerName ?? ""])
                 </MudText>
             </MudPaper>
             </MudItem>
@@ -73,26 +74,26 @@
             {
                 <MudItem xs="12" sm="6" lg="12" Class="pspad-settings-card">
                 <MudPaper Outlined="true" Class="pa-4 pspad-budget-import-card pspad-budget-import-entries">
-                    <MudText Typo="Typo.subtitle2" Class="mb-2">Import expenses and incomes</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">@T["ImportEntriesTitle"]</MudText>
                     <MudText Typo="Typo.body2" Class="pspad-muted mb-2">
-                        Fills the Entries tab. Bring expenses and incomes from a CSV file, for example saved from Excel.
+                        @T["ImportEntriesBody"]
                     </MudText>
-                    <MudLink Href="templates/pspad-entries.csv" download="pspad-entries.csv" Typo="Typo.body2" Class="d-block mb-2">Expenses and incomes template</MudLink>
+                    <MudLink Href="templates/pspad-entries.csv" download="pspad-entries.csv" Typo="Typo.body2" Class="d-block mb-2">@T["EntriesTemplate"]</MudLink>
                     <MudButton Class="pspad-budget-import-open" Variant="Variant.Outlined" Color="Color.Primary"
                                StartIcon="@Icons.Material.Outlined.UploadFile"
-                               OnClick="@(() => OnImport.InvokeAsync(BudgetLinks.EntriesImport))">Upload expenses and incomes</MudButton>
+                               OnClick="@(() => OnImport.InvokeAsync(BudgetLinks.EntriesImport))">@T["UploadEntries"]</MudButton>
                 </MudPaper>
                 </MudItem>
                 <MudItem xs="12" sm="6" lg="12" Class="pspad-settings-card">
                 <MudPaper Outlined="true" Class="pa-4 pspad-budget-import-card pspad-budget-import-balances">
-                    <MudText Typo="Typo.subtitle2" Class="mb-2">Import balances</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">@T["ImportBalancesTitle"]</MudText>
                     <MudText Typo="Typo.body2" Class="pspad-muted mb-2">
-                        Fills the Balance tab. Bring monthly holding balances from a CSV file, for example saved from Excel.
+                        @T["ImportBalancesBody"]
                     </MudText>
-                    <MudLink Href="templates/pspad-balances.csv" download="pspad-balances.csv" Typo="Typo.body2" Class="d-block mb-2">Balances template</MudLink>
+                    <MudLink Href="templates/pspad-balances.csv" download="pspad-balances.csv" Typo="Typo.body2" Class="d-block mb-2">@T["BalancesTemplate"]</MudLink>
                     <MudButton Class="pspad-budget-import-open" Variant="Variant.Outlined" Color="Color.Primary"
                                StartIcon="@Icons.Material.Outlined.UploadFile"
-                               OnClick="@(() => OnImport.InvokeAsync(BudgetLinks.BalancesImport))">Upload balances</MudButton>
+                               OnClick="@(() => OnImport.InvokeAsync(BudgetLinks.BalancesImport))">@T["UploadBalances"]</MudButton>
                 </MudPaper>
                 </MudItem>
             }
@@ -142,18 +143,16 @@
 
             if (!IsMine)
             {
-                return $"{joined + 1} people";
+                return T.Plural(joined + 1, "BudgetPeople");
             }
-
-            var people = joined == 0 ? "Nobody joined yet" : $"{joined} joined";
 
             if (Budget.IsInviteLiveAt(Clock.UtcNow))
             {
                 var left = (int)Math.Ceiling((Budget.InviteExpiresAt!.Value - Clock.UtcNow).TotalMinutes);
-                return $"{people} · link {left} min left";
+                return Lists.Plural(joined, "JoinedWithLink", left);
             }
 
-            return joined == 0 ? "Only you" : people;
+            return joined == 0 ? T["OnlyYou"] : Lists.Plural(joined, "Joined");
         }
     }
 

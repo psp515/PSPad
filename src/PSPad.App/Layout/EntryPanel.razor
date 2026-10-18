@@ -17,26 +17,28 @@
 @inject AppState State
 @inject CommandSender Sender
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<BudgetsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
 
 <DetailPanel Open="@(_budget is not null)" Title="@Title" TitleTypo="Typo.body2" Class="pspad-entry-panel"
              OnClose="@OnClose" OnSave="@SaveCallback" CanSave="@CanSave" OnDelete="@DeleteCallback" Disabled="@(Disabled || _saving)">
     <div class="d-flex flex-column gap-3 pa-4">
-        <MudTextField T="string" Class="pspad-entry-name-field" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense"
+        <MudTextField T="string" Class="pspad-entry-name-field" Label="@Shared["Name"]" Variant="Variant.Outlined" Margin="Margin.Dense"
                       MaxLength="@MoneyEntry.MaxNameLength" @bind-Value="_name" Immediate="true" AutoFocus="@IsNew" Disabled="@ReadOnly" />
-        <MudAutocomplete T="string" Class="pspad-entry-category-field" Label="Category" Variant="Variant.Outlined"
+        <MudAutocomplete T="string" Class="pspad-entry-category-field" Label="@T["Category"]" Variant="Variant.Outlined"
                          Margin="Margin.Dense" Value="@_category" ValueChanged="@CategoryChanged"
                          SearchFunc="@SearchCategoriesAsync" CoerceValue="true" DebounceInterval="0"
                          ResetValueOnEmptyText="false" Disabled="@ReadOnly">
             <ItemTemplate Context="choice">
-                @(CategoryChoices.IsNew(Categories, choice) ? $"Create category \"{choice}\"" : choice)
+                @(CategoryChoices.IsNew(Categories, choice) ? T["CreateCategory", choice] : choice)
             </ItemTemplate>
         </MudAutocomplete>
         <RateFields @key="@((_loadedEntry, _loadedBudget, _loadedKind))" CssPrefix="pspad-entry" @bind-Amount="_amount" Currency="@_currency" CurrencyChanged="@Suggest"
                     Rate="@_rate" RateTyped="@RateTyped" NbpDate="@EntryDate" NbpFetched="@ApplyNbpRate"
                     ReadOnly="@ReadOnly" />
-        <MudDatePicker Class="pspad-entry-date-field" Label="Date" Variant="Variant.Outlined" Margin="Margin.Dense"
+        <MudDatePicker Class="pspad-entry-date-field" Label="@T["Date"]" Variant="Variant.Outlined" Margin="Margin.Dense"
                        Date="@_date" DateChanged="@DateChanged" Disabled="@ReadOnly" />
-        <MudTextField T="string" Class="pspad-entry-note-field" Label="Note" Variant="Variant.Outlined" Margin="Margin.Dense"
+        <MudTextField T="string" Class="pspad-entry-note-field" Label="@T["Note"]" Variant="Variant.Outlined" Margin="Margin.Dense"
                       Lines="3" MaxLength="@MoneyEntry.MaxNoteLength" Counter="@MoneyEntry.MaxNoteLength" @bind-Value="_note" Disabled="@ReadOnly" />
     </div>
 </DetailPanel>
@@ -83,10 +85,10 @@
 
     string Title => (IsNew, Kind) switch
     {
-        (true, CategoryKind.Expense) => "New expense",
-        (true, _) => "New income",
-        (false, CategoryKind.Expense) => "Expense",
-        _ => "Income"
+        (true, CategoryKind.Expense) => T["NewExpense"],
+        (true, _) => T["NewIncome"],
+        (false, CategoryKind.Expense) => T["KindExpense"],
+        _ => T["KindIncome"]
     };
 
     bool IsPln => _currency == Currencies.Pln;
@@ -236,7 +238,7 @@
 
         if (!result.Accepted)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't save the entry.", Severity.Warning);
+            Snackbar.Add(result.Rejection ?? T["SaveEntryFailed"].Value, Severity.Warning);
             return;
         }
 
@@ -264,7 +266,7 @@
 
         if (!result.Accepted)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't delete the entry.", Severity.Warning);
+            Snackbar.Add(result.Rejection ?? T["DeleteEntryFailed"].Value, Severity.Warning);
             return;
         }
 

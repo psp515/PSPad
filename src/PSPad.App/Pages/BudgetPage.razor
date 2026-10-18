@@ -18,6 +18,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject IDialogService Dialogs
+@inject IStringLocalizer<BudgetsStrings> T
 @implements IDisposable
 
 @if (!_loaded)
@@ -26,16 +27,16 @@
 }
 else if (_budget is null)
 {
-    <PageHeading Title="Budget" Icon="@Icons.Material.Outlined.AccountBalanceWallet" BackHref="@BudgetLinks.Index" />
-    <MudAlert Severity="Severity.Warning">That budget does not exist.</MudAlert>
+    <PageHeading Title="@T["Budget"]" Icon="@Icons.Material.Outlined.AccountBalanceWallet" BackHref="@BudgetLinks.Index" />
+    <MudAlert Severity="Severity.Warning">@T["BudgetMissing"]</MudAlert>
 }
 else
 {
     <div class="pspad-budget-page">
     <PageHeading Title="@_budget.Name" Icon="@Icons.Material.Outlined.AccountBalanceWallet" BackHref="@BudgetLinks.Index"
-                 BackLabel="Back to budgets">
+                 BackLabel="@T["BackToBudgets"]">
         <Actions>
-            <MudIconButton Class="pspad-budget-settings" Icon="@Icons.Material.Outlined.Settings" aria-label="Budget settings"
+            <MudIconButton Class="pspad-budget-settings" Icon="@Icons.Material.Outlined.Settings" aria-label="@T["BudgetSettings"]"
                            aria-pressed="@(TabIndex == SettingsTab ? "true" : "false")"
                            Color="@(TabIndex == SettingsTab ? Color.Primary : Color.Default)" OnClick="@(() => SelectTab(SettingsTab))" />
         </Actions>
@@ -49,16 +50,16 @@ else
     <div class="d-flex align-center gap-2 mb-4 pspad-budget-nav">
         <MudToggleGroup T="int" Class="flex-grow-1 pspad-budget-views" Color="Color.Primary" Size="Size.Small"
                         SelectionMode="SelectionMode.SingleSelection" CheckMark="true" Value="@TabIndex" ValueChanged="@SelectTab">
-            <MudToggleItem Value="@OverviewTab" Text="Overview" UnselectedIcon="@Icons.Material.Outlined.Dashboard" SelectedIcon="@Icons.Material.Filled.Dashboard" />
-            <MudToggleItem Value="@EntriesTab" Text="Entries" UnselectedIcon="@Icons.Material.Outlined.List" SelectedIcon="@Icons.Material.Filled.List" />
-            <MudToggleItem Value="@BalanceTab" Text="Balance" UnselectedIcon="@Icons.Material.Outlined.AccountBalance" SelectedIcon="@Icons.Material.Filled.AccountBalance" />
-            <MudToggleItem Value="@StatsTab" Text="Stats" UnselectedIcon="@Icons.Material.Outlined.BarChart" SelectedIcon="@Icons.Material.Filled.BarChart" />
+            <MudToggleItem Value="@OverviewTab" Text="@T["TabOverview"]" UnselectedIcon="@Icons.Material.Outlined.Dashboard" SelectedIcon="@Icons.Material.Filled.Dashboard" />
+            <MudToggleItem Value="@EntriesTab" Text="@T["TabEntries"]" UnselectedIcon="@Icons.Material.Outlined.List" SelectedIcon="@Icons.Material.Filled.List" />
+            <MudToggleItem Value="@BalanceTab" Text="@T["TabBalance"]" UnselectedIcon="@Icons.Material.Outlined.AccountBalance" SelectedIcon="@Icons.Material.Filled.AccountBalance" />
+            <MudToggleItem Value="@StatsTab" Text="@T["TabStats"]" UnselectedIcon="@Icons.Material.Outlined.BarChart" SelectedIcon="@Icons.Material.Filled.BarChart" />
         </MudToggleGroup>
         @if (_budget.IsShared)
         {
             <MudBadge Class="pspad-budget-members-button" Content="@(_budget.Members.Count + 1)" Color="Color.Primary"
                       Overlap="true" Bordered="true">
-                <MudIconButton Icon="@Icons.Material.Outlined.People" aria-label="@($"Members, {_budget.Members.Count + 1} people")"
+                <MudIconButton Icon="@Icons.Material.Outlined.People" aria-label="@T.Plural(_budget.Members.Count + 1, "MembersCount")"
                                OnClick="@OpenMembers" />
             </MudBadge>
         }
@@ -66,9 +67,9 @@ else
         {
             <div class="d-none d-md-flex gap-2 pspad-budget-quick">
                 <MudButton Class="pspad-budget-quick-expense" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Remove" OnClick="@(() => AddEntry(CategoryKind.Expense))">Expense</MudButton>
+                           StartIcon="@Icons.Material.Filled.Remove" OnClick="@(() => AddEntry(CategoryKind.Expense))">@T["KindExpense"]</MudButton>
                 <MudButton Class="pspad-budget-quick-income" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddEntry(CategoryKind.Income))">Income</MudButton>
+                           StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddEntry(CategoryKind.Income))">@T["KindIncome"]</MudButton>
             </div>
         }
     </div>
@@ -115,11 +116,11 @@ else
     @if ((TabIndex is OverviewTab or EntriesTab) && !_budget.IsArchived)
     {
         <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab d-md-none" UserAttributes="@ActivatorAttributes">
-            <MudTooltip Text="Add expense">
+            <MudTooltip Text="@T["AddExpense"]">
                 <MudFabMenuItem OnClick="@(() => AddEntry(CategoryKind.Expense))" StartIcon="@Icons.Material.Filled.Remove"
                                 Color="Color.Primary" Size="Size.Small" UserAttributes="@AddExpenseAttributes" />
             </MudTooltip>
-            <MudTooltip Text="Add income">
+            <MudTooltip Text="@T["AddIncome"]">
                 <MudFabMenuItem OnClick="@(() => AddEntry(CategoryKind.Income))" StartIcon="@Icons.Material.Filled.Add"
                                 Color="Color.Primary" Size="Size.Small" UserAttributes="@AddIncomeAttributes" />
             </MudTooltip>
@@ -128,11 +129,11 @@ else
     else if (TabIndex == BalanceTab && !_budget.IsArchived && Balance.Snapshot is not null)
     {
         <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@MonthActionsAttributes">
-            <MudTooltip Text="Add holding">
+            <MudTooltip Text="@T["AddHolding"]">
                 <MudFabMenuItem Class="pspad-fab-add-holding" OnClick="@NewHolding" StartIcon="@Icons.Material.Filled.Add"
                                 Color="Color.Primary" Size="Size.Small" UserAttributes="@AddHoldingAttributes" />
             </MudTooltip>
-            <MudTooltip Text="Delete month">
+            <MudTooltip Text="@T["DeleteMonth"]">
                 <MudFabMenuItem Class="pspad-delete-month" OnClick="@DeleteMonthAsync" StartIcon="@Icons.Material.Outlined.Delete"
                                 Color="Color.Error" Size="Size.Small" UserAttributes="@DeleteMonthAttributes" />
             </MudTooltip>
@@ -148,12 +149,14 @@ else
     const int SettingsTab = 4;
     static readonly string[] Tabs = ["overview", "entries", "balance", "stats", "settings"];
     static readonly Dictionary<string, string> Aliases = new() { ["month"] = "entries", ["summary"] = "stats" };
-    static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Add entry" };
-    static readonly Dictionary<string, object> AddExpenseAttributes = new() { ["aria-label"] = "Add expense" };
-    static readonly Dictionary<string, object> AddIncomeAttributes = new() { ["aria-label"] = "Add income" };
-    static readonly Dictionary<string, object> AddHoldingAttributes = new() { ["aria-label"] = "Add holding" };
-    static readonly Dictionary<string, object> MonthActionsAttributes = new() { ["aria-label"] = "Month actions" };
-    static readonly Dictionary<string, object> DeleteMonthAttributes = new() { ["aria-label"] = "Delete month" };
+    Dictionary<string, object> ActivatorAttributes => Labelled("AddEntry");
+    Dictionary<string, object> AddExpenseAttributes => Labelled("AddExpense");
+    Dictionary<string, object> AddIncomeAttributes => Labelled("AddIncome");
+    Dictionary<string, object> AddHoldingAttributes => Labelled("AddHolding");
+    Dictionary<string, object> MonthActionsAttributes => Labelled("MonthActions");
+    Dictionary<string, object> DeleteMonthAttributes => Labelled("DeleteMonth");
+
+    Dictionary<string, object> Labelled(string key) => new() { ["aria-label"] = T[key].Value };
 
     IReadOnlySet<YearMonth> MarkedMonths =>
         TabIndex == BalanceTab
@@ -247,8 +250,8 @@ else
     }
 
     string ArchivedText => _budget!.UserId == State.UserId
-        ? "This budget is archived. It is read-only."
-        : $"{_budget.OwnerName} archived this budget. It is read-only.";
+        ? T["ArchivedReadOnly"]
+        : T["ArchivedByOwner", _budget.OwnerName ?? ""];
 
     void OpenMembers() => Navigation.NavigateTo(BudgetMembersQuery.For(Navigation.Uri, BudgetId));
 
@@ -264,20 +267,20 @@ else
 
     async Task StartCurrentMonthAsync() =>
         Surface(await Sender.SendAsync(new StartBalanceMonth(Guid.NewGuid(), State.UserId, BudgetId, Current)),
-            "Couldn't start the month.");
+            T["StartMonthFailed"]);
 
     async Task StartMonthAsync() =>
         Surface(await Sender.SendAsync(new StartBalanceMonth(Guid.NewGuid(), State.UserId, BudgetId, _month)),
-            "Couldn't start the month.");
+            T["StartMonthFailed"]);
 
     async Task DeleteMonthAsync()
     {
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete the {MoneyText.MonthTitle(_month)} balance and its holdings? This can’t be undone." },
-            { dialog => dialog.ConfirmText, "Delete month" }
+            { dialog => dialog.Message, T["DeleteMonthMessage", MoneyText.MonthTitle(_month)].Value },
+            { dialog => dialog.ConfirmText, T["DeleteMonth"].Value }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete month", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["DeleteMonth"], parameters);
         var result = await dialog.Result;
         if (result is null || result.Canceled)
         {
@@ -285,32 +288,32 @@ else
         }
 
         Surface(await Sender.SendAsync(new DeleteBalanceMonth(Guid.NewGuid(), State.UserId, BudgetId, _month)),
-            "Couldn't delete the month.");
+            T["DeleteMonthFailed"]);
     }
 
     async Task<bool> AddCategoryAsync((CategoryKind Kind, string Name) category) =>
         Surface(await Sender.SendAsync(new AddCategory(Guid.NewGuid(), State.UserId, BudgetId, category.Kind, category.Name)),
-            "Couldn't add the category.");
+            T["AddCategoryFailed"]);
 
     async Task<bool> RenameCategoryAsync((CategoryKind Kind, string From, string To) change) =>
         Surface(await Sender.SendAsync(new RenameCategory(Guid.NewGuid(), State.UserId, BudgetId, change.Kind, change.From, change.To)),
-            "Couldn't rename the category.");
+            T["RenameCategoryFailed"]);
 
     async Task<bool> MergeCategoryAsync((CategoryKind Kind, string From, string Into) change) =>
         Surface(await Sender.SendAsync(new MergeCategory(Guid.NewGuid(), State.UserId, BudgetId, change.Kind, change.From, change.Into)),
-            "Couldn't merge the categories.");
+            T["MergeCategoryFailed"]);
 
     async Task<bool> RemoveCategoryAsync((CategoryKind Kind, string Name) category) =>
         Surface(await Sender.SendAsync(new RemoveCategory(Guid.NewGuid(), State.UserId, BudgetId, category.Kind, category.Name)),
-            "Couldn't remove the category.");
+            T["RemoveCategoryFailed"]);
 
     async Task ArchiveAsync() =>
         Surface(await Sender.SendAsync(new ArchiveBudget(Guid.NewGuid(), State.UserId, BudgetId)),
-            "Couldn't archive the budget.");
+            T["ArchiveBudgetFailed"]);
 
     async Task RestoreAsync() =>
         Surface(await Sender.SendAsync(new RestoreBudget(Guid.NewGuid(), State.UserId, BudgetId)),
-            "Couldn't restore the budget.");
+            T["RestoreBudgetFailed"]);
 
     bool Surface(CommandResult result, string fallback)
     {

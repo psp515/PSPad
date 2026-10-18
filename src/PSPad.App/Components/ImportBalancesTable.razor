@@ -1,12 +1,14 @@
 @using System.Globalization
+@using PSPad.App.State
 @using PSPad.Module.Money.Import
+@inject IStringLocalizer<BudgetsStrings> T
 
 <MudChipSet T="ImportEntriesTable.ImportFilter" SelectedValue="@_filter" SelectedValueChanged="@(value => _filter = value)"
             SelectionMode="SelectionMode.SingleSelection" CheckMark="false" Color="Color.Primary" Variant="Variant.Outlined"
             SelectedColor="Color.Primary" Size="Size.Small" Class="mb-2 pspad-import-filter">
-    <MudChip Value="@ImportEntriesTable.ImportFilter.All" aria-pressed="@Pressed(ImportEntriesTable.ImportFilter.All)" Text="All" />
-    <MudChip Value="@ImportEntriesTable.ImportFilter.ToImport" aria-pressed="@Pressed(ImportEntriesTable.ImportFilter.ToImport)" Text="To import" />
-    <MudChip Value="@ImportEntriesTable.ImportFilter.Errors" aria-pressed="@Pressed(ImportEntriesTable.ImportFilter.Errors)" Text="Errors" />
+    <MudChip Value="@ImportEntriesTable.ImportFilter.All" aria-pressed="@Pressed(ImportEntriesTable.ImportFilter.All)" Text="@T["All"]" />
+    <MudChip Value="@ImportEntriesTable.ImportFilter.ToImport" aria-pressed="@Pressed(ImportEntriesTable.ImportFilter.ToImport)" Text="@T["ImportToImport"]" />
+    <MudChip Value="@ImportEntriesTable.ImportFilter.Errors" aria-pressed="@Pressed(ImportEntriesTable.ImportFilter.Errors)" Text="@T["ImportErrors"]" />
 </MudChipSet>
 
 @foreach (var month in Months)
@@ -15,8 +17,8 @@
 
     <MudText Typo="Typo.subtitle2" Class="mt-3 pspad-import-month">
         @month.Month · @(month.IsNew
-            ? $"New month: {month.Holdings} holdings"
-            : $"Existing month: updates {month.Updates}, adds {month.Adds}, unchanged {month.Unchanged}")
+            ? T["NewMonthHoldings", month.Holdings]
+            : T["ExistingMonth", month.Updates, month.Adds, month.Unchanged])
     </MudText>
     @if (shown.Count > 0)
     {
@@ -32,7 +34,7 @@
 }
 @if (unreadable.Count > 0)
 {
-    <MudText Typo="Typo.subtitle2" Class="mt-3 pspad-import-month">Unreadable rows</MudText>
+    <MudText Typo="Typo.subtitle2" Class="mt-3 pspad-import-month">@T["UnreadableRows"]</MudText>
     <MudTable T="HoldingPreview" Items="@unreadable" Dense="true" Hover="true" RowClassFunc="@RowClass" Class="mt-1">
         <HeaderContent>@Header</HeaderContent>
         <RowTemplate>@Row(context)</RowTemplate>
@@ -58,18 +60,18 @@
     static string RowClass(HoldingPreview row, int _) =>
         row.Status == ImportStatus.Error ? "pspad-import-row pspad-import-row-error" : "pspad-import-row";
 
-    static RenderFragment Header => @<text>
-        <MudTh>Line</MudTh><MudTh>Month</MudTh><MudTh>Holding</MudTh><MudTh>Type</MudTh><MudTh>Amount</MudTh>
-        <MudTh>Rate</MudTh><MudTh>Status</MudTh>
+    RenderFragment Header => @<text>
+        <MudTh>@T["Line"]</MudTh><MudTh>@T["Month"]</MudTh><MudTh>@T["Holding"]</MudTh><MudTh>@T["Type"]</MudTh><MudTh>@T["Amount"]</MudTh>
+        <MudTh>@T["Rate"]</MudTh><MudTh>@T["Status"]</MudTh>
     </text>;
 
-    static RenderFragment Row(HoldingPreview row) => @<text>
+    RenderFragment Row(HoldingPreview row) => @<text>
         <MudTd>@row.Line</MudTd>
         <MudTd>@row.Row?.Month</MudTd>
         <MudTd>@row.Row?.Name</MudTd>
-        <MudTd>@row.Row?.Type</MudTd>
-        <MudTd>@(row.Row is { } parsed ? $"{parsed.Amount.ToString("0.00", CultureInfo.InvariantCulture)} {row.Money?.Currency ?? parsed.Currency}" : "")</MudTd>
-        <MudTd>@ImportEntriesTable.RateSource(row.Row?.Rate, row.Money)</MudTd>
-        <MudTd Class="@ImportEntriesTable.StatusClass(row.Status)">@(row.Error ?? ImportEntriesTable.StatusText(row.Status))</MudTd>
+        <MudTd>@(row.Row is { } typed ? T.Of(typed.Type) : "")</MudTd>
+        <MudTd>@(row.Row is { } parsed ? ImportText.Amount(parsed.Amount, row.Money?.Currency ?? parsed.Currency ?? "") : "")</MudTd>
+        <MudTd>@ImportText.RateSource(row.Row?.Rate, row.Money, T)</MudTd>
+        <MudTd Class="@ImportText.StatusClass(row.Status)">@(row.Error ?? ImportText.StatusText(row.Status, T))</MudTd>
     </text>;
 }

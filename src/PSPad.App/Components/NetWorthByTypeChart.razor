@@ -1,6 +1,7 @@
 @using PSPad.App.State
 @using PSPad.App.Statistics
 @using PSPad.Module.Money.Reading
+@inject IStringLocalizer<BudgetsStrings> T
 
 <MudChart Class="@Class" ChartType="ChartType.StackedBar" ChartSeries="@_series" ChartLabels="@Labels"
           ChartOptions="@_options" Width="100%" Height="@Height" />
@@ -8,11 +9,11 @@
     <caption>@Caption</caption>
     <thead>
         <tr>
-            <th scope="col">Month</th>
-            <th scope="col">Cash</th>
-            <th scope="col">Savings</th>
-            <th scope="col">Investment</th>
-            <th scope="col">Total</th>
+            <th scope="col">@T["Month"]</th>
+            <th scope="col">@T["HoldingCash"]</th>
+            <th scope="col">@T["HoldingSavings"]</th>
+            <th scope="col">@T["HoldingInvestment"]</th>
+            <th scope="col">@T["Total"]</th>
         </tr>
     </thead>
     <tbody>
@@ -47,9 +48,9 @@
     {
         _series =
         [
-            Series("Cash", Months.Select(month => month.Cash ?? 0m)),
-            Series("Savings", Months.Select(month => month.Savings ?? 0m)),
-            Series("Investment", Months.Select(month => month.Investment ?? 0m))
+            Series(T["HoldingCash"], Months.Select(month => month.Cash ?? 0m)),
+            Series(T["HoldingSavings"], Months.Select(month => month.Savings ?? 0m)),
+            Series(T["HoldingInvestment"], Months.Select(month => month.Investment ?? 0m))
         ];
         _options = new StackedBarChartOptions
         {
