@@ -17,8 +17,8 @@ public class ListsAndGoalsPolishTests
 {
     [Theory]
     [InlineData(2, 0, 3, 0, "2 listy · 3 otwarte zadania")]
-    [InlineData(1, 1, 1, 2, "2 listy · 1 otwarte zadanie · 2 materiały")]
-    [InlineData(0, 5, 0, 0, "5 list materiałów · brak materiałów")]
+    [InlineData(1, 1, 1, 2, "2 listy · 1 otwarte zadanie · 2 pozycje")]
+    [InlineData(0, 5, 0, 0, "5 list materiałów · brak pozycji")]
     public void TheAreaSummaryAgreesWithTheCountsInPolish(
         int taskLists, int referenceLists, int openTasks, int items, string expected) =>
         InPolish(() => Assert.Equal(expected, AreaSummary.Describe(

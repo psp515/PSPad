@@ -154,7 +154,7 @@
     <value>Dołączyło {0} osób · link wygaśnie za {1} min</value>
   </data>
   <data name="LiveLinks.Zero" xml:space="preserve">
-    <value>Brak aktywnych</value>
+    <value>Brak aktywnych linków</value>
   </data>
   <data name="LiveLinks.One" xml:space="preserve">
     <value>{0} aktywny link</value>
@@ -193,16 +193,16 @@
     <value>{0} list materiałów</value>
   </data>
   <data name="SummaryItems.Zero" xml:space="preserve">
-    <value>brak materiałów</value>
+    <value>brak pozycji</value>
   </data>
   <data name="SummaryItems.One" xml:space="preserve">
-    <value>{0} materiał</value>
+    <value>{0} pozycja</value>
   </data>
   <data name="SummaryItems.Few" xml:space="preserve">
-    <value>{0} materiały</value>
+    <value>{0} pozycje</value>
   </data>
   <data name="SummaryItems.Many" xml:space="preserve">
-    <value>{0} materiałów</value>
+    <value>{0} pozycji</value>
   </data>
   <data name="ContainsLists.One" xml:space="preserve">
     <value>{0} listą</value>
@@ -223,12 +223,12 @@
     <value>{0} zadaniami</value>
   </data>
   <data name="ContainsItems.One" xml:space="preserve">
-    <value>{0} materiałem</value>
+    <value>{0} pozycją</value>
   </data>
   <data name="ContainsItems.Few" xml:space="preserve">
-    <value>{0} materiałami</value>
+    <value>{0} pozycjami</value>
   </data>
   <data name="ContainsItems.Many" xml:space="preserve">
-    <value>{0} materiałami</value>
+    <value>{0} pozycjami</value>
   </data>
 </root>
