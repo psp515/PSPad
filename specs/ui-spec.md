@@ -451,8 +451,8 @@ The day is two parts inside `pspad-day`: the task sections
 (`pspad-day-lists`) and the Schedule (`pspad-day-schedule`). From `md` they
 are a grid, sections on the left and a 380px schedule column on the right.
 Below `md` a tab bar under the week strip (`pspad-day-tabs`: **Tasks** and
-**Schedule · N**, N the pending scheduled count) picks one; the bar exists
-only when the day has a schedule, `pspad-day` carries
+**Schedule · N**, N the pending scheduled count, plain **Schedule** at zero)
+picks one; `pspad-day` carries
 `pspad-day-tab-tasks` or `pspad-day-tab-schedule`, and the page opens on
 Tasks.
 
@@ -471,8 +471,10 @@ Task sections, top to bottom, each hidden when empty:
 Each section is one `RowGroup` of `TaskRow`s with `pspad-row-ledger`, so
 from `md` a row is one line with its details in a right-hand column.
 
-**Schedule** (`Color.Primary` heading, only with timed tasks) is
-`Components/DayTimeline`: a vertical timeline from the floor of the first
+**Schedule** (`Color.Primary` heading, always present) is a muted "Schedule
+empty for today." / "Schedule empty for Fri, 9 Oct." in a `RowGroup` when
+the day has no timed task, else `Components/DayTimeline`: a vertical
+timeline from the floor of the first
 start to the ceiling of the last end, 56px per hour, hour labels in a 52px
 gutter, a dashed half-hour line. Each task is a block placed by its time
 (`pspad-timeline-task`; a task without an end takes 30 minutes; an

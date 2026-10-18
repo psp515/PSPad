@@ -72,11 +72,12 @@ lead-time rule (`adr/0053`) still runs and still decides Today membership for re
   tasks done" muted for closed goals. The `⋯` menu keeps Mark achieved / Mark not achieved / Edit /
   Delete and stops click propagation. The five-task preview moved to the goal page.
 - **Today (My Day)**: `pspad-day` holds `pspad-day-lists` (Overdue, Starred, {Day} any time, each a
-  `RowGroup` with `pspad-row-ledger`, then Completed) and `pspad-day-schedule` (the `DayTimeline`,
-  rendered only when the plan has Scheduled entries). From `md` the two are a grid, lists then a
-  380px schedule column. Below `md` a tab bar (`pspad-day-tabs`: "Tasks", "Schedule · N" with the
-  pending count) under the week strip picks which one shows; the bar exists only when there is a
-  schedule, and `pspad-day-tab-tasks` / `pspad-day-tab-schedule` on `pspad-day` says which. The
+  `RowGroup` with `pspad-row-ledger`, then Completed) and `pspad-day-schedule` (the `DayTimeline`, or a
+  muted "Schedule empty for today." / "Schedule empty for Fri, 9 Oct." in a `RowGroup` when the plan
+  has no Scheduled entry). From `md` the two are a grid, lists then a 380px schedule column. Below
+  `md` a tab bar (`pspad-day-tabs`: "Tasks", "Schedule · N" with the pending count, plain "Schedule"
+  at zero) under the week strip picks which one shows; `pspad-day-tab-tasks` /
+  `pspad-day-tab-schedule` on `pspad-day` says which. The
   page starts on Tasks. Section order: Overdue, Starred, any time. Coming up is gone; membership,
   order and ticking rules are otherwise untouched (`TodayRule.Plan`, ADR 0035/0053). The lead time
   a task carries still only affects Coming up, so the panel's "Remind me" row has no visible effect

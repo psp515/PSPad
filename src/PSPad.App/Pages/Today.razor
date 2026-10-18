@@ -43,17 +43,14 @@ else if (_day < State.Today)
 else
 {
     <div class="@DayClass">
-        @if (_plan.Scheduled.Count > 0)
-        {
-            <div class="pspad-day-tabs" role="tablist">
+        <div class="pspad-day-tabs" role="tablist">
                 <MudButton Class="pspad-day-tab-tasks-button" Variant="@(_tab == DayTab.Tasks ? Variant.Filled : Variant.Text)"
                            Color="Color.Primary" Size="Size.Small" OnClick="@(() => _tab = DayTab.Tasks)"
                            aria-selected="@(_tab == DayTab.Tasks ? "true" : "false")" role="tab">Tasks</MudButton>
                 <MudButton Class="pspad-day-tab-schedule-button" Variant="@(_tab == DayTab.Schedule ? Variant.Filled : Variant.Text)"
                            Color="Color.Primary" Size="Size.Small" OnClick="@(() => _tab = DayTab.Schedule)"
-                           aria-selected="@(_tab == DayTab.Schedule ? "true" : "false")" role="tab">@($"Schedule · {PendingScheduled}")</MudButton>
-            </div>
-        }
+                           aria-selected="@(_tab == DayTab.Schedule ? "true" : "false")" role="tab">@ScheduleTabText</MudButton>
+        </div>
 
         <div class="pspad-day-lists">
             @if (_plan.Overdue.Count > 0)
@@ -97,15 +94,19 @@ else
             }
         </div>
 
-        @if (_plan.Scheduled.Count > 0)
-        {
-            <section class="pspad-day-schedule mb-4">
-                <SectionHeading Title="Schedule" Color="Color.Primary" />
+        <section class="pspad-day-schedule mb-4">
+            <SectionHeading Title="Schedule" Color="Color.Primary" />
+            @if (_plan.Scheduled.Count > 0)
+            {
                 <DayTimeline Entries="@_plan.Scheduled" Tasks="@_byId" Day="@_day" Now="@NowOnTheDay"
                              ListNameOf="@(task => NameOf(task.ListId))"
                              OnToggle="@(toggled => ToggleAsync(toggled, _day))" OnOpen="@Open" />
-            </section>
-        }
+            }
+            else
+            {
+                <RowGroup><MudText Typo="Typo.body2" Class="pa-3 pspad-muted">@ScheduleEmpty</MudText></RowGroup>
+            }
+        </section>
     </div>
 }
 
@@ -184,6 +185,10 @@ else
     DateOnly DayOf(TodayEntry entry) => entry.Recurring ? entry.DueOn ?? _day : _day;
 
     string NothingPlanned => _day == State.Today ? "Nothing planned for today." : $"Nothing planned for {_day:ddd, d MMM}.";
+
+    string ScheduleEmpty => _day == State.Today ? "Schedule empty for today." : $"Schedule empty for {_day:ddd, d MMM}.";
+
+    string ScheduleTabText => PendingScheduled > 0 ? $"Schedule · {PendingScheduled}" : "Schedule";
 
     string? NameOf(Guid listId) => _listNames.TryGetValue(listId, out var name) ? name : null;
 

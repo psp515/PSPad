@@ -142,7 +142,7 @@ public class TodayTests : Bunit.TestContext
         var page = Render<Today>();
 
         Assert.DoesNotContain("Overdue", page.Markup);
-        Assert.Single(page.FindAll(".mud-paper:not(.pspad-week-strip)"));
+        Assert.Single(page.FindAll(".pspad-day-lists .mud-paper"));
     }
 
     [Fact]
@@ -308,16 +308,31 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheTabBarExistsOnlyWithASchedule()
+    public void AnEmptyScheduleSaysSoAndStillHasItsTab()
     {
         var list = NewList("Praca");
         Arrange(list, Due(list.Id, "Mleko", Today));
 
         var page = Render<Today>();
 
-        Assert.Empty(page.FindAll(".pspad-day-tabs"));
-        Assert.Empty(page.FindAll(".pspad-day-schedule"));
+        Assert.Contains("Schedule empty for today.", page.Find(".pspad-day-schedule").TextContent);
+        Assert.Empty(page.FindComponents<DayTimeline>());
+        Assert.Equal("Schedule", page.Find(".pspad-day-tab-schedule-button").TextContent.Trim());
         Assert.Contains("pspad-day-tab-tasks", page.Find(".pspad-day").ClassList);
+    }
+
+    [Fact]
+    public void AnEmptyScheduleNamesAnotherDay()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Due(list.Id, "Later", Today.AddDays(1)));
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"/?day={Today.AddDays(1):yyyy-MM-dd}");
+
+        var page = Render<Today>();
+
+        var text = page.Find(".pspad-day-schedule").TextContent;
+        Assert.Contains($"Schedule empty for {Today.AddDays(1):ddd, d MMM}.", text);
+        Assert.DoesNotContain("today", text);
     }
 
     [Fact]
