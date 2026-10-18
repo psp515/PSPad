@@ -17,6 +17,9 @@ public sealed class User : Aggregate
     public string TimeZone { get; private set; } = "Etc/UTC";
 
     [JsonInclude]
+    public string Language { get; private set; } = SupportedLanguages.Default;
+
+    [JsonInclude]
     public DateTimeOffset? ProvisionedAt { get; private set; }
 
     public static Guid IdFor(string subject) =>
@@ -34,7 +37,8 @@ public sealed class User : Aggregate
 
                 return [new UserProvisioned(
                     IdFor(provision.Subject), IdFor(provision.Subject), at,
-                    provision.Subject, provision.DisplayName, RequireZone(provision.TimeZone))];
+                    provision.Subject, provision.DisplayName, RequireZone(provision.TimeZone),
+                    SupportedLanguages.Require(provision.Language))];
 
             case SetUserTimeZone zone:
                 var existing = Require(user);
@@ -47,6 +51,11 @@ public sealed class User : Aggregate
                 return renaming.DisplayName == displayName
                     ? []
                     : [new UserDisplayNameSet(renaming.Id, renaming.Id, at, displayName)];
+
+            case SetUserLanguage language:
+                var speaking = Require(user);
+                var tag = SupportedLanguages.Require(language.Language);
+                return speaking.Language == tag ? [] : [new UserLanguageSet(speaking.Id, speaking.Id, at, tag)];
 
             default:
                 throw new DomainRejectedException($"A user cannot handle {command.GetType().Name}.");
@@ -63,10 +72,14 @@ public sealed class User : Aggregate
                 Subject = provisioned.Subject;
                 DisplayName = provisioned.DisplayName;
                 TimeZone = provisioned.TimeZone;
+                Language = provisioned.Language;
                 ProvisionedAt = provisioned.At;
                 break;
             case UserTimeZoneSet zoneSet:
                 TimeZone = zoneSet.TimeZone;
+                break;
+            case UserLanguageSet languageSet:
+                Language = languageSet.Language;
                 break;
             case UserDisplayNameSet renamed:
                 DisplayName = renamed.DisplayName;

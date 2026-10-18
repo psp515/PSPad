@@ -50,8 +50,57 @@ public class UserTests
         Assert.Equal("Pacific/Auckland", user.TimeZone);
     }
 
-    static ProvisionUser Command(string zone) =>
-        new(Guid.NewGuid(), User.IdFor("keycloak-sub-1"), "keycloak-sub-1", "Łukasz", zone);
+    [Fact]
+    public void ProvisioningRecordsTheLanguage()
+    {
+        var user = new User();
+        user.ApplyAll(User.Decide(null, Command("Europe/Warsaw", "pl"), Now));
+
+        Assert.Equal("pl", user.Language);
+    }
+
+    [Fact]
+    public void ProvisioningWithAnUnsupportedLanguageIsRejected()
+    {
+        Assert.Throws<DomainRejectedException>(() => User.Decide(null, Command("Europe/Warsaw", "de"), Now));
+    }
+
+    [Fact]
+    public void ADocumentWithoutALanguageSpeaksEnglish()
+    {
+        Assert.Equal("en", new User().Language);
+    }
+
+    [Fact]
+    public void ChangingTheLanguageKeepsTheUser()
+    {
+        var user = Provisioned("Europe/Warsaw");
+
+        user.ApplyAll(User.Decide(user, new SetUserLanguage(Guid.NewGuid(), user.Id, "pl"), Now));
+
+        Assert.Equal("pl", user.Language);
+        Assert.Equal("keycloak-sub-1", user.Subject);
+    }
+
+    [Fact]
+    public void SettingTheSameLanguageProducesNoEvent()
+    {
+        var user = Provisioned("Europe/Warsaw");
+
+        Assert.Empty(User.Decide(user, new SetUserLanguage(Guid.NewGuid(), user.Id, "en"), Now));
+    }
+
+    [Fact]
+    public void AnUnsupportedLanguageIsRejected()
+    {
+        var user = Provisioned("Europe/Warsaw");
+
+        Assert.Throws<DomainRejectedException>(
+            () => User.Decide(user, new SetUserLanguage(Guid.NewGuid(), user.Id, "de"), Now));
+    }
+
+    static ProvisionUser Command(string zone, string language = "en") =>
+        new(Guid.NewGuid(), User.IdFor("keycloak-sub-1"), "keycloak-sub-1", "Łukasz", zone, language);
 
     static User Provisioned(string zone)
     {
@@ -64,7 +113,7 @@ public class UserTests
     {
         var user = new User();
         user.ApplyAll(User.Decide(
-            null, new ProvisionUser(Guid.NewGuid(), Guid.Empty, subject, displayName, "Etc/UTC"), Now));
+            null, new ProvisionUser(Guid.NewGuid(), Guid.Empty, subject, displayName, "Etc/UTC", "en"), Now));
         return user;
     }
 
