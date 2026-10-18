@@ -6,6 +6,11 @@ test('a fresh user signs in and sees an empty day', async ({ page, account }) =>
 
   await expect(page.getByText('Nothing planned for today.')).toBeVisible();
 
+  const areas = page.locator('.pspad-nav');
+  for (const name of ['Personal', 'Work', 'Home']) {
+    await expect(areas.getByRole('link', { name, exact: true })).toBeVisible();
+  }
+
   const badge = page.locator('.pspad-account-badge:visible');
   await expect(badge).toContainText(account.displayName);
   await expect(badge).toContainText(account.email);
