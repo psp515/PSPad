@@ -7,6 +7,8 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime Js
 @inject ILogger<ReferenceFieldList> Logger
+@inject IStringLocalizer<ReferenceStrings> Ref
+@inject IStringLocalizer<SharedStrings> Shared
 
 <div class="pspad-fields d-flex flex-column">
     @* MudDropZone keeps its own index per item; keying on the order hands it a fresh container after every change. *@
@@ -36,10 +38,10 @@
                         <ReferenceFieldValue Field="@context" />
                     </div>
                     <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
-                                   Class="pspad-field-remove pspad-step-remove" aria-label="@($"Remove {context.Label}")"
+                                   Class="pspad-field-remove pspad-step-remove" aria-label="@Ref["RemoveLabel", context.Label]"
                                    Disabled="@Disabled" OnClick="@(() => RemoveAsync(context))" />
                     <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small"
-                             Class="pspad-drag-handle pspad-muted" aria-label="@($"Drag {context.Label}")" />
+                             Class="pspad-drag-handle pspad-muted" aria-label="@Shared["DragItem", context.Label]" />
                 </div>
             }
         </ItemRenderer>
@@ -50,10 +52,10 @@
             <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary" />
         </span>
         <MudTextField @ref="_labelInput" T="string" Class="pspad-step-add pspad-field-add-label flex-grow-1 mt-0"
-                      @bind-Value="_newLabel" Placeholder="Label" MaxLength="@ContentLimits.Label" aria-label="New label" Underline="false"
+                      @bind-Value="_newLabel" Placeholder="@Ref["Label"]" MaxLength="@ContentLimits.Label" aria-label="@Ref["NewLabel"]" Underline="false"
                       Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@LabelKeyDownAsync" />
         <MudTextField @ref="_valueInput" T="string" Class="pspad-step-add pspad-field-add-value flex-grow-1 mt-0"
-                      @bind-Value="_newValue" Placeholder="Value" MaxLength="@ContentLimits.FieldValue" aria-label="New label value" Underline="false"
+                      @bind-Value="_newValue" Placeholder="@Ref["Value"]" MaxLength="@ContentLimits.FieldValue" aria-label="@Ref["NewLabelValue"]" Underline="false"
                       Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@ValueKeyDownAsync" />
     </div>
 </div>
@@ -117,9 +119,7 @@
 
         if (hadFiles)
         {
-            Snackbar.Add(
-                "Browsers can't read a file's full path. On Windows use Shift+right-click → Copy as path, then paste.",
-                Severity.Info);
+            Snackbar.Add(Ref["DropHasNoPath"], Severity.Info);
         }
     }
 
@@ -237,7 +237,7 @@
                 {
                     _newLabel = typedLabel;
                     _newValue = value;
-                    Snackbar.Add(result.Rejection ?? "Couldn't add the field.", Severity.Warning);
+                    Snackbar.Add(result.Rejection ?? Ref["CouldntAddFieldGeneric"], Severity.Warning);
                     return;
                 }
             }
@@ -290,7 +290,7 @@
 
             if (!result.Accepted)
             {
-                Snackbar.Add(result.Rejection ?? "Couldn't save the field.", Severity.Warning);
+                Snackbar.Add(result.Rejection ?? Ref["CouldntSaveField"], Severity.Warning);
                 return;
             }
         }
@@ -318,7 +318,7 @@
 
             if (!result.Accepted)
             {
-                Snackbar.Add(result.Rejection ?? "Couldn't remove the field.", Severity.Warning);
+                Snackbar.Add(result.Rejection ?? Ref["CouldntRemoveField"], Severity.Warning);
                 return;
             }
         }
@@ -357,7 +357,7 @@
 
             if (!result.Accepted)
             {
-                Snackbar.Add(result.Rejection ?? "Couldn't reorder the field.", Severity.Warning);
+                Snackbar.Add(result.Rejection ?? Ref["CouldntReorderField"], Severity.Warning);
                 return;
             }
         }

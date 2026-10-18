@@ -22,6 +22,9 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IStringLocalizer<TasksStrings> TaskText
+@inject IStringLocalizer<ListsStrings> T
+@inject IStringLocalizer<ReferenceStrings> Ref
+@inject IStringLocalizer<SharedStrings> Shared
 @implements IDisposable
 
 @if (!_loaded)
@@ -32,8 +35,8 @@
 }
 else if (_list is not null)
 {
-    <PageHeading Title="@_list.Name" Subtitle="@Summary" Icon="@ListIcon.For(_list)" IconLabel="@ListIcon.LabelFor(_list)" BackHref="@AreaLinks.For(_areaId)"
-                 BackLabel="Back to area" BackClass="pspad-back-to-area" />
+    <PageHeading Title="@_list.Name" Subtitle="@Summary" Icon="@ListIcon.For(_list)" IconLabel="@ListIcon.LabelFor(_list, T)" BackHref="@AreaLinks.For(_areaId)"
+                 BackLabel="@T["BackToArea"]" BackClass="pspad-back-to-area" />
 
     @if (_list.Kind == ListKind.Reference)
     {
@@ -41,7 +44,7 @@ else if (_list is not null)
         {
             <MudGrid Spacing="4">
                 <MudItem xs="12" sm="6" lg="4" xl="3">
-                    <EmptyState Icon="@Icons.Material.Outlined.LibraryBooks" Message="No items yet." CreateText="Add item"
+                    <EmptyState Icon="@Icons.Material.Outlined.LibraryBooks" Message="@Ref["NoItemsYet"]" CreateText="@Ref["AddItem"]"
                                 OnCreate="@(EventCallback.Factory.Create(this, AddItem))" />
                 </MudItem>
             </MudGrid>
@@ -53,7 +56,7 @@ else if (_list is not null)
                 {
                     <ReferenceRow @key="item.Id" Item="@item" OnStar="@StarItemAsync" OnOpen="@OpenItem" />
                 }
-                <AddRow Text="Add item" OnClick="@AddItem" />
+                <AddRow Text="@Ref["AddItem"]" OnClick="@AddItem" />
             </RowGroup>
         }
     }
@@ -61,7 +64,7 @@ else if (_list is not null)
     {
         <MudGrid Spacing="4">
             <MudItem xs="12" sm="6" lg="4" xl="3">
-                <EmptyState Icon="@Icons.Material.Outlined.TaskAlt" Message="No tasks yet." CreateText="Add task"
+                <EmptyState Icon="@Icons.Material.Outlined.TaskAlt" Message="@T["NoTasksYet"]" CreateText="@TaskText["AddTask"]"
                             OnCreate="@(EventCallback.Factory.Create(this, AddTask))" />
             </MudItem>
         </MudGrid>
@@ -74,14 +77,14 @@ else if (_list is not null)
                 <TaskRow @key="task.Id" Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
                          OnOpen="@Open" />
             }
-            <AddRow Text="Add task" OnClick="@AddTask" />
+            <AddRow Text="@TaskText["AddTask"]" OnClick="@AddTask" />
         </RowGroup>
     }
 
     @if (_list.Kind != ListKind.Reference && _done.Count > 0)
     {
         <MudExpansionPanels Elevation="0" Class="pspad-completed mt-2">
-            <MudExpansionPanel Text="@($"Completed · {_done.Count}")">
+            <MudExpansionPanel Text="@T["CompletedCount", _done.Count]">
                 <RowGroup Columns="true">
                     @foreach (var task in _done)
                     {
@@ -96,25 +99,25 @@ else if (_list is not null)
     <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
         @if (_list.Kind == ListKind.Reference)
         {
-            <MudTooltip Text="Add item">
+            <MudTooltip Text="@Ref["AddItem"]">
                 <MudFabMenuItem OnClick="@AddItem" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
                                 Size="Size.Small" UserAttributes="@AddItemAttributes" />
             </MudTooltip>
         }
         else
         {
-            <MudTooltip Text="Add task">
+            <MudTooltip Text="@TaskText["AddTask"]">
                 <MudFabMenuItem OnClick="@AddTask" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
                                 Size="Size.Small" UserAttributes="@AddTaskAttributes" />
             </MudTooltip>
         }
         @if (_isMine)
         {
-            <MudTooltip Text="Edit list">
+            <MudTooltip Text="@T["EditList"]">
                 <MudFabMenuItem OnClick="@EditList" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
                                 Size="Size.Small" UserAttributes="@EditListAttributes" />
             </MudTooltip>
-            <MudTooltip Text="Delete list">
+            <MudTooltip Text="@T["DeleteList"]">
                 <MudFabMenuItem OnClick="@DeleteAsync" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Primary"
                                 Size="Size.Small" UserAttributes="@DeleteListAttributes" />
             </MudTooltip>
@@ -124,7 +127,7 @@ else if (_list is not null)
 else
 {
     <PageHeading Title="" />
-    <MudText Typo="Typo.body1">This list is not there anymore.</MudText>
+    <MudText Typo="Typo.body1">@T["ListGone"]</MudText>
 }
 
 @code {
@@ -141,11 +144,11 @@ else
     IReadOnlyList<TodoTask> _done = [];
     IReadOnlyList<ReferenceItem> _items = [];
 
-    static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
-    static readonly Dictionary<string, object> AddTaskAttributes = new() { ["aria-label"] = "Add task" };
-    static readonly Dictionary<string, object> AddItemAttributes = new() { ["aria-label"] = "Add item" };
-    static readonly Dictionary<string, object> EditListAttributes = new() { ["aria-label"] = "Edit list" };
-    static readonly Dictionary<string, object> DeleteListAttributes = new() { ["aria-label"] = "Delete list" };
+    Dictionary<string, object> ActivatorAttributes => new() { ["aria-label"] = Shared["Actions"].Value };
+    Dictionary<string, object> AddTaskAttributes => new() { ["aria-label"] = TaskText["AddTask"].Value };
+    Dictionary<string, object> AddItemAttributes => new() { ["aria-label"] = Ref["AddItem"].Value };
+    Dictionary<string, object> EditListAttributes => new() { ["aria-label"] = T["EditList"].Value };
+    Dictionary<string, object> DeleteListAttributes => new() { ["aria-label"] = T["DeleteList"].Value };
 
     protected override void OnInitialized() => Sender.Sent += OnCommandSent;
 
@@ -210,13 +213,13 @@ else
         }
 
         var message = _list.Kind == ListKind.Reference
-            ? DeleteWarning.ForList(_list.Name, ListId, await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None))
-            : DeleteWarning.ForList(_list.Name, ListId, await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None));
+            ? DeleteWarning.ForList(_list.Name, ListId, await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None), T)
+            : DeleteWarning.ForList(_list.Name, ListId, await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None), T);
         var parameters = new DialogParameters<ConfirmDialog>
         {
             { dialog => dialog.Message, message }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete list", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["DeleteList"], parameters);
         var result = await dialog.Result;
 
         if (result is null || result.Canceled)
@@ -268,7 +271,7 @@ else
 
         if (!result.Accepted)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't star the item.", Severity.Warning);
+            Snackbar.Add(result.Rejection ?? Ref["CouldntStarItem"], Severity.Warning);
         }
     }
 

@@ -579,7 +579,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         panel.Find(".pspad-repeat-custom").Click();
         panel.WaitForElement(".pspad-repeat-dialog");
         panel.Find(".pspad-repeat-unit .mud-select-input").MouseDown();
-        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "years").Click();
+        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "year").Click();
         panel.Find(".pspad-repeat-save").Click();
 
         var rule = (await replica.LoadAsync<TodoTask>(task.Id))!.Recurrence!;
@@ -847,7 +847,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         panel.Find(".pspad-repeat-custom").Click();
         panel.WaitForElement(".pspad-repeat-dialog");
         panel.Find(".pspad-repeat-unit .mud-select-input").MouseDown();
-        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "weeks").Click();
+        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "week").Click();
         await PickStartAsync(panel, Today.AddDays(2));
         panel.Find(".pspad-repeat-save").Click();
 
@@ -868,7 +868,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         panel.Find(".pspad-repeat-custom").Click();
         panel.WaitForElement(".pspad-repeat-dialog");
         panel.Find(".pspad-repeat-unit .mud-select-input").MouseDown();
-        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "months").Click();
+        panel.FindAll(".mud-list-item").First(item => item.TextContent.Trim() == "month").Click();
         await PickStartAsync(panel, Today.AddDays(3));
         panel.Find(".pspad-repeat-save").Click();
 

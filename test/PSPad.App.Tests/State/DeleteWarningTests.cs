@@ -1,3 +1,5 @@
+using PSPad.App.Resources;
+using PSPad.App.Tests.Localization;
 using PSPad.App.State;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
@@ -19,7 +21,7 @@ public class DeleteWarningTests
         var chores = NewList(AreaId);
         TodoTask[] tasks = [NewTask(errands.Id), NewTask(errands.Id), NewTask(chores.Id)];
 
-        var message = DeleteWarning.ForArea("Dom", AreaId, [errands, chores], tasks, []);
+        var message = DeleteWarning.ForArea("Dom", AreaId, [errands, chores], tasks, [], TestLocalizers.For<ListsStrings>());
 
         Assert.Equal("Delete “Dom” and its 2 lists and 3 tasks? This can’t be undone.", message);
     }
@@ -29,7 +31,7 @@ public class DeleteWarningTests
     {
         var errands = NewList(AreaId);
 
-        var message = DeleteWarning.ForArea("Dom", AreaId, [errands], [NewTask(errands.Id)], []);
+        var message = DeleteWarning.ForArea("Dom", AreaId, [errands], [NewTask(errands.Id)], [], TestLocalizers.For<ListsStrings>());
 
         Assert.Equal("Delete “Dom” and its 1 list and 1 task? This can’t be undone.", message);
     }
@@ -37,7 +39,7 @@ public class DeleteWarningTests
     [Fact]
     public void AnAreaWithEmptyListsMentionsOnlyTheLists()
     {
-        var message = DeleteWarning.ForArea("Dom", AreaId, [NewList(AreaId), NewList(AreaId)], [], []);
+        var message = DeleteWarning.ForArea("Dom", AreaId, [NewList(AreaId), NewList(AreaId)], [], [], TestLocalizers.For<ListsStrings>());
 
         Assert.Equal("Delete “Dom” and its 2 lists? This can’t be undone.", message);
     }
@@ -45,7 +47,7 @@ public class DeleteWarningTests
     [Fact]
     public void AnEmptyAreaMentionsNothingElse()
     {
-        var message = DeleteWarning.ForArea("Dom", AreaId, [], [], []);
+        var message = DeleteWarning.ForArea("Dom", AreaId, [], [], [], TestLocalizers.For<ListsStrings>());
 
         Assert.Equal("Delete “Dom”? This can’t be undone.", message);
     }
@@ -58,7 +60,7 @@ public class DeleteWarningTests
         var elsewhere = NewList(Guid.NewGuid());
         TodoTask[] tasks = [NewTask(mine.Id), NewTask(mine.Id, deleted: true), NewTask(gone.Id), NewTask(elsewhere.Id)];
 
-        var message = DeleteWarning.ForArea("Dom", AreaId, [mine, gone, elsewhere], tasks, []);
+        var message = DeleteWarning.ForArea("Dom", AreaId, [mine, gone, elsewhere], tasks, [], TestLocalizers.For<ListsStrings>());
 
         Assert.Equal("Delete “Dom” and its 1 list and 1 task? This can’t be undone.", message);
     }
@@ -69,7 +71,7 @@ public class DeleteWarningTests
         var list = NewList(AreaId);
         TodoTask[] tasks = [NewTask(list.Id), NewTask(list.Id), NewTask(list.Id, deleted: true), NewTask(Guid.NewGuid())];
 
-        var message = DeleteWarning.ForList("Zakupy", list.Id, tasks);
+        var message = DeleteWarning.ForList("Zakupy", list.Id, tasks, TestLocalizers.For<ListsStrings>());
 
         Assert.Equal("Delete “Zakupy” and its 2 tasks? This can’t be undone.", message);
     }
@@ -77,7 +79,7 @@ public class DeleteWarningTests
     [Fact]
     public void AnEmptyListMentionsNothingElse()
     {
-        var message = DeleteWarning.ForList("Zakupy", Guid.NewGuid(), Array.Empty<TodoTask>());
+        var message = DeleteWarning.ForList("Zakupy", Guid.NewGuid(), Array.Empty<TodoTask>(), TestLocalizers.For<ListsStrings>());
 
         Assert.Equal("Delete “Zakupy”? This can’t be undone.", message);
     }
@@ -88,7 +90,7 @@ public class DeleteWarningTests
         var list = NewList(AreaId);
         ReferenceItem[] items = [NewItem(list.Id), NewItem(list.Id), NewItem(list.Id, deleted: true), NewItem(Guid.NewGuid())];
 
-        var message = DeleteWarning.ForList("Przepisy", list.Id, items);
+        var message = DeleteWarning.ForList("Przepisy", list.Id, items, TestLocalizers.For<ListsStrings>());
 
         Assert.Equal("Delete “Przepisy” and its 2 items? This can’t be undone.", message);
     }
@@ -101,7 +103,7 @@ public class DeleteWarningTests
         TodoTask[] tasks = [NewTask(tasksList.Id)];
         ReferenceItem[] items = [NewItem(referenceList.Id), NewItem(referenceList.Id)];
 
-        var message = DeleteWarning.ForArea("Dom", AreaId, [tasksList, referenceList], tasks, items);
+        var message = DeleteWarning.ForArea("Dom", AreaId, [tasksList, referenceList], tasks, items, TestLocalizers.For<ListsStrings>());
 
         Assert.Equal("Delete “Dom” and its 2 lists, 1 task and 2 items? This can’t be undone.", message);
     }

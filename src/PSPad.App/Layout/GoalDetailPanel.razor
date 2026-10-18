@@ -8,12 +8,13 @@
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
+@inject IStringLocalizer<GoalsStrings> T
 
-<DetailPanel Open="@(IsNew || _goal is not null)" Title="@(IsNew ? "New goal" : "Goal")" TitleTypo="Typo.body2" OnClose="@OnClose"
-             OnSave="@SaveCallback" SaveText="Add goal" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
-             OnDelete="@DeleteCallback" DeleteText="Delete goal" Disabled="@Disabled">
+<DetailPanel Open="@(IsNew || _goal is not null)" Title="@(IsNew ? T["NewGoal"] : T["GoalTitle"])" TitleTypo="Typo.body2" OnClose="@OnClose"
+             OnSave="@SaveCallback" SaveText="@T["AddGoal"]" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
+             OnDelete="@DeleteCallback" DeleteText="@T["DeleteGoal"]" Disabled="@Disabled">
     <div class="px-2 pt-3 pb-1">
-        <MudTextField T="string" Class="pspad-goal-name-field flex-grow-1 px-2" Placeholder="Goal name" Typo="Typo.h6" MaxLength="@ContentLimits.Name"
+        <MudTextField T="string" Class="pspad-goal-name-field flex-grow-1 px-2" Placeholder="@T["GoalName"]" Typo="Typo.h6" MaxLength="@ContentLimits.Name"
                       Underline="false" Value="@(_goal?.Name ?? _draftName)" ValueChanged="@NameChangedAsync"
                       Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
     </div>
@@ -23,12 +24,12 @@
     <div class="pa-4 d-flex flex-column gap-2">
         @if (_goal is not null)
         {
-            <MudSelect T="GoalStatus" Class="pspad-goal-status mt-2" Label="Status" Variant="Variant.Outlined"
+            <MudSelect T="GoalStatus" Class="pspad-goal-status mt-2" Label="@T["Status"]" Variant="Variant.Outlined"
                        Value="@_goal.Status" ValueChanged="@StatusChangedAsync" Disabled="@Disabled"
-                       ToStringFunc="@GoalStatusText.Of" AnchorOrigin="Origin.BottomCenter">
+                       ToStringFunc="@(status => GoalStatusText.Of(status, T))" AnchorOrigin="Origin.BottomCenter">
                 @foreach (var status in Enum.GetValues<GoalStatus>())
                 {
-                    <MudSelectItem T="GoalStatus" Value="@status">@GoalStatusText.Of(status)</MudSelectItem>
+                    <MudSelectItem T="GoalStatus" Value="@status">@GoalStatusText.Of(status, T)</MudSelectItem>
                 }
             </MudSelect>
         }
@@ -164,9 +165,9 @@
 
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{_goal.Name}”? Its tasks stay, without a goal." }
+            { dialog => dialog.Message, T["DeleteGoalConfirm", _goal.Name].Value }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete goal", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["DeleteGoal"], parameters);
         var result = await dialog.Result;
 
         if (result is null || result.Canceled)

@@ -1,8 +1,10 @@
 @using PSPad.App.State
 @using PSPad.Module.Tasks.Areas
 @inject NavigationManager Navigation
+@inject IStringLocalizer<ListsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
 
-<nav class="d-flex flex-wrap gap-1 mb-3 pspad-area-chips" aria-label="Areas">
+<nav class="d-flex flex-wrap gap-1 mb-3 pspad-area-chips" aria-label="@Shared["Areas"]">
     @foreach (var area in Areas.Where(area => !area.Deleted).OrderBy(area => area.Position))
     {
         var current = area.Id == Current;
@@ -18,7 +20,7 @@
                  UserAttributes="@(current ? CurrentPage : NoAttributes)">@SharedWithMe.Name</MudChip>
     }
     <MudChip T="string" Size="Size.Small" Class="ma-0 pspad-new-area-chip" Color="Color.Primary"
-             Variant="Variant.Text" Icon="@Icons.Material.Filled.Add" OnClick="@NewArea">New area</MudChip>
+             Variant="Variant.Text" Icon="@Icons.Material.Filled.Add" OnClick="@NewArea">@T["NewArea"]</MudChip>
 </nav>
 
 @code {

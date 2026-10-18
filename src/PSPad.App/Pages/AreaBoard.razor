@@ -25,6 +25,9 @@
 @inject NavigationManager Navigation
 @inject LastArea Remembered
 @inject IStringLocalizer<TasksStrings> TaskText
+@inject IStringLocalizer<ListsStrings> T
+@inject IStringLocalizer<ReferenceStrings> Ref
+@inject IStringLocalizer<SharedStrings> Shared
 @implements IDisposable
 
 @if (!_loaded)
@@ -48,11 +51,11 @@ else if (_isShared || _area is not null)
             <MudItem xs="12" sm="6" lg="4" xl="3">
                 @if (_isShared)
                 {
-                    <EmptyState Icon="@Icons.Material.Outlined.ListAlt" Message="Nothing is shared with you right now." />
+                    <EmptyState Icon="@Icons.Material.Outlined.ListAlt" Message="@T["NothingSharedWithYou"]" />
                 }
                 else
                 {
-                    <EmptyState Icon="@Icons.Material.Outlined.ListAlt" Message="No lists yet." CreateText="New list"
+                    <EmptyState Icon="@Icons.Material.Outlined.ListAlt" Message="@T["NoListsYet"]" CreateText="@T["NewList"]"
                                 OnCreate="@NewList" />
                 }
             </MudItem>
@@ -77,15 +80,15 @@ else if (_isShared || _area is not null)
     @if (!_isShared)
     {
         <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
-            <MudTooltip Text="New list">
+            <MudTooltip Text="@T["NewList"]">
                 <MudFabMenuItem OnClick="@NewList" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary"
                                 Size="Size.Small" UserAttributes="@NewListAttributes" />
             </MudTooltip>
-            <MudTooltip Text="Edit area & order lists">
+            <MudTooltip Text="@T["EditAreaAndOrderLists"]">
                 <MudFabMenuItem OnClick="@EditArea" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
                                 Size="Size.Small" UserAttributes="@EditAreaAttributes" />
             </MudTooltip>
-            <MudTooltip Text="Delete area">
+            <MudTooltip Text="@T["DeleteArea"]">
                 <MudFabMenuItem OnClick="@DeleteAreaAsync" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Primary"
                                 Size="Size.Small" UserAttributes="@DeleteAreaAttributes" />
             </MudTooltip>
@@ -95,7 +98,7 @@ else if (_isShared || _area is not null)
 else
 {
     <PageHeading Title="" />
-    <MudText Typo="Typo.body1">This area is not there anymore.</MudText>
+    <MudText Typo="Typo.body1">@T["AreaGone"]</MudText>
 }
 
 @code {
@@ -113,10 +116,10 @@ else
     IReadOnlyList<ReferenceItem> _items = [];
     ListPlacement _placement = ListPlacement.Empty;
 
-    static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
-    static readonly Dictionary<string, object> NewListAttributes = new() { ["aria-label"] = "New list" };
-    static readonly Dictionary<string, object> EditAreaAttributes = new() { ["aria-label"] = "Edit area" };
-    static readonly Dictionary<string, object> DeleteAreaAttributes = new() { ["aria-label"] = "Delete area" };
+    Dictionary<string, object> ActivatorAttributes => new() { ["aria-label"] = Shared["Actions"].Value };
+    Dictionary<string, object> NewListAttributes => new() { ["aria-label"] = T["NewList"].Value };
+    Dictionary<string, object> EditAreaAttributes => new() { ["aria-label"] = T["EditArea"].Value };
+    Dictionary<string, object> DeleteAreaAttributes => new() { ["aria-label"] = T["DeleteArea"].Value };
 
     protected override void OnInitialized() => Sender.Sent += OnCommandSent;
 
@@ -178,7 +181,7 @@ else
         get
         {
             var referenceLists = _lists.Count(list => list.Kind == ListKind.Reference);
-            return AreaSummary.Describe(_lists.Count - referenceLists, referenceLists, OpenTasks, Items, TaskText);
+            return AreaSummary.Describe(_lists.Count - referenceLists, referenceLists, OpenTasks, Items, T, TaskText);
         }
     }
 
@@ -205,7 +208,7 @@ else
 
         if (!result.Accepted)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't star the item.", Severity.Warning);
+            Snackbar.Add(result.Rejection ?? Ref["CouldntStarItem"], Severity.Warning);
         }
     }
 
@@ -247,13 +250,13 @@ else
     async Task DeleteListAsync(TaskList list)
     {
         var message = list.Kind == ListKind.Reference
-            ? DeleteWarning.ForList(list.Name, list.Id, _items)
-            : DeleteWarning.ForList(list.Name, list.Id, _tasks);
+            ? DeleteWarning.ForList(list.Name, list.Id, _items, T)
+            : DeleteWarning.ForList(list.Name, list.Id, _tasks, T);
         var parameters = new DialogParameters<ConfirmDialog>
         {
             { dialog => dialog.Message, message }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete list", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["DeleteList"], parameters);
         var result = await dialog.Result;
 
         if (result is null || result.Canceled)
@@ -271,9 +274,9 @@ else
         var area = _area!;
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, DeleteWarning.ForArea(area.Name, area.Id, _lists, _tasks, _items) }
+            { dialog => dialog.Message, DeleteWarning.ForArea(area.Name, area.Id, _lists, _tasks, _items, T) }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete area", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["DeleteArea"], parameters);
         var result = await dialog.Result;
 
         if (result is null || result.Canceled)

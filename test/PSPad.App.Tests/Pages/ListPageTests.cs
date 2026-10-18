@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
+using PSPad.App.Resources;
+using PSPad.App.Tests.Localization;
 using PSPad.App.State;
 using PSPad.App.Pages;
 using PSPad.App.State.Dispatch;
@@ -59,7 +61,7 @@ public class ListPageTests : Bunit.TestContext
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
 
         var kind = page.Find(".pspad-page-heading h1 .pspad-sr-only");
-        Assert.Equal(ListIcon.LabelFor(list), kind.TextContent.Trim());
+        Assert.Equal(ListIcon.LabelFor(list, TestLocalizers.For<ListsStrings>()), kind.TextContent.Trim());
     }
 
     [Theory]

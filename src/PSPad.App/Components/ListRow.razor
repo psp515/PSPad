@@ -1,11 +1,12 @@
 @using PSPad.App.State
 @using PSPad.Module.Tasks.Lists
+@inject IStringLocalizer<ListsStrings> T
 
-<PropertyRow Class="pspad-task-list" Icon="@Icons.Material.Outlined.Folder" Label="List"
-             Value="@(PathOf(Value) ?? "No list")" HasValue="@(PathOf(Value) is not null)" Disabled="@Disabled">
+<PropertyRow Class="pspad-task-list" Icon="@Icons.Material.Outlined.Folder" Label="@T["ListTitle"]"
+             Value="@(PathOf(Value) ?? T["NoList"].Value)" HasValue="@(PathOf(Value) is not null)" Disabled="@Disabled">
     @if (Lists.Count == 0)
     {
-        <MudMenuItem Disabled="true">No lists yet</MudMenuItem>
+        <MudMenuItem Disabled="true">@T["NoListsYetMenu"]</MudMenuItem>
     }
     @foreach (var areaId in AreaIds())
     {

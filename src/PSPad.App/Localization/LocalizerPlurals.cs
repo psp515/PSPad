@@ -15,7 +15,7 @@ public static class LocalizerPlurals
             var zero = localizer[key + ".Zero"];
             if (!zero.ResourceNotFound)
             {
-                return zero.Value;
+                return string.Format(CultureInfo.CurrentCulture, zero.Value, [count, .. arguments]);
             }
         }
 

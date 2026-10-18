@@ -10,9 +10,10 @@
 @inject CommandSender Sender
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedStrings> Shared
+@inject IStringLocalizer<InboxStrings> T
 @implements IDisposable
 
-<PageHeading Title="Inbox" Subtitle="@Subtitle" />
+<PageHeading Title="@Shared["Inbox"]" Subtitle="@Subtitle" />
 
 @if (!_loaded)
 {
@@ -24,7 +25,7 @@ else
     {
         <MudGrid Spacing="4">
             <MudItem xs="12" sm="6" lg="4" xl="3">
-                <EmptyState Icon="@Icons.Material.Outlined.Inbox" Message="Nothing captured." CreateText="Capture"
+                <EmptyState Icon="@Icons.Material.Outlined.Inbox" Message="@T["NothingCaptured"]" CreateText="@T["Capture"]"
                             OnCreate="@Capture" />
             </MudItem>
         </MudGrid>
@@ -51,13 +52,13 @@ else
     bool _loaded;
     Inbox? _inbox;
 
-    static readonly Dictionary<string, object> FabAttributes = new() { ["aria-label"] = "Capture" };
+    Dictionary<string, object> FabAttributes => new() { ["aria-label"] = T["Capture"].Value };
 
     IReadOnlyList<InboxItem> Items => _inbox?.Items ?? [];
 
     TimeZoneInfo Zone => LocalToday.Zone(State.TimeZone);
 
-    string? Subtitle => Items.Count == 0 ? null : $"{Items.Count} to process";
+    string? Subtitle => Items.Count == 0 ? null : T.Plural(Items.Count, "ToProcess");
 
     IEnumerable<IGrouping<DateOnly, InboxItem>> Days => Items
         .OrderByDescending(item => item.CapturedAt)

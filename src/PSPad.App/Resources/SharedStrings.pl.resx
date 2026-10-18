@@ -87,4 +87,25 @@
   <data name="Edit" xml:space="preserve">
     <value>Edytuj</value>
   </data>
+  <data name="Actions" xml:space="preserve">
+    <value>Akcje</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Nazwa</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Opis</value>
+  </data>
+  <data name="NoDescription" xml:space="preserve">
+    <value>Brak opisu</value>
+  </data>
+  <data name="EditDescription" xml:space="preserve">
+    <value>Edytuj opis</value>
+  </data>
+  <data name="AddDescription" xml:space="preserve">
+    <value>Dodaj opis…</value>
+  </data>
+  <data name="DragItem" xml:space="preserve">
+    <value>Przeciągnij: {0}</value>
+  </data>
 </root>

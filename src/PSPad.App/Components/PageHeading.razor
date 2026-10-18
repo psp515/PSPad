@@ -1,5 +1,6 @@
 @using PSPad.App.State
 @inject PageHeader Header
+@inject IStringLocalizer<SharedStrings> Shared
 
 @if (Title.Length > 0)
 {
@@ -7,7 +8,7 @@
         @if (BackHref is not null)
         {
             <MudIconButton Class="@BackClass" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary"
-                           Href="@BackHref" aria-label="@BackLabel" />
+                           Href="@BackHref" aria-label="@EffectiveBackLabel" />
         }
         @if (Icon is not null)
         {
@@ -34,7 +35,7 @@
 
     [Parameter] public string? BackHref { get; set; }
 
-    [Parameter] public string BackLabel { get; set; } = "Back";
+    [Parameter] public string? BackLabel { get; set; }
 
     [Parameter] public string? BackClass { get; set; }
 
@@ -44,5 +45,7 @@
 
     [Parameter] public RenderFragment? Actions { get; set; }
 
-    protected override void OnParametersSet() => Header.Set(Title, Subtitle, BackHref, BackLabel, Icon, Actions);
+    string EffectiveBackLabel => BackLabel ?? Shared["Back"].Value;
+
+    protected override void OnParametersSet() => Header.Set(Title, Subtitle, BackHref, EffectiveBackLabel, Icon, Actions);
 }

@@ -1,16 +1,17 @@
 @using PSPad.App.Markdown
 @inject ILogger<MarkdownField> Logger
+@inject IStringLocalizer<SharedStrings> Shared
 
 @if (ShowsEditor)
 {
     <MudTextField @ref="_input" T="string" Lines="3" Sizing="InputSizing.Auto" Variant="Variant.Outlined" Class="pspad-markdown-input mt-0"
-                  Placeholder="@Placeholder" aria-label="Description" Immediate="true"
+                  Placeholder="@(Placeholder ?? Shared["AddDescription"].Value)" aria-label="@Shared["Description"]" Immediate="true"
                   MaxLength="@ContentLimits.Description" Counter="@ContentLimits.Description" AutoFocus="@_editing"
                   Value="@_draft" ValueChanged="@DraftChanged" OnBlur="@CommitAsync" OnKeyDown="@DiscardOnEscape" />
 }
 else if (string.IsNullOrWhiteSpace(Value))
 {
-    <MudText Typo="Typo.body2" Class="pspad-markdown-empty pspad-muted">No description</MudText>
+    <MudText Typo="Typo.body2" Class="pspad-markdown-empty pspad-muted">@Shared["NoDescription"]</MudText>
 }
 else
 {
@@ -21,7 +22,7 @@ else
                 <div class="flex-grow-1 pspad-markdown-content" style="min-width:0; cursor:text"
                      @onmarkdownviewclick="@EditUnlessOnLink">@((MarkupString)_renderedHtml)</div>
                 <MudIconButton Icon="@Icons.Material.Outlined.Edit" Class="pspad-markdown-edit" Size="Size.Small"
-                               aria-label="Edit description" OnClick="@BeginEdit" />
+                               aria-label="@Shared["EditDescription"]" OnClick="@BeginEdit" />
             }
             else
             {
@@ -40,7 +41,7 @@ else
 
     [Parameter] public bool Disabled { get; set; }
 
-    [Parameter] public string Placeholder { get; set; } = "Add a description…";
+    [Parameter] public string? Placeholder { get; set; }
 
     MudTextField<string>? _input;
     bool _editing;

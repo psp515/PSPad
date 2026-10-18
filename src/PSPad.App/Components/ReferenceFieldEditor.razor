@@ -5,26 +5,28 @@
 @inject IJSRuntime Js
 @inject ISnackbar Snackbar
 @inject ILogger<ReferenceFieldEditor> Logger
+@inject IStringLocalizer<ReferenceStrings> Ref
+@inject IStringLocalizer<SharedStrings> Shared
 
-<MudTextField T="string" Label="Label" Class="pspad-field-label-input" Margin="Margin.Dense" AutoFocus="true"
+<MudTextField T="string" Label="@Ref["Label"]" Class="pspad-field-label-input" Margin="Margin.Dense" AutoFocus="true"
               MaxLength="@ContentLimits.Label" @bind-Value="_label" />
-<MudTextField @ref="_valueInput" T="string" Label="Value" Class="pspad-field-value-input" Margin="Margin.Dense" Lines="1"
+<MudTextField @ref="_valueInput" T="string" Label="@Ref["Value"]" Class="pspad-field-value-input" Margin="Margin.Dense" Lines="1"
               Sizing="InputSizing.Auto" MaxLength="@ContentLimits.FieldValue" @bind-Value="_value" />
-<MudSelect T="FieldKind?" Label="Display" Class="pspad-field-kind-input" Margin="Margin.Dense" @bind-Value="_kind">
-    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)null)">Automatic</MudSelectItem>
-    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Text)">Text</MudSelectItem>
-    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Link)">Link</MudSelectItem>
-    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Path)">Path</MudSelectItem>
-    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Quantity)">Quantity</MudSelectItem>
+<MudSelect T="FieldKind?" Label="@Ref["Display"]" Class="pspad-field-kind-input" Margin="Margin.Dense" @bind-Value="_kind">
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)null)">@Ref["DisplayAutomatic"]</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Text)">@Ref["DisplayText"]</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Link)">@Ref["DisplayLink"]</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Path)">@Ref["DisplayPath"]</MudSelectItem>
+    <MudSelectItem T="FieldKind?" Value="@((FieldKind?)FieldKind.Quantity)">@Ref["DisplayQuantity"]</MudSelectItem>
 </MudSelect>
 <div class="d-flex align-center gap-1 mt-1">
     <MudButton Class="pspad-field-save" Size="Size.Small" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(_label)"
-               OnClick="@SaveAsync">Save</MudButton>
-    <MudButton Class="pspad-field-cancel" Size="Size.Small" OnClick="@CancelAsync">Cancel</MudButton>
+               OnClick="@SaveAsync">@Shared["Save"]</MudButton>
+    <MudButton Class="pspad-field-cancel" Size="Size.Small" OnClick="@CancelAsync">@Shared["Cancel"]</MudButton>
     <MudSpacer />
     @if (Field is not null)
     {
-        <MudButton Class="pspad-field-editor-remove" Size="Size.Small" Color="Color.Error" OnClick="@RemoveAsync">Remove</MudButton>
+        <MudButton Class="pspad-field-editor-remove" Size="Size.Small" Color="Color.Error" OnClick="@RemoveAsync">@Ref["Remove"]</MudButton>
     }
 </div>
 
@@ -92,9 +94,7 @@
 
         if (hadFiles)
         {
-            Snackbar.Add(
-                "Browsers can't read a file's full path. On Windows use Shift+right-click → Copy as path, then paste.",
-                Severity.Info);
+            Snackbar.Add(Ref["DropHasNoPath"], Severity.Info);
         }
     }
 

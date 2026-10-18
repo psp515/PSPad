@@ -1,11 +1,12 @@
 @using PSPad.Module.Tasks.Goals
+@inject IStringLocalizer<GoalsStrings> T
 
-<PropertyRow Class="pspad-task-goal" Icon="@Icons.Material.Outlined.TrackChanges" Label="Goal"
-             Value="@(Name ?? "No goal")" HasValue="@(Name is not null)" Disabled="@Disabled"
+<PropertyRow Class="pspad-task-goal" Icon="@Icons.Material.Outlined.TrackChanges" Label="@T["Goal"]"
+             Value="@(Name ?? T["NoGoal"].Value)" HasValue="@(Name is not null)" Disabled="@Disabled"
              OnClear="@(() => ValueChanged.InvokeAsync(null))">
     @if (Options.Count == 0)
     {
-        <MudMenuItem Disabled="true">No goals in progress</MudMenuItem>
+        <MudMenuItem Disabled="true">@T["NoGoalsInProgress"]</MudMenuItem>
     }
     @foreach (var goal in Options)
     {

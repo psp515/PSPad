@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using PSPad.App.Components;
 using PSPad.App.Markdown;
@@ -352,5 +353,6 @@ public class MarkdownFieldTests : Bunit.TestContext
     {
         JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
         Services.AddMudServices();
+        Services.AddLocalization();
     }
 }
