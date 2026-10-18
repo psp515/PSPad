@@ -8,6 +8,8 @@ sealed class FakeStorageJsRuntime : IJSRuntime
 
     public string? BrowserLanguage { get; set; }
 
+    public bool StorageWritesFail { get; set; }
+
     public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
     {
         switch (identifier)
@@ -15,6 +17,11 @@ sealed class FakeStorageJsRuntime : IJSRuntime
             case "pspadLanguage":
                 return ValueTask.FromResult((TValue)(object)BrowserLanguage!);
             case "localStorage.setItem":
+                if (StorageWritesFail)
+                {
+                    throw new JSException("QuotaExceededError");
+                }
+
                 Storage[(string)args![0]!] = (string)args[1]!;
                 return ValueTask.FromResult(default(TValue)!);
             case "localStorage.removeItem":

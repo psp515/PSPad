@@ -105,6 +105,19 @@ public class LanguagePreferenceTests
     });
 
     [Fact]
+    public Task AServerValueThatCannotBeCachedIsAppliedButDoesNotAskForAReload() => WithRestoredCultureAsync(async () =>
+    {
+        var js = new FakeStorageJsRuntime { BrowserLanguage = "en", StorageWritesFail = true };
+        var preference = new LanguagePreference(js);
+        await preference.InitialiseAsync();
+
+        var changed = await preference.AdoptFromServerAsync("pl");
+
+        Assert.False(changed);
+        Assert.Equal("pl", preference.Language);
+    });
+
+    [Fact]
     public Task TheSameServerValueChangesNothing() => WithRestoredCultureAsync(async () =>
     {
         var js = new FakeStorageJsRuntime { BrowserLanguage = "pl" };

@@ -34,10 +34,10 @@ public sealed class LanguagePreference(IJSRuntime js)
         }
 
         Language = language;
-        await WriteAsync(StorageKey, language);
+        var persisted = await WriteAsync(StorageKey, language);
         ApplyCulture(language);
         Changed?.Invoke();
-        return true;
+        return persisted;
     }
 
     public async Task ChooseAsync(string language)
@@ -77,14 +77,16 @@ public sealed class LanguagePreference(IJSRuntime js)
         }
     }
 
-    async Task WriteAsync(string key, string value)
+    async Task<bool> WriteAsync(string key, string value)
     {
         try
         {
             await js.InvokeVoidAsync("localStorage.setItem", key, value);
+            return true;
         }
         catch (JSException)
         {
+            return false;
         }
     }
 
