@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="OpenPSPad" xml:space="preserve">
+    <value>Open PSPad</value>
+  </data>
+  <data name="LogIn" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="SnapshotExpired" xml:space="preserve">
+    <value>This snapshot has expired or never existed.</value>
+  </data>
+  <data name="WhatIsPSPad" xml:space="preserve">
+    <value>What is PSPad?</value>
+  </data>
+  <data name="SnapshotNeedsConnection" xml:space="preserve">
+    <value>Connect to the internet to open this snapshot.</value>
+  </data>
+  <data name="SnapshotOfflineBanner" xml:space="preserve">
+    <value>Offline — showing the copy from {0}. Ticks are paused.</value>
+  </data>
+  <data name="PublicSnapshot" xml:space="preserve">
+    <value>Public snapshot</value>
+  </data>
+  <data name="PublicSnapshotSharedBy" xml:space="preserve">
+    <value>Public snapshot · shared by {0}</value>
+  </data>
+  <data name="CopyFromDate" xml:space="preserve">
+    <value>Copy from {0}</value>
+  </data>
+  <data name="LinkWorksUntil" xml:space="preserve">
+    <value>Link works until {0}</value>
+  </data>
+  <data name="TickedByVisitors" xml:space="preserve">
+    <value>{0} of {1} ticked by visitors</value>
+  </data>
+  <data name="TickPrompt" xml:space="preserve">
+    <value>Tick anything you have taken care of. Everyone with this link sees your tick, and {0} sees it on the list.</value>
+  </data>
+  <data name="TickPromptOwner" xml:space="preserve">
+    <value>Tick anything you have taken care of. Everyone with this link sees your tick, and the owner sees it on the list.</value>
+  </data>
+  <data name="ToDoCount" xml:space="preserve">
+    <value>To do · {0}</value>
+  </data>
+  <data name="TickedChip" xml:space="preserve">
+    <value>ticked</value>
+  </data>
+  <data name="DoneByOwner" xml:space="preserve">
+    <value>Done by the owner</value>
+  </data>
+  <data name="AlreadyDoneByOwner" xml:space="preserve">
+    <value>Already done by the owner · {0}</value>
+  </data>
+  <data name="AlreadyDoneByName" xml:space="preserve">
+    <value>Already done by {0} · {1}</value>
+  </data>
+  <data name="ReadOnlyCopy" xml:space="preserve">
+    <value>A read-only copy made with PSPad.</value>
+  </data>
+  <data name="TooManyTicks" xml:space="preserve">
+    <value>Too many ticks on this list. Try again later.</value>
+  </data>
+  <data name="TickNotSaved" xml:space="preserve">
+    <value>Couldn't save that tick. Try again.</value>
+  </data>
+  <data name="SnapshotsTitle" xml:space="preserve">
+    <value>List snapshots</value>
+  </data>
+  <data name="SnapshotsEmpty" xml:space="preserve">
+    <value>Snapshots you open while signed in show up here.</value>
+  </data>
+  <data name="SnapshotExpiresOpened" xml:space="preserve">
+    <value>Expires {0} · Opened {1}</value>
+  </data>
+  <data name="MarkedOnSnapshot" xml:space="preserve">
+    <value>Marked on a snapshot</value>
+  </data>
+  <data name="QrCode" xml:space="preserve">
+    <value>QR code</value>
+  </data>
+  <data name="PeopleCount" xml:space="preserve">
+    <value>People · {0}</value>
+  </data>
+  <data name="You" xml:space="preserve">
+    <value>You</value>
+  </data>
+  <data name="Owner" xml:space="preserve">
+    <value>Owner</value>
+  </data>
+  <data name="JoinedOn" xml:space="preserve">
+    <value>Joined {0}</value>
+  </data>
+  <data name="RemovePerson" xml:space="preserve">
+    <value>Remove {0}</value>
+  </data>
+  <data name="OnlyOwnerCanInvite" xml:space="preserve">
+    <value>Only {0} can invite people.</value>
+  </data>
+  <data name="InviteLink" xml:space="preserve">
+    <value>Invite link</value>
+  </data>
+  <data name="LinkClosed" xml:space="preserve">
+    <value>Closed</value>
+  </data>
+  <data name="MinutesLeft" xml:space="preserve">
+    <value>{0} min left</value>
+  </data>
+  <data name="ExpiredAt" xml:space="preserve">
+    <value>Expired {0}</value>
+  </data>
+  <data name="NoLink" xml:space="preserve">
+    <value>No link</value>
+  </data>
+  <data name="WorksUntil" xml:space="preserve">
+    <value>Works until {0}. People who joined stay after it ends.</value>
+  </data>
+  <data name="InviteQrLabel" xml:space="preserve">
+    <value>QR code for the invite link</value>
+  </data>
+  <data name="QrCarriesCode" xml:space="preserve">
+    <value>The QR code and the link both carry the code</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="InviteCodeCaption" xml:space="preserve">
+    <value>Invite code — for typing in by hand</value>
+  </data>
+  <data name="CopyCode" xml:space="preserve">
+    <value>Copy code</value>
+  </data>
+  <data name="AnyoneWithLinkCanJoin" xml:space="preserve">
+    <value>Anyone with the link can join until it ends. After 5 wrong codes it closes.</value>
+  </data>
+  <data name="NewLink" xml:space="preserve">
+    <value>New link</value>
+  </data>
+  <data name="EndLinkNow" xml:space="preserve">
+    <value>End link now</value>
+  </data>
+  <data name="CreateLinkThirtyMinutes" xml:space="preserve">
+    <value>Create link · 30 min</value>
+  </data>
+  <data name="OnlyYouUseList" xml:space="preserve">
+    <value>Only you use this list</value>
+  </data>
+  <data name="OnlyYouUseBudget" xml:space="preserve">
+    <value>Only you use this budget</value>
+  </data>
+  <data name="CreateInviteLink" xml:space="preserve">
+    <value>Create invite link</value>
+  </data>
+  <data name="WrongCodeClosedLink" xml:space="preserve">
+    <value>Someone entered a wrong code 5 times, so the link closed. Create a new one when you're ready.</value>
+  </data>
+  <data name="OldLinkEndedList.Zero" xml:space="preserve">
+    <value>Nobody can join with the old link and code.</value>
+  </data>
+  <data name="OldLinkEndedList.One" xml:space="preserve">
+    <value>Nobody can join with the old link and code. {0} person already in the list stays.</value>
+  </data>
+  <data name="OldLinkEndedList.Few" xml:space="preserve">
+    <value>Nobody can join with the old link and code. {0} people already in the list stay.</value>
+  </data>
+  <data name="OldLinkEndedList.Many" xml:space="preserve">
+    <value>Nobody can join with the old link and code. {0} people already in the list stay.</value>
+  </data>
+  <data name="OldLinkEndedBudget.Zero" xml:space="preserve">
+    <value>Nobody can join with the old link and code.</value>
+  </data>
+  <data name="OldLinkEndedBudget.One" xml:space="preserve">
+    <value>Nobody can join with the old link and code. {0} person already in the budget stays.</value>
+  </data>
+  <data name="OldLinkEndedBudget.Few" xml:space="preserve">
+    <value>Nobody can join with the old link and code. {0} people already in the budget stay.</value>
+  </data>
+  <data name="OldLinkEndedBudget.Many" xml:space="preserve">
+    <value>Nobody can join with the old link and code. {0} people already in the budget stay.</value>
+  </data>
+  <data name="NewLinkWarningList" xml:space="preserve">
+    <value>The old link stops working now. People already in the list stay.</value>
+  </data>
+  <data name="NewLinkWarningBudget" xml:space="preserve">
+    <value>The old link stops working now. People already in the budget stay.</value>
+  </data>
+  <data name="LinkCopied" xml:space="preserve">
+    <value>Link copied.</value>
+  </data>
+  <data name="CopyLinkFailed" xml:space="preserve">
+    <value>Could not copy — select the link instead.</value>
+  </data>
+  <data name="CodeCopied" xml:space="preserve">
+    <value>Code copied.</value>
+  </data>
+  <data name="CopyCodeFailed" xml:space="preserve">
+    <value>Could not copy — read the code out instead.</value>
+  </data>
+  <data name="InviteListDescription" xml:space="preserve">
+    <value>Create an invite link or QR code. It works for 30 minutes — whoever opens it in that time can add, edit and tick tasks.</value>
+  </data>
+  <data name="SharingNeedsConnection" xml:space="preserve">
+    <value>Sharing changes need a connection.</value>
+  </data>
+  <data name="SharedByLabel" xml:space="preserve">
+    <value>Shared by</value>
+  </data>
+  <data name="YouCanEdit" xml:space="preserve">
+    <value>You can edit</value>
+  </data>
+  <data name="StopSharingEveryone" xml:space="preserve">
+    <value>Stop sharing · remove everyone</value>
+  </data>
+  <data name="ShowInMyArea" xml:space="preserve">
+    <value>Show in my area</value>
+  </data>
+  <data name="LeaveList" xml:space="preserve">
+    <value>Leave list</value>
+  </data>
+  <data name="StopSharing" xml:space="preserve">
+    <value>Stop sharing</value>
+  </data>
+  <data name="StopSharingMessage" xml:space="preserve">
+    <value>The invite link stops working and everyone else loses {0}.</value>
+  </data>
+  <data name="RemoveMember" xml:space="preserve">
+    <value>Remove member</value>
+  </data>
+  <data name="RemoveMemberFromList" xml:space="preserve">
+    <value>Remove {0} from this list?</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="LeaveListMessage" xml:space="preserve">
+    <value>Leave {0}? It disappears from your devices.</value>
+  </data>
+  <data name="Leave" xml:space="preserve">
+    <value>Leave</value>
+  </data>
+  <data name="InviteExpired" xml:space="preserve">
+    <value>This invite has expired</value>
+  </data>
+  <data name="GoToMyDay" xml:space="preserve">
+    <value>Go to My Day</value>
+  </data>
+  <data name="InviteWorksThirtyMinutes" xml:space="preserve">
+    <value>Invites work for 30 minutes. Ask the owner for a new link and code.</value>
+  </data>
+  <data name="JoiningNeedsConnection" xml:space="preserve">
+    <value>Joining needs a connection.</value>
+  </data>
+  <data name="EnterInviteCode" xml:space="preserve">
+    <value>Enter the invite code</value>
+  </data>
+  <data name="CodeAskForList" xml:space="preserve">
+    <value>The person who shared the list has a 6-character code. Ask them for it.</value>
+  </data>
+  <data name="CodeAskForBudget" xml:space="preserve">
+    <value>The person who shared the budget has a 6-character code. Ask them for it.</value>
+  </data>
+  <data name="InvalidLinkOrCode" xml:space="preserve">
+    <value>That link or code doesn't work.</value>
+  </data>
+  <data name="TooManyTries" xml:space="preserve">
+    <value>Too many tries. Wait a few minutes and try again.</value>
+  </data>
+  <data name="CodeLabel" xml:space="preserve">
+    <value>Code</value>
+  </data>
+  <data name="CodeHelper" xml:space="preserve">
+    <value>Capital letters A–Z and digits 0–9.</value>
+  </data>
+  <data name="JoinList" xml:space="preserve">
+    <value>Join list</value>
+  </data>
+  <data name="JoinBudget" xml:space="preserve">
+    <value>Join budget</value>
+  </data>
+  <data name="QrCodeFilled" xml:space="preserve">
+    <value>Scanned the QR code? The code is filled in for you.</value>
+  </data>
+  <data name="PublisherIntro" xml:space="preserve">
+    <value>A frozen copy of this list anyone can open without an account. Visitors can tick; you see their ticks here.</value>
+  </data>
+  <data name="LinkWorksFor" xml:space="preserve">
+    <value>Link works for</value>
+  </data>
+  <data name="PresetDays.One" xml:space="preserve">
+    <value>{0} day</value>
+  </data>
+  <data name="PresetDays.Few" xml:space="preserve">
+    <value>{0} days</value>
+  </data>
+  <data name="PresetDays.Many" xml:space="preserve">
+    <value>{0} days</value>
+  </data>
+  <data name="PickDatePreset" xml:space="preserve">
+    <value>Date…</value>
+  </data>
+  <data name="PublishUntil" xml:space="preserve">
+    <value>Publish until {0}</value>
+  </data>
+  <data name="PickADate" xml:space="preserve">
+    <value>Pick a date</value>
+  </data>
+  <data name="PublishingNeedsConnection" xml:space="preserve">
+    <value>Publishing needs a connection.</value>
+  </data>
+  <data name="LiveLinksNeedConnection" xml:space="preserve">
+    <value>Live links need a connection.</value>
+  </data>
+  <data name="NoLiveLinks" xml:space="preserve">
+    <value>No live links. Published copies show up here.</value>
+  </data>
+  <data name="LiveLinksHeading" xml:space="preserve">
+    <value>Live links · {0}</value>
+  </data>
+  <data name="DaysLeftCaption.One" xml:space="preserve">
+    <value>day left</value>
+  </data>
+  <data name="DaysLeftCaption.Few" xml:space="preserve">
+    <value>days left</value>
+  </data>
+  <data name="DaysLeftCaption.Many" xml:space="preserve">
+    <value>days left</value>
+  </data>
+  <data name="PublishedOn" xml:space="preserve">
+    <value>Published {0}</value>
+  </data>
+  <data name="TicksCount" xml:space="preserve">
+    <value>{0} ticked</value>
+  </data>
+  <data name="NoTicksYet" xml:space="preserve">
+    <value>No ticks yet</value>
+  </data>
+  <data name="EntriesCount.One" xml:space="preserve">
+    <value>{0} entry</value>
+  </data>
+  <data name="EntriesCount.Few" xml:space="preserve">
+    <value>{0} entries</value>
+  </data>
+  <data name="EntriesCount.Many" xml:space="preserve">
+    <value>{0} entries</value>
+  </data>
+  <data name="ShowQrCode" xml:space="preserve">
+    <value>Show QR code</value>
+  </data>
+  <data name="CopyLink" xml:space="preserve">
+    <value>Copy link</value>
+  </data>
+  <data name="SnapshotQrLabel" xml:space="preserve">
+    <value>Snapshot link QR code</value>
+  </data>
+  <data name="Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="Revoke" xml:space="preserve">
+    <value>Revoke</value>
+  </data>
+  <data name="PublishFailed" xml:space="preserve">
+    <value>Couldn't publish the snapshot.</value>
+  </data>
+  <data name="SnapshotPublished" xml:space="preserve">
+    <value>Snapshot published. Link copied.</value>
+  </data>
+  <data name="RevokeTitle" xml:space="preserve">
+    <value>Revoke snapshot</value>
+  </data>
+  <data name="RevokeMessage" xml:space="preserve">
+    <value>Revoke this snapshot? The link stops working.</value>
+  </data>
+  <data name="RevokeFailed" xml:space="preserve">
+    <value>Couldn't revoke the snapshot.</value>
+  </data>
+</root>

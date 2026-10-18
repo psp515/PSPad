@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using PSPad.App.Components;
 using PSPad.TestInfrastructure;
@@ -13,6 +14,7 @@ public class SnapshotMarkChipTests : Bunit.TestContext
     {
         JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
         Services.AddMudServices();
+        Services.AddLocalization();
 
         var chip = Render<SnapshotMarkChip>();
 
@@ -25,6 +27,7 @@ public class SnapshotMarkChipTests : Bunit.TestContext
     {
         JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
         Services.AddMudServices();
+        Services.AddLocalization();
 
         var chip = Render<SnapshotMarkChip>(parameters => parameters.Add(c => c.Compact, true));
 

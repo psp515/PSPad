@@ -9,19 +9,20 @@
 @inject ISnackbar Snackbar
 @inject Clipboard Clipboard
 @inject IClock Clock
+@inject IStringLocalizer<SharingStrings> T
 
 <MudPaper Outlined="true" Class="pspad-invite-card pa-4 d-flex flex-column gap-3">
     <div class="d-flex align-center justify-space-between gap-2">
-        <MudText Typo="Typo.subtitle1">Invite link</MudText>
+        <MudText Typo="Typo.subtitle1">@T["InviteLink"]</MudText>
         @if (Invite.ClosedByWrongCodes)
         {
             <MudChip T="string" Class="pspad-invite-state ma-0" Size="Size.Small" Color="Color.Error"
-                     Variant="Variant.Text">Closed</MudChip>
+                     Variant="Variant.Text">@T["LinkClosed"]</MudChip>
         }
         else if (IsLive)
         {
             <MudChip T="string" Class="pspad-invite-left ma-0" Size="Size.Small" Color="Color.Primary"
-                     Variant="Variant.Text" Icon="@Icons.Material.Outlined.Timer">@($"{MinutesLeft} min left")</MudChip>
+                     Variant="Variant.Text" Icon="@Icons.Material.Outlined.Timer">@T["MinutesLeft", MinutesLeft]</MudChip>
         }
         else if (!Invite.NeverShared)
         {
@@ -34,13 +35,13 @@
         <div>
             <MudProgressLinear Color="Color.Primary" Value="@PercentLeft" Rounded="true" />
             <MudText Typo="Typo.caption" Class="pspad-muted d-block mt-1">
-                @($"Works until {LocalTime(Invite.ExpiresAt!.Value)}. People who joined stay after it ends.")
+                @T["WorksUntil", LocalTime(Invite.ExpiresAt!.Value)]
             </MudText>
         </div>
 
         <div class="d-flex flex-column align-center gap-1">
-            <QrCode Value="@Link" Size="176" Label="QR code for the invite link" />
-            <MudText Typo="Typo.caption" Class="pspad-muted">The QR code and the link both carry the code</MudText>
+            <QrCode Value="@Link" Size="176" Label="@T["InviteQrLabel"]" />
+            <MudText Typo="Typo.caption" Class="pspad-muted">@T["QrCarriesCode"]</MudText>
         </div>
 
         <div class="d-flex align-center gap-2">
@@ -49,31 +50,31 @@
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Link" />
             <MudButton Class="pspad-invite-copy" Variant="Variant.Filled" Color="Color.Primary"
                        StartIcon="@Icons.Material.Outlined.ContentCopy" OnClick="@CopyLinkAsync">
-                Copy
+                @T["Copy"]
             </MudButton>
         </div>
 
         <MudPaper Outlined="true" Class="pspad-invite-code pa-3 d-flex align-center gap-2">
             <div class="flex-grow-1">
-                <MudText Typo="Typo.caption" Class="pspad-muted d-block">Invite code — for typing in by hand</MudText>
+                <MudText Typo="Typo.caption" Class="pspad-muted d-block">@T["InviteCodeCaption"]</MudText>
                 <MudText Typo="Typo.h5" Class="pspad-invite-code-value">@InviteCodes.Format(Invite.Code!)</MudText>
             </div>
             <MudIconButton Class="pspad-invite-code-copy" Icon="@Icons.Material.Outlined.ContentCopy"
-                           aria-label="Copy code" OnClick="@CopyCodeAsync" />
+                           aria-label="@T["CopyCode"]" OnClick="@CopyCodeAsync" />
         </MudPaper>
 
         <MudText Typo="Typo.caption" Class="pspad-muted">
-            Anyone with the link can join until it ends. After 5 wrong codes it closes.
+            @T["AnyoneWithLinkCanJoin"]
         </MudText>
 
         <div class="d-flex align-center gap-2">
             <MudButton Class="pspad-invite-new" Variant="Variant.Outlined" Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.Refresh" Disabled="@Disabled" OnClick="@NewLinkAsync">
-                New link
+                @T["NewLink"]
             </MudButton>
             <MudButton Class="pspad-invite-end" Variant="Variant.Text" Color="Color.Error" Disabled="@Disabled"
                        OnClick="@EndLinkAsync">
-                End link now
+                @T["EndLinkNow"]
             </MudButton>
         </div>
     }
@@ -82,7 +83,7 @@
         <MudAlert Class="pspad-invite-blocked" Severity="Severity.Normal" Dense="true">@blocked</MudAlert>
         <MudButton Class="pspad-invite-create align-self-start" Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Outlined.Link" Disabled="true">
-            Create link · 30 min
+            @T["CreateLinkThirtyMinutes"]
         </MudButton>
     }
     else if (Invite.NeverShared && !Invite.ClosedByWrongCodes)
@@ -91,11 +92,11 @@
             <MudAvatar Color="Color.Primary">
                 <MudIcon Icon="@Icons.Material.Filled.PersonAdd" />
             </MudAvatar>
-            <MudText Typo="Typo.subtitle2">@($"Only you use this {Thing}")</MudText>
+            <MudText Typo="Typo.subtitle2">@T[Kind == InviteKind.Budget ? "OnlyYouUseBudget" : "OnlyYouUseList"]</MudText>
             <MudText Typo="Typo.body2" Class="pspad-muted">@Invitation</MudText>
             <MudButton Class="pspad-invite-create mt-1" Variant="Variant.Filled" Color="Color.Primary"
                        StartIcon="@Icons.Material.Outlined.Link" Disabled="@Disabled" OnClick="@CreateAsync">
-                Create invite link
+                @T["CreateInviteLink"]
             </MudButton>
         </div>
     }
@@ -104,18 +105,18 @@
         @if (Invite.ClosedByWrongCodes)
         {
             <MudAlert Class="pspad-invite-closed" Severity="Severity.Warning" Dense="true">
-                Someone entered a wrong code 5 times, so the link closed. Create a new one when you're ready.
+                @T["WrongCodeClosedLink"]
             </MudAlert>
         }
         else
         {
             <MudAlert Severity="Severity.Info" Dense="true">
-                @($"Nobody can join with the old link and code. The {PeopleStaying} already in the {Thing} stay.")
+                @T.Plural(Invite.MemberCount, Kind == InviteKind.Budget ? "OldLinkEndedBudget" : "OldLinkEndedList")
             </MudAlert>
         }
         <MudButton Class="pspad-invite-create" Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Outlined.Link" Disabled="@Disabled" OnClick="@CreateAsync">
-            Create link · 30 min
+            @T["CreateLinkThirtyMinutes"]
         </MudButton>
     }
 </MudPaper>
@@ -125,7 +126,7 @@
 
     [Parameter, EditorRequired] public Func<string, string, string> LinkFor { get; set; } = null!;
 
-    [Parameter] public string Thing { get; set; } = "list";
+    [Parameter] public InviteKind Kind { get; set; } = InviteKind.List;
 
     [Parameter] public string Invitation { get; set; } = "";
 
@@ -150,10 +151,8 @@
     double PercentLeft => Math.Clamp(Left / Invites.Life * 100, 0, 100);
 
     string ExpiredText => Invite.Token is not null && Invite.ExpiresAt is { } expiredAt
-        ? $"Expired {LocalTime(expiredAt)}"
-        : "No link";
-
-    string PeopleStaying => Invite.MemberCount == 1 ? "1 person" : $"{Invite.MemberCount} people";
+        ? T["ExpiredAt", LocalTime(expiredAt)]
+        : T["NoLink"];
 
     string Link => LinkFor(Invite.Token!, Invite.Code!);
 
@@ -181,7 +180,7 @@
         }
 
         if (!await ConfirmAsync(
-            "New link", $"The old link stops working now. People already in the {Thing} stay.", "New link"))
+            T["NewLink"], T[Kind == InviteKind.Budget ? "NewLinkWarningBudget" : "NewLinkWarningList"], T["NewLink"]))
         {
             return;
         }
@@ -217,7 +216,7 @@
     {
         var copied = await Clipboard.CopyAsync(Link);
         Snackbar.Add(
-            copied ? "Link copied." : "Could not copy — select the link instead.",
+            copied ? T["LinkCopied"] : T["CopyLinkFailed"],
             copied ? Severity.Success : Severity.Warning);
     }
 
@@ -225,7 +224,7 @@
     {
         var copied = await Clipboard.CopyAsync(InviteCodes.Format(Invite.Code!));
         Snackbar.Add(
-            copied ? "Code copied." : "Could not copy — read the code out instead.",
+            copied ? T["CodeCopied"] : T["CopyCodeFailed"],
             copied ? Severity.Success : Severity.Warning);
     }
 

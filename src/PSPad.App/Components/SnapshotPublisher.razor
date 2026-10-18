@@ -13,20 +13,21 @@
 @inject ISnackbar Snackbar
 @inject Clipboard Clipboard
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharingStrings> T
 
 <div class="d-flex flex-column gap-3 pspad-snapshot-publisher">
     <MudPaper Outlined="true" Class="pa-4 d-flex flex-column gap-2">
         <MudText Typo="Typo.body2" Class="pspad-muted">
-            A frozen copy of this list anyone can open without an account. Visitors can tick; you see their ticks here.
+            @T["PublisherIntro"]
         </MudText>
-        <MudText Typo="Typo.overline" Class="pspad-muted">Link works for</MudText>
+        <MudText Typo="Typo.overline" Class="pspad-muted">@T["LinkWorksFor"]</MudText>
         <MudToggleGroup T="int" Value="@_selectedDays" ValueChanged="@SelectDays" Color="Color.Primary"
                         Outlined="true" Disabled="@Disabled">
-            @foreach (var preset in Presets)
+            @foreach (var preset in PresetDays)
             {
-                <MudToggleItem T="int" Value="@preset.Days" Text="@preset.Label" Class="pspad-snapshot-preset" />
+                <MudToggleItem T="int" Value="@preset" Text="@T.Plural(preset, "PresetDays")" Class="pspad-snapshot-preset" />
             }
-            <MudToggleItem T="int" Value="0" Text="Date…" Class="pspad-snapshot-preset-date" />
+            <MudToggleItem T="int" Value="0" Text="@T["PickDatePreset"]" Class="pspad-snapshot-preset-date" />
         </MudToggleGroup>
 
         @if (_selectedDays == 0)
@@ -45,7 +46,7 @@
         @if (!Connectivity.IsOnline)
         {
             <MudText Typo="Typo.caption" Class="pspad-muted pspad-snapshot-offline">
-                Publishing needs a connection.
+                @T["PublishingNeedsConnection"]
             </MudText>
         }
     </MudPaper>
@@ -53,17 +54,17 @@
     @if (_unreachable)
     {
         <div class="pspad-snapshot-unreachable">
-            <EmptyState Icon="@Icons.Material.Outlined.CloudOff" Message="Live links need a connection." />
+            <EmptyState Icon="@Icons.Material.Outlined.CloudOff" Message="@T["LiveLinksNeedConnection"]" />
         </div>
     }
     else if (_snapshots.Count == 0)
     {
-        <MudText Typo="Typo.body2" Class="pspad-muted">No live links. Published copies show up here.</MudText>
+        <MudText Typo="Typo.body2" Class="pspad-muted">@T["NoLiveLinks"]</MudText>
     }
     else
     {
         <div>
-            <MudText Typo="Typo.overline" Class="pspad-muted">Live links · @_snapshots.Count</MudText>
+            <MudText Typo="Typo.overline" Class="pspad-muted">@T["LiveLinksHeading", _snapshots.Count]</MudText>
             <MudPaper Outlined="true">
                 @foreach (var snapshot in Newest)
                 {
@@ -72,29 +73,29 @@
                     <div @key="snapshot.Id" class="pa-3 pspad-snapshot">
                         <div class="d-flex align-center gap-3">
                             <div class="d-flex flex-column align-center pspad-snapshot-days">
-                                <MudText Typo="Typo.h6" Color="@(daysLeft.Urgent ? Color.Warning : Color.Primary)">@daysLeft.Text</MudText>
-                                <MudText Typo="Typo.caption" Class="pspad-muted">@(daysLeft.Text == "1" ? "day left" : "days left")</MudText>
+                                <MudText Typo="Typo.h6" Color="@(daysLeft.Urgent ? Color.Warning : Color.Primary)">@daysLeft.Days</MudText>
+                                <MudText Typo="Typo.caption" Class="pspad-muted">@T.Plural(daysLeft.Days, "DaysLeftCaption")</MudText>
                             </div>
                             <div class="flex-grow-1 d-flex flex-column gap-1">
-                                <MudText Typo="Typo.body1">Published @Local(snapshot.CreatedAt).ToString("d MMM")</MudText>
+                                <MudText Typo="Typo.body1">@T["PublishedOn", Local(snapshot.CreatedAt).ToString("d MMM")]</MudText>
                                 <div class="d-flex gap-1 flex-wrap">
                                     @if (snapshot.Ticks > 0)
                                     {
                                         <MudChip T="string" Class="pspad-snapshot-ticks" Size="Size.Small" Variant="Variant.Text"
-                                                 Color="Color.Success">@snapshot.Ticks ticked</MudChip>
+                                                 Color="Color.Success">@T["TicksCount", snapshot.Ticks]</MudChip>
                                     }
                                     else
                                     {
-                                        <MudChip T="string" Class="pspad-snapshot-ticks" Size="Size.Small" Variant="Variant.Text">No ticks yet</MudChip>
+                                        <MudChip T="string" Class="pspad-snapshot-ticks" Size="Size.Small" Variant="Variant.Text">@T["NoTicksYet"]</MudChip>
                                     }
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@snapshot.Entries entries</MudChip>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@T.Plural(snapshot.Entries, "EntriesCount")</MudChip>
                                 </div>
                             </div>
                             <MudIconButton Class="pspad-snapshot-qr-toggle" Icon="@Icons.Material.Outlined.QrCode2"
-                                           Size="Size.Small" aria-label="Show QR code" aria-expanded="@(expanded ? "true" : "false")"
+                                           Size="Size.Small" aria-label="@T["ShowQrCode"]" aria-expanded="@(expanded ? "true" : "false")"
                                            OnClick="@(() => ToggleExpanded(snapshot.Id))" />
                             <MudIconButton Class="pspad-snapshot-copy" Icon="@Icons.Material.Outlined.ContentCopy"
-                                           Size="Size.Small" aria-label="Copy link"
+                                           Size="Size.Small" aria-label="@T["CopyLink"]"
                                            OnClick="@(() => CopyAsync(snapshot.Token))" />
                         </div>
 
@@ -102,15 +103,15 @@
                         {
                             var link = SnapshotLinks.For(Navigation.BaseUri, snapshot.Token);
                             <div class="d-flex gap-3 align-center mt-3">
-                                <QrCode Value="@link" Size="120" Label="Snapshot link QR code" />
+                                <QrCode Value="@link" Size="120" Label="@T["SnapshotQrLabel"]" />
                                 <div class="d-flex flex-column gap-1 flex-grow-1">
                                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                                               OnClick="@(() => CopyAsync(snapshot.Token))">Copy link</MudButton>
+                                               OnClick="@(() => CopyAsync(snapshot.Token))">@T["CopyLink"]</MudButton>
                                     <MudButton Class="pspad-snapshot-open" Variant="Variant.Outlined" Size="Size.Small"
-                                               Href="@link" Target="_blank">Open</MudButton>
+                                               Href="@link" Target="_blank">@T["Open"]</MudButton>
                                     <MudButton Class="pspad-snapshot-revoke" Variant="Variant.Text" Color="Color.Error"
                                                Size="Size.Small" Disabled="@Disabled"
-                                               OnClick="@(() => RevokeAsync(snapshot))">Revoke</MudButton>
+                                               OnClick="@(() => RevokeAsync(snapshot))">@T["Revoke"]</MudButton>
                                 </div>
                             </div>
                         }
@@ -130,7 +131,7 @@
 
     [Parameter] public bool Disabled { get; set; }
 
-    static readonly (string Label, int Days)[] Presets = [("1 day", 1), ("7 days", 7), ("30 days", 30)];
+    static readonly int[] PresetDays = [1, 7, 30];
 
     Guid? _listId;
     IReadOnlyList<PublishedSnapshotView> _snapshots = [];
@@ -148,17 +149,17 @@
 
     string PublishText => (_selectedDays, _date) switch
     {
-        (0, { } date) => $"Publish until {date:d MMM}",
-        (0, null) => "Pick a date",
-        _ => $"Publish until {Local(PlannedExpiry!.Value):d MMM}"
+        (0, { } date) => T["PublishUntil", date.ToString("d MMM")],
+        (0, null) => T["PickADate"],
+        _ => T["PublishUntil", Local(PlannedExpiry!.Value).ToString("d MMM")]
     };
 
     DateTime Local(DateTimeOffset moment) => TimeZoneInfo.ConvertTime(moment, LocalToday.Zone(State.TimeZone)).DateTime;
 
-    (string Text, bool Urgent) DaysLeft(PublishedSnapshotView snapshot)
+    (int Days, bool Urgent) DaysLeft(PublishedSnapshotView snapshot)
     {
         var days = Math.Max(1, (int)Math.Ceiling((snapshot.ExpiresAt - Clock.UtcNow).TotalDays));
-        return (days.ToString(), days <= 1);
+        return (days, days <= 1);
     }
 
     DateTime MaxDate => Clock.UtcNow.AddDays(365).DateTime;
@@ -223,7 +224,7 @@
 
             if (published is null)
             {
-                Snackbar.Add("Couldn't publish the snapshot.", Severity.Warning);
+                Snackbar.Add(T["PublishFailed"], Severity.Warning);
                 return;
             }
 
@@ -238,7 +239,7 @@
 
             _expanded = published.Id;
             await Clipboard.CopyAsync(SnapshotLinks.For(Navigation.BaseUri, published.Token));
-            Snackbar.Add("Snapshot published. Link copied.", Severity.Success);
+            Snackbar.Add(T["SnapshotPublished"], Severity.Success);
         }
         finally
         {
@@ -269,7 +270,7 @@
     {
         var copied = await Clipboard.CopyAsync(SnapshotLinks.For(Navigation.BaseUri, token));
         Snackbar.Add(
-            copied ? "Link copied." : "Could not copy — select the link instead.",
+            copied ? T["LinkCopied"] : T["CopyLinkFailed"],
             copied ? Severity.Success : Severity.Warning);
     }
 
@@ -282,10 +283,10 @@
 
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, "Revoke this snapshot? The link stops working." },
-            { dialog => dialog.ConfirmText, "Revoke" }
+            { dialog => dialog.Message, T["RevokeMessage"].Value },
+            { dialog => dialog.ConfirmText, T["Revoke"].Value }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Revoke snapshot", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["RevokeTitle"], parameters);
         var result = await dialog.Result;
 
         if (result is null || result.Canceled)
@@ -299,7 +300,7 @@
             return;
         }
 
-        Snackbar.Add("Couldn't revoke the snapshot.", Severity.Warning);
+        Snackbar.Add(T["RevokeFailed"], Severity.Warning);
     }
 
     async Task<bool> TryRevokeAsync(Guid snapshotId)

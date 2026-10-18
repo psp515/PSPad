@@ -19,11 +19,12 @@
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
 @inject IClock Clock
+@inject IStringLocalizer<SharingStrings> T
 
 <div class="pspad-list-members d-flex flex-column gap-3">
     @if (!Connectivity.IsOnline)
     {
-        <MudAlert Class="pspad-share-offline" Severity="Severity.Info" Dense="true">Sharing changes need a connection.</MudAlert>
+        <MudAlert Class="pspad-share-offline" Severity="Severity.Info" Dense="true">@T["SharingNeedsConnection"]</MudAlert>
     }
     @if (IsMine)
     {
@@ -34,10 +35,10 @@
         <MudPaper Outlined="true" Class="pa-4 d-flex align-center gap-3">
             <MudAvatar Color="Color.Primary">@AvatarColor.InitialsOf(_list.OwnerName)</MudAvatar>
             <div class="flex-grow-1">
-                <MudText Typo="Typo.caption" Class="pspad-muted d-block">Shared by</MudText>
+                <MudText Typo="Typo.caption" Class="pspad-muted d-block">@T["SharedByLabel"]</MudText>
                 <MudText Typo="Typo.subtitle1" Class="pspad-share-owner">@_list.OwnerName</MudText>
             </div>
-            <MudChip T="string" Class="ma-0" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">You can edit</MudChip>
+            <MudChip T="string" Class="ma-0" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">@T["YouCanEdit"]</MudChip>
         </MudPaper>
     }
 
@@ -50,13 +51,13 @@
         {
             <MudButton Class="pspad-share-stop align-self-start" Variant="Variant.Text" Color="Color.Error"
                        Disabled="@Locked" OnClick="@StopSharingAsync">
-                Stop sharing · remove everyone
+                @T["StopSharingEveryone"]
             </MudButton>
         }
     }
     else
     {
-        <MudSelect T="Guid?" Class="pspad-list-filed-area" Label="Show in my area" Variant="Variant.Outlined"
+        <MudSelect T="Guid?" Class="pspad-list-filed-area" Label="@T["ShowInMyArea"]" Variant="Variant.Outlined"
                    Value="@_filedAreaId" ValueChanged="@FileUnderAsync" Disabled="@Disabled"
                    ToStringFunc="@FiledAreaName" AnchorOrigin="Origin.BottomCenter">
             <MudSelectItem T="Guid?" Value="@((Guid?)null)">@SharedWithMe.Name</MudSelectItem>
@@ -68,7 +69,7 @@
 
         <MudButton Class="pspad-share-leave align-self-start" Variant="Variant.Text" Color="Color.Error"
                    StartIcon="@Icons.Material.Outlined.Logout" Disabled="@Locked" OnClick="@LeaveAsync">
-            Leave list
+            @T["LeaveList"]
         </MudButton>
     }
 </div>
@@ -136,9 +137,9 @@
         }
 
         if (!await ConfirmAsync(
-            "Stop sharing",
-            $"The invite link stops working and everyone else loses {_list.Name}.",
-            "Stop sharing"))
+            T["StopSharing"],
+            T["StopSharingMessage", _list.Name],
+            T["StopSharing"]))
         {
             return;
         }
@@ -168,7 +169,7 @@
         }
 
         if (!await ConfirmAsync(
-            "Remove member", $"Remove {member.DisplayName} from this list?", "Remove"))
+            T["RemoveMember"], T["RemoveMemberFromList", member.DisplayName], T["Remove"]))
         {
             return;
         }
@@ -188,7 +189,7 @@
         }
 
         if (!await ConfirmAsync(
-            "Leave list", $"Leave {_list.Name}? It disappears from your devices.", "Leave"))
+            T["LeaveList"], T["LeaveListMessage", _list.Name], T["Leave"]))
         {
             return;
         }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using AngleSharp.Html.Dom;
@@ -17,6 +18,7 @@ using PSPad.TestInfrastructure;
 namespace PSPad.App.Tests.Pages;
 
 [UnitTest]
+[Collection("Culture")]
 public class SnapshotPageTests : Bunit.TestContext
 {
     static readonly Guid User = Guid.NewGuid();
@@ -38,6 +40,27 @@ public class SnapshotPageTests : Bunit.TestContext
         Assert.Contains("Renew the domain", page.Markup);
         Assert.Contains("Buy stamps", page.Markup);
         Assert.Contains("Weekly list", page.Markup);
+    }
+
+    [Fact]
+    public void ThePageSpeaksPolishUnderThePolishCulture()
+    {
+        Arrange(SampleTaskSnapshot());
+        var before = CultureInfo.CurrentUICulture;
+
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("pl-PL");
+
+            var page = RenderPage("tok123");
+
+            Assert.Contains("Kopia tylko do odczytu, zrobiona w PSPad.", page.Markup);
+            Assert.DoesNotContain("A read-only copy", page.Markup);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = before;
+        }
     }
 
     [Fact]

@@ -9,7 +9,11 @@ namespace PSPad.App.Tests.Components;
 [UnitTest]
 public class QrCodeTests : Bunit.TestContext
 {
-    public QrCodeTests() => Services.AddMudServices();
+    public QrCodeTests()
+    {
+        Services.AddMudServices();
+        Services.AddLocalization();
+    }
 
     [Fact]
     public void ItRendersAPngOfTheValue()

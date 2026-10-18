@@ -108,4 +108,7 @@
   <data name="DragItem" xml:space="preserve">
     <value>Przeciągnij: {0}</value>
   </data>
+  <data name="DeleteThis" xml:space="preserve">
+    <value>Usunąć to?</value>
+  </data>
 </root>

@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using PSPad.App.Statistics;
 using PSPad.Contracts;
 using PSPad.TestInfrastructure;
@@ -8,6 +9,8 @@ namespace PSPad.App.Tests.Components;
 [UnitTest]
 public class ConsistencyHeatmapTests : Bunit.TestContext
 {
+    public ConsistencyHeatmapTests() => Services.AddLocalization();
+
     [Fact]
     public void EveryDayInTheRangeGetsACell()
     {

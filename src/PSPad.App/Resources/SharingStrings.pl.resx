@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="OpenPSPad" xml:space="preserve">
+    <value>Otwórz PSPad</value>
+  </data>
+  <data name="LogIn" xml:space="preserve">
+    <value>Zaloguj się</value>
+  </data>
+  <data name="SnapshotExpired" xml:space="preserve">
+    <value>Ta migawka wygasła albo nigdy nie istniała.</value>
+  </data>
+  <data name="WhatIsPSPad" xml:space="preserve">
+    <value>Czym jest PSPad?</value>
+  </data>
+  <data name="SnapshotNeedsConnection" xml:space="preserve">
+    <value>Połącz się z internetem, żeby otworzyć tę migawkę.</value>
+  </data>
+  <data name="SnapshotOfflineBanner" xml:space="preserve">
+    <value>Offline — pokazujemy kopię z {0}. Odhaczanie jest wstrzymane.</value>
+  </data>
+  <data name="PublicSnapshot" xml:space="preserve">
+    <value>Publiczna migawka</value>
+  </data>
+  <data name="PublicSnapshotSharedBy" xml:space="preserve">
+    <value>Publiczna migawka · udostępnia {0}</value>
+  </data>
+  <data name="CopyFromDate" xml:space="preserve">
+    <value>Kopia z {0}</value>
+  </data>
+  <data name="LinkWorksUntil" xml:space="preserve">
+    <value>Link działa do {0}</value>
+  </data>
+  <data name="TickedByVisitors" xml:space="preserve">
+    <value>Odhaczone przez odwiedzających: {0} z {1}</value>
+  </data>
+  <data name="TickPrompt" xml:space="preserve">
+    <value>Odhacz wszystko, czym już się zajęto. Każdy z tym linkiem widzi odhaczenie, a {0} zobaczy je na liście.</value>
+  </data>
+  <data name="TickPromptOwner" xml:space="preserve">
+    <value>Odhacz wszystko, czym już się zajęto. Każdy z tym linkiem widzi odhaczenie, a właściciel zobaczy je na liście.</value>
+  </data>
+  <data name="ToDoCount" xml:space="preserve">
+    <value>Do zrobienia · {0}</value>
+  </data>
+  <data name="TickedChip" xml:space="preserve">
+    <value>odhaczone</value>
+  </data>
+  <data name="DoneByOwner" xml:space="preserve">
+    <value>Zrobione przez właściciela</value>
+  </data>
+  <data name="AlreadyDoneByOwner" xml:space="preserve">
+    <value>Już zrobione przez właściciela · {0}</value>
+  </data>
+  <data name="AlreadyDoneByName" xml:space="preserve">
+    <value>Już zrobione przez właściciela ({0}) · {1}</value>
+  </data>
+  <data name="ReadOnlyCopy" xml:space="preserve">
+    <value>Kopia tylko do odczytu, zrobiona w PSPad.</value>
+  </data>
+  <data name="TooManyTicks" xml:space="preserve">
+    <value>Za dużo odhaczeń na tej liście. Spróbuj ponownie później.</value>
+  </data>
+  <data name="TickNotSaved" xml:space="preserve">
+    <value>Nie udało się zapisać odhaczenia. Spróbuj ponownie.</value>
+  </data>
+  <data name="SnapshotsTitle" xml:space="preserve">
+    <value>Migawki list</value>
+  </data>
+  <data name="SnapshotsEmpty" xml:space="preserve">
+    <value>Migawki otwarte po zalogowaniu pojawią się tutaj.</value>
+  </data>
+  <data name="SnapshotExpiresOpened" xml:space="preserve">
+    <value>Wygasa {0} · Otwarta {1}</value>
+  </data>
+  <data name="MarkedOnSnapshot" xml:space="preserve">
+    <value>Odhaczone w migawce</value>
+  </data>
+  <data name="QrCode" xml:space="preserve">
+    <value>Kod QR</value>
+  </data>
+  <data name="PeopleCount" xml:space="preserve">
+    <value>Osoby · {0}</value>
+  </data>
+  <data name="You" xml:space="preserve">
+    <value>Ty</value>
+  </data>
+  <data name="Owner" xml:space="preserve">
+    <value>Właściciel</value>
+  </data>
+  <data name="JoinedOn" xml:space="preserve">
+    <value>Dołączono {0}</value>
+  </data>
+  <data name="RemovePerson" xml:space="preserve">
+    <value>Usuń: {0}</value>
+  </data>
+  <data name="OnlyOwnerCanInvite" xml:space="preserve">
+    <value>Tylko {0} może zapraszać osoby.</value>
+  </data>
+  <data name="InviteLink" xml:space="preserve">
+    <value>Link z zaproszeniem</value>
+  </data>
+  <data name="LinkClosed" xml:space="preserve">
+    <value>Zamknięty</value>
+  </data>
+  <data name="MinutesLeft" xml:space="preserve">
+    <value>zostało {0} min</value>
+  </data>
+  <data name="ExpiredAt" xml:space="preserve">
+    <value>Wygasł {0}</value>
+  </data>
+  <data name="NoLink" xml:space="preserve">
+    <value>Brak linku</value>
+  </data>
+  <data name="WorksUntil" xml:space="preserve">
+    <value>Działa do {0}. Osoby, które dołączyły, zostają po jego wygaśnięciu.</value>
+  </data>
+  <data name="InviteQrLabel" xml:space="preserve">
+    <value>Kod QR z linkiem do zaproszenia</value>
+  </data>
+  <data name="QrCarriesCode" xml:space="preserve">
+    <value>Kod QR i link zawierają już kod</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Kopiuj</value>
+  </data>
+  <data name="InviteCodeCaption" xml:space="preserve">
+    <value>Kod zaproszenia — do wpisania ręcznie</value>
+  </data>
+  <data name="CopyCode" xml:space="preserve">
+    <value>Kopiuj kod</value>
+  </data>
+  <data name="AnyoneWithLinkCanJoin" xml:space="preserve">
+    <value>Każdy z linkiem może dołączyć, dopóki nie wygaśnie. Po 5 błędnych kodach link się zamyka.</value>
+  </data>
+  <data name="NewLink" xml:space="preserve">
+    <value>Nowy link</value>
+  </data>
+  <data name="EndLinkNow" xml:space="preserve">
+    <value>Zakończ link teraz</value>
+  </data>
+  <data name="CreateLinkThirtyMinutes" xml:space="preserve">
+    <value>Utwórz link · 30 min</value>
+  </data>
+  <data name="OnlyYouUseList" xml:space="preserve">
+    <value>Tylko ty korzystasz z tej listy</value>
+  </data>
+  <data name="OnlyYouUseBudget" xml:space="preserve">
+    <value>Tylko ty korzystasz z tego budżetu</value>
+  </data>
+  <data name="CreateInviteLink" xml:space="preserve">
+    <value>Utwórz link z zaproszeniem</value>
+  </data>
+  <data name="WrongCodeClosedLink" xml:space="preserve">
+    <value>Ktoś 5 razy wpisał zły kod, więc link się zamknął. Utwórz nowy, kiedy zechcesz.</value>
+  </data>
+  <data name="OldLinkEndedList.Zero" xml:space="preserve">
+    <value>Nikt nie dołączy ze starym linkiem i kodem.</value>
+  </data>
+  <data name="OldLinkEndedList.One" xml:space="preserve">
+    <value>Nikt nie dołączy ze starym linkiem i kodem. {0} osoba, która już jest na liście, zostaje.</value>
+  </data>
+  <data name="OldLinkEndedList.Few" xml:space="preserve">
+    <value>Nikt nie dołączy ze starym linkiem i kodem. {0} osoby, które już są na liście, zostają.</value>
+  </data>
+  <data name="OldLinkEndedList.Many" xml:space="preserve">
+    <value>Nikt nie dołączy ze starym linkiem i kodem. {0} osób, które już są na liście, zostaje.</value>
+  </data>
+  <data name="OldLinkEndedBudget.Zero" xml:space="preserve">
+    <value>Nikt nie dołączy ze starym linkiem i kodem.</value>
+  </data>
+  <data name="OldLinkEndedBudget.One" xml:space="preserve">
+    <value>Nikt nie dołączy ze starym linkiem i kodem. {0} osoba, która już jest w budżecie, zostaje.</value>
+  </data>
+  <data name="OldLinkEndedBudget.Few" xml:space="preserve">
+    <value>Nikt nie dołączy ze starym linkiem i kodem. {0} osoby, które już są w budżecie, zostają.</value>
+  </data>
+  <data name="OldLinkEndedBudget.Many" xml:space="preserve">
+    <value>Nikt nie dołączy ze starym linkiem i kodem. {0} osób, które już są w budżecie, zostaje.</value>
+  </data>
+  <data name="NewLinkWarningList" xml:space="preserve">
+    <value>Stary link przestanie działać. Osoby, które są już na liście, zostają.</value>
+  </data>
+  <data name="NewLinkWarningBudget" xml:space="preserve">
+    <value>Stary link przestanie działać. Osoby, które są już w budżecie, zostają.</value>
+  </data>
+  <data name="LinkCopied" xml:space="preserve">
+    <value>Skopiowano link.</value>
+  </data>
+  <data name="CopyLinkFailed" xml:space="preserve">
+    <value>Nie udało się skopiować — zaznacz link i skopiuj go ręcznie.</value>
+  </data>
+  <data name="CodeCopied" xml:space="preserve">
+    <value>Skopiowano kod.</value>
+  </data>
+  <data name="CopyCodeFailed" xml:space="preserve">
+    <value>Nie udało się skopiować — przeczytaj kod na głos.</value>
+  </data>
+  <data name="InviteListDescription" xml:space="preserve">
+    <value>Utwórz link z zaproszeniem lub kod QR. Działa przez 30 minut — każdy, kto otworzy go w tym czasie, może dodawać i edytować zadania oraz je odhaczać.</value>
+  </data>
+  <data name="SharingNeedsConnection" xml:space="preserve">
+    <value>Zmiany w udostępnianiu wymagają połączenia.</value>
+  </data>
+  <data name="SharedByLabel" xml:space="preserve">
+    <value>Udostępnia</value>
+  </data>
+  <data name="YouCanEdit" xml:space="preserve">
+    <value>Możesz edytować</value>
+  </data>
+  <data name="StopSharingEveryone" xml:space="preserve">
+    <value>Przestań udostępniać · usuń wszystkich</value>
+  </data>
+  <data name="ShowInMyArea" xml:space="preserve">
+    <value>Pokaż w moim obszarze</value>
+  </data>
+  <data name="LeaveList" xml:space="preserve">
+    <value>Opuść listę</value>
+  </data>
+  <data name="StopSharing" xml:space="preserve">
+    <value>Przestań udostępniać</value>
+  </data>
+  <data name="StopSharingMessage" xml:space="preserve">
+    <value>Link z zaproszeniem przestanie działać, a pozostałe osoby stracą dostęp do: {0}.</value>
+  </data>
+  <data name="RemoveMember" xml:space="preserve">
+    <value>Usuń członka</value>
+  </data>
+  <data name="RemoveMemberFromList" xml:space="preserve">
+    <value>Usunąć {0} z tej listy?</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Usuń</value>
+  </data>
+  <data name="LeaveListMessage" xml:space="preserve">
+    <value>Opuścić {0}? Zniknie z twoich urządzeń.</value>
+  </data>
+  <data name="Leave" xml:space="preserve">
+    <value>Opuść</value>
+  </data>
+  <data name="InviteExpired" xml:space="preserve">
+    <value>To zaproszenie wygasło</value>
+  </data>
+  <data name="GoToMyDay" xml:space="preserve">
+    <value>Przejdź do ekranu Mój dzień</value>
+  </data>
+  <data name="InviteWorksThirtyMinutes" xml:space="preserve">
+    <value>Zaproszenia działają przez 30 minut. Poproś właściciela o nowy link i kod.</value>
+  </data>
+  <data name="JoiningNeedsConnection" xml:space="preserve">
+    <value>Dołączanie wymaga połączenia.</value>
+  </data>
+  <data name="EnterInviteCode" xml:space="preserve">
+    <value>Wpisz kod zaproszenia</value>
+  </data>
+  <data name="CodeAskForList" xml:space="preserve">
+    <value>Osoba, która udostępniła listę, ma 6-znakowy kod. Poproś ją o niego.</value>
+  </data>
+  <data name="CodeAskForBudget" xml:space="preserve">
+    <value>Osoba, która udostępniła budżet, ma 6-znakowy kod. Poproś ją o niego.</value>
+  </data>
+  <data name="InvalidLinkOrCode" xml:space="preserve">
+    <value>Ten link lub kod nie działa.</value>
+  </data>
+  <data name="TooManyTries" xml:space="preserve">
+    <value>Za dużo prób. Poczekaj kilka minut i spróbuj ponownie.</value>
+  </data>
+  <data name="CodeLabel" xml:space="preserve">
+    <value>Kod</value>
+  </data>
+  <data name="CodeHelper" xml:space="preserve">
+    <value>Wielkie litery A–Z i cyfry 0–9.</value>
+  </data>
+  <data name="JoinList" xml:space="preserve">
+    <value>Dołącz do listy</value>
+  </data>
+  <data name="JoinBudget" xml:space="preserve">
+    <value>Dołącz do budżetu</value>
+  </data>
+  <data name="QrCodeFilled" xml:space="preserve">
+    <value>Po zeskanowaniu kodu QR kod wpisuje się sam.</value>
+  </data>
+  <data name="PublisherIntro" xml:space="preserve">
+    <value>Zamrożona kopia tej listy, którą każdy może otworzyć bez konta. Odwiedzający mogą odhaczać; ich odhaczenia zobaczysz tutaj.</value>
+  </data>
+  <data name="LinkWorksFor" xml:space="preserve">
+    <value>Link działa przez</value>
+  </data>
+  <data name="PresetDays.One" xml:space="preserve">
+    <value>{0} dzień</value>
+  </data>
+  <data name="PresetDays.Few" xml:space="preserve">
+    <value>{0} dni</value>
+  </data>
+  <data name="PresetDays.Many" xml:space="preserve">
+    <value>{0} dni</value>
+  </data>
+  <data name="PickDatePreset" xml:space="preserve">
+    <value>Data…</value>
+  </data>
+  <data name="PublishUntil" xml:space="preserve">
+    <value>Opublikuj do {0}</value>
+  </data>
+  <data name="PickADate" xml:space="preserve">
+    <value>Wybierz datę</value>
+  </data>
+  <data name="PublishingNeedsConnection" xml:space="preserve">
+    <value>Publikowanie wymaga połączenia.</value>
+  </data>
+  <data name="LiveLinksNeedConnection" xml:space="preserve">
+    <value>Aktywne linki wymagają połączenia.</value>
+  </data>
+  <data name="NoLiveLinks" xml:space="preserve">
+    <value>Brak aktywnych linków. Opublikowane kopie pojawią się tutaj.</value>
+  </data>
+  <data name="LiveLinksHeading" xml:space="preserve">
+    <value>Aktywne linki · {0}</value>
+  </data>
+  <data name="DaysLeftCaption.One" xml:space="preserve">
+    <value>dzień do końca</value>
+  </data>
+  <data name="DaysLeftCaption.Few" xml:space="preserve">
+    <value>dni do końca</value>
+  </data>
+  <data name="DaysLeftCaption.Many" xml:space="preserve">
+    <value>dni do końca</value>
+  </data>
+  <data name="PublishedOn" xml:space="preserve">
+    <value>Opublikowano {0}</value>
+  </data>
+  <data name="TicksCount" xml:space="preserve">
+    <value>Odhaczone: {0}</value>
+  </data>
+  <data name="NoTicksYet" xml:space="preserve">
+    <value>Jeszcze bez odhaczeń</value>
+  </data>
+  <data name="EntriesCount.One" xml:space="preserve">
+    <value>{0} pozycja</value>
+  </data>
+  <data name="EntriesCount.Few" xml:space="preserve">
+    <value>{0} pozycje</value>
+  </data>
+  <data name="EntriesCount.Many" xml:space="preserve">
+    <value>{0} pozycji</value>
+  </data>
+  <data name="ShowQrCode" xml:space="preserve">
+    <value>Pokaż kod QR</value>
+  </data>
+  <data name="CopyLink" xml:space="preserve">
+    <value>Kopiuj link</value>
+  </data>
+  <data name="SnapshotQrLabel" xml:space="preserve">
+    <value>Kod QR z linkiem do migawki</value>
+  </data>
+  <data name="Open" xml:space="preserve">
+    <value>Otwórz</value>
+  </data>
+  <data name="Revoke" xml:space="preserve">
+    <value>Unieważnij</value>
+  </data>
+  <data name="PublishFailed" xml:space="preserve">
+    <value>Nie udało się opublikować migawki.</value>
+  </data>
+  <data name="SnapshotPublished" xml:space="preserve">
+    <value>Opublikowano migawkę. Skopiowano link.</value>
+  </data>
+  <data name="RevokeTitle" xml:space="preserve">
+    <value>Unieważnij migawkę</value>
+  </data>
+  <data name="RevokeMessage" xml:space="preserve">
+    <value>Unieważnić tę migawkę? Link przestanie działać.</value>
+  </data>
+  <data name="RevokeFailed" xml:space="preserve">
+    <value>Nie udało się unieważnić migawki.</value>
+  </data>
+</root>

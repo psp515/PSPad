@@ -3,9 +3,10 @@
 @using PSPad.Module.Tasks.Lists
 @inject IListSharingApi Sharing
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharingStrings> T
 
-<InviteCard Invite="@Invite" LinkFor="@LinkFor" Thing="list" Disabled="@Disabled" OnChanged="@OnChanged"
-            Invitation="Create an invite link or QR code. It works for 30 minutes — whoever opens it in that time can add, edit and tick tasks."
+<InviteCard Invite="@Invite" LinkFor="@LinkFor" Kind="InviteKind.List" Disabled="@Disabled" OnChanged="@OnChanged"
+            Invitation="@T["InviteListDescription"]"
             OnShare="@((token, code) => Sharing.ShareListAsync(List.Id, token, code))"
             OnEnd="@(() => Sharing.StopSharingAsync(List.Id))" />
 

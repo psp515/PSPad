@@ -21,7 +21,7 @@
     }
     @if (IsMine)
     {
-        <InviteCard Invite="@Invite" LinkFor="@LinkFor" Thing="budget" Disabled="@Locked" OnChanged="@OnChanged"
+        <InviteCard Invite="@Invite" LinkFor="@LinkFor" Kind="InviteKind.Budget" Disabled="@Locked" OnChanged="@OnChanged"
                     Invitation="@T["InviteDescription"]"
                     BlockedReason="@(Budget.IsArchived ? T["RestoreToInvite"].Value : null)"
                     OnShare="@((token, code) => Sharing.ShareBudgetAsync(Budget.Id, token, code))"

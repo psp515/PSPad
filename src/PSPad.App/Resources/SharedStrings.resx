@@ -108,4 +108,7 @@
   <data name="DragItem" xml:space="preserve">
     <value>Drag {0}</value>
   </data>
+  <data name="DeleteThis" xml:space="preserve">
+    <value>Delete this?</value>
+  </data>
 </root>

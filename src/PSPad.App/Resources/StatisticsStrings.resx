@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="OfflineLastNumbers" xml:space="preserve">
+    <value>Offline — showing the last numbers we have.</value>
+  </data>
+  <data name="DoneToday" xml:space="preserve">
+    <value>Done today</value>
+  </data>
+  <data name="OpenedToday" xml:space="preserve">
+    <value>Opened today</value>
+  </data>
+  <data name="LastSevenDays" xml:space="preserve">
+    <value>Last 7 days</value>
+  </data>
+  <data name="NetChange" xml:space="preserve">
+    <value>Net change</value>
+  </data>
+  <data name="DaysRange.One" xml:space="preserve">
+    <value>{0} day</value>
+  </data>
+  <data name="DaysRange.Few" xml:space="preserve">
+    <value>{0} days</value>
+  </data>
+  <data name="DaysRange.Many" xml:space="preserve">
+    <value>{0} days</value>
+  </data>
+  <data name="UpdatedJustNow" xml:space="preserve">
+    <value>updated just now</value>
+  </data>
+  <data name="UpdatedMinutesAgo" xml:space="preserve">
+    <value>updated {0}m ago</value>
+  </data>
+  <data name="UpdatedHoursAgo" xml:space="preserve">
+    <value>updated {0}h ago</value>
+  </data>
+  <data name="UpdatedDaysAgo" xml:space="preserve">
+    <value>updated {0}d ago</value>
+  </data>
+  <data name="SeriesPlanned" xml:space="preserve">
+    <value>Planned</value>
+  </data>
+  <data name="SeriesUnplanned" xml:space="preserve">
+    <value>Unplanned</value>
+  </data>
+  <data name="SeriesOpened" xml:space="preserve">
+    <value>Opened</value>
+  </data>
+  <data name="SeriesOutstanding" xml:space="preserve">
+    <value>Outstanding</value>
+  </data>
+  <data name="SeriesCaptured" xml:space="preserve">
+    <value>Captured</value>
+  </data>
+  <data name="CompletionsPerDay" xml:space="preserve">
+    <value>Completions per day</value>
+  </data>
+  <data name="TasksOpenedPerDay" xml:space="preserve">
+    <value>Tasks opened per day</value>
+  </data>
+  <data name="OpenTasksOutstanding" xml:space="preserve">
+    <value>Open tasks outstanding</value>
+  </data>
+  <data name="WhereTheWorkWent" xml:space="preserve">
+    <value>Where the work went</value>
+  </data>
+  <data name="Consistency" xml:space="preserve">
+    <value>Consistency</value>
+  </data>
+  <data name="CapturedEachWeek" xml:space="preserve">
+    <value>Captured into the Inbox each week</value>
+  </data>
+  <data name="CapturedEachWeekExplain" xml:space="preserve">
+    <value>Each bar is one week; its height is how many items you captured into the Inbox that week, whatever became of them afterwards.</value>
+  </data>
+  <data name="WeekOf" xml:space="preserve">
+    <value>Week of</value>
+  </data>
+  <data name="Captured" xml:space="preserve">
+    <value>Captured</value>
+  </data>
+  <data name="EverythingThatHappened" xml:space="preserve">
+    <value>Everything that happened</value>
+  </data>
+  <data name="LoadOlder" xml:space="preserve">
+    <value>load older</value>
+  </data>
+  <data name="HeatmapCaption" xml:space="preserve">
+    <value>Each square is one day; darker means more tasks finished that day.</value>
+  </data>
+  <data name="HeatmapHint" xml:space="preserve">
+    <value>Tap a square for the day and its count.</value>
+  </data>
+  <data name="HeatmapReadout" xml:space="preserve">
+    <value>{0} — {1} completed</value>
+  </data>
+  <data name="HeatmapCell" xml:space="preserve">
+    <value>{0}: {1} completed</value>
+  </data>
+  <data name="Less" xml:space="preserve">
+    <value>Less</value>
+  </data>
+  <data name="More" xml:space="preserve">
+    <value>More</value>
+  </data>
+</root>
