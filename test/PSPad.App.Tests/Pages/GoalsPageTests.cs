@@ -58,17 +58,6 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void AGoalsNameLinksToItsPage()
-    {
-        var goal = NewGoal("Eat healthier");
-        Arrange(goal);
-
-        var page = Render<GoalsPage>();
-
-        Assert.Equal($"/goals/{goal.Id}", page.Find("a.pspad-goal-name").GetAttribute("href"));
-    }
-
-    [Fact]
     public void EditFromTheCardMenuOpensTheGoalPanel()
     {
         var goal = NewGoal("Eat healthier");
@@ -81,36 +70,6 @@ public class GoalsPageTests : Bunit.TestContext
         page.FindAll(".mud-menu-item").First(item => item.TextContent.Trim() == "Edit").Click();
 
         Assert.EndsWith($"/goals?goal={goal.Id}", navigation.Uri);
-    }
-
-    [Fact]
-    public void ACardPreviewsFiveTasksAndLinksToTheGoalPageForTheRest()
-    {
-        var goal = NewGoal("Eat healthier");
-        var list = NewList("Health");
-        Arrange([goal, list, .. Enumerable.Range(0, 7).Select(index => NewTask(list.Id, $"Task {index}", goal))]);
-
-        var page = Render<GoalsPage>();
-        var card = page.FindComponent<GoalCard>();
-
-        Assert.Equal(5, card.FindComponents<TaskRow>().Count);
-        var showAll = card.Find(".pspad-show-all");
-        Assert.Equal("Show all 7", showAll.TextContent.Trim());
-        Assert.Equal($"/goals/{goal.Id}", showAll.GetAttribute("href"));
-    }
-
-    [Fact]
-    public void ATasksRowNamesItsListButNotTheDayItWasAdded()
-    {
-        var goal = NewGoal("Eat healthier");
-        var list = NewList("Health");
-        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal));
-
-        var page = Render<GoalsPage>();
-        var row = page.FindComponent<TaskRow>();
-
-        Assert.Equal("Health", row.Instance.ListName);
-        Assert.DoesNotContain("Added", row.Markup);
     }
 
     [Fact]
@@ -127,127 +86,6 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ItLaysGoalCardsOutInTheGrid()
-    {
-        Arrange(NewGoal("Eat healthier"));
-
-        var page = Render<GoalsPage>();
-
-        page.Find(".mud-grid");
-    }
-
-    [Fact]
-    public void ItLaysAchievedGoalCardsOutInTheGrid()
-    {
-        Arrange(NewGoal("Eat healthier", achieved: true));
-
-        var page = Render<GoalsPage>();
-        var grids = page.FindAll(".mud-grid");
-
-        Assert.Contains(grids, grid => grid.TextContent.Contains("Eat healthier"));
-    }
-
-    [Fact]
-    public void ItShowsCardSkeletonsBeforeItHasLoaded()
-    {
-        ArrangeWithPendingStore();
-
-        var page = Render<GoalsPage>();
-
-        Assert.Single(page.FindComponents<CardSkeleton>());
-        Assert.DoesNotContain("No goals yet.", page.Markup);
-    }
-
-    [Fact]
-    public void EachGoalIsACard()
-    {
-        Arrange(NewGoal("Eat healthier"), NewGoal("Ship the redesign"));
-
-        var page = Render<GoalsPage>();
-
-        Assert.Equal(2, page.FindComponents<GoalCard>().Count);
-    }
-
-    [Fact]
-    public void ACardIsOutlinedWithNoShadowLikeAListCard()
-    {
-        Arrange(NewGoal("Eat healthier"));
-
-        var page = Render<GoalsPage>();
-        var card = page.FindComponents<GoalCard>().Single();
-
-        var paper = card.Find(".mud-paper").ClassList;
-        Assert.Contains("mud-paper-outlined", paper);
-        Assert.DoesNotContain(paper, name => name.StartsWith("mud-elevation-") && name != "mud-elevation-0");
-    }
-
-    [Fact]
-    public void ACardShowsOnlyItsOwnOpenTasks()
-    {
-        var goal = NewGoal("Eat healthier");
-        var other = NewGoal("Ship the redesign");
-        var list = NewList("Health");
-        Arrange(goal, other, list, NewTask(list.Id, "Book a check-up", goal), NewTask(list.Id, "Deploy", other));
-
-        var page = Render<GoalsPage>();
-        var card = page.FindComponents<GoalCard>().Single(c => c.Instance.Goal.Id == goal.Id);
-
-        Assert.Contains("Book a check-up", card.Markup);
-        Assert.DoesNotContain("Deploy", card.Markup);
-    }
-
-    [Fact]
-    public void ARepeatPastItsUntilDateIsNotOpenOnItsGoalCard()
-    {
-        var today = new DateOnly(2026, 9, 12);
-        var goal = NewGoal("Read more");
-        var list = NewList("Health");
-        var ended = NewTask(list.Id, "Read a book", goal);
-        ended.ApplyAll(TodoTask.Decide(ended,
-            new SetTaskRecurrence(Guid.NewGuid(), User, ended.Id, RecurrenceRule.Daily(today.AddDays(-7))),
-            DateTimeOffset.UnixEpoch));
-        ended.ApplyAll(TodoTask.Decide(ended,
-            new SetTaskDueDate(Guid.NewGuid(), User, ended.Id, today.AddDays(-1)), DateTimeOffset.UnixEpoch));
-        Arrange(goal, list, ended, NewTask(list.Id, "Buy a lamp", goal));
-
-        var page = Render<GoalsPage>();
-        var card = page.FindComponents<GoalCard>().Single();
-
-        Assert.DoesNotContain("Read a book", card.Markup);
-        Assert.Equal("1 open", card.Find(".pspad-open-count").TextContent);
-    }
-
-    [Fact]
-    public async Task DeletingAListTakesItsTasksOffTheGoalButKeepsTheGoal()
-    {
-        var goal = NewGoal("Eat healthier");
-        var list = NewList("Health");
-        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal), NewTask(list.Id, "Buy oats", goal));
-        var sender = Services.GetRequiredService<CommandSender>();
-
-        var result = await sender.SendAsync(
-            new DeleteTaskList(Guid.NewGuid(), User, list.Id), Xunit.TestContext.Current.CancellationToken);
-
-        Assert.True(result.Accepted, result.Rejection);
-        var page = Render<GoalsPage>();
-        var card = page.FindComponents<GoalCard>().Single(c => c.Instance.Goal.Id == goal.Id);
-        Assert.DoesNotContain("Book a check-up", card.Markup);
-        Assert.DoesNotContain("Buy oats", card.Markup);
-    }
-
-    [Fact]
-    public void ATasksListNameIsShownOnItsRow()
-    {
-        var goal = NewGoal("Eat healthier");
-        var list = NewList("Health");
-        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal));
-
-        var page = Render<GoalsPage>();
-
-        Assert.Contains("Health", page.Markup);
-    }
-
-    [Fact]
     public async Task AchievingAGoalMovesItToTheAchievedSection()
     {
         var goal = NewGoal("Eat healthier");
@@ -260,7 +98,7 @@ public class GoalsPageTests : Bunit.TestContext
         var stored = await replica.LoadAsync<Goal>(goal.Id);
         Assert.True(stored!.Achieved);
         page.WaitForAssertion(() => Assert.Contains("Eat healthier",
-            page.Find(".pspad-goals-achieved .pspad-goal-summary").TextContent));
+            page.Find(".pspad-goals-achieved .pspad-goal-list-row").TextContent));
     }
 
     [Fact]
@@ -288,7 +126,7 @@ public class GoalsPageTests : Bunit.TestContext
         var stored = await replica.LoadAsync<Goal>(goal.Id);
         Assert.Equal(GoalStatus.NotAchieved, stored!.Status);
         page.WaitForAssertion(() => Assert.Contains("Eat healthier",
-            page.Find(".pspad-goals-not-achieved .pspad-goal-summary").TextContent));
+            page.Find(".pspad-goals-not-achieved .pspad-goal-list-row").TextContent));
     }
 
     [Fact]
@@ -303,63 +141,6 @@ public class GoalsPageTests : Bunit.TestContext
         var names = page.FindAll(".pspad-goal-name").Select(name => name.TextContent.Trim()).ToArray();
 
         Assert.Equal(["Ccc sooner", "Bbb later", "Aaa undated"], names);
-    }
-
-    [Fact]
-    public void ACardsDueDateSitsOnItsOwnLineUnderTheName()
-    {
-        Arrange(NewGoal("Ship PSPad v1", dueOn: new DateOnly(2026, 9, 27)));
-
-        var page = Render<GoalsPage>();
-        var name = page.Find(".pspad-goal-name");
-
-        Assert.Same(name.ParentElement, page.Find(".pspad-goal-due").ParentElement);
-        Assert.Contains("flex-column", name.ParentElement!.ClassName);
-    }
-
-    [Fact]
-    public void AnOverdueGoalShowsItsDueDateInTheErrorColour()
-    {
-        Arrange(NewGoal("Eat healthier", dueOn: new DateOnly(2026, 9, 1)));
-
-        var page = Render<GoalsPage>();
-        var due = page.Find(".pspad-goal-due");
-
-        Assert.Contains("Due Tue, 1 Sep", due.TextContent);
-        Assert.Contains("mud-error-text", due.ClassName);
-    }
-
-    [Fact]
-    public void ClosedGoalsShowAsSummariesInTheirOwnSectionsNotAsCards()
-    {
-        var active = NewGoal("Eat healthier");
-        var achieved = NewGoal("Run a marathon", achieved: true);
-        var list = NewList("Health");
-        Arrange(active, achieved, list, NewTask(list.Id, "Buy shoes", achieved));
-
-        var page = Render<GoalsPage>();
-
-        Assert.Single(page.FindComponents<GoalCard>());
-        var summary = page.Find(".pspad-goals-achieved .pspad-goal-summary");
-        Assert.Contains("Run a marathon", summary.TextContent);
-        Assert.Contains("0 of 1 task done", summary.TextContent);
-        Assert.Contains("1", page.Find(".pspad-goals-achieved .pspad-section-count").TextContent);
-        Assert.Empty(page.FindAll(".pspad-goals-not-achieved"));
-        Assert.Empty(page.FindAll(".mud-expand-panel"));
-    }
-
-    [Fact]
-    public void ClickingASummaryOpensTheGoalPage()
-    {
-        var achieved = NewGoal("Run a marathon", achieved: true);
-        Arrange(achieved);
-        var navigation = Services.GetRequiredService<NavigationManager>();
-        navigation.NavigateTo("/goals");
-
-        var page = Render<GoalsPage>();
-        page.Find(".pspad-goal-summary").Click();
-
-        Assert.EndsWith($"/goals/{achieved.Id}", navigation.Uri);
     }
 
     [Fact]
@@ -405,18 +186,144 @@ public class GoalsPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ClickingATaskSetsTheTaskQueryString()
+    public void EachStatusSitsInItsOwnRowGroup()
+    {
+        Arrange(NewGoal("Eat healthier"), NewGoal("Run a marathon", achieved: true));
+
+        var page = Render<GoalsPage>();
+
+        Assert.Single(page.FindAll(".pspad-goals-in-progress .pspad-row-group.pspad-row-group-cols .pspad-goal-list-row"));
+        Assert.Single(page.FindAll(".pspad-goals-achieved .pspad-row-group .pspad-goal-list-row"));
+        Assert.Empty(page.FindAll(".mud-grid-item"));
+    }
+
+    [Fact]
+    public void EachGoalIsARow()
+    {
+        Arrange(NewGoal("Eat healthier"), NewGoal("Ship the redesign"));
+
+        var page = Render<GoalsPage>();
+
+        Assert.Equal(2, page.FindComponents<GoalListRow>().Count);
+    }
+
+    [Fact]
+    public void ClickingAGoalRowOpensTheGoalPage()
+    {
+        var goal = NewGoal("Eat healthier");
+        Arrange(goal);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/goals");
+
+        var page = Render<GoalsPage>();
+        page.Find(".pspad-goal-list-row").Click();
+
+        Assert.EndsWith($"/goals/{goal.Id}", navigation.Uri);
+    }
+
+    [Fact]
+    public void OpeningTheMenuDoesNotOpenTheGoal()
+    {
+        Arrange(NewGoal("Eat healthier"));
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/goals");
+
+        var page = Render(BuildGoalsPageWithPopovers());
+        page.Find(".pspad-goal-menu button").Click();
+
+        Assert.EndsWith("/goals", navigation.Uri);
+    }
+
+    [Fact]
+    public void ARowShowsProgressInsteadOfAPreviewOfItsTasks()
     {
         var goal = NewGoal("Eat healthier");
         var list = NewList("Health");
-        var task = NewTask(list.Id, "Book a check-up", goal);
-        Arrange(goal, list, task);
+        Arrange([goal, list, .. Enumerable.Range(0, 7).Select(index => NewTask(list.Id, $"Task {index}", goal))]);
 
         var page = Render<GoalsPage>();
-        page.Find(".pspad-task-name").Click();
 
-        var navigation = Services.GetRequiredService<NavigationManager>();
-        Assert.Contains($"?task={task.Id}", navigation.Uri);
+        Assert.Empty(page.FindComponents<TaskRow>());
+        Assert.DoesNotContain("Task 0", page.Markup);
+        Assert.Equal("0/7", page.Find(".pspad-goal-row-progress").TextContent.Trim());
+    }
+
+    [Fact]
+    public void ARepeatPastItsUntilDateCountsAsDone()
+    {
+        var today = new DateOnly(2026, 9, 12);
+        var goal = NewGoal("Read more");
+        var list = NewList("Health");
+        var ended = NewTask(list.Id, "Read a book", goal);
+        ended.ApplyAll(TodoTask.Decide(ended,
+            new SetTaskRecurrence(Guid.NewGuid(), User, ended.Id, RecurrenceRule.Daily(today.AddDays(-7))),
+            DateTimeOffset.UnixEpoch));
+        ended.ApplyAll(TodoTask.Decide(ended,
+            new SetTaskDueDate(Guid.NewGuid(), User, ended.Id, today.AddDays(-1)), DateTimeOffset.UnixEpoch));
+        Arrange(goal, list, ended, NewTask(list.Id, "Buy a lamp", goal));
+
+        var page = Render<GoalsPage>();
+
+        Assert.Equal("1/2", page.Find(".pspad-goal-row-progress").TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task DeletingAListTakesItsTasksOffTheGoalButKeepsTheGoal()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        Arrange(goal, list, NewTask(list.Id, "Book a check-up", goal), NewTask(list.Id, "Buy oats", goal));
+        var sender = Services.GetRequiredService<CommandSender>();
+
+        var result = await sender.SendAsync(
+            new DeleteTaskList(Guid.NewGuid(), User, list.Id), Xunit.TestContext.Current.CancellationToken);
+
+        Assert.True(result.Accepted, result.Rejection);
+        var page = Render<GoalsPage>();
+        Assert.Contains("Eat healthier", page.Markup);
+        Assert.Contains("No tasks linked", page.Find(".pspad-goal-list-row").TextContent);
+    }
+
+    [Fact]
+    public void AnOverdueGoalShowsItsDueDateInTheErrorColour()
+    {
+        Arrange(NewGoal("Eat healthier", dueOn: new DateOnly(2026, 9, 1)));
+
+        var page = Render<GoalsPage>();
+        var due = page.Find(".pspad-goal-due");
+
+        Assert.Contains("Overdue · 1 Sep", due.TextContent);
+        Assert.Contains("mud-error-text", due.ClassName);
+    }
+
+    [Fact]
+    public void ClosedGoalsShowAsMutedRowsInTheirOwnSections()
+    {
+        var active = NewGoal("Eat healthier");
+        var achieved = NewGoal("Run a marathon", achieved: true);
+        var list = NewList("Health");
+        Arrange(active, achieved, list, NewTask(list.Id, "Buy shoes", achieved));
+
+        var page = Render<GoalsPage>();
+
+        var row = page.Find(".pspad-goals-achieved .pspad-goal-list-row");
+        Assert.Contains("Run a marathon", row.TextContent);
+        Assert.Contains("0 of 1 task done", row.TextContent);
+        Assert.Empty(row.QuerySelectorAll(".mud-progress-linear"));
+        Assert.Contains("1", page.Find(".pspad-goals-achieved .pspad-section-count").TextContent);
+        Assert.Empty(page.FindAll(".pspad-goals-not-achieved"));
+        Assert.Empty(page.FindAll(".mud-expand-panel"));
+    }
+
+    [Fact]
+    public void ItShowsRowSkeletonsBeforeItHasLoaded()
+    {
+        ArrangeWithPendingStore();
+
+        var page = Render<GoalsPage>();
+
+        Assert.Single(page.FindComponents<RowSkeleton>());
+        Assert.DoesNotContain("No goals yet.", page.Markup);
     }
 
     // ThingMenu's MudMenu and IDialogService's MudDialogProvider both portal their open

@@ -11,7 +11,7 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<PageHeading Title="Inbox" />
+<PageHeading Title="Inbox" Subtitle="@Subtitle" />
 
 @if (!_loaded)
 {
@@ -19,21 +19,28 @@
 }
 else
 {
-    <MudGrid Spacing="4">
-        @if (Items.Count == 0)
-        {
+    @if (Items.Count == 0)
+    {
+        <MudGrid Spacing="4">
             <MudItem xs="12" sm="6" lg="4" xl="3">
                 <EmptyState Icon="@Icons.Material.Outlined.Inbox" Message="Nothing captured." CreateText="Capture"
                             OnCreate="@Capture" />
             </MudItem>
-        }
-        @foreach (var item in Items)
-        {
-            <MudItem @key="item.Id" xs="12" sm="6" lg="4" xl="3">
-                <InboxItemCard Item="@item" OnOpen="@Open" />
-            </MudItem>
-        }
-    </MudGrid>
+        </MudGrid>
+    }
+    else
+    {
+        <RowGroup Columns="true">
+            @foreach (var day in Days)
+            {
+                <div class="pspad-row-subhead">@DueDateRow.Describe(day.Key, State.Today)</div>
+                @foreach (var item in day)
+                {
+                    <InboxItemRow @key="item.Id" Item="@item" Zone="@Zone" OnOpen="@Open" />
+                }
+            }
+        </RowGroup>
+    }
 }
 
 <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@Capture"
@@ -46,6 +53,14 @@ else
     static readonly Dictionary<string, object> FabAttributes = new() { ["aria-label"] = "Capture" };
 
     IReadOnlyList<InboxItem> Items => _inbox?.Items ?? [];
+
+    TimeZoneInfo Zone => LocalToday.Zone(State.TimeZone);
+
+    string? Subtitle => Items.Count == 0 ? null : $"{Items.Count} to process";
+
+    IEnumerable<IGrouping<DateOnly, InboxItem>> Days => Items
+        .OrderByDescending(item => item.CapturedAt)
+        .GroupBy(item => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(item.CapturedAt, Zone).DateTime));
 
     [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
 

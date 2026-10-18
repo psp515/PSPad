@@ -27,46 +27,32 @@ else if (_goal is not null)
 {
     <PageHeading Title="@_goal.Name" Subtitle="@GoalStatusText.Of(_goal.Status)" Icon="@Icons.Material.Outlined.Flag" BackHref="/goals"
                  BackLabel="Back to goals" BackClass="pspad-back-to-goals" />
-    <div class="d-flex align-center gap-2 mb-4">
-        <MudChip T="string" Class="pspad-goal-status ma-0" Size="Size.Small" Variant="Variant.Outlined"
-                 Color="@(_goal.Status == GoalStatus.Achieved ? Color.Success : Color.Default)">@GoalStatusText.Of(_goal.Status)</MudChip>
-        @if (_goal.DueOn is { } due)
+    <MudPaper Outlined="true" Elevation="0" Class="pspad-goal-summary-card pa-3 mb-4 d-flex flex-column gap-2">
+        <div class="d-flex align-center gap-2">
+            <MudChip T="string" Class="pspad-goal-status ma-0" Size="Size.Small" Variant="Variant.Outlined"
+                     Color="@(_goal.Status == GoalStatus.Achieved ? Color.Success : Color.Default)">@GoalStatusText.Of(_goal.Status)</MudChip>
+            @if (_goal.DueOn is { } due)
+            {
+                <MudText Typo="Typo.caption" Class="@($"pspad-goal-due ml-auto {(IsOverdue ? "" : "pspad-muted")}")"
+                         Color="@(IsOverdue ? Color.Error : Color.Inherit)">@DueText(due)</MudText>
+            }
+        </div>
+        @if (Total > 0)
         {
-            <MudText Typo="Typo.caption" Class="@($"pspad-goal-due {(IsOverdue ? "" : "pspad-muted")}")"
-                     Color="@(IsOverdue ? Color.Error : Color.Inherit)">@($"Due {DueDateRow.Describe(due, State.Today)}")</MudText>
+            <div class="d-flex align-center gap-2">
+                <MudProgressLinear Value="@_done.Count" Max="@Total" Color="Color.Primary" Rounded="true" Class="flex-grow-1" />
+                <MudText Typo="Typo.caption" Class="pspad-goal-progress-text pspad-muted">@($"{_done.Count} of {Total} done")</MudText>
+            </div>
         }
-    </div>
-
-    <MudGrid Spacing="4">
-        @if (_open.Count == 0)
+        else
         {
-            <MudItem xs="12" sm="6" lg="4" xl="3">
-                <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="No open tasks." />
-            </MudItem>
+            <MudText Typo="Typo.caption" Class="pspad-goal-progress-text pspad-muted">No tasks linked</MudText>
         }
-        @foreach (var task in _open)
-        {
-            @Card(task)
-        }
-    </MudGrid>
-
-    @if (_done.Count > 0)
-    {
-        <MudExpansionPanels Elevation="0" Outlined="true" Class="mt-4">
-            <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
-                <MudGrid Spacing="4">
-                    @foreach (var task in _done)
-                    {
-                        @Card(task)
-                    }
-                </MudGrid>
-            </MudExpansionPanel>
-        </MudExpansionPanels>
-    }
+    </MudPaper>
 
     @if (_progress.Count > 0)
     {
-        <section class="pspad-goal-charts mt-8">
+        <section class="pspad-goal-charts mb-4">
             <MudGrid Spacing="4">
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pspad-goal-progress pa-3">
@@ -87,6 +73,39 @@ else if (_goal is not null)
                 }
             </MudGrid>
         </section>
+    }
+
+    <SectionHeading Title="Tasks" Count="@_open.Count" />
+    @if (_open.Count == 0)
+    {
+        <MudGrid Spacing="4">
+            <MudItem xs="12" sm="6" lg="4" xl="3">
+                <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="No open tasks." />
+            </MudItem>
+        </MudGrid>
+    }
+    else
+    {
+        <RowGroup Columns="true">
+            @foreach (var task in _open)
+            {
+                @Card(task)
+            }
+        </RowGroup>
+    }
+
+    @if (_done.Count > 0)
+    {
+        <MudExpansionPanels Elevation="0" Class="pspad-completed mt-2">
+            <MudExpansionPanel Text="@($"Completed · {_done.Count}")">
+                <RowGroup Columns="true">
+                    @foreach (var task in _done)
+                    {
+                        @Card(task)
+                    }
+                </RowGroup>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
     }
 
     <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
@@ -127,13 +146,21 @@ else
     bool IsOverdue => _goal is { Status: GoalStatus.InProgress } goal && goal.DueOn < State.Today;
 
     RenderFragment Card(TodoTask task) =>
-        @<MudItem @key="task.Id" xs="12" sm="6" lg="4" xl="3">
-            <MudPaper Outlined="true" Class="pspad-task-card">
-                <TaskRow Task="@task" Today="@State.Today"
-                         ListName="@ListNameOf(task)"
-                         OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
-            </MudPaper>
-        </MudItem>;
+        @<TaskRow @key="task.Id" Task="@task" Today="@State.Today"
+                  ListName="@ListNameOf(task)"
+                  OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />;
+
+    int Total => _open.Count + _done.Count;
+
+    string DueText(DateOnly due)
+    {
+        var text = $"Due {DueDateRow.Describe(due, State.Today)}";
+        var days = due.DayNumber - State.Today.DayNumber;
+
+        return _goal?.Status == GoalStatus.InProgress && days > 0
+            ? $"{text} · {days} {(days == 1 ? "day" : "days")} left"
+            : text;
+    }
 
     string? ListNameOf(TodoTask task) => _listNames.TryGetValue(task.ListId, out var name) ? name : null;
 

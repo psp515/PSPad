@@ -33,12 +33,6 @@ public partial class StylesheetRulesTests
         Assert.Contains("box-shadow: none", strip);
     }
 
-    [Theory]
-    [InlineData(".mud-paper.pspad-goal-summary:hover")]
-    [InlineData(".mud-paper.pspad-goal-summary:focus-visible")]
-    public void TheGoalSummaryWashOutranksTheCardGround(string selector) =>
-        Assert.Contains("background-color: var(--mud-palette-action-default-hover)", Declarations(selector));
-
     [Fact]
     public void WeekDaysAndShowAllKeepTheirOwnShapeInsteadOfThePill() =>
         Assert.Contains("border-radius: 999px", Declarations(".mud-button-root:not(.mud-icon-button, .pspad-week-day, .pspad-show-all)"));
@@ -58,19 +52,95 @@ public partial class StylesheetRulesTests
         Assert.Contains("box-shadow: none", inDrawer);
     }
 
-    [Theory]
-    [InlineData("pspad-day-task")]
-    [InlineData("pspad-task-card")]
-    [InlineData("pspad-goal-card")]
-    [InlineData("pspad-inbox-card")]
-    public void AClickableCardShowsKeyboardFocusLikeHover(string card)
+    [Fact]
+    public void RowsInAGroupAreSeparatedByAnInsetDivider()
     {
-        var hover = Declarations($".mud-paper-outlined.{card}:hover");
+        var divider = Declarations(".pspad-row-group .pspad-row + .pspad-row::before");
 
-        Assert.NotEmpty(hover);
-        Assert.Equal(hover, Declarations($".mud-paper-outlined.{card}:focus-visible"));
-        Assert.Equal(hover, Declarations($".mud-paper-outlined.{card}:has(:focus-visible)"));
+        Assert.Contains("border-top: 1px solid var(--pspad-line)", divider);
+        Assert.Contains("left: 55px", divider);
     }
+
+    [Fact]
+    public void RowsInsideAnAreaCardGetTheSameDivider()
+    {
+        var divider = Declarations(".pspad-card-body .pspad-row + .pspad-row::before");
+
+        Assert.Contains("border-top: 1px solid var(--pspad-line)", divider);
+        Assert.Contains("left: 55px", divider);
+    }
+
+    [Fact]
+    public void ARowHasTheSamePaddingOnBothSides() =>
+        Assert.Contains("padding-inline: 4px", Declarations(".pspad-row"));
+
+    [Fact]
+    public void AGroupSpansTheContentWidth() =>
+        Assert.DoesNotContain("max-width", Declarations(".pspad-row-group.mud-paper-outlined"));
+
+    [Fact]
+    public void AColumnGroupFlowsRowsIntoTwoThenThreeColumns()
+    {
+        Assert.Contains("grid-template-columns: repeat(2, minmax(0, 1fr))", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols"));
+        Assert.Contains("grid-template-columns: repeat(3, minmax(0, 1fr))", DeclarationsInMedia("min-width: 1920px", ".pspad-row-group-cols"));
+    }
+
+    [Fact]
+    public void RowsInAColumnGroupDrawTheirOwnBottomDividerAndLeftHairline()
+    {
+        var wide = DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row::after");
+        Assert.Contains("border-top: 1px solid var(--pspad-line)", wide);
+        Assert.Contains("left: 55px", wide);
+        Assert.Contains("display: none", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row:last-child::after"));
+        Assert.Contains("display: none", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row + .pspad-row::before"));
+        Assert.Contains("box-shadow: -1px 0 0 var(--pspad-line)", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row"));
+        Assert.Contains("grid-column: 1 / -1", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row-subhead"));
+        Assert.Contains("grid-column: 1 / -1", DeclarationsInMedia("min-width: 960px", ".pspad-row-group-cols > .pspad-row-add"));
+    }
+
+    [Fact]
+    public void ALedgerRowPutsItsMetaInAFixedColumnOnDesktop()
+    {
+        Assert.Contains("flex-direction: row", DeclarationsInMedia("min-width: 960px", ".pspad-row-ledger .pspad-row-body"));
+        Assert.Contains("width: 280px", DeclarationsInMedia("min-width: 960px", ".pspad-row-ledger .pspad-row-meta"));
+    }
+
+    [Fact]
+    public void MyDayIsTwoPanesOnDesktopAndTabsOnAPhone()
+    {
+        Assert.Contains("grid-template-columns: minmax(0, 1fr) 380px", DeclarationsInMedia("min-width: 960px", ".pspad-day"));
+        Assert.Contains("display: none", DeclarationsInMedia("min-width: 960px", ".pspad-day-tabs"));
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-day-tab-tasks .pspad-day-schedule"));
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-day-tab-schedule .pspad-day-lists"));
+    }
+
+    [Fact]
+    public void TheTimelineIsOnAnHourScaleWithANowLine()
+    {
+        Assert.Contains("height: 56px", Declarations(".pspad-timeline-hour"));
+        Assert.Contains("border-top: 2px solid var(--mud-palette-error)", Declarations(".pspad-timeline-now"));
+    }
+
+    [Fact]
+    public void AnEmptyStarIsHiddenUntilHoverOnlyWhereHoverExists()
+    {
+        Assert.Contains("opacity: 0", DeclarationsInMedia("hover: hover", ".pspad-row .pspad-row-star.pspad-muted"));
+        Assert.Contains("opacity: .7", DeclarationsInMedia("hover: hover", ".pspad-row:hover .pspad-row-star.pspad-muted"));
+    }
+
+    [Fact]
+    public void ARowNoLongerHasAFixedHeight()
+    {
+        var row = Declarations(".pspad-row");
+
+        Assert.DoesNotContain("height: 60px", row);
+        Assert.Contains("min-height: 44px", row);
+        Assert.Contains("min-height: 54px", Declarations(".pspad-row.pspad-row-has-meta"));
+    }
+
+    [Fact]
+    public void AFocusableRowShowsKeyboardFocus() =>
+        Assert.Contains("outline: 2px solid var(--mud-palette-primary)", Declarations(".pspad-row[tabindex]:focus-visible"));
 
     [Fact]
     public void ARowShowsKeyboardFocusLikeHover()

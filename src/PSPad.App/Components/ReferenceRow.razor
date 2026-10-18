@@ -4,7 +4,8 @@
 @inject Clipboard Clipboard
 @inject ISnackbar Snackbar
 
-<div class="pspad-row pspad-reference-row d-flex align-center gap-2 px-1">
+<div class="pspad-row pspad-reference-row d-flex align-center gap-2 pr-1 @(Item.Fields.Count > 0 || Item.SnapshotMarks.Count > 0 ? "pspad-row-has-meta" : "")">
+    <span class="pspad-priority-slot" aria-hidden="true"></span>
     <span class="pspad-row-lead">
         <MudIcon Icon="@Icons.Material.Outlined.BookmarkBorder" Size="Size.Small" Class="pspad-muted" />
     </span>

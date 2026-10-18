@@ -47,16 +47,13 @@ else if (_list is not null)
         }
         else
         {
-            <MudGrid Spacing="4">
+            <RowGroup Columns="true">
                 @foreach (var item in _items)
                 {
-                    <MudItem @key="item.Id" xs="12" sm="6" lg="4" xl="3">
-                        <MudPaper Outlined="true" Class="pspad-task-card">
-                            <ReferenceRow Item="@item" OnStar="@StarItemAsync" OnOpen="@OpenItem" />
-                        </MudPaper>
-                    </MudItem>
+                    <ReferenceRow @key="item.Id" Item="@item" OnStar="@StarItemAsync" OnOpen="@OpenItem" />
                 }
-            </MudGrid>
+                <AddRow Text="Add item" OnClick="@AddItem" />
+            </RowGroup>
         }
     }
     else if (_open.Count == 0 && _done.Count == 0)
@@ -70,34 +67,27 @@ else if (_list is not null)
     }
     else
     {
-        <MudGrid Spacing="4">
+        <RowGroup Columns="true">
             @foreach (var task in _open)
             {
-                <MudItem @key="task.Id" xs="12" sm="6" lg="4" xl="3">
-                    <MudPaper Outlined="true" Class="pspad-task-card">
-                        <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
-                                 OnOpen="@Open" />
-                    </MudPaper>
-                </MudItem>
+                <TaskRow @key="task.Id" Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
+                         OnOpen="@Open" />
             }
-        </MudGrid>
+            <AddRow Text="Add task" OnClick="@AddTask" />
+        </RowGroup>
     }
 
     @if (_list.Kind != ListKind.Reference && _done.Count > 0)
     {
-        <MudExpansionPanels Elevation="0" Outlined="true" Class="mt-4">
-            <MudExpansionPanel Text="@($"Completed ({_done.Count})")">
-                <MudGrid Spacing="4">
+        <MudExpansionPanels Elevation="0" Class="pspad-completed mt-2">
+            <MudExpansionPanel Text="@($"Completed · {_done.Count}")">
+                <RowGroup Columns="true">
                     @foreach (var task in _done)
                     {
-                        <MudItem @key="task.Id" xs="12" sm="6" lg="4" xl="3">
-                            <MudPaper Outlined="true" Class="pspad-task-card">
-                                <TaskRow Task="@task" Today="@State.Today" OnToggle="@ToggleAsync"
-                                         OnStar="@StarAsync" OnOpen="@Open" />
-                            </MudPaper>
-                        </MudItem>
+                        <TaskRow @key="task.Id" Task="@task" Today="@State.Today" OnToggle="@ToggleAsync"
+                                 OnStar="@StarAsync" OnOpen="@Open" />
                     }
-                </MudGrid>
+                </RowGroup>
             </MudExpansionPanel>
         </MudExpansionPanels>
     }

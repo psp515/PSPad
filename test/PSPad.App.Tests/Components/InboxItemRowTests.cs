@@ -7,33 +7,36 @@ using PSPad.TestInfrastructure;
 namespace PSPad.App.Tests.Components;
 
 [UnitTest]
-public class InboxItemCardTests : Bunit.TestContext
+public class InboxItemRowTests : Bunit.TestContext
 {
     static readonly Guid User = Guid.NewGuid();
 
     [Fact]
-    public void ItIsItsOwnOutlinedCard()
+    public void ItIsARowAndShowsTheText()
     {
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
         var item = NewItem("Kupić mleko");
 
-        var card = Render<InboxItemCard>(parameters => parameters.Add(p => p.Item, item));
+        var row = Render<InboxItemRow>(parameters => parameters.Add(p => p.Item, item));
 
-        var classes = card.Find(".mud-paper").ClassList;
-        Assert.Contains("mud-paper-outlined", classes);
-        Assert.Contains("pspad-inbox-card", classes);
-        Assert.Contains("Kupić mleko", card.Markup);
+        var classes = row.Find(".pspad-inbox-item").ClassList;
+        Assert.Contains("pspad-row", classes);
+        Assert.Empty(row.FindAll(".mud-paper"));
+        Assert.Contains("Kupić mleko", row.Markup);
     }
 
     [Fact]
-    public void ItShowsWhenTheItemWasCaptured()
+    public void ItShowsTheCaptureTimeInTheGivenZone()
     {
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
         var item = NewItem("Kupić mleko");
+        var zone = TimeZoneInfo.CreateCustomTimeZone("plus5", TimeSpan.FromHours(5), "plus5", "plus5");
 
-        var card = Render<InboxItemCard>(parameters => parameters.Add(p => p.Item, item));
+        var row = Render<InboxItemRow>(parameters => parameters
+            .Add(p => p.Item, item)
+            .Add(p => p.Zone, zone));
 
-        Assert.Contains(item.CapturedAt.ToLocalTime().ToString("d MMM"), card.Find(".pspad-inbox-item-captured").TextContent);
+        Assert.Equal("05:00", row.Find(".pspad-inbox-item-captured").TextContent.Trim());
     }
 
     [Fact]
@@ -43,26 +46,24 @@ public class InboxItemCardTests : Bunit.TestContext
         var item = NewItem("Kupić mleko");
         InboxItem? opened = null;
 
-        var card = Render<InboxItemCard>(parameters => parameters
+        var row = Render<InboxItemRow>(parameters => parameters
             .Add(p => p.Item, item)
             .Add(p => p.OnOpen, EventCallback.Factory.Create<InboxItem>(this, i => opened = i)));
 
-        card.Find(".pspad-inbox-item").Click();
+        row.Find(".pspad-inbox-item").Click();
 
         Assert.Equal(item.Id, opened?.Id);
     }
 
     [Fact]
-    public void ItSharesTheRowShapeWithAOneLineName()
+    public void TheFullTextRidesInTheTitleForALongCapture()
     {
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
         var item = NewItem("Zadzwonić do mechanika w sprawie opon");
 
-        var card = Render<InboxItemCard>(parameters => parameters.Add(p => p.Item, item));
+        var row = Render<InboxItemRow>(parameters => parameters.Add(p => p.Item, item));
 
-        card.Find(".pspad-inbox-item.pspad-row");
-        Assert.Equal("Zadzwonić do mechanika w sprawie opon", card.Find(".pspad-row-name").GetAttribute("title"));
-        card.Find(".pspad-row-meta .pspad-inbox-item-captured");
+        Assert.Equal("Zadzwonić do mechanika w sprawie opon", row.Find(".pspad-inbox-item-text").GetAttribute("title"));
     }
 
     static InboxItem NewItem(string text)

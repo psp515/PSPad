@@ -1,0 +1,11 @@
+<MudPaper Outlined="true" Elevation="0" Class="@($"pspad-row-group {(Columns ? "pspad-row-group-cols" : "")} {Class}".Replace("  ", " ").Trim())">
+    @ChildContent
+</MudPaper>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public bool Columns { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+}

@@ -34,6 +34,33 @@ public class GoalPageTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ASummaryCardShowsTheStatusAndHowManyTasksAreDone()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        Arrange(goal, list, NewTask(list.Id, "A", goal), NewTask(list.Id, "B", goal));
+
+        var page = RenderPage(goal.Id);
+
+        var summary = page.Find(".pspad-goal-summary-card");
+        Assert.NotNull(summary.QuerySelector(".pspad-goal-status"));
+        Assert.Equal("0 of 2 done", summary.QuerySelector(".pspad-goal-progress-text")!.TextContent.Trim());
+        Assert.NotNull(summary.QuerySelector(".mud-progress-linear"));
+    }
+
+    [Fact]
+    public void ASummaryCardWithNoTasksSaysSo()
+    {
+        var goal = NewGoal("Eat healthier");
+        Arrange(goal);
+
+        var page = RenderPage(goal.Id);
+
+        Assert.Equal("No tasks linked", page.Find(".pspad-goal-progress-text").TextContent.Trim());
+        Assert.Empty(page.FindAll(".pspad-goal-summary-card .mud-progress-linear"));
+    }
+
+    [Fact]
     public void TheHeadingShowsAFlagIcon()
     {
         var goal = NewGoal("Eat healthier");
@@ -90,7 +117,7 @@ public class GoalPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void EachTaskIsItsOwnCardInTheGrid()
+    public void EachTaskIsARowInOneGroup()
     {
         var goal = NewGoal("Eat healthier");
         var list = NewList("Health");
@@ -98,8 +125,8 @@ public class GoalPageTests : Bunit.TestContext
 
         var page = RenderPage(goal.Id);
 
-        page.Find(".mud-grid");
-        Assert.Equal(2, page.FindAll(".pspad-task-card").Count);
+        Assert.Contains("pspad-row-group-cols", page.Find(".pspad-row-group").ClassList);
+        Assert.Equal(2, page.FindAll(".pspad-row-group > .pspad-row").Count);
     }
 
     [Fact]
@@ -113,7 +140,7 @@ public class GoalPageTests : Bunit.TestContext
 
         var page = RenderPage(goal.Id);
 
-        Assert.Contains("Completed (1)", page.Markup);
+        Assert.Contains("Completed · 1", page.Markup);
     }
 
     [Fact]
@@ -312,7 +339,7 @@ public class GoalPageTests : Bunit.TestContext
 
         var page = RenderPage(goal.Id);
 
-        Assert.Contains("Completed (1)", page.Markup);
+        Assert.Contains("Completed · 1", page.Markup);
         var openNames = page.FindAll(".pspad-task-name").Where(name => name.Closest(".mud-expand-panel") is null);
         Assert.DoesNotContain(openNames, name => name.TextContent.Contains("Read a book"));
     }
@@ -383,7 +410,7 @@ public class GoalPageTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ChartsAreTheirOwnSectionBelowTheTasks()
+    public void ChartsSitBetweenTheSummaryAndTheTasks()
     {
         var goal = NewGoal("Eat healthier", dueOn: Today.AddDays(12));
         var list = NewList("Health");
@@ -397,9 +424,12 @@ public class GoalPageTests : Bunit.TestContext
 
         Assert.NotNull(charts.QuerySelector(".pspad-goal-progress"));
         Assert.NotNull(charts.QuerySelector(".pspad-goal-pace"));
-        Assert.Null(charts.QuerySelector(".pspad-task-card"));
-        Assert.True(markup.IndexOf("pspad-task-card", StringComparison.Ordinal) < markup.IndexOf("pspad-goal-charts", StringComparison.Ordinal));
-        Assert.True(markup.IndexOf("Completed (1)", StringComparison.Ordinal) < markup.IndexOf("pspad-goal-charts", StringComparison.Ordinal));
+        Assert.Null(charts.QuerySelector(".pspad-row"));
+        Assert.True(markup.IndexOf("pspad-goal-summary-card", StringComparison.Ordinal) < markup.IndexOf("pspad-goal-charts", StringComparison.Ordinal));
+        Assert.True(markup.IndexOf("pspad-goal-charts", StringComparison.Ordinal) < markup.IndexOf("pspad-row-group", StringComparison.Ordinal));
+        Assert.True(markup.IndexOf("pspad-row-group", StringComparison.Ordinal) < markup.IndexOf("Completed · 1", StringComparison.Ordinal));
+        var heading = page.FindAll(".pspad-section-heading").Single(h => h.TextContent.StartsWith("Tasks"));
+        Assert.Equal("1", heading.QuerySelector(".pspad-section-count")!.TextContent.Trim());
     }
 
     IRenderedComponent<GoalPage> RenderPage(Guid goalId) =>

@@ -204,7 +204,7 @@ public class TaskRowTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheMetaLineRunsDueStepsRepeatDescriptionPriorityThenList()
+    public void TheMetaLineRunsDueStepsRepeatDescriptionThenList()
     {
         Arrange();
         var task = Recurring(Task("Sprawdzaj Inwestycje"), Today);
@@ -219,20 +219,41 @@ public class TaskRowTests : Bunit.TestContext
             .Select(child => child.ClassList.First(name => name != "mud-typography" && name.StartsWith("pspad-")))
             .ToArray();
         Assert.Equal(
-            ["pspad-due", "pspad-steps-progress", "pspad-recurring", "pspad-has-description", "pspad-priority", "pspad-row-list"],
+            ["pspad-due", "pspad-steps-progress", "pspad-recurring", "pspad-has-description", "pspad-row-list"],
             order);
     }
 
     [Fact]
-    public void ThePriorityDotSitsInTheMetaLineLeavingOnlyTheStarOnTheRight()
+    public void ThePriorityIsAStripeAtTheRowStartNotADotInTheMetaLine()
     {
         Arrange();
 
         var row = Render(Prioritised(Task("Scroodge"), Priority.Medium));
 
-        row.Find(".pspad-row-meta .pspad-priority");
-        Assert.Empty(row.FindAll(".pspad-row > .mud-icon-root"));
+        var stripe = row.Find(".pspad-row > .pspad-priority.pspad-priority-medium");
+        Assert.Equal("Medium priority", stripe.GetAttribute("aria-label"));
+        Assert.Empty(row.FindAll(".pspad-row-meta .pspad-priority"));
         row.Find(".pspad-row > .pspad-row-star");
+    }
+
+    [Fact]
+    public void ATaskWithoutPriorityKeepsASpacerSoNamesStayAligned()
+    {
+        Arrange();
+
+        var row = Render(Task("Plain"));
+
+        row.Find(".pspad-row > .pspad-priority-slot");
+        Assert.Empty(row.FindAll(".pspad-priority"));
+    }
+
+    [Fact]
+    public void ARowWithAMetaLineIsTallerThanABareOne()
+    {
+        Arrange();
+
+        Assert.Contains("pspad-row-has-meta", Render(Due(Task("Dated"), Today)).Find(".pspad-row").ClassList);
+        Assert.DoesNotContain("pspad-row-has-meta", Render(Task("Bare")).Find(".pspad-row").ClassList);
     }
 
     [Fact]

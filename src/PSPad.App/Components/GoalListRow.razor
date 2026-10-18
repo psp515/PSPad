@@ -1,0 +1,96 @@
+@using PSPad.Module.Tasks.Goals
+@using PSPad.Module.Tasks.Tasks
+
+<div class="pspad-row pspad-goal-list-row d-flex align-start gap-3 pl-3 pr-1" role="link" tabindex="0"
+     aria-label="@Goal.Name" @onclick="@OnOpen" @onkeydown="@OpenOnKeyAsync">
+    <MudIcon Icon="@StatusIcon" Color="@StatusColor" Class="flex-shrink-0 mt-1" />
+    <div class="d-flex flex-column flex-grow-1 gap-1" style="min-width:0">
+        <div class="d-flex align-baseline gap-2">
+            <MudText Typo="Typo.body2" Class="@($"pspad-goal-name flex-grow-1 {(InProgress ? "pspad-goal-name-active" : "pspad-muted")}")">@Goal.Name</MudText>
+            @if (InProgress && Goal.DueOn is { } due)
+            {
+                <MudText Typo="Typo.caption" Class="@($"pspad-goal-due flex-shrink-0 {(Overdue ? "" : "pspad-muted")}")"
+                         Color="@(Overdue ? Color.Error : Color.Inherit)">@DueText(due)</MudText>
+            }
+        </div>
+        @if (InProgress && Total > 0)
+        {
+            <div class="d-flex align-center gap-2">
+                <MudProgressLinear Value="@Done" Max="@Total" Color="Color.Primary" Rounded="true" Size="Size.Small" Class="flex-grow-1" />
+                <MudText Typo="Typo.caption" Class="pspad-goal-row-progress pspad-muted">@($"{Done}/{Total}")</MudText>
+            </div>
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Class="pspad-goal-row-tasks pspad-muted">@TasksText</MudText>
+        }
+    </div>
+    <span class="flex-shrink-0 align-self-center" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+        <ThingMenu Class="pspad-goal-menu" OnEdit="@OnEdit" OnDelete="@OnDelete">
+            <Extra>
+                @foreach (var status in Enum.GetValues<GoalStatus>().Where(status => status != Goal.Status))
+                {
+                    <MudMenuItem Class="pspad-goal-status-option" OnClick="@(() => OnStatus.InvokeAsync(status))">
+                        @($"Mark {GoalStatusText.Of(status).ToLowerInvariant()}")
+                    </MudMenuItem>
+                }
+            </Extra>
+        </ThingMenu>
+    </span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Goal Goal { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback OnOpen { get; set; }
+
+    [Parameter] public EventCallback<GoalStatus> OnStatus { get; set; }
+
+    [Parameter] public EventCallback OnEdit { get; set; }
+
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    bool InProgress => Goal.Status == GoalStatus.InProgress;
+
+    bool Overdue => InProgress && Goal.DueOn < Today;
+
+    string StatusIcon => Goal.Status switch
+    {
+        GoalStatus.Achieved => Icons.Material.Outlined.EmojiEvents,
+        GoalStatus.NotAchieved => Icons.Material.Outlined.HighlightOff,
+        _ => Icons.Material.Outlined.Flag
+    };
+
+    Color StatusColor => Goal.Status switch
+    {
+        GoalStatus.Achieved => Color.Success,
+        GoalStatus.NotAchieved => Color.Error,
+        _ => Color.Primary
+    };
+
+    IReadOnlyList<TodoTask> Counted => [.. Tasks.Where(task => !task.Deleted)];
+
+    int Total => Counted.Count;
+
+    int Done => Counted.Count(task => task.CompletedAt is not null || task.EndedBy(Today));
+
+    string TasksText => Total == 0
+        ? "No tasks linked"
+        : $"{Done} of {Total} {(Total == 1 ? "task" : "tasks")} done";
+
+    string DueText(DateOnly due) => Overdue
+        ? $"Overdue · {due:d MMM}"
+        : $"Due {DueDateRow.Describe(due, Today)}";
+
+    async Task OpenOnKeyAsync(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or " ")
+        {
+            await OnOpen.InvokeAsync();
+        }
+    }
+}

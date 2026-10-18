@@ -9,7 +9,6 @@
 @using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<Goal> GoalStore
 @inject IDocumentStore<TodoTask> TaskStore
-@inject IDocumentStore<TaskList> ListStore
 @inject AppState State
 @inject CommandSender Sender
 @inject IDialogService Dialogs
@@ -20,27 +19,21 @@
 
 @if (!_loaded)
 {
-    <CardSkeleton Count="3" />
+    <RowSkeleton Count="4" />
 }
 else
 {
-    @if (_active.Count > 0 && (_achieved.Count > 0 || _notAchieved.Count > 0))
+    @if (_active.Count == 0 && _achieved.Count == 0 && _notAchieved.Count == 0)
     {
-        @SectionHeader("In progress", _active.Count)
-    }
-    <MudGrid Spacing="4" Class="pspad-goals-in-progress">
-        @if (_active.Count == 0 && _achieved.Count == 0 && _notAchieved.Count == 0)
-        {
+        <MudGrid Spacing="4" Class="pspad-goals-in-progress">
             <MudItem xs="12" sm="6" lg="4" xl="3">
                 <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="No goals yet." CreateText="Add goal"
                             OnCreate="@AddGoal" />
             </MudItem>
-        }
-        @foreach (var goal in _active)
-        {
-            @Card(goal)
-        }
-    </MudGrid>
+        </MudGrid>
+    }
+
+    @Section("In progress", _active, "pspad-goals-in-progress", false)
 
     @Section("Achieved", _achieved, "pspad-goals-achieved")
     @Section("Not achieved", _notAchieved, "pspad-goals-not-achieved")
@@ -57,38 +50,28 @@ else
     RenderFragment SectionHeader(string title, int count) =>
         @<SectionHeading Title="@title" Count="@count" />;
 
-    RenderFragment Section(string title, IReadOnlyList<Goal> goals, string css) => __builder =>
+    RenderFragment Section(string title, IReadOnlyList<Goal> goals, string css, bool spaced = true) => __builder =>
     {
         if (goals.Count == 0)
         {
             return;
         }
 
-        <section class="@($"{css} mt-8")">
+        <section class="@($"{css} {(spaced ? "mt-6" : "")}".Trim())">
             @SectionHeader(title, goals.Count)
-            <MudGrid Spacing="4">
+            <RowGroup Columns="true">
                 @foreach (var goal in goals)
                 {
-                    <MudItem @key="goal.Id" xs="12" sm="6" lg="4" xl="3">
-                        <GoalSummaryCard Goal="@goal" Tasks="@TasksOf(goal.Id)" Today="@State.Today"
-                                         OnOpen="@(() => OpenGoal(goal))" />
-                    </MudItem>
+                    <GoalListRow @key="goal.Id" Goal="@goal" Tasks="@TasksOf(goal.Id)" Today="@State.Today"
+                                 OnOpen="@(() => OpenGoal(goal))"
+                                 OnStatus="@(status => SetStatusAsync(goal, status))"
+                                 OnEdit="@(() => EditGoal(goal))"
+                                 OnDelete="@(() => DeleteAsync(goal))" />
                 }
-            </MudGrid>
+            </RowGroup>
         </section>
     };
-
-    RenderFragment Card(Goal goal) =>
-        @<MudItem @key="goal.Id" xs="12" sm="6" lg="4" xl="3">
-            <GoalCard Goal="@goal" Tasks="@TasksOf(goal.Id)" ListNames="@_listNames"
-                      Today="@State.Today"
-                      OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
-                      OnStatus="@(status => SetStatusAsync(goal, status))"
-                      OnEdit="@(() => EditGoal(goal))"
-                      OnDelete="@(() => DeleteAsync(goal))" />
-        </MudItem>;
     IReadOnlyList<TodoTask> _tasks = [];
-    IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
 
     [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
 
@@ -126,8 +109,6 @@ else
 
         _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
 
-        var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
-        _listNames = lists.Where(list => !list.Deleted).ToDictionary(list => list.Id, list => list.Name);
         _loaded = true;
     }
 
@@ -135,37 +116,6 @@ else
         _active.Concat(_achieved).Concat(_notAchieved).FirstOrDefault(goal => goal.Id == goalId) is { } goal
             ? [.. _tasks.Where(task => goal.TaskIds.Contains(task.Id))]
             : [];
-
-    void Open(TodoTask task) =>
-        Navigation.NavigateTo($"{Navigation.Uri.Split('?')[0]}?task={task.Id}");
-
-    async Task ToggleAsync(TodoTask task)
-    {
-        if (task.IsRecurring)
-        {
-            if (!task.OccursOn(State.Today) && !task.CompletedDays.Contains(State.Today))
-            {
-                return;
-            }
-
-            await Sender.SendAsync(new CompleteOccurrence(
-                Guid.NewGuid(), State.UserId, task.Id, State.Today, !task.CompletedDays.Contains(State.Today)));
-        }
-        else if (task.CompletedAt is null)
-        {
-            await Sender.SendAsync(new CompleteTask(Guid.NewGuid(), State.UserId, task.Id));
-        }
-        else
-        {
-            await Sender.SendAsync(new ReopenTask(Guid.NewGuid(), State.UserId, task.Id));
-        }
-
-    }
-
-    async Task StarAsync(TodoTask task)
-    {
-        await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, task.Id, !task.Starred));
-    }
 
     void AddGoal() => Navigation.NavigateTo(GoalQuery.ForNew(Navigation.Uri));
 

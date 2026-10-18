@@ -17,7 +17,7 @@
         @Actions
     </div>
 
-    <MudCollapse Expanded="@(!Collapsed)">
+    <MudCollapse Expanded="@(!Collapsed)" Class="pspad-card-body">
         @if (Count == 0 && EmptyText is not null)
         {
             <MudText Typo="Typo.body2" Class="pa-3">@EmptyText</MudText>

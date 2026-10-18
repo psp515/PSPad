@@ -14,6 +14,7 @@
 @inject AppState State
 @inject CommandSender Sender
 @inject NavigationManager Navigation
+@inject IClock Clock
 
 <PageHeading Title="My Day" />
 
@@ -35,86 +36,78 @@ else if (_day < State.Today)
         }
         else
         {
-            <MudPaper Outlined="true"><MudText Typo="Typo.body2" Class="pa-4">@($"Nothing completed on {_day:ddd, d MMM}.")</MudText></MudPaper>
+            <RowGroup><MudText Typo="Typo.body2" Class="pa-3 pspad-muted">@($"Nothing completed on {_day:ddd, d MMM}.")</MudText></RowGroup>
         }
     </section>
 }
 else
 {
-    @if (_plan.Overdue.Count > 0)
-    {
-        <section class="pspad-day-overdue mb-4">
-            <SectionHeading Title="Overdue" Color="Color.Error" />
-            @Rows(_plan.Overdue)
-        </section>
-    }
+    <div class="@DayClass">
+        <div class="pspad-day-tabs" role="tablist">
+                <MudButton Class="pspad-day-tab-tasks-button" Variant="@(_tab == DayTab.Tasks ? Variant.Filled : Variant.Text)"
+                           Color="Color.Primary" Size="Size.Small" OnClick="@(() => _tab = DayTab.Tasks)"
+                           aria-selected="@(_tab == DayTab.Tasks ? "true" : "false")" role="tab">Tasks</MudButton>
+                <MudButton Class="pspad-day-tab-schedule-button" Variant="@(_tab == DayTab.Schedule ? Variant.Filled : Variant.Text)"
+                           Color="Color.Primary" Size="Size.Small" OnClick="@(() => _tab = DayTab.Schedule)"
+                           aria-selected="@(_tab == DayTab.Schedule ? "true" : "false")" role="tab">@ScheduleTabText</MudButton>
+        </div>
 
-    @if (_plan.Scheduled.Count > 0)
-    {
+        <div class="pspad-day-lists">
+            @if (_plan.Overdue.Count > 0)
+            {
+                <section class="pspad-day-overdue mb-4">
+                    <SectionHeading Title="Overdue" Color="Color.Error" />
+                    @Rows(_plan.Overdue)
+                </section>
+            }
+
+            @if (_plan.Starred.Count > 0)
+            {
+                <section class="pspad-day-starred mb-4">
+                    <SectionHeading Title="Starred" Hint="· when you have time" />
+                    @Rows(_plan.Starred)
+                </section>
+            }
+
+            @if (_plan.AnyTime.Count > 0 || (_plan.Scheduled.Count == 0 && _plan.Overdue.Count == 0))
+            {
+                <section class="pspad-day-anytime mb-4">
+                    <SectionHeading Title="@($"{DueDateRow.Describe(_day, State.Today)}, any time")" />
+                    @if (_plan.AnyTime.Count > 0)
+                    {
+                        @Rows(_plan.AnyTime)
+                    }
+                    else
+                    {
+                        <RowGroup><MudText Typo="Typo.body2" Class="pa-3 pspad-muted">@NothingPlanned</MudText></RowGroup>
+                    }
+                </section>
+            }
+
+            @if (_plan.Completed.Count > 0)
+            {
+                <MudExpansionPanels Elevation="0" Class="pspad-completed">
+                    <MudExpansionPanel Class="pspad-day-completed" Text="@($"Completed · {_plan.Completed.Count}")">
+                        @Rows(_plan.Completed)
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            }
+        </div>
+
         <section class="pspad-day-schedule mb-4">
             <SectionHeading Title="Schedule" Color="Color.Primary" />
-            <MudStack Spacing="2" Class="pspad-schedule">
-                @foreach (var entry in _plan.Scheduled)
-                {
-                    var task = _byId[entry.TaskId];
-                    var day = DayOf(entry);
-                    <div @key="entry.TaskId" class="pspad-schedule-slot">
-                        <MudText Typo="Typo.body2" Color="Color.Primary" Class="pspad-schedule-time">
-                            <span class="pspad-schedule-start">@TimeRow.Format(entry.Time!.Start)</span>@if (entry.Time.End is { } end){<span class="pspad-schedule-dash">–</span><span class="pspad-schedule-end">@TimeRow.Format(end)</span>}@if (entry.Time.Overnight){<span class="pspad-schedule-nextday pspad-muted">@TimeRow.NextDay</span>}
-                        </MudText>
-                        <MudPaper Outlined="true" Class="pspad-day-task">
-                            <TaskRow Task="@task" Today="@day" ListName="@NameOf(task.ListId)" ShowTime="false"
-                                     OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />
-                        </MudPaper>
-                    </div>
-                }
-            </MudStack>
-        </section>
-    }
-
-    @if (_plan.AnyTime.Count > 0 || (_plan.Scheduled.Count == 0 && _plan.Overdue.Count == 0))
-    {
-        <section class="pspad-day-anytime mb-4">
-            <SectionHeading Title="@($"{DueDateRow.Describe(_day, State.Today)}, any time")" />
-            @if (_plan.AnyTime.Count > 0)
+            @if (_plan.Scheduled.Count > 0)
             {
-                @Rows(_plan.AnyTime)
+                <DayTimeline Entries="@_plan.Scheduled" Tasks="@_byId" Day="@_day" Now="@NowOnTheDay"
+                             ListNameOf="@(task => NameOf(task.ListId))"
+                             OnToggle="@(toggled => ToggleAsync(toggled, _day))" OnOpen="@Open" />
             }
             else
             {
-                <MudPaper Outlined="true"><MudText Typo="Typo.body2" Class="pa-4">@NothingPlanned</MudText></MudPaper>
+                <RowGroup><MudText Typo="Typo.body2" Class="pa-3 pspad-muted">@ScheduleEmpty</MudText></RowGroup>
             }
         </section>
-    }
-
-    @if (_plan.Starred.Count > 0)
-    {
-        <section class="pspad-day-starred mb-4">
-            <SectionHeading Title="Starred" Hint="· when you have time" />
-            @Rows(_plan.Starred)
-        </section>
-    }
-
-    @if (_plan.ComingUp.Count > 0)
-    {
-        <section class="pspad-day-comingup mb-4">
-            <SectionHeading Title="Coming up" />
-            @foreach (var group in _plan.ComingUp.GroupBy(entry => entry.DueOn!.Value))
-            {
-                <MudText Typo="Typo.caption" Class="pspad-muted d-block pt-2 pb-1">@DueDateRow.Describe(group.Key, State.Today)</MudText>
-                @Rows([.. group])
-            }
-        </section>
-    }
-
-    @if (_plan.Completed.Count > 0)
-    {
-        <MudExpansionPanels Elevation="0">
-            <MudExpansionPanel Class="pspad-day-completed" Text="@($"Completed ({_plan.Completed.Count})")">
-                @Rows(_plan.Completed)
-            </MudExpansionPanel>
-        </MudExpansionPanels>
-    }
+    </div>
 }
 
 @code {
@@ -125,7 +118,22 @@ else
     IReadOnlyDictionary<Guid, TodoTask> _byId = new Dictionary<Guid, TodoTask>();
     IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
 
+    DayTab _tab = DayTab.Tasks;
+
+    enum DayTab { Tasks, Schedule }
+
     [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
+    string DayClass => $"pspad-day {(_tab == DayTab.Schedule ? "pspad-day-tab-schedule" : "pspad-day-tab-tasks")}";
+
+    int PendingScheduled => _plan.Scheduled.Count(entry => !IsDone(_byId[entry.TaskId], DayOf(entry)));
+
+    TimeOnly? NowOnTheDay => _day == State.Today
+        ? TimeOnly.FromDateTime(TimeZoneInfo.ConvertTime(Clock.UtcNow, LocalToday.Zone(State.TimeZone)).DateTime)
+        : null;
+
+    static bool IsDone(TodoTask task, DateOnly day) =>
+        task.IsRecurring ? task.CompletedDays.Contains(day) : task.CompletedAt is not null;
 
     int _rendered = -1;
 
@@ -158,19 +166,18 @@ else
     }
 
     RenderFragment Rows(IReadOnlyList<TodayEntry> entries) =>
-        @<MudGrid Spacing="4">
+        @<RowGroup Class="pspad-row-ledger">@RowItems(entries)</RowGroup>;
+
+    RenderFragment RowItems(IReadOnlyList<TodayEntry> entries) =>
+        @<text>
             @foreach (var entry in entries)
             {
                 var task = _byId[entry.TaskId];
                 var day = DayOf(entry);
-                <MudItem @key="entry.TaskId" xs="12" sm="6" lg="4" xl="3">
-                    <MudPaper Outlined="true" Class="pspad-day-task">
-                        <TaskRow Task="@task" Today="@day" ListName="@NameOf(task.ListId)"
-                                 OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />
-                    </MudPaper>
-                </MudItem>
+                <TaskRow @key="entry.TaskId" Task="@task" Today="@day" ListName="@NameOf(task.ListId)"
+                         OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />
             }
-        </MudGrid>;
+        </text>;
 
     bool IsBusy(DayPlan plan, DateOnly day) =>
         plan.Scheduled.Count > 0 || plan.AnyTime.Count > 0 || (day == State.Today && plan.Overdue.Count > 0);
@@ -178,6 +185,10 @@ else
     DateOnly DayOf(TodayEntry entry) => entry.Recurring ? entry.DueOn ?? _day : _day;
 
     string NothingPlanned => _day == State.Today ? "Nothing planned for today." : $"Nothing planned for {_day:ddd, d MMM}.";
+
+    string ScheduleEmpty => _day == State.Today ? "Schedule empty for today." : $"Schedule empty for {_day:ddd, d MMM}.";
+
+    string ScheduleTabText => PendingScheduled > 0 ? $"Schedule · {PendingScheduled}" : "Schedule";
 
     string? NameOf(Guid listId) => _listNames.TryGetValue(listId, out var name) ? name : null;
 
