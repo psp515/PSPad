@@ -1,4 +1,3 @@
-@using System.Globalization
 @using PSPad.App.State
 @inject AppState State
 @inject IStringLocalizer<SharingStrings> T
@@ -25,7 +24,7 @@
                             <MudText Typo="Typo.body2">@(member.UserId == State.UserId ? T["You"] : member.DisplayName)</MudText>
                             @if (OwnerIsMe)
                             {
-                                <MudText Typo="Typo.caption" Class="pspad-muted">@T["JoinedOn", member.JoinedAt.ToString("d MMM", CultureInfo.InvariantCulture)]</MudText>
+                                <MudText Typo="Typo.caption" Class="pspad-muted">@T["JoinedOn", member.JoinedAt.ToString("d MMM")]</MudText>
                             }
                         </div>
                         @if (OwnerIsMe)

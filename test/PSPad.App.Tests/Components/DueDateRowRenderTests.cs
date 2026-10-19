@@ -59,4 +59,34 @@ public class DueDateRowRenderTests : Bunit.TestContext
             CultureInfo.CurrentCulture = beforeFormat;
         }
     }
+
+    [Fact]
+    public void ADueDateRendersDayFirstInEnglishAndPolishMonthInPolish()
+    {
+        var before = CultureInfo.CurrentUICulture;
+        var beforeFormat = CultureInfo.CurrentCulture;
+
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-GB");
+            var english = Render<DueDateRow>(parameters => parameters
+                .Add(p => p.Today, new DateOnly(2026, 10, 1))
+                .Add(p => p.Value, new DateOnly(2026, 10, 18)));
+
+            Assert.Contains("18 Oct", english.Find(".pspad-property-value").TextContent);
+
+            CultureInfo.CurrentUICulture = CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("pl-PL");
+            var polish = Render<DueDateRow>(parameters => parameters
+                .Add(p => p.Today, new DateOnly(2026, 10, 1))
+                .Add(p => p.Value, new DateOnly(2026, 10, 18)));
+
+            Assert.Contains("18 paź", polish.Find(".pspad-property-value").TextContent);
+            Assert.DoesNotContain("Oct", polish.Find(".pspad-property-value").TextContent);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = before;
+            CultureInfo.CurrentCulture = beforeFormat;
+        }
+    }
 }

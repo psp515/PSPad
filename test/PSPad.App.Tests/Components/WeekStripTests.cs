@@ -11,6 +11,9 @@ namespace PSPad.App.Tests.Components;
 [Collection("Culture")]
 public class WeekStripTests : Bunit.TestContext
 {
+    readonly CultureInfo _culture = CultureInfo.CurrentCulture;
+    readonly CultureInfo _uiCulture = CultureInfo.CurrentUICulture;
+
     static readonly DateOnly Thursday = new(2026, 10, 8);
 
     public WeekStripTests()
@@ -18,6 +21,14 @@ public class WeekStripTests : Bunit.TestContext
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddMudServices();
         Services.AddLocalization();
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-GB");
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        CultureInfo.CurrentCulture = _culture;
+        CultureInfo.CurrentUICulture = _uiCulture;
+        base.Dispose(disposing);
     }
 
     [Fact]
@@ -140,28 +151,41 @@ public class WeekStripTests : Bunit.TestContext
     }
 
     [Theory]
-    [InlineData(2026, 10, 9, "Jutro · Fri, 9 Oct")]
-    [InlineData(2026, 11, 2, "Mon, 2 Nov")]
-    [InlineData(2027, 1, 4, "Mon, 4 Jan 2027")]
+    [InlineData(2026, 10, 9, "Jutro · pt., 9 paź")]
+    [InlineData(2026, 11, 2, "pon., 2 lis")]
+    [InlineData(2027, 1, 4, "pon., 4 sty 2027")]
     public void EverythingTheStripSaysIsInOneCulture(int year, int month, int day, string label)
     {
-        var current = CultureInfo.CurrentCulture;
-        var currentUi = CultureInfo.CurrentUICulture;
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = new CultureInfo("pl-PL");
-        try
-        {
-            var strip = Strip(new DateOnly(year, month, day), Thursday);
 
-            Assert.Equal(label, strip.Find(".pspad-week-label").TextContent.Trim());
-            Assert.StartsWith("Mon, ", strip.FindAll(".pspad-week-day")[0].GetAttribute("aria-label"));
-            Assert.Equal("M", strip.FindAll(".pspad-week-initial")[0].TextContent.Trim());
-            Assert.DoesNotContain("październik", strip.Markup, StringComparison.OrdinalIgnoreCase);
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = current;
-            CultureInfo.CurrentUICulture = currentUi;
-        }
+        var strip = Strip(new DateOnly(year, month, day), Thursday);
+
+        Assert.Equal(label, strip.Find(".pspad-week-label").TextContent.Trim());
+        Assert.StartsWith("pon.", strip.FindAll(".pspad-week-day")[0].GetAttribute("aria-label"));
+        Assert.DoesNotContain("Oct", strip.Markup);
+    }
+
+    [Fact]
+    public void TheWeekStripStartsOnMondayInPolishAndNamesMonthsInPolish()
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("pl-PL");
+
+        var strip = Strip(new DateOnly(2026, 10, 18), new DateOnly(2026, 10, 18));
+
+        Assert.Contains("październik 2026", strip.Markup);
+        Assert.StartsWith("p", strip.FindAll(".pspad-week-initial")[0].TextContent.Trim().ToLowerInvariant());
+        Assert.Equal("12", strip.FindAll(".pspad-week-circle")[0].TextContent.Trim());
+    }
+
+    [Fact]
+    public void TheWeekStartsOnSundayWhereTheCultureSaysSo()
+    {
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+
+        var strip = Strip(Thursday, Thursday);
+
+        Assert.Equal("4", strip.FindAll(".pspad-week-circle")[0].TextContent.Trim());
+        Assert.Equal("10", strip.FindAll(".pspad-week-circle")[6].TextContent.Trim());
     }
 
     [Fact]

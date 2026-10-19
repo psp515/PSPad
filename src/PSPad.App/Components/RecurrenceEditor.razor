@@ -195,7 +195,7 @@
         _ => localizer["RepeatCustom"]
     };
 
-    static string YearlyDay(DateOnly day) => day.ToString("d MMM", CultureInfo.InvariantCulture);
+    static string YearlyDay(DateOnly day) => day.ToString("d MMM");
 
     static string AbbreviatedDay(DayOfWeek day) => CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(day);
 

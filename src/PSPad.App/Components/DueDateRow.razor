@@ -1,3 +1,4 @@
+@using System.Globalization
 @inject IStringLocalizer<TasksStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
 
@@ -56,7 +57,7 @@
         new(shared["Today"], today),
         new(shared["Tomorrow"], today.AddDays(1)),
         new(tasks["QuickInTwoDays"], today.AddDays(2)),
-        new(tasks["QuickNextWeek"], NextMonday(today))
+        new(tasks["QuickNextWeek"], NextWeekStart(today))
     ];
 
     public static string Describe(DateOnly day, DateOnly today, IStringLocalizer<SharedStrings> shared) => day switch
@@ -68,9 +69,10 @@
         var d => d.ToString("ddd, d MMM yyyy")
     };
 
-    static DateOnly NextMonday(DateOnly today)
+    static DateOnly NextWeekStart(DateOnly today)
     {
-        var daysAhead = ((int)DayOfWeek.Monday - (int)today.DayOfWeek + 7) % 7;
+        var firstDay = CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
+        var daysAhead = ((int)firstDay - (int)today.DayOfWeek + 7) % 7;
         return today.AddDays(daysAhead == 0 ? 7 : daysAhead);
     }
 
