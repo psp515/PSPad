@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Xml.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using PSPad.Abstractions;
 using PSPad.App.Resources;
 using PSPad.App.Tests.Hosting;
 using PSPad.TestInfrastructure;
@@ -18,31 +19,36 @@ public class ResourceGuardTests
             .Where(path => !Path.GetFileNameWithoutExtension(path).Contains('.'))
             .Select(path => new object[] { Path.GetFileName(path) });
 
+    public static IEnumerable<object[]> TranslatedFiles() =>
+        EnglishFiles().SelectMany(
+            english => SupportedLanguages.All.Where(tag => tag != SupportedLanguages.Default),
+            (english, tag) => new object[] { english[0], tag });
+
     [Theory]
-    [MemberData(nameof(EnglishFiles))]
-    public void EveryLanguageHasEveryKeyAndNoEmptyValue(string file)
+    [MemberData(nameof(TranslatedFiles))]
+    public void EveryLanguageHasEveryKeyAndNoEmptyValue(string file, string tag)
     {
         var english = Keys(Path.Combine(Resources, file));
-        var polish = Keys(Path.Combine(Resources, Path.GetFileNameWithoutExtension(file) + ".pl.resx"));
+        var translated = Keys(Path.Combine(Resources, Path.GetFileNameWithoutExtension(file) + "." + tag + ".resx"));
 
-        Assert.Empty(english.Keys.Except(polish.Keys));
-        Assert.Empty(polish.Keys.Except(english.Keys));
-        Assert.Empty(english.Concat(polish).Where(pair => string.IsNullOrWhiteSpace(pair.Value)).Select(pair => pair.Key));
+        Assert.Empty(english.Keys.Except(translated.Keys));
+        Assert.Empty(translated.Keys.Except(english.Keys));
+        Assert.Empty(english.Concat(translated).Where(pair => string.IsNullOrWhiteSpace(pair.Value)).Select(pair => pair.Key));
     }
 
     [Theory]
-    [MemberData(nameof(EnglishFiles))]
-    public void PluralKeysComeInCompleteSets(string file)
+    [MemberData(nameof(TranslatedFiles))]
+    public void PluralKeysComeInCompleteSets(string file, string tag)
     {
-        var polish = Keys(Path.Combine(Resources, Path.GetFileNameWithoutExtension(file) + ".pl.resx"));
-        var stems = polish.Keys.Where(key => key.EndsWith(".One") || key.EndsWith(".Few") || key.EndsWith(".Many"))
+        var translated = Keys(Path.Combine(Resources, Path.GetFileNameWithoutExtension(file) + "." + tag + ".resx"));
+        var stems = translated.Keys.Where(key => key.EndsWith(".One") || key.EndsWith(".Few") || key.EndsWith(".Many"))
             .Select(key => key[..key.LastIndexOf('.')]).Distinct();
 
         foreach (var stem in stems)
         {
-            Assert.Contains(stem + ".One", polish.Keys);
-            Assert.Contains(stem + ".Few", polish.Keys);
-            Assert.Contains(stem + ".Many", polish.Keys);
+            Assert.Contains(stem + ".One", translated.Keys);
+            Assert.Contains(stem + ".Few", translated.Keys);
+            Assert.Contains(stem + ".Many", translated.Keys);
         }
     }
 

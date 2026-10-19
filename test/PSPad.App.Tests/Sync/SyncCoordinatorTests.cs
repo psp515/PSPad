@@ -5,6 +5,8 @@ using Microsoft.Extensions.Localization;
 using MudBlazor;
 using MudBlazor.Services;
 using PSPad.App.Api;
+using PSPad.App.Auth;
+using PSPad.App.Tests.Auth;
 using PSPad.App.Localization;
 using PSPad.App.Resources;
 using PSPad.App.Tests.Localization;
@@ -29,6 +31,8 @@ public class SyncCoordinatorTests : Bunit.TestContext
     readonly FakeLanguageApi _languageApi = new();
     static readonly IStringLocalizer<ShellStrings> Text = TestLocalizers.For<ShellStrings>();
     readonly LanguagePreference _languages = new(new FakeStorageJsRuntime());
+    readonly InMemoryLocalSessionStore _sessions = new(
+        new LocalSession(User, "Ada", "ada@example.com", "UTC", "en", "refresh-token", DateTimeOffset.UtcNow));
 
     NavigationManager Navigation => Services.GetRequiredService<NavigationManager>();
 
@@ -147,7 +151,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var replica = new InMemoryReplica();
         return new SyncCoordinator(
             new SyncService(_rejecting, replica, _rejectingOutbox), new FixedConnectivity(true), _rejectingOutbox,
-            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, Text);
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, _sessions, Text);
     }
 
     Task QueueACommandAsync() =>
@@ -378,7 +382,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var api = new StuckApi(unrecoverable);
         var coordinator = new SyncCoordinator(
             new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, Text);
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, _sessions, Text);
         return (coordinator, outbox, api, replica);
     }
 
@@ -413,7 +417,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var replica = new InMemoryReplica();
         var coordinator = new SyncCoordinator(
             new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, Text);
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, _sessions, Text);
         var changes = 0;
         coordinator.Changed += () => changes++;
 
@@ -443,7 +447,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
             _belts,
             Navigation,
             new InMemoryReplica(),
-            new StoppedClock(Noon), _languages, _languageApi, Text);
+            new StoppedClock(Noon), _languages, _languageApi, _sessions, Text);
 
         var first = coordinator.SyncNowAsync();
         var second = coordinator.SyncNowAsync();
@@ -467,6 +471,43 @@ public class SyncCoordinatorTests : Bunit.TestContext
 
         Assert.Equal(["pl"], _languageApi.Sent);
         Assert.False(_languages.HasPendingWrite);
+    }
+
+    [Fact]
+    public async Task AConfirmedPendingLanguageIsRememberedInTheStoredSession()
+    {
+        await _languages.ChooseAsync("pl");
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"));
+
+        await coordinator.SyncNowAsync();
+
+        Assert.Equal("pl", _sessions.Current!.Language);
+    }
+
+    [Fact]
+    public async Task AFailingLanguageRetryDoesNotHideRejectionsOrTheRevision()
+    {
+        await _languages.ChooseAsync("pl");
+        _languageApi.Throws = true;
+        var coordinator = await CoordinatorRejecting("That list no longer exists.");
+
+        await coordinator.SyncNowAsync();
+
+        Assert.True(_languages.HasPendingWrite);
+        Assert.Equal(["That list no longer exists."], coordinator.LastRejections);
+    }
+
+    [Fact]
+    public async Task AFailingLanguageRetryStillBumpsTheRevision()
+    {
+        await _languages.ChooseAsync("pl");
+        _languageApi.Throws = true;
+        var coordinator = CoordinatorFor(AnAreaCalled("Dom"));
+
+        await coordinator.SyncNowAsync();
+
+        Assert.True(_languages.HasPendingWrite);
+        Assert.Equal(1, coordinator.Revision);
     }
 
     [Fact]
@@ -497,9 +538,16 @@ public class SyncCoordinatorTests : Bunit.TestContext
 
         public bool Confirms { get; set; } = true;
 
+        public bool Throws { get; set; }
+
         public Task<MeResponse?> SetLanguageAsync(string language)
         {
             Sent.Add(language);
+            if (Throws)
+            {
+                throw new TaskCanceledException();
+            }
+
             return Task.FromResult<MeResponse?>(
                 Confirms ? new MeResponse(User, "Ada", "ada@example.com", "UTC", language) : null);
         }
@@ -530,7 +578,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         Services.AddMudServices();
         return new SyncCoordinator(
             new SyncService(new FakeApi(null, failure), local, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, local, new StoppedClock(Noon), _languages, _languageApi, Text);
+            _belts, Navigation, local, new StoppedClock(Noon), _languages, _languageApi, _sessions, Text);
     }
 
     SyncCoordinator CoordinatorFor(ISyncApi api)
@@ -540,7 +588,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
         var outbox = new InMemoryOutbox();
         return new SyncCoordinator(
             new SyncService(api, replica, outbox), new FixedConnectivity(true), outbox,
-            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, Text);
+            _belts, Navigation, replica, new StoppedClock(Noon), _languages, _languageApi, _sessions, Text);
     }
 
     SyncCoordinator CoordinatorFor(SyncResponse? pull, bool online = true, InMemoryReplica? replica = null)
@@ -557,7 +605,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
             _belts,
             Navigation,
             replica,
-            new StoppedClock(Noon), _languages, _languageApi, Text);
+            new StoppedClock(Noon), _languages, _languageApi, _sessions, Text);
     }
 
     static readonly DateTimeOffset Noon = new(2026, 10, 7, 12, 0, 0, TimeSpan.Zero);

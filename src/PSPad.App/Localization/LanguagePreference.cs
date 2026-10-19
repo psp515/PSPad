@@ -13,12 +13,15 @@ public sealed class LanguagePreference(IJSRuntime js)
 
     public bool HasPendingWrite { get; private set; }
 
+    public bool HadCachedChoice { get; private set; }
+
     public event Action? Changed;
 
     public async Task InitialiseAsync()
     {
         var stored = await ReadAsync(StorageKey);
-        Language = SupportedLanguages.IsSupported(stored)
+        HadCachedChoice = SupportedLanguages.IsSupported(stored);
+        Language = HadCachedChoice
             ? stored!
             : SupportedLanguages.FromBrowser(await BrowserLanguage.ReadAsync(js));
         HasPendingWrite = await ReadAsync(PendingKey) == "1";
@@ -35,7 +38,6 @@ public sealed class LanguagePreference(IJSRuntime js)
 
         Language = language;
         var persisted = await WriteAsync(StorageKey, language);
-        ApplyCulture(language);
         Changed?.Invoke();
         return persisted;
     }

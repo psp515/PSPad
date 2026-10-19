@@ -53,9 +53,19 @@ public class SettingsPageTests : Bunit.TestContext
         var preference = Services.GetRequiredService<LanguagePreference>();
         Assert.Equal("pl", preference.Language);
         Assert.False(preference.HasPendingWrite);
-        Assert.Equal("pl", state.Language);
         Assert.Contains("/api/me/language", _requests.Select(request => request.RequestUri!.PathAndQuery));
         Assert.True(ReloadRequested);
+    }
+
+    [Fact]
+    public async Task AConfirmedLanguageIsRememberedInTheStoredSession()
+    {
+        Arrange(displayName: "Ada", email: "ada@example.com");
+        var page = Render<SettingsPage>();
+
+        await page.InvokeAsync(() => page.Instance.ApplyLanguageAsync("pl"));
+
+        Assert.Equal("pl", _sessions!.Current!.Language);
     }
 
     [Fact]

@@ -49,6 +49,9 @@ public partial class SelfContainedPageTests
         Assert.Contains("autostart=\"false\"", Index);
         Assert.Contains("Blazor.start(", Index);
         Assert.Contains("applicationCulture", Index);
+        Assert.Contains("document.documentElement.lang = language", Index);
+        Assert.Contains("Blazor.start(", Index);
+        Assert.Contains(".catch(", Index);
     }
 
     [GeneratedRegex("""(?:src|href)\s*=\s*["'](?:https?:)?//""", RegexOptions.IgnoreCase)]

@@ -165,10 +165,9 @@
             State.DisplayName = session.DisplayName;
             State.Email = session.Email;
             State.TimeZone = session.TimeZone;
-            State.Language = session.Language;
             State.Today = TodayIn(session.TimeZone);
 
-            if (await Languages.AdoptFromServerAsync(session.Language))
+            if (!Languages.HadCachedChoice && await Languages.AdoptFromServerAsync(session.Language))
             {
                 Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
                 return;
@@ -280,7 +279,6 @@
         State.DisplayName = me.DisplayName;
         State.Email = me.Email;
         State.TimeZone = me.TimeZone;
-        State.Language = me.Language;
         State.Today = TodayIn(me.TimeZone);
 
         // The fetch itself may have rotated the refresh token and stamped the contact time,

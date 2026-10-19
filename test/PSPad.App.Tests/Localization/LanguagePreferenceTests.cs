@@ -39,6 +39,29 @@ public class LanguagePreferenceTests
     });
 
     [Fact]
+    public Task ACachedChoiceIsRemembered() => WithRestoredCultureAsync(async () =>
+    {
+        var js = new FakeStorageJsRuntime { BrowserLanguage = "en" };
+        js.Storage["pspad.language"] = "pl";
+        var preference = new LanguagePreference(js);
+
+        await preference.InitialiseAsync();
+
+        Assert.True(preference.HadCachedChoice);
+    });
+
+    [Fact]
+    public Task WithoutACachedChoiceItIsNotRemembered() => WithRestoredCultureAsync(async () =>
+    {
+        var js = new FakeStorageJsRuntime { BrowserLanguage = "en" };
+        var preference = new LanguagePreference(js);
+
+        await preference.InitialiseAsync();
+
+        Assert.False(preference.HadCachedChoice);
+    });
+
+    [Fact]
     public Task AnUnsupportedBrowserLanguageFallsBackToEnglish() => WithRestoredCultureAsync(async () =>
     {
         var js = new FakeStorageJsRuntime { BrowserLanguage = "de-DE" };
@@ -67,9 +90,11 @@ public class LanguagePreferenceTests
         var js = new FakeStorageJsRuntime { BrowserLanguage = "en" };
         var preference = new LanguagePreference(js);
         await preference.InitialiseAsync();
+        var cultureBefore = CultureInfo.CurrentUICulture;
 
         var changed = await preference.AdoptFromServerAsync("pl");
 
+        Assert.Equal(cultureBefore, CultureInfo.CurrentUICulture);
         Assert.True(changed);
         Assert.Equal("pl", preference.Language);
         Assert.Equal("pl", js.Storage["pspad.language"]);

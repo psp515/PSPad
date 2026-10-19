@@ -17,6 +17,7 @@
 @inject IConfiguration Configuration
 @inject IDocumentStore<MoneyPreferences> PreferencesStore
 @inject IConnectivity Connectivity
+@inject ILocalSessionStore Sessions
 @inject PSPadApiClient Api
 @inject AppState State
 @inject LanguagePreference Languages
@@ -309,12 +310,12 @@
     public async Task ApplyLanguageAsync(string language)
     {
         await Languages.ChooseAsync(language);
-        State.Language = language;
 
         var me = (await Api.SetLanguageAsync(language)).Sanitized();
         if (me is not null && me.Language == language)
         {
             await Languages.ClearPendingAsync();
+            await Sessions.RememberLanguageAsync(me.Language);
         }
 
         Navigation.NavigateTo(Navigation.Uri, forceLoad: true);

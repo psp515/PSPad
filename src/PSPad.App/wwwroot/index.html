@@ -100,7 +100,7 @@
     </div>
 
     <div id="blazor-error-ui">
-        An unhandled error has occurred.
+        <span class="message">An unhandled error has occurred.</span>
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
@@ -114,7 +114,16 @@
             try { stored = localStorage.getItem('pspad.language'); } catch (error) { }
             var language = stored === 'pl' || stored === 'en' ? stored
                 : (/^pl/i.test(navigator.language || '') ? 'pl' : 'en');
-            Blazor.start({ applicationCulture: language === 'pl' ? 'pl-PL' : 'en-GB' });
+            document.documentElement.lang = language;
+            var errorUi = document.getElementById('blazor-error-ui');
+            if (language === 'pl') {
+                errorUi.querySelector('.message').textContent = 'Wystąpił nieoczekiwany błąd.';
+                errorUi.querySelector('.reload').textContent = 'Odśwież';
+            }
+            Blazor.start({ applicationCulture: language === 'pl' ? 'pl-PL' : 'en-GB' }).catch(function (error) {
+                console.error(error);
+                errorUi.style.display = 'block';
+            });
         })();
         navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
     </script>

@@ -49,6 +49,22 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task AStaleSessionLanguageDoesNotOverrideTheCachedChoiceAtBoot()
+    {
+        Arrange(meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "UTC", "pl"));
+        JSInterop.Setup<string?>("localStorage.getItem", "pspad.language").SetResult("pl");
+        var preference = Services.GetRequiredService<LanguagePreference>();
+        await preference.InitialiseAsync();
+
+        var shell = Render<AppShell>();
+
+        shell.WaitForAssertion(() => Assert.NotEmpty(shell.FindComponents<NavSidebar>()));
+        var navigation = Assert.IsType<Bunit.TestDoubles.BunitNavigationManager>(Services.GetRequiredService<NavigationManager>());
+        Assert.DoesNotContain(navigation.History, entry => entry.Options.ForceLoad);
+        Assert.Equal("pl", preference.Language);
+    }
+
+    [Fact]
     public void OnlyTheDesktopCarriesTheSidebar()
     {
         Arrange();

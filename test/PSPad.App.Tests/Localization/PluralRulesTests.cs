@@ -21,6 +21,11 @@ public class PluralRulesTests
     [InlineData(22, PluralForm.Few)]
     [InlineData(25, PluralForm.Many)]
     [InlineData(102, PluralForm.Few)]
+    [InlineData(11, PluralForm.Many)]
+    [InlineData(13, PluralForm.Many)]
+    [InlineData(111, PluralForm.Many)]
+    [InlineData(112, PluralForm.Many)]
+    [InlineData(1012, PluralForm.Many)]
     public void PolishHasOneFewAndMany(int count, PluralForm expected)
     {
         Assert.Equal(expected, PluralRules.For(count, Polish));

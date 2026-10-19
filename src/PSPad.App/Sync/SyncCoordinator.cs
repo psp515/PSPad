@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using PSPad.Abstractions;
 using PSPad.App.Api;
+using PSPad.App.Auth;
 using PSPad.App.Localization;
 using PSPad.App.Resources;
 using PSPad.App.State;
@@ -20,6 +21,7 @@ public sealed class SyncCoordinator(
     IClock clock,
     LanguagePreference languages,
     ILanguageApi api,
+    ILocalSessionStore sessions,
     IStringLocalizer<ShellStrings> text)
     : ISyncTrigger, ISyncStatus
 {
@@ -144,7 +146,6 @@ public sealed class SyncCoordinator(
                 {
                     LastSyncedAt = clock.UtcNow;
                     await replica.SetLastSyncedAtAsync(LastSyncedAt.Value);
-                    await RetryPendingLanguageAsync();
                 }
 
                 if (outcome.Pulled > 0)
@@ -159,6 +160,11 @@ public sealed class SyncCoordinator(
                 }
 
                 _stuckCommand = await StuckCommandAsync(outcome);
+
+                if (outcome.ReachedServer)
+                {
+                    await RetryPendingLanguageAsync();
+                }
             }
             catch (ServerBusyException busy)
             {
@@ -182,10 +188,17 @@ public sealed class SyncCoordinator(
             return;
         }
 
-        var me = await api.SetLanguageAsync(languages.Language);
-        if (me is not null && me.Language == languages.Language)
+        try
         {
-            await languages.ClearPendingAsync();
+            var me = (await api.SetLanguageAsync(languages.Language)).Sanitized();
+            if (me is not null && me.Language == languages.Language)
+            {
+                await languages.ClearPendingAsync();
+                await sessions.RememberLanguageAsync(me.Language);
+            }
+        }
+        catch (Exception)
+        {
         }
     }
 
