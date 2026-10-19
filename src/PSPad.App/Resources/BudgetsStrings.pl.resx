@@ -40,7 +40,7 @@
     <value>Zarchiwizowany</value>
   </data>
   <data name="NoEntriesIn" xml:space="preserve">
-    <value>Brak wpisów w miesiącu: {0}.</value>
+    <value>Brak wpisów w miesiącu: {0}</value>
   </data>
   <data name="Income" xml:space="preserve">
     <value>Przychody</value>

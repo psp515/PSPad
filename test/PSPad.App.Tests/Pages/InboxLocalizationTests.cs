@@ -26,7 +26,7 @@ public class InboxLocalizationTests : Bunit.TestContext
 
             var page = Render<InboxPage>();
 
-            Assert.Contains("Nic nie przechwycono.", page.Markup);
+            Assert.Contains("Nic jeszcze nie dodano.", page.Markup);
             Assert.DoesNotContain("Nothing captured", page.Markup);
         }
         finally

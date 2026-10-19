@@ -28,7 +28,7 @@
     <value>Brak pozycji.</value>
   </data>
   <data name="Labels" xml:space="preserve">
-    <value>Pola</value>
+    <value>Etykiety</value>
   </data>
   <data name="Label" xml:space="preserve">
     <value>Etykieta</value>
@@ -76,19 +76,19 @@
     <value>Nie udało się dodać pozycji.</value>
   </data>
   <data name="CouldntAddField" xml:space="preserve">
-    <value>Nie udało się dodać pola: {0}.</value>
+    <value>Nie udało się dodać etykiety: {0}.</value>
   </data>
   <data name="CouldntAddFieldGeneric" xml:space="preserve">
-    <value>Nie udało się dodać pola.</value>
+    <value>Nie udało się dodać etykiety.</value>
   </data>
   <data name="CouldntSaveField" xml:space="preserve">
-    <value>Nie udało się zapisać pola.</value>
+    <value>Nie udało się zapisać etykiety.</value>
   </data>
   <data name="CouldntRemoveField" xml:space="preserve">
-    <value>Nie udało się usunąć pola.</value>
+    <value>Nie udało się usunąć etykiety.</value>
   </data>
   <data name="CouldntReorderField" xml:space="preserve">
-    <value>Nie udało się zmienić kolejności pól.</value>
+    <value>Nie udało się zmienić kolejności etykiet.</value>
   </data>
   <data name="CouldntRenameItem" xml:space="preserve">
     <value>Nie udało się zmienić nazwy pozycji.</value>

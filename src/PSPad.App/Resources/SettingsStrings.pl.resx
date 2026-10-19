@@ -118,7 +118,7 @@
     <value>Usunięcie konta wymaga ponownego zalogowania. Zaloguj się jeszcze raz, a potem potwierdź usunięcie.</value>
   </data>
   <data name="DeleteConfirm" xml:space="preserve">
-    <value>To trwale usuwa twoje konto i wszystko, co w nim jest. Wpisz &lt;strong&gt;{0}&lt;/strong&gt;, żeby potwierdzić.</value>
+    <value>Spowoduje to trwałe usunięcie twojego konta i wszystkiego, co w nim jest. Wpisz &lt;strong&gt;{0}&lt;/strong&gt;, żeby potwierdzić.</value>
   </data>
   <data name="Email" xml:space="preserve">
     <value>E-mail</value>

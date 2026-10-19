@@ -79,7 +79,8 @@ Boot (`Program.cs`, before `host.RunAsync()`):
 
 1. Read `pspad.language`; if absent, `SupportedLanguages.FromBrowser(navigator.language)`.
 2. Set `CultureInfo.DefaultThreadCurrentCulture`, `DefaultThreadCurrentUICulture`,
-   `CurrentCulture`, `CurrentUICulture` to `CultureInfo.GetCultureInfo(tag)`.
+   `CurrentCulture`, `CurrentUICulture` to the culture the tag maps to
+   (`pl` to `pl-PL`, `en` to `en-GB`).
 
 `index.html` loads Blazor with `autostart="false"` and calls
 `Blazor.start({ applicationCulture })` with the same cached-or-browser choice
@@ -117,8 +118,8 @@ means the culture is fixed at `Blazor.start`, never changed afterwards (§4.1).
   `Reference`, `Budgets`, `Sharing`, `Statistics`, `Mud`.
 - Usage: `@inject IStringLocalizer<TodayStrings> T`, then `@T["NothingDue"]`.
   Keys are stable identifiers in `PascalCase`; the English `.resx` holds the
-  text. A missing key renders the key, which the resource guard test (§6)
-  prevents.
+  text. A missing key renders the key; `ResourceGuardTests` checks that every
+  language has every key.
 - Formatted strings use indexed placeholders: `T["DueInDays", count]`.
 - Plurals: `Plural` helper in `App/Localization/`:
   `T.Plural(count, "TasksLeft")` looks up `TasksLeft.One`, `TasksLeft.Few`,
@@ -163,7 +164,7 @@ logs) stays English.
   over cache when nothing is pending, pending set on failed write and cleared
   on retry.
 - `PluralRules`: Polish 1 / 2 / 4 / 5 / 12 / 22 / 25 / 0; English 1 / 0 / 2.
-- Resource guard: for every `<Feature>.resx`, the `.pl.resx` has the same
+- Resource guard: for every `<Feature>Strings.resx`, the `.pl.resx` has the same
   key set and no empty value, and every `.Few` key has `.One` and `.Many`.
 - `ProvisioningPlan.SeedAreaNames("pl")` returns Polish names.
 
@@ -184,7 +185,8 @@ Manual: every page walked in Polish in the browser pane before merge.
 3. Add plural forms to `PluralRules` if the language is not One/Many.
 4. Add seed area names to `ProvisioningPlan`.
 5. Add the native name in `SettingsPage`.
-6. Run the unit tests; `ResourceGuardTests` reports any missing key.
+6. Map the tag to a culture in `index.html` (start script) and `LanguagePreference.ApplyCulture`.
+7. Run the unit tests; `ResourceGuardTests` reports any missing key.
 
 Documented in `docs/src/pages/features.astro` ("Speaks your language" card
 and "Adding a language" section).

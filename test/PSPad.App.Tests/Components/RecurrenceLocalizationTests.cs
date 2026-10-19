@@ -60,7 +60,7 @@ public class RecurrenceLocalizationTests
             Assert.Equal("Co 2 dni", RecurrenceEditor.Describe(RecurrenceRule.Daily(Start).EveryNth(2), strings));
             Assert.Equal("Co 2 tygodnie: pon., czw.", RecurrenceEditor.Describe(
                 RecurrenceRule.Weekly(Start, DayOfWeek.Thursday, DayOfWeek.Monday).EveryNth(2), strings));
-            Assert.Equal("Co 5 miesięcy: 15.",
+            Assert.Equal("Co 5 miesięcy, 15. dnia",
                 RecurrenceEditor.Describe(RecurrenceRule.MonthlyOnDay(Start, 15).EveryNth(5), strings));
             Assert.Equal("Wykonano 1 raz · 1 z rzędu", RecurrenceEditor.DescribeTally(new RepeatTally(1, 1), strings));
             Assert.Equal("Wykonano 3 razy", RecurrenceEditor.DescribeTally(new RepeatTally(3, 0), strings));

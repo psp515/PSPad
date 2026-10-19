@@ -16,7 +16,7 @@
     <value>Offline — pokazujemy ostatnie dostępne liczby.</value>
   </data>
   <data name="DoneToday" xml:space="preserve">
-    <value>Zrobione dziś</value>
+    <value>Wykonane dziś</value>
   </data>
   <data name="OpenedToday" xml:space="preserve">
     <value>Utworzone dziś</value>
@@ -45,8 +45,14 @@
   <data name="UpdatedHoursAgo" xml:space="preserve">
     <value>zaktualizowano {0} godz. temu</value>
   </data>
-  <data name="UpdatedDaysAgo" xml:space="preserve">
-    <value>zaktualizowano {0} d. temu</value>
+  <data name="UpdatedDaysAgo.One" xml:space="preserve">
+    <value>zaktualizowano {0} dzień temu</value>
+  </data>
+  <data name="UpdatedDaysAgo.Few" xml:space="preserve">
+    <value>zaktualizowano {0} dni temu</value>
+  </data>
+  <data name="UpdatedDaysAgo.Many" xml:space="preserve">
+    <value>zaktualizowano {0} dni temu</value>
   </data>
   <data name="SeriesPlanned" xml:space="preserve">
     <value>Planowane</value>
@@ -64,7 +70,7 @@
     <value>Zapisane</value>
   </data>
   <data name="CompletionsPerDay" xml:space="preserve">
-    <value>Zrobione zadania dziennie</value>
+    <value>Wykonane zadania dziennie</value>
   </data>
   <data name="TasksOpenedPerDay" xml:space="preserve">
     <value>Utworzone zadania dziennie</value>
@@ -79,7 +85,7 @@
     <value>Regularność</value>
   </data>
   <data name="CapturedEachWeek" xml:space="preserve">
-    <value>Zapisane w Skrzynce w każdym tygodniu</value>
+    <value>Dodane do Skrzynki w każdym tygodniu</value>
   </data>
   <data name="CapturedEachWeekExplain" xml:space="preserve">
     <value>Każdy słupek to jeden tydzień; jego wysokość to liczba pozycji zapisanych w Skrzynce w tym tygodniu, niezależnie od tego, co się z nimi potem stało.</value>

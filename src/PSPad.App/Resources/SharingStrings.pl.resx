@@ -385,10 +385,10 @@
     <value>Nie udało się unieważnić migawki.</value>
   </data>
   <data name="SharingListGone" xml:space="preserve">
-    <value>Ta lista nie jest już dla ciebie udostępniona.</value>
+    <value>Ta lista nie jest ci już udostępniana.</value>
   </data>
   <data name="SharingBudgetGone" xml:space="preserve">
-    <value>Ten budżet nie jest już dla ciebie udostępniony.</value>
+    <value>Ten budżet nie jest ci już udostępniany.</value>
   </data>
   <data name="SharingFailed" xml:space="preserve">
     <value>To się nie udało. Spróbuj ponownie.</value>

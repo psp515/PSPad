@@ -348,7 +348,7 @@
             _ when delta < TimeSpan.FromSeconds(45) => T["UpdatedJustNow"],
             _ when delta < TimeSpan.FromMinutes(60) => T["UpdatedMinutesAgo", (int)delta.TotalMinutes],
             _ when delta < TimeSpan.FromHours(24) => T["UpdatedHoursAgo", (int)delta.TotalHours],
-            _ => T["UpdatedDaysAgo", (int)delta.TotalDays]
+            _ => T.Plural((int)delta.TotalDays, "UpdatedDaysAgo")
         };
     }
 }

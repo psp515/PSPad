@@ -45,8 +45,14 @@
   <data name="UpdatedHoursAgo" xml:space="preserve">
     <value>updated {0}h ago</value>
   </data>
-  <data name="UpdatedDaysAgo" xml:space="preserve">
-    <value>updated {0}d ago</value>
+  <data name="UpdatedDaysAgo.One" xml:space="preserve">
+    <value>updated {0} day ago</value>
+  </data>
+  <data name="UpdatedDaysAgo.Few" xml:space="preserve">
+    <value>updated {0} days ago</value>
+  </data>
+  <data name="UpdatedDaysAgo.Many" xml:space="preserve">
+    <value>updated {0} days ago</value>
   </data>
   <data name="SeriesPlanned" xml:space="preserve">
     <value>Planned</value>

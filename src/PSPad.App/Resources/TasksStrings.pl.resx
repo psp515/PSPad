@@ -157,7 +157,7 @@
     <value>Co tydzień: {0}</value>
   </data>
   <data name="RepeatMonthlyOnDay" xml:space="preserve">
-    <value>Co miesiąc: {0}.</value>
+    <value>Co miesiąc, {0}. dnia</value>
   </data>
   <data name="RepeatYearlyOn" xml:space="preserve">
     <value>Co roku: {0}</value>
@@ -184,16 +184,16 @@
     <value>Co {0} tygodni: {1}</value>
   </data>
   <data name="EveryMonths.One" xml:space="preserve">
-    <value>Co miesiąc: {1}.</value>
+    <value>Co miesiąc, {1}. dnia</value>
   </data>
   <data name="EveryMonths.Few" xml:space="preserve">
-    <value>Co {0} miesiące: {1}.</value>
+    <value>Co {0} miesiące, {1}. dnia</value>
   </data>
   <data name="EveryMonths.Many" xml:space="preserve">
-    <value>Co {0} miesięcy: {1}.</value>
+    <value>Co {0} miesięcy, {1}. dnia</value>
   </data>
   <data name="EveryYears.One" xml:space="preserve">
-    <value>Co rok: {1}</value>
+    <value>Co roku: {1}</value>
   </data>
   <data name="EveryYears.Few" xml:space="preserve">
     <value>Co {0} lata: {1}</value>

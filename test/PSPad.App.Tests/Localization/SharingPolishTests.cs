@@ -39,7 +39,7 @@ public class SharingPolishTests : Bunit.TestContext
 
     [Theory]
     [InlineData(SharingFailure.Offline, "Zmiany w udostępnianiu wymagają połączenia. Spróbuj ponownie, gdy będziesz online.")]
-    [InlineData(SharingFailure.ListGone, "Ta lista nie jest już dla ciebie udostępniona.")]
+    [InlineData(SharingFailure.ListGone, "Ta lista nie jest ci już udostępniana.")]
     public void ASharingFailureSpeaksPolish(SharingFailure failure, string expected)
     {
         var strings = TestLocalizers.For<SharingStrings>();

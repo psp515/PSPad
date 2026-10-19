@@ -109,7 +109,7 @@
     <value>Zamknij</value>
   </data>
   <data name="Reload" xml:space="preserve">
-    <value>Przeładuj</value>
+    <value>Odśwież</value>
   </data>
   <data name="ServerUnreachableBelt" xml:space="preserve">
     <value>Nie można połączyć się z serwerem — pracujesz na danych lokalnych. Zmiany zsynchronizują się, gdy połączenie wróci.</value>
