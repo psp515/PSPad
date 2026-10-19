@@ -14,6 +14,7 @@
         };
         // The first screen tears the splash down; a boot that never renders one must not hide the error banner forever.
         setTimeout(window.pspadBoot.done, 20000);
+        window.pspadLanguage = function () { return navigator.language; };
     </script>
     <script>
         (function () {
@@ -99,14 +100,33 @@
     </div>
 
     <div id="blazor-error-ui">
-        An unhandled error has occurred.
+        <span class="message">An unhandled error has occurred.</span>
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js" autostart="false"></script>
     <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
-    <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
+    <script>
+        // autostart is off so Blazor starts in the cached language; .NET changing the culture after start makes RunAsync throw.
+        (function () {
+            var stored = null;
+            try { stored = localStorage.getItem('pspad.language'); } catch (error) { }
+            var language = stored === 'pl' || stored === 'en' ? stored
+                : (/^pl/i.test(navigator.language || '') ? 'pl' : 'en');
+            document.documentElement.lang = language;
+            var errorUi = document.getElementById('blazor-error-ui');
+            if (language === 'pl') {
+                errorUi.querySelector('.message').textContent = 'Wystąpił nieoczekiwany błąd.';
+                errorUi.querySelector('.reload').textContent = 'Odśwież';
+            }
+            Blazor.start({ applicationCulture: language === 'pl' ? 'pl-PL' : 'en-GB' }).catch(function (error) {
+                console.error(error);
+                errorUi.style.display = 'block';
+            });
+        })();
+        navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
+    </script>
 </body>
 
 </html>

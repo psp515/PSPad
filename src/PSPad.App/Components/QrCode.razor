@@ -1,7 +1,8 @@
 @using QRCoder
+@inject IStringLocalizer<SharingStrings> T
 
 <MudPaper Outlined="true" Class="pa-2 d-inline-flex" Style="background:#fff">
-    <img class="pspad-qr" src="@_source" width="@Size" height="@Size" alt="@Label" />
+    <img class="pspad-qr" src="@_source" width="@Size" height="@Size" alt="@(Label ?? T["QrCode"].Value)" />
 </MudPaper>
 
 @code {
@@ -9,7 +10,7 @@
 
     [Parameter] public int Size { get; set; } = 176;
 
-    [Parameter] public string Label { get; set; } = "QR code";
+    [Parameter] public string? Label { get; set; }
 
     string _encoded = "";
     string _source = "";

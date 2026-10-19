@@ -3,6 +3,7 @@
 @using PSPad.Module.Money.Budgets
 @using PSPad.Module.Money.Reading
 @using PSPad.Module.Money.Values
+@inject IStringLocalizer<BudgetsStrings> T
 
 <MudCard Outlined="true" Class="@($"pspad-budget-card {(Budget.IsArchived ? "pspad-archived" : "")}")">
     <MudCardContent>
@@ -24,52 +25,52 @@
         {
             <MudText Typo="Typo.caption" Class="pspad-muted pspad-budget-card-shared-by d-flex align-center gap-1">
                 <MudIcon Icon="@Icons.Material.Outlined.People" Size="Size.Small" aria-hidden="true" />
-                @($"Shared by {Budget.OwnerName}")
+                @T["SharedBy", Budget.OwnerName ?? ""]
             </MudText>
         }
         @if (Budget.IsArchived)
         {
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Archived</MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@T["Archived"]</MudChip>
         }
         @if (Totals.Days.Count == 0)
         {
-            <MudText Typo="Typo.body2" Class="pspad-muted mt-2 pspad-budget-card-empty">No entries in @MoneyText.MonthTitle(Month)</MudText>
+            <MudText Typo="Typo.body2" Class="pspad-muted mt-2 pspad-budget-card-empty">@T["NoEntriesIn", MoneyText.MonthTitle(Month)]</MudText>
         }
         else
         {
             <div class="d-flex flex-wrap gap-4 mt-3">
                 <div>
-                    <MudText Typo="Typo.caption" Class="pspad-muted">Income</MudText>
+                    <MudText Typo="Typo.caption" Class="pspad-muted">@T["Income"]</MudText>
                     <MudText Typo="Typo.body1" Class="pspad-budget-card-income">@MoneyText.Pln(Totals.Income)</MudText>
                 </div>
                 <div>
-                    <MudText Typo="Typo.caption" Class="pspad-muted">Expenses</MudText>
+                    <MudText Typo="Typo.caption" Class="pspad-muted">@T["Expenses"]</MudText>
                     <MudText Typo="Typo.body1" Class="pspad-budget-card-expenses">@MoneyText.Pln(Totals.Expenses)</MudText>
                 </div>
                 <div>
-                    <MudText Typo="Typo.caption" Class="pspad-muted">Net</MudText>
+                    <MudText Typo="Typo.caption" Class="pspad-muted">@T["Net"]</MudText>
                     <MudText Typo="Typo.body1" Class="pspad-budget-card-net"
                              Color="@(Totals.Net < 0 ? Color.Error : Color.Default)">@MoneyText.SignedPln(Totals.Net)</MudText>
                 </div>
             </div>
             <MudProgressLinear Class="mt-3 pspad-budget-card-bar" Rounded="true" Size="Size.Medium" Value="@SpentShare"
                                Color="@(Totals.Expenses > Totals.Income ? Color.Error : Color.Primary)"
-                               aria-label="Expenses against income" />
+                               aria-label="@T["ExpensesAgainstIncome"].Value" />
         }
         <div class="mt-3 pspad-budget-card-balance">
             @if (Latest is not null)
             {
-                <MudText Typo="Typo.caption" Class="pspad-muted">Net worth · @MoneyText.MonthTitle(Latest.Month)</MudText>
+                <MudText Typo="Typo.caption" Class="pspad-muted">@T["NetWorthMonth", MoneyText.MonthTitle(Latest.Month)]</MudText>
                 <MudText Typo="Typo.body1" Class="pspad-budget-card-net-worth">@MoneyText.Pln(BalanceTotals.NetWorthOf(Latest))</MudText>
             }
             else if (Budget.IsArchived)
             {
-                <MudText Typo="Typo.body2" Class="pspad-muted pspad-budget-card-no-balance">No balance yet</MudText>
+                <MudText Typo="Typo.body2" Class="pspad-muted pspad-budget-card-no-balance">@T["NoBalanceYet"]</MudText>
             }
             else
             {
                 <MudLink Href="@BudgetLinks.ForTab(Budget.Id, "balance")" Typo="Typo.body2"
-                         Class="pspad-budget-card-start">Start @MoneyText.MonthTitle(Month)</MudLink>
+                         Class="pspad-budget-card-start">@T["StartMonth", MoneyText.MonthTitle(Month)]</MudLink>
             }
         </div>
     </MudCardContent>
@@ -86,7 +87,7 @@
 
     [Parameter] public BalanceSnapshot? Latest { get; set; }
 
-    string SharedText => Budget.Members.Count == 0 ? "Shared · 1 person" : $"Shared · {Budget.Members.Count + 1} people";
+    string SharedText => T.Plural(Budget.Members.Count + 1, "BudgetShared");
 
     double SpentShare => Totals.Income == 0
         ? Totals.Expenses > 0 ? 100 : 0

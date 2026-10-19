@@ -8,6 +8,7 @@
 @inject INbpRates Nbp
 @inject IConnectivity Connectivity
 @inject AppState State
+@inject IStringLocalizer<BudgetsStrings> T
 @implements IDisposable
 
 <div class="@Class">
@@ -18,12 +19,12 @@
             {
                 <MudItem xs="12" md="5" lg="12" Class="pspad-balance-hero-item">
                 <MudPaper Outlined="true" Class="pa-4 pspad-balance-missing">
-                    <MudText Typo="Typo.subtitle2">@MoneyText.MonthTitle(Month) has no balance yet</MudText>
+                    <MudText Typo="Typo.subtitle2">@T["MonthHasNoBalance", MoneyText.MonthTitle(Month)]</MudText>
                     <MudText Typo="Typo.body2" Class="pspad-muted mt-1 mb-3">@StartHint</MudText>
                     @if (!ReadOnly)
                     {
                         <MudButton Class="pspad-start-month" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                                   OnClick="@OnStart">Start @MoneyText.MonthTitle(Month)</MudButton>
+                                   OnClick="@OnStart">@T["StartMonth", MoneyText.MonthTitle(Month)]</MudButton>
                     }
                 </MudPaper>
                 </MudItem>
@@ -31,13 +32,13 @@
             else
             {
                 <MudItem xs="12" md="5" lg="12" Class="pspad-balance-hero-item">
-                <MoneyHero HeadlineClass="pspad-balance-net-worth" Label="Net worth" Text="@MoneyText.Pln(Totals.NetWorth)">
+                <MoneyHero HeadlineClass="pspad-balance-net-worth" Label="@T["NetWorth"]" Text="@MoneyText.Pln(Totals.NetWorth)">
                     <ChildContent>
                         <MoneyFigure Class="pspad-balance-change" Label="@ChangeLabel" Text="@ChangeText" Negative="@(Totals.Change < 0)" />
                         @if (AtToday is { } atToday)
                         {
-                            <MoneyFigure Class="pspad-balance-at-nbp" Label="At NBP today" Text="@MoneyText.Pln(atToday)" />
-                            <MoneyFigure Class="pspad-balance-currency" Label="Currency difference"
+                            <MoneyFigure Class="pspad-balance-at-nbp" Label="@T["AtNbpToday"]" Text="@MoneyText.Pln(atToday)" />
+                            <MoneyFigure Class="pspad-balance-currency" Label="@T["CurrencyDifference"]"
                                          Text="@MoneyText.SignedPln(atToday - Totals.NetWorth)" Negative="@(atToday < Totals.NetWorth)" />
                         }
                     </ChildContent>
@@ -54,9 +55,9 @@
             {
                 <MudItem xs="12" md="7" lg="12" Class="pspad-balance-history-item">
                 <MudPaper Outlined="true" Class="pa-3 pspad-balance-history">
-                    <SectionHeading Title="Last 12 months" Hint="by holding type" />
+                    <SectionHeading Title="@T["Last12Months"]" Hint="@T["ByHoldingType"]" />
                     <NetWorthByTypeChart Class="pspad-balance-history-chart" Months="@_history.NetWorth" Labels="@_historyLabels"
-                                         Height="200px" Caption="Net worth by holding type, last 12 months" />
+                                         Height="200px" Caption="@T["NetWorthByTypeLast12"]" />
                 </MudPaper>
                 </MudItem>
             }
@@ -65,29 +66,29 @@
         <MudItem xs="12" lg="8" Class="pspad-balance-holdings">
             @if (Snapshot is null)
             {
-                <MudText Typo="Typo.body2" Class="pspad-muted pspad-balance-empty">No holdings in @MoneyText.MonthTitle(Month).</MudText>
+                <MudText Typo="Typo.body2" Class="pspad-muted pspad-balance-empty">@T["NoHoldingsIn", MoneyText.MonthTitle(Month)]</MudText>
             }
             else
             {
                 if (Snapshot.Holdings.Count == 0)
                 {
-                    <MudText Typo="Typo.body2" Class="pspad-muted pspad-balance-empty">No holdings in @MoneyText.MonthTitle(Month).</MudText>
+                    <MudText Typo="Typo.body2" Class="pspad-muted pspad-balance-empty">@T["NoHoldingsIn", MoneyText.MonthTitle(Month)]</MudText>
                 }
                 else
                 {
                     <div class="pspad-holdings">
                         <div class="pspad-holdings-head" aria-hidden="true">
-                            <span>Holding</span>
-                            <span class="pspad-holding-cell">Amount</span>
-                            <span class="pspad-holding-cell">Rate</span>
-                            <span>In PLN</span>
-                            <span>vs NBP today</span>
+                            <span>@T["Holding"]</span>
+                            <span class="pspad-holding-cell">@T["Amount"]</span>
+                            <span class="pspad-holding-cell">@T["Rate"]</span>
+                            <span>@T["InPln"]</span>
+                            <span>@T["VsNbpToday"]</span>
                         </div>
                         @foreach (var group in ByType)
                         {
                             <section @key="group.Type" class="pspad-holding-group">
                                 <div class="d-flex align-baseline px-1 pt-3 pb-1">
-                                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-holding-group-name">@group.Type</MudText>
+                                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-holding-group-name">@T.Of(group.Type)</MudText>
                                     <MudText Typo="Typo.caption" Class="pspad-muted pspad-holding-group-total">@MoneyText.Pln(group.Pln)</MudText>
                                 </div>
                                 <MudPaper Outlined="true" Class="pspad-holding-list">
@@ -148,14 +149,14 @@
 
     string StartHint =>
         Totals.Previous is { } previous
-            ? $"Starting it copies the holdings from {MoneyText.MonthTitle(previous.Month)}."
-            : "Start it and add your holdings.";
+            ? T["StartCopiesHoldings", MoneyText.MonthTitle(previous.Month)]
+            : T["StartAddHoldings"];
 
     IReadOnlyList<HoldingTypeTotal> ByType => Snapshot is null ? [] : BalanceTotals.ByType(Snapshot);
 
-    IReadOnlyList<CategoryTotal> TypeTotals => [.. ByType.Select(total => new CategoryTotal(total.Type.ToString(), total.Pln))];
+    IReadOnlyList<CategoryTotal> TypeTotals => [.. ByType.Select(total => new CategoryTotal(T.Of(total.Type), total.Pln))];
 
-    static string SubText(Holding holding) => holding.Money.Currency == Currencies.Pln
+    string SubText(Holding holding) => holding.Money.Currency == Currencies.Pln
         ? holding.Money.Currency
         : $"{MoneyText.Amount(holding.Money.Amount)} {holding.Money.Currency} @ {MoneyText.Rate(holding.Money.RateToPln)}";
 
@@ -183,8 +184,8 @@
     });
 
     string ChangeLabel => Totals.Previous is null
-        ? "vs previous month"
-        : $"vs {MoneyText.MonthTitle(Totals.Previous.Month)}";
+        ? T["VsPreviousMonth"]
+        : T["VsMonth", MoneyText.MonthTitle(Totals.Previous.Month)];
 
     string ChangeText => Totals.Change is { } change ? MoneyText.SignedPln(change) : "—";
 

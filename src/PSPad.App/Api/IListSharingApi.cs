@@ -2,11 +2,11 @@ namespace PSPad.App.Api;
 
 public interface IListSharingApi
 {
-    Task<string?> ShareListAsync(Guid listId, string token, string code);
+    Task<SharingRejection?> ShareListAsync(Guid listId, string token, string code);
 
-    Task<string?> StopSharingAsync(Guid listId);
+    Task<SharingRejection?> StopSharingAsync(Guid listId);
 
-    Task<string?> RemoveMemberAsync(Guid listId, Guid memberId);
+    Task<SharingRejection?> RemoveMemberAsync(Guid listId, Guid memberId);
 
-    Task<string?> LeaveListAsync(Guid listId);
+    Task<SharingRejection?> LeaveListAsync(Guid listId);
 }

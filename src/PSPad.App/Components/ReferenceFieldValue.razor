@@ -3,6 +3,7 @@
 @using PSPad.Module.Tasks.References
 @inject Clipboard Clipboard
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<ReferenceStrings> Ref
 
 @if (Kind == FieldKind.Link)
 {
@@ -23,7 +24,7 @@ else if (Kind == FieldKind.Path)
         <code class="pspad-field-path">@Field.Value</code>
         <span @onclick:stopPropagation="true">
             <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" Class="pspad-field-copy"
-                           aria-label="Copy" OnClick="@CopyAsync" />
+                           aria-label="@Ref["Copy"].Value" OnClick="@CopyAsync" />
         </span>
     </div>
 }
@@ -49,7 +50,7 @@ else
     {
         var copied = await Clipboard.CopyAsync(Field.Value);
         Snackbar.Add(
-            copied ? "Copied" : "Could not copy — select the path instead.",
+            copied ? Ref["Copied"] : Ref["CopyFailedSelect"],
             copied ? Severity.Success : Severity.Warning);
     }
 }

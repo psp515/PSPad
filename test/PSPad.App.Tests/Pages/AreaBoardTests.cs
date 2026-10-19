@@ -317,7 +317,7 @@ public class AreaBoardTests : Bunit.TestContext
         var card = page.FindComponent<PSPad.App.Components.ListCard>();
 
         Assert.Equal(5, card.FindComponents<PSPad.App.Components.ReferenceRow>().Count);
-        Assert.Equal("7 open", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("7 open tasks", card.Find(".pspad-open-count .pspad-sr-only").TextContent);
     }
 
     [Fact]

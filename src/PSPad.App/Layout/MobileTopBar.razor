@@ -1,13 +1,14 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @inject PageHeader Header
+@inject IStringLocalizer<SharedStrings> S
 @implements IDisposable
 
 <MudAppBar Elevation="0" Gutters="false" Class="d-md-none pspad-top-bar">
     @if (Header.BackHref is not null)
     {
         <MudIconButton Class="pspad-top-back" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary"
-                       Href="@Header.BackHref" aria-label="@(Header.BackLabel ?? "Back")" />
+                       Href="@Header.BackHref" aria-label="@(Header.BackLabel ?? S["Back"].Value)" />
     }
     @if (Header.Icon is { } icon)
     {
@@ -24,7 +25,7 @@
     <ConnectionStatus />
     <SyncButton WithStamp="true" />
     @Header.Actions
-    <MudIconButton Class="pspad-avatar-button" OnClick="@OnAvatar" aria-label="Account">
+    <MudIconButton Class="pspad-avatar-button" OnClick="@OnAvatar" aria-label="@S["Account"].Value">
         <MudAvatar Style="@($"width:36px;height:36px;background:{AvatarColor.For(UserId)};color:#FFFFFF")">
             @AvatarColor.InitialOf(DisplayName.Length > 0 ? DisplayName : Email)
         </MudAvatar>

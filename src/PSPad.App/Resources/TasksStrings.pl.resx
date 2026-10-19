@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="PriorityLabelLow" xml:space="preserve">
+    <value>Niski priorytet</value>
+  </data>
+  <data name="PriorityLabelMedium" xml:space="preserve">
+    <value>Średni priorytet</value>
+  </data>
+  <data name="PriorityLabelHigh" xml:space="preserve">
+    <value>Wysoki priorytet</value>
+  </data>
+  <data name="UntilDate" xml:space="preserve">
+    <value>Do {0}</value>
+  </data>
+  <data name="Star" xml:space="preserve">
+    <value>Oznacz gwiazdką</value>
+  </data>
+  <data name="Unstar" xml:space="preserve">
+    <value>Usuń gwiazdkę</value>
+  </data>
+  <data name="RemoveStep" xml:space="preserve">
+    <value>Usuń krok: {0}</value>
+  </data>
+  <data name="AddStep" xml:space="preserve">
+    <value>Dodaj krok</value>
+  </data>
+  <data name="NextStep" xml:space="preserve">
+    <value>Następny krok</value>
+  </data>
+  <data name="Due" xml:space="preserve">
+    <value>Termin</value>
+  </data>
+  <data name="NoDueDate" xml:space="preserve">
+    <value>Brak terminu</value>
+  </data>
+  <data name="PickDate" xml:space="preserve">
+    <value>Wybierz datę…</value>
+  </data>
+  <data name="QuickInTwoDays" xml:space="preserve">
+    <value>Za 2 dni</value>
+  </data>
+  <data name="QuickNextWeek" xml:space="preserve">
+    <value>Następny tydzień</value>
+  </data>
+  <data name="Time" xml:space="preserve">
+    <value>Godzina</value>
+  </data>
+  <data name="TimeFrom" xml:space="preserve">
+    <value>Od</value>
+  </data>
+  <data name="TimeTo" xml:space="preserve">
+    <value>Do</value>
+  </data>
+  <data name="TimeStart" xml:space="preserve">
+    <value>Początek</value>
+  </data>
+  <data name="TimeEnd" xml:space="preserve">
+    <value>Koniec</value>
+  </data>
+  <data name="PickStartTime" xml:space="preserve">
+    <value>Wybierz godzinę początku</value>
+  </data>
+  <data name="PickEndTime" xml:space="preserve">
+    <value>Wybierz godzinę końca</value>
+  </data>
+  <data name="ClearTime" xml:space="preserve">
+    <value>Wyczyść godzinę</value>
+  </data>
+  <data name="EndsNextDay" xml:space="preserve">
+    <value>Kończy się następnego dnia (+1)</value>
+  </data>
+  <data name="EndMustDiffer" xml:space="preserve">
+    <value>Koniec musi być inny niż początek</value>
+  </data>
+  <data name="RemindMe" xml:space="preserve">
+    <value>Przypomnij mi</value>
+  </data>
+  <data name="LeadHint" xml:space="preserve">
+    <value>Na ile wcześniej zadanie pokaże się w sekcji Nadchodzące w widoku Mój dzień. W dniu terminu trafi na Dziś, jak zawsze.</value>
+  </data>
+  <data name="CustomEllipsis" xml:space="preserve">
+    <value>Własne…</value>
+  </data>
+  <data name="LeadBefore" xml:space="preserve">
+    <value>przed</value>
+  </data>
+  <data name="LeadDays.One" xml:space="preserve">
+    <value>{0} dzień przed</value>
+  </data>
+  <data name="LeadDays.Few" xml:space="preserve">
+    <value>{0} dni przed</value>
+  </data>
+  <data name="LeadDays.Many" xml:space="preserve">
+    <value>{0} dni przed</value>
+  </data>
+  <data name="LeadWeeks.One" xml:space="preserve">
+    <value>{0} tydzień przed</value>
+  </data>
+  <data name="LeadWeeks.Few" xml:space="preserve">
+    <value>{0} tygodnie przed</value>
+  </data>
+  <data name="LeadWeeks.Many" xml:space="preserve">
+    <value>{0} tygodni przed</value>
+  </data>
+  <data name="LeadMonths.One" xml:space="preserve">
+    <value>{0} miesiąc przed</value>
+  </data>
+  <data name="LeadMonths.Few" xml:space="preserve">
+    <value>{0} miesiące przed</value>
+  </data>
+  <data name="LeadMonths.Many" xml:space="preserve">
+    <value>{0} miesięcy przed</value>
+  </data>
+  <data name="Priority" xml:space="preserve">
+    <value>Priorytet</value>
+  </data>
+  <data name="PriorityNone" xml:space="preserve">
+    <value>Brak</value>
+  </data>
+  <data name="PriorityLow" xml:space="preserve">
+    <value>Niski</value>
+  </data>
+  <data name="PriorityMedium" xml:space="preserve">
+    <value>Średni</value>
+  </data>
+  <data name="PriorityHigh" xml:space="preserve">
+    <value>Wysoki</value>
+  </data>
+  <data name="ClearProperty" xml:space="preserve">
+    <value>Wyczyść: {0}</value>
+  </data>
+  <data name="Repeat" xml:space="preserve">
+    <value>Powtarzanie</value>
+  </data>
+  <data name="RepeatNever" xml:space="preserve">
+    <value>Nigdy</value>
+  </data>
+  <data name="RepeatDaily" xml:space="preserve">
+    <value>Codziennie</value>
+  </data>
+  <data name="RepeatWeekdays" xml:space="preserve">
+    <value>W dni robocze</value>
+  </data>
+  <data name="RepeatWeeklyOn" xml:space="preserve">
+    <value>Co tydzień: {0}</value>
+  </data>
+  <data name="RepeatMonthlyOnDay" xml:space="preserve">
+    <value>Co miesiąc, {0}. dnia</value>
+  </data>
+  <data name="RepeatYearlyOn" xml:space="preserve">
+    <value>Co roku: {0}</value>
+  </data>
+  <data name="RepeatCustom" xml:space="preserve">
+    <value>Własne</value>
+  </data>
+  <data name="EveryDays.One" xml:space="preserve">
+    <value>Codziennie</value>
+  </data>
+  <data name="EveryDays.Few" xml:space="preserve">
+    <value>Co {0} dni</value>
+  </data>
+  <data name="EveryDays.Many" xml:space="preserve">
+    <value>Co {0} dni</value>
+  </data>
+  <data name="EveryWeeks.One" xml:space="preserve">
+    <value>Co tydzień: {1}</value>
+  </data>
+  <data name="EveryWeeks.Few" xml:space="preserve">
+    <value>Co {0} tygodnie: {1}</value>
+  </data>
+  <data name="EveryWeeks.Many" xml:space="preserve">
+    <value>Co {0} tygodni: {1}</value>
+  </data>
+  <data name="EveryMonths.One" xml:space="preserve">
+    <value>Co miesiąc, {1}. dnia</value>
+  </data>
+  <data name="EveryMonths.Few" xml:space="preserve">
+    <value>Co {0} miesiące, {1}. dnia</value>
+  </data>
+  <data name="EveryMonths.Many" xml:space="preserve">
+    <value>Co {0} miesięcy, {1}. dnia</value>
+  </data>
+  <data name="EveryYears.One" xml:space="preserve">
+    <value>Co roku: {1}</value>
+  </data>
+  <data name="EveryYears.Few" xml:space="preserve">
+    <value>Co {0} lata: {1}</value>
+  </data>
+  <data name="EveryYears.Many" xml:space="preserve">
+    <value>Co {0} lat: {1}</value>
+  </data>
+  <data name="TallyNone" xml:space="preserve">
+    <value>Jeszcze nie wykonano</value>
+  </data>
+  <data name="DoneTimes.One" xml:space="preserve">
+    <value>Wykonano {0} raz</value>
+  </data>
+  <data name="DoneTimes.Few" xml:space="preserve">
+    <value>Wykonano {0} razy</value>
+  </data>
+  <data name="DoneTimes.Many" xml:space="preserve">
+    <value>Wykonano {0} razy</value>
+  </data>
+  <data name="DoneTimesStreak.One" xml:space="preserve">
+    <value>Wykonano {0} raz · {1} z rzędu</value>
+  </data>
+  <data name="DoneTimesStreak.Few" xml:space="preserve">
+    <value>Wykonano {0} razy · {1} z rzędu</value>
+  </data>
+  <data name="DoneTimesStreak.Many" xml:space="preserve">
+    <value>Wykonano {0} razy · {1} z rzędu</value>
+  </data>
+  <data name="OccurrencePending" xml:space="preserve">
+    <value>Oczekuje</value>
+  </data>
+  <data name="OccurrenceSkipped" xml:space="preserve">
+    <value>Pominięte</value>
+  </data>
+  <data name="CustomRepeat" xml:space="preserve">
+    <value>Własne powtarzanie</value>
+  </data>
+  <data name="RepeatEvery" xml:space="preserve">
+    <value>Co</value>
+  </data>
+  <data name="RepeatOnDay" xml:space="preserve">
+    <value>Dzień miesiąca</value>
+  </data>
+  <data name="RepeatStarts" xml:space="preserve">
+    <value>Początek</value>
+  </data>
+  <data name="AddTask" xml:space="preserve">
+    <value>Dodaj zadanie</value>
+  </data>
+  <data name="TaskName" xml:space="preserve">
+    <value>Nazwa zadania</value>
+  </data>
+  <data name="OneTime" xml:space="preserve">
+    <value>Jednorazowe</value>
+  </data>
+  <data name="Repeating" xml:space="preserve">
+    <value>Powtarzane</value>
+  </data>
+  <data name="Until" xml:space="preserve">
+    <value>Do</value>
+  </data>
+  <data name="NoEndDate" xml:space="preserve">
+    <value>Bez daty końca</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Opis</value>
+  </data>
+  <data name="SnapshotMarks" xml:space="preserve">
+    <value>Znaczniki migawek</value>
+  </data>
+  <data name="SnapshotDismiss" xml:space="preserve">
+    <value>Zamknij</value>
+  </data>
+  <data name="DeleteTask" xml:space="preserve">
+    <value>Usuń zadanie</value>
+  </data>
+  <data name="DeleteTaskConfirm" xml:space="preserve">
+    <value>Usunąć „{0}”?</value>
+  </data>
+  <data name="NewTask" xml:space="preserve">
+    <value>Nowe zadanie</value>
+  </data>
+  <data name="NewTaskIn" xml:space="preserve">
+    <value>Nowe zadanie · {0}</value>
+  </data>
+  <data name="TaskTitle" xml:space="preserve">
+    <value>Zadanie</value>
+  </data>
+  <data name="Created" xml:space="preserve">
+    <value>Utworzono {0}</value>
+  </data>
+  <data name="DescriptionNotSaved" xml:space="preserve">
+    <value>Nie udało się zapisać opisu.</value>
+  </data>
+  <data name="NoOpenTasks" xml:space="preserve">
+    <value>Brak otwartych zadań</value>
+  </data>
+  <data name="AddOne" xml:space="preserve">
+    <value>Dodaj zadanie</value>
+  </data>
+  <data name="AddTaskTo" xml:space="preserve">
+    <value>Dodaj zadanie do: {0}</value>
+  </data>
+  <data name="ShowAll" xml:space="preserve">
+    <value>Pokaż wszystkie ({0})</value>
+  </data>
+  <data name="ExpandCard" xml:space="preserve">
+    <value>Rozwiń: {0}</value>
+  </data>
+  <data name="CollapseCard" xml:space="preserve">
+    <value>Zwiń: {0}</value>
+  </data>
+  <data name="OpenTasks.Zero" xml:space="preserve">
+    <value>brak otwartych zadań</value>
+  </data>
+  <data name="OpenTasks.One" xml:space="preserve">
+    <value>{0} otwarte zadanie</value>
+  </data>
+  <data name="OpenTasks.Few" xml:space="preserve">
+    <value>{0} otwarte zadania</value>
+  </data>
+  <data name="OpenTasks.Many" xml:space="preserve">
+    <value>{0} otwartych zadań</value>
+  </data>
+  <data name="UnitDays.One" xml:space="preserve">
+    <value>dzień</value>
+  </data>
+  <data name="UnitDays.Few" xml:space="preserve">
+    <value>dni</value>
+  </data>
+  <data name="UnitDays.Many" xml:space="preserve">
+    <value>dni</value>
+  </data>
+  <data name="UnitWeeks.One" xml:space="preserve">
+    <value>tydzień</value>
+  </data>
+  <data name="UnitWeeks.Few" xml:space="preserve">
+    <value>tygodnie</value>
+  </data>
+  <data name="UnitWeeks.Many" xml:space="preserve">
+    <value>tygodni</value>
+  </data>
+  <data name="UnitMonths.One" xml:space="preserve">
+    <value>miesiąc</value>
+  </data>
+  <data name="UnitMonths.Few" xml:space="preserve">
+    <value>miesiące</value>
+  </data>
+  <data name="UnitMonths.Many" xml:space="preserve">
+    <value>miesięcy</value>
+  </data>
+  <data name="UnitYears.One" xml:space="preserve">
+    <value>rok</value>
+  </data>
+  <data name="UnitYears.Few" xml:space="preserve">
+    <value>lata</value>
+  </data>
+  <data name="UnitYears.Many" xml:space="preserve">
+    <value>lat</value>
+  </data>
+</root>

@@ -1,4 +1,7 @@
+using Microsoft.Extensions.Localization;
+using PSPad.App.Resources;
 using PSPad.App.State;
+using PSPad.App.Tests.Localization;
 using PSPad.Contracts;
 using PSPad.Module.Money.Import;
 using PSPad.TestInfrastructure;
@@ -6,8 +9,12 @@ using PSPad.TestInfrastructure;
 namespace PSPad.App.Tests.State;
 
 [UnitTest]
+[Collection("Culture")]
 public class ImportRatesTests
 {
+    static readonly IStringLocalizer<BudgetsStrings> Text = TestLocalizers.For<BudgetsStrings>();
+    const string Offline = "Needs a rate: go online or fill the rate column.";
+
     static readonly RateRequest Eur = new("EUR", new DateOnly(2026, 9, 5));
     static readonly RateRequest Usd = new("USD", new DateOnly(2026, 9, 5));
     static readonly DateOnly Today = new(2026, 10, 14);
@@ -19,10 +26,10 @@ public class ImportRatesTests
         nbp.ByCurrency["EUR"] = new NbpRateView("EUR", 4.25m, new DateOnly(2026, 9, 4));
         nbp.ByCurrency["USD"] = null;
 
-        var book = await ImportRates.FetchAsync(nbp, true, Today, [Eur, Usd], RateBook.Empty);
+        var book = await ImportRates.FetchAsync(nbp, true, Today, [Eur, Usd], RateBook.Empty, Text);
 
         Assert.Equal(new ImportRate(4.25m, new DateOnly(2026, 9, 4)), book.Known[Eur]);
-        Assert.Equal("No NBP rate for USD on 2026-09-05.", book.Failed[Usd]);
+        Assert.Equal("No NBP rate for USD on 9/5/2026.", book.Failed[Usd]);
     }
 
     [Fact]
@@ -30,10 +37,34 @@ public class ImportRatesTests
     {
         var nbp = new AppTestHost.FakeNbpRates();
 
-        var book = await ImportRates.FetchAsync(nbp, false, Today, [Eur], RateBook.Empty);
+        var book = await ImportRates.FetchAsync(nbp, false, Today, [Eur], RateBook.Empty, Text);
 
-        Assert.Equal(ImportRates.OfflineMessage, book.Failed[Eur]);
+        Assert.Equal(Offline, book.Failed[Eur]);
         Assert.Empty(nbp.Asked);
+    }
+
+    [Fact]
+    public async Task RatesFailuresSpeakPolishWithPolishDates()
+    {
+        var before = System.Globalization.CultureInfo.CurrentUICulture;
+        var beforeFormat = System.Globalization.CultureInfo.CurrentCulture;
+
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("pl-PL");
+            System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("pl-PL");
+            var nbp = new AppTestHost.FakeNbpRates();
+            nbp.ByCurrency["USD"] = null;
+
+            var book = await ImportRates.FetchAsync(nbp, true, Today, [Usd], RateBook.Empty, Text);
+
+            Assert.Equal("Brak kursu NBP dla USD z dnia 5.09.2026.", book.Failed[Usd]);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = before;
+            System.Globalization.CultureInfo.CurrentCulture = beforeFormat;
+        }
     }
 
     [Fact]
@@ -41,9 +72,9 @@ public class ImportRatesTests
     {
         var nbp = new AppTestHost.FakeNbpRates { Next = new NbpRateView("EUR", 4.3m, Eur.Date) };
         var failed = new RateBook(new Dictionary<RateRequest, ImportRate>(),
-            new Dictionary<RateRequest, string> { [Eur] = ImportRates.OfflineMessage });
+            new Dictionary<RateRequest, string> { [Eur] = Offline });
 
-        var book = await ImportRates.FetchAsync(nbp, true, Today, [Eur], failed);
+        var book = await ImportRates.FetchAsync(nbp, true, Today, [Eur], failed, Text);
 
         Assert.Empty(book.Failed);
         Assert.Equal(4.3m, book.Known[Eur].Rate);
@@ -55,9 +86,9 @@ public class ImportRatesTests
         var nbp = new AppTestHost.FakeNbpRates();
         var future = new RateRequest("USD", new DateOnly(2026, 10, 31));
 
-        var book = await ImportRates.FetchAsync(nbp, true, Today, [future], RateBook.Empty);
+        var book = await ImportRates.FetchAsync(nbp, true, Today, [future], RateBook.Empty, Text);
 
-        Assert.Equal("2026-10-31 is in the future, so NBP has no USD rate for it yet. Fill the rate column or change the date.",
+        Assert.Equal("10/31/2026 is in the future, so NBP has no USD rate for it yet. Fill the rate column or change the date.",
             book.Failed[future]);
         Assert.Empty(nbp.Asked);
     }

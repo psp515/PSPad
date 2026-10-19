@@ -32,7 +32,7 @@ public class ProvisioningTests(MongoFixture fixture)
         var context = Persistence.TestContext.For(fixture);
         var provisioner = ProvisionerFor(context);
 
-        var user = await provisioner.EnsureAsync(subject, "Łukasz", "Europe/Warsaw", ct);
+        var user = await provisioner.EnsureAsync(subject, "Łukasz", "Europe/Warsaw", "en", ct);
 
         var areas = await context.Collection<BsonDocument>("areas")
             .Find(Builders<BsonDocument>.Filter.Eq("userId", new BsonBinaryData(user.Id, GuidRepresentation.Standard)))
@@ -42,7 +42,7 @@ public class ProvisioningTests(MongoFixture fixture)
             .ToListAsync(ct);
 
         Assert.Equal("Europe/Warsaw", user.TimeZone);
-        Assert.Equal(ProvisioningPlan.SeedAreaNames.Count, areas.Count);
+        Assert.Equal(ProvisioningPlan.SeedAreaNames("en").Count, areas.Count);
         Assert.Single(inboxes);
     }
 
@@ -54,15 +54,34 @@ public class ProvisioningTests(MongoFixture fixture)
         var context = Persistence.TestContext.For(fixture);
         var provisioner = ProvisionerFor(context);
 
-        var first = await provisioner.EnsureAsync(subject, "Łukasz", "Europe/Warsaw", ct);
-        var second = await provisioner.EnsureAsync(subject, "Łukasz", "Europe/Warsaw", ct);
+        var first = await provisioner.EnsureAsync(subject, "Łukasz", "Europe/Warsaw", "en", ct);
+        var second = await provisioner.EnsureAsync(subject, "Łukasz", "Europe/Warsaw", "en", ct);
 
         var areas = await context.Collection<BsonDocument>("areas")
             .Find(Builders<BsonDocument>.Filter.Eq("userId", new BsonBinaryData(first.Id, GuidRepresentation.Standard)))
             .ToListAsync(ct);
 
         Assert.Equal(first.Id, second.Id);
-        Assert.Equal(ProvisioningPlan.SeedAreaNames.Count, areas.Count);
+        Assert.Equal(ProvisioningPlan.SeedAreaNames("en").Count, areas.Count);
+    }
+
+    [Fact]
+    public async Task APolishFirstSignInSeedsPolishAreaNames()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var subject = Guid.NewGuid().ToString();
+        var context = Persistence.TestContext.For(fixture);
+        var provisioner = ProvisionerFor(context);
+
+        var user = await provisioner.EnsureAsync(subject, "Łukasz", "Europe/Warsaw", "pl", ct);
+
+        var names = (await context.Collection<BsonDocument>("areas")
+            .Find(Builders<BsonDocument>.Filter.Eq("userId", new BsonBinaryData(user.Id, GuidRepresentation.Standard)))
+            .ToListAsync(ct)).Select(area => area["name"].AsString).ToList();
+
+        Assert.Equal("pl", user.Language);
+        Assert.Equivalent(ProvisioningPlan.SeedAreaNames("pl"), names);
+        Assert.Contains("Prywatne", names);
     }
 
     static UserProvisioner ProvisionerFor(MongoContext context) =>

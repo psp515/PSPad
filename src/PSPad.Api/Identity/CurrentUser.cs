@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using PSPad.Abstractions;
 
 namespace PSPad.Api.Identity;
 
@@ -9,6 +10,8 @@ public interface ICurrentUser
     Guid UserId { get; }
 
     string TimeZoneHint { get; }
+
+    string LanguageHint { get; }
 
     string DisplayName { get; }
 
@@ -26,6 +29,9 @@ public sealed class ClaimsCurrentUser(IHttpContextAccessor accessor) : ICurrentU
 
     public string TimeZoneHint =>
         accessor.HttpContext?.User.FindFirstValue("zoneinfo") ?? "Etc/UTC";
+
+    public string LanguageHint =>
+        SupportedLanguages.FromBrowser(accessor.HttpContext?.Request.Headers.AcceptLanguage.ToString());
 
     public string DisplayName =>
         accessor.HttpContext?.User.FindFirstValue("name")

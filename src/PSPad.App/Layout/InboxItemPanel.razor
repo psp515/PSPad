@@ -18,16 +18,19 @@
 @inject AppState State
 @inject CommandSender Sender
 @inject NavigationManager Navigation
+@inject IStringLocalizer<InboxStrings> T
+@inject IStringLocalizer<TasksStrings> TaskText
+@inject IStringLocalizer<SharedStrings> Shared
 
-<DetailPanel Open="@(IsNew || _item is not null)" Title="@(IsNew ? "Capture" : "Inbox item")" OnClose="@OnClose"
-             OnSave="@SaveCallback" SaveText="@(IsNew ? "Add" : "Convert to task")" CanSave="@CanSave"
-             OnDelete="@DeleteCallback" DeleteText="Discard" Disabled="@Disabled">
+<DetailPanel Open="@(IsNew || _item is not null)" Title="@(IsNew ? T["Capture"] : T["InboxItemTitle"])" OnClose="@OnClose"
+             OnSave="@SaveCallback" SaveText="@(IsNew ? T["Add"] : T["ConvertToTask"])" CanSave="@CanSave"
+             OnDelete="@DeleteCallback" DeleteText="@T["Discard"]" Disabled="@Disabled">
     <HeaderActions>
         @if (_item is not null)
         {
             <MudIconButton Class="pspad-inbox-star" Color="Color.Primary" Disabled="@Disabled"
                            Icon="@(_draft.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                           aria-label="@(_draft.Starred ? "Unstar" : "Star")"
+                           aria-label="@(_draft.Starred ? TaskText["Unstar"].Value : TaskText["Star"].Value)"
                            OnClick="@(() => _draft.Starred = !_draft.Starred)" />
         }
     </HeaderActions>
@@ -35,13 +38,13 @@
         <div class="pa-4">
             @if (_item is null)
             {
-                <MudTextField T="string" Class="pspad-inbox-name-field" Label="Name" Variant="Variant.Outlined"
+                <MudTextField T="string" Class="pspad-inbox-name-field" Label="@Shared["Name"]" Variant="Variant.Outlined"
                               @bind-Value="_draft.Name" Immediate="true" AutoFocus="true" Disabled="@Disabled" MaxLength="@ContentLimits.Name"
                               OnKeyDown="@AddOnEnterAsync" />
             }
             else
             {
-                <MudTextField T="string" Class="pspad-inbox-name-field" Label="Name" Variant="Variant.Outlined"
+                <MudTextField T="string" Class="pspad-inbox-name-field" Label="@Shared["Name"]" Variant="Variant.Outlined"
                               Value="@_item.Text" ValueChanged="@RenameAsync" Disabled="@Disabled" MaxLength="@ContentLimits.Name" />
             }
         </div>
@@ -65,7 +68,7 @@
                          Disabled="@Disabled" />
             </div>
 
-            <PanelSection Title="Description" Class="pspad-inbox-description">
+            <PanelSection Title="@Shared["Description"]" Class="pspad-inbox-description">
                 <MarkdownField @key="_draft" Value="@_draft.Description" OnSave="@SaveDescriptionAsync"
                                Disabled="@Disabled" />
             </PanelSection>
@@ -75,7 +78,7 @@
         @if (_item is not null)
         {
             <MudText Typo="Typo.caption" Class="pspad-inbox-captured pspad-muted">
-                @($"Captured {_item.CapturedAt.ToLocalTime():ddd, d MMM yyyy, HH:mm}")
+                @T["CapturedAt", _item.CapturedAt.ToLocalTime().ToString("ddd, d MMM yyyy, HH:mm")]
             </MudText>
         }
     </Footer>

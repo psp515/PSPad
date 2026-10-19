@@ -10,13 +10,14 @@
 @inject ISnapshotCache Cache
 @inject IConnectivity Connectivity
 @inject IClock Clock
+@inject IStringLocalizer<SharingStrings> T
 
-<PageHeading Title="List snapshots" />
+<PageHeading Title="@T["SnapshotsTitle"]" />
 
 @if (_rows.Count == 0)
 {
     <EmptyState Icon="@Icons.Material.Outlined.Link"
-                Message="Snapshots you open while signed in show up here." />
+                Message="@T["SnapshotsEmpty"]" />
 }
 else
 {
@@ -26,7 +27,7 @@ else
             <MudListItem @key="row.Token" T="string" Href="@SnapshotLinks.Route(row.Token)">
                 <MudText>@row.Name</MudText>
                 <MudText Typo="Typo.caption">
-                    Expires @row.ExpiresAt.ToString("d MMM yyyy") · Opened @row.VisitedAt.ToString("d MMM yyyy")
+                    @T["SnapshotExpiresOpened", row.ExpiresAt.ToString("d MMM yyyy"), row.VisitedAt.ToString("d MMM yyyy")]
                 </MudText>
             </MudListItem>
         }

@@ -4,8 +4,9 @@
 @using PSPad.Module.Money.Budgets
 @inject IDocumentStore<Budget> Budgets
 @inject AppState State
+@inject IStringLocalizer<ListsStrings> Lists
 
-<DetailPanel Open="@(_budget is not null)" Title="Members" TitleTypo="Typo.body2" OnClose="@OnClose" Disabled="@Disabled">
+<DetailPanel Open="@(_budget is not null)" Title="@Lists["Members"]" TitleTypo="Typo.body2" OnClose="@OnClose" Disabled="@Disabled">
     @if (_budget is not null)
     {
         <div class="px-4 py-3">

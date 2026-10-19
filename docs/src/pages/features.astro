@@ -21,6 +21,7 @@ const features = [
   { title: 'Public snapshots', body: 'Publish a frozen, read-only link to a list for anyone — no account needed — until an expiry you pick: a day, a week, a month or a date. They tick a task, step or item off — up to 100 changes a day per list — and you see it as a mark on your own copy, never a completion. Each live link has a QR code and shows how many entries visitors ticked. Every snapshot you open yourself shows up under List snapshots.', status: 'built' },
   { title: 'Yours, and multi-user', body: 'Your hardware, your Keycloak, your data.', status: 'built' },
   { title: 'Settings, in one place', body: 'Time zone, light or dark theme, an accent colour from presets or your own picked colour, sync status, a password change through the Keycloak account console, and account deletion, which asks you to sign in again when your last sign-in is more than five minutes old — no longer buried in a menu.', status: 'built' },
+  { title: 'Speaks your language', body: 'English and Polish, chosen once in Settings and followed on every device, offline included. Dates, numbers, money amounts and the week start follow the language; the sign-in page follows Keycloak’s language. Adding a language takes a resource file per feature plus a few list entries, all listed under Adding a language below.', status: 'built' },
   { title: 'Made for your phone', body: 'On a phone, a bottom bar puts Inbox, Areas, My Day, Goals and Budgets one tap away, My Day in the middle. Areas switch with a row of chips, and your account sits behind the avatar, with Statistics in its drawer.', status: 'built' }
 ]
 
@@ -51,6 +52,20 @@ const planned = [
       {built.map((feature) => (
         <FeatureCard title={feature.title} status={feature.status}><p>{feature.body}</p></FeatureCard>
       ))}
+    </div>
+
+    <div class="prose">
+      <h2>Adding a language</h2>
+      <p>The same steps are in <code>specs/localization-design.md</code> §7 in the repository.</p>
+      <ol>
+        <li>Add the language tag to <code>SupportedLanguages.All</code>.</li>
+        <li>Copy each <code>src/PSPad.App/Resources/&lt;Feature&gt;Strings.resx</code> to <code>&lt;Feature&gt;Strings.&lt;tag&gt;.resx</code> and translate every value as a whole sentence.</li>
+        <li>Add plural forms to <code>PluralRules</code> if the language is not One/Many.</li>
+        <li>Add seed area names to <code>ProvisioningPlan</code>.</li>
+        <li>Add the native name in <code>SettingsPage</code>.</li>
+        <li>Map the tag to a culture in <code>index.html</code> (start script) and <code>LanguagePreference.ApplyCulture</code>.</li>
+        <li>Run the unit tests; <code>ResourceGuardTests</code> reports any missing key.</li>
+      </ol>
     </div>
 
     <div class="prose">

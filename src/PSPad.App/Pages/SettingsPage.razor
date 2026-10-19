@@ -4,6 +4,8 @@
 @using PSPad.App.Api
 @using PSPad.App.Auth
 @using PSPad.App.Components
+@using PSPad.App.Localization
+@using PSPad.App.Resources
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.App.State.Outbox
@@ -15,8 +17,13 @@
 @inject IConfiguration Configuration
 @inject IDocumentStore<MoneyPreferences> PreferencesStore
 @inject IConnectivity Connectivity
+@inject ILocalSessionStore Sessions
 @inject PSPadApiClient Api
 @inject AppState State
+@inject LanguagePreference Languages
+@inject IStringLocalizer<SettingsStrings> T
+@inject IStringLocalizer<SharedStrings> S
+@inject IStringLocalizer<ShellStrings> Shell
 @inject ThemePreference Preference
 @inject IOutbox Outbox
 @inject CommandSender Sender
@@ -29,12 +36,12 @@
 @inject ISnackbar Snackbar
 @implements IDisposable
 
-<PageHeading Title="Settings" Subtitle="Account, appearance and sync" Icon="@Icons.Material.Outlined.Settings" />
+<PageHeading Title="@S["Settings"]" Subtitle="@T["SettingsSubtitle"]" Icon="@Icons.Material.Outlined.Settings" />
 
 <MudGrid Spacing="4">
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4 pspad-account-card">
-            <SectionHeading Title="Account" />
+            <SectionHeading Title="@S["Account"]" />
             <div class="d-flex align-center gap-3 mb-3">
                 <MudAvatar Style="@($"background:{AvatarColor.For(State.UserId)};color:#FFFFFF")" Size="Size.Large">
                     @AvatarColor.InitialOf(State.DisplayName.Length > 0 ? State.DisplayName : State.Email)
@@ -47,33 +54,42 @@
             <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
                 <MudButton Class="pspad-change-password" Href="@KeycloakAccountConsole.UrlFor(Configuration["Keycloak:Authority"]!)"
                            Target="_blank" StartIcon="@Icons.Material.Filled.Password" Variant="Variant.Outlined">
-                    Change password
+                    @T["ChangePassword"]
                 </MudButton>
                 <MudButton Class="pspad-sign-out" OnClick="@SignOutAsync" StartIcon="@Icons.Material.Filled.Logout"
                            Color="Color.Error" Variant="Variant.Outlined" Disabled="@(!Connectivity.IsOnline || _signingOut)">
-                    Sign out
+                    @T["SignOut"]
                 </MudButton>
             </MudStack>
             @if (!Connectivity.IsOnline)
             {
                 <MudText Typo="Typo.caption" Class="d-block mt-2 pspad-sign-out-offline">
-                    You're offline, so this device can't be signed out securely. Connect to sign out.
+                    @T["SignOutNeedsConnection"]
                 </MudText>
             }
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4 pspad-application-settings">
-            <SectionHeading Title="Application settings" />
+            <SectionHeading Title="@T["ApplicationSettings"]" />
             <MudAutocomplete T="string" Value="@State.TimeZone" ValueChanged="@ApplyTimeZoneAsync"
-                             SearchFunc="@SearchTimeZonesAsync" Label="Time zone"
+                             SearchFunc="@SearchTimeZonesAsync" Label="@T["TimeZone"]"
                              Variant="Variant.Outlined" Margin="Margin.Dense" ResetValueOnEmptyText="false" />
-            <MudText Typo="Typo.caption">The time zone is saved on the server, so it needs a connection.</MudText>
+            <MudText Typo="Typo.caption">@T["TimeZoneNeedsConnection"]</MudText>
             @if (_rejected)
             {
-                <MudText Typo="Typo.caption" Color="Color.Error">That change did not go through.</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Error">@S["ThatChangeDidNotGoThrough"]</MudText>
             }
-            <MudSelect T="string" Class="pspad-default-currency mt-3" Label="Default currency"
+            <MudSelect T="string" Class="pspad-language mt-3" Label="@T["Language"]"
+                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                       Value="@Languages.Language" ValueChanged="@ApplyLanguageAsync">
+                @foreach (var language in SupportedLanguages.All)
+                {
+                    <MudSelectItem T="string" Value="@language">@NativeName(language)</MudSelectItem>
+                }
+            </MudSelect>
+            <MudText Typo="Typo.caption">@T["LanguageReloads"]</MudText>
+            <MudSelect T="string" Class="pspad-default-currency mt-3" Label="@T["DefaultCurrency"]"
                        Variant="Variant.Outlined" Margin="Margin.Dense"
                        Value="@_defaultCurrency" ValueChanged="@ApplyDefaultCurrencyAsync">
                 @foreach (var currency in Currencies.All)
@@ -81,25 +97,25 @@
                     <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
                 }
             </MudSelect>
-            <MudSelect T="ThemeMode" Value="@Preference.Mode" ValueChanged="@SelectThemeAsync" Label="Theme"
+            <MudSelect T="ThemeMode" Value="@Preference.Mode" ValueChanged="@SelectThemeAsync" Label="@T["Theme"]"
                        Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-4">
                 @foreach (var mode in Enum.GetValues<ThemeMode>())
                 {
-                    <MudSelectItem T="ThemeMode" Value="@mode">@mode</MudSelectItem>
+                    <MudSelectItem T="ThemeMode" Value="@mode">@T[$"Theme{mode}"]</MudSelectItem>
                 }
             </MudSelect>
-            <MudText Typo="Typo.caption" Class="d-block mt-4 mb-2">Accent</MudText>
+            <MudText Typo="Typo.caption" Class="d-block mt-4 mb-2">@T["Accent"]</MudText>
             <AccentPicker />
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4" id="sync">
-            <SectionHeading Title="Sync" />
+            <SectionHeading Title="@T["Sync"]" />
             <MudText Typo="Typo.body2" Color="@(Failed ? Color.Error : Color.Default)">@SyncLine</MudText>
             <MudText Typo="Typo.caption" Class="d-block mb-3 pspad-muted">@LastSyncedText</MudText>
             @if (SyncStatus.LastRejections.Count > 0)
             {
-                <MudText Typo="Typo.body2" Color="Color.Error">Couldn’t be saved</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Error">@T["CouldNotBeSaved"]</MudText>
                 <MudList T="string" Dense="true" ReadOnly="true" Class="pspad-sync-rejections mb-3">
                     @foreach (var rejection in SyncStatus.LastRejections)
                     {
@@ -110,11 +126,11 @@
                 @if (SyncStatus.HasStuckChange)
                 {
                     <MudText Typo="Typo.caption" Class="d-block mb-2">
-                        It holds back every change made after it. Discarding it puts the saved version back.
+                        @T["StuckChangeHoldsBack"]
                     </MudText>
                     <MudButton Class="pspad-discard-stuck mb-3" Color="Color.Error" Variant="Variant.Outlined"
                                OnClick="@SyncStatus.DiscardStuckChangeAsync">
-                        Discard this change
+                        @T["DiscardChange"]
                     </MudButton>
                 }
             }
@@ -123,17 +139,17 @@
     </MudItem>
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4">
-            <SectionHeading Title="Danger zone" Color="Color.Error" />
+            <SectionHeading Title="@T["DangerZone"]" Color="Color.Error" />
             <MudText Typo="Typo.body2" Class="mb-3">
-                Permanently deletes your account and everything in it.
+                @T["DeleteAccountWarning"]
             </MudText>
             <MudButton Class="pspad-delete-account" Color="Color.Error" Variant="Variant.Outlined"
                        Disabled="@(!Connectivity.IsOnline)" OnClick="@OpenDeleteAccountDialogAsync">
-                Delete account
+                @T["DeleteAccount"]
             </MudButton>
             @if (!Connectivity.IsOnline)
             {
-                <MudText Typo="Typo.caption" Class="mt-2">Requires a connection.</MudText>
+                <MudText Typo="Typo.caption" Class="mt-2">@T["RequiresConnection"]</MudText>
             }
         </MudPaper>
     </MudItem>
@@ -155,14 +171,14 @@
     bool Failed => SyncStatus.LastSyncFailed && Connectivity.IsOnline && !SyncStatus.IsSyncing;
 
     string SyncLine =>
-        SyncStatus.IsSyncing ? "Syncing…"
-        : Failed ? (_pendingCommands == 0 ? "Couldn't sync." : $"Couldn't sync. {_pendingCommands} pending")
-        : _pendingCommands == 0 ? "Everything is synced."
-        : $"{_pendingCommands} pending";
+        SyncStatus.IsSyncing ? T["Syncing"]
+        : Failed ? (_pendingCommands == 0 ? T["SyncFailed"] : T["SyncFailedPending", _pendingCommands])
+        : _pendingCommands == 0 ? T["SyncedEverything"]
+        : T["SyncPending", _pendingCommands];
 
     string LastSyncedText => SyncStatus.LastSyncedAt is { } at
-        ? $"Last synced {RelativeTime.Describe(at, Clock.UtcNow)}"
-        : "Not synced yet";
+        ? T["LastSynced", RelativeTime.Describe(at, Clock.UtcNow, Shell)]
+        : T["NotSyncedYet"];
 
     [SupplyParameterFromQuery(Name = StepUpSignIn.DeleteAccountQuery)]
     public string? DeleteAccount { get; set; }
@@ -228,9 +244,7 @@
         if (await SignOut.SignOutAsync() is not SignOutOutcome.Cleared cleared)
         {
             _signingOut = false;
-            Snackbar.Add(
-                "Couldn't reach the sign-in server, so you're still signed in. Try again when you're connected.",
-                Severity.Warning);
+            Snackbar.Add(T["SignOutServerUnreachable"], Severity.Warning);
             return;
         }
 
@@ -252,13 +266,12 @@
             return true;
         }
 
-        var changes = pending == 1 ? "1 unsynced change hasn't" : $"{pending} unsynced changes haven't";
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"{changes} reached the server yet. Signing out removes them from this device." },
-            { dialog => dialog.ConfirmText, "Sign out" }
+            { dialog => dialog.Message, T.Plural(pending, "UnsyncedChanges") },
+            { dialog => dialog.ConfirmText, T["SignOut"].Value }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Sign out", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["SignOut"], parameters);
         var result = await dialog.Result;
 
         return result is { Canceled: false };
@@ -288,6 +301,26 @@
         StateHasChanged();
     }
 
+    static string NativeName(string language) => language switch
+    {
+        "pl" => "Polski",
+        _ => "English"
+    };
+
+    public async Task ApplyLanguageAsync(string language)
+    {
+        await Languages.ChooseAsync(language);
+
+        var me = (await Api.SetLanguageAsync(language)).Sanitized();
+        if (me is not null && me.Language == language)
+        {
+            await Languages.ClearPendingAsync();
+            await Sessions.RememberLanguageAsync(me.Language);
+        }
+
+        Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+    }
+
     public Task SelectThemeAsync(ThemeMode mode) => Preference.SetAsync(mode);
 
     public Task<IEnumerable<string>> SearchTimeZonesAsync(string value, CancellationToken ct) =>
@@ -298,7 +331,7 @@
     async Task OpenDeleteAccountDialogAsync()
     {
         var parameters = new DialogParameters<DeleteAccountDialog> { { dialog => dialog.Email, State.Email } };
-        var dialog = await Dialogs.ShowAsync<DeleteAccountDialog>("Delete account", parameters);
+        var dialog = await Dialogs.ShowAsync<DeleteAccountDialog>(T["DeleteAccount"], parameters);
         var result = await dialog.Result;
 
         if (result is null || result.Canceled)

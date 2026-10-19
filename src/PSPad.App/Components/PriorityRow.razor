@@ -1,7 +1,8 @@
 @using PSPad.Module.Tasks.Tasks
+@inject IStringLocalizer<TasksStrings> T
 
-<PropertyRow Class="pspad-task-priority" Icon="@Icons.Material.Outlined.Flag" Label="Priority"
-             Value="@Value.ToString()" HasValue="@(Value != Priority.None)"
+<PropertyRow Class="pspad-task-priority" Icon="@Icons.Material.Outlined.Flag" Label="@T["Priority"]"
+             Value="@T[$"Priority{Value}"]" HasValue="@(Value != Priority.None)"
              ValueIcon="@(Value == Priority.None ? null : Icons.Material.Filled.Circle)"
              ValueColor="@ColorOf(Value)" Disabled="@Disabled">
     @foreach (var priority in Enum.GetValues<Priority>())
@@ -10,7 +11,7 @@
             <div class="d-flex align-center gap-2">
                 <MudIcon Icon="@(priority == Priority.None ? Icons.Material.Outlined.Circle : Icons.Material.Filled.Circle)"
                          Size="Size.Small" Color="@ColorOf(priority)" />
-                @priority
+                @T[$"Priority{priority}"]
             </div>
         </MudMenuItem>
     }

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="OfflineLastNumbers" xml:space="preserve">
+    <value>Offline — pokazujemy ostatnie dostępne liczby.</value>
+  </data>
+  <data name="DoneToday" xml:space="preserve">
+    <value>Wykonane dziś</value>
+  </data>
+  <data name="OpenedToday" xml:space="preserve">
+    <value>Utworzone dziś</value>
+  </data>
+  <data name="LastSevenDays" xml:space="preserve">
+    <value>Ostatnie 7 dni</value>
+  </data>
+  <data name="NetChange" xml:space="preserve">
+    <value>Zmiana netto</value>
+  </data>
+  <data name="DaysRange.One" xml:space="preserve">
+    <value>{0} dzień</value>
+  </data>
+  <data name="DaysRange.Few" xml:space="preserve">
+    <value>{0} dni</value>
+  </data>
+  <data name="DaysRange.Many" xml:space="preserve">
+    <value>{0} dni</value>
+  </data>
+  <data name="UpdatedJustNow" xml:space="preserve">
+    <value>zaktualizowano przed chwilą</value>
+  </data>
+  <data name="UpdatedMinutesAgo" xml:space="preserve">
+    <value>zaktualizowano {0} min temu</value>
+  </data>
+  <data name="UpdatedHoursAgo" xml:space="preserve">
+    <value>zaktualizowano {0} godz. temu</value>
+  </data>
+  <data name="UpdatedDaysAgo.One" xml:space="preserve">
+    <value>zaktualizowano {0} dzień temu</value>
+  </data>
+  <data name="UpdatedDaysAgo.Few" xml:space="preserve">
+    <value>zaktualizowano {0} dni temu</value>
+  </data>
+  <data name="UpdatedDaysAgo.Many" xml:space="preserve">
+    <value>zaktualizowano {0} dni temu</value>
+  </data>
+  <data name="SeriesPlanned" xml:space="preserve">
+    <value>Planowane</value>
+  </data>
+  <data name="SeriesUnplanned" xml:space="preserve">
+    <value>Nieplanowane</value>
+  </data>
+  <data name="SeriesOpened" xml:space="preserve">
+    <value>Utworzone</value>
+  </data>
+  <data name="SeriesOutstanding" xml:space="preserve">
+    <value>Czekające</value>
+  </data>
+  <data name="SeriesCaptured" xml:space="preserve">
+    <value>Zapisane</value>
+  </data>
+  <data name="CompletionsPerDay" xml:space="preserve">
+    <value>Wykonane zadania dziennie</value>
+  </data>
+  <data name="TasksOpenedPerDay" xml:space="preserve">
+    <value>Utworzone zadania dziennie</value>
+  </data>
+  <data name="OpenTasksOutstanding" xml:space="preserve">
+    <value>Zadania czekające na wykonanie</value>
+  </data>
+  <data name="WhereTheWorkWent" xml:space="preserve">
+    <value>Na co poszła praca</value>
+  </data>
+  <data name="Consistency" xml:space="preserve">
+    <value>Regularność</value>
+  </data>
+  <data name="CapturedEachWeek" xml:space="preserve">
+    <value>Dodane do Skrzynki w każdym tygodniu</value>
+  </data>
+  <data name="CapturedEachWeekExplain" xml:space="preserve">
+    <value>Każdy słupek to jeden tydzień; jego wysokość to liczba pozycji zapisanych w Skrzynce w tym tygodniu, niezależnie od tego, co się z nimi potem stało.</value>
+  </data>
+  <data name="WeekOf" xml:space="preserve">
+    <value>Tydzień od</value>
+  </data>
+  <data name="Captured" xml:space="preserve">
+    <value>Zapisane</value>
+  </data>
+  <data name="EverythingThatHappened" xml:space="preserve">
+    <value>Wszystko, co się wydarzyło</value>
+  </data>
+  <data name="LoadOlder" xml:space="preserve">
+    <value>Wczytaj starsze</value>
+  </data>
+  <data name="HeatmapCaption" xml:space="preserve">
+    <value>Każdy kwadrat to jeden dzień; ciemniejszy oznacza więcej zadań zrobionych tego dnia.</value>
+  </data>
+  <data name="HeatmapHint" xml:space="preserve">
+    <value>Dotknij kwadratu, żeby zobaczyć dzień i liczbę zadań.</value>
+  </data>
+  <data name="HeatmapReadout" xml:space="preserve">
+    <value>{0} — zrobiono: {1}</value>
+  </data>
+  <data name="HeatmapCell" xml:space="preserve">
+    <value>{0}: zrobiono {1}</value>
+  </data>
+  <data name="Less" xml:space="preserve">
+    <value>Mniej</value>
+  </data>
+  <data name="More" xml:space="preserve">
+    <value>Więcej</value>
+  </data>
+</root>

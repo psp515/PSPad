@@ -19,21 +19,23 @@
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
+@inject IStringLocalizer<ListsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
 
-<DetailPanel Open="@(IsNew || _area is not null)" Title="@(IsNew ? "New area" : "Area")" TitleTypo="Typo.body2" OnClose="@OnClose"
-             OnSave="@SaveCallback" SaveText="Add area" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
-             OnDelete="@DeleteCallback" DeleteText="Delete area" Disabled="@Disabled">
+<DetailPanel Open="@(IsNew || _area is not null)" Title="@(IsNew ? T["NewArea"] : T["AreaTitle"])" TitleTypo="Typo.body2" OnClose="@OnClose"
+             OnSave="@SaveCallback" SaveText="@T["AddArea"]" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
+             OnDelete="@DeleteCallback" DeleteText="@T["DeleteArea"]" Disabled="@Disabled">
     <div class="px-2 pt-3 pb-1">
-        <MudTextField T="string" Class="pspad-area-name-field flex-grow-1 px-2" Placeholder="Area name" Typo="Typo.h6" MaxLength="@ContentLimits.Name"
+        <MudTextField T="string" Class="pspad-area-name-field flex-grow-1 px-2" Placeholder="@T["AreaName"]" Typo="Typo.h6" MaxLength="@ContentLimits.Name"
                       Underline="false" Value="@(_area?.Name ?? _draftName)" ValueChanged="@NameChangedAsync"
                       Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
     </div>
     @if (_area is not null)
     {
-        <PanelSection Title="@($"Lists · {_lists.Count}")" Class="pspad-area-lists">
+        <PanelSection Title="@T["ListsCount", _lists.Count]" Class="pspad-area-lists">
             @if (_lists.Count == 0)
             {
-                <MudText Typo="Typo.body2" Class="pspad-muted">No lists yet.</MudText>
+                <MudText Typo="Typo.body2" Class="pspad-muted">@T["NoListsYet"]</MudText>
             }
             <MudDropContainer T="TaskList" @key="_listsRevision" Items="@_lists" ItemsSelector="@((_, _) => true)"
                               ItemDropped="@ListDroppedAsync" ItemDisabled="@(_ => Disabled || _moving)"
@@ -48,7 +50,7 @@
                         </span>
                         <MudText Typo="Typo.body2" Class="pspad-area-list-name flex-grow-1">@context.Name</MudText>
                         <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small"
-                                 Class="pspad-drag-handle pspad-muted" aria-label="@($"Drag {context.Name}")" />
+                                 Class="pspad-drag-handle pspad-muted" aria-label="@Shared["DragItem", context.Name].Value" />
                     </div>
                 </ItemRenderer>
             </MudDropContainer>
@@ -191,9 +193,9 @@
         var items = await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None);
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, DeleteWarning.ForArea(_area.Name, _area.Id, lists, tasks, items) }
+            { dialog => dialog.Message, DeleteWarning.ForArea(_area.Name, _area.Id, lists, tasks, items, T) }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete area", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["DeleteArea"], parameters);
         var result = await dialog.Result;
 
         if (result is null || result.Canceled)

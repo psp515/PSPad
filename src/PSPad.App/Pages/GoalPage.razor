@@ -15,6 +15,8 @@
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedStrings> Shared
+@inject IStringLocalizer<GoalsStrings> T
 @implements IDisposable
 
 @if (!_loaded)
@@ -25,12 +27,12 @@
 }
 else if (_goal is not null)
 {
-    <PageHeading Title="@_goal.Name" Subtitle="@GoalStatusText.Of(_goal.Status)" Icon="@Icons.Material.Outlined.Flag" BackHref="/goals"
-                 BackLabel="Back to goals" BackClass="pspad-back-to-goals" />
+    <PageHeading Title="@_goal.Name" Subtitle="@GoalStatusText.Of(_goal.Status, T)" Icon="@Icons.Material.Outlined.Flag" BackHref="/goals"
+                 BackLabel="@T["BackToGoals"]" BackClass="pspad-back-to-goals" />
     <MudPaper Outlined="true" Elevation="0" Class="pspad-goal-summary-card pa-3 mb-4 d-flex flex-column gap-2">
         <div class="d-flex align-center gap-2">
             <MudChip T="string" Class="pspad-goal-status ma-0" Size="Size.Small" Variant="Variant.Outlined"
-                     Color="@(_goal.Status == GoalStatus.Achieved ? Color.Success : Color.Default)">@GoalStatusText.Of(_goal.Status)</MudChip>
+                     Color="@(_goal.Status == GoalStatus.Achieved ? Color.Success : Color.Default)">@GoalStatusText.Of(_goal.Status, T)</MudChip>
             @if (_goal.DueOn is { } due)
             {
                 <MudText Typo="Typo.caption" Class="@($"pspad-goal-due ml-auto {(IsOverdue ? "" : "pspad-muted")}")"
@@ -41,12 +43,12 @@ else if (_goal is not null)
         {
             <div class="d-flex align-center gap-2">
                 <MudProgressLinear Value="@_done.Count" Max="@Total" Color="Color.Primary" Rounded="true" Class="flex-grow-1" />
-                <MudText Typo="Typo.caption" Class="pspad-goal-progress-text pspad-muted">@($"{_done.Count} of {Total} done")</MudText>
+                <MudText Typo="Typo.caption" Class="pspad-goal-progress-text pspad-muted">@T["ProgressDone", _done.Count, Total]</MudText>
             </div>
         }
         else
         {
-            <MudText Typo="Typo.caption" Class="pspad-goal-progress-text pspad-muted">No tasks linked</MudText>
+            <MudText Typo="Typo.caption" Class="pspad-goal-progress-text pspad-muted">@T["NoTasksLinked"]</MudText>
         }
     </MudPaper>
 
@@ -56,12 +58,12 @@ else if (_goal is not null)
             <MudGrid Spacing="4">
                 <MudItem xs="12" md="6">
                     <MudPaper Outlined="true" Class="pspad-goal-progress pa-3">
-                        <SectionHeading Title="Progress" />
+                        <SectionHeading Title="@T["Progress"]" />
                         <MudChart ChartType="ChartType.Line" ChartSeries="@ProgressSeries" ChartLabels="@ProgressLabels"
                                   ChartOptions="@ProgressOptions" Width="100%" Height="260px" />
                         @if (_hasRecurring)
                         {
-                            <MudText Typo="Typo.caption" Class="pspad-muted">Recurring tasks not counted</MudText>
+                            <MudText Typo="Typo.caption" Class="pspad-muted">@T["RecurringNotCounted"]</MudText>
                         }
                     </MudPaper>
                 </MudItem>
@@ -75,12 +77,12 @@ else if (_goal is not null)
         </section>
     }
 
-    <SectionHeading Title="Tasks" Count="@_open.Count" />
+    <SectionHeading Title="@T["TasksHeading"]" Count="@_open.Count" />
     @if (_open.Count == 0)
     {
         <MudGrid Spacing="4">
             <MudItem xs="12" sm="6" lg="4" xl="3">
-                <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="No open tasks." />
+                <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="@T["NoOpenTasks"]" />
             </MudItem>
         </MudGrid>
     }
@@ -97,7 +99,7 @@ else if (_goal is not null)
     @if (_done.Count > 0)
     {
         <MudExpansionPanels Elevation="0" Class="pspad-completed mt-2">
-            <MudExpansionPanel Text="@($"Completed · {_done.Count}")">
+            <MudExpansionPanel Text="@T["CompletedCount", _done.Count]">
                 <RowGroup Columns="true">
                     @foreach (var task in _done)
                     {
@@ -109,11 +111,11 @@ else if (_goal is not null)
     }
 
     <MudFabMenu Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" UserAttributes="@ActivatorAttributes">
-        <MudTooltip Text="Edit goal">
+        <MudTooltip Text="@T["EditGoal"]">
             <MudFabMenuItem OnClick="@EditGoal" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Primary"
                             Size="Size.Small" UserAttributes="@EditGoalAttributes" />
         </MudTooltip>
-        <MudTooltip Text="Delete goal">
+        <MudTooltip Text="@T["DeleteGoal"]">
             <MudFabMenuItem OnClick="@DeleteAsync" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Primary"
                             Size="Size.Small" UserAttributes="@DeleteGoalAttributes" />
         </MudTooltip>
@@ -122,7 +124,7 @@ else if (_goal is not null)
 else
 {
     <PageHeading Title="" />
-    <MudText Typo="Typo.body1">This goal is not there anymore.</MudText>
+    <MudText Typo="Typo.body1">@T["GoalGone"]</MudText>
 }
 
 @code {
@@ -139,9 +141,9 @@ else
     bool _hasRecurring;
     GoalPaceView? _pace;
 
-    static readonly Dictionary<string, object> ActivatorAttributes = new() { ["aria-label"] = "Actions" };
-    static readonly Dictionary<string, object> EditGoalAttributes = new() { ["aria-label"] = "Edit goal" };
-    static readonly Dictionary<string, object> DeleteGoalAttributes = new() { ["aria-label"] = "Delete goal" };
+    Dictionary<string, object> ActivatorAttributes => new() { ["aria-label"] = Shared["Actions"].Value };
+    Dictionary<string, object> EditGoalAttributes => new() { ["aria-label"] = T["EditGoal"].Value };
+    Dictionary<string, object> DeleteGoalAttributes => new() { ["aria-label"] = T["DeleteGoal"].Value };
 
     bool IsOverdue => _goal is { Status: GoalStatus.InProgress } goal && goal.DueOn < State.Today;
 
@@ -154,20 +156,20 @@ else
 
     string DueText(DateOnly due)
     {
-        var text = $"Due {DueDateRow.Describe(due, State.Today)}";
+        var text = DueDateRow.Describe(due, State.Today, Shared);
         var days = due.DayNumber - State.Today.DayNumber;
 
         return _goal?.Status == GoalStatus.InProgress && days > 0
-            ? $"{text} · {days} {(days == 1 ? "day" : "days")} left"
-            : text;
+            ? T.Plural(days, "DueWithDaysLeft", text)
+            : T["DueOn", text];
     }
 
     string? ListNameOf(TodoTask task) => _listNames.TryGetValue(task.ListId, out var name) ? name : null;
 
     List<ChartSeries<double>> ProgressSeries =>
     [
-        new ChartSeries<double> { Name = "On the goal", Data = _progress.Select(week => (double)week.Total).ToArray() },
-        new ChartSeries<double> { Name = "Done", Data = _progress.Select(week => (double)week.Done).ToArray() }
+        new ChartSeries<double> { Name = T["SeriesOnGoal"], Data = _progress.Select(week => (double)week.Total).ToArray() },
+        new ChartSeries<double> { Name = T["SeriesDone"], Data = _progress.Select(week => (double)week.Done).ToArray() }
     ];
 
     string[] ProgressLabels => ChartAxis.Labels(_progress, week => week.WeekStart, DaySpan);
@@ -224,9 +226,9 @@ else
 
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{_goal.Name}”? Its tasks stay, without a goal." }
+            { dialog => dialog.Message, T["DeleteGoalConfirm", _goal.Name].Value }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete goal", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["DeleteGoal"], parameters);
         var result = await dialog.Result;
 
         if (result is null || result.Canceled)

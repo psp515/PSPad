@@ -3,6 +3,7 @@
 @using PSPad.App.Api
 @using PSPad.App.Auth
 @using PSPad.App.Components
+@using PSPad.App.Localization
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.App.State.Viewport
@@ -22,6 +23,7 @@
 @inject AppState State
 @inject PSPadApiClient Api
 @inject ThemePreference Preference
+@inject LanguagePreference Languages
 @inject SidebarCounts Counts
 @inject CardCollapseState Collapse
 @inject CommandSender Sender
@@ -41,6 +43,8 @@
 @inject StatusBelts Belts
 @inject IAppUpdates Updates
 @inject ILogger<AppShell> Logger
+@inject IStringLocalizer<ShellStrings> T
+@inject IStringLocalizer<SharedStrings> S
 @implements IDisposable
 @implements IAsyncDisposable
 
@@ -163,6 +167,12 @@
             State.TimeZone = session.TimeZone;
             State.Today = TodayIn(session.TimeZone);
 
+            if (!Languages.HadCachedChoice && await Languages.AdoptFromServerAsync(session.Language))
+            {
+                Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+                return;
+            }
+
             nothingLocalYet = await TakeOwnershipAndReportEmptyAsync(session.UserId);
             await LoadLocalDataAsync();
         }
@@ -281,8 +291,15 @@
             {
                 DisplayName = me.DisplayName,
                 Email = me.Email,
-                TimeZone = me.TimeZone
+                TimeZone = me.TimeZone,
+                Language = me.Language
             });
+        }
+
+        if (await Languages.AdoptFromServerAsync(me.Language))
+        {
+            Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+            return;
         }
 
         StateHasChanged();
@@ -414,8 +431,8 @@
         {
             Belts.Show(
                 BeltKind.Offline,
-                "Can’t reach the server — working from local data. Changes sync when you’re back.",
-                "Retry",
+                T["ServerUnreachableBelt"],
+                S["Retry"],
                 Trigger.SyncNowAsync);
         }
 
@@ -425,7 +442,7 @@
     void OnUpdateAvailable() => InvokeAsync(OfferUpdate);
 
     void OfferUpdate() =>
-        Belts.Show(BeltKind.Update, "A new version of PSPad is ready.", "Reload", Updates.ApplyAsync);
+        Belts.Show(BeltKind.Update, T["UpdateReady"], T["Reload"], Updates.ApplyAsync);
 
     void OnCommandSent() => InvokeAsync(ReloadAreasAndCountsAsync);
 

@@ -1,6 +1,8 @@
+@inject IStringLocalizer<SharedStrings> Shared
+
 <MudPaper Outlined="true" Class="@($"pspad-empty-state pa-4 d-flex flex-column align-center gap-2 {(Clickable ? "pspad-empty-state-clickable" : "")}")"
           role="@(Clickable ? "button" : null)" tabindex="@(Clickable ? "0" : null)"
-          aria-label="@(Clickable ? CreateText : null)"
+          aria-label="@(Clickable ? CreateText ?? Shared["Create"].Value : null)"
           @onclick="@CreateAsync" @onkeydown="@KeyAsync">
     <div class="pspad-empty-icon d-flex align-center justify-center">
         <MudIcon Icon="@Icon" Color="Color.Primary" />
@@ -13,7 +15,7 @@
 
     [Parameter, EditorRequired] public string Message { get; set; } = "";
 
-    [Parameter] public string CreateText { get; set; } = "Create";
+    [Parameter] public string? CreateText { get; set; }
 
     [Parameter] public EventCallback OnCreate { get; set; }
 

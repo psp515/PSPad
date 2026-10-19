@@ -61,7 +61,7 @@
             }
 
             var session = new LocalSession(
-                account.UserId, account.DisplayName, account.Email, account.TimeZone,
+                account.UserId, account.DisplayName, account.Email, account.TimeZone, account.Language,
                 renewed.RefreshToken, Clock.UtcNow, renewed.IdToken);
 
             await Sessions.SaveAsync(session);

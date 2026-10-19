@@ -1,5 +1,7 @@
 @using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Tasks
+@inject IStringLocalizer<SharedStrings> Shared
+@inject IStringLocalizer<GoalsStrings> T
 
 <div class="pspad-row pspad-goal-list-row d-flex align-start gap-3 pl-3 pr-1" role="link" tabindex="0"
      aria-label="@Goal.Name" @onclick="@OnOpen" @onkeydown="@OpenOnKeyAsync">
@@ -31,7 +33,7 @@
                 @foreach (var status in Enum.GetValues<GoalStatus>().Where(status => status != Goal.Status))
                 {
                     <MudMenuItem Class="pspad-goal-status-option" OnClick="@(() => OnStatus.InvokeAsync(status))">
-                        @($"Mark {GoalStatusText.Of(status).ToLowerInvariant()}")
+                        @MarkText(status)
                     </MudMenuItem>
                 }
             </Extra>
@@ -78,13 +80,18 @@
 
     int Done => Counted.Count(task => task.CompletedAt is not null || task.EndedBy(Today));
 
-    string TasksText => Total == 0
-        ? "No tasks linked"
-        : $"{Done} of {Total} {(Total == 1 ? "task" : "tasks")} done";
+    string TasksText => Total == 0 ? T["NoTasksLinked"] : T.Plural(Total, "TasksDone", Done);
 
     string DueText(DateOnly due) => Overdue
-        ? $"Overdue · {due:d MMM}"
-        : $"Due {DueDateRow.Describe(due, Today)}";
+        ? T["OverdueOn", due.ToString("d MMM")]
+        : T["DueOn", DueDateRow.Describe(due, Today, Shared)];
+
+    string MarkText(GoalStatus status) => status switch
+    {
+        GoalStatus.Achieved => T["MarkAchieved"],
+        GoalStatus.NotAchieved => T["MarkNotAchieved"],
+        _ => T["MarkInProgress"]
+    };
 
     async Task OpenOnKeyAsync(KeyboardEventArgs args)
     {

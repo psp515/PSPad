@@ -14,6 +14,7 @@
 @inject LocalAuthenticationStateProvider Authentication
 @inject IClock Clock
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharingStrings> T
 
 <MudContainer MaxWidth="MaxWidth.Small" Class="pspad-snapshot-page pa-0">
     <div class="pspad-snapshot-topbar d-flex align-center justify-space-between pa-2">
@@ -23,52 +24,52 @@
         </div>
         @if (_signedIn)
         {
-            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/">Open PSPad</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/">@T["OpenPSPad"]</MudButton>
         }
         else
         {
-            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="authentication/login">Log in</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="authentication/login">@T["LogIn"]</MudButton>
         }
     </div>
 
     @if (_state == SnapshotPageState.NotFound)
     {
-        <EmptyState Icon="@Icons.Material.Outlined.LinkOff" Message="This snapshot has expired or never existed." />
+        <EmptyState Icon="@Icons.Material.Outlined.LinkOff" Message="@T["SnapshotExpired"]" />
         <div class="pspad-snapshot-welcome-link pa-2">
-            <MudLink Href="/welcome">What is PSPad?</MudLink>
+            <MudLink Href="/welcome">@T["WhatIsPSPad"]</MudLink>
         </div>
     }
     else if (_state == SnapshotPageState.NoConnection)
     {
-        <EmptyState Icon="@Icons.Material.Outlined.WifiOff" Message="Connect to the internet to open this snapshot." />
+        <EmptyState Icon="@Icons.Material.Outlined.WifiOff" Message="@T["SnapshotNeedsConnection"]" />
     }
     else if (_snapshot is not null)
     {
         @if (_offline)
         {
             <MudAlert Severity="Severity.Warning" Class="pspad-snapshot-offline-banner ma-2">
-                Offline — showing the copy from @_snapshot.CreatedAt.ToString("d MMM yyyy"). Ticks are paused.
+                @T["SnapshotOfflineBanner", _snapshot.CreatedAt.ToString("d MMM yyyy")]
             </MudAlert>
         }
 
         <MudPaper Elevation="2" Class="mud-theme-primary pa-6 ma-2 pspad-snapshot-hero">
             <div class="d-flex align-center gap-2 mb-1">
                 <MudIcon Icon="@Icons.Material.Outlined.Public" Size="Size.Small" />
-                <MudText Typo="Typo.caption">Public snapshot@(HasOwner ? $" · shared by {_snapshot.OwnerName}" : "")</MudText>
+                <MudText Typo="Typo.caption">@(HasOwner ? T["PublicSnapshotSharedBy", _snapshot.OwnerName] : T["PublicSnapshot"])</MudText>
             </div>
             <MudText Typo="Typo.h4" Class="pspad-snapshot-name">@_snapshot.Name</MudText>
             <div class="d-flex flex-wrap gap-2 my-3">
-                <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Class="pspad-snapshot-hero-chip ma-0">Copy from @_snapshot.CreatedAt.ToString("d MMM")</MudChip>
-                <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Class="pspad-snapshot-hero-chip ma-0">Link works until @_snapshot.ExpiresAt.ToString("d MMM")</MudChip>
+                <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Class="pspad-snapshot-hero-chip ma-0">@T["CopyFromDate", _snapshot.CreatedAt.ToString("d MMM")]</MudChip>
+                <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Class="pspad-snapshot-hero-chip ma-0">@T["LinkWorksUntil", _snapshot.ExpiresAt.ToString("d MMM")]</MudChip>
             </div>
-            <MudText Typo="Typo.caption">@Ticked of @Entries ticked by visitors</MudText>
+            <MudText Typo="Typo.caption">@T["TickedByVisitors", Ticked, Entries]</MudText>
             <MudProgressLinear Color="Color.Inherit" Rounded="true" Size="Size.Medium" Class="pspad-snapshot-progress mt-2" Value="@(Entries == 0 ? 0 : 100.0 * Ticked / Entries)" />
         </MudPaper>
 
         @if (!_offline)
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Text" Class="mx-2">
-                Tick anything you have taken care of. Everyone with this link sees your tick, and @OwnerLabel sees it on the list.
+                @(HasOwner ? T["TickPrompt", _snapshot.OwnerName] : T["TickPromptOwner"])
             </MudAlert>
         }
 
@@ -77,7 +78,7 @@
             {
                 @if (OpenTasks.Length > 0)
                 {
-                    <MudText Typo="Typo.overline" Class="pspad-muted d-block mt-2">To do · @OpenTasks.Length</MudText>
+                    <MudText Typo="Typo.overline" Class="pspad-muted d-block mt-2">@T["ToDoCount", OpenTasks.Length]</MudText>
                 }
                 @foreach (var task in OpenTasks)
                 {
@@ -96,7 +97,7 @@
                             }
                             @if (task.Marked)
                             {
-                                <MudChip T="string" Color="Color.Success" Variant="Variant.Text" Size="Size.Small">ticked</MudChip>
+                                <MudChip T="string" Color="Color.Success" Variant="Variant.Text" Size="Size.Small">@T["TickedChip"]</MudChip>
                             }
                         </div>
 
@@ -113,7 +114,7 @@
                                 @if (step.Done)
                                 {
                                     <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
-                                             Class="pspad-snapshot-step-done" aria-label="Done by the owner" />
+                                             Class="pspad-snapshot-step-done" aria-label="@T["DoneByOwner"].Value" />
                                     <MudText Typo="Typo.body2" Class="pspad-muted" Style="text-decoration:line-through">@step.Name</MudText>
                                 }
                                 else
@@ -124,7 +125,7 @@
                                 }
                                 @if (step.Marked)
                                 {
-                                    <MudChip T="string" Color="Color.Success" Variant="Variant.Text" Size="Size.Small">ticked</MudChip>
+                                    <MudChip T="string" Color="Color.Success" Variant="Variant.Text" Size="Size.Small">@T["TickedChip"]</MudChip>
                                 }
                             </div>
                         }
@@ -134,7 +135,7 @@
                 @if (DoneTasks.Length > 0)
                 {
                 <div class="pspad-snapshot-done mt-4">
-                    <MudText Typo="Typo.overline" Class="pspad-muted d-block">Already done by @OwnerLabel · @DoneTasks.Length</MudText>
+                    <MudText Typo="Typo.overline" Class="pspad-muted d-block">@(HasOwner ? T["AlreadyDoneByName", _snapshot.OwnerName, DoneTasks.Length] : T["AlreadyDoneByOwner", DoneTasks.Length])</MudText>
                     @foreach (var task in DoneTasks)
                     {
                         <MudPaper Outlined="true" Class="pa-2 mb-2 d-flex align-center gap-2">
@@ -160,7 +161,7 @@
                             }
                             @if (item.Marked)
                             {
-                                <MudChip T="string" Color="Color.Success" Variant="Variant.Text" Size="Size.Small">ticked</MudChip>
+                                <MudChip T="string" Color="Color.Success" Variant="Variant.Text" Size="Size.Small">@T["TickedChip"]</MudChip>
                             }
                         </div>
 
@@ -184,8 +185,8 @@
         </div>
 
         <div class="text-center pa-4">
-            <MudText Typo="Typo.caption">A read-only copy made with PSPad.</MudText>
-            <MudLink Href="/welcome" Typo="Typo.caption">What is PSPad?</MudLink>
+            <MudText Typo="Typo.caption">@T["ReadOnlyCopy"]</MudText>
+            <MudLink Href="/welcome" Typo="Typo.caption">@T["WhatIsPSPad"]</MudLink>
         </div>
     }
 </MudContainer>
@@ -207,8 +208,6 @@
     bool _signedIn;
 
     bool HasOwner => !string.IsNullOrWhiteSpace(_snapshot?.OwnerName);
-
-    string OwnerLabel => HasOwner ? _snapshot!.OwnerName : "the owner";
 
     SnapshotTaskView[] OpenTasks => _snapshot!.Tasks.Where(task => !task.Done).ToArray();
 
@@ -285,8 +284,8 @@
             _snapshot = previous;
             Snackbar.Add(
                 status == HttpStatusCode.TooManyRequests
-                    ? "Too many ticks on this list. Try again later."
-                    : "Couldn't save that tick. Try again.",
+                    ? T["TooManyTicks"]
+                    : T["TickNotSaved"],
                 Severity.Warning);
         }
     }

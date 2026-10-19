@@ -1,5 +1,6 @@
 @using PSPad.App.State
 @inject StatusBelts Belts
+@inject IStringLocalizer<ShellStrings> T
 @implements IDisposable
 
 @if (Belts.Visible.Count > 0)
@@ -17,7 +18,7 @@
                                OnClick="@action">@actionText</MudButton>
                 }
                 <MudIconButton Class="pspad-belt-dismiss" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                               aria-label="Dismiss" OnClick="@(() => Belts.Dismiss(belt.Kind))" />
+                               aria-label="@T["Dismiss"].Value" OnClick="@(() => Belts.Dismiss(belt.Kind))" />
             </MudAlert>
         }
     </div>

@@ -19,15 +19,16 @@
 @inject IClock Clock
 @inject ISnapshotsApi SnapshotsApi
 @inject IConnectivity Connectivity
+@inject IStringLocalizer<ListsStrings> T
 
 <DetailPanel Open="@(IsNew || _list is not null)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose" OnBack="@BackCallback"
-             OnSave="@SaveCallback" SaveText="Add list" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
-             OnDelete="@DeleteCallback" DeleteText="Delete list" Disabled="@Disabled">
+             OnSave="@SaveCallback" SaveText="@T["AddList"]" CanSave="@(!string.IsNullOrWhiteSpace(_draftName))"
+             OnDelete="@DeleteCallback" DeleteText="@T["DeleteList"]" Disabled="@Disabled">
     @if (EffectiveView == ListPanelView.Details)
     {
         <div class="px-2 pt-3 pb-1">
             <MudTextField T="string" Class="pspad-list-name-field flex-grow-1 px-2" Value="@(_list?.Name ?? _draftName)"
-                          ValueChanged="@NameChangedAsync" Placeholder="List name" Typo="Typo.h6" Underline="false"
+                          ValueChanged="@NameChangedAsync" Placeholder="@T["ListName"]" Typo="Typo.h6" Underline="false"
                           MaxLength="@ContentLimits.Name"
                           Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@(Disabled || !IsMine)"
                           OnKeyDown="@AddOnEnterAsync" />
@@ -41,8 +42,8 @@
         {
             <MudToggleGroup T="ListKind" @bind-Value="_kind" Class="pspad-list-kind" Color="Color.Primary"
                             Outlined="true" Disabled="@Disabled">
-                <MudToggleItem Value="ListKind.Tasks" Text="Tasks" />
-                <MudToggleItem Value="ListKind.Reference" Text="Reference" />
+                <MudToggleItem Value="ListKind.Tasks" Text="@T["KindTasks"]" />
+                <MudToggleItem Value="ListKind.Reference" Text="@T["KindReference"]" />
             </MudToggleGroup>
         }
         else
@@ -58,12 +59,12 @@
                 default:
                     <div class="pspad-list-kind-readonly d-flex align-center gap-2">
                         <MudIcon Icon="@ListIcon.For(_list)" Size="Size.Small" Class="pspad-muted" />
-                        <MudText Typo="Typo.body2">@ListIcon.LabelFor(_list)</MudText>
+                        <MudText Typo="Typo.body2">@ListIcon.LabelFor(_list, T)</MudText>
                     </div>
 
                     @if (IsMine)
                     {
-                        <MudSelect T="Guid" Class="pspad-list-area" Label="Area" Variant="Variant.Outlined"
+                        <MudSelect T="Guid" Class="pspad-list-area" Label="@T["AreaTitle"]" Variant="Variant.Outlined"
                                    Value="@_list.AreaId" ValueChanged="@AreaChangedAsync" Disabled="@Disabled"
                                    ToStringFunc="@AreaName" AnchorOrigin="Origin.BottomCenter">
                             @foreach (var area in _areas)
@@ -77,14 +78,14 @@
                         <MudList T="string" Dense="false">
                             <MudListItem T="string" Class="pspad-list-members-link"
                                          Icon="@Icons.Material.Outlined.Group" IconColor="Color.Primary"
-                                         Text="Members" SecondaryText="@MembersSummary"
+                                         Text="@T["Members"]" SecondaryText="@MembersSummary"
                                          OnClick="@(() => Go(ListPanelView.Members))" />
                             @if (IsMine)
                             {
                                 <MudDivider />
                                 <MudListItem T="string" Class="pspad-list-snapshots-link"
                                              Icon="@Icons.Material.Outlined.Public" IconColor="Color.Primary"
-                                             Text="Public snapshots" SecondaryText="@_snapshotsSummary"
+                                             Text="@T["PublicSnapshots"]" SecondaryText="@_snapshotsSummary"
                                              OnClick="@(() => Go(ListPanelView.Snapshots))" />
                             }
                         </MudList>
@@ -118,9 +119,10 @@
 
     string Title => EffectiveView switch
     {
-        ListPanelView.Members => "Members",
-        ListPanelView.Snapshots => "Public snapshots",
-        _ => (_list is null ? "New list" : "List") + (_areaName.Length == 0 ? "" : $" · {_areaName}")
+        ListPanelView.Members => T["Members"],
+        ListPanelView.Snapshots => T["PublicSnapshots"],
+        _ when _areaName.Length == 0 => _list is null ? T["NewList"] : T["ListTitle"],
+        _ => _list is null ? T["NewListIn", _areaName] : T["ListIn", _areaName]
     };
 
     string _snapshotsSummary = "";
@@ -134,12 +136,10 @@
 
     string MembersSummary => _list is null ? "" : (_list.Members.Count, IsMine, _list.IsInviteLiveAt(Clock.UtcNow)) switch
     {
-        (0, true, false) => "Only you",
-        (var count, true, true) => $"{Joined(count)} · link {MinutesLeft} min left",
-        (var count, _, _) => Joined(count)
+        (0, true, false) => T["OnlyYou"],
+        (var count, true, true) => T.Plural(count, "JoinedWithLink", MinutesLeft),
+        (var count, _, _) => T.Plural(count, "Joined")
     };
-
-    static string Joined(int count) => count switch { 0 => "Nobody joined yet", 1 => "1 joined", _ => $"{count} joined" };
 
     int MinutesLeft => (int)Math.Ceiling((_list!.InviteExpiresAt!.Value - Clock.UtcNow).TotalMinutes);
 
@@ -201,17 +201,17 @@
     {
         if (!Connectivity.IsOnline)
         {
-            return "Needs a connection";
+            return T["NeedsConnection"];
         }
 
         try
         {
             var live = (await SnapshotsApi.ForListAsync(listId)).Count;
-            return live switch { 0 => "None live", 1 => "1 live link", _ => $"{live} live links" };
+            return T.Plural(live, "LiveLinks");
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
-            return "Needs a connection";
+            return T["NeedsConnection"];
         }
     }
 
@@ -290,13 +290,13 @@
 
         var list = _list;
         var message = list.Kind == ListKind.Reference
-            ? DeleteWarning.ForList(list.Name, list.Id, await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None))
-            : DeleteWarning.ForList(list.Name, list.Id, await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None));
+            ? DeleteWarning.ForList(list.Name, list.Id, await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None), T)
+            : DeleteWarning.ForList(list.Name, list.Id, await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None), T);
         var parameters = new DialogParameters<ConfirmDialog>
         {
             { dialog => dialog.Message, message }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete list", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["DeleteList"], parameters);
         var result = await dialog.Result;
 
         if (result is null || result.Canceled)

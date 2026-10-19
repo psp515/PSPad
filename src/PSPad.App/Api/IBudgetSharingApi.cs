@@ -6,11 +6,11 @@ public interface IBudgetSharingApi
 {
     Task<JoinOutcome> JoinBudgetAsync(string token, string code);
 
-    Task<string?> ShareBudgetAsync(Guid budgetId, string token, string code);
+    Task<SharingRejection?> ShareBudgetAsync(Guid budgetId, string token, string code);
 
-    Task<string?> StopSharingBudgetAsync(Guid budgetId);
+    Task<SharingRejection?> StopSharingBudgetAsync(Guid budgetId);
 
-    Task<string?> RemoveBudgetMemberAsync(Guid budgetId, Guid memberId);
+    Task<SharingRejection?> RemoveBudgetMemberAsync(Guid budgetId, Guid memberId);
 
-    Task<string?> LeaveBudgetAsync(Guid budgetId);
+    Task<SharingRejection?> LeaveBudgetAsync(Guid budgetId);
 }

@@ -1,3 +1,5 @@
+@inject IStringLocalizer<SharingStrings> T
+
 @if (Compact)
 {
     <MudChip T="string" Class="pspad-snapshot-mark pspad-snapshot-mark-compact" Size="Size.Small" Variant="Variant.Text"
@@ -12,9 +14,9 @@ else
 }
 
 @code {
-    const string Label = "Marked on a snapshot";
+    string Label => T["MarkedOnSnapshot"];
 
-    static readonly Dictionary<string, object> CompactAttributes = new()
+    Dictionary<string, object> CompactAttributes => new()
     {
         ["aria-label"] = Label,
         ["title"] = Label,

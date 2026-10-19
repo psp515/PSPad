@@ -1,5 +1,8 @@
 @using System.Globalization
+@using PSPad.App.State
 @using PSPad.Module.Money.Import
+@inject IStringLocalizer<BudgetsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
 
 <MudTable T="EntryPreview" Items="@Shown" Dense="true" Hover="true" Virtualize="true" Height="60vh" FixedHeader="true"
           RowClassFunc="@RowClass">
@@ -7,32 +10,32 @@
         <MudChipSet T="ImportFilter" SelectedValue="@_filter" SelectedValueChanged="@(value => _filter = value)"
                     SelectionMode="SelectionMode.SingleSelection" CheckMark="false" Color="Color.Primary" Variant="Variant.Outlined"
                     SelectedColor="Color.Primary" Size="Size.Small" Class="pspad-import-filter">
-            <MudChip Value="@ImportFilter.All" aria-pressed="@Pressed(ImportFilter.All)" Text="All" />
-            <MudChip Value="@ImportFilter.ToImport" aria-pressed="@Pressed(ImportFilter.ToImport)" Text="To import" />
-            <MudChip Value="@ImportFilter.Errors" aria-pressed="@Pressed(ImportFilter.Errors)" Text="Errors" />
-            <MudChip Value="@ImportFilter.AlreadyInBudget" aria-pressed="@Pressed(ImportFilter.AlreadyInBudget)" Text="Already in budget" />
+            <MudChip Value="@ImportFilter.All" aria-pressed="@Pressed(ImportFilter.All)" Text="@T["All"]" />
+            <MudChip Value="@ImportFilter.ToImport" aria-pressed="@Pressed(ImportFilter.ToImport)" Text="@T["ImportToImport"]" />
+            <MudChip Value="@ImportFilter.Errors" aria-pressed="@Pressed(ImportFilter.Errors)" Text="@T["ImportErrors"]" />
+            <MudChip Value="@ImportFilter.AlreadyInBudget" aria-pressed="@Pressed(ImportFilter.AlreadyInBudget)" Text="@T["ImportAlreadyInBudget"]" />
         </MudChipSet>
     </ToolBarContent>
     <HeaderContent>
-        <MudTh></MudTh><MudTh>Line</MudTh><MudTh>Kind</MudTh><MudTh>Date</MudTh><MudTh>Name</MudTh>
-        <MudTh>Category</MudTh><MudTh>Amount</MudTh><MudTh>Rate</MudTh><MudTh>Status</MudTh>
+        <MudTh></MudTh><MudTh>@T["Line"]</MudTh><MudTh>@T["Kind"]</MudTh><MudTh>@T["Date"]</MudTh><MudTh>@Shared["Name"]</MudTh>
+        <MudTh>@T["Category"]</MudTh><MudTh>@T["Amount"]</MudTh><MudTh>@T["Rate"]</MudTh><MudTh>@T["Status"]</MudTh>
     </HeaderContent>
     <RowTemplate>
         <MudTd>
             @if (context.Status is ImportStatus.ToImport or ImportStatus.AlreadyInBudget)
             {
                 <MudCheckBox T="bool" Value="@MoneyImportPlan.Includes(context, Toggled)" Dense="true"
-                             ValueChanged="@(_ => OnToggle.InvokeAsync(context.Line))" aria-label="@($"Import line {context.Line}")" />
+                             ValueChanged="@(_ => OnToggle.InvokeAsync(context.Line))" aria-label="@T["ImportLine", context.Line].Value" />
             }
         </MudTd>
         <MudTd>@context.Line</MudTd>
-        <MudTd>@context.Row?.Kind</MudTd>
+        <MudTd>@(context.Row is { } kindRow ? T.Of(kindRow.Kind) : "")</MudTd>
         <MudTd>@context.Row?.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</MudTd>
         <MudTd>@context.Row?.Name</MudTd>
         <MudTd>@context.Row?.Category</MudTd>
-        <MudTd>@(context.Row is { } row ? $"{row.Amount.ToString("0.00", CultureInfo.InvariantCulture)} {context.Money?.Currency ?? row.Currency}" : "")</MudTd>
+        <MudTd>@(context.Row is { } row ? ImportText.Amount(row.Amount, context.Money?.Currency ?? row.Currency ?? "") : "")</MudTd>
         <MudTd>@RateText(context)</MudTd>
-        <MudTd Class="@StatusClass(context.Status)">@(context.Error ?? StatusText(context.Status))</MudTd>
+        <MudTd Class="@ImportText.StatusClass(context.Status)">@(context.Error ?? ImportText.StatusText(context.Status, T))</MudTd>
     </RowTemplate>
 </MudTable>
 
@@ -60,23 +63,5 @@
     static string RowClass(EntryPreview row, int _) =>
         row.Status == ImportStatus.Error ? "pspad-import-row pspad-import-row-error" : "pspad-import-row";
 
-    static string RateText(EntryPreview row) => RateSource(row.Row?.Rate, row.Money);
-
-    public static string RateSource(decimal? fileRate, PSPad.Module.Money.Money? money) =>
-        money is not { Currency: not "PLN" } known
-            ? ""
-            : fileRate is null
-                ? $"{known.RateToPln.ToString(CultureInfo.InvariantCulture)} (NBP {known.RateDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)})"
-                : $"{known.RateToPln.ToString(CultureInfo.InvariantCulture)} (file)";
-
-    public static string StatusClass(ImportStatus status) => status == ImportStatus.Error ? "mud-error-text" : "";
-
-    public static string StatusText(ImportStatus status) => status switch
-    {
-        ImportStatus.ToImport => "To import",
-        ImportStatus.AlreadyInBudget => "Already in budget",
-        ImportStatus.Unchanged => "Unchanged",
-        ImportStatus.WaitingForRate => "Fetching rate…",
-        _ => "Error"
-    };
+    string RateText(EntryPreview row) => ImportText.RateSource(row.Row?.Rate, row.Money, T);
 }

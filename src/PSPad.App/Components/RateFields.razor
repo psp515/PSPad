@@ -8,13 +8,14 @@
 @inject IConnectivity Connectivity
 @inject AppState State
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<BudgetsStrings> T
 @implements IDisposable
 
 <div class="d-flex gap-3">
-    <MudNumericField T="decimal?" Class="@($"{CssPrefix}-amount-field flex-grow-1")" Label="Amount" Variant="Variant.Outlined"
+    <MudNumericField T="decimal?" Class="@($"{CssPrefix}-amount-field flex-grow-1")" Label="@T["Amount"]" Variant="Variant.Outlined"
                      Margin="Margin.Dense" Value="@Amount" ValueChanged="@AmountChanged" Immediate="true" HideSpinButtons="true"
                      Max="@Money.MaxAmount" Disabled="@ReadOnly" />
-    <MudSelect T="string" Class="@($"{CssPrefix}-currency-field")" Label="Currency" Variant="Variant.Outlined"
+    <MudSelect T="string" Class="@($"{CssPrefix}-currency-field")" Label="@T["Currency"]" Variant="Variant.Outlined"
                Margin="Margin.Dense" Value="@Currency" ValueChanged="@CurrencyChanged" Disabled="@ReadOnly">
         @foreach (var currency in Currencies.All)
         {
@@ -25,14 +26,14 @@
 @if (!IsPln)
 {
     <div class="@($"d-flex align-center gap-2 {CssPrefix}-rate")">
-        <MudNumericField T="decimal?" Class="@($"{CssPrefix}-rate-field flex-grow-1")" Label="Rate to PLN"
+        <MudNumericField T="decimal?" Class="@($"{CssPrefix}-rate-field flex-grow-1")" Label="@T["RateToPln"]"
                          Variant="Variant.Outlined" Margin="Margin.Dense" Value="@Rate" ValueChanged="@RateTyped"
                          Immediate="true" HideSpinButtons="true" Max="@Money.MaxRate" Disabled="@ReadOnly" />
         <MudButton Class="@($"{CssPrefix}-nbp")" Variant="Variant.Outlined" Color="Color.Primary"
                    Disabled="@(ReadOnly || _fetching || !Connectivity.IsOnline)" OnClick="@FetchNbpRateAsync">NBP</MudButton>
     </div>
 }
-<MudTextField T="string" Class="@($"{CssPrefix}-pln")" Label="In PLN" Variant="Variant.Outlined" Margin="Margin.Dense"
+<MudTextField T="string" Class="@($"{CssPrefix}-pln")" Label="@T["InPln"]" Variant="Variant.Outlined" Margin="Margin.Dense"
               Value="@InPlnText" ReadOnly="true" />
 
 @code {
@@ -94,7 +95,7 @@
 
         if (rate is null)
         {
-            Snackbar.Add("Couldn't get the NBP rate. Type the rate instead.", Severity.Warning);
+            Snackbar.Add(T["NbpRateFailed"], Severity.Warning);
             return;
         }
 

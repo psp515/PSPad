@@ -3,11 +3,13 @@
 @using PSPad.Module.Tasks.References
 @using PSPad.Module.Tasks.Tasks
 @inject IClock Clock
+@inject IStringLocalizer<ListsStrings> T
+@inject IStringLocalizer<ReferenceStrings> Ref
 
 <ThingCard Id="@List.Id" Name="@List.Name" Href="@($"/lists/{List.Id}")" Icon="@ListIcon.For(List)"
-           IconTitle="@ListIcon.LabelFor(List)" Tasks="@Tasks" Today="@Today"
+           IconTitle="@ListIcon.LabelFor(List, T)" Tasks="@Tasks" Today="@Today"
            Rows="@(IsReference ? ItemRows : null)" RowCount="@(IsReference ? Items.Count : (int?)null)"
-           EmptyText="@(IsReference ? "No items yet." : null)"
+           EmptyText="@(IsReference ? Ref["NoItemsYet"].Value : null)"
            OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" OnAdd="@(IsReference ? default : OnAddTaskClick)">
     <Actions>
         @if (IsShared)
@@ -19,7 +21,7 @@
         @if (IsReference)
         {
             <MudIconButton Class="pspad-add-item" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
-                           aria-label="Add item" OnClick="@OnAddItemClick" />
+                           aria-label="@Ref["AddItem"].Value" OnClick="@OnAddItemClick" />
         }
         else
         {
@@ -63,11 +65,7 @@
 
     bool IsShared => List.IsShared || List.IsInviteLiveAt(Clock.UtcNow);
 
-    string SharedTooltip => (List.Members.Count + 1) switch
-    {
-        1 => "Shared · 1 person",
-        var count => $"Shared · {count} people"
-    };
+    string SharedTooltip => T.Plural(List.Members.Count + 1, "SharedWithPeople");
 
     RenderFragment ItemRows => @<text>
         @foreach (var item in Items.Take(ThingCard.Preview))

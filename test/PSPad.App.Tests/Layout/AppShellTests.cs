@@ -13,6 +13,7 @@ using PSPad.App.Api;
 using PSPad.App.Auth;
 using PSPad.App.Components;
 using PSPad.App.Layout;
+using PSPad.App.Localization;
 using PSPad.App.State;
 using PSPad.App.State.Replica;
 using PSPad.App.State.Viewport;
@@ -45,6 +46,22 @@ public class AppShellTests : Bunit.TestContext
         Assert.Contains("pt-md-6", content);
         Assert.DoesNotContain("mt-md-2", content);
         Assert.DoesNotContain("my-4", content);
+    }
+
+    [Fact]
+    public async Task AStaleSessionLanguageDoesNotOverrideTheCachedChoiceAtBoot()
+    {
+        Arrange(meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "UTC", "pl"));
+        JSInterop.Setup<string?>("localStorage.getItem", "pspad.language").SetResult("pl");
+        var preference = Services.GetRequiredService<LanguagePreference>();
+        await preference.InitialiseAsync();
+
+        var shell = Render<AppShell>();
+
+        shell.WaitForAssertion(() => Assert.NotEmpty(shell.FindComponents<NavSidebar>()));
+        var navigation = Assert.IsType<Bunit.TestDoubles.BunitNavigationManager>(Services.GetRequiredService<NavigationManager>());
+        Assert.DoesNotContain(navigation.History, entry => entry.Options.ForceLoad);
+        Assert.Equal("pl", preference.Language);
     }
 
     [Fact]
@@ -329,7 +346,7 @@ public class AppShellTests : Bunit.TestContext
     [Fact]
     public void ANullDisplayNameOrEmailFromApiMeDoesNotCrashTheShell()
     {
-        Arrange(meResponseOverride: new MeResponse(User, null!, null!, "UTC"));
+        Arrange(meResponseOverride: new MeResponse(User, null!, null!, "UTC", "en"));
         var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
 
         var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
@@ -345,7 +362,7 @@ public class AppShellTests : Bunit.TestContext
     [Fact]
     public void ANullTimeZoneFromApiMeDoesNotCrashTheShell()
     {
-        Arrange(meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", null!));
+        Arrange(meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", null!, "en"));
         var authStateTask = AuthenticatedAs("Ada Lovelace", "ada@example.com");
 
         var shell = Render<AppShell>(parameters => parameters.AddCascadingValue(authStateTask));
@@ -438,7 +455,7 @@ public class AppShellTests : Bunit.TestContext
         var signedIn = new DateTimeOffset(2026, 9, 15, 8, 0, 0, TimeSpan.Zero);
         var refreshed = new DateTimeOffset(2026, 9, 22, 8, 0, 0, TimeSpan.Zero);
         var store = new InMemoryLocalSessionStore(
-            new LocalSession(User, "Zoe Session", "zoe@example.com", "UTC", "r0", signedIn));
+            new LocalSession(User, "Zoe Session", "zoe@example.com", "UTC", "en", "r0", signedIn));
         Arrange(
             sessionStore: store,
             onMeRequest: () => store.SaveAsync(
@@ -454,10 +471,10 @@ public class AppShellTests : Bunit.TestContext
     public void ItTakesTodayFromTheRegisteredClockAndTheSessionTimeZone()
     {
         var store = new InMemoryLocalSessionStore(new LocalSession(
-            User, "Zoe Session", "zoe@example.com", "Etc/GMT+12", "refresh-token", DateTimeOffset.UtcNow));
+            User, "Zoe Session", "zoe@example.com", "Etc/GMT+12", "en", "refresh-token", DateTimeOffset.UtcNow));
         Arrange(
             sessionStore: store,
-            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Etc/GMT+12"));
+            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Etc/GMT+12", "en"));
 
         Render<AppShell>();
 
@@ -503,10 +520,10 @@ public class AppShellTests : Bunit.TestContext
     public void ItStaysReadyOnATimeZoneTheRuntimeDoesNotCarry()
     {
         var store = new InMemoryLocalSessionStore(new LocalSession(
-            User, "Zoe Session", "zoe@example.com", "Mars/Olympus", "refresh-token", DateTimeOffset.UtcNow));
+            User, "Zoe Session", "zoe@example.com", "Mars/Olympus", "en", "refresh-token", DateTimeOffset.UtcNow));
         Arrange(
             sessionStore: store,
-            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Mars/Olympus"));
+            meResponseOverride: new MeResponse(User, "Ada Lovelace", "ada@example.com", "Mars/Olympus", "en"));
 
         var shell = Render<AppShell>();
 
@@ -631,7 +648,7 @@ public class AppShellTests : Bunit.TestContext
         await DisposeComponentsAsync();
 
         var session = new LocalSession(
-            User, "Zoe Session", "zoe@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow);
+            User, "Zoe Session", "zoe@example.com", "UTC", "en", "refresh-token", DateTimeOffset.UtcNow);
         await store.SaveAsync(session);
         Services.GetRequiredService<LocalAuthenticationStateProvider>().SignedIn(session);
         var shell = Render<AppShell>();
@@ -700,11 +717,11 @@ public class AppShellTests : Bunit.TestContext
         Services.AddSingleton<ILocalSessionStore>(sessionStore ?? new InMemoryLocalSessionStore(
             hasSession
                 ? new LocalSession(
-                    User, "Zoe Session", "zoe@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow)
+                    User, "Zoe Session", "zoe@example.com", "UTC", "en", "refresh-token", DateTimeOffset.UtcNow)
                 : null));
         Services.AddSingleton<LocalAuthenticationStateProvider>();
 
-        var meResponse = meResponseOverride ?? new MeResponse(User, displayName, email, "UTC");
+        var meResponse = meResponseOverride ?? new MeResponse(User, displayName, email, "UTC", "en");
         HttpMessageHandler handler = accountFetchFails
             ? new ThrowingMeHandler()
             : accountFetchHangs
@@ -715,6 +732,7 @@ public class AppShellTests : Bunit.TestContext
         Services.AddSingleton<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
         Services.AddSingleton<IConnectivity>(new SpyConnectivity());
         Services.AddScoped<SyncService>();
+        Services.AddSingleton<ILanguageApi>(sp => sp.GetRequiredService<PSPadApiClient>());
         Services.AddScoped<SyncCoordinator>();
 
         var authStateTask = AuthenticatedAs(displayName, emailClaim);

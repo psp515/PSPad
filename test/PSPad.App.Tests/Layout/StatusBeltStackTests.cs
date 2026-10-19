@@ -16,6 +16,7 @@ public class StatusBeltStackTests : Bunit.TestContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddMudServices();
+        Services.AddLocalization();
         Services.AddSingleton(_belts);
     }
 

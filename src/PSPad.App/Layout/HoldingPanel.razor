@@ -17,19 +17,21 @@
 @inject AppState State
 @inject CommandSender Sender
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<BudgetsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
 
 <DetailPanel Open="@(_snapshot is not null)" Title="@Title" TitleTypo="Typo.body2" Class="pspad-holding-panel"
-             OnClose="@OnClose" OnSave="@SaveCallback" CanSave="@CanSave" OnDelete="@RemoveCallback" DeleteText="Remove"
+             OnClose="@OnClose" OnSave="@SaveCallback" CanSave="@CanSave" OnDelete="@RemoveCallback" DeleteText="@T["Remove"]"
              Disabled="@(Disabled || _saving)">
     <div class="d-flex flex-column gap-3 pa-4">
-        <MudTextField T="string" Class="pspad-holding-name-field" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense"
+        <MudTextField T="string" Class="pspad-holding-name-field" Label="@Shared["Name"]" Variant="Variant.Outlined" Margin="Margin.Dense"
                       MaxLength="@BalanceSnapshot.MaxHoldingNameLength" @bind-Value="_name" Immediate="true"
                       AutoFocus="@IsNew" Disabled="@ReadOnly" />
         <MudToggleGroup T="HoldingType" @bind-Value="_type" Class="pspad-holding-type-field" Color="Color.Primary"
                         Outlined="true" Disabled="@ReadOnly">
-            <MudToggleItem Value="HoldingType.Cash" Text="Cash" />
-            <MudToggleItem Value="HoldingType.Savings" Text="Savings" />
-            <MudToggleItem Value="HoldingType.Investment" Text="Investment" />
+            <MudToggleItem Value="HoldingType.Cash" Text="@T["HoldingCash"]" />
+            <MudToggleItem Value="HoldingType.Savings" Text="@T["HoldingSavings"]" />
+            <MudToggleItem Value="HoldingType.Investment" Text="@T["HoldingInvestment"]" />
         </MudToggleGroup>
         <RateFields @key="@((_loadedSnapshot, _loadedHolding))" CssPrefix="pspad-holding-panel" @bind-Amount="_amount"
                     Currency="@_currency" CurrencyChanged="@Suggest" Rate="@_rate" RateTyped="@RateTyped"
@@ -66,7 +68,7 @@
 
     bool ReadOnly => _budget?.IsArchived == true;
 
-    string Title => IsNew ? "New holding" : "Holding";
+    string Title => IsNew ? T["NewHolding"] : T["Holding"];
 
     bool IsPln => _currency == Currencies.Pln;
 
@@ -206,7 +208,7 @@
 
         if (!result.Accepted)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't save the holding.", Severity.Warning);
+            Snackbar.Add(result.Rejection ?? T["SaveHoldingFailed"].Value, Severity.Warning);
             return;
         }
 
@@ -235,7 +237,7 @@
 
         if (!result.Accepted)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't remove the holding.", Severity.Warning);
+            Snackbar.Add(result.Rejection ?? T["RemoveHoldingFailed"].Value, Severity.Warning);
             return;
         }
 

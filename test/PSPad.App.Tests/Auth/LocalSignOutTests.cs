@@ -18,7 +18,7 @@ public class LocalSignOutTests
     static readonly Guid User = Guid.NewGuid();
 
     readonly InMemoryLocalSessionStore _sessions = new(
-        new LocalSession(User, "Ada", "ada@example.com", "UTC", "refresh-token", DateTimeOffset.UtcNow, "id-token"));
+        new LocalSession(User, "Ada", "ada@example.com", "UTC", "en", "refresh-token", DateTimeOffset.UtcNow, "id-token"));
 
     readonly InMemoryReplica _replica = new();
 

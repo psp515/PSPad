@@ -1,15 +1,16 @@
 @using PSPad.App.State
 @using PSPad.Module.Tasks.Lists
+@inject IStringLocalizer<ListsStrings> T
 
-<PropertyRow Class="pspad-task-list" Icon="@Icons.Material.Outlined.Folder" Label="List"
-             Value="@(PathOf(Value) ?? "No list")" HasValue="@(PathOf(Value) is not null)" Disabled="@Disabled">
+<PropertyRow Class="pspad-task-list" Icon="@Icons.Material.Outlined.Folder" Label="@T["ListTitle"]"
+             Value="@(PathOf(Value) ?? T["NoList"].Value)" HasValue="@(PathOf(Value) is not null)" Disabled="@Disabled">
     @if (Lists.Count == 0)
     {
-        <MudMenuItem Disabled="true">No lists yet</MudMenuItem>
+        <MudMenuItem Disabled="true">@T["NoListsYetMenu"]</MudMenuItem>
     }
     @foreach (var areaId in AreaIds())
     {
-        <MudText Typo="Typo.overline" Class="px-4 pt-2 d-block">@Placement.AreaName(areaId)</MudText>
+        <MudText Typo="Typo.overline" Class="px-4 pt-2 d-block">@Placement.AreaName(areaId, T["SharedWithMe"])</MudText>
         @foreach (var list in Lists.Where(list => Placement.AreaOf(list) == areaId))
         {
             <MudMenuItem Class="pspad-list-option" OnClick="@(() => ValueChanged.InvokeAsync(list.Id))"
@@ -31,13 +32,13 @@
 
     [Parameter] public bool Disabled { get; set; }
 
-    public static string? PathOf(Guid? listId, ListPlacement placement, IReadOnlyList<TaskList> lists)
+    public static string? PathOf(Guid? listId, ListPlacement placement, IReadOnlyList<TaskList> lists, string sharedWithMeName)
     {
         var list = lists.FirstOrDefault(list => list.Id == listId);
-        return list is null ? null : $"{placement.AreaName(placement.AreaOf(list))} › {list.Name}";
+        return list is null ? null : $"{placement.AreaName(placement.AreaOf(list), sharedWithMeName)} › {list.Name}";
     }
 
-    string? PathOf(Guid? listId) => PathOf(listId, Placement, Lists);
+    string? PathOf(Guid? listId) => PathOf(listId, Placement, Lists, T["SharedWithMe"]);
 
     IEnumerable<Guid> AreaIds() => Lists.Select(list => Placement.AreaOf(list)).Distinct();
 }

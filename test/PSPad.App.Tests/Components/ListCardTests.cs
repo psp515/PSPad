@@ -72,7 +72,7 @@ public class ListCardTests : Bunit.TestContext
         var card = Render(list, [ended, .. Tasks(list.Id, 2)]);
 
         Assert.Equal(2, card.FindComponents<TaskRow>().Count);
-        Assert.Equal("2 open", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("2 open tasks", card.Find(".pspad-open-count .pspad-sr-only").TextContent);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class ListCardTests : Bunit.TestContext
 
         var card = Render(list, Tasks(list.Id, 17));
 
-        Assert.Equal("17 open", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("17 open tasks", card.Find(".pspad-open-count .pspad-sr-only").TextContent);
     }
 
     [Fact]
@@ -275,7 +275,7 @@ public class ListCardTests : Bunit.TestContext
             .Add(p => p.Today, Today));
 
         Assert.Equal(5, card.FindComponents<ReferenceRow>().Count);
-        Assert.Equal("7 open", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("7 open tasks", card.Find(".pspad-open-count .pspad-sr-only").TextContent);
     }
 
     [Fact]

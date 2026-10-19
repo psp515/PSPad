@@ -1,16 +1,16 @@
-@using System.Globalization
 @using PSPad.App.State
 @inject AppState State
+@inject IStringLocalizer<SharingStrings> T
 
 <div>
-    <MudText Typo="Typo.overline" Class="pspad-muted d-block mb-1">@($"People · {Members.Count + 1}")</MudText>
+    <MudText Typo="Typo.overline" Class="pspad-muted d-block mb-1">@T["PeopleCount", Members.Count + 1]</MudText>
     <MudPaper Outlined="true">
         <MudList T="string" Class="pspad-share-members">
             <MudListItem T="string" Class="pspad-share-owner-row">
                 <div class="d-flex align-center gap-3">
                     <MudAvatar Color="Color.Primary" Size="Size.Small">@AvatarColor.InitialsOf(OwnerIsMe ? State.DisplayName : OwnerName)</MudAvatar>
-                    <MudText Typo="Typo.body2" Class="flex-grow-1">@(OwnerIsMe ? "You" : OwnerName)</MudText>
-                    <MudChip T="string" Class="ma-0" Size="Size.Small">Owner</MudChip>
+                    <MudText Typo="Typo.body2" Class="flex-grow-1">@(OwnerIsMe ? T["You"] : OwnerName)</MudText>
+                    <MudChip T="string" Class="ma-0" Size="Size.Small">@T["Owner"]</MudChip>
                 </div>
             </MudListItem>
             @foreach (var member in Members)
@@ -21,16 +21,16 @@
                             @AvatarColor.InitialsOf(member.DisplayName)
                         </MudAvatar>
                         <div class="flex-grow-1">
-                            <MudText Typo="Typo.body2">@(member.UserId == State.UserId ? "You" : member.DisplayName)</MudText>
+                            <MudText Typo="Typo.body2">@(member.UserId == State.UserId ? T["You"] : member.DisplayName)</MudText>
                             @if (OwnerIsMe)
                             {
-                                <MudText Typo="Typo.caption" Class="pspad-muted">@($"Joined {member.JoinedAt.ToString("d MMM", CultureInfo.InvariantCulture)}")</MudText>
+                                <MudText Typo="Typo.caption" Class="pspad-muted">@T["JoinedOn", member.JoinedAt.ToString("d MMM")]</MudText>
                             }
                         </div>
                         @if (OwnerIsMe)
                         {
                             <MudIconButton Class="pspad-share-remove" Icon="@Icons.Material.Outlined.PersonRemove"
-                                           aria-label="@($"Remove {member.DisplayName}")" Disabled="@Disabled"
+                                           aria-label="@T["RemovePerson", member.DisplayName].Value" Disabled="@Disabled"
                                            OnClick="@(() => OnRemove.InvokeAsync(member))" />
                         }
                     </div>
@@ -40,7 +40,7 @@
     </MudPaper>
     @if (!OwnerIsMe)
     {
-        <MudText Typo="Typo.caption" Class="pspad-muted d-block mt-2">@($"Only {OwnerName} can invite people.")</MudText>
+        <MudText Typo="Typo.caption" Class="pspad-muted d-block mt-2">@T["OnlyOwnerCanInvite", OwnerName]</MudText>
     }
 </div>
 

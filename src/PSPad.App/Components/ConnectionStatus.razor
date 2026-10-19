@@ -1,20 +1,22 @@
 @using PSPad.App.Sync
 @inject IConnectivity Connectivity
 @inject ServerReachability Reachability
+@inject IStringLocalizer<ShellStrings> T
+@inject IStringLocalizer<SharedStrings> S
 @implements IDisposable
 
 @if (!Connectivity.IsOnline)
 {
-    <MudTooltip Text="Offline">
+    <MudTooltip Text="@S["Offline"]">
         <MudIcon Icon="@Icons.Material.Filled.CloudOff" Color="Color.Default" Size="Size.Small"
-                 Class="pspad-connection-status" role="img" aria-label="Offline" />
+                 Class="pspad-connection-status" role="img" aria-label="@S["Offline"].Value" />
     </MudTooltip>
 }
 else if (!Reachability.IsReachable)
 {
-    <MudTooltip Text="Server unreachable">
+    <MudTooltip Text="@T["ServerUnreachable"]">
         <MudIcon Icon="@Icons.Material.Filled.CloudOff" Color="Color.Warning" Size="Size.Small"
-                 Class="pspad-connection-status" role="img" aria-label="Server unreachable" />
+                 Class="pspad-connection-status" role="img" aria-label="@T["ServerUnreachable"].Value" />
     </MudTooltip>
 }
 

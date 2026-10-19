@@ -13,9 +13,11 @@
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
+@inject IStringLocalizer<GoalsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
 @implements IDisposable
 
-<PageHeading Title="Goals" />
+<PageHeading Title="@Shared["Goals"]" />
 
 @if (!_loaded)
 {
@@ -27,16 +29,16 @@ else
     {
         <MudGrid Spacing="4" Class="pspad-goals-in-progress">
             <MudItem xs="12" sm="6" lg="4" xl="3">
-                <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="No goals yet." CreateText="Add goal"
+                <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="@T["NoGoalsYet"]" CreateText="@T["AddGoal"]"
                             OnCreate="@AddGoal" />
             </MudItem>
         </MudGrid>
     }
 
-    @Section("In progress", _active, "pspad-goals-in-progress", false)
+    @Section(T["SectionInProgress"], _active, "pspad-goals-in-progress", false)
 
-    @Section("Achieved", _achieved, "pspad-goals-achieved")
-    @Section("Not achieved", _notAchieved, "pspad-goals-not-achieved")
+    @Section(T["SectionAchieved"], _achieved, "pspad-goals-achieved")
+    @Section(T["SectionNotAchieved"], _notAchieved, "pspad-goals-not-achieved")
 }
 
 <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@AddGoal" UserAttributes="@FabAttributes" />
@@ -77,7 +79,7 @@ else
 
     int _rendered = -1;
 
-    static readonly Dictionary<string, object> FabAttributes = new() { ["aria-label"] = "Add goal" };
+    Dictionary<string, object> FabAttributes => new() { ["aria-label"] = T["AddGoal"].Value };
 
     protected override void OnInitialized() => Sender.Sent += OnCommandSent;
 
@@ -130,9 +132,9 @@ else
     {
         var parameters = new DialogParameters<ConfirmDialog>
         {
-            { dialog => dialog.Message, $"Delete “{goal.Name}”? Its tasks stay, without a goal." }
+            { dialog => dialog.Message, T["DeleteGoalConfirm", goal.Name].Value }
         };
-        var dialog = await Dialogs.ShowAsync<ConfirmDialog>("Delete goal", parameters);
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["DeleteGoal"], parameters);
         var result = await dialog.Result;
 
         if (result is null || result.Canceled)

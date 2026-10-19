@@ -66,8 +66,8 @@ public class ThingCardTests : Bunit.TestContext
 
         var count = Render(Tasks(7)).Find(".pspad-open-count");
 
-        Assert.Equal("7 open", count.TextContent);
-        Assert.Equal(" open", count.QuerySelector(".pspad-sr-only")!.TextContent);
+        Assert.Equal("7", count.QuerySelector("[aria-hidden]")!.TextContent);
+        Assert.Equal("7 open tasks", count.QuerySelector(".pspad-sr-only")!.TextContent);
         Assert.Null(count.GetAttribute("aria-label"));
     }
 
@@ -233,7 +233,7 @@ public class ThingCardTests : Bunit.TestContext
 
         Assert.Empty(card.FindComponents<TaskRow>());
         card.Find(".pspad-custom-row");
-        Assert.Equal("9 open", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("9 open tasks", card.Find(".pspad-open-count .pspad-sr-only").TextContent);
         Assert.Equal("Show all 9", card.Find(".pspad-show-all").TextContent.Trim());
     }
 
@@ -262,7 +262,7 @@ public class ThingCardTests : Bunit.TestContext
         var card = Render(tasks);
 
         Assert.Single(card.FindComponents<TaskRow>());
-        Assert.Equal("1 open", card.Find(".pspad-open-count").TextContent);
+        Assert.Equal("1 open task", card.Find(".pspad-open-count .pspad-sr-only").TextContent);
     }
 
     IRenderedComponent<ThingCard> Render(IReadOnlyList<TodoTask> tasks) =>

@@ -44,7 +44,7 @@ public class BudgetImportPageTests : Bunit.TestContext
 
         page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".pspad-import-row").Count));
         Assert.Contains("Kind must be expense or income.", page.Find(".pspad-import-row-error").TextContent);
-        Assert.Contains("Import 1 rows", page.Find(".pspad-import-run").TextContent);
+        Assert.Contains("Import 1 row", page.Find(".pspad-import-run").TextContent);
     }
 
     [Fact]

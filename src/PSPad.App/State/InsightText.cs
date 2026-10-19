@@ -1,30 +1,37 @@
-using System.Globalization;
+using Microsoft.Extensions.Localization;
+using PSPad.App.Resources;
 using PSPad.Module.Money.Reading;
 
 namespace PSPad.App.State;
 
 public static class InsightText
 {
-    public static string Title(Insight insight) => insight.Kind switch
+    public static string Title(Insight insight, IStringLocalizer<BudgetsStrings> text) => insight.Kind switch
     {
-        InsightKind.PastUsual => $"{insight.Category} already past a usual month",
-        InsightKind.RunningHigh => $"{insight.Category} is running high",
-        InsightKind.IncomeExpected => $"{insight.Category} usually lands around the {Ordinal(insight.Day)}",
-        _ => $"{insight.Category} on track"
+        InsightKind.PastUsual => text["InsightPastUsual", insight.Category],
+        InsightKind.RunningHigh => text["InsightRunningHigh", insight.Category],
+        InsightKind.IncomeExpected => text["InsightIncomeExpected", insight.Category, Ordinal(insight.Day, text)],
+        _ => text["InsightOnTrack", insight.Category]
     };
 
-    public static string Caption(Insight insight) => insight.Kind switch
+    public static string Caption(Insight insight, IStringLocalizer<BudgetsStrings> text) => insight.Kind switch
     {
-        InsightKind.PastUsual => $"{MoneyText.Pln(insight.Amount)} vs {MoneyText.Pln(insight.Usual)} average",
-        InsightKind.RunningHigh =>
-            $"{MoneyText.Pln(insight.Amount)} so far, {MoneyText.Pln(insight.Amount - insight.Usual)} more than usual at this point",
-        InsightKind.IncomeExpected => $"{MoneyText.Pln(insight.Amount)} on average; nothing yet this month",
-        _ => $"{MoneyText.Pln(insight.Amount)}, close to usual"
+        InsightKind.PastUsual => text["InsightPastUsualCaption", MoneyText.Pln(insight.Amount), MoneyText.Pln(insight.Usual)],
+        InsightKind.RunningHigh => text["InsightRunningHighCaption",
+            MoneyText.Pln(insight.Amount), MoneyText.Pln(insight.Amount - insight.Usual)],
+        InsightKind.IncomeExpected => text["InsightIncomeExpectedCaption", MoneyText.Pln(insight.Amount)],
+        _ => text["InsightOnTrackCaption", MoneyText.Pln(insight.Amount)]
     };
 
-    static string Ordinal(int day)
+    static string Ordinal(int day, IStringLocalizer<BudgetsStrings> text)
     {
-        var suffix = day % 100 is 11 or 12 or 13 ? "th" : (day % 10) switch { 1 => "st", 2 => "nd", 3 => "rd", _ => "th" };
-        return $"{day.ToString(CultureInfo.InvariantCulture)}{suffix}";
+        var key = day % 100 is 11 or 12 or 13 ? "OrdinalTh" : (day % 10) switch
+        {
+            1 => "OrdinalSt",
+            2 => "OrdinalNd",
+            3 => "OrdinalRd",
+            _ => "OrdinalTh"
+        };
+        return text[key, day];
     }
 }

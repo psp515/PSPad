@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ItemTitle" xml:space="preserve">
+    <value>Reference item</value>
+  </data>
+  <data name="NewItem" xml:space="preserve">
+    <value>New item</value>
+  </data>
+  <data name="AddItem" xml:space="preserve">
+    <value>Add item</value>
+  </data>
+  <data name="ItemName" xml:space="preserve">
+    <value>Item name</value>
+  </data>
+  <data name="NoItemsYet" xml:space="preserve">
+    <value>No items yet.</value>
+  </data>
+  <data name="Labels" xml:space="preserve">
+    <value>Labels</value>
+  </data>
+  <data name="Label" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="NewLabel" xml:space="preserve">
+    <value>New label</value>
+  </data>
+  <data name="NewLabelValue" xml:space="preserve">
+    <value>New label value</value>
+  </data>
+  <data name="Display" xml:space="preserve">
+    <value>Display</value>
+  </data>
+  <data name="DisplayAutomatic" xml:space="preserve">
+    <value>Automatic</value>
+  </data>
+  <data name="DisplayText" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="DisplayLink" xml:space="preserve">
+    <value>Link</value>
+  </data>
+  <data name="DisplayPath" xml:space="preserve">
+    <value>Path</value>
+  </data>
+  <data name="DisplayQuantity" xml:space="preserve">
+    <value>Quantity</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="RemoveLabel" xml:space="preserve">
+    <value>Remove {0}</value>
+  </data>
+  <data name="DeleteItem" xml:space="preserve">
+    <value>Delete item</value>
+  </data>
+  <data name="DeleteItemConfirm" xml:space="preserve">
+    <value>Delete “{0}”?</value>
+  </data>
+  <data name="CouldntAddItem" xml:space="preserve">
+    <value>Couldn't add the item.</value>
+  </data>
+  <data name="CouldntAddField" xml:space="preserve">
+    <value>Couldn't add the field {0}.</value>
+  </data>
+  <data name="CouldntAddFieldGeneric" xml:space="preserve">
+    <value>Couldn't add the field.</value>
+  </data>
+  <data name="CouldntSaveField" xml:space="preserve">
+    <value>Couldn't save the field.</value>
+  </data>
+  <data name="CouldntRemoveField" xml:space="preserve">
+    <value>Couldn't remove the field.</value>
+  </data>
+  <data name="CouldntReorderField" xml:space="preserve">
+    <value>Couldn't reorder the field.</value>
+  </data>
+  <data name="CouldntRenameItem" xml:space="preserve">
+    <value>Couldn't rename the item.</value>
+  </data>
+  <data name="CouldntStarItem" xml:space="preserve">
+    <value>Couldn't star the item.</value>
+  </data>
+  <data name="CouldntMoveItem" xml:space="preserve">
+    <value>Couldn't move the item.</value>
+  </data>
+  <data name="CouldntDeleteItem" xml:space="preserve">
+    <value>Couldn't delete the item.</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="CopyValue" xml:space="preserve">
+    <value>Copy {0}</value>
+  </data>
+  <data name="Copied" xml:space="preserve">
+    <value>Copied</value>
+  </data>
+  <data name="CopyFailedOpenItem" xml:space="preserve">
+    <value>Could not copy — open the item to select the path.</value>
+  </data>
+  <data name="CopyFailedSelect" xml:space="preserve">
+    <value>Could not copy — select the path instead.</value>
+  </data>
+  <data name="DropHasNoPath" xml:space="preserve">
+    <value>Browsers can't read a file's full path. On Windows use Shift+right-click → Copy as path, then paste.</value>
+  </data>
+</root>

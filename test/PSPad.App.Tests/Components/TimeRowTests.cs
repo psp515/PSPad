@@ -14,6 +14,7 @@ public class TimeRowTests : Bunit.TestContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddMudServices();
+        Services.AddLocalization();
     }
 
     [Fact]

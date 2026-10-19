@@ -1,4 +1,5 @@
 @using PSPad.Contracts
+@inject IStringLocalizer<StatisticsStrings> T
 
 <div class="pspad-heatmap">
     @if (Days.Count > MonthSectionThreshold)
@@ -21,12 +22,11 @@
              data-selected="@Flag(_selected is not null)" aria-live="polite">
         @Readout()
     </MudText>
-    <HeatmapKey Caption="Each square is one day; darker means more tasks finished that day." />
+    <HeatmapKey Caption="@T["HeatmapCaption"]" />
 </div>
 
 @code {
     const int MonthSectionThreshold = 30;
-    const string Hint = "Tap a square for the day and its count.";
 
     [Parameter, EditorRequired] public IReadOnlyList<DailyCountView> Days { get; set; } = [];
 
@@ -57,9 +57,9 @@
     void Toggle(DailyCountView day) => _selected = _selected?.Day == day.Day ? null : day;
 
     string Readout() =>
-        _selected is { } day ? $"{day.Day:d MMM yyyy} — {day.Count} completed" : Hint;
+        _selected is { } day ? T["HeatmapReadout", day.Day.ToString("d MMM yyyy"), day.Count] : T["HeatmapHint"];
 
     static string Flag(bool set) => set ? "true" : "false";
 
-    static string LabelOf(DailyCountView day) => $"{day.Day:yyyy-MM-dd}: {day.Count} completed";
+    string LabelOf(DailyCountView day) => T["HeatmapCell", day.Day.ToString("yyyy-MM-dd"), day.Count];
 }

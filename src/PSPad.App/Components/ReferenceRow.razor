@@ -3,6 +3,8 @@
 @using PSPad.Module.Tasks.References
 @inject Clipboard Clipboard
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<ReferenceStrings> Ref
+@inject IStringLocalizer<TasksStrings> TaskText
 
 <div class="pspad-row pspad-reference-row d-flex align-center gap-2 pr-1 @(Item.Fields.Count > 0 || Item.SnapshotMarks.Count > 0 ? "pspad-row-has-meta" : "")">
     <span class="pspad-priority-slot" aria-hidden="true"></span>
@@ -30,7 +32,7 @@
                             case FieldKind.Path:
                                 <MudChip T="string" Class="pspad-row-chip pspad-row-chip-path" Size="Size.Small"
                                          Variant="Variant.Text" Icon="@Icons.Material.Outlined.Folder"
-                                         title="@($"Copy {field.Value}")"
+                                         title="@Ref["CopyValue", field.Value].Value"
                                          OnClick="@(() => CopyAsync(field.Value))">@field.Label</MudChip>
                                 break;
                             default:
@@ -54,7 +56,7 @@
     <MudIconButton Class="@(Item.Starred ? "pspad-row-star" : "pspad-row-star pspad-muted")" Size="Size.Small"
                    Color="@(Item.Starred ? Color.Primary : Color.Default)"
                    Icon="@(Item.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                   aria-label="@(Item.Starred ? "Unstar" : "Star")"
+                   aria-label="@(Item.Starred ? TaskText["Unstar"].Value : TaskText["Star"].Value)"
                    OnClick="@(() => OnStar.InvokeAsync(Item))" />
 </div>
 
@@ -79,7 +81,7 @@
     {
         var copied = await Clipboard.CopyAsync(path);
         Snackbar.Add(
-            copied ? "Copied" : "Could not copy — open the item to select the path.",
+            copied ? Ref["Copied"] : Ref["CopyFailedOpenItem"],
             copied ? Severity.Success : Severity.Warning);
     }
 }

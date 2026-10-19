@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ListSnapshots" xml:space="preserve">
+    <value>List snapshots</value>
+  </data>
+  <data name="AppInfo" xml:space="preserve">
+    <value>App info</value>
+  </data>
+  <data name="NewBudget" xml:space="preserve">
+    <value>New budget</value>
+  </data>
+  <data name="NewArea" xml:space="preserve">
+    <value>New area</value>
+  </data>
+  <data name="BudgetShared" xml:space="preserve">
+    <value>Shared</value>
+  </data>
+  <data name="BudgetSharedWithYou" xml:space="preserve">
+    <value>Shared with you</value>
+  </data>
+  <data name="GroupCollapsedHeader" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="CollapseBudgets" xml:space="preserve">
+    <value>Collapse budgets</value>
+  </data>
+  <data name="ExpandBudgets" xml:space="preserve">
+    <value>Expand budgets</value>
+  </data>
+  <data name="CollapseAreas" xml:space="preserve">
+    <value>Collapse areas</value>
+  </data>
+  <data name="ExpandAreas" xml:space="preserve">
+    <value>Expand areas</value>
+  </data>
+  <data name="MainNavigation" xml:space="preserve">
+    <value>Main</value>
+  </data>
+  <data name="SyncNow" xml:space="preserve">
+    <value>Sync now</value>
+  </data>
+  <data name="SyncNowWithStatus" xml:space="preserve">
+    <value>Sync now. {0}</value>
+  </data>
+  <data name="SyncUpdating" xml:space="preserve">
+    <value>Updating…</value>
+  </data>
+  <data name="SyncCouldNotUpdate" xml:space="preserve">
+    <value>Couldn't update</value>
+  </data>
+  <data name="SyncFailedUpdatedAgo" xml:space="preserve">
+    <value>Couldn't update · updated {0}</value>
+  </data>
+  <data name="SyncUpdatedAgo" xml:space="preserve">
+    <value>Updated {0}</value>
+  </data>
+  <data name="SyncOfflineUpdatedAgo" xml:space="preserve">
+    <value>Offline · updated {0}</value>
+  </data>
+  <data name="TimeJustNow" xml:space="preserve">
+    <value>just now</value>
+  </data>
+  <data name="TimeMinutesAgo" xml:space="preserve">
+    <value>{0} min ago</value>
+  </data>
+  <data name="TimeHoursAgo.One" xml:space="preserve">
+    <value>{0} hour ago</value>
+  </data>
+  <data name="TimeHoursAgo.Few" xml:space="preserve">
+    <value>{0} hours ago</value>
+  </data>
+  <data name="TimeHoursAgo.Many" xml:space="preserve">
+    <value>{0} hours ago</value>
+  </data>
+  <data name="TimeDaysAgo.One" xml:space="preserve">
+    <value>{0} day ago</value>
+  </data>
+  <data name="TimeDaysAgo.Few" xml:space="preserve">
+    <value>{0} days ago</value>
+  </data>
+  <data name="TimeDaysAgo.Many" xml:space="preserve">
+    <value>{0} days ago</value>
+  </data>
+  <data name="RejectedChanges.One" xml:space="preserve">
+    <value>{0} change couldn’t be saved.</value>
+  </data>
+  <data name="RejectedChanges.Few" xml:space="preserve">
+    <value>{0} changes couldn’t be saved.</value>
+  </data>
+  <data name="RejectedChanges.Many" xml:space="preserve">
+    <value>{0} changes couldn’t be saved.</value>
+  </data>
+  <data name="Details" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="Dismiss" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+  <data name="Reload" xml:space="preserve">
+    <value>Reload</value>
+  </data>
+  <data name="ServerUnreachableBelt" xml:space="preserve">
+    <value>Can’t reach the server — working from local data. Changes sync when you’re back.</value>
+  </data>
+  <data name="UpdateReady" xml:space="preserve">
+    <value>A new version of PSPad is ready.</value>
+  </data>
+  <data name="ServerUnreachable" xml:space="preserve">
+    <value>Server unreachable</value>
+  </data>
+  <data name="NotFoundTitle" xml:space="preserve">
+    <value>Not found</value>
+  </data>
+  <data name="NotFoundMessage" xml:space="preserve">
+    <value>Sorry, the content you are looking for does not exist.</value>
+  </data>
+  <data name="AppVersion" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="VersionUnknown" xml:space="preserve">
+    <value>unknown</value>
+  </data>
+  <data name="License" xml:space="preserve">
+    <value>License</value>
+  </data>
+  <data name="LicenseText" xml:space="preserve">
+    <value>Free software, licensed under the GNU General Public License v3.</value>
+  </data>
+  <data name="Links" xml:space="preserve">
+    <value>Links</value>
+  </data>
+  <data name="SourceOnGitHub" xml:space="preserve">
+    <value>Source on GitHub</value>
+  </data>
+  <data name="Documentation" xml:space="preserve">
+    <value>Documentation</value>
+  </data>
+  <data name="SyncNotYet" xml:space="preserve">
+    <value>Not synced yet</value>
+  </data>
+  <data name="SyncOffline" xml:space="preserve">
+    <value>Offline</value>
+  </data>
+</root>

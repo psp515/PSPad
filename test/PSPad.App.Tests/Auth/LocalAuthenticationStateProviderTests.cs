@@ -8,7 +8,7 @@ namespace PSPad.App.Tests.Auth;
 public class LocalAuthenticationStateProviderTests
 {
     static readonly LocalSession Stored = new(
-        Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "refresh",
+        Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "en", "refresh",
         new DateTimeOffset(2026, 9, 22, 12, 0, 0, TimeSpan.Zero));
 
     [Fact]

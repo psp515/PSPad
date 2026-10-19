@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NoGoalsYet" xml:space="preserve">
+    <value>No goals yet.</value>
+  </data>
+  <data name="AddGoal" xml:space="preserve">
+    <value>Add goal</value>
+  </data>
+  <data name="SectionInProgress" xml:space="preserve">
+    <value>In progress</value>
+  </data>
+  <data name="SectionAchieved" xml:space="preserve">
+    <value>Achieved</value>
+  </data>
+  <data name="SectionNotAchieved" xml:space="preserve">
+    <value>Not achieved</value>
+  </data>
+  <data name="StatusInProgress" xml:space="preserve">
+    <value>In progress</value>
+  </data>
+  <data name="StatusAchieved" xml:space="preserve">
+    <value>Achieved</value>
+  </data>
+  <data name="StatusNotAchieved" xml:space="preserve">
+    <value>Not achieved</value>
+  </data>
+  <data name="MarkInProgress" xml:space="preserve">
+    <value>Mark in progress</value>
+  </data>
+  <data name="MarkAchieved" xml:space="preserve">
+    <value>Mark achieved</value>
+  </data>
+  <data name="MarkNotAchieved" xml:space="preserve">
+    <value>Mark not achieved</value>
+  </data>
+  <data name="NewGoal" xml:space="preserve">
+    <value>New goal</value>
+  </data>
+  <data name="GoalTitle" xml:space="preserve">
+    <value>Goal</value>
+  </data>
+  <data name="GoalName" xml:space="preserve">
+    <value>Goal name</value>
+  </data>
+  <data name="EditGoal" xml:space="preserve">
+    <value>Edit goal</value>
+  </data>
+  <data name="DeleteGoal" xml:space="preserve">
+    <value>Delete goal</value>
+  </data>
+  <data name="DeleteGoalConfirm" xml:space="preserve">
+    <value>Delete “{0}”? Its tasks stay, without a goal.</value>
+  </data>
+  <data name="GoalGone" xml:space="preserve">
+    <value>This goal is not there anymore.</value>
+  </data>
+  <data name="BackToGoals" xml:space="preserve">
+    <value>Back to goals</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Progress" xml:space="preserve">
+    <value>Progress</value>
+  </data>
+  <data name="RecurringNotCounted" xml:space="preserve">
+    <value>Recurring tasks not counted</value>
+  </data>
+  <data name="SeriesOnGoal" xml:space="preserve">
+    <value>On the goal</value>
+  </data>
+  <data name="SeriesDone" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="TasksHeading" xml:space="preserve">
+    <value>Tasks</value>
+  </data>
+  <data name="NoOpenTasks" xml:space="preserve">
+    <value>No open tasks.</value>
+  </data>
+  <data name="CompletedCount" xml:space="preserve">
+    <value>Completed · {0}</value>
+  </data>
+  <data name="NoTasksLinked" xml:space="preserve">
+    <value>No tasks linked</value>
+  </data>
+  <data name="ProgressDone" xml:space="preserve">
+    <value>{0} of {1} done</value>
+  </data>
+  <data name="DueOn" xml:space="preserve">
+    <value>Due {0}</value>
+  </data>
+  <data name="OverdueOn" xml:space="preserve">
+    <value>Overdue · {0}</value>
+  </data>
+  <data name="Pace" xml:space="preserve">
+    <value>Pace</value>
+  </data>
+  <data name="PaceDueToday" xml:space="preserve">
+    <value>Due today</value>
+  </data>
+  <data name="WorkBehind" xml:space="preserve">
+    <value>Work done · behind</value>
+  </data>
+  <data name="WorkOnPace" xml:space="preserve">
+    <value>Work done · on pace</value>
+  </data>
+  <data name="Goal" xml:space="preserve">
+    <value>Goal</value>
+  </data>
+  <data name="NoGoal" xml:space="preserve">
+    <value>No goal</value>
+  </data>
+  <data name="NoGoalsInProgress" xml:space="preserve">
+    <value>No goals in progress</value>
+  </data>
+  <data name="DueWithDaysLeft.One" xml:space="preserve">
+    <value>Due {1} · {0} day left</value>
+  </data>
+  <data name="DueWithDaysLeft.Few" xml:space="preserve">
+    <value>Due {1} · {0} days left</value>
+  </data>
+  <data name="DueWithDaysLeft.Many" xml:space="preserve">
+    <value>Due {1} · {0} days left</value>
+  </data>
+  <data name="TasksDone.One" xml:space="preserve">
+    <value>{1} of {0} task done</value>
+  </data>
+  <data name="TasksDone.Few" xml:space="preserve">
+    <value>{1} of {0} tasks done</value>
+  </data>
+  <data name="TasksDone.Many" xml:space="preserve">
+    <value>{1} of {0} tasks done</value>
+  </data>
+  <data name="PaceOverdue.One" xml:space="preserve">
+    <value>{0} day overdue</value>
+  </data>
+  <data name="PaceOverdue.Few" xml:space="preserve">
+    <value>{0} days overdue</value>
+  </data>
+  <data name="PaceOverdue.Many" xml:space="preserve">
+    <value>{0} days overdue</value>
+  </data>
+  <data name="PaceDaysLeft.One" xml:space="preserve">
+    <value>{0} day left</value>
+  </data>
+  <data name="PaceDaysLeft.Few" xml:space="preserve">
+    <value>{0} days left</value>
+  </data>
+  <data name="PaceDaysLeft.Many" xml:space="preserve">
+    <value>{0} days left</value>
+  </data>
+</root>

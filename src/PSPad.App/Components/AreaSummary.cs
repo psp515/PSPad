@@ -1,38 +1,37 @@
-using System.Globalization;
+using Microsoft.Extensions.Localization;
+using PSPad.App.Localization;
+using PSPad.App.Resources;
 
 namespace PSPad.App.Components;
 
 public static class AreaSummary
 {
-    public static string Describe(int taskLists, int referenceLists, int openTasks, int items)
+    public static string Describe(
+        int taskLists, int referenceLists, int openTasks, int items,
+        IStringLocalizer<ListsStrings> localizer, IStringLocalizer<TasksStrings> tasks)
     {
         if (referenceLists == 0)
         {
-            return $"{Counted(taskLists, "list", "lists")} · {OpenTaskCount.Describe(openTasks)}";
+            return $"{localizer.Plural(taskLists, "SummaryLists")} · {OpenTaskCount.Describe(openTasks, tasks)}";
         }
 
         if (taskLists == 0)
         {
-            return $"{Counted(referenceLists, "reference list", "reference lists")} · {ItemCount(items)}";
+            return $"{localizer.Plural(referenceLists, "SummaryReferenceLists")} · {localizer.Plural(items, "SummaryItems")}";
         }
 
-        var parts = new List<string> { Counted(taskLists + referenceLists, "list", "lists") };
+        var parts = new List<string> { localizer.Plural(taskLists + referenceLists, "SummaryLists") };
 
         if (openTasks > 0 || items == 0)
         {
-            parts.Add(OpenTaskCount.Describe(openTasks));
+            parts.Add(OpenTaskCount.Describe(openTasks, tasks));
         }
 
         if (items > 0)
         {
-            parts.Add(ItemCount(items));
+            parts.Add(localizer.Plural(items, "SummaryItems"));
         }
 
         return string.Join(" · ", parts);
     }
-
-    static string ItemCount(int items) => items == 0 ? "no items" : Counted(items, "item", "items");
-
-    static string Counted(int count, string one, string many) =>
-        $"{count.ToString(CultureInfo.InvariantCulture)} {(count == 1 ? one : many)}";
 }

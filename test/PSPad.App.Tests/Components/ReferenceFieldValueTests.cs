@@ -224,6 +224,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
     {
         JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
         Services.AddMudServices();
+        Services.AddLocalization();
         Services.AddScoped<Clipboard>();
     }
 }

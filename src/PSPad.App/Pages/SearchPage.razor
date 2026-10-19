@@ -6,12 +6,13 @@
 @using PSPad.Module.Tasks.Lists
 @inject ReplicaSearch Search
 @inject AppState State
+@inject IStringLocalizer<ListsStrings> T
 
-<PageHeading Title="@($"Search: {Q ?? ""}")" />
+<PageHeading Title="@T["SearchTitle", Q ?? ""]" />
 
 @if (_hits.Count == 0)
 {
-    <MudText Typo="Typo.body2">Nothing matches.</MudText>
+    <MudText Typo="Typo.body2">@T["NothingMatches"]</MudText>
 }
 else
 {

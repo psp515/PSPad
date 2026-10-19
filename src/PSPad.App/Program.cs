@@ -2,11 +2,13 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using MudBlazor;
 using MudBlazor.Services;
 using PSPad.Abstractions;
 using PSPad.App;
 using PSPad.App.Api;
 using PSPad.App.Auth;
+using PSPad.App.Localization;
 using PSPad.App.State;
 using PSPad.App.State.Dispatch;
 using PSPad.App.State.Outbox;
@@ -24,6 +26,9 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddMudServices(config => SmallMessages.Configure(config.SnackbarConfiguration));
+builder.Services.AddLocalization();
+builder.Services.AddTransient<MudLocalizer, PSPadMudLocalizer>();
+builder.Services.AddSingleton<LanguagePreference>();
 
 builder.Services.AddOidcAuthentication(options =>
 {
@@ -106,6 +111,7 @@ builder.Services.AddScoped<StatusBelts>();
 builder.Services.AddScoped<StatisticsCache>();
 builder.Services.AddScoped<IStatisticsSource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>());
+builder.Services.AddScoped<ILanguageApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISnapshotsApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<INbpRates>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IListSharingApi>(sp => sp.GetRequiredService<PSPadApiClient>());
@@ -120,6 +126,15 @@ builder.Services.AddScoped<ISyncStatus>(sp => sp.GetRequiredService<SyncCoordina
 
 var host = builder.Build();
 var bootLogger = host.Services.GetRequiredService<ILogger<Program>>();
+
+try
+{
+    await host.Services.GetRequiredService<LanguagePreference>().InitialiseAsync();
+}
+catch (Exception exception)
+{
+    bootLogger.LogWarning("Language bootstrap failed: {Reason}", exception.Message);
+}
 
 // Any bootstrap failure must still reveal the app: a held splash is an unrecoverable
 // blank screen, so nothing below is allowed to escape and skip host.RunAsync().

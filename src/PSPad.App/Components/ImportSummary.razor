@@ -1,21 +1,22 @@
 @using PSPad.App.State
 @using PSPad.Module.Money.Import
+@inject IStringLocalizer<BudgetsStrings> T
 
 <MudPaper Outlined="true" Class="pa-4 pspad-import-summary">
     <MudText Typo="Typo.subtitle1">
-        Imported @Outcome.Entries entries and @Outcome.Holdings holdings in @Outcome.Months months.
+        @T["ImportedSummary", Outcome.Entries, Outcome.Holdings, Outcome.Months]
     </MudText>
     @if (Outcome.Rejected.Count > 0)
     {
-        <MudText Typo="Typo.body2" Color="Color.Warning" Class="mt-2">Not imported:</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Warning" Class="mt-2">@T["NotImported"]</MudText>
         <MudList T="string" Dense="true">
             @foreach (var rejected in Outcome.Rejected)
             {
-                <MudListItem T="string" Text="@(rejected.Line > 0 ? $"Line {rejected.Line}: {rejected.Message}" : rejected.Message)" />
+                <MudListItem T="string" Text="@(rejected.Line > 0 ? T["LineMessage", rejected.Line, rejected.Message].Value : rejected.Message)" />
             }
         </MudList>
     }
-    <MudButton Class="mt-2" Variant="Variant.Text" Color="Color.Primary" Href="@BudgetLinks.For(BudgetId)">Open the budget</MudButton>
+    <MudButton Class="mt-2" Variant="Variant.Text" Color="Color.Primary" Href="@BudgetLinks.For(BudgetId)">@T["OpenBudget"]</MudButton>
 </MudPaper>
 
 @code {

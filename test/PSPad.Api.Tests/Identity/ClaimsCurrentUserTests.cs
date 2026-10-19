@@ -58,7 +58,26 @@ public class ClaimsCurrentUserTests
         Assert.Equal("", user.Email);
     }
 
-    static ClaimsCurrentUser CurrentUserWith(params Claim[] claims)
+    [Fact]
+    public void TheLanguageHintComesFromAcceptLanguage()
+    {
+        var user = CurrentUserWith("pl-PL,en;q=0.8", new Claim("sub", Guid.NewGuid().ToString()));
+
+        Assert.Equal("pl", user.LanguageHint);
+    }
+
+    [Fact]
+    public void WithoutAcceptLanguageTheHintIsEnglish()
+    {
+        var user = CurrentUserWith(new Claim("sub", Guid.NewGuid().ToString()));
+
+        Assert.Equal("en", user.LanguageHint);
+    }
+
+    static ClaimsCurrentUser CurrentUserWith(params Claim[] claims) =>
+        CurrentUserWith(null, claims);
+
+    static ClaimsCurrentUser CurrentUserWith(string? acceptLanguage, params Claim[] claims)
     {
         var hasSubject = claims.Any(claim => claim.Type is "sub" or ClaimTypes.NameIdentifier);
         var allClaims = hasSubject
@@ -67,6 +86,10 @@ public class ClaimsCurrentUserTests
 
         var identity = new ClaimsIdentity(allClaims, "Test");
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
+        if (acceptLanguage is not null)
+        {
+            httpContext.Request.Headers.AcceptLanguage = acceptLanguage;
+        }
 
         return new ClaimsCurrentUser(new StubHttpContextAccessor(httpContext));
     }

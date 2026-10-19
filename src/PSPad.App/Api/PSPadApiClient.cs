@@ -8,7 +8,7 @@ using PSPad.Contracts;
 
 namespace PSPad.App.Api;
 
-public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ISnapshotsApi, INbpRates, IListSharingApi,
+public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ILanguageApi, ISnapshotsApi, INbpRates, IListSharingApi,
     IBudgetSharingApi
 {
     static readonly TimeSpan DefaultRetryAfter = TimeSpan.FromSeconds(5);
@@ -21,6 +21,23 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
         {
             var response = await http.PutAsJsonAsync(
                 "api/me/timezone", new SetTimeZoneRequest(timeZone));
+
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<MeResponse>()
+                : null;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+    }
+
+    public async Task<MeResponse?> SetLanguageAsync(string language)
+    {
+        try
+        {
+            var response = await http.PutAsJsonAsync(
+                "api/me/language", new SetLanguageRequest(language));
 
             return response.IsSuccessStatusCode
                 ? await response.Content.ReadFromJsonAsync<MeResponse>()
@@ -124,36 +141,32 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
         _ => null
     };
 
-    const string ListGone = "That list is no longer shared with you.";
+    public Task<SharingRejection?> ShareListAsync(Guid listId, string token, string code) =>
+        ChangeSharingAsync(() => http.PostAsJsonAsync($"api/lists/{listId}/share", new ShareListRequest(token, code)), SharingFailure.ListGone);
 
-    const string BudgetGone = "That budget is no longer shared with you.";
+    public Task<SharingRejection?> StopSharingAsync(Guid listId) =>
+        ChangeSharingAsync(() => http.DeleteAsync($"api/lists/{listId}/share"), SharingFailure.ListGone);
 
-    public Task<string?> ShareListAsync(Guid listId, string token, string code) =>
-        ChangeSharingAsync(() => http.PostAsJsonAsync($"api/lists/{listId}/share", new ShareListRequest(token, code)), ListGone);
+    public Task<SharingRejection?> RemoveMemberAsync(Guid listId, Guid memberId) =>
+        ChangeSharingAsync(() => http.DeleteAsync($"api/lists/{listId}/members/{memberId}"), SharingFailure.ListGone);
 
-    public Task<string?> StopSharingAsync(Guid listId) =>
-        ChangeSharingAsync(() => http.DeleteAsync($"api/lists/{listId}/share"), ListGone);
+    public Task<SharingRejection?> LeaveListAsync(Guid listId) =>
+        ChangeSharingAsync(() => http.PostAsync($"api/lists/{listId}/leave", null), SharingFailure.ListGone);
 
-    public Task<string?> RemoveMemberAsync(Guid listId, Guid memberId) =>
-        ChangeSharingAsync(() => http.DeleteAsync($"api/lists/{listId}/members/{memberId}"), ListGone);
-
-    public Task<string?> LeaveListAsync(Guid listId) =>
-        ChangeSharingAsync(() => http.PostAsync($"api/lists/{listId}/leave", null), ListGone);
-
-    public Task<string?> ShareBudgetAsync(Guid budgetId, string token, string code) =>
+    public Task<SharingRejection?> ShareBudgetAsync(Guid budgetId, string token, string code) =>
         ChangeSharingAsync(
-            () => http.PostAsJsonAsync($"api/budgets/{budgetId}/share", new ShareBudgetRequest(token, code)), BudgetGone);
+            () => http.PostAsJsonAsync($"api/budgets/{budgetId}/share", new ShareBudgetRequest(token, code)), SharingFailure.BudgetGone);
 
-    public Task<string?> StopSharingBudgetAsync(Guid budgetId) =>
-        ChangeSharingAsync(() => http.DeleteAsync($"api/budgets/{budgetId}/share"), BudgetGone);
+    public Task<SharingRejection?> StopSharingBudgetAsync(Guid budgetId) =>
+        ChangeSharingAsync(() => http.DeleteAsync($"api/budgets/{budgetId}/share"), SharingFailure.BudgetGone);
 
-    public Task<string?> RemoveBudgetMemberAsync(Guid budgetId, Guid memberId) =>
-        ChangeSharingAsync(() => http.DeleteAsync($"api/budgets/{budgetId}/members/{memberId}"), BudgetGone);
+    public Task<SharingRejection?> RemoveBudgetMemberAsync(Guid budgetId, Guid memberId) =>
+        ChangeSharingAsync(() => http.DeleteAsync($"api/budgets/{budgetId}/members/{memberId}"), SharingFailure.BudgetGone);
 
-    public Task<string?> LeaveBudgetAsync(Guid budgetId) =>
-        ChangeSharingAsync(() => http.PostAsync($"api/budgets/{budgetId}/leave", null), BudgetGone);
+    public Task<SharingRejection?> LeaveBudgetAsync(Guid budgetId) =>
+        ChangeSharingAsync(() => http.PostAsync($"api/budgets/{budgetId}/leave", null), SharingFailure.BudgetGone);
 
-    static async Task<string?> ChangeSharingAsync(Func<Task<HttpResponseMessage>> send, string gone)
+    static async Task<SharingRejection?> ChangeSharingAsync(Func<Task<HttpResponseMessage>> send, SharingFailure gone)
     {
         try
         {
@@ -168,20 +181,16 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
                 await response.Content.ReadFromJsonAsync<JsonElement>() is { ValueKind: JsonValueKind.Object } problem &&
                 problem.TryGetProperty("detail", out var detail) && detail.GetString() is { } reason)
             {
-                return reason;
+                return new SharingRejection(SharingFailure.Server, reason);
             }
 
-            return response.StatusCode == HttpStatusCode.NotFound
-                ? gone
-                : "That did not go through. Try again.";
+            return new SharingRejection(response.StatusCode == HttpStatusCode.NotFound ? gone : SharingFailure.Failed);
         }
         catch (HttpRequestException)
         {
-            return OfflineReason;
+            return new SharingRejection(SharingFailure.Offline);
         }
     }
-
-    public const string OfflineReason = "Sharing changes need a connection. Try again when you are online.";
 
     public Task<StatisticsOverview?> OverviewAsync(int days) =>
         GetAsync<StatisticsOverview>($"api/statistics/overview?days={days}");

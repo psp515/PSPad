@@ -17,7 +17,7 @@ public sealed class UserProvisioner(
     readonly IDocumentStore<Inbox> _inboxes = inboxes;
 
     public async Task<User> EnsureAsync(
-        string subject, string displayName, string timeZone, CancellationToken ct)
+        string subject, string displayName, string timeZone, string language, CancellationToken ct)
     {
         var id = User.IdFor(subject);
         var existing = await users.LoadAsync(id, ct);
@@ -32,7 +32,7 @@ public sealed class UserProvisioner(
 
         var user = new User();
         var userEvents = User.Decide(
-            existing, new ProvisionUser(commandId, id, subject, displayName, timeZone), at);
+            existing, new ProvisionUser(commandId, id, subject, displayName, timeZone, language), at);
         user.ApplyAll(userEvents);
         work.Stage(user, userEvents);
 
@@ -41,12 +41,13 @@ public sealed class UserProvisioner(
         inbox.ApplyAll(inboxEvents);
         work.Stage(inbox, inboxEvents);
 
-        for (var position = 0; position < ProvisioningPlan.SeedAreaNames.Count; position++)
+        var seeds = ProvisioningPlan.SeedAreaNames(language);
+        for (var position = 0; position < seeds.Count; position++)
         {
             var area = new Area();
             var areaEvents = Area.Decide(
                 null,
-                new CreateArea(commandId, id, Guid.NewGuid(), ProvisioningPlan.SeedAreaNames[position], position),
+                new CreateArea(commandId, id, Guid.NewGuid(), seeds[position], position),
                 at);
             area.ApplyAll(areaEvents);
             work.Stage(area, areaEvents);
@@ -61,6 +62,14 @@ public sealed class UserProvisioner(
         var commandId = Guid.NewGuid();
         var events = User.Decide(
             user, new SetUserTimeZone(commandId, user.Id, timeZone), clock.UtcNow);
+
+        return await StageAndCommitAsync(user, events, commandId, ct);
+    }
+
+    public async Task<User> SetLanguageAsync(User user, string language, CancellationToken ct)
+    {
+        var commandId = Guid.NewGuid();
+        var events = User.Decide(user, new SetUserLanguage(commandId, user.Id, language), clock.UtcNow);
 
         return await StageAndCommitAsync(user, events, commandId, ct);
     }

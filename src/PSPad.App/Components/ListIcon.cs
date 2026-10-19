@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Localization;
 using MudBlazor;
+using PSPad.App.Resources;
 using PSPad.Module.Tasks.Lists;
 
 namespace PSPad.App.Components;
@@ -13,11 +15,12 @@ public static class ListIcon
         _ => Icons.Material.Outlined.Checklist
     };
 
-    public static string LabelFor(TaskList list) => LabelFor(list.Kind);
+    public static string LabelFor(TaskList list, IStringLocalizer<ListsStrings> localizer) =>
+        LabelFor(list.Kind, localizer);
 
-    public static string LabelFor(ListKind kind) => kind switch
+    public static string LabelFor(ListKind kind, IStringLocalizer<ListsStrings> localizer) => kind switch
     {
-        ListKind.Reference => "Reference list",
-        _ => "Task list"
+        ListKind.Reference => localizer["ReferenceListLabel"],
+        _ => localizer["TaskListLabel"]
     };
 }

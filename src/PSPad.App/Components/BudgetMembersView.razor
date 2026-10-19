@@ -11,18 +11,20 @@
 @inject IDialogService Dialogs
 @inject NavigationManager Navigation
 @inject IClock Clock
+@inject IStringLocalizer<BudgetsStrings> T
+@inject IStringLocalizer<SharingStrings> SharingText
 @implements IDisposable
 
 <div class="pspad-budget-members d-flex flex-column gap-3">
     @if (!Connectivity.IsOnline)
     {
-        <MudAlert Class="pspad-share-offline" Severity="Severity.Info" Dense="true">Sharing changes need a connection.</MudAlert>
+        <MudAlert Class="pspad-share-offline" Severity="Severity.Info" Dense="true">@T["SharingNeedsConnection"]</MudAlert>
     }
     @if (IsMine)
     {
-        <InviteCard Invite="@Invite" LinkFor="@LinkFor" Thing="budget" Disabled="@Locked" OnChanged="@OnChanged"
-                    Invitation="Create an invite link or QR code. It works for 30 minutes. Whoever opens it in that time sees every entry and balance and can add and edit them."
-                    BlockedReason="@(Budget.IsArchived ? "Restore the budget to invite people." : null)"
+        <InviteCard Invite="@Invite" LinkFor="@LinkFor" Kind="InviteKind.Budget" Disabled="@Locked" OnChanged="@OnChanged"
+                    Invitation="@T["InviteDescription"]"
+                    BlockedReason="@(Budget.IsArchived ? T["RestoreToInvite"].Value : null)"
                     OnShare="@((token, code) => Sharing.ShareBudgetAsync(Budget.Id, token, code))"
                     OnEnd="@(() => Sharing.StopSharingBudgetAsync(Budget.Id))" />
     }
@@ -31,10 +33,10 @@
         <MudPaper Outlined="true" Class="pa-4 d-flex align-center gap-3">
             <MudAvatar Color="Color.Primary">@AvatarColor.InitialsOf(Budget.OwnerName)</MudAvatar>
             <div class="flex-grow-1">
-                <MudText Typo="Typo.caption" Class="pspad-muted d-block">Shared by</MudText>
+                <MudText Typo="Typo.caption" Class="pspad-muted d-block">@T["SharedByLabel"]</MudText>
                 <MudText Typo="Typo.subtitle1" Class="pspad-share-owner">@Budget.OwnerName</MudText>
             </div>
-            <MudChip T="string" Class="ma-0" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">You can edit</MudChip>
+            <MudChip T="string" Class="ma-0" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">@T["YouCanEdit"]</MudChip>
         </MudPaper>
     }
 
@@ -47,19 +49,16 @@
         {
             <MudButton Class="pspad-share-stop align-self-start" Variant="Variant.Text" Color="Color.Error"
                        Disabled="@Locked" OnClick="@StopSharingAsync">
-                Stop sharing · remove everyone
+                @T["StopSharingEveryone"]
             </MudButton>
         }
     }
     else
     {
-        <MudText Typo="Typo.body2" Class="pspad-muted">
-            You see every entry and balance in this budget and can add, edit and delete them, and edit its categories.
-            Your default currency stays your own.
-        </MudText>
+        <MudText Typo="Typo.body2" Class="pspad-muted">@T["MemberExplain"]</MudText>
         <MudButton Class="pspad-share-leave align-self-start" Variant="Variant.Text" Color="Color.Error"
                    StartIcon="@Icons.Material.Outlined.Logout" Disabled="@Locked" OnClick="@LeaveAsync">
-            Leave budget
+            @T["LeaveBudget"]
         </MudButton>
     }
 </div>
@@ -89,7 +88,7 @@
     async Task StopSharingAsync()
     {
         if (Locked || !await ConfirmAsync(
-                "Stop sharing", $"The invite link stops working and everyone else loses {Budget.Name}.", "Stop sharing"))
+                T["StopSharing"], T["StopSharingMessage", Budget.Name], T["StopSharing"]))
         {
             return;
         }
@@ -113,7 +112,7 @@
 
     async Task RemoveMemberAsync(SharePerson member)
     {
-        if (Locked || !await ConfirmAsync("Remove member", $"Remove {member.DisplayName} from this budget?", "Remove"))
+        if (Locked || !await ConfirmAsync(T["RemoveMember"], T["RemoveMemberMessage", member.DisplayName], T["Remove"]))
         {
             return;
         }
@@ -127,7 +126,7 @@
 
     async Task LeaveAsync()
     {
-        if (Locked || !await ConfirmAsync("Leave budget", $"Leave {Budget.Name}? It disappears from your devices.", "Leave"))
+        if (Locked || !await ConfirmAsync(T["LeaveBudget"], T["LeaveBudgetMessage", Budget.Name], T["Leave"]))
         {
             return;
         }
@@ -141,14 +140,14 @@
         Navigation.NavigateTo(BudgetLinks.Index);
     }
 
-    async Task<bool> SucceededAsync(Task<string?> change)
+    async Task<bool> SucceededAsync(Task<SharingRejection?> change)
     {
         if (await change is not { } rejection)
         {
             return true;
         }
 
-        Snackbar.Add(rejection, Severity.Error);
+        Snackbar.Add(SharingText.Of(rejection), Severity.Error);
         return false;
     }
 

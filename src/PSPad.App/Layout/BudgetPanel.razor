@@ -8,12 +8,13 @@
 @inject CommandSender Sender
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<BudgetsStrings> T
 
-<DetailPanel Open="@(IsNew || _budget is not null)" Title="@(IsNew ? "New budget" : "Budget")" TitleTypo="Typo.body2"
-             OnClose="@OnClose" OnSave="@SaveCallback" SaveText="Add budget"
+<DetailPanel Open="@(IsNew || _budget is not null)" Title="@(IsNew ? T["NewBudget"] : T["Budget"])" TitleTypo="Typo.body2"
+             OnClose="@OnClose" OnSave="@SaveCallback" SaveText="@T["AddBudget"]"
              CanSave="@(!string.IsNullOrWhiteSpace(_draftName))" Disabled="@Disabled">
     <div class="px-2 pt-3 pb-1">
-        <MudTextField T="string" Class="pspad-budget-name-field flex-grow-1 px-2" Placeholder="Budget name"
+        <MudTextField T="string" Class="pspad-budget-name-field flex-grow-1 px-2" Placeholder="@T["BudgetName"]"
                       Typo="Typo.h6" Underline="false" MaxLength="@Budget.MaxNameLength" Value="@(_budget?.Name ?? _draftName)"
                       ValueChanged="@NameChangedAsync" Immediate="@IsNew" AutoFocus="@IsNew" Disabled="@Disabled"
                       OnKeyDown="@AddOnEnterAsync" />
@@ -72,7 +73,7 @@
 
         if (!result.Accepted)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't rename the budget.", Severity.Warning);
+            Snackbar.Add(result.Rejection ?? T["RenameBudgetFailed"].Value, Severity.Warning);
         }
 
         await ReloadAsync();
@@ -100,7 +101,7 @@
 
         if (!result.Accepted)
         {
-            Snackbar.Add(result.Rejection ?? "Couldn't add the budget.", Severity.Warning);
+            Snackbar.Add(result.Rejection ?? T["AddBudgetFailed"].Value, Severity.Warning);
             return;
         }
 

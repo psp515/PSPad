@@ -1,4 +1,6 @@
 using PSPad.App.Components;
+using PSPad.App.Resources;
+using PSPad.App.Tests.Localization;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Components;
@@ -12,14 +14,14 @@ public class AreaSummaryTests
     [InlineData(1, 1, "1 list · 1 open task")]
     [InlineData(2, 3, "2 lists · 3 open tasks")]
     public void TaskListsOnlyCountListsAndOpenTasks(int taskLists, int openTasks, string expected) =>
-        Assert.Equal(expected, AreaSummary.Describe(taskLists, 0, openTasks, 0));
+        Assert.Equal(expected, AreaSummary.Describe(taskLists, 0, openTasks, 0, TestLocalizers.For<ListsStrings>(), TestLocalizers.For<TasksStrings>()));
 
     [Theory]
     [InlineData(1, 0, "1 reference list · no items")]
     [InlineData(1, 1, "1 reference list · 1 item")]
     [InlineData(2, 7, "2 reference lists · 7 items")]
     public void ReferenceListsOnlyCountReferenceListsAndItems(int referenceLists, int items, string expected) =>
-        Assert.Equal(expected, AreaSummary.Describe(0, referenceLists, 0, items));
+        Assert.Equal(expected, AreaSummary.Describe(0, referenceLists, 0, items, TestLocalizers.For<ListsStrings>(), TestLocalizers.For<TasksStrings>()));
 
     [Theory]
     [InlineData(1, 1, 1, 1, "2 lists · 1 open task · 1 item")]
@@ -28,5 +30,5 @@ public class AreaSummaryTests
     [InlineData(1, 1, 2, 0, "2 lists · 2 open tasks")]
     [InlineData(1, 1, 0, 0, "2 lists · no open tasks")]
     public void BothKindsCountAllListsAndLeaveOutAZeroPart(int taskLists, int referenceLists, int openTasks, int items, string expected) =>
-        Assert.Equal(expected, AreaSummary.Describe(taskLists, referenceLists, openTasks, items));
+        Assert.Equal(expected, AreaSummary.Describe(taskLists, referenceLists, openTasks, items, TestLocalizers.For<ListsStrings>(), TestLocalizers.For<TasksStrings>()));
 }

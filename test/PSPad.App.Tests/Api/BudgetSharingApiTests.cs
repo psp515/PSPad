@@ -58,13 +58,18 @@ public class BudgetSharingApiTests
 
     [Fact]
     public async Task AConflictReturnsItsDetail() =>
-        Assert.Equal("This budget is archived.", await ClientAnswering(HttpStatusCode.Conflict,
+        Assert.Equal(new SharingRejection(SharingFailure.Server, "This budget is archived."), await ClientAnswering(HttpStatusCode.Conflict,
             new { detail = "This budget is archived." }).Client.ShareBudgetAsync(BudgetId, "token", "K7M4PX"));
 
     [Fact]
     public async Task ANotFoundSaysTheBudgetIsGone() =>
-        Assert.Equal("That budget is no longer shared with you.",
+        Assert.Equal(new SharingRejection(SharingFailure.BudgetGone),
             await ClientAnswering(HttpStatusCode.NotFound).Client.LeaveBudgetAsync(BudgetId));
+
+    [Fact]
+    public async Task AServerErrorIsAGenericFailure() =>
+        Assert.Equal(new SharingRejection(SharingFailure.Failed),
+            await ClientAnswering(HttpStatusCode.InternalServerError).Client.LeaveBudgetAsync(BudgetId));
 
     sealed class RecordingHandler(HttpStatusCode status, object? body) : HttpMessageHandler
     {

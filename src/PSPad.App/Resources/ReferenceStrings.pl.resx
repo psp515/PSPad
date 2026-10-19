@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ItemTitle" xml:space="preserve">
+    <value>Pozycja</value>
+  </data>
+  <data name="NewItem" xml:space="preserve">
+    <value>Nowa pozycja</value>
+  </data>
+  <data name="AddItem" xml:space="preserve">
+    <value>Dodaj pozycję</value>
+  </data>
+  <data name="ItemName" xml:space="preserve">
+    <value>Nazwa pozycji</value>
+  </data>
+  <data name="NoItemsYet" xml:space="preserve">
+    <value>Brak pozycji.</value>
+  </data>
+  <data name="Labels" xml:space="preserve">
+    <value>Etykiety</value>
+  </data>
+  <data name="Label" xml:space="preserve">
+    <value>Etykieta</value>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Wartość</value>
+  </data>
+  <data name="NewLabel" xml:space="preserve">
+    <value>Nowa etykieta</value>
+  </data>
+  <data name="NewLabelValue" xml:space="preserve">
+    <value>Wartość nowej etykiety</value>
+  </data>
+  <data name="Display" xml:space="preserve">
+    <value>Wyświetlanie</value>
+  </data>
+  <data name="DisplayAutomatic" xml:space="preserve">
+    <value>Automatycznie</value>
+  </data>
+  <data name="DisplayText" xml:space="preserve">
+    <value>Tekst</value>
+  </data>
+  <data name="DisplayLink" xml:space="preserve">
+    <value>Link</value>
+  </data>
+  <data name="DisplayPath" xml:space="preserve">
+    <value>Ścieżka</value>
+  </data>
+  <data name="DisplayQuantity" xml:space="preserve">
+    <value>Ilość</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Usuń</value>
+  </data>
+  <data name="RemoveLabel" xml:space="preserve">
+    <value>Usuń: {0}</value>
+  </data>
+  <data name="DeleteItem" xml:space="preserve">
+    <value>Usuń pozycję</value>
+  </data>
+  <data name="DeleteItemConfirm" xml:space="preserve">
+    <value>Usunąć „{0}”?</value>
+  </data>
+  <data name="CouldntAddItem" xml:space="preserve">
+    <value>Nie udało się dodać pozycji.</value>
+  </data>
+  <data name="CouldntAddField" xml:space="preserve">
+    <value>Nie udało się dodać etykiety: {0}.</value>
+  </data>
+  <data name="CouldntAddFieldGeneric" xml:space="preserve">
+    <value>Nie udało się dodać etykiety.</value>
+  </data>
+  <data name="CouldntSaveField" xml:space="preserve">
+    <value>Nie udało się zapisać etykiety.</value>
+  </data>
+  <data name="CouldntRemoveField" xml:space="preserve">
+    <value>Nie udało się usunąć etykiety.</value>
+  </data>
+  <data name="CouldntReorderField" xml:space="preserve">
+    <value>Nie udało się zmienić kolejności etykiet.</value>
+  </data>
+  <data name="CouldntRenameItem" xml:space="preserve">
+    <value>Nie udało się zmienić nazwy pozycji.</value>
+  </data>
+  <data name="CouldntStarItem" xml:space="preserve">
+    <value>Nie udało się oznaczyć pozycji gwiazdką.</value>
+  </data>
+  <data name="CouldntMoveItem" xml:space="preserve">
+    <value>Nie udało się przenieść pozycji.</value>
+  </data>
+  <data name="CouldntDeleteItem" xml:space="preserve">
+    <value>Nie udało się usunąć pozycji.</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Kopiuj</value>
+  </data>
+  <data name="CopyValue" xml:space="preserve">
+    <value>Kopiuj: {0}</value>
+  </data>
+  <data name="Copied" xml:space="preserve">
+    <value>Skopiowano</value>
+  </data>
+  <data name="CopyFailedOpenItem" xml:space="preserve">
+    <value>Nie udało się skopiować — otwórz pozycję i zaznacz ścieżkę.</value>
+  </data>
+  <data name="CopyFailedSelect" xml:space="preserve">
+    <value>Nie udało się skopiować — zaznacz ścieżkę ręcznie.</value>
+  </data>
+  <data name="DropHasNoPath" xml:space="preserve">
+    <value>Przeglądarki nie mogą odczytać pełnej ścieżki pliku. W Windowsie kliknij plik prawym przyciskiem z wciśniętym Shiftem, wybierz „Kopiuj jako ścieżkę” i wklej ją tutaj.</value>
+  </data>
+</root>

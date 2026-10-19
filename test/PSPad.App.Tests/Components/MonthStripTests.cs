@@ -21,6 +21,7 @@ public class MonthStripTests : Bunit.TestContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddMudServices();
+        Services.AddLocalization();
     }
 
     IRenderedComponent<ContainerFragment> Strip(YearMonth month, params YearMonth[] marked) => Render(builder =>

@@ -1495,7 +1495,7 @@ lands on the budget. `InviteLinkCard` is now the list wrapper over
 | `/public/snapshot/{token}` | a public snapshot, anonymous, outside `AppShell` |
 | `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-captures bar chart, collapsed record feed |
 | `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
-| `/settings` | Settings (account + change password + sign-out; application settings: time zone, theme, accent; sync status; delete account) |
+| `/settings` | Settings (account + change password + sign-out; application settings: language, time zone, theme, accent; sync status; delete account) |
 | `/app-info` | version, license, docs/repo links |
 | `/search` | search results (currently unreachable from the UI) |
 | `/welcome` | public, signed-out landing screen |

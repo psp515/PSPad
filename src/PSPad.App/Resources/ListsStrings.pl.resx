@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NoAreasYet" xml:space="preserve">
+    <value>Brak obszarów.</value>
+  </data>
+  <data name="NewArea" xml:space="preserve">
+    <value>Nowy obszar</value>
+  </data>
+  <data name="AreaTitle" xml:space="preserve">
+    <value>Obszar</value>
+  </data>
+  <data name="AddArea" xml:space="preserve">
+    <value>Dodaj obszar</value>
+  </data>
+  <data name="EditArea" xml:space="preserve">
+    <value>Edytuj obszar</value>
+  </data>
+  <data name="EditAreaAndOrderLists" xml:space="preserve">
+    <value>Edytuj obszar i kolejność list</value>
+  </data>
+  <data name="DeleteArea" xml:space="preserve">
+    <value>Usuń obszar</value>
+  </data>
+  <data name="AreaGone" xml:space="preserve">
+    <value>Tego obszaru już nie ma.</value>
+  </data>
+  <data name="AreaName" xml:space="preserve">
+    <value>Nazwa obszaru</value>
+  </data>
+  <data name="ListsCount" xml:space="preserve">
+    <value>Listy · {0}</value>
+  </data>
+  <data name="NoListsYet" xml:space="preserve">
+    <value>Brak list.</value>
+  </data>
+  <data name="NoListsYetMenu" xml:space="preserve">
+    <value>Brak list</value>
+  </data>
+  <data name="NothingSharedWithYou" xml:space="preserve">
+    <value>Nic ci teraz nie udostępniono.</value>
+  </data>
+  <data name="NewList" xml:space="preserve">
+    <value>Nowa lista</value>
+  </data>
+  <data name="NewListIn" xml:space="preserve">
+    <value>Nowa lista · {0}</value>
+  </data>
+  <data name="ListTitle" xml:space="preserve">
+    <value>Lista</value>
+  </data>
+  <data name="ListIn" xml:space="preserve">
+    <value>Lista · {0}</value>
+  </data>
+  <data name="AddList" xml:space="preserve">
+    <value>Dodaj listę</value>
+  </data>
+  <data name="EditList" xml:space="preserve">
+    <value>Edytuj listę</value>
+  </data>
+  <data name="DeleteList" xml:space="preserve">
+    <value>Usuń listę</value>
+  </data>
+  <data name="ListName" xml:space="preserve">
+    <value>Nazwa listy</value>
+  </data>
+  <data name="ListGone" xml:space="preserve">
+    <value>Tej listy już nie ma.</value>
+  </data>
+  <data name="BackToArea" xml:space="preserve">
+    <value>Wróć do obszaru</value>
+  </data>
+  <data name="NoTasksYet" xml:space="preserve">
+    <value>Brak zadań.</value>
+  </data>
+  <data name="CompletedCount" xml:space="preserve">
+    <value>Ukończone · {0}</value>
+  </data>
+  <data name="KindTasks" xml:space="preserve">
+    <value>Zadania</value>
+  </data>
+  <data name="KindReference" xml:space="preserve">
+    <value>Materiały</value>
+  </data>
+  <data name="TaskListLabel" xml:space="preserve">
+    <value>Lista zadań</value>
+  </data>
+  <data name="ReferenceListLabel" xml:space="preserve">
+    <value>Lista materiałów</value>
+  </data>
+  <data name="NoList" xml:space="preserve">
+    <value>Brak listy</value>
+  </data>
+  <data name="Members" xml:space="preserve">
+    <value>Członkowie</value>
+  </data>
+  <data name="PublicSnapshots" xml:space="preserve">
+    <value>Publiczne migawki</value>
+  </data>
+  <data name="OnlyYou" xml:space="preserve">
+    <value>Tylko ty</value>
+  </data>
+  <data name="NeedsConnection" xml:space="preserve">
+    <value>Wymaga połączenia</value>
+  </data>
+  <data name="SearchTitle" xml:space="preserve">
+    <value>Szukaj: {0}</value>
+  </data>
+  <data name="NothingMatches" xml:space="preserve">
+    <value>Nic nie pasuje.</value>
+  </data>
+  <data name="DeleteWarning" xml:space="preserve">
+    <value>Usunąć „{0}”? Tej operacji nie można cofnąć.</value>
+  </data>
+  <data name="DeleteWarningWith" xml:space="preserve">
+    <value>Usunąć „{0}” razem z {1}? Tej operacji nie można cofnąć.</value>
+  </data>
+  <data name="ContentsAnd" xml:space="preserve">
+    <value>{0} i {1}</value>
+  </data>
+  <data name="Joined.Zero" xml:space="preserve">
+    <value>Nikt jeszcze nie dołączył</value>
+  </data>
+  <data name="Joined.One" xml:space="preserve">
+    <value>Dołączyła {0} osoba</value>
+  </data>
+  <data name="Joined.Few" xml:space="preserve">
+    <value>Dołączyły {0} osoby</value>
+  </data>
+  <data name="Joined.Many" xml:space="preserve">
+    <value>Dołączyło {0} osób</value>
+  </data>
+  <data name="JoinedWithLink.Zero" xml:space="preserve">
+    <value>Nikt jeszcze nie dołączył · link wygaśnie za {1} min</value>
+  </data>
+  <data name="JoinedWithLink.One" xml:space="preserve">
+    <value>Dołączyła {0} osoba · link wygaśnie za {1} min</value>
+  </data>
+  <data name="JoinedWithLink.Few" xml:space="preserve">
+    <value>Dołączyły {0} osoby · link wygaśnie za {1} min</value>
+  </data>
+  <data name="JoinedWithLink.Many" xml:space="preserve">
+    <value>Dołączyło {0} osób · link wygaśnie za {1} min</value>
+  </data>
+  <data name="LiveLinks.Zero" xml:space="preserve">
+    <value>Brak aktywnych linków</value>
+  </data>
+  <data name="LiveLinks.One" xml:space="preserve">
+    <value>{0} aktywny link</value>
+  </data>
+  <data name="LiveLinks.Few" xml:space="preserve">
+    <value>{0} aktywne linki</value>
+  </data>
+  <data name="LiveLinks.Many" xml:space="preserve">
+    <value>{0} aktywnych linków</value>
+  </data>
+  <data name="SharedWithPeople.One" xml:space="preserve">
+    <value>Udostępniona · {0} osoba</value>
+  </data>
+  <data name="SharedWithPeople.Few" xml:space="preserve">
+    <value>Udostępniona · {0} osoby</value>
+  </data>
+  <data name="SharedWithPeople.Many" xml:space="preserve">
+    <value>Udostępniona · {0} osób</value>
+  </data>
+  <data name="SummaryLists.One" xml:space="preserve">
+    <value>{0} lista</value>
+  </data>
+  <data name="SummaryLists.Few" xml:space="preserve">
+    <value>{0} listy</value>
+  </data>
+  <data name="SummaryLists.Many" xml:space="preserve">
+    <value>{0} list</value>
+  </data>
+  <data name="SummaryReferenceLists.One" xml:space="preserve">
+    <value>{0} lista materiałów</value>
+  </data>
+  <data name="SummaryReferenceLists.Few" xml:space="preserve">
+    <value>{0} listy materiałów</value>
+  </data>
+  <data name="SummaryReferenceLists.Many" xml:space="preserve">
+    <value>{0} list materiałów</value>
+  </data>
+  <data name="SummaryItems.Zero" xml:space="preserve">
+    <value>brak pozycji</value>
+  </data>
+  <data name="SummaryItems.One" xml:space="preserve">
+    <value>{0} pozycja</value>
+  </data>
+  <data name="SummaryItems.Few" xml:space="preserve">
+    <value>{0} pozycje</value>
+  </data>
+  <data name="SummaryItems.Many" xml:space="preserve">
+    <value>{0} pozycji</value>
+  </data>
+  <data name="ContainsLists.One" xml:space="preserve">
+    <value>{0} listą</value>
+  </data>
+  <data name="ContainsLists.Few" xml:space="preserve">
+    <value>{0} listami</value>
+  </data>
+  <data name="ContainsLists.Many" xml:space="preserve">
+    <value>{0} listami</value>
+  </data>
+  <data name="ContainsTasks.One" xml:space="preserve">
+    <value>{0} zadaniem</value>
+  </data>
+  <data name="ContainsTasks.Few" xml:space="preserve">
+    <value>{0} zadaniami</value>
+  </data>
+  <data name="ContainsTasks.Many" xml:space="preserve">
+    <value>{0} zadaniami</value>
+  </data>
+  <data name="ContainsItems.One" xml:space="preserve">
+    <value>{0} pozycją</value>
+  </data>
+  <data name="ContainsItems.Few" xml:space="preserve">
+    <value>{0} pozycjami</value>
+  </data>
+  <data name="ContainsItems.Many" xml:space="preserve">
+    <value>{0} pozycjami</value>
+  </data>
+  <data name="SharedWithMe" xml:space="preserve">
+    <value>Udostępnione mi</value>
+  </data>
+</root>

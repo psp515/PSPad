@@ -1,13 +1,11 @@
-using System.Globalization;
+using Microsoft.Extensions.Localization;
+using PSPad.App.Localization;
+using PSPad.App.Resources;
 
 namespace PSPad.App.Components;
 
 public static class OpenTaskCount
 {
-    public static string Describe(int open) => open switch
-    {
-        0 => "no open tasks",
-        1 => "1 open task",
-        _ => $"{open.ToString(CultureInfo.InvariantCulture)} open tasks"
-    };
+    public static string Describe(int open, IStringLocalizer<TasksStrings> localizer) =>
+        localizer.Plural(open, "OpenTasks");
 }

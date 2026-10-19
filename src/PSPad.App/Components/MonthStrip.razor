@@ -4,12 +4,14 @@
 @using PSPad.Module.Money.Values
 @inject IJSRuntime Js
 @inject ILogger<MonthStrip> Logger
+@inject IStringLocalizer<BudgetsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
 @implements IAsyncDisposable
 
 <div class="@($"d-flex align-center gap-1 pspad-month-strip {Class}")">
-    <MudIconButton Class="pspad-month-today" Icon="@Icons.Material.Outlined.Today" aria-label="This month" Size="Size.Small"
+    <MudIconButton Class="pspad-month-today" Icon="@Icons.Material.Outlined.Today" aria-label="@T["ThisMonth"].Value" Size="Size.Small"
                    Disabled="@(Month == Current)" OnClick="@(() => OnMonthChanged.InvokeAsync(Current))" />
-    <div @ref="_scroll" class="pspad-month-strip-scroll" role="group" aria-label="Month">
+    <div @ref="_scroll" class="pspad-month-strip-scroll" role="group" aria-label="@T["Month"].Value">
         @foreach (var month in _chips)
         {
             <MudButton @key="month" Class="@ChipClass(month)" Variant="@(month == Month ? Variant.Filled : Variant.Text)"
@@ -25,17 +27,17 @@
             </MudButton>
         }
     </div>
-    <MudIconButton Class="pspad-month-more" Icon="@Icons.Material.Outlined.CalendarMonth" aria-label="Pick another month"
+    <MudIconButton Class="pspad-month-more" Icon="@Icons.Material.Outlined.CalendarMonth" aria-label="@T["PickAnotherMonth"].Value"
                    Size="Size.Small" OnClick="@Open" />
 </div>
 
 <MudDialog @bind-Visible="_picking" Class="pspad-month-sheet" Options="@SheetOptions">
     <DialogContent>
         <div class="d-flex align-center mb-3">
-            <MudIconButton Class="pspad-month-sheet-previous" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="Previous year"
+            <MudIconButton Class="pspad-month-sheet-previous" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="@T["PreviousYear"].Value"
                            OnClick="@(() => _year--)" />
             <MudText Typo="Typo.h6" Align="Align.Center" Class="flex-grow-1 pspad-month-sheet-year">@_year</MudText>
-            <MudIconButton Class="pspad-month-sheet-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="Next year"
+            <MudIconButton Class="pspad-month-sheet-next" Icon="@Icons.Material.Filled.ChevronRight" aria-label="@T["NextYear"].Value"
                            OnClick="@(() => _year++)" />
         </div>
         <div class="pspad-month-sheet-grid">
@@ -50,8 +52,8 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Class="pspad-month-sheet-current" Color="Color.Primary" OnClick="@(() => PickAsync(Current))">This month</MudButton>
-        <MudButton Color="Color.Primary" OnClick="@(() => _picking = false)">Cancel</MudButton>
+        <MudButton Class="pspad-month-sheet-current" Color="Color.Primary" OnClick="@(() => PickAsync(Current))">@T["ThisMonth"]</MudButton>
+        <MudButton Color="Color.Primary" OnClick="@(() => _picking = false)">@Shared["Cancel"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -159,7 +161,7 @@
         + (Marked.Contains(month) ? " pspad-month-chip-marked" : "")
         + (month == Current ? " pspad-month-chip-current" : "");
 
-    static string Abbreviation(int month) => CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(month);
+    static string Abbreviation(int month) => CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(month);
 
     void Open()
     {
