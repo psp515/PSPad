@@ -59,7 +59,6 @@ public sealed class ListPlacement
         byArea[SharedWithMe.AreaId] = Arranged.Sort(shared, [], list => list.Id, list => list.CreatedAt);
 
         var areaNames = liveAreas.ToDictionary(area => area.Id, area => area.Name);
-        areaNames[SharedWithMe.AreaId] = SharedWithMe.Name;
 
         var all = liveAreas
             .SelectMany(area => byArea[area.Id])
@@ -90,7 +89,8 @@ public sealed class ListPlacement
 
     public IReadOnlyList<TaskList> InArea(Guid areaId) => _byArea.GetValueOrDefault(areaId, []);
 
-    public string AreaName(Guid areaId) => _areaNames.GetValueOrDefault(areaId, "");
+    public string AreaName(Guid areaId, string sharedWithMeName) =>
+        areaId == SharedWithMe.AreaId ? sharedWithMeName : _areaNames.GetValueOrDefault(areaId, "");
 
     public bool IsMine(TaskList list) => IsMine(_me, list);
 

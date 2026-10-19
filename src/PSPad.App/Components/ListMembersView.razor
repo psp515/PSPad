@@ -20,6 +20,7 @@
 @inject NavigationManager Navigation
 @inject IClock Clock
 @inject IStringLocalizer<SharingStrings> T
+@inject IStringLocalizer<ListsStrings> ListText
 
 <div class="pspad-list-members d-flex flex-column gap-3">
     @if (!Connectivity.IsOnline)
@@ -60,7 +61,7 @@
         <MudSelect T="Guid?" Class="pspad-list-filed-area" Label="@T["ShowInMyArea"]" Variant="Variant.Outlined"
                    Value="@_filedAreaId" ValueChanged="@FileUnderAsync" Disabled="@Disabled"
                    ToStringFunc="@FiledAreaName" AnchorOrigin="Origin.BottomCenter">
-            <MudSelectItem T="Guid?" Value="@((Guid?)null)">@SharedWithMe.Name</MudSelectItem>
+            <MudSelectItem T="Guid?" Value="@((Guid?)null)">@ListText["SharedWithMe"]</MudSelectItem>
             @foreach (var area in _areas)
             {
                 <MudSelectItem T="Guid?" Value="@((Guid?)area.Id)">@area.Name</MudSelectItem>
@@ -116,7 +117,7 @@
     }
 
     string FiledAreaName(Guid? areaId) =>
-        areaId is null ? SharedWithMe.Name : _areas.FirstOrDefault(area => area.Id == areaId)?.Name ?? "";
+        areaId is null ? ListText["SharedWithMe"].Value : _areas.FirstOrDefault(area => area.Id == areaId)?.Name ?? "";
 
     async Task FileUnderAsync(Guid? areaId)
     {
@@ -203,14 +204,14 @@
         Navigation.NavigateTo(AreaLinks.For(SharedWithMe.AreaId));
     }
 
-    async Task<bool> SucceededAsync(Task<string?> change)
+    async Task<bool> SucceededAsync(Task<SharingRejection?> change)
     {
         if (await change is not { } rejection)
         {
             return true;
         }
 
-        Snackbar.Add(rejection, Severity.Error);
+        Snackbar.Add(T.Of(rejection), Severity.Error);
         return false;
     }
 

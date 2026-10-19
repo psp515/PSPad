@@ -17,7 +17,7 @@
         var current = Current == SharedWithMe.AreaId;
         <MudChip T="Guid" Value="@SharedWithMe.AreaId" Href="@AreaLinks.For(SharedWithMe.AreaId)" Size="Size.Small" Class="@ChipClass(current)"
                  Color="Color.Default" Variant="Variant.Text"
-                 UserAttributes="@(current ? CurrentPage : NoAttributes)">@SharedWithMe.Name</MudChip>
+                 UserAttributes="@(current ? CurrentPage : NoAttributes)">@T["SharedWithMe"]</MudChip>
     }
     <MudChip T="string" Size="Size.Small" Class="ma-0 pspad-new-area-chip" Color="Color.Primary"
              Variant="Variant.Text" Icon="@Icons.Material.Filled.Add" OnClick="@NewArea">@T["NewArea"]</MudChip>

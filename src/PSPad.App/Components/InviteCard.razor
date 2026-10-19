@@ -1,5 +1,6 @@
 @using System.Globalization
 @using PSPad.Abstractions
+@using PSPad.App.Api
 @using PSPad.App.State
 @using PSPad.App.Sync
 @implements IDisposable
@@ -134,9 +135,9 @@
 
     [Parameter] public bool Disabled { get; set; }
 
-    [Parameter, EditorRequired] public Func<string, string, Task<string?>> OnShare { get; set; } = null!;
+    [Parameter, EditorRequired] public Func<string, string, Task<SharingRejection?>> OnShare { get; set; } = null!;
 
-    [Parameter, EditorRequired] public Func<Task<string?>> OnEnd { get; set; } = null!;
+    [Parameter, EditorRequired] public Func<Task<SharingRejection?>> OnEnd { get; set; } = null!;
 
     [Parameter] public EventCallback OnChanged { get; set; }
 
@@ -200,11 +201,11 @@
 
     Task ShareAsync() => ApplyAsync(OnShare(InviteToken.New(), InviteCode.New()));
 
-    async Task ApplyAsync(Task<string?> change)
+    async Task ApplyAsync(Task<SharingRejection?> change)
     {
         if (await change is { } rejection)
         {
-            Snackbar.Add(rejection, Severity.Error);
+            Snackbar.Add(T.Of(rejection), Severity.Error);
             return;
         }
 

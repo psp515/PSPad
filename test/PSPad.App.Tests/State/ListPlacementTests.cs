@@ -124,7 +124,7 @@ public class ListPlacementTests
     }
 
     [Fact]
-    public void TheVirtualAreaIsNamedSharedWithMe() => Assert.Equal("Shared with me", Empty().AreaName(SharedWithMe.AreaId));
+    public void TheVirtualAreaIsNamedSharedWithMe() => Assert.Equal("Shared with me", Empty().AreaName(SharedWithMe.AreaId, "Shared with me"));
 
     static ListPlacement Empty() => ListPlacement.For(Me, [], [], [], []);
 

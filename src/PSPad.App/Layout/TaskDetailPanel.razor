@@ -21,6 +21,7 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<TasksStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
+@inject IStringLocalizer<ListsStrings> ListText
 
 <DetailPanel Open="@(Mode != PanelMode.Closed)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose"
              OnSave="@SaveCallback" SaveText="@T["AddTask"]" CanSave="@(!_creating && !string.IsNullOrWhiteSpace(_draft.Name))"
@@ -192,7 +193,7 @@
 
     string CreatedText => _task?.CreatedAt is { } created ? T["Created", created.ToString("ddd, d MMM yyyy")] : "";
 
-    string? PathOf(Guid listId) => ListRow.PathOf(listId, _placement, _lists);
+    string? PathOf(Guid listId) => ListRow.PathOf(listId, _placement, _lists, ListText["SharedWithMe"]);
 
     protected override async Task OnParametersSetAsync()
     {

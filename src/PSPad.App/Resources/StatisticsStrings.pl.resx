@@ -46,7 +46,7 @@
     <value>zaktualizowano {0} godz. temu</value>
   </data>
   <data name="UpdatedDaysAgo" xml:space="preserve">
-    <value>zaktualizowano {0} dn. temu</value>
+    <value>zaktualizowano {0} d. temu</value>
   </data>
   <data name="SeriesPlanned" xml:space="preserve">
     <value>Planowane</value>
@@ -64,7 +64,7 @@
     <value>Zapisane</value>
   </data>
   <data name="CompletionsPerDay" xml:space="preserve">
-    <value>Ukończone zadania dziennie</value>
+    <value>Zrobione zadania dziennie</value>
   </data>
   <data name="TasksOpenedPerDay" xml:space="preserve">
     <value>Utworzone zadania dziennie</value>

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +9,7 @@ using PSPad.TestInfrastructure;
 namespace PSPad.App.Tests.Components;
 
 [UnitTest]
+[Collection("Culture")]
 public class AreaChipsTests : Bunit.TestContext
 {
     static readonly Guid User = Guid.NewGuid();
@@ -76,6 +78,28 @@ public class AreaChipsTests : Bunit.TestContext
             .Add(p => p.HasShared, true));
         var chip = with.Find($"a[href='{PSPad.App.State.SharedWithMe.Href}']");
         Assert.Contains("Shared with me", chip.TextContent);
+    }
+
+    [Fact]
+    public void TheSharedWithMeChipSpeaksPolishUnderThePolishCulture()
+    {
+        AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12));
+        var before = CultureInfo.CurrentUICulture;
+
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("pl-PL");
+
+            var chips = Render<AreaChips>(parameters => parameters
+                .Add(p => p.Areas, new[] { NewArea("Dom", 0) })
+                .Add(p => p.HasShared, true));
+
+            Assert.Contains("Udostępnione mi", chips.Find($"a[href='{PSPad.App.State.SharedWithMe.Href}']").TextContent);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = before;
+        }
     }
 
     [Fact]

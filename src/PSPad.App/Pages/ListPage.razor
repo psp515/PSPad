@@ -172,7 +172,7 @@ else
         _list = list is null || list.Deleted ? null : list;
         _isMine = _list is null || ListPlacement.IsMine(State.UserId, _list);
         _areaId = _list is null ? Guid.Empty : placement.AreaOf(_list);
-        _areaName = _list is null ? null : placement.AreaName(_areaId);
+        _areaName = _list is null ? null : placement.AreaName(_areaId, T["SharedWithMe"]);
 
         if (_list is { Kind: ListKind.Reference })
         {

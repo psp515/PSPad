@@ -10,7 +10,7 @@
     }
     @foreach (var areaId in AreaIds())
     {
-        <MudText Typo="Typo.overline" Class="px-4 pt-2 d-block">@Placement.AreaName(areaId)</MudText>
+        <MudText Typo="Typo.overline" Class="px-4 pt-2 d-block">@Placement.AreaName(areaId, T["SharedWithMe"])</MudText>
         @foreach (var list in Lists.Where(list => Placement.AreaOf(list) == areaId))
         {
             <MudMenuItem Class="pspad-list-option" OnClick="@(() => ValueChanged.InvokeAsync(list.Id))"
@@ -32,13 +32,13 @@
 
     [Parameter] public bool Disabled { get; set; }
 
-    public static string? PathOf(Guid? listId, ListPlacement placement, IReadOnlyList<TaskList> lists)
+    public static string? PathOf(Guid? listId, ListPlacement placement, IReadOnlyList<TaskList> lists, string sharedWithMeName)
     {
         var list = lists.FirstOrDefault(list => list.Id == listId);
-        return list is null ? null : $"{placement.AreaName(placement.AreaOf(list))} › {list.Name}";
+        return list is null ? null : $"{placement.AreaName(placement.AreaOf(list), sharedWithMeName)} › {list.Name}";
     }
 
-    string? PathOf(Guid? listId) => PathOf(listId, Placement, Lists);
+    string? PathOf(Guid? listId) => PathOf(listId, Placement, Lists, T["SharedWithMe"]);
 
     IEnumerable<Guid> AreaIds() => Lists.Select(list => Placement.AreaOf(list)).Distinct();
 }

@@ -384,4 +384,16 @@
   <data name="RevokeFailed" xml:space="preserve">
     <value>Couldn't revoke the snapshot.</value>
   </data>
+  <data name="SharingListGone" xml:space="preserve">
+    <value>That list is no longer shared with you.</value>
+  </data>
+  <data name="SharingBudgetGone" xml:space="preserve">
+    <value>That budget is no longer shared with you.</value>
+  </data>
+  <data name="SharingFailed" xml:space="preserve">
+    <value>That did not go through. Try again.</value>
+  </data>
+  <data name="SharingOffline" xml:space="preserve">
+    <value>Sharing changes need a connection. Try again when you are online.</value>
+  </data>
 </root>

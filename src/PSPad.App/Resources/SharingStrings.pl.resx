@@ -46,10 +46,10 @@
     <value>Odhaczone przez odwiedzających: {0} z {1}</value>
   </data>
   <data name="TickPrompt" xml:space="preserve">
-    <value>Odhacz wszystko, czym już się zajęto. Każdy z tym linkiem widzi odhaczenie, a {0} zobaczy je na liście.</value>
+    <value>Odhacz to, co już załatwione. Każdy z tym linkiem zobaczy twoje odhaczenie, a {0} zobaczy je na liście.</value>
   </data>
   <data name="TickPromptOwner" xml:space="preserve">
-    <value>Odhacz wszystko, czym już się zajęto. Każdy z tym linkiem widzi odhaczenie, a właściciel zobaczy je na liście.</value>
+    <value>Odhacz to, co już załatwione. Każdy z tym linkiem zobaczy twoje odhaczenie, a właściciel zobaczy je na liście.</value>
   </data>
   <data name="ToDoCount" xml:space="preserve">
     <value>Do zrobienia · {0}</value>
@@ -79,7 +79,7 @@
     <value>Migawki list</value>
   </data>
   <data name="SnapshotsEmpty" xml:space="preserve">
-    <value>Migawki otwarte po zalogowaniu pojawią się tutaj.</value>
+    <value>Migawki, które otworzysz po zalogowaniu, pojawią się tutaj.</value>
   </data>
   <data name="SnapshotExpiresOpened" xml:space="preserve">
     <value>Wygasa {0} · Otwarta {1}</value>
@@ -130,7 +130,7 @@
     <value>Kod QR z linkiem do zaproszenia</value>
   </data>
   <data name="QrCarriesCode" xml:space="preserve">
-    <value>Kod QR i link zawierają już kod</value>
+    <value>Kod QR i link zawierają kod zaproszenia</value>
   </data>
   <data name="Copy" xml:space="preserve">
     <value>Kopiuj</value>
@@ -292,7 +292,7 @@
     <value>Po zeskanowaniu kodu QR kod wpisuje się sam.</value>
   </data>
   <data name="PublisherIntro" xml:space="preserve">
-    <value>Zamrożona kopia tej listy, którą każdy może otworzyć bez konta. Odwiedzający mogą odhaczać; ich odhaczenia zobaczysz tutaj.</value>
+    <value>Niezmienna kopia tej listy, którą każdy może otworzyć bez konta. Odwiedzający mogą odhaczać; ich odhaczenia zobaczysz tutaj.</value>
   </data>
   <data name="LinkWorksFor" xml:space="preserve">
     <value>Link działa przez</value>
@@ -383,5 +383,17 @@
   </data>
   <data name="RevokeFailed" xml:space="preserve">
     <value>Nie udało się unieważnić migawki.</value>
+  </data>
+  <data name="SharingListGone" xml:space="preserve">
+    <value>Ta lista nie jest już dla ciebie udostępniona.</value>
+  </data>
+  <data name="SharingBudgetGone" xml:space="preserve">
+    <value>Ten budżet nie jest już dla ciebie udostępniony.</value>
+  </data>
+  <data name="SharingFailed" xml:space="preserve">
+    <value>To się nie udało. Spróbuj ponownie.</value>
+  </data>
+  <data name="SharingOffline" xml:space="preserve">
+    <value>Zmiany w udostępnianiu wymagają połączenia. Spróbuj ponownie, gdy będziesz online.</value>
   </data>
 </root>

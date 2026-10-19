@@ -10,20 +10,20 @@ public sealed class FakeListSharingApi(IReplica replica, AppState state, IClock 
 {
     public List<string> Calls { get; } = [];
 
-    public Task<string?> ShareListAsync(Guid listId, string token, string code) =>
+    public Task<SharingRejection?> ShareListAsync(Guid listId, string token, string code) =>
         ApplyAsync($"share {listId}", listId,
             new ShareTaskList(Guid.NewGuid(), state.UserId, listId, token, code, state.DisplayName));
 
-    public Task<string?> StopSharingAsync(Guid listId) =>
+    public Task<SharingRejection?> StopSharingAsync(Guid listId) =>
         ApplyAsync($"stop {listId}", listId, new StopSharingTaskList(Guid.NewGuid(), state.UserId, listId));
 
-    public Task<string?> RemoveMemberAsync(Guid listId, Guid memberId) =>
+    public Task<SharingRejection?> RemoveMemberAsync(Guid listId, Guid memberId) =>
         ApplyAsync($"remove {memberId}", listId, new RemoveListMember(Guid.NewGuid(), state.UserId, listId, memberId));
 
-    public Task<string?> LeaveListAsync(Guid listId) =>
+    public Task<SharingRejection?> LeaveListAsync(Guid listId) =>
         ApplyAsync($"leave {listId}", listId, new LeaveTaskList(Guid.NewGuid(), state.UserId, listId));
 
-    async Task<string?> ApplyAsync(string call, Guid listId, ICommand command)
+    async Task<SharingRejection?> ApplyAsync(string call, Guid listId, ICommand command)
     {
         Calls.Add(call);
         var list = await replica.LoadAsync<TaskList>(listId);
@@ -36,7 +36,7 @@ public sealed class FakeListSharingApi(IReplica replica, AppState state, IClock 
         }
         catch (DomainRejectedException rejection)
         {
-            return rejection.Message;
+            return new SharingRejection(SharingFailure.Server, rejection.Message);
         }
     }
 }

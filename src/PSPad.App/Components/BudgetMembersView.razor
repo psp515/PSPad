@@ -12,6 +12,7 @@
 @inject NavigationManager Navigation
 @inject IClock Clock
 @inject IStringLocalizer<BudgetsStrings> T
+@inject IStringLocalizer<SharingStrings> SharingText
 @implements IDisposable
 
 <div class="pspad-budget-members d-flex flex-column gap-3">
@@ -139,14 +140,14 @@
         Navigation.NavigateTo(BudgetLinks.Index);
     }
 
-    async Task<bool> SucceededAsync(Task<string?> change)
+    async Task<bool> SucceededAsync(Task<SharingRejection?> change)
     {
         if (await change is not { } rejection)
         {
             return true;
         }
 
-        Snackbar.Add(rejection, Severity.Error);
+        Snackbar.Add(SharingText.Of(rejection), Severity.Error);
         return false;
     }
 

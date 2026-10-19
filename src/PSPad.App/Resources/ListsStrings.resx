@@ -231,4 +231,7 @@
   <data name="ContainsItems.Many" xml:space="preserve">
     <value>{0} items</value>
   </data>
+  <data name="SharedWithMe" xml:space="preserve">
+    <value>Shared with me</value>
+  </data>
 </root>

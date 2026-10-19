@@ -6,6 +6,7 @@
 @inject NavigationManager Navigation
 @inject IStringLocalizer<ShellStrings> T
 @inject IStringLocalizer<SharedStrings> S
+@inject IStringLocalizer<ListsStrings> ListText
 @implements IDisposable
 
 <div class="d-flex flex-column pspad-nav" style="height:100%">
@@ -84,7 +85,7 @@
             @if (HasShared)
             {
                 <MudNavLink Href="@AreaLinks.For(SharedWithMe.AreaId)" Icon="@Icons.Material.Outlined.People">
-                    @SharedWithMe.Name
+                    @ListText["SharedWithMe"]
                 </MudNavLink>
             }
 

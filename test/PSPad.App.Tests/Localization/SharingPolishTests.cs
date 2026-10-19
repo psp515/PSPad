@@ -1,6 +1,8 @@
 using System.Globalization;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using PSPad.App.Api;
+using PSPad.App.Components;
 using PSPad.App.Localization;
 using PSPad.App.Resources;
 using PSPad.App.Statistics;
@@ -34,6 +36,31 @@ public class SharingPolishTests : Bunit.TestContext
             CultureInfo.CurrentUICulture = before;
         }
     }
+
+    [Theory]
+    [InlineData(SharingFailure.Offline, "Zmiany w udostępnianiu wymagają połączenia. Spróbuj ponownie, gdy będziesz online.")]
+    [InlineData(SharingFailure.ListGone, "Ta lista nie jest już dla ciebie udostępniona.")]
+    public void ASharingFailureSpeaksPolish(SharingFailure failure, string expected)
+    {
+        var strings = TestLocalizers.For<SharingStrings>();
+        var before = CultureInfo.CurrentUICulture;
+
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("pl-PL");
+
+            Assert.Equal(expected, strings.Of(new SharingRejection(failure)));
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = before;
+        }
+    }
+
+    [Fact]
+    public void AServerReasonIsShownAsItCame() =>
+        Assert.Equal("This budget is archived.",
+            TestLocalizers.For<SharingStrings>().Of(new SharingRejection(SharingFailure.Server, "This budget is archived.")));
 
     [Fact]
     public void TheHeatmapSpeaksPolishUnderThePolishCulture()
