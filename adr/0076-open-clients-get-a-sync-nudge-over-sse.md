@@ -5,7 +5,7 @@ date: 2026-10-14
 status: Active
 ---
 
-# ADR-0075: Open clients get a data-free sync nudge over Server-Sent Events, fanned out from commit
+# ADR-0076: Open clients get a data-free sync nudge over Server-Sent Events, fanned out from commit
 
 ## Context
 

@@ -1,7 +1,7 @@
 # Live updates — design
 
 Status: Built (issue #105). The reasoning is in
-`adr/0075-open-clients-get-a-sync-nudge-over-sse.md`.
+`adr/0076-open-clients-get-a-sync-nudge-over-sse.md`.
 
 ## 1. Problem and scope
 
@@ -180,7 +180,7 @@ List and budget lookups for dependents go through `IContainerMembers` (one
 Mongo read per kind per commit, deleted containers included so a cascade
 still reaches members). `Guid.Empty` is never in the audience.
 
-Accepted gaps, recorded in ADR-0075: `TaskListSharingStopped` and
+Accepted gaps, recorded in ADR-0076: `TaskListSharingStopped` and
 `BudgetSharingStopped` carry no member list, so former members learn on their
 next poll; a member who leaves is the actor and is nudged anyway.
 
