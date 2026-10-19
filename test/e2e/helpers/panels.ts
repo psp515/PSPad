@@ -10,10 +10,13 @@ export async function savePanel(page: Page) {
 
 export async function closePanel(page: Page) {
   const close = panel(page).locator('.pspad-panel-close');
-  if (await close.isVisible()) {
-    await close.click();
-  }
-  await expect(panel(page).locator('.pspad-panel-title')).toBeHidden();
+  await expect(async () => {
+    if (await close.isVisible()) {
+      await close.click({ timeout: 2_000 });
+    }
+    await expect(panel(page).locator('.pspad-panel-title')).toBeHidden({ timeout: 3_000 });
+    await expect(page.locator('.mud-drawer-overlay--open')).toHaveCount(0, { timeout: 3_000 });
+  }).toPass({ timeout: 30_000 });
 }
 
 export async function deleteFromPanel(page: Page) {
@@ -26,9 +29,13 @@ export async function confirm(page: Page, text?: string) {
   await expect(page.getByRole('dialog')).toBeHidden();
 }
 
-export async function openFabAction(page: Page, name: string) {
+export async function awaitNoDrawer(page: Page) {
   await expect(page.locator('.pspad-detail-panel.mud-drawer--open')).toHaveCount(0);
   await expect(page.locator('.mud-drawer-overlay--open')).toHaveCount(0);
+}
+
+export async function openFabAction(page: Page, name: string) {
+  await awaitNoDrawer(page);
   const menu = page.locator('.pspad-fab .mud-fab-menu');
   const item = page.getByRole('menuitem', { name, exact: true });
   await expect(async () => {

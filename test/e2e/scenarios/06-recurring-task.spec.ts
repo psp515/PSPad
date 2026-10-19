@@ -25,7 +25,7 @@ test('a daily task is never overdue and comes back tomorrow', async ({ page, acc
   await expect(daySection(page, 'overdue')).toHaveCount(0);
 
   await completeTaskRow(page, task);
-  await expect(daySection(page, 'completed')).toContainText('Completed (1)');
+  await expect(daySection(page, 'completed')).toContainText('Completed · 1');
   await expect(daySection(page, 'anytime').locator('.pspad-row')).toHaveCount(0);
 
   const tomorrow = addDays(today, 1);

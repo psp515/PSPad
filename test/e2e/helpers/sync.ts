@@ -20,3 +20,9 @@ export async function syncNow(page: Page) {
   await synced;
   await expect(page.locator('.pspad-sync-stamp').first()).toContainText(/Updated/);
 }
+
+export const pushedWithin = { timeout: 20_000 };
+
+export function liveStreamOpened(page: Page) {
+  return page.waitForResponse(response => response.url().endsWith('/api/live') && response.status() === 200, { timeout: 30_000 });
+}

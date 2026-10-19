@@ -1,11 +1,11 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea } from '../helpers/areas';
-import { shiftedZone, shortDate } from '../helpers/dates';
+import { addDays, shiftedZone, shortDate, utcToday } from '../helpers/dates';
 import { createList, openList } from '../helpers/lists';
 import { goToSettings, setTimeZone } from '../helpers/settings';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, completeTaskRow, openTask, taskRow } from '../helpers/tasks';
-import { dayLabel, daySection, goToMyDay, setDueDate } from '../helpers/today';
+import { dayLabel, daySection, goToMyDay, setDueDate, showDay } from '../helpers/today';
 
 test('My Day follows the Today rule in the stored time zone', async ({ page, account }) => {
   const dueToday = `Call the bank ${account.suffix}`;
@@ -32,11 +32,16 @@ test('My Day follows the Today rule in the stored time zone', async ({ page, acc
   await goToMyDay(page);
   await expect(daySection(page, 'anytime').locator('.pspad-row')).toHaveCount(1);
   await expect(taskRow(page, dueToday)).toBeVisible();
-  await expect(daySection(page, 'comingup')).toContainText(dueTomorrow);
+  await expect(page.getByText(dueTomorrow)).toBeHidden();
   await expect(page.getByText(undated)).toBeHidden();
 
+  await showDay(page, addDays(utcToday(), 1));
+  await expect(daySection(page, 'anytime')).toContainText(dueTomorrow);
+  await expect(daySection(page, 'anytime')).not.toContainText(dueToday);
+  await page.locator('.pspad-week-today').click();
+
   await completeTaskRow(page, dueToday);
-  await expect(daySection(page, 'completed')).toContainText('Completed (1)');
+  await expect(daySection(page, 'completed')).toContainText('Completed · 1');
 
   const zone = shiftedZone();
   await goToSettings(page);
@@ -47,6 +52,8 @@ test('My Day follows the Today rule in the stored time zone', async ({ page, acc
   if (zone.id === 'Pacific/Kiritimati') {
     await expect(daySection(page, 'anytime')).toContainText(dueTomorrow);
   } else {
-    await expect(daySection(page, 'comingup')).toContainText(dueTomorrow);
+    await expect(page.getByText(dueTomorrow)).toBeHidden();
+    await showDay(page, addDays(utcToday(), 1));
+    await expect(daySection(page, 'anytime')).toContainText(dueTomorrow);
   }
 });

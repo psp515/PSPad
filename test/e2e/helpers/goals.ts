@@ -15,7 +15,7 @@ export async function createGoal(page: Page, name: string) {
 }
 
 export function goalCard(page: Page, name: string) {
-  return page.locator('.mud-paper').filter({ has: page.locator('.pspad-goal-name', { hasText: name }) }).first();
+  return page.locator('.pspad-goal-list-row').filter({ has: page.locator('.pspad-goal-name', { hasText: name }) });
 }
 
 export async function openGoal(page: Page, name: string) {

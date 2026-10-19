@@ -1,11 +1,12 @@
 import { expect, Page } from '@playwright/test';
-import { closePanel, openFabAction, panel, savePanel } from './panels';
+import { awaitNoDrawer, closePanel, openFabAction, panel, savePanel } from './panels';
 
 export function taskRow(page: Page, name: string) {
   return page.locator('.pspad-row').filter({ has: page.locator('.pspad-row-name', { hasText: name }) });
 }
 
 export async function addTask(page: Page, name: string) {
+  await awaitNoDrawer(page);
   if (await page.getByRole('button', { name: 'Add task' }).isVisible()) {
     await page.getByRole('button', { name: 'Add task' }).click();
   } else {

@@ -23,7 +23,7 @@ test('an area, a list and a task live and die', async ({ page, account }) => {
   await expect(taskRow(page, task).locator('.pspad-steps-progress')).toContainText('1/2');
 
   await completeTaskRow(page, task);
-  await expect(page.getByText('Completed (1)')).toBeVisible();
+  await expect(page.getByText('Completed · 1')).toBeVisible();
 
   await openArea(page, area);
   await expect(areaSubtitle(page)).toHaveText('1 list · no open tasks');

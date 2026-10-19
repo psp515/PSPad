@@ -14,7 +14,7 @@ talking to the API over HTTP, syncing a replica. Regressions in that seam
 
 In:
 
-- A Playwright suite in `test/e2e/` that runs fifteen whole-scenario
+- A Playwright suite in `test/e2e/` that runs sixteen whole-scenario
   journeys through a browser against the Docker Compose stack.
 - Fixtures that create a Keycloak user per test and sign in through the real
   login form.
@@ -89,7 +89,8 @@ claim), so "today" in every test is the UTC date, computed in the test.
 ### 3.3 Page helpers
 
 Thin functions, not page-object classes: `openArea`, `createList(kind)`,
-`createTask(name)`, `openTaskPanel(name)`, `setDueDate(day)`, `syncNow`.
+`createTask(name)`, `openTaskPanel(name)`, `setDueDate(day)`, `syncNow`,
+`liveStreamOpened` (resolves when the page's `/api/live` stream answers 200).
 Each lives in `test/e2e/helpers/` next to what it drives. Helpers locate by
 `getByRole`, `getByLabel`, `getByText` and the `pspad-*` classes the UI spec
 names; the panel's **Add …** button is `.pspad-panel-save`.
@@ -138,12 +139,13 @@ tests would be visible, not silent.
    reads "1 list · no open tasks". Delete the list, then the area: Areas
    shows "No areas yet."
 4. **Today rule and time zone.** Three tasks: due today, due tomorrow, no
-   due date. My Day lists exactly the first; the second sits under Coming
-   up; the third is absent. Complete the first: it moves to Completed. In
-   Settings pick a time zone whose local date differs from UTC right now
+   due date. My Day lists exactly the first and neither of the others;
+   picking tomorrow in the week strip's date dialog lists exactly the
+   second. Complete the first: it moves to Completed. In Settings pick a
+   time zone whose local date differs from UTC right now
    (`Pacific/Kiritimati` when the UTC hour is 12 or later, else
    `Pacific/Pago_Pago`); My Day's day bar shows that local date and the
-   second task moves to the plan or stays under Coming up accordingly.
+   second task is on that day's plan or still on tomorrow's accordingly.
    The client exposes no step due dates, so the step half of the Today rule
    stays with the unit tests.
 5. **Overdue and the week strip.** Task due yesterday through the picker;
@@ -196,6 +198,15 @@ tests would be visible, not silent.
     `/search?q=` finds it; Statistics shows Done today at 1; Settings:
     theme Dark sets `html[data-theme="dark"]` and survives a reload; Sign
     out with confirmation lands on Welcome.
+16. **Live updates.** Owner and a member each hold the list open in their
+    own context, each with its `/api/live` stream confirmed open. The member
+    adds a task and the owner's page shows it; the owner adds one and the
+    member's page shows it; the member completes it and the owner's page
+    shows Completed · 1. A second context of the owner adds a task and both
+    other pages show it. The owner removes the member: the member's page
+    loses "Shared with me". Every wait is 20 s, well
+    under the 60 s poll, so a pass proves the nudge, not the fallback; no
+    page clicks Sync now.
 
 ## 5. Timing
 
@@ -206,7 +217,7 @@ tests would be visible, not silent.
   timeout.
 - Retries: 0 locally, 1 in CI; a retry is a flake to fix, reported in the
   HTML report.
-- Scenarios 10, 11 and 14 are the heaviest (two contexts or two users).
+- Scenarios 10, 11, 14 and 16 are the heaviest (two or three contexts).
 
 ## 6. CI
 
@@ -233,7 +244,7 @@ test/e2e/
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
                  settings.ts  goals.ts  references.ts  sharing.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 15-search-statistics-settings.spec.ts
+  scenarios/     01-first-sign-in.spec.ts … 16-live-updates.spec.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared

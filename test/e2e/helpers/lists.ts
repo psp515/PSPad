@@ -1,9 +1,10 @@
 import { expect, Page } from '@playwright/test';
-import { confirm, openFabAction, panel, savePanel } from './panels';
+import { awaitNoDrawer, confirm, openFabAction, panel, savePanel } from './panels';
 
 export type ListKind = 'Tasks' | 'Reference';
 
 export async function createList(page: Page, name: string, kind: ListKind = 'Tasks') {
+  await awaitNoDrawer(page);
   if (await page.getByRole('button', { name: 'New list' }).isVisible()) {
     await page.getByRole('button', { name: 'New list' }).click();
   } else {

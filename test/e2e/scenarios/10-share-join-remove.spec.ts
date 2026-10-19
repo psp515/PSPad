@@ -35,7 +35,7 @@ test('a shared list is joined, edited, and closed to a removed member', async ({
   await expect(member.locator('.pspad-nav').getByRole('link', { name: 'Shared with me' })).toBeVisible();
 
   await completeTaskRow(member, doneByMember);
-  await expect(member.getByText('Completed (1)')).toBeVisible();
+  await expect(member.getByText('Completed · 1')).toBeVisible();
 
   await openSharedListMembersFromBoard(member, list);
   await expect(panel(member).locator('.pspad-share-owner')).toHaveText(account.displayName);
@@ -46,7 +46,7 @@ test('a shared list is joined, edited, and closed to a removed member', async ({
   await expect(member.getByRole('link', { name: list, exact: true })).toBeVisible();
 
   await syncNow(page);
-  await expect(page.getByText('Completed (1)')).toBeVisible();
+  await expect(page.getByText('Completed · 1')).toBeVisible();
 
   await openListMembers(page);
   await expect(panel(page).locator('.pspad-share-member')).toContainText(otherAccount.displayName);

@@ -30,7 +30,7 @@ test('a goal tracks its linked tasks and a star never plans a task', async ({ pa
   await goToGoals(page);
   await openGoal(page, goal);
   await expect(taskRow(page, open)).toBeVisible();
-  await expect(page.getByText('Completed (1)')).toBeVisible();
+  await expect(page.getByText('Completed · 1')).toBeVisible();
 
   await taskRow(page, open).getByRole('button', { name: 'Star' }).click();
   await goToMyDay(page);
@@ -42,7 +42,7 @@ test('a goal tracks its linked tasks and a star never plans a task', async ({ pa
   await page.getByRole('menuitem', { name: 'Mark achieved' }).click();
   const achieved = page.locator('.pspad-goals-achieved');
   await expect(achieved).toContainText('1 of 2 tasks done');
-  await achieved.getByRole('button', { name: goal }).click();
+  await achieved.getByRole('link', { name: goal }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText(goal);
   await expect(page.locator('.pspad-goal-status')).toHaveText('Achieved');
 

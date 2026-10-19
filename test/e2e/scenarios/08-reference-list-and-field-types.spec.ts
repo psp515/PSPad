@@ -5,6 +5,7 @@ import { confirm, panel } from '../helpers/panels';
 import {
   addField, addReferenceItem, dragRow, editFieldValue, fieldLabels, fieldRow, openReferenceItem, referenceRow, reopenReferenceItem,
   setFieldKind,
+  removeField,
 } from '../helpers/references';
 import { signIn } from '../helpers/sign-in';
 
@@ -23,8 +24,10 @@ test('a reference item renders each field kind and keeps its field order', async
   await addField(page, 'Config', '/etc/router/config.yaml');
   await addField(page, 'Ports', '8');
   await addField(page, 'Docs', 'https://example.com/router-docs');
-  await reopenReferenceItem(page, item);
-  await expect.poll(() => fieldLabels(page)).toEqual(['Model', 'Admin', 'Config', 'Ports', 'Docs']);
+  await expect(async () => {
+    await reopenReferenceItem(page, item);
+    expect(await fieldLabels(page)).toEqual(['Model', 'Admin', 'Config', 'Ports', 'Docs']);
+  }).toPass({ timeout: 30_000 });
 
   await setFieldKind(page, 'Model', 'Text');
   await setFieldKind(page, 'Admin', 'Link');
@@ -42,7 +45,7 @@ test('a reference item renders each field kind and keeps its field order', async
   await expect.poll(() => fieldLabels(page)).toEqual(['Docs', 'Model', 'Admin', 'Config', 'Ports']);
 
   await editFieldValue(page, 'Ports', '12');
-  await fieldRow(page, 'Config').getByRole('button', { name: 'Remove Config' }).click();
+  await removeField(page, 'Config');
 
   await page.reload();
   await expect(panel(page).getByPlaceholder('Item name')).toHaveValue(item);

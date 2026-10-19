@@ -7,7 +7,7 @@ export async function goToMyDay(page: Page) {
   await goTo(page, 'My Day');
 }
 
-export function daySection(page: Page, section: 'overdue' | 'anytime' | 'starred' | 'comingup' | 'completed') {
+export function daySection(page: Page, section: 'overdue' | 'anytime' | 'starred' | 'completed') {
   return page.locator(`.pspad-day-${section}`);
 }
 
@@ -43,6 +43,12 @@ export async function pickCalendarDay(dialog: import('@playwright/test').Locator
 export async function setRepeating(page: Page) {
   await panel(page).locator('.pspad-task-kind').getByText('Repeating', { exact: true }).click();
   await expect(panel(page).locator('.pspad-task-repeat')).toBeVisible();
+}
+
+export async function showDay(page: Page, day: Date) {
+  await page.locator('.pspad-week-pick').click();
+  await pickCalendarDay(page.locator('.pspad-day-dialog'), day);
+  await expect(dayLabel(page)).toContainText(shortDate(day));
 }
 
 export async function pickWeekDay(page: Page, day: Date) {

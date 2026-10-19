@@ -1,5 +1,5 @@
 import { expect, Locator, Page } from '@playwright/test';
-import { closePanel, openFabAction, panel, savePanel } from './panels';
+import { awaitNoDrawer, closePanel, openFabAction, panel, savePanel } from './panels';
 
 export type FieldKind = 'Automatic' | 'Text' | 'Link' | 'Path' | 'Quantity';
 
@@ -8,6 +8,7 @@ export function referenceRow(page: Page, name: string) {
 }
 
 export async function addReferenceItem(page: Page, name: string) {
+  await awaitNoDrawer(page);
   if (await page.getByRole('button', { name: 'Add item' }).isVisible()) {
     await page.getByRole('button', { name: 'Add item' }).click();
   } else {
@@ -28,11 +29,21 @@ export function fieldRow(page: Page, label: string): Locator {
 }
 
 export async function addField(page: Page, label: string, value: string) {
-  await panel(page).getByLabel('New label', { exact: true }).fill(label);
-  await panel(page).getByLabel('New label value', { exact: true }).fill(value);
-  await panel(page).getByLabel('New label value', { exact: true }).press('Enter');
-  await expect(panel(page).getByLabel('New label', { exact: true })).toHaveValue('');
-  await expect(page.locator('.pspad-reference-row .pspad-row-chip-slot', { hasText: label })).toBeVisible();
+  const labelInput = panel(page).getByLabel('New label', { exact: true });
+  const valueInput = panel(page).getByLabel('New label value', { exact: true });
+  const chip = page.locator('.pspad-reference-row .pspad-row-chip-slot', { hasText: label });
+  await expect(async () => {
+    if ((await chip.count()) === 0) {
+      await labelInput.fill(label);
+      await valueInput.fill(value);
+      await valueInput.press('Enter');
+    }
+    await expect(chip).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 30_000 });
+  if ((await labelInput.inputValue()) !== '') {
+    await labelInput.fill('');
+    await valueInput.fill('');
+  }
 }
 
 export async function reopenReferenceItem(page: Page, name: string) {
@@ -52,14 +63,28 @@ export async function setFieldKind(page: Page, label: string, kind: FieldKind) {
 }
 
 export async function editFieldValue(page: Page, label: string, value: string) {
-  await fieldRow(page, label).locator('.pspad-field-row-body').click();
   const editor = panel(page).locator('.pspad-field-editor');
   const input = editor.locator('.pspad-field-value-input textarea, .pspad-field-value-input input').first();
-  await input.fill(value);
-  await input.press('Tab');
-  await expect(input).toHaveValue(value);
-  await editor.locator('.pspad-field-save').click();
-  await expect(editor).toHaveCount(0);
+  await expect(async () => {
+    if ((await editor.count()) === 0) {
+      await fieldRow(page, label).locator('.pspad-field-row-body').click({ timeout: 2_000 });
+    }
+    await input.fill(value, { timeout: 2_000 });
+    await input.press('Tab');
+    await expect(input).toHaveValue(value, { timeout: 2_000 });
+    await editor.locator('.pspad-field-save').click({ timeout: 2_000 });
+    await expect(editor).toHaveCount(0, { timeout: 3_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
+export async function removeField(page: Page, label: string) {
+  const chip = page.locator('.pspad-reference-row .pspad-row-chip-slot', { hasText: label });
+  await expect(async () => {
+    if ((await fieldRow(page, label).count()) > 0) {
+      await fieldRow(page, label).getByRole('button', { name: `Remove ${label}` }).click({ timeout: 2_000 });
+    }
+    await expect(chip).toHaveCount(0, { timeout: 3_000 });
+  }).toPass({ timeout: 30_000 });
 }
 
 export async function fieldLabels(page: Page): Promise<string[]> {

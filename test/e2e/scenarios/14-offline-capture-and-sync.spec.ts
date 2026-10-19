@@ -26,7 +26,7 @@ test('changes made offline reach the server after the next sync', async ({ page,
   await expect(page.locator('.pspad-connection-status:visible')).toHaveCount(1);
   await addTask(page, offline);
   await completeTaskRow(page, before);
-  await expect(page.getByText('Completed (1)')).toBeVisible();
+  await expect(page.getByText('Completed · 1')).toBeVisible();
 
   await goOnline(page);
   await expect(page.locator('.pspad-connection-status')).toHaveCount(0, { timeout: 30_000 });
@@ -39,7 +39,7 @@ test('changes made offline reach the server after the next sync', async ({ page,
   await openArea(other, area);
   await openList(other, list);
   await expect(taskRow(other, offline)).toBeVisible();
-  await expect(other.getByText('Completed (1)')).toBeVisible();
+  await expect(other.getByText('Completed · 1')).toBeVisible();
   await expect(taskRow(other, before)).toBeHidden();
   await otherContext.close();
 });
