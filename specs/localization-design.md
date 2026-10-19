@@ -1,7 +1,7 @@
 # Localization — design
 
 Status: Built. English and Polish, structured so a third language is a
-resource file and one list entry.
+resource file per feature plus the six steps in §7.
 
 ## 1. Problem
 
@@ -180,8 +180,8 @@ Manual: every page walked in Polish in the browser pane before merge.
 5. Add the native name in `SettingsPage`.
 6. Run the unit tests; `ResourceGuardTests` reports any missing key.
 
-Documented in `docs/src/pages/features.astro` ("English and Polish") and a
-short contributor note in `docs/`.
+Documented in `docs/src/pages/features.astro` ("Speaks your language" card
+and "Adding a language" section).
 
 ## 8. Out of scope
 
