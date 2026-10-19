@@ -92,10 +92,10 @@
                                 </div>
                             </div>
                             <MudIconButton Class="pspad-snapshot-qr-toggle" Icon="@Icons.Material.Outlined.QrCode2"
-                                           Size="Size.Small" aria-label="@T["ShowQrCode"]" aria-expanded="@(expanded ? "true" : "false")"
+                                           Size="Size.Small" aria-label="@T["ShowQrCode"].Value" aria-expanded="@(expanded ? "true" : "false")"
                                            OnClick="@(() => ToggleExpanded(snapshot.Id))" />
                             <MudIconButton Class="pspad-snapshot-copy" Icon="@Icons.Material.Outlined.ContentCopy"
-                                           Size="Size.Small" aria-label="@T["CopyLink"]"
+                                           Size="Size.Small" aria-label="@T["CopyLink"].Value"
                                            OnClick="@(() => CopyAsync(snapshot.Token))" />
                         </div>
 

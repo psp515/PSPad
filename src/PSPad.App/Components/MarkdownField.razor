@@ -5,7 +5,7 @@
 @if (ShowsEditor)
 {
     <MudTextField @ref="_input" T="string" Lines="3" Sizing="InputSizing.Auto" Variant="Variant.Outlined" Class="pspad-markdown-input mt-0"
-                  Placeholder="@(Placeholder ?? Shared["AddDescription"].Value)" aria-label="@Shared["Description"]" Immediate="true"
+                  Placeholder="@(Placeholder ?? Shared["AddDescription"].Value)" aria-label="@Shared["Description"].Value" Immediate="true"
                   MaxLength="@ContentLimits.Description" Counter="@ContentLimits.Description" AutoFocus="@_editing"
                   Value="@_draft" ValueChanged="@DraftChanged" OnBlur="@CommitAsync" OnKeyDown="@DiscardOnEscape" />
 }
@@ -22,7 +22,7 @@ else
                 <div class="flex-grow-1 pspad-markdown-content" style="min-width:0; cursor:text"
                      @onmarkdownviewclick="@EditUnlessOnLink">@((MarkupString)_renderedHtml)</div>
                 <MudIconButton Icon="@Icons.Material.Outlined.Edit" Class="pspad-markdown-edit" Size="Size.Small"
-                               aria-label="@Shared["EditDescription"]" OnClick="@BeginEdit" />
+                               aria-label="@Shared["EditDescription"].Value" OnClick="@BeginEdit" />
             }
             else
             {

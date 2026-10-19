@@ -20,13 +20,13 @@ else if (WithStamp)
     <MudTooltip Text="@described.Text">
         <MudIconButton Class="@ButtonClass" Icon="@Icons.Material.Filled.Sync"
                        Color="@Tone" Disabled="@Blocked"
-                       OnClick="@Trigger.SyncNowAsync" aria-label="@T["SyncNowWithStatus", described.Text]" />
+                       OnClick="@Trigger.SyncNowAsync" aria-label="@T["SyncNowWithStatus", described.Text].Value" />
     </MudTooltip>
 }
 else
 {
     <MudIconButton Class="@ButtonClass" Icon="@Icons.Material.Filled.Sync" Color="@Tone" Size="Size.Small"
-                   Disabled="@Blocked" OnClick="@Trigger.SyncNowAsync" aria-label="@T["SyncNow"]" />
+                   Disabled="@Blocked" OnClick="@Trigger.SyncNowAsync" aria-label="@T["SyncNow"].Value" />
 }
 
 @code {

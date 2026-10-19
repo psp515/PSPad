@@ -36,7 +36,7 @@ else
     <PageHeading Title="@_budget.Name" Icon="@Icons.Material.Outlined.AccountBalanceWallet" BackHref="@BudgetLinks.Index"
                  BackLabel="@T["BackToBudgets"]">
         <Actions>
-            <MudIconButton Class="pspad-budget-settings" Icon="@Icons.Material.Outlined.Settings" aria-label="@T["BudgetSettings"]"
+            <MudIconButton Class="pspad-budget-settings" Icon="@Icons.Material.Outlined.Settings" aria-label="@T["BudgetSettings"].Value"
                            aria-pressed="@(TabIndex == SettingsTab ? "true" : "false")"
                            Color="@(TabIndex == SettingsTab ? Color.Primary : Color.Default)" OnClick="@(() => SelectTab(SettingsTab))" />
         </Actions>

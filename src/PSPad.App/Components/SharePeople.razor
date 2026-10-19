@@ -30,7 +30,7 @@
                         @if (OwnerIsMe)
                         {
                             <MudIconButton Class="pspad-share-remove" Icon="@Icons.Material.Outlined.PersonRemove"
-                                           aria-label="@T["RemovePerson", member.DisplayName]" Disabled="@Disabled"
+                                           aria-label="@T["RemovePerson", member.DisplayName].Value" Disabled="@Disabled"
                                            OnClick="@(() => OnRemove.InvokeAsync(member))" />
                         }
                     </div>

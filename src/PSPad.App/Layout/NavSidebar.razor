@@ -45,7 +45,7 @@
                         @if (budget.IsShared)
                         {
                             <MudIcon Class="pspad-budget-shared" Icon="@Icons.Material.Outlined.People" Size="Size.Small"
-                                     aria-label="@(budget.UserId == UserId ? T["BudgetShared"] : T["BudgetSharedWithYou"])" />
+                                     aria-label="@(budget.UserId == UserId ? T["BudgetShared"].Value : T["BudgetSharedWithYou"].Value)" />
                         }
                     </span>
                 </MudNavLink>

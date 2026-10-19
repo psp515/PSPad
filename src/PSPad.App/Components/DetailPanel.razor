@@ -13,12 +13,12 @@
                 @if (OnBack.HasDelegate)
                 {
                     <MudIconButton Class="pspad-panel-back" Icon="@Icons.Material.Filled.ArrowBack"
-                                   aria-label="@Shared["Back"]" OnClick="@OnBack" />
+                                   aria-label="@Shared["Back"].Value" OnClick="@OnBack" />
                 }
                 else
                 {
                     <MudIconButton Class="pspad-panel-close" Icon="@Icons.Material.Filled.Close"
-                                   aria-label="@Shared["Close"]" OnClick="@OnClose" />
+                                   aria-label="@Shared["Close"].Value" OnClick="@OnClose" />
                 }
                 <MudText Class="pspad-panel-title" Typo="@(TitleTypo ?? (_isDesktop ? Typo.h5 : Typo.h6))">@Title</MudText>
                 <MudSpacer />
@@ -26,7 +26,7 @@
                 @if (OnBack.HasDelegate)
                 {
                     <MudIconButton Class="pspad-panel-close" Icon="@Icons.Material.Filled.Close"
-                                   aria-label="@Shared["Close"]" OnClick="@OnClose" />
+                                   aria-label="@Shared["Close"].Value" OnClick="@OnClose" />
                 }
             </div>
 

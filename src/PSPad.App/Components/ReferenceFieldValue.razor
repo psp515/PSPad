@@ -24,7 +24,7 @@ else if (Kind == FieldKind.Path)
         <code class="pspad-field-path">@Field.Value</code>
         <span @onclick:stopPropagation="true">
             <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" Class="pspad-field-copy"
-                           aria-label="@Ref["Copy"]" OnClick="@CopyAsync" />
+                           aria-label="@Ref["Copy"].Value" OnClick="@CopyAsync" />
         </span>
     </div>
 }

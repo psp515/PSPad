@@ -7,7 +7,7 @@
 @inject IStringLocalizer<SettingsStrings> T
 @implements IAsyncDisposable
 
-<div class="pspad-accent-picker d-flex flex-wrap gap-2" role="group" aria-label="@T["AccentColour"]">
+<div class="pspad-accent-picker d-flex flex-wrap gap-2" role="group" aria-label="@T["AccentColour"].Value">
     @foreach (var accent in PSPadTheme.Presets)
     {
         var selected = Preference.Accent == accent;
@@ -15,14 +15,14 @@
                        Variant="Variant.Filled" Size="Size.Small"
                        Icon="@(selected ? Icons.Material.Filled.Check : Icons.Material.Filled.Circle)"
                        Style="@SwatchStyle(PSPadTheme.Swatch(accent), selected)"
-                       aria-label="@T[$"Accent{accent}"]" aria-pressed="@(selected ? "true" : "false")"
+                       aria-label="@T[$"Accent{accent}"].Value" aria-pressed="@(selected ? "true" : "false")"
                        OnClick="@(() => Preference.SetAccentAsync(accent))" />
     }
     <MudIconButton Class="@($"pspad-accent-swatch pspad-accent-custom{(Preference.Accent == Accent.Custom ? " pspad-accent-selected" : "")}")"
                    Variant="@(Preference.CustomColor is null ? Variant.Outlined : Variant.Filled)" Size="Size.Small"
                    Icon="@Icons.Material.Filled.Edit"
                    Style="@(Preference.CustomColor is null ? null : SwatchStyle(Preference.CustomColor, selected: true))"
-                   aria-label="@T["CustomAccent"]" aria-pressed="@(Preference.Accent == Accent.Custom ? "true" : "false")"
+                   aria-label="@T["CustomAccent"].Value" aria-pressed="@(Preference.Accent == Accent.Custom ? "true" : "false")"
                    OnClick="@OpenCustomAsync" />
 </div>
 

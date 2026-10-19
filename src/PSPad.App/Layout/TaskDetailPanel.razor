@@ -29,14 +29,14 @@
     <HeaderActions>
         <MudIconButton Class="pspad-task-star" Color="Color.Primary" Disabled="@Disabled"
                        Icon="@(Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                       aria-label="@(Starred ? T["Unstar"] : T["Star"])" OnClick="@ToggleStarAsync" />
+                       aria-label="@(Starred ? T["Unstar"].Value : T["Star"].Value)" OnClick="@ToggleStarAsync" />
     </HeaderActions>
     <ChildContent>
         <div class="d-flex align-center gap-1 px-2 pt-3 pb-1">
             @if (_task is not null)
             {
                 <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync"
-                             Color="Color.Primary" Disabled="@Disabled" aria-label="@Shared["Done"]" />
+                             Color="Color.Primary" Disabled="@Disabled" aria-label="@Shared["Done"].Value" />
             }
             <MudTextField T="string" Class="@($"pspad-task-name-field flex-grow-1 {(_task is null ? "px-2" : "")}")"
                           Value="@Name" ValueChanged="@NameChangedAsync" Placeholder="@T["TaskName"]" MaxLength="@ContentLimits.Name"
@@ -122,7 +122,7 @@
                 <MudSpacer />
                 <MudTooltip Text="@T["DeleteTask"]">
                     <MudIconButton Class="pspad-task-delete" Icon="@Icons.Material.Outlined.Delete"
-                                   Color="Color.Error" aria-label="@T["DeleteTask"]" Disabled="@Disabled"
+                                   Color="Color.Error" aria-label="@T["DeleteTask"].Value" Disabled="@Disabled"
                                    OnClick="@DeleteAsync" />
                 </MudTooltip>
             </div>

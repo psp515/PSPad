@@ -61,7 +61,7 @@
                 <MudText Typo="Typo.h5" Class="pspad-invite-code-value">@InviteCodes.Format(Invite.Code!)</MudText>
             </div>
             <MudIconButton Class="pspad-invite-code-copy" Icon="@Icons.Material.Outlined.ContentCopy"
-                           aria-label="@T["CopyCode"]" OnClick="@CopyCodeAsync" />
+                           aria-label="@T["CopyCode"].Value" OnClick="@CopyCodeAsync" />
         </MudPaper>
 
         <MudText Typo="Typo.caption" Class="pspad-muted">

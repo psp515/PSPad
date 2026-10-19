@@ -6,11 +6,11 @@
 @implements IDisposable
 
 <MudAppBar Bottom="true" Elevation="1" Class="d-md-none pspad-bottom-nav">
-    <nav class="pspad-bottom-nav-slots" aria-label="@T["MainNavigation"]">
+    <nav class="pspad-bottom-nav-slots" aria-label="@T["MainNavigation"].Value">
         @Tab(NavTab.Inbox, "/inbox", Icons.Material.Filled.Inbox, S["Inbox"], Counts.Inbox)
         @Tab(NavTab.Areas, "/areas", Icons.Material.Filled.Folder, S["Areas"], 0)
         <a href="/" class="@($"pspad-tab-myday {(Active == NavTab.MyDay ? "pspad-tab-active" : "")}")"
-           aria-label="@S["MyDay"]"
+           aria-label="@S["MyDay"].Value"
            aria-current="@(Active == NavTab.MyDay ? "page" : null)">
             <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.WbSunny"
                     Class="pspad-myday-fab" UserAttributes="@MyDayFabAttributes" />

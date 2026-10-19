@@ -32,7 +32,7 @@
                             case FieldKind.Path:
                                 <MudChip T="string" Class="pspad-row-chip pspad-row-chip-path" Size="Size.Small"
                                          Variant="Variant.Text" Icon="@Icons.Material.Outlined.Folder"
-                                         title="@Ref["CopyValue", field.Value]"
+                                         title="@Ref["CopyValue", field.Value].Value"
                                          OnClick="@(() => CopyAsync(field.Value))">@field.Label</MudChip>
                                 break;
                             default:
@@ -56,7 +56,7 @@
     <MudIconButton Class="@(Item.Starred ? "pspad-row-star" : "pspad-row-star pspad-muted")" Size="Size.Small"
                    Color="@(Item.Starred ? Color.Primary : Color.Default)"
                    Icon="@(Item.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                   aria-label="@(Item.Starred ? TaskText["Unstar"] : TaskText["Star"])"
+                   aria-label="@(Item.Starred ? TaskText["Unstar"].Value : TaskText["Star"].Value)"
                    OnClick="@(() => OnStar.InvokeAsync(Item))" />
 </div>
 

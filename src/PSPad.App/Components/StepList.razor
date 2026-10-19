@@ -16,7 +16,7 @@
                 </span>
                 <MudText Typo="Typo.body2" Class="flex-grow-1 pspad-step-name">@name</MudText>
                 <MudIconButton Class="pspad-step-remove" Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
-                               aria-label="@T["RemoveStep", name]" Disabled="@Disabled"
+                               aria-label="@T["RemoveStep", name].Value" Disabled="@Disabled"
                                OnClick="@(() => Draft.RemoveAt(position))" />
             </div>
         }
@@ -35,7 +35,7 @@
                 <SnapshotMarkChip />
             }
             <MudIconButton Class="pspad-step-remove" Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
-                           aria-label="@T["RemoveStep", step.Name]" Disabled="@Disabled"
+                           aria-label="@T["RemoveStep", step.Name].Value" Disabled="@Disabled"
                            OnClick="@(() => RemoveAsync(step))" />
         </div>
     }

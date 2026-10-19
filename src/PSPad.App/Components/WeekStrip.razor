@@ -6,7 +6,7 @@
     <MudText Typo="Typo.subtitle2" Class="pspad-week-month">@Day.ToString("MMMM yyyy")</MudText>
 
     <div class="pspad-week-row d-flex align-center">
-        <MudIconButton Class="pspad-week-prev" Size="Size.Small" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="@T["PreviousWeek"]"
+        <MudIconButton Class="pspad-week-prev" Size="Size.Small" Icon="@Icons.Material.Filled.ChevronLeft" aria-label="@T["PreviousWeek"].Value"
                        OnClick="@(() => DayChanged.InvokeAsync(Day.AddDays(-7)))" />
         <div class="pspad-week-days d-flex flex-grow-1" @ontouchstart="@TouchStarted" @ontouchend="@TouchEndedAsync">
             @foreach (var day in Week)
@@ -26,7 +26,7 @@
                 </MudButton>
             }
         </div>
-        <MudIconButton Class="pspad-week-next" Size="Size.Small" Icon="@Icons.Material.Filled.ChevronRight" aria-label="@T["NextWeek"]"
+        <MudIconButton Class="pspad-week-next" Size="Size.Small" Icon="@Icons.Material.Filled.ChevronRight" aria-label="@T["NextWeek"].Value"
                        OnClick="@(() => DayChanged.InvokeAsync(Day.AddDays(7)))" />
     </div>
 
@@ -41,7 +41,7 @@
             <MudButton Class="pspad-week-today" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
                        OnClick="@(() => DayChanged.InvokeAsync(Today))">@Shared["Today"]</MudButton>
         }
-        <MudIconButton Class="pspad-week-pick" Icon="@Icons.Material.Outlined.CalendarMonth" aria-label="@T["PickADate"]"
+        <MudIconButton Class="pspad-week-pick" Icon="@Icons.Material.Outlined.CalendarMonth" aria-label="@T["PickADate"].Value"
                        OnClick="@(() => _picking = true)" />
     </div>
 </MudPaper>

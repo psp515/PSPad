@@ -55,7 +55,7 @@
             </div>
             <MudProgressLinear Class="mt-3 pspad-budget-card-bar" Rounded="true" Size="Size.Medium" Value="@SpentShare"
                                Color="@(Totals.Expenses > Totals.Income ? Color.Error : Color.Primary)"
-                               aria-label="@T["ExpensesAgainstIncome"]" />
+                               aria-label="@T["ExpensesAgainstIncome"].Value" />
         }
         <div class="mt-3 pspad-budget-card-balance">
             @if (Latest is not null)

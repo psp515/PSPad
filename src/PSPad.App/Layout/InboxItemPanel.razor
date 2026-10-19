@@ -30,7 +30,7 @@
         {
             <MudIconButton Class="pspad-inbox-star" Color="Color.Primary" Disabled="@Disabled"
                            Icon="@(_draft.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                           aria-label="@(_draft.Starred ? TaskText["Unstar"] : TaskText["Star"])"
+                           aria-label="@(_draft.Starred ? TaskText["Unstar"].Value : TaskText["Star"].Value)"
                            OnClick="@(() => _draft.Starred = !_draft.Starred)" />
         }
     </HeaderActions>

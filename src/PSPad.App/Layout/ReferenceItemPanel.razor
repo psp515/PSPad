@@ -31,7 +31,7 @@
         {
             <MudIconButton Class="pspad-item-star" Color="Color.Primary" Disabled="@Disabled"
                            Icon="@(_item.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                           aria-label="@(_item.Starred ? TaskText["Unstar"] : TaskText["Star"])" OnClick="@ToggleStarAsync" />
+                           aria-label="@(_item.Starred ? TaskText["Unstar"].Value : TaskText["Star"].Value)" OnClick="@ToggleStarAsync" />
         }
     </HeaderActions>
     <ChildContent>
@@ -95,7 +95,7 @@
                 <MudSpacer />
                 <MudTooltip Text="@Ref["DeleteItem"]">
                     <MudIconButton Class="pspad-item-delete" Icon="@Icons.Material.Outlined.Delete"
-                                   Color="Color.Error" aria-label="@Ref["DeleteItem"]" Disabled="@Disabled"
+                                   Color="Color.Error" aria-label="@Ref["DeleteItem"].Value" Disabled="@Disabled"
                                    OnClick="@DeleteAsync" />
                 </MudTooltip>
             </div>

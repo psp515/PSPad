@@ -6,7 +6,7 @@
     @if (Task.Priority != Priority.None)
     {
         <span class="@($"pspad-priority pspad-priority-{Task.Priority.ToString().ToLowerInvariant()}")" role="img"
-              title="@T[$"PriorityLabel{Task.Priority}"]" aria-label="@T[$"PriorityLabel{Task.Priority}"]"></span>
+              title="@T[$"PriorityLabel{Task.Priority}"].Value" aria-label="@T[$"PriorityLabel{Task.Priority}"].Value"></span>
     }
     else
     {
@@ -64,7 +64,7 @@
     <MudIconButton Class="@(Task.Starred ? "pspad-row-star" : "pspad-row-star pspad-muted")" Size="Size.Small"
                    Color="@(Task.Starred ? Color.Primary : Color.Default)"
                    Icon="@(Task.Starred ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                   aria-label="@(Task.Starred ? T["Unstar"] : T["Star"])"
+                   aria-label="@(Task.Starred ? T["Unstar"].Value : T["Star"].Value)"
                    OnClick="@(() => OnStar.InvokeAsync(Task))" />
 </div>
 

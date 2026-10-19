@@ -38,10 +38,10 @@
                         <ReferenceFieldValue Field="@context" />
                     </div>
                     <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
-                                   Class="pspad-field-remove pspad-step-remove" aria-label="@Ref["RemoveLabel", context.Label]"
+                                   Class="pspad-field-remove pspad-step-remove" aria-label="@Ref["RemoveLabel", context.Label].Value"
                                    Disabled="@Disabled" OnClick="@(() => RemoveAsync(context))" />
                     <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small"
-                             Class="pspad-drag-handle pspad-muted" aria-label="@Shared["DragItem", context.Label]" />
+                             Class="pspad-drag-handle pspad-muted" aria-label="@Shared["DragItem", context.Label].Value" />
                 </div>
             }
         </ItemRenderer>
@@ -52,10 +52,10 @@
             <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary" />
         </span>
         <MudTextField @ref="_labelInput" T="string" Class="pspad-step-add pspad-field-add-label flex-grow-1 mt-0"
-                      @bind-Value="_newLabel" Placeholder="@Ref["Label"]" MaxLength="@ContentLimits.Label" aria-label="@Ref["NewLabel"]" Underline="false"
+                      @bind-Value="_newLabel" Placeholder="@Ref["Label"]" MaxLength="@ContentLimits.Label" aria-label="@Ref["NewLabel"].Value" Underline="false"
                       Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@LabelKeyDownAsync" />
         <MudTextField @ref="_valueInput" T="string" Class="pspad-step-add pspad-field-add-value flex-grow-1 mt-0"
-                      @bind-Value="_newValue" Placeholder="@Ref["Value"]" MaxLength="@ContentLimits.FieldValue" aria-label="@Ref["NewLabelValue"]" Underline="false"
+                      @bind-Value="_newValue" Placeholder="@Ref["Value"]" MaxLength="@ContentLimits.FieldValue" aria-label="@Ref["NewLabelValue"].Value" Underline="false"
                       Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@ValueKeyDownAsync" />
     </div>
 </div>

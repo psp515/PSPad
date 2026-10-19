@@ -9,14 +9,14 @@
 {
     <MudTooltip Text="@S["Offline"]">
         <MudIcon Icon="@Icons.Material.Filled.CloudOff" Color="Color.Default" Size="Size.Small"
-                 Class="pspad-connection-status" role="img" aria-label="@S["Offline"]" />
+                 Class="pspad-connection-status" role="img" aria-label="@S["Offline"].Value" />
     </MudTooltip>
 }
 else if (!Reachability.IsReachable)
 {
     <MudTooltip Text="@T["ServerUnreachable"]">
         <MudIcon Icon="@Icons.Material.Filled.CloudOff" Color="Color.Warning" Size="Size.Small"
-                 Class="pspad-connection-status" role="img" aria-label="@T["ServerUnreachable"]" />
+                 Class="pspad-connection-status" role="img" aria-label="@T["ServerUnreachable"].Value" />
     </MudTooltip>
 }
 

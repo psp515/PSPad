@@ -21,7 +21,7 @@
         @if (IsReference)
         {
             <MudIconButton Class="pspad-add-item" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
-                           aria-label="@Ref["AddItem"]" OnClick="@OnAddItemClick" />
+                           aria-label="@Ref["AddItem"].Value" OnClick="@OnAddItemClick" />
         }
         else
         {

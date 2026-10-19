@@ -18,7 +18,7 @@
                                OnClick="@action">@actionText</MudButton>
                 }
                 <MudIconButton Class="pspad-belt-dismiss" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                               aria-label="@T["Dismiss"]" OnClick="@(() => Belts.Dismiss(belt.Kind))" />
+                               aria-label="@T["Dismiss"].Value" OnClick="@(() => Belts.Dismiss(belt.Kind))" />
             </MudAlert>
         }
     </div>

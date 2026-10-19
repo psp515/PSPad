@@ -4,7 +4,7 @@
 @inject IStringLocalizer<ListsStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
 
-<nav class="d-flex flex-wrap gap-1 mb-3 pspad-area-chips" aria-label="@Shared["Areas"]">
+<nav class="d-flex flex-wrap gap-1 mb-3 pspad-area-chips" aria-label="@Shared["Areas"].Value">
     @foreach (var area in Areas.Where(area => !area.Deleted).OrderBy(area => area.Position))
     {
         var current = area.Id == Current;
