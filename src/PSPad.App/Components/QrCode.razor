@@ -2,7 +2,7 @@
 @inject IStringLocalizer<SharingStrings> T
 
 <MudPaper Outlined="true" Class="pa-2 d-inline-flex" Style="background:#fff">
-    <img class="pspad-qr" src="@_source" width="@Size" height="@Size" alt="@(Label ?? T["QrCode"])" />
+    <img class="pspad-qr" src="@_source" width="@Size" height="@Size" alt="@(Label ?? T["QrCode"].Value)" />
 </MudPaper>
 
 @code {
