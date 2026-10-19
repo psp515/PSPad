@@ -1,6 +1,6 @@
 # Localization — design
 
-Status: Proposed. English and Polish, structured so a third language is a
+Status: Built. English and Polish, structured so a third language is a
 resource file and one list entry.
 
 ## 1. Problem
@@ -82,6 +82,8 @@ Boot (`Program.cs`, before `host.RunAsync()`):
    `CurrentCulture`, `CurrentUICulture` to `CultureInfo.GetCultureInfo(tag)`.
 
 First paint is already localized, offline or not, with no replica involved.
+English uses the `en-GB` culture (week starts Monday, 24-hour time); it
+abbreviates September as "Sept".
 
 When `/me` arrives in `AppState`: if `me.Language` differs from the cached
 value and no pending write exists, cache it and reload
@@ -103,10 +105,10 @@ service worker caches it with the other framework assets.
 ### 4.3 Resources
 
 - `builder.Services.AddLocalization()`.
-- `App/Resources/<Feature>.resx` + `<Feature>.pl.resx`, with an empty marker
-  class `<Feature>Strings` per file. Features: `Shared`, `Today`, `Tasks`,
-  `Lists`, `Goals`, `Inbox`, `Reference`, `Budgets`, `Settings`, `Sharing`,
-  `Auth`, `Statistics`.
+- `App/Resources/<Feature>Strings.resx` + `<Feature>Strings.pl.resx`, with an
+  empty marker class `<Feature>Strings` per file. Features: `Shared`, `Shell`,
+  `Auth`, `Settings`, `Today`, `Tasks`, `Lists`, `Inbox`, `Goals`,
+  `Reference`, `Budgets`, `Sharing`, `Statistics`, `Mud`.
 - Usage: `@inject IStringLocalizer<TodayStrings> T`, then `@T["NothingDue"]`.
   Keys are stable identifiers in `PascalCase`; the English `.resx` holds the
   text. A missing key renders the key, which the resource guard test (§6)
@@ -171,11 +173,12 @@ Manual: every page walked in Polish in the browser pane before merge.
 ## 7. Adding a language (contributor path)
 
 1. Add the tag to `SupportedLanguages.All`.
-2. Copy each `App/Resources/<Feature>.resx` to `<Feature>.<tag>.resx` and
-   translate every value as a whole sentence.
+2. Copy each `App/Resources/<Feature>Strings.resx` to
+   `<Feature>Strings.<tag>.resx` and translate every value as a whole sentence.
 3. Add plural forms to `PluralRules` if the language is not One/Many.
 4. Add seed area names to `ProvisioningPlan`.
-5. Run the unit tests; the resource guard reports any missing key.
+5. Add the native name in `SettingsPage`.
+6. Run the unit tests; `ResourceGuardTests` reports any missing key.
 
 Documented in `docs/src/pages/features.astro` ("English and Polish") and a
 short contributor note in `docs/`.

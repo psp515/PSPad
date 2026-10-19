@@ -2,7 +2,7 @@
 title: Store the user's language on the User aggregate and localize with .NET resources
 tags: [identity, ui, offline, localization]
 date: 2026-10-18
-status: Proposed
+status: Active
 ---
 
 # ADR-0075: Store the user's language on the User aggregate and localize with .NET resources
