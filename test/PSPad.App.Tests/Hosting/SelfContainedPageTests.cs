@@ -43,6 +43,14 @@ public partial class SelfContainedPageTests
         Assert.True(File.Exists(Path.Combine(RepositoryPaths.Wwwroot, "fonts", "roboto", "OFL.txt")));
     }
 
+    [Fact]
+    public void BlazorStartsInTheCachedLanguageSoTheCultureNeverChangesAtBoot()
+    {
+        Assert.Contains("autostart=\"false\"", Index);
+        Assert.Contains("Blazor.start(", Index);
+        Assert.Contains("applicationCulture", Index);
+    }
+
     [GeneratedRegex("""(?:src|href)\s*=\s*["'](?:https?:)?//""", RegexOptions.IgnoreCase)]
     private static partial Regex ExternalReferences();
 

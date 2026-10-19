@@ -81,6 +81,11 @@ Boot (`Program.cs`, before `host.RunAsync()`):
 2. Set `CultureInfo.DefaultThreadCurrentCulture`, `DefaultThreadCurrentUICulture`,
    `CurrentCulture`, `CurrentUICulture` to `CultureInfo.GetCultureInfo(tag)`.
 
+`index.html` loads Blazor with `autostart="false"` and calls
+`Blazor.start({ applicationCulture })` with the same cached-or-browser choice
+(`pl-PL` / `en-GB`), so the .NET culture set in `Program.cs` matches Blazor's
+startup culture and `RunAsync` does not throw.
+
 First paint is already localized, offline or not, with no replica involved.
 English uses the `en-GB` culture (week starts Monday, 24-hour time); it
 abbreviates September as "Sept".
@@ -100,7 +105,8 @@ in the chosen language meanwhile, offline included.
 
 `PSPad.App.csproj`: `<BlazorWebAssemblyLoadAllGlobalizationData>false</…>`,
 default ICU sharding. `pl` resolves to `icudt_no_CJK.dat` (≈1.4 MB). The
-service worker caches it with the other framework assets.
+service worker caches it with the other framework assets. Keeping sharding
+means the culture is fixed at `Blazor.start`, never changed afterwards (§4.1).
 
 ### 4.3 Resources
 

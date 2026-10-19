@@ -104,10 +104,20 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js" autostart="false"></script>
     <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
-    <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
+    <script>
+        // autostart is off so Blazor starts in the cached language; .NET changing the culture after start makes RunAsync throw.
+        (function () {
+            var stored = null;
+            try { stored = localStorage.getItem('pspad.language'); } catch (error) { }
+            var language = stored === 'pl' || stored === 'en' ? stored
+                : (/^pl/i.test(navigator.language || '') ? 'pl' : 'en');
+            Blazor.start({ applicationCulture: language === 'pl' ? 'pl-PL' : 'en-GB' });
+        })();
+        navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
+    </script>
 </body>
 
 </html>
