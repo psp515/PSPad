@@ -12,6 +12,7 @@ using PSPad.Abstractions;
 using PSPad.App.Api;
 using PSPad.App.Auth;
 using PSPad.App.Components;
+using PSPad.App.Live;
 using PSPad.App.Layout;
 using PSPad.App.Localization;
 using PSPad.App.State;
@@ -19,6 +20,7 @@ using PSPad.App.State.Replica;
 using PSPad.App.State.Viewport;
 using PSPad.App.Sync;
 using PSPad.App.Tests.Auth;
+using PSPad.App.Tests.Live;
 using PSPad.App.Theme;
 using PSPad.App.Updates;
 using PSPad.Contracts;
@@ -33,6 +35,8 @@ namespace PSPad.App.Tests.Layout;
 public class AppShellTests : Bunit.TestContext
 {
     static readonly Guid User = Guid.NewGuid();
+
+    readonly ScriptedLiveStream _liveStream = new();
 
     [Fact]
     public void OnTheDesktopThePageInsetIsPaddingSoNoMarginCollapsesAboveTheShell()
@@ -425,6 +429,31 @@ public class AppShellTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ASignedInShellOpensTheLiveStream()
+    {
+        Arrange();
+        Services.AddSingleton<IConnectivity>(new SpyConnectivity(isOnline: true));
+        var feed = new FeedStream();
+        feed.Send("event: ready\ndata: ready\n\n");
+        _liveStream.ThenFeed(feed);
+
+        var shell = Render<AppShell>();
+
+        shell.WaitForAssertion(() => Assert.Equal(1, _liveStream.Opens));
+    }
+
+    [Fact]
+    public void ASignedOutShellNeverOpensTheLiveStream()
+    {
+        Arrange(hasSession: false);
+
+        var shell = Render<AppShell>();
+
+        shell.WaitForAssertion(() => Assert.Empty(shell.FindComponents<BrandLoader>()));
+        Assert.Equal(0, _liveStream.Opens);
+    }
+
+    [Fact]
     public void AThrowingSessionStoreLeavesTheShellReadyAndAnonymousRatherThanThrowing()
     {
         Arrange();
@@ -734,6 +763,10 @@ public class AppShellTests : Bunit.TestContext
         Services.AddScoped<SyncService>();
         Services.AddSingleton<ILanguageApi>(sp => sp.GetRequiredService<PSPadApiClient>());
         Services.AddScoped<SyncCoordinator>();
+        Services.AddSingleton<ILiveStream>(_liveStream);
+        Services.AddSingleton<IPageVisibility>(new SwitchableVisibility());
+        Services.AddSingleton(new LiveTiming(TimeSpan.FromMinutes(1), () => 1.0, (_, _) => Task.CompletedTask));
+        Services.AddScoped<LiveUpdates>();
 
         var authStateTask = AuthenticatedAs(displayName, emailClaim);
         RenderTree.Add<CascadingValue<Task<AuthenticationState>>>(parameters =>
@@ -860,7 +893,7 @@ public class AppShellTests : Bunit.TestContext
         Assert.Equal(BeltKind.Update, Assert.Single(belts.Visible).Kind);
     }
 
-    sealed class SpyConnectivity : IConnectivity
+    sealed class SpyConnectivity(bool isOnline = false) : IConnectivity
     {
         public int IsOnlineReads { get; private set; }
 
@@ -869,7 +902,7 @@ public class AppShellTests : Bunit.TestContext
             get
             {
                 IsOnlineReads++;
-                return false;
+                return isOnline;
             }
         }
 

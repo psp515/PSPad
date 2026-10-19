@@ -4,6 +4,7 @@ using PSPad.Api.Commands;
 using PSPad.Api.Cors;
 using PSPad.Api.Endpoints;
 using PSPad.Api.Identity;
+using PSPad.Api.Live;
 using PSPad.Api.Presentation;
 using PSPad.Api.Proxy;
 using PSPad.Api.Rates;
@@ -84,6 +85,12 @@ builder.Services.AddHttpClient<NbpRateClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(5);
 });
 
+builder.Services.Configure<LiveOptions>(builder.Configuration.GetSection(LiveOptions.Section));
+builder.Services.AddSingleton<LiveConnections>();
+builder.Services.AddScoped<IContainerMembers, MongoContainerMembers>();
+builder.Services.AddScoped<LiveAudience>();
+builder.Services.AddScoped<ICommitObserver, LiveNudges>();
+
 var app = builder.Build();
 
 app.UseForwardedHeaders();
@@ -97,6 +104,7 @@ app.MapGet("/health", () => "healthy");
 var api = app.MapGroup("/api").RequireAuthorization();
 api.MapCommandEndpoints();
 api.MapSyncEndpoints();
+api.MapLiveEndpoints();
 api.MapListEndpoints();
 api.MapBudgetEndpoints();
 api.MapTodayEndpoints();
