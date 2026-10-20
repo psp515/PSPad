@@ -7,7 +7,7 @@ export async function goToMyDay(page: Page) {
   await goTo(page, 'My Day');
 }
 
-export function daySection(page: Page, section: 'overdue' | 'anytime' | 'starred' | 'completed') {
+export function daySection(page: Page, section: 'overdue' | 'scheduled' | 'anytime' | 'starred' | 'completed') {
   return page.locator(`.pspad-day-${section}`);
 }
 
@@ -38,6 +38,25 @@ export async function pickCalendarDay(dialog: import('@playwright/test').Locator
     .filter({ hasText: new RegExp(`^${day.getUTCDate()}$`) })
     .first()
     .click();
+}
+
+export async function setTaskTime(page: Page, start: string, end?: string) {
+  const row = panel(page).locator('.pspad-task-time');
+  const startInput = row.locator('.pspad-time-start input');
+  await startInput.fill(start);
+  await startInput.press('Tab');
+  await expect(startInput).toHaveValue(start);
+  await expect(row.locator('.pspad-time-clear')).toBeVisible();
+  if (end) {
+    const endInput = row.locator('.pspad-time-end input');
+    await endInput.fill(end);
+    await endInput.press('Tab');
+    await expect(endInput).toHaveValue(end);
+  }
+}
+
+export function timelineBlock(page: Page, name: string) {
+  return page.locator('.pspad-timeline-task').filter({ has: page.locator('.pspad-timeline-task-name', { hasText: name }) });
 }
 
 export async function setRepeating(page: Page) {

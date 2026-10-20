@@ -19,6 +19,8 @@ test('captured items are organised into a task or discarded', async ({ page, acc
   await goToInbox(page);
   await capture(page, keep);
   await capture(page, drop);
+  await expect(page.locator('.pspad-row-subhead')).toHaveText('Today');
+  await expect(page.locator('.pspad-row-group .pspad-inbox-item')).toHaveCount(2);
 
   await openInboxItem(page, keep);
   await pickFromPropertyRow(page, 'pspad-task-list', list);

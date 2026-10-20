@@ -14,7 +14,7 @@ talking to the API over HTTP, syncing a replica. Regressions in that seam
 
 In:
 
-- A Playwright suite in `test/e2e/` that runs sixteen whole-scenario
+- A Playwright suite in `test/e2e/` that runs eighteen whole-scenario
   journeys through a browser against the Docker Compose stack.
 - Fixtures that create a Keycloak user per test and sign in through the real
   login form.
@@ -90,7 +90,9 @@ claim), so "today" in every test is the UTC date, computed in the test.
 
 Thin functions, not page-object classes: `openArea`, `createList(kind)`,
 `createTask(name)`, `openTaskPanel(name)`, `setDueDate(day)`, `syncNow`,
-`liveStreamOpened` (resolves when the page's `/api/live` stream answers 200).
+`liveStreamOpened` (resolves when the page's `/api/live` stream answers 200),
+`setTaskTime(start, end)`, `timelineBlock(name)`, `setLanguage(nativeName)`
+(waits for the reload the language change forces).
 Each lives in `test/e2e/helpers/` next to what it drives. Helpers locate by
 `getByRole`, `getByLabel`, `getByText` and the `pspad-*` classes the UI spec
 names; the panel's **Add …** button is `.pspad-panel-save`.
@@ -207,6 +209,17 @@ tests would be visible, not silent.
     loses "Shared with me". Every wait is 20 s, well
     under the 60 s poll, so a pass proves the nudge, not the fallback; no
     page clicks Sync now.
+17. **Scheduled day.** A fresh day shows "Schedule empty for today." over a
+    full 00:00–24:00 axis. A task due today with a time 09:00–10:30 and one
+    due today without a time: My Day lists the first under Scheduled (count 1) and
+    the second under "Today, any time"; the timeline block carries both
+    times. Ticking the block's checkbox takes it off the timeline and out of
+    Scheduled, the schedule reads empty again, and Completed · 1 lists it.
+18. **Language.** Settings shows English; choosing Polski reloads the app
+    into Polish (Ustawienia, Mój dzień) and a reload keeps
+    it. A second context of the same user signs in and lands in Polish
+    without touching Settings, since the language is stored on the user.
+    Choosing English brings the first page back to English.
 
 ## 5. Timing
 
@@ -217,7 +230,7 @@ tests would be visible, not silent.
   timeout.
 - Retries: 0 locally, 1 in CI; a retry is a flake to fix, reported in the
   HTML report.
-- Scenarios 10, 11, 14 and 16 are the heaviest (two or three contexts).
+- Scenarios 10, 11, 14, 16 and 18 are the heaviest (two or three contexts).
 
 ## 6. CI
 
@@ -244,7 +257,7 @@ test/e2e/
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
                  settings.ts  goals.ts  references.ts  sharing.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 16-live-updates.spec.ts
+  scenarios/     01-first-sign-in.spec.ts … 18-language.spec.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared
@@ -261,7 +274,22 @@ the host lacks Chromium's libraries.
 - `adr/0077` records the decision and the alternatives (Playwright for
   .NET inside the solution; API-only end-to-end tests; storage state reuse).
 
-## 9. Risks
+## 9. Keeping the suite current
+
+A pull request that adds or changes what a user can do adds a scenario or
+extends the one that already walks that screen; a pull request that changes
+markup or copy a scenario reads fixes the scenario in the same change. The
+`e2e` CI job gates deploy, so a red scenario blocks the merge either way.
+Scenario numbers never change; a new one takes the next number. Helpers
+locate by role, label, text and the `pspad-*` classes the UI spec names, so
+renaming one of those is a suite change too.
+
+Since live updates (ADR-0076) every command a device sends echoes back as a
+nudge whose pull re-renders the open panel. Helpers that close a panel or
+edit inside one retry inside `toPass`; a new helper that types into a panel
+should do the same.
+
+## 10. Risks
 
 - **Drag and drop** (scenarios 8 and 9) rides on MudBlazor's HTML5 drag
   events; Playwright's `dragTo` drives them in Chromium. If a handle

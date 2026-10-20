@@ -5,6 +5,7 @@ test('a fresh user signs in and sees an empty day', async ({ page, account }) =>
   await signIn(page, account);
 
   await expect(page.getByText('Nothing planned for today.')).toBeVisible();
+  await expect(page.getByText('Schedule empty for today.')).toBeVisible();
 
   const areas = page.locator('.pspad-nav');
   for (const name of ['Personal', 'Work', 'Home']) {

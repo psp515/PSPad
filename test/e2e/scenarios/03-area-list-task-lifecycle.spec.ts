@@ -24,6 +24,10 @@ test('an area, a list and a task live and die', async ({ page, account }) => {
 
   await completeTaskRow(page, task);
   await expect(page.getByText('Completed · 1')).toBeVisible();
+  await expect(taskRow(page, task)).toBeHidden();
+  await page.locator('.pspad-completed').getByText('Completed · 1').click();
+  await expect(taskRow(page, task)).toBeVisible();
+  await expect(taskRow(page, task).getByRole('checkbox').first()).toBeChecked();
 
   await openArea(page, area);
   await expect(areaSubtitle(page)).toHaveText('1 list · no open tasks');

@@ -45,5 +45,11 @@ export async function addStep(page: Page, name: string) {
 }
 
 export async function checkStep(page: Page, name: string) {
-  await panel(page).getByRole('checkbox', { name, exact: true }).check();
+  const box = panel(page).getByRole('checkbox', { name, exact: true });
+  await expect(async () => {
+    if (!(await box.isChecked())) {
+      await box.click({ timeout: 2_000 });
+    }
+    await expect(box).toBeChecked({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
 }
