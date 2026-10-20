@@ -133,6 +133,14 @@ public partial class StylesheetRulesTests
     }
 
     [Fact]
+    public void TheDayTabsArePillShapedLikeTheirButtons() =>
+        Assert.Contains("border-radius: 999px", Declarations(".pspad-day-tabs"));
+
+    [Fact]
+    public void AGroupSitsInItsLaneLikeABlock() =>
+        Assert.Contains("left: calc(58px + (100% - 66px) * var(--lane) / var(--lanes))", Declarations(".pspad-timeline-group"));
+
+    [Fact]
     public void VeryWideMyDayFlowsItsRowsIntoTwoColumnsBesideAWiderSchedule()
     {
         Assert.Contains("grid-template-columns: minmax(0, 1fr) 420px", DeclarationsInMedia("min-width: 1600px", ".pspad-day"));

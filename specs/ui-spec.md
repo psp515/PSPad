@@ -452,7 +452,7 @@ The day is two parts inside `pspad-day`: the task sections
 (`pspad-day-lists`) and the Schedule (`pspad-day-schedule`). From `md` they
 are a grid, sections on the left and a 380px schedule column on the right
 (420px from 1600px).
-Below `md` a tab bar under the week strip (`pspad-day-tabs`: **Tasks** and
+Below `md` a pill-shaped tab bar under the week strip (`pspad-day-tabs`: **Tasks** and
 **Schedule · N**, N the pending scheduled count, plain **Schedule** at zero)
 picks one; `pspad-day` carries
 `pspad-day-tab-tasks` or `pspad-day-tab-schedule`, and the page opens on
@@ -490,9 +490,11 @@ minutes; an overnight end counts as 24:00 and adds the muted `(+1)`,
 `pspad-schedule-nextday`), holding its checkbox, `09:30–11:00`
 (`pspad-schedule-time`, `-start`, `-dash`, `-end`), its name and, from two hours, its list
 name (one line under 90 minutes, only the start when it shares the width). Tasks are laid out by a span of at least 45
-minutes; up to two overlapping tasks share the width side by side, three or
-more become one group block (`pspad-timeline-group`) of 24px lines, and the
-axis below grows to fit it. On today a red line (`pspad-timeline-now`)
+minutes; up to two overlapping tasks share the width side by side; three or
+more starting within half an hour become one group block
+(`pspad-timeline-group`) of 24px lines, and the axis below grows to fit it;
+tasks inside a long one sit beside it in the right half, grouped where they
+overlap. On today a red line (`pspad-timeline-now`)
 marks the current time in the user's zone. Ticking a block ticks the task
 like a row does. Design: `specs/my-day-schedule-design.md`.
 

@@ -1180,7 +1180,7 @@ button.pspad-heatmap-cell:focus-visible {
     gap: 4px;
     padding: 3px;
     margin-bottom: 16px;
-    border-radius: 10px;
+    border-radius: 999px;
     background-color: var(--pspad-hover);
 }
 
@@ -1256,8 +1256,8 @@ button.pspad-heatmap-cell:focus-visible {
 
 .pspad-timeline-group {
     position: absolute;
-    left: 58px;
-    right: 8px;
+    left: calc(58px + (100% - 66px) * var(--lane) / var(--lanes));
+    width: calc((100% - 66px) / var(--lanes) - 2px);
     box-sizing: border-box;
     padding: 2px 6px 2px 2px;
     border-radius: 8px;

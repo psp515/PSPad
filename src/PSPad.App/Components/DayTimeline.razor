@@ -37,7 +37,7 @@
         }
         @foreach (var group in _layout.Groups)
         {
-            <div @key="group.Entries[0].TaskId" class="pspad-timeline-group" style="@GroupStyle(group)">
+            <div @key="group.Entries[0].TaskId" class="@(group.Lanes > 1 ? "pspad-timeline-group pspad-timeline-task-narrow" : "pspad-timeline-group")" style="@GroupStyle(group)">
                 @foreach (var entry in group.Entries)
                 {
                     var task = Tasks[entry.TaskId];
@@ -92,7 +92,7 @@
 
     sealed record Block(TodayEntry Entry, int Start, int End, int Lane, int Lanes);
 
-    sealed record Group(IReadOnlyList<TodayEntry> Entries, int Start, int End)
+    sealed record Group(IReadOnlyList<TodayEntry> Entries, int Start, int End, int Lane, int Lanes)
     {
         public int Needs => Entries.Count * LineHeight + GroupPadding;
     }
@@ -135,12 +135,15 @@
 
     string Top(int minutes) => $"calc(var(--pspad-hour) * {minutes} / 60{Growth(minutes)})";
 
-    string Growth(int minutes) =>
+    string Growth(int minutes) => Growth(-1, minutes);
+
+    string Growth(int after, int upTo) =>
         string.Concat(_layout.Groups
-            .Where(group => group.End <= minutes)
+            .Where(group => group.End > after && group.End <= upTo)
             .Select(group => $" + max(0px, {group.Needs}px - var(--pspad-hour) * {group.End - group.Start} / 60)"));
 
-    static string Height(int minutes, int least) => $"max({least}px, calc(var(--pspad-hour) * {minutes} / 60 - 2px))";
+    string Height(int start, int end, int least) =>
+        $"max({least}px, calc(var(--pspad-hour) * {end - start} / 60{Growth(start, end)} - 2px))";
 
     static int Minutes(TimeOnly time) => time.Hour * 60 + time.Minute;
 
@@ -159,43 +162,76 @@
         var spans = entries
             .Where(entry => entry.Time is not null)
             .Select(SpanOf)
-            .OrderBy(span => span.Start).ThenBy(span => span.VisibleEnd)
+            .OrderBy(span => span.Start).ThenByDescending(span => span.VisibleEnd)
             .ToList();
         var blocks = new List<Block>();
         var groups = new List<Group>();
-        var cluster = new List<(Span Span, int Lane)>();
-        var laneEnds = new List<int>();
-        var clusterEnd = -1;
-
-        void Flush()
+        foreach (var cluster in Clusters(spans))
         {
-            if (laneEnds.Count > MaxLanes)
-            {
-                var members = cluster
-                    .Select(item => item.Span)
-                    .OrderBy(span => span.Start)
-                    .ThenBy(span => span.Entry.Name, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-                groups.Add(new Group([.. members.Select(span => span.Entry)], members[0].Start, clusterEnd));
-            }
-            else
-            {
-                blocks.AddRange(cluster.Select(item =>
-                    new Block(item.Span.Entry, item.Span.Start, item.Span.End, item.Lane, laneEnds.Count)));
-            }
-
-            cluster.Clear();
-            laneEnds.Clear();
+            Place(cluster, blocks, groups);
         }
 
+        return new Layout(blocks, groups);
+    }
+
+    static IEnumerable<List<Span>> Clusters(IEnumerable<Span> spans)
+    {
+        var cluster = new List<Span>();
+        var clusterEnd = -1;
         foreach (var span in spans)
         {
-            if (span.Start >= clusterEnd)
+            if (span.Start >= clusterEnd && cluster.Count > 0)
             {
-                Flush();
-                clusterEnd = -1;
+                yield return cluster;
+                cluster = [];
             }
 
+            cluster.Add(span);
+            clusterEnd = cluster.Count == 1 ? span.VisibleEnd : Math.Max(clusterEnd, span.VisibleEnd);
+        }
+
+        if (cluster.Count > 0)
+        {
+            yield return cluster;
+        }
+    }
+
+    static void Place(List<Span> cluster, List<Block> blocks, List<Group> groups)
+    {
+        var lanes = Lanes(cluster);
+        var laneCount = lanes.Max() + 1;
+        if (laneCount <= MaxLanes)
+        {
+            blocks.AddRange(cluster.Select((span, index) => new Block(span.Entry, span.Start, span.End, lanes[index], laneCount)));
+        }
+        else if (cluster.All(span => span.Start - cluster[0].Start < HalfHour))
+        {
+            groups.Add(GroupOf(cluster, 0, 1));
+        }
+        else
+        {
+            var first = cluster.Where((_, index) => lanes[index] == 0);
+            var beside = cluster.Where((_, index) => lanes[index] > 0);
+            blocks.AddRange(first.Select(span => new Block(span.Entry, span.Start, span.End, 0, MaxLanes)));
+            foreach (var inner in Clusters(beside))
+            {
+                if (inner.Count == 1)
+                {
+                    blocks.Add(new Block(inner[0].Entry, inner[0].Start, inner[0].End, 1, MaxLanes));
+                }
+                else
+                {
+                    groups.Add(GroupOf(inner, 1, MaxLanes));
+                }
+            }
+        }
+    }
+
+    static int[] Lanes(List<Span> cluster)
+    {
+        var laneEnds = new List<int>();
+        return [.. cluster.Select(span =>
+        {
             var lane = laneEnds.FindIndex(laneEnd => laneEnd <= span.Start);
             if (lane < 0)
             {
@@ -207,12 +243,17 @@
                 laneEnds[lane] = span.VisibleEnd;
             }
 
-            cluster.Add((span, lane));
-            clusterEnd = Math.Max(clusterEnd, span.VisibleEnd);
-        }
+            return lane;
+        })];
+    }
 
-        Flush();
-        return new Layout(blocks, groups);
+    static Group GroupOf(List<Span> members, int lane, int lanes)
+    {
+        var ordered = members
+            .OrderBy(span => span.Start)
+            .ThenBy(span => span.Entry.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return new Group([.. ordered.Select(span => span.Entry)], ordered[0].Start, members.Max(span => span.VisibleEnd), lane, lanes);
     }
 
     RenderFragment Time(TaskTime time) =>
@@ -221,10 +262,10 @@
         </MudText>;
 
     string BlockStyle(Block block) =>
-        $"top:{Top(block.Start)};height:{Height(block.End - block.Start, MinHeight)};--lane:{block.Lane};--lanes:{block.Lanes}";
+        $"top:{Top(block.Start)};height:{Height(block.Start, block.End, MinHeight)};--lane:{block.Lane};--lanes:{block.Lanes}";
 
     string GroupStyle(Group group) =>
-        $"top:{Top(group.Start)};height:{Height(group.End - group.Start, group.Needs)}";
+        $"top:{Top(group.Start)};height:max({group.Needs}px, calc(var(--pspad-hour) * {group.End - group.Start} / 60 - 2px));--lane:{group.Lane};--lanes:{group.Lanes}";
 
     static string BlockClass(Block block, bool done)
     {

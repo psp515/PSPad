@@ -113,9 +113,32 @@ public class DayTimelineTests : Bunit.TestContext
         var style = group.GetAttribute("style")!;
         Assert.Contains("top:calc(var(--pspad-hour) * 540 / 60)", style);
         Assert.Contains("height:max(76px, calc(var(--pspad-hour) * 60 / 60 - 2px))", style);
+        Assert.Contains("--lane:0;--lanes:1", style);
+        Assert.DoesNotContain("pspad-timeline-task-narrow", group.ClassList);
         var lines = group.QuerySelectorAll(".pspad-timeline-group-line");
         Assert.Equal(["Call", "Review", "Standup"], lines.Select(line => line.QuerySelector(".pspad-timeline-task-name")!.TextContent.Trim()));
         Assert.Equal("09:00–09:30", lines[0].QuerySelector(".pspad-schedule-time")!.TextContent.Trim());
+    }
+
+    [Fact]
+    public void ALongTaskKeepsItsColumnWhileTheTasksBesideItKeepTheirOwnTimes()
+    {
+        var timeline = Render(Timed("Workday", 10, 0, 18, 0), Timed("Call", 11, 0, null, null),
+            Timed("Review", 16, 0, 17, 0), Timed("Sync", 16, 15, 17, 0), Timed("Demo", 16, 45, 17, 15));
+
+        const string growth = " + max(0px, 76px - var(--pspad-hour) * 90 / 60)";
+        var blocks = timeline.FindAll(".pspad-timeline-task");
+        Assert.Equal(["Workday", "Call"], blocks.Select(block => block.QuerySelector(".pspad-timeline-task-name")!.TextContent.Trim()));
+        Assert.Contains("--lane:0;--lanes:2", blocks[0].GetAttribute("style"));
+        Assert.Contains($"height:max(24px, calc(var(--pspad-hour) * 480 / 60{growth} - 2px))", blocks[0].GetAttribute("style"));
+        Assert.Contains("top:calc(var(--pspad-hour) * 660 / 60)", blocks[1].GetAttribute("style"));
+        Assert.Contains("--lane:1;--lanes:2", blocks[1].GetAttribute("style"));
+        var group = timeline.Find(".pspad-timeline-group");
+        Assert.Contains("top:calc(var(--pspad-hour) * 960 / 60)", group.GetAttribute("style"));
+        Assert.Contains("--lane:1;--lanes:2", group.GetAttribute("style"));
+        Assert.Contains("pspad-timeline-task-narrow", group.ClassList);
+        Assert.Equal(["Review", "Sync", "Demo"],
+            group.QuerySelectorAll(".pspad-timeline-task-name").Select(name => name.TextContent.Trim()));
     }
 
     [Fact]

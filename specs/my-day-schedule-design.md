@@ -51,13 +51,22 @@ the muted "Schedule empty for today." line sits above it.
   minimum hour), so blocks that would touch on screen never share a lane.
   A task without an end still takes 30 minutes; an overnight one ends at 24:00.
 - A cluster needing one or two lanes keeps side-by-side blocks.
-- A cluster needing three or more lanes becomes one group block
+- Within a cluster the longer task takes the first lane.
+- A cluster needing three or more lanes whose tasks all start within half an
+  hour of the first becomes one full-width group block
   (`pspad-timeline-group`) spanning the cluster, holding one 24px line per
   task (`pspad-timeline-group-line`: checkbox, time, name; the name opens the
-  task), ordered by start then name. The block is
+  task), ordered by start then name.
+- Any other cluster needing three or more lanes (a long task with others
+  inside it) keeps its first-lane tasks as blocks in the left half; the rest
+  are clustered again among themselves in the right half, a lone task as a
+  block, two or more as a group at their own time, its lines showing only
+  their start (`pspad-timeline-task-narrow`). Nothing is listed away from its
+  time. The block is
   `max(lines × 24px + 4px, its span − 2px)` tall; what it needs beyond its
-  span is the cluster's growth, added to every position from the cluster's
-  end on, so the axis below moves down rather than being covered.
+  span is the group's growth, added to every position from the group's end
+  on, so the axis below moves down rather than being covered; a block that
+  runs past a group grows by the same amount.
 - A block shorter than 90 minutes of real time is one line (time and name,
   `pspad-timeline-task-short`); from 90 minutes it shows time over name, and
   from two hours also the list name, so nothing is cut at the 32px hour. A
