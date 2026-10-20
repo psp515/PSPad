@@ -83,7 +83,7 @@ else if (_list is not null)
 
     @if (_list.Kind != ListKind.Reference && _done.Count > 0)
     {
-        <MudExpansionPanels Elevation="0" Class="pspad-completed mt-2">
+        <MudExpansionPanels Elevation="0" Gutters="false" Class="pspad-completed mt-2">
             <MudExpansionPanel Text="@T["CompletedCount", _done.Count]">
                 <RowGroup Columns="true">
                     @foreach (var task in _done)

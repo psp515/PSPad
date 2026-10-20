@@ -127,6 +127,7 @@ public class TodayTests : Bunit.TestContext
 
         Assert.Contains("Completed · 1", page.Markup);
         Assert.Contains("Masło", page.Markup);
+        Assert.Empty(page.FindAll(".pspad-completed [class*='gutters']"));
 
         var beforeCompletedSection = page.Markup[..page.Markup.IndexOf("Completed · 1")];
         Assert.DoesNotContain("Masło", beforeCompletedSection);
@@ -316,7 +317,8 @@ public class TodayTests : Bunit.TestContext
         var page = Render<Today>();
 
         Assert.Contains("Schedule empty for today.", page.Find(".pspad-day-schedule").TextContent);
-        Assert.Empty(page.FindComponents<DayTimeline>());
+        Assert.Single(page.FindComponents<DayTimeline>());
+        Assert.Empty(page.FindAll(".pspad-day-scheduled"));
         Assert.Equal("Schedule", page.Find(".pspad-day-tab-schedule-button").TextContent.Trim());
         Assert.Contains("pspad-day-tab-tasks", page.Find(".pspad-day").ClassList);
     }
@@ -377,7 +379,25 @@ public class TodayTests : Bunit.TestContext
         Assert.Contains("Sprint planning", schedule);
         Assert.Contains("Today, any time", page.Find(".pspad-day-anytime").TextContent);
         Assert.Contains("Mleko", page.Find(".pspad-day-anytime").TextContent);
-        Assert.DoesNotContain("Sprint planning", page.Find(".pspad-day-lists").TextContent);
+        Assert.DoesNotContain("Sprint planning", page.Find(".pspad-day-anytime").TextContent);
+    }
+
+    [Fact]
+    public void TimedTasksAreAlsoListedByStartBetweenStarredAndAnyTime()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Timed(Due(list.Id, "Sprint planning", Today), 9, 30, 11, 0), Timed(Due(list.Id, "Standup", Today), 8, 0, 8, 15),
+            Due(list.Id, "Mleko", Today));
+
+        var page = Render<Today>();
+
+        var scheduled = page.Find(".pspad-day-lists .pspad-day-scheduled");
+        Assert.Contains("Scheduled", scheduled.QuerySelector(".pspad-section-heading")!.TextContent);
+        Assert.Equal("2", scheduled.QuerySelector(".pspad-section-count")!.TextContent.Trim());
+        var rows = scheduled.QuerySelectorAll(".pspad-row");
+        Assert.Equal(["Standup", "Sprint planning"], rows.Select(row => row.QuerySelector(".pspad-row-name")!.TextContent.Trim()));
+        Assert.Equal("08:00–08:15", rows[0].QuerySelector(".pspad-row-time")!.TextContent.Trim());
+        Assert.True(page.Markup.IndexOf("pspad-day-scheduled") < page.Markup.IndexOf("pspad-day-anytime"));
     }
 
     [Fact]

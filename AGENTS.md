@@ -45,6 +45,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | List density, row groups, Inbox and goal rows | `specs/grouped-lists-design.md` |
 | Languages, resources, plurals, culture | `specs/localization-design.md` |
 | Live updates (sync nudges over SSE, proxies) | `specs/live-updates-design.md` |
+| My Day schedule timeline and sections | `specs/my-day-schedule-design.md` |
 | Why a decision was made | `adr/README.md` index → the `Active` record |
 
 Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither silently.

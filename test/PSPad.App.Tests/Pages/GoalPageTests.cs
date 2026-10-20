@@ -141,6 +141,7 @@ public class GoalPageTests : Bunit.TestContext
         var page = RenderPage(goal.Id);
 
         Assert.Contains("Completed · 1", page.Markup);
+        Assert.Empty(page.FindAll(".pspad-completed [class*='gutters']"));
     }
 
     [Fact]

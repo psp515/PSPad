@@ -39,6 +39,9 @@
   <data name="StarredHint" xml:space="preserve">
     <value>· when you have time</value>
   </data>
+  <data name="Scheduled" xml:space="preserve">
+    <value>Scheduled</value>
+  </data>
   <data name="AnyTime" xml:space="preserve">
     <value>{0}, any time</value>
   </data>
