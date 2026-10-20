@@ -206,7 +206,8 @@ task, reference and inbox rows, 48px for goal rows). `Columns="true"`
 (`pspad-row-group-cols`: list, inbox, goals, goal tasks) flows the rows into
 2 columns from `md` and 3 from `xl`, each row drawing its own bottom divider
 and a left hairline. `pspad-row-ledger` (My Day) puts the meta line beside the
-name in a fixed right column from `md`. A `pspad-row-subhead` inside a group
+name in a fixed right column from `md`, and from 1600px flows the rows into
+2 columns with the meta under the name. A `pspad-row-subhead` inside a group
 labels a day (Inbox). `RowSkeleton` is one `RowGroup` of 44px rows. Design and
 reasoning: `specs/grouped-lists-design.md`.
 
@@ -449,7 +450,8 @@ panel keeps the day); `ForNewTask` does not.
 
 The day is two parts inside `pspad-day`: the task sections
 (`pspad-day-lists`) and the Schedule (`pspad-day-schedule`). From `md` they
-are a grid, sections on the left and a 380px schedule column on the right.
+are a grid, sections on the left and a 380px schedule column on the right
+(420px from 1600px).
 Below `md` a tab bar under the week strip (`pspad-day-tabs`: **Tasks** and
 **Schedule · N**, N the pending scheduled count, plain **Schedule** at zero)
 picks one; `pspad-day` carries
@@ -460,30 +462,39 @@ Task sections, top to bottom, each hidden when empty:
 
 1. **Overdue** (`Color.Error` heading) — today only.
 2. **Starred** — `SectionHeading` with `Hint` "· when you have time".
-3. **{Day}, any time** — "Today, any time", "Tomorrow, any time", "Fri, 9
+3. **Scheduled · N** (`pspad-day-scheduled`, `Color.Primary` heading) — the
+   day's pending timed tasks by start, each row showing its time; on every
+   width, beside the timeline.
+4. **{Day}, any time** — "Today, any time", "Tomorrow, any time", "Fri, 9
    Oct, any time" (`DueDateRow.Describe`): the untimed tasks. When Schedule
    and this section are both empty (and Overdue on today) it stays with
    "Nothing planned for today." / "…for Fri, 9 Oct."
-4. **Completed · N** — a collapsed `MudExpansionPanel` on today and future
+5. **Completed · N** — a collapsed `MudExpansionPanel` on today and future
    days. On a past day it is the only section, a plain open section with
    "Nothing completed on Wed, 7 Oct." when empty.
 
 Each section is one `RowGroup` of `TaskRow`s with `pspad-row-ledger`, so
 from `md` a row is one line with its details in a right-hand column.
 
-**Schedule** (`Color.Primary` heading, always present) is a muted "Schedule
-empty for today." / "Schedule empty for Fri, 9 Oct." in a `RowGroup` when
-the day has no timed task, else `Components/DayTimeline`: a vertical
-timeline from the floor of the first
-start to the ceiling of the last end, 56px per hour, hour labels in a 52px
-gutter, a dashed half-hour line. Each task is a block placed by its time
-(`pspad-timeline-task`; a task without an end takes 30 minutes; an
-overnight end counts as 24:00 and adds the muted `(+1)`,
+**Schedule** (`Color.Primary` heading, always present) is
+`Components/DayTimeline`, under a muted "Schedule empty for today." /
+"Schedule empty for Fri, 9 Oct." when the day has no timed task: a vertical
+timeline of the whole day, 00:00–24:00, hour labels in a 52px gutter, a
+dashed half-hour line. The hour is `--pspad-hour`, as tall as fits the
+screen between 32 and 56px; when 24 hours at 32px do not fit, the timeline
+scrolls inside itself and opens an hour before now (today), else 30 minutes
+before the first task, else at 08:00 (`pspad-timeline-anchor`,
+`js/timeline.js`). Each task is a block placed by its time
+(`pspad-timeline-task`, at least 24px; a task without an end takes 30
+minutes; an overnight end counts as 24:00 and adds the muted `(+1)`,
 `pspad-schedule-nextday`), holding its checkbox, `09:30–11:00`
-(`pspad-schedule-time`, `-start`, `-dash`, `-end`), its name and list name;
-overlapping tasks share the width side by side. On today a red line
-(`pspad-timeline-now`) marks the current time in the user's zone. Ticking a
-block ticks the task like a row does.
+(`pspad-schedule-time`, `-start`, `-dash`, `-end`), its name and, from two hours, its list
+name (one line under 90 minutes, only the start when it shares the width). Tasks are laid out by a span of at least 45
+minutes; up to two overlapping tasks share the width side by side, three or
+more become one group block (`pspad-timeline-group`) of 24px lines, and the
+axis below grows to fit it. On today a red line (`pspad-timeline-now`)
+marks the current time in the user's zone. Ticking a block ticks the task
+like a row does. Design: `specs/my-day-schedule-design.md`.
 
 Membership comes from `TodayRule.Plan`, never from the page. The page does
 not show Coming up; the lead-time rule (`adr/0053`) stays in the domain and

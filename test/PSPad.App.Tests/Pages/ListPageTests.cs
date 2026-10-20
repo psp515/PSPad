@@ -254,6 +254,7 @@ public class ListPageTests : Bunit.TestContext
 
         Assert.Contains("Completed", page.Markup);
         Assert.Contains("1", page.Markup);
+        Assert.Empty(page.FindAll(".pspad-completed [class*='gutters']"));
     }
 
     [Fact]

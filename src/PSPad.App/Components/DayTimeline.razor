@@ -1,49 +1,78 @@
+@using Microsoft.JSInterop
 @using PSPad.Module.Tasks.Tasks
 @using PSPad.Module.Tasks.Today
+@inject IJSRuntime Js
+@inject ILogger<DayTimeline> Logger
+@implements IAsyncDisposable
 
 <MudPaper Outlined="true" Elevation="0" Class="pspad-timeline">
-    <div class="pspad-timeline-hours" style="@($"height:{Height}px")">
-        @for (var hour = FirstHour; hour < LastHour; hour++)
+    <div class="pspad-timeline-hours" @ref="_hours" style="@($"height:calc(var(--pspad-hour) * 24{Growth(MinutesPerDay)})")">
+        @for (var hour = 0; hour < 24; hour++)
         {
-            <div class="pspad-timeline-hour" style="@($"top:{(hour - FirstHour) * HourHeight}px")">
+            <div class="pspad-timeline-hour" style="@($"top:{Top(hour * 60)}")">
                 <span class="pspad-timeline-hour-label pspad-muted">@($"{hour:00}:00")</span>
                 <span class="pspad-timeline-half"></span>
             </div>
         }
-        @foreach (var block in Blocks)
+        <div class="pspad-timeline-anchor" style="@($"top:{Top(AnchorMinutes)}")" aria-hidden="true"></div>
+        @foreach (var block in _layout.Blocks)
         {
             var task = Tasks[block.Entry.TaskId];
             var done = IsDone(task);
-            <div @key="block.Entry.TaskId" class="@BlockClass(block, done)" style="@BlockStyle(block)">
+            <div @key="block.Entry.TaskId" class="@BlockClass(block, done)" style="@BlockStyle(block)"
+                 title="@($"{task.Name} – {TimeRow.Describe(block.Entry.Time!)}")">
                 <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))"
                              Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
                              UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" />
                 <div class="pspad-timeline-task-body" @onclick="@(() => OnOpen.InvokeAsync(task))">
-                    <MudText Typo="Typo.caption" Color="Color.Primary" Class="pspad-schedule-time">
-                        <span class="pspad-schedule-start">@TimeRow.Format(block.Entry.Time!.Start)</span>@if (block.Entry.Time.End is { } end){<span class="pspad-schedule-dash">–</span><span class="pspad-schedule-end">@TimeRow.Format(end)</span>}@if (block.Entry.Time.Overnight){<span class="pspad-schedule-nextday pspad-muted">@TimeRow.NextDay</span>}
-                    </MudText>
-                    <MudText Typo="Typo.body2" Class="pspad-timeline-task-name pspad-task-name" title="@task.Name"
+                    @Time(block.Entry.Time!)
+                    <MudText Typo="Typo.body2" Class="pspad-timeline-task-name pspad-task-name"
                              Style="@(done ? "text-decoration:line-through" : "")">@task.Name</MudText>
-                    @if (ListNameOf?.Invoke(task) is { } listName)
+                    @if (block.End - block.Start >= RoomForList && ListNameOf?.Invoke(task) is { } listName)
                     {
                         <MudText Typo="Typo.caption" Class="pspad-timeline-task-list pspad-muted">@listName</MudText>
                     }
                 </div>
             </div>
         }
+        @foreach (var group in _layout.Groups)
+        {
+            <div @key="group.Entries[0].TaskId" class="pspad-timeline-group" style="@GroupStyle(group)">
+                @foreach (var entry in group.Entries)
+                {
+                    var task = Tasks[entry.TaskId];
+                    var done = IsDone(task);
+                    <div @key="entry.TaskId" class="pspad-timeline-group-line">
+                        <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))"
+                                     Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
+                                     UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" />
+                        <div class="pspad-timeline-task-body" @onclick="@(() => OnOpen.InvokeAsync(task))">
+                            @Time(entry.Time!)
+                            <MudText Typo="Typo.body2" Class="pspad-timeline-task-name pspad-task-name" title="@task.Name"
+                                     Style="@(done ? "text-decoration:line-through" : "")">@task.Name</MudText>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
         @if (Now is { } now)
         {
-            <div class="pspad-timeline-now" style="@($"top:{Top(now)}px")"><span class="pspad-timeline-now-label">@TimeRow.Format(now)</span></div>
+            <div class="pspad-timeline-now" style="@($"top:{Top(Minutes(now))}")"><span class="pspad-timeline-now-label">@TimeRow.Format(now)</span></div>
         }
     </div>
 </MudPaper>
 
 @code {
-    public const int HourHeight = 56;
     const int HalfHour = 30;
-    const int MinHeight = 22;
-    const int OneLineBelow = 40;
     const int MinutesPerDay = 24 * 60;
+    const int ShortestVisibleSpan = 45;
+    const int MinHeight = 24;
+    const int LineHeight = 24;
+    const int GroupPadding = 4;
+    const int MaxLanes = 2;
+    const int DefaultStart = 8 * 60;
+    const int RoomForTwoLines = 90;
+    const int RoomForList = 120;
 
     [Parameter, EditorRequired] public IReadOnlyList<TodayEntry> Entries { get; set; } = [];
 
@@ -59,82 +88,167 @@
 
     [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
 
+    sealed record Span(TodayEntry Entry, int Start, int End, int VisibleEnd);
+
     sealed record Block(TodayEntry Entry, int Start, int End, int Lane, int Lanes);
 
-    IReadOnlyList<Block> Blocks => Lay(Entries);
+    sealed record Group(IReadOnlyList<TodayEntry> Entries, int Start, int End)
+    {
+        public int Needs => Entries.Count * LineHeight + GroupPadding;
+    }
 
-    int FirstHour => Blocks.Count == 0 ? 0 : Blocks.Min(block => block.Start) / 60;
+    sealed record Layout(IReadOnlyList<Block> Blocks, IReadOnlyList<Group> Groups);
 
-    int LastHour => Blocks.Count == 0 ? 1 : (Blocks.Max(block => block.End) + 59) / 60;
+    Layout _layout = new([], []);
+    ElementReference _hours;
+    IJSObjectReference? _module;
+    DateOnly? _revealed;
 
-    int Height => (LastHour - FirstHour) * HourHeight;
+    protected override void OnParametersSet() => _layout = Lay(Entries);
 
-    int Top(TimeOnly time) => Top(Minutes(time));
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_revealed == Day)
+        {
+            return;
+        }
 
-    int Top(int minutes) => (minutes - FirstHour * 60) * HourHeight / 60;
+        _revealed = Day;
+        try
+        {
+            _module ??= await Js.InvokeAsync<IJSObjectReference>("import", "./js/timeline.js");
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("reveal", _hours);
+            }
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Timeline keeps its scroll position");
+        }
+    }
+
+    int AnchorMinutes =>
+        Now is { } now ? Math.Max(0, Minutes(now) - 60)
+        : Entries.FirstOrDefault(entry => entry.Time is not null) is { Time: { } first } ? Math.Max(0, Minutes(first.Start) - HalfHour)
+        : DefaultStart;
+
+    string Top(int minutes) => $"calc(var(--pspad-hour) * {minutes} / 60{Growth(minutes)})";
+
+    string Growth(int minutes) =>
+        string.Concat(_layout.Groups
+            .Where(group => group.End <= minutes)
+            .Select(group => $" + max(0px, {group.Needs}px - var(--pspad-hour) * {group.End - group.Start} / 60)"));
+
+    static string Height(int minutes, int least) => $"max({least}px, calc(var(--pspad-hour) * {minutes} / 60 - 2px))";
 
     static int Minutes(TimeOnly time) => time.Hour * 60 + time.Minute;
 
-    static (int Start, int End) Span(TaskTime time)
+    static Span SpanOf(TodayEntry entry)
     {
+        var time = entry.Time!;
         var start = Minutes(time.Start);
-        var end = time.End is { } finish ? Minutes(finish) : start + HalfHour;
-        return (start, time.Overnight ? MinutesPerDay : Math.Min(end, MinutesPerDay));
+        var end = time.Overnight ? MinutesPerDay
+            : time.End is { } finish ? Math.Min(Minutes(finish), MinutesPerDay)
+            : start + HalfHour;
+        return new Span(entry, start, end, Math.Min(MinutesPerDay, Math.Max(end, start + ShortestVisibleSpan)));
     }
 
-    static IReadOnlyList<Block> Lay(IReadOnlyList<TodayEntry> entries)
+    static Layout Lay(IReadOnlyList<TodayEntry> entries)
     {
         var spans = entries
             .Where(entry => entry.Time is not null)
-            .Select(entry => (Entry: entry, Span: Span(entry.Time!)))
-            .OrderBy(item => item.Span.Start).ThenBy(item => item.Span.End)
+            .Select(SpanOf)
+            .OrderBy(span => span.Start).ThenBy(span => span.VisibleEnd)
             .ToList();
         var blocks = new List<Block>();
-        var cluster = new List<(TodayEntry Entry, int Start, int End, int Lane)>();
+        var groups = new List<Group>();
+        var cluster = new List<(Span Span, int Lane)>();
         var laneEnds = new List<int>();
         var clusterEnd = -1;
 
         void Flush()
         {
-            blocks.AddRange(cluster.Select(item => new Block(item.Entry, item.Start, item.End, item.Lane, laneEnds.Count)));
+            if (laneEnds.Count > MaxLanes)
+            {
+                var members = cluster
+                    .Select(item => item.Span)
+                    .OrderBy(span => span.Start)
+                    .ThenBy(span => span.Entry.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                groups.Add(new Group([.. members.Select(span => span.Entry)], members[0].Start, clusterEnd));
+            }
+            else
+            {
+                blocks.AddRange(cluster.Select(item =>
+                    new Block(item.Span.Entry, item.Span.Start, item.Span.End, item.Lane, laneEnds.Count)));
+            }
+
             cluster.Clear();
             laneEnds.Clear();
         }
 
-        foreach (var (entry, (start, end)) in spans)
+        foreach (var span in spans)
         {
-            if (start >= clusterEnd)
+            if (span.Start >= clusterEnd)
             {
                 Flush();
+                clusterEnd = -1;
             }
 
-            var lane = laneEnds.FindIndex(laneEnd => laneEnd <= start);
+            var lane = laneEnds.FindIndex(laneEnd => laneEnd <= span.Start);
             if (lane < 0)
             {
                 lane = laneEnds.Count;
-                laneEnds.Add(end);
+                laneEnds.Add(span.VisibleEnd);
             }
             else
             {
-                laneEnds[lane] = end;
+                laneEnds[lane] = span.VisibleEnd;
             }
 
-            cluster.Add((entry, start, end, lane));
-            clusterEnd = Math.Max(clusterEnd, end);
+            cluster.Add((span, lane));
+            clusterEnd = Math.Max(clusterEnd, span.VisibleEnd);
         }
 
         Flush();
-        return blocks;
+        return new Layout(blocks, groups);
     }
 
-    int BlockHeight(Block block) => Math.Max(MinHeight, (block.End - block.Start) * HourHeight / 60 - 2);
+    RenderFragment Time(TaskTime time) =>
+        @<MudText Typo="Typo.caption" Color="Color.Primary" Class="pspad-schedule-time">
+            <span class="pspad-schedule-start">@TimeRow.Format(time.Start)</span>@if (time.End is { } end){<span class="pspad-schedule-dash">–</span><span class="pspad-schedule-end">@TimeRow.Format(end)</span>}@if (time.Overnight){<span class="pspad-schedule-nextday pspad-muted">@TimeRow.NextDay</span>}
+        </MudText>;
 
     string BlockStyle(Block block) =>
-        $"top:{Top(block.Start)}px;height:{BlockHeight(block)}px;--lane:{block.Lane};--lanes:{block.Lanes}";
+        $"top:{Top(block.Start)};height:{Height(block.End - block.Start, MinHeight)};--lane:{block.Lane};--lanes:{block.Lanes}";
 
-    string BlockClass(Block block, bool done) =>
-        $"pspad-timeline-task{(done ? " pspad-timeline-task-done" : "")}{(BlockHeight(block) < OneLineBelow ? " pspad-timeline-task-short" : "")}";
+    string GroupStyle(Group group) =>
+        $"top:{Top(group.Start)};height:{Height(group.End - group.Start, group.Needs)}";
+
+    static string BlockClass(Block block, bool done)
+    {
+        var oneLine = block.End - block.Start < RoomForTwoLines;
+        return "pspad-timeline-task"
+            + (done ? " pspad-timeline-task-done" : "")
+            + (oneLine ? " pspad-timeline-task-short" : "")
+            + (oneLine && block.Lanes > 1 ? " pspad-timeline-task-narrow" : "");
+    }
 
     bool IsDone(TodoTask task) =>
         task.IsRecurring ? task.CompletedDays.Contains(Day) : task.CompletedAt is not null;
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_module is not null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
 }

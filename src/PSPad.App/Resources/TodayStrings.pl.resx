@@ -39,6 +39,9 @@
   <data name="StarredHint" xml:space="preserve">
     <value>· gdy znajdzie się chwila</value>
   </data>
+  <data name="Scheduled" xml:space="preserve">
+    <value>Zaplanowane</value>
+  </data>
   <data name="AnyTime" xml:space="preserve">
     <value>{0}, bez godziny</value>
   </data>

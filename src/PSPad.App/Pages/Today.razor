@@ -71,6 +71,14 @@ else
                 </section>
             }
 
+            @if (_plan.Scheduled.Count > 0)
+            {
+                <section class="pspad-day-scheduled mb-4">
+                    <SectionHeading Title="@T["Scheduled"]" Count="@_plan.Scheduled.Count" Color="Color.Primary" />
+                    @Rows(_plan.Scheduled)
+                </section>
+            }
+
             @if (_plan.AnyTime.Count > 0 || (_plan.Scheduled.Count == 0 && _plan.Overdue.Count == 0))
             {
                 <section class="pspad-day-anytime mb-4">
@@ -88,7 +96,7 @@ else
 
             @if (_plan.Completed.Count > 0)
             {
-                <MudExpansionPanels Elevation="0" Class="pspad-completed">
+                <MudExpansionPanels Elevation="0" Gutters="false" Class="pspad-completed">
                     <MudExpansionPanel Class="pspad-day-completed" Text="@T["CompletedCount", _plan.Completed.Count]">
                         @Rows(_plan.Completed)
                     </MudExpansionPanel>
@@ -98,16 +106,13 @@ else
 
         <section class="pspad-day-schedule mb-4">
             <SectionHeading Title="@T["Schedule"]" Color="Color.Primary" />
-            @if (_plan.Scheduled.Count > 0)
+            @if (_plan.Scheduled.Count == 0)
             {
-                <DayTimeline Entries="@_plan.Scheduled" Tasks="@_byId" Day="@_day" Now="@NowOnTheDay"
-                             ListNameOf="@(task => NameOf(task.ListId))"
-                             OnToggle="@(toggled => ToggleAsync(toggled, _day))" OnOpen="@Open" />
+                <MudText Typo="Typo.body2" Class="pspad-timeline-empty pspad-muted mb-2">@ScheduleEmpty</MudText>
             }
-            else
-            {
-                <RowGroup><MudText Typo="Typo.body2" Class="pa-3 pspad-muted">@ScheduleEmpty</MudText></RowGroup>
-            }
+            <DayTimeline Entries="@_plan.Scheduled" Tasks="@_byId" Day="@_day" Now="@NowOnTheDay"
+                         ListNameOf="@(task => NameOf(task.ListId))"
+                         OnToggle="@(toggled => ToggleAsync(toggled, _day))" OnOpen="@Open" />
         </section>
     </div>
 }
