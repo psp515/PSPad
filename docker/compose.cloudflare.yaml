@@ -1,0 +1,28 @@
+# Layered over compose.yaml on a VPS behind a Cloudflare Tunnel. Nothing is published;
+# cloudflared reaches app, api and keycloak by service name over the shared "proxy" network.
+# docker network create proxy  (once)
+# docker compose -f docker/compose.yaml -f docker/compose.cloudflare.yaml up -d
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.1
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    restart: unless-stopped
+    networks: [proxy]
+
+  api:
+    ports: !override []
+    networks: [pspad, proxy]
+
+  app:
+    ports: !override []
+    networks: [pspad, proxy]
+
+  keycloak:
+    ports: !override []
+    networks: [pspad, proxy]
+
+networks:
+  proxy:
+    external: true
