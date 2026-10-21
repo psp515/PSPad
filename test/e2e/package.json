@@ -13,7 +13,7 @@
     "stack:down": "docker compose -f ../../docker/compose.yaml -f ../../docker/compose.e2e.yaml --env-file ../../docker/.env.example -p pspad-e2e down -v"
   },
   "devDependencies": {
-    "@playwright/test": "1.58.2",
+    "@playwright/test": "1.64.1",
     "@types/node": "22.19.0",
     "typescript": "5.9.3"
   }
