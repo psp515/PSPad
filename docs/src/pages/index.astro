@@ -33,7 +33,7 @@ const highlights = [
         <a class="button button-secondary" href={join(base, 'features')}>See the features</a>
       </p>
     </div>
-    <Shot name="my-day-phone" alt="My Day on a phone" phone />
+    <Shot name="my-day-phone" alt="My Day on a phone" phone eager />
   </section>
 
   <section class="wrap">
@@ -56,9 +56,9 @@ const highlights = [
   <section class="wrap">
     <div class="call">
       <h2>Run it yourself</h2>
-      <p>One Compose file on your own VPS, about ten minutes.</p>
+      <p>One file on your own VPS, about ten minutes.</p>
       <p><a class="button button-primary" href={join(base, 'self-host')}>Self-host PSPad</a></p>
-      <p class="mine"><a href={join(base, 'self-host#how-i-host-it')}>How I host it</a>, on a small VPS behind a Cloudflare Tunnel.</p>
+      <p class="mine"><a href={join(base, 'self-host#how-i-host-it')}>How I host it</a>, on a small VPS with no open ports.</p>
     </div>
   </section>
 </Page>
@@ -104,6 +104,7 @@ const highlights = [
   @media (min-width: 820px) {
     .hero { grid-template-columns: 3fr 2fr; }
     .highlight { grid-template-columns: 2fr 3fr; }
+    .highlight:nth-child(even) { grid-template-columns: 3fr 2fr; }
     .highlight:nth-child(even) .text { order: 2; }
   }
 </style>

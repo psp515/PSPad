@@ -1,14 +1,14 @@
 ---
 import { join } from '../lib/repo'
 
-interface Props { name: string; alt: string; phone?: boolean }
-const { name, alt, phone = false } = Astro.props
+interface Props { name: string; alt: string; phone?: boolean; eager?: boolean }
+const { name, alt, phone = false, eager = false } = Astro.props
 const base = import.meta.env.BASE_URL
 const src = (theme: 'light' | 'dark') => join(base, `screens/${name}-${theme}.png`)
 ---
 <figure class:list={['shot', { phone }]}>
-  <img class="light" src={src('light')} alt={alt} loading="lazy" />
-  <img class="dark" src={src('dark')} alt={alt} loading="lazy" />
+  <img class="light" src={src('light')} alt={alt} loading={eager ? 'eager' : 'lazy'} />
+  <img class="dark" src={src('dark')} alt={alt} loading={eager ? 'eager' : 'lazy'} />
 </figure>
 
 <style>
