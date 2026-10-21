@@ -6,7 +6,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "playwright test",
+    "test": "playwright test --project chromium",
+    "screenshots": "playwright test --project screenshots",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report",
     "stack:up": "docker compose -f ../../docker/compose.yaml -f ../../docker/compose.e2e.yaml --env-file ../../docker/.env.example -p pspad-e2e up -d --build --wait",

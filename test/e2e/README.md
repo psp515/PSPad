@@ -25,6 +25,14 @@ top: Keycloak listens on 18080 so the suite can run beside a developer's own
 Keycloak on 8080. The app and API stay on 5001 and 5000 because the realm's
 redirect URI names 5001.
 
+## Screenshots for the docs site
+
+`npm run screenshots` seeds a fresh user with sample content and writes ten
+PNGs to `docs/public/screens/` (My Day, Inbox, an area, a budget; light and
+dark; phone and desktop). Run it with the stack up, the same way as the
+suite, after a UI change that the site shows, and commit the files. It is
+not part of `npm test` or CI.
+
 ## Configuration
 
 | Variable | Default |
