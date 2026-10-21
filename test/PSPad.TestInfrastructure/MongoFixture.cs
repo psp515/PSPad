@@ -5,7 +5,7 @@ namespace PSPad.TestInfrastructure;
 
 public sealed class MongoFixture : IAsyncLifetime
 {
-    readonly MongoDbContainer _container = new MongoDbBuilder("mongo:8")
+    readonly MongoDbContainer _container = new MongoDbBuilder("mongo:9")
         .WithReplicaSet()
         .Build();
 

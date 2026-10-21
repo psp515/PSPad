@@ -22,8 +22,7 @@ jobs:
       - run: dotnet test --filter Category=Unit
 
   integration-test:
-    # mongo:8 refuses the ubuntu-24.04 image's 7.0.0-azure kernel (actions/runner-images#15005); back to ubuntu-latest once MongoDB 8.3.14 ships
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: build-and-unit-test
     steps:
       - uses: actions/checkout@v7
@@ -37,8 +36,7 @@ jobs:
       - run: dotnet test --project test/PSPad.Api.Tests --filter Category=Integration
 
   api-image:
-    # mongo:8 refuses the ubuntu-24.04 image's 7.0.0-azure kernel (actions/runner-images#15005); back to ubuntu-latest once MongoDB 8.3.14 ships
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: build-and-unit-test
     permissions:
       contents: read
@@ -56,7 +54,7 @@ jobs:
       - name: Start Mongo for smoke test
         run: |
           docker network create pspad-ci
-          docker run -d --name pspad-mongo-ci --network pspad-ci mongo:8
+          docker run -d --name pspad-mongo-ci --network pspad-ci mongo:9.0.4
           for i in $(seq 1 30); do
             if docker exec pspad-mongo-ci mongosh --quiet --eval "db.runCommand('ping').ok" | grep -q 1; then exit 0; fi
             sleep 1
@@ -137,8 +135,7 @@ jobs:
         run: docker rm -f pspad-app-ci || true
 
   e2e:
-    # mongo:8 refuses the ubuntu-24.04 image's 7.0.0-azure kernel (actions/runner-images#15005); back to ubuntu-latest once MongoDB 8.3.14 ships
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: build-and-unit-test
     env:
       COMPOSE: docker compose -f docker/compose.yaml -f docker/compose.e2e.yaml --env-file docker/.env.example -p pspad-e2e
@@ -169,7 +166,7 @@ jobs:
         if: failure()
         run: $COMPOSE logs --no-color --tail 200
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report
