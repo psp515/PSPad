@@ -1,6 +1,6 @@
 # Docs site — design
 
-Status: Proposed. Issue #110. No ADR: the site's stack (Astro on GitHub
+Status: Built. Issue #110. No ADR: the site's stack (Astro on GitHub
 Pages, `docs/`) and the self-hoster-facing rules in `AGENTS.md` §6 are
 unchanged; this is content, structure and one compose override.
 
