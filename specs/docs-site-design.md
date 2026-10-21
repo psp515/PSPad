@@ -186,12 +186,14 @@ it and remove `local-mongo` from `COMPOSE_PROFILES`.
 
 This needs one change to `docker/compose.yaml`: the `mongo` service gets
 `profiles: [local-mongo]`, the `keycloak` service gets
-`profiles: [local-keycloak]`, and the API's `depends_on` on them moves
-into the same profiles' services. `docker/.env.example` ships
-`COMPOSE_PROFILES=local-mongo,local-keycloak`, so a first run starts the
-same four containers as today; dropping a name from that line leaves the
-service out. The API's connection string is built from
-`MONGO_CONNECTION_STRING` when set, else from `MONGO_PASSWORD` as today.
+`profiles: [local-keycloak]`, and the API's `depends_on` on `mongo` gets
+`required: false` so Compose ignores it when the profile is off.
+`docker/.env.example` ships `COMPOSE_PROFILES=local-mongo,local-keycloak`,
+so a first run starts the same four containers as today; dropping a name
+from that line leaves the service out. The API reads
+`MONGO_CONNECTION_STRING` from `.env`, whose shipped value is the local
+string built from `MONGO_PASSWORD` and `MONGO_DATABASE` by `.env`
+interpolation; hosted means replacing that one value.
 
 **Keycloak: bundled or your own.** Your own means an existing Keycloak with
 the realm imported from `docker/keycloak/realm-psplace.json`, or any realm
@@ -296,10 +298,10 @@ budget with six entries this month. It then captures, with
 
 Theme is switched through Settings so the capture uses the app's own
 palette. Names, amounts and dates are fixed strings; dates are relative to
-the day of capture so "today" reads as today. The PNGs are committed. The
-site shows the light or dark file following its own theme toggle, through
-`<picture>` with a `prefers-color-scheme` source and a `data-theme`
-override in CSS.
+the day of capture so "today" reads as today. The PNGs are committed. A
+`Shot` component renders both files as lazy images and CSS shows the one
+matching the site theme, the same `prefers-color-scheme` and `data-theme`
+rules `theme.css` already uses for colours.
 
 The script is documented in `test/e2e/README.md` and runs on demand only;
 CI does not run it.
