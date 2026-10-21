@@ -28,6 +28,7 @@ const cloudflare = readRepoFile('docker/compose.cloudflare.yaml')
       <li>A Linux machine with Docker Compose v2 and about 2 GB of disk.</li>
       <li>A domain, if anyone but you will reach it.</li>
       <li>MongoDB and Keycloak are bundled. Both can be yours instead, see <a href="#options">Options</a>.</li>
+      <li>Optional: outbound HTTPS from the API to <code>api.nbp.pl</code>. Only a budget's exchange-rate lookups use it; without it the NBP button fails and everything else works.</li>
     </ul>
 
     <h2 id="quick-start">Quick start</h2>
@@ -155,6 +156,9 @@ docker compose -f docker/compose.yaml up -d --build</code></pre>
       or nginx only when <code>compose.yaml</code> or a <code>Dockerfile</code> in the
       release does.
     </p>
+    <Callout kind="warning" title="Upgrading from a release without profiles">
+      <p>Older <code>docker/.env</code> files have no <code>COMPOSE_PROFILES</code> line, and without it the bundled MongoDB and Keycloak no longer start. Add <code>COMPOSE_PROFILES=local-mongo,local-keycloak</code> to <code>docker/.env</code> before <code>up</code>. Nothing else changes.</p>
+    </Callout>
     <Callout kind="warning" title="Upgrading from a release with floating images">
       <p>
         Older releases pulled <code>mongo:8</code> and Keycloak 26.0. This release pins
@@ -164,9 +168,6 @@ docker compose -f docker/compose.yaml up -d --build</code></pre>
         <code>.env</code>, same ports, same volumes, and none of them needs new file
         permissions.
       </p>
-    </Callout>
-    <Callout kind="warning" title="Upgrading from a release without profiles">
-      <p>Older <code>docker/.env</code> files have no <code>COMPOSE_PROFILES</code> line, and without it the bundled MongoDB and Keycloak no longer start. Add <code>COMPOSE_PROFILES=local-mongo,local-keycloak</code> to <code>docker/.env</code> before <code>up</code>. Nothing else changes.</p>
     </Callout>
 
     <h3>Live updates through a proxy</h3>
@@ -247,9 +248,9 @@ docker compose -f docker/compose.yaml exec \
     <p>
       Pass both files on every later <code>up</code>, or the API goes back to the root user.
       The root user stays for the healthcheck, the script and your backups. Running PSPad
+      against your own MongoDB or Atlas? Give its user only <code>readWrite</code> on the
       PSPad database.
     </p>
-      PSPad database.
     </details>
 
     <Callout kind="warning" title="Two things worth knowing">
