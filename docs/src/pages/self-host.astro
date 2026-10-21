@@ -1,0 +1,265 @@
+---
+import Page from '../layouts/Page.astro'
+import Callout from '../components/Callout.astro'
+import EnvTable from '../components/EnvTable.astro'
+import Step from '../components/Step.astro'
+import { parseEnvExample, readRepoFile } from '../lib/repo'
+
+const entries = parseEnvExample(readRepoFile('docker/.env.example'))
+const cloudflare = readRepoFile('docker/compose.cloudflare.yaml')
+---
+<Page
+  title="Self-host PSPad"
+  description="Run PSPad on your own server: a quick start with Docker Compose, hosted or bundled MongoDB and Keycloak, a reverse proxy or a Cloudflare Tunnel, and how I host it myself."
+>
+  <div class="wrap prose">
+    <h1>Self-host</h1>
+    <p>Your own server, one Compose file, about ten minutes.</p>
+    <nav class="toc" aria-label="On this page">
+      <a href="#need">What you need</a>
+      <a href="#quick-start">Quick start</a>
+      <a href="#options">Options</a>
+      <a href="#how-i-host-it">How I host it</a>
+      <a href="#maintenance">Maintenance</a>
+    </nav>
+
+    <h2 id="need">What you need</h2>
+    <ul>
+      <li>A Linux machine with Docker Compose v2 and about 2 GB of disk.</li>
+      <li>A domain, if anyone but you will reach it.</li>
+      <li>MongoDB and Keycloak are bundled. Both can be yours instead, see <a href="#options">Options</a>.</li>
+    </ul>
+
+    <h2 id="quick-start">Quick start</h2>
+    <p>Everything on <code>localhost</code>, for a first look.</p>
+
+    <Step n={1} title="Clone">
+      <pre><code>git clone https://github.com/psp515/PSPad.git
+cd PSPad</code></pre>
+    </Step>
+
+    <Step n={2} title="Create the environment file">
+      <pre><code>cp docker/.env.example docker/.env</code></pre>
+      <p>The defaults work on <code>localhost</code>. Change the two passwords before the machine is reachable from anywhere else. Every value, for later:</p>
+      <details>
+        <summary>All variables</summary>
+        <EnvTable entries={entries} />
+      </details>
+    </Step>
+
+    <Step n={3} title="Start">
+      <pre><code>docker compose -f docker/compose.yaml up -d --build</code></pre>
+      <p>The first build takes a few minutes. When this prints <code>401</code> the API is up and you are simply not signed in yet:</p>
+      <pre><code>curl -s -o /dev/null -w "%{'{'}http_code{'}'}\n" http://localhost:5000/api/today</code></pre>
+    </Step>
+
+    <Step n={4} title="Create your first user">
+      <p>Accounts live in Keycloak. Open <code>http://localhost:8080</code>, sign in as <code>admin</code> / <code>admin</code>, switch the realm from <strong>master</strong> to <strong>psplace</strong>, then <strong>Users → Create new user</strong>. Under <strong>Credentials</strong> set a password with <em>Temporary</em> off.</p>
+    </Step>
+
+    <Step n={5} title="Sign in">
+      <p>Open <code>http://localhost:5001</code> and sign in. My Day is empty at first while three starter areas are created. Install it from the browser's address bar for the offline app.</p>
+      <Callout kind="warning" title="Give it 20–30 seconds before you trust something is saved">
+        <p>New tasks save to your browser at once and reach the server within 20–30 seconds. Restart the stack sooner and they are gone.</p>
+      </Callout>
+    </Step>
+
+    <h2 id="options">Options</h2>
+    <p>Each option is one line in <code>docker/.env</code>. <code>COMPOSE_PROFILES</code> says which bundled services start; remove a name to bring your own.</p>
+
+    <h3 id="mongodb">MongoDB: bundled or hosted</h3>
+    <p>Hosted means any MongoDB 8 replica set the server can reach. The free Atlas M0 tier is enough for one household:</p>
+    <ol>
+      <li>Create a cluster at <a href="https://www.mongodb.com/atlas">Atlas</a>, then a database user with <strong>Read and write to any database</strong>.</li>
+      <li>Under <strong>Network Access</strong> allow your server's public address.</li>
+      <li><strong>Connect → Drivers</strong>: copy the <code>mongodb+srv://</code> string and put the user's password in it.</li>
+      <li>In <code>docker/.env</code>:
+        <pre><code>COMPOSE_PROFILES=local-keycloak
+MONGO_CONNECTION_STRING=mongodb+srv://pspad:PASSWORD@cluster0.abcde.mongodb.net/pspad?retryWrites=true&amp;w=majority</code></pre>
+      </li>
+      <li><code>docker compose -f docker/compose.yaml up -d</code>. The <code>mongo</code> container is not started.</li>
+    </ol>
+    <p>Atlas keeps its own backups, so the <a href="#backups">dump command</a> below does not apply.</p>
+
+    <h3 id="keycloak">Keycloak: bundled or your own</h3>
+    <p>Your own Keycloak needs the realm from <code>docker/keycloak/realm-psplace.json</code> (<strong>Realm settings → Action → Partial import</strong>), or any realm with a public client <code>pspad-frontend</code> and an audience <code>pspad-backend</code>. Then in <code>docker/.env</code>:</p>
+    <pre><code>COMPOSE_PROFILES=local-mongo
+KEYCLOAK_AUTHORITY=https://auth.example.com/realms/psplace
+KEYCLOAK_INTERNAL_AUTHORITY=https://auth.example.com/realms/psplace
+KEYCLOAK_HOSTNAME=https://auth.example.com
+KEYCLOAK_ADMIN_USER=…
+KEYCLOAK_ADMIN_PASSWORD=…</code></pre>
+    <p>The admin credentials are what the API uses to remove a login when a user deletes their account. Rotate the password there and here together.</p>
+    <Callout kind="warning" title="Two Keycloak URLs">
+      <p><code>KEYCLOAK_AUTHORITY</code> is how the <strong>browser</strong> reaches Keycloak, <code>KEYCLOAK_INTERNAL_AUTHORITY</code> how the <strong>API container</strong> does. With your own Keycloak they are the same address.</p>
+    </Callout>
+
+    <h3 id="internet">Reaching it from the internet</h3>
+    <p>Either way, set the four public URLs in <code>docker/.env</code> first, then update the Keycloak client:</p>
+    <pre><code>APP_BASE_ADDRESS=https://pspad.example.com
+API_BASE_ADDRESS=https://pspad-api.example.com
+KEYCLOAK_AUTHORITY=https://auth.example.com/realms/psplace
+KEYCLOAK_HOSTNAME=https://auth.example.com</code></pre>
+    <Callout kind="warning" title="Update the Keycloak client, or sign-in fails">
+      <p>The bundled realm has <code>http://localhost:5001/*</code> as the redirect URI. In Keycloak: realm <strong>psplace → Clients → pspad-frontend → Valid redirect URIs</strong>, set it to your app URL followed by <code>/*</code>.</p>
+    </Callout>
+    <p><strong>A reverse proxy on the server</strong> (nginx, Caddy):</p>
+    <ul>
+      <li>Three hostnames to the published ports: app <code>5001</code>, API <code>5000</code>, Keycloak <code>8080</code>. TLS at the proxy, HSTS on.</li>
+      <li>Forward <code>X-Forwarded-For</code> and <code>X-Forwarded-Proto</code>; nginx: <code>proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;</code>.</li>
+      <li>Set <code>API_TRUSTED_PROXY_NETWORK</code> to the stack's Docker subnet so rate limits see each visitor: <code>docker network inspect pspad_pspad --format '{'{'}range .IPAM.Config{'}'}{'{'}.Subnet{'}'}{'{'}end{'}'}'</code>.</li>
+      <li>Keep port <code>5000</code> off the internet: bind it to <code>127.0.0.1</code> or close it at the firewall.</li>
+    </ul>
+    <p><strong>A Cloudflare Tunnel</strong>: no open ports at all. That is how I host it, next.</p>
+    <Callout title="The browser only talks to the origins in .env">
+      <p>The client's security policy and the API's allowed origins are built from <code>APP_BASE_ADDRESS</code>, <code>API_BASE_ADDRESS</code> and <code>KEYCLOAK_AUTHORITY</code> when the containers start. A "Refused to connect" error in the browser console means one of them is wrong: fix it and recreate the stack.</p>
+    </Callout>
+
+    <!-- how-i-host-it -->
+
+    <h2 id="maintenance">Maintenance</h2>
+
+    <h3 id="backups">Backups</h3>
+    <p>Three volumes hold everything:</p>
+    <ul>
+      <li><code>pspad_mongo-data</code> — areas, lists, tasks, the event log.</li>
+      <li><code>pspad_mongo-keyfile</code> — the replica-set key. Lose it and <code>mongo-data</code> won't start.</li>
+      <li><code>pspad_keycloak-data</code> — accounts and realm config.</li>
+    </ul>
+    <Callout kind="warning" title="Never pass -v to docker compose down">
+      <p>
+        <code>down -v</code> deletes <code>pspad_keycloak-data</code>, and with it every
+        account. PSPad keys its users by the Keycloak user's UUID, so accounts recreated
+        afterwards are new people — the old areas, lists and tasks stay in MongoDB, owned by
+        a user that can no longer sign in. <code>down</code> on its own is safe.
+      </p>
+    </Callout>
+    <p>Dump the database:</p>
+    <pre><code>docker compose -f docker/compose.yaml exec -T mongo \
+  sh -c 'mongodump --archive --username pspad --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' \
+  > pspad-backup.archive</code></pre>
+    <p>
+      Keep the single quotes — the password only exists inside the <code>mongo</code>
+      container. Double quotes would expand it on your host instead, where it's empty.
+    </p>
+
+    <h3>Upgrading, restarting</h3>
+    <pre><code>git pull
+docker compose -f docker/compose.yaml up -d --build</code></pre>
+    <p>
+      Volumes survive — only <code>down -v</code> destroys them. Give Mongo 10–30 seconds to
+      report healthy again before assuming something's broken.
+    </p>
+    <p>
+      Every image is pinned to an exact version, so an upgrade changes MongoDB, Keycloak
+      or nginx only when <code>compose.yaml</code> or a <code>Dockerfile</code> in the
+      release does.
+    </p>
+    <Callout kind="warning" title="Upgrading from a release with floating images">
+      <p>
+        Older releases pulled <code>mongo:8</code> and Keycloak 26.0. This release pins
+        MongoDB 8.3.11 and Keycloak 26.7.4, which migrates its embedded database on first
+        start. Before you run <code>up</code>, take a <a href="#backups">database dump</a> and
+        export the <strong>psplace</strong> realm. Nothing else changes: same
+        <code>.env</code>, same ports, same volumes, and none of them needs new file
+        permissions.
+      </p>
+    </Callout>
+    <Callout kind="warning" title="Upgrading from a release without profiles">
+      <p>Older <code>docker/.env</code> files have no <code>COMPOSE_PROFILES</code> line, and without it the bundled MongoDB and Keycloak no longer start. Add <code>COMPOSE_PROFILES=local-mongo,local-keycloak</code> to <code>docker/.env</code> before <code>up</code>. Nothing else changes.</p>
+    </Callout>
+
+    <h3>Live updates through a proxy</h3>
+    <p>
+      An open app holds one long-lived request, <code>GET /api/live</code>, a Server-Sent
+      Events stream that tells it to sync the moment something changes. The headers and the 25-second heartbeat are chosen so stock proxy
+      settings carry the stream.
+    </p>
+    <p>
+      <strong>Cloudflare (proxied DNS or Tunnel): expected to need no change; not tested
+      here.</strong> Per its documented behaviour Cloudflare streams
+      <code>text/event-stream</code> unbuffered and drops an origin connection silent for
+      100 s (error 524); the 25 s heartbeat stays under that. Browsers talk HTTP/2
+      to Cloudflare, so a stream does not use up the per-host connection limit. Only if a
+      Cache Rule caches the API hostname, exclude <code>/api/live</code> (better: never cache
+      the API).
+    </p>
+    <p>
+      <strong>nginx in front of the API: stock settings were tested and need no change.</strong>
+      Change only if the config has one of these:
+    </p>
+    <table>
+      <thead>
+        <tr><th>If your config has</th><th>Change it to</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>proxy_read_timeout</code> below 30s</td><td>≥ 60s, at least for <code>location /api/live</code></td></tr>
+        <tr><td><code>proxy_ignore_headers X-Accel-Buffering</code></td><td>remove it, or add <code>proxy_buffering off;</code> in <code>location /api/live</code></td></tr>
+        <tr><td><code>proxy_cache</code> on the API</td><td><code>proxy_cache off;</code> for <code>/api/live</code></td></tr>
+        <tr><td><code>gzip_types</code> including <code>text/event-stream</code></td><td>remove it</td></tr>
+        <tr><td>TLS without <code>http2</code> and no Cloudflare in front</td><td><code>http2 on;</code> — on HTTP/1.1 each visible tab holds one of the browser's six connections to the API (hidden tabs drop their stream); the default proxy-less <code>http://localhost:5000</code> is HTTP/1.1 too</td></tr>
+      </tbody>
+    </table>
+    <p>An explicit block that does not rely on the response headers:</p>
+    <pre><code>{`location /api/live {
+    proxy_pass http://<api-upstream>;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 1h;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+}`}</code></pre>
+    <p>
+      <strong>Caddy: expected to need no change; not tested here.</strong> Per its documented
+      behaviour it flushes <code>text/event-stream</code> immediately.
+    </p>
+    <p>
+      An integration test runs the stream through
+      <code>nginxinc/nginx-unprivileged:1.31.6-alpine</code> with a stock
+      <code>proxy_pass</code> block and a short <code>proxy_read_timeout</code>. Cloudflare and
+      Caddy are not tested.
+    </p>
+
+    <details>
+      <summary>Give the API its own database user</summary>
+    <p>
+      Out of the box the API signs in to MongoDB as the root user <code>pspad</code>. To
+      limit what a leaked connection string can do, create a user that can read and write
+      <code>MONGO_DATABASE</code> and nothing else, using the example script
+      <code>docker/mongo-app-user.js</code>. Run it as root inside the running
+      <code>mongo</code> container (use your own database name and a password of letters,
+      digits and <code>- . _ ~</code>):
+    </p>
+    <pre><code>docker compose -f docker/compose.yaml cp docker/mongo-app-user.js mongo:/tmp/mongo-app-user.js
+docker compose -f docker/compose.yaml exec \
+  -e MONGO_DATABASE=pspad -e MONGO_APP_USER=pspad-api -e MONGO_APP_PASSWORD='&lt;app password&gt;' \
+  mongo sh -c 'mongosh --quiet -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin /tmp/mongo-app-user.js'</code></pre>
+    <p>
+      It prints <code>created pspad-api on pspad</code>; running it again resets the password
+      and roles. Then point the API at the new user with an override file next to
+      <code>compose.yaml</code>, say <code>docker/compose.db-user.yaml</code>:
+    </p>
+    <pre><code>services:
+  api:
+    environment:
+      Mongo__ConnectionString: mongodb://pspad-api:&lt;app password&gt;@mongo:27017/pspad?directConnection=true</code></pre>
+    <pre><code>docker compose -f docker/compose.yaml -f docker/compose.db-user.yaml up -d</code></pre>
+    <p>
+      Pass both files on every later <code>up</code>, or the API goes back to the root user.
+      The root user stays for the healthcheck, the script and your backups. Running PSPad
+      PSPad database.
+    </p>
+      PSPad database.
+    </details>
+
+    <Callout kind="warning" title="Two things worth knowing">
+      <p>The bundled Keycloak runs in development mode, fine for one household behind a proxy, not for a public service. The old MongoDB keyfile is in the git history; the stack generates a fresh one on first start, so nothing in the repository unlocks your data.</p>
+    </Callout>
+  </div>
+</Page>
+
+<style>
+  .toc { display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0 32px; font-weight: 500; }
+  details { margin: 16px 0; }
+  summary { cursor: pointer; font-weight: 500; }
+</style>
