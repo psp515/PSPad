@@ -1,0 +1,40 @@
+---
+import { join } from '../lib/repo'
+
+interface Props { name: string; alt: string; phone?: boolean }
+const { name, alt, phone = false } = Astro.props
+const base = import.meta.env.BASE_URL
+const src = (theme: 'light' | 'dark') => join(base, `screens/${name}-${theme}.png`)
+---
+<figure class:list={['shot', { phone }]}>
+  <img class="light" src={src('light')} alt={alt} loading="lazy" />
+  <img class="dark" src={src('dark')} alt={alt} loading="lazy" />
+</figure>
+
+<style>
+  .shot {
+    margin: 0;
+    border: 1px solid var(--lines);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  }
+
+  .shot.phone {
+    width: min(300px, 100%);
+    margin: 0 auto;
+    border-radius: 24px;
+  }
+
+  img { display: block; width: 100%; height: auto; }
+  .dark { display: none; }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme='light'])) .light { display: none; }
+    :global(:root:not([data-theme='light'])) .dark { display: block; }
+  }
+
+  :global(:root[data-theme='dark']) .light { display: none; }
+  :global(:root[data-theme='dark']) .dark { display: block; }
+</style>
