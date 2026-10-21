@@ -11,10 +11,14 @@ const paths: Record<NavTarget, string> = {
   Budgets: '/budgets',
 };
 
+export function navLink(page: Page, path: string) {
+  return page.locator('.pspad-nav').locator(`a[href="${path}"]`);
+}
+
 export async function goTo(page: Page, target: NavTarget) {
   await expect(page.locator('.pspad-detail-panel.mud-drawer--open')).toHaveCount(0);
   await expect(page.locator('.mud-drawer-overlay--open')).toHaveCount(0);
-  const link = page.locator('.pspad-nav').getByRole('link', { name: target, exact: true });
+  const link = navLink(page, paths[target]);
   if (await link.isVisible()) {
     await link.click({ timeout: 10_000 }).catch(() => page.goto(paths[target]));
   } else {

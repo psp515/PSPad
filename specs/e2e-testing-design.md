@@ -50,7 +50,12 @@ laptop and in CI, excluding the image build.
   redirect URI names `http://localhost:5001/*`; the developer stack's app
   and API must be down while the suite runs.
 - Before the first test a global setup polls `GET /health` on the API,
-  `GET /` on the app and `GET /realms/psplace` on Keycloak, up to 180 s.
+  `GET /` on the app and `GET /realms/psplace` on Keycloak, up to 180 s,
+  then signs a throwaway account in once through the browser. A freshly
+  imported realm generates its signing keys on the first login, and
+  parallel first logins lose that race with `invalid_token` on userinfo;
+  the warm-up also pays the app's first WASM load and the API's first
+  provisioning before any scenario is timed.
 - Base addresses come from the environment with those defaults:
   `E2E_APP_URL`, `E2E_API_URL`, `E2E_KEYCLOAK_URL`, plus
   `E2E_KEYCLOAK_ADMIN_USER` and `E2E_KEYCLOAK_ADMIN_PASSWORD`.
@@ -282,7 +287,10 @@ markup or copy a scenario reads fixes the scenario in the same change. The
 `e2e` CI job gates deploy, so a red scenario blocks the merge either way.
 Scenario numbers never change; a new one takes the next number. Helpers
 locate by role, label, text and the `pspad-*` classes the UI spec names, so
-renaming one of those is a suite change too.
+renaming one of those is a suite change too. Nav links carry a count once
+the user has items, so `navLink` finds them by `href`; a link found by its
+name alone misses when the count appears and a `goto` fallback reloads the
+page, which is a different flow from clicking.
 
 Since live updates (ADR-0076) every command a device sends echoes back as a
 nudge whose pull re-renders the open panel. Helpers that close a panel or
@@ -296,8 +304,9 @@ should do the same.
   refuses, the scenario falls back to keyboard or the step is reported as
   a UI gap, not papered over.
 - **Keycloak start** takes 20–40 s with realm import; the global setup's
-  120 s wait covers it, and the compose `--wait` only covers services with
-  a health check.
+  180 s wait covers it, and the compose `--wait` only covers services with
+  a health check. The first logins after the import are the fragile part,
+  hence the warm-up sign-in (§2).
 - **Clock edges.** Tests that depend on "today" compute it in UTC at the
   start and would be wrong across midnight UTC; a run that straddles it is
   rerun, not patched.

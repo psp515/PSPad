@@ -13,7 +13,11 @@ export async function goToSettings(page: Page, label = 'Settings') {
 export async function setTimeZone(page: Page, id: string) {
   const input = page.getByLabel('Time zone');
   await input.fill(id);
+  const saved = page.waitForResponse(
+    response => response.url().endsWith('/api/me/timezone') && response.request().method() === 'PUT' && response.ok(),
+  );
   await page.locator('.mud-popover-open').getByText(id, { exact: true }).click();
+  await saved;
   await expect(input).toHaveValue(id);
 }
 
