@@ -116,7 +116,47 @@ KEYCLOAK_HOSTNAME=https://auth.example.com</code></pre>
       <p>The client's security policy and the API's allowed origins are built from <code>APP_BASE_ADDRESS</code>, <code>API_BASE_ADDRESS</code> and <code>KEYCLOAK_AUTHORITY</code> when the containers start. A "Refused to connect" error in the browser console means one of them is wrong: fix it and recreate the stack.</p>
     </Callout>
 
-    <!-- how-i-host-it -->
+    <h2 id="how-i-host-it">How I host it</h2>
+    <p>A small VPS (a Polish <a href="https://mikr.us">Mikrus</a>), MongoDB on a free Atlas cluster, and a Cloudflare Tunnel so the server has no open ports. Nothing here is specific to that provider.</p>
+    <ol>
+      <li><strong>MongoDB.</strong> An Atlas M0 cluster, set up as in <a href="#mongodb">the option above</a>.</li>
+      <li><strong>Tunnel.</strong> In Cloudflare <strong>Zero Trust → Networks → Tunnels → Create a tunnel</strong>, pick Docker, copy the token. Then add three public hostnames, each of type HTTP:
+        <table>
+          <thead><tr><th>Hostname</th><th>Service</th></tr></thead>
+          <tbody>
+            <tr><td><code>pspad.example.com</code></td><td><code>app:8080</code></td></tr>
+            <tr><td><code>pspad-api.example.com</code></td><td><code>api:8080</code></td></tr>
+            <tr><td><code>auth.example.com</code></td><td><code>keycloak:8080</code></td></tr>
+          </tbody>
+        </table>
+      </li>
+      <li><strong>Network.</strong> One shared network the tunnel and the containers all join:
+        <pre><code>docker network create proxy
+docker network inspect proxy --format '{'{'}range .IPAM.Config{'}'}{'{'}.Subnet{'}'}{'{'}end{'}'}'</code></pre>
+      </li>
+      <li><strong>Environment.</strong> In <code>docker/.env</code>:
+        <pre><code>COMPOSE_PROFILES=local-keycloak
+MONGO_CONNECTION_STRING=mongodb+srv://…
+APP_BASE_ADDRESS=https://pspad.example.com
+API_BASE_ADDRESS=https://pspad-api.example.com
+KEYCLOAK_AUTHORITY=https://auth.example.com/realms/psplace
+KEYCLOAK_HOSTNAME=https://auth.example.com
+API_TRUSTED_PROXY_NETWORK=172.20.0.0/16   # the subnet printed above
+API_CLIENT_IP_HEADER=CF-Connecting-IP
+CLOUDFLARE_TUNNEL_TOKEN=…</code></pre>
+      </li>
+      <li><strong>Start.</strong> The override adds <code>cloudflared</code>, joins every service to <code>proxy</code> and publishes nothing:
+        <pre><code>docker compose -f docker/compose.yaml -f docker/compose.cloudflare.yaml up -d --build</code></pre>
+        <details>
+          <summary><code>docker/compose.cloudflare.yaml</code></summary>
+          <pre><code>{cloudflare}</code></pre>
+        </details>
+      </li>
+      <li><strong>Keycloak.</strong> Open <code>https://auth.example.com</code>, update the client's redirect URI as <a href="#internet">above</a>, create your user.</li>
+      <li><strong>HSTS.</strong> In Cloudflare <strong>SSL/TLS → Edge Certificates → HSTS</strong>, enable it. The containers speak plain HTTP to the tunnel; Cloudflare does TLS.</li>
+    </ol>
+    <p>Why <code>CF-Connecting-IP</code>: with a tunnel the only way in is Cloudflare, so the header is trustworthy and public snapshot links get rate-limited per visitor. Behind your own proxy keep the default <code>X-Forwarded-For</code> instead; anyone reaching the origin directly could forge the Cloudflare header.</p>
+    <p>I run Keycloak as a separate Compose project on the same <code>proxy</code> network, on Postgres instead of its built-in store, with <code>KC_HOSTNAME=https://auth.example.com</code>, <code>KC_HOSTNAME_STRICT=true</code>, <code>KC_HTTP_ENABLED=true</code>, <code>KC_PROXY_HEADERS=xforwarded</code> and <code>start --import-realm</code>. The bundled Keycloak is enough for one household; move to Postgres when the realm is shared with other apps.</p>
 
     <h2 id="maintenance">Maintenance</h2>
 
