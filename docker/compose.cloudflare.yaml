@@ -7,7 +7,7 @@ services:
     image: cloudflare/cloudflared:2026.9.1
     command: ["tunnel", "--no-autoupdate", "run"]
     environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in docker/.env}
     restart: unless-stopped
     networks: [proxy]
 
