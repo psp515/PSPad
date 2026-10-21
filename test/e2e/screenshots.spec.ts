@@ -1,8 +1,8 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Page, test } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { test } from './fixtures/accounts';
+import { createAccount, deleteAccount } from './fixtures/keycloak';
 import { openArea } from './helpers/areas';
 import { addEntry, createBudget } from './helpers/budgets';
 import { addDays, utcToday } from './helpers/dates';
@@ -105,30 +105,35 @@ async function seed(page: Page) {
 
 test.describe.configure({ timeout: 600_000 });
 
-test('capture the screenshots the docs site shows', async ({ page, account }) => {
-  mkdirSync(out, { recursive: true });
-  await page.setViewportSize(desktop);
-  await signIn(page, account);
-  await seed(page);
-
-  for (const theme of ['Light', 'Dark'] as const) {
-    const name = theme.toLowerCase() as 'light' | 'dark';
-    await setTheme(page, theme);
-
-    await goToMyDay(page);
-    await shot(page, 'my-day', name, desktop);
-    await shot(page, 'my-day', name, phone);
-
-    await goToInbox(page);
-    await shot(page, 'inbox', name, phone);
-
+test('capture the screenshots the docs site shows', async ({ page }) => {
+  const account = await createAccount({ firstName: 'Anna', lastName: 'Nowak', email: 'anna@example.com' });
+  try {
+    mkdirSync(out, { recursive: true });
     await page.setViewportSize(desktop);
-    await openArea(page, 'Work');
-    await shot(page, 'area', name, desktop);
+    await signIn(page, account);
+    await seed(page);
 
-    await goTo(page, 'Budgets');
-    await page.getByRole('link', { name: 'Household' }).first().click();
-    await expect(page.getByRole('heading', { name: 'Household', exact: true })).toBeVisible();
-    await shot(page, 'budget', name, desktop);
+    for (const theme of ['Light', 'Dark'] as const) {
+      const name = theme.toLowerCase() as 'light' | 'dark';
+      await setTheme(page, theme);
+
+      await goToMyDay(page);
+      await shot(page, 'my-day', name, desktop);
+      await shot(page, 'my-day', name, phone);
+
+      await goToInbox(page);
+      await shot(page, 'inbox', name, phone);
+
+      await page.setViewportSize(desktop);
+      await openArea(page, 'Work');
+      await shot(page, 'area', name, desktop);
+
+      await goTo(page, 'Budgets');
+      await page.getByRole('link', { name: 'Household' }).first().click();
+      await expect(page.getByRole('heading', { name: 'Household', exact: true })).toBeVisible();
+      await shot(page, 'budget', name, desktop);
+    }
+  } finally {
+    await deleteAccount(account);
   }
 });
