@@ -1,9 +1,11 @@
 ---
-interface Props { title: string; status?: 'built' | 'in-progress' | 'planned' }
-const { title, status = 'built' } = Astro.props
+interface Props { title: string; does?: string; how?: string; status?: 'built' | 'planned' }
+const { title, does, how, status = 'built' } = Astro.props
 ---
 <article class={`card ${status}`}>
   <h3>{title}</h3>
+  {does && <p class="does">{does}</p>}
+  {how && <p class="how">{how}</p>}
   <slot />
 </article>
 
@@ -15,9 +17,9 @@ const { title, status = 'built' } = Astro.props
   }
 
   h3 { margin-top: 0; }
+  .does { margin: 0 0 6px; font-weight: 500; }
+  .how { margin: 0; color: var(--muted); font-size: 0.95rem; }
   article :global(p:last-child) { margin-bottom: 0; }
-
-  .in-progress { border-left-color: var(--warning); }
 
   .planned {
     background: none;
