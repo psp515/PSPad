@@ -64,6 +64,7 @@ export async function setFieldKind(page: Page, label: string, kind: FieldKind) {
 
 export async function editFieldValue(page: Page, label: string, value: string) {
   const editor = panel(page).locator('.pspad-field-editor');
+  const labelInput = editor.locator('.pspad-field-label-input input').first();
   const input = editor.locator('.pspad-field-value-input textarea, .pspad-field-value-input input').first();
   await expect(async () => {
     if ((await editor.count()) === 0) {
@@ -72,6 +73,10 @@ export async function editFieldValue(page: Page, label: string, value: string) {
     await input.fill(value, { timeout: 2_000 });
     await input.press('Tab');
     await expect(input).toHaveValue(value, { timeout: 2_000 });
+    if ((await labelInput.inputValue({ timeout: 2_000 })) !== label) {
+      await labelInput.fill(label, { timeout: 2_000 });
+    }
+    await expect(labelInput).toHaveValue(label, { timeout: 2_000 });
     await editor.locator('.pspad-field-save').click({ timeout: 2_000 });
     await expect(editor).toHaveCount(0, { timeout: 3_000 });
   }).toPass({ timeout: 30_000 });

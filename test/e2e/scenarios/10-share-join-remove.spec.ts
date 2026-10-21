@@ -6,7 +6,7 @@ import { goTo } from '../helpers/nav';
 import { closePanel, confirm, panel } from '../helpers/panels';
 import { createInvite, joinWithCode, openListMembers, openSharedListMembersFromBoard } from '../helpers/sharing';
 import { signIn } from '../helpers/sign-in';
-import { syncNow } from '../helpers/sync';
+import { pushedWithin, syncNow } from '../helpers/sync';
 import { addTask, completeTaskRow, taskRow } from '../helpers/tasks';
 
 test('a shared list is joined, edited, and closed to a removed member', async ({ page, browser, account, otherAccount }) => {
@@ -33,6 +33,7 @@ test('a shared list is joined, edited, and closed to a removed member', async ({
   await expect(member).toHaveURL(new RegExp(`/lists/${listId}`));
   await expect(member.getByRole('heading', { level: 1 })).toContainText(list);
   await expect(member.locator('.pspad-nav').getByRole('link', { name: 'Shared with me' })).toBeVisible();
+  await expect(taskRow(member, doneByMember)).toBeVisible(pushedWithin);
 
   await completeTaskRow(member, doneByMember);
   await expect(member.getByText('Completed · 1')).toBeVisible();
