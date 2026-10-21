@@ -71,7 +71,7 @@ cd PSPad</code></pre>
     <h3 id="mongodb">MongoDB: bundled or hosted</h3>
     <p>Hosted means any MongoDB 8 replica set the server can reach. The free Atlas M0 tier is enough for one household:</p>
     <ol>
-      <li>Create a cluster at <a href="https://www.mongodb.com/atlas">Atlas</a>, then a database user with <strong>Read and write to any database</strong>.</li>
+      <li>Create a cluster at <a href="https://www.mongodb.com/atlas">Atlas</a>, then a database user with <strong>Specific Privileges → readWrite</strong> on the <code>pspad</code> database.</li>
       <li>Under <strong>Network Access</strong> allow your server's public address.</li>
       <li><strong>Connect → Drivers</strong>: copy the <code>mongodb+srv://</code> string and put the user's password in it.</li>
       <li>In <code>docker/.env</code>:
@@ -136,6 +136,8 @@ docker network inspect proxy --format '{'{'}range .IPAM.Config{'}'}{'{'}.Subnet{
       </li>
       <li><strong>Environment.</strong> In <code>docker/.env</code>:
         <pre><code>COMPOSE_PROFILES=local-keycloak
+KEYCLOAK_ADMIN_USER=…
+KEYCLOAK_ADMIN_PASSWORD=…
 MONGO_CONNECTION_STRING=mongodb+srv://…
 APP_BASE_ADDRESS=https://pspad.example.com
 API_BASE_ADDRESS=https://pspad-api.example.com
@@ -144,6 +146,7 @@ KEYCLOAK_HOSTNAME=https://auth.example.com
 API_TRUSTED_PROXY_NETWORK=172.20.0.0/16   # the subnet printed above
 API_CLIENT_IP_HEADER=CF-Connecting-IP
 CLOUDFLARE_TUNNEL_TOKEN=…</code></pre>
+        <p>Set the admin user and password before the first <code>up</code>: Keycloak reads them once, and this console is public.</p>
       </li>
       <li><strong>Start.</strong> The override adds <code>cloudflared</code>, joins every service to <code>proxy</code> and publishes nothing:
         <pre><code>docker compose -f docker/compose.yaml -f docker/compose.cloudflare.yaml up -d --build</code></pre>
@@ -185,6 +188,9 @@ CLOUDFLARE_TUNNEL_TOKEN=…</code></pre>
     </p>
 
     <h3>Upgrading, restarting</h3>
+    <Callout kind="warning" title="Upgrading from a release without profiles">
+      <p>Older <code>docker/.env</code> files have no <code>COMPOSE_PROFILES</code> line, and without it the bundled MongoDB and Keycloak no longer start. Add <code>COMPOSE_PROFILES=local-mongo,local-keycloak</code> to <code>docker/.env</code> before <code>up</code>. Nothing else changes.</p>
+    </Callout>
     <pre><code>git pull
 docker compose -f docker/compose.yaml up -d --build</code></pre>
     <p>
@@ -196,9 +202,6 @@ docker compose -f docker/compose.yaml up -d --build</code></pre>
       or nginx only when <code>compose.yaml</code> or a <code>Dockerfile</code> in the
       release does.
     </p>
-    <Callout kind="warning" title="Upgrading from a release without profiles">
-      <p>Older <code>docker/.env</code> files have no <code>COMPOSE_PROFILES</code> line, and without it the bundled MongoDB and Keycloak no longer start. Add <code>COMPOSE_PROFILES=local-mongo,local-keycloak</code> to <code>docker/.env</code> before <code>up</code>. Nothing else changes.</p>
-    </Callout>
     <Callout kind="warning" title="Upgrading from a release with floating images">
       <p>
         Older releases pulled <code>mongo:8</code> and Keycloak 26.0. This release pins
@@ -277,16 +280,16 @@ docker compose -f docker/compose.yaml exec \
   mongo sh -c 'mongosh --quiet -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin /tmp/mongo-app-user.js'</code></pre>
     <p>
       It prints <code>created pspad-api on pspad</code>; running it again resets the password
-      and roles. Then point the API at the new user with an override file next to
-      <code>compose.yaml</code>, say <code>docker/compose.db-user.yaml</code>:
+      and roles. Then put the new user's credentials into <code>MONGO_CONNECTION_STRING</code>
+      in <code>docker/.env</code>:
     </p>
-    <pre><code>services:
-  api:
-    environment:
-      Mongo__ConnectionString: mongodb://pspad-api:&lt;app password&gt;@mongo:27017/pspad?directConnection=true</code></pre>
-    <pre><code>docker compose -f docker/compose.yaml -f docker/compose.db-user.yaml up -d</code></pre>
+    <pre><code>MONGO_CONNECTION_STRING=mongodb://pspad-api:APP_PASSWORD@mongo:27017/pspad?directConnection=true</code></pre>
     <p>
-      Pass both files on every later <code>up</code>, or the API goes back to the root user.
+      The user lives in the <code>pspad</code> database, so no <code>authSource</code> is needed.
+      Recreate the API so it picks the line up:
+    </p>
+    <pre><code>docker compose -f docker/compose.yaml up -d api</code></pre>
+    <p>
       The root user stays for the healthcheck, the script and your backups. Running PSPad
       against your own MongoDB or Atlas? Give its user only <code>readWrite</code> on the
       PSPad database.

@@ -87,13 +87,12 @@ interface Feature {
   title: string         // two to four words
   does: string          // one sentence: what the user gets
   how: string           // one sentence: how it behaves, the rule that matters
-  status: 'built' | 'planned'
 }
 ```
 
 Home reads the same file and picks `today`, `inbox`, `areas`, `budgets` by
-id; a missing id fails the build. The Features page renders built features
-first, then planned. The `in-progress` status is dropped: a feature is on
+id; a missing id fails the build. The Features page renders `features`,
+then `planned`. The `in-progress` status is dropped: a feature is on
 the page when it is usable, and the recurrence card that currently carries
 it is built.
 
@@ -284,7 +283,7 @@ reuses the account fixture, `signIn`, and the helpers in `test/e2e/helpers`.
 
 One test seeds a fresh user with sample content in English: two areas with
 two lists each, eight tasks including one timed, one overdue, one recurring
-and one with steps, three inbox items, one goal with two linked tasks, one
+and one with steps, three inbox items, one
 budget with six entries this month. It then captures, with
 `page.screenshot`, light then dark, into `docs/public/screens/`:
 
@@ -318,8 +317,9 @@ to `specs/localization-design.md` for adding a language.
 - `npm run build` in `docs/` passes; the docs workflow already runs it on
   every pull request.
 - `docker compose -f docker/compose.yaml -f docker/compose.cloudflare.yaml
-  --env-file docker/.env.example config` renders without error; with
-  `COMPOSE_PROFILES=` empty it has no `mongo` or `keycloak` service, and
+  --env-file docker/.env.example config` renders without error when
+  `CLOUDFLARE_TUNNEL_TOKEN` is set and fails fast naming the variable when it
+  is empty; with `COMPOSE_PROFILES=` empty it has no `mongo` or `keycloak` service, and
   with the shipped `.env.example` it has both.
 - The screenshot script runs once on the maintainer's box against the e2e
   stack and produces the ten files.

@@ -31,7 +31,10 @@ redirect URI names 5001.
 PNGs to `docs/public/screens/` (My Day, Inbox, an area, a budget; light and
 dark; phone and desktop). Run it with the stack up, the same way as the
 suite, after a UI change that the site shows, and commit the files. It is
-not part of `npm test` or CI.
+not part of `npm test` or CI. The script signs in as a throwaway Keycloak user
+with the email anna@example.com and deletes it afterwards; if a run was
+interrupted, delete that user in the Keycloak console (realm psplace) before
+running again.
 
 ## Configuration
 

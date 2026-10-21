@@ -2,8 +2,6 @@
 import Page from '../layouts/Page.astro'
 import FeatureCard from '../components/FeatureCard.astro'
 import { features, planned } from '../data/features'
-
-const built = features.filter((item) => item.status === 'built')
 ---
 <Page
   title="PSPad features"
@@ -16,7 +14,7 @@ const built = features.filter((item) => item.status === 'built')
     </div>
 
     <div class="grid">
-      {built.map((item) => <FeatureCard title={item.title} does={item.does} how={item.how} />)}
+      {features.map((item) => <FeatureCard title={item.title} does={item.does} how={item.how} />)}
     </div>
 
     <div class="prose">
