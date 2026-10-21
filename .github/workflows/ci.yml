@@ -22,7 +22,8 @@ jobs:
       - run: dotnet test --filter Category=Unit
 
   integration-test:
-    runs-on: ubuntu-latest
+    # mongo:8 refuses the ubuntu-24.04 image's 7.0.0-azure kernel (actions/runner-images#15005); back to ubuntu-latest once MongoDB 8.3.14 ships
+    runs-on: ubuntu-22.04
     needs: build-and-unit-test
     steps:
       - uses: actions/checkout@v7
@@ -36,7 +37,8 @@ jobs:
       - run: dotnet test --project test/PSPad.Api.Tests --filter Category=Integration
 
   api-image:
-    runs-on: ubuntu-latest
+    # mongo:8 refuses the ubuntu-24.04 image's 7.0.0-azure kernel (actions/runner-images#15005); back to ubuntu-latest once MongoDB 8.3.14 ships
+    runs-on: ubuntu-22.04
     needs: build-and-unit-test
     permissions:
       contents: read
@@ -134,10 +136,55 @@ jobs:
       - if: always()
         run: docker rm -f pspad-app-ci || true
 
+  e2e:
+    # mongo:8 refuses the ubuntu-24.04 image's 7.0.0-azure kernel (actions/runner-images#15005); back to ubuntu-latest once MongoDB 8.3.14 ships
+    runs-on: ubuntu-22.04
+    needs: build-and-unit-test
+    env:
+      COMPOSE: docker compose -f docker/compose.yaml -f docker/compose.e2e.yaml --env-file docker/.env.example -p pspad-e2e
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: test/e2e/package-lock.json
+
+      - name: Start the stack
+        run: $COMPOSE up -d --build --wait
+
+      - run: npm ci
+        working-directory: test/e2e
+
+      - run: npx playwright install --with-deps chromium
+        working-directory: test/e2e
+
+      - run: npm test
+        working-directory: test/e2e
+        env:
+          CI: "true"
+
+      - name: Print the stack's logs
+        if: failure()
+        run: $COMPOSE logs --no-color --tail 200
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            test/e2e/playwright-report
+            test/e2e/test-results
+          retention-days: 7
+
+      - if: always()
+        run: $COMPOSE down -v
+
   deploy:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: [integration-test, api-image, app-image]
+    needs: [integration-test, e2e, api-image, app-image]
     steps:
       - name: Trigger update on the VPS
         uses: appleboy/ssh-action@v1

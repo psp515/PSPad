@@ -32,6 +32,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Client components, layout, pages, theming, navigation | `specs/ui-spec.md` |
 | Adding an aggregate, module boundaries | `specs/modules-spec.md` |
 | Writing or running tests, fixtures, guards | `specs/testing-spec.md` |
+| End-to-end scenarios, Playwright harness, e2e CI job | `specs/e2e-testing-design.md` |
 | Sharing, invites, public snapshots | `specs/sharing-spec.md` |
 | Reference lists | `specs/reference-lists-design.md` |
 | List ordering | `specs/list-ordering-design.md` |
@@ -69,6 +70,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 15 | Containers non-root on exact-version-tagged images; central package versions; Dependabot weekly | 0071 |
 | 16 | Language on `User`, `.resx` per feature, culture-driven formats; Keycloak untouched | 0075 |
 | 17 | Open clients get a data-free sync nudge over SSE, fanned out from commit | 0076 |
+| 18 | End-to-end: Playwright in `test/e2e/` drives the compose stack in Chromium, one Keycloak user per test | 0077 |
 
 Stack: .NET 10, MongoDB 8 replica set `rs0`, Blazor WASM PWA + MudBlazor,
 IndexedDB replica and outbox, Keycloak OIDC/JWT, Docker Compose, no messaging bus.
@@ -99,6 +101,10 @@ module; `App` never sees `Infrastructure`; `Api` sees all. Only module edges:
   user-facing capability → `features.astro` and the landing page.
 - **TDD.** Failing test first; every test class has `[UnitTest]` or
   `[IntegrationTest]` (`specs/testing-spec.md`). Never claim green without running.
+- **End-to-end ships with the feature.** A new or changed user-facing flow
+  adds or extends a scenario in `test/e2e/`; a markup or copy change that a
+  scenario reads fixes that scenario in the same change
+  (`specs/e2e-testing-design.md` §9).
 - **No comments in code.** Rename or extract instead; one line only for a
   counter-intuitive *why*. XML docs only on cross-project public API.
 - **One type per file**, filename = type, grouped by operation:
