@@ -61,7 +61,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 5–6 | LWW conflicts offline, version-checked saves on the server, final rejections dropped; delta sync by monotonic `seq`, paged, documents only | 0005, 0006, 0061, 0063, 0067 |
 | 7 | Recurrence template + occurrences | 0007, 0043, 0053 |
 | 8 | Aggregates: User, Area, TaskList, TodoTask, Goal, Inbox, ReferenceItem; a goal holds its task links | 0008, 0047, 0065 |
-| 9 | Integration tests own a Testcontainers MongoDB 9 replica set | 0009, 0078 |
+| 9 | Integration tests own a Testcontainers MongoDB 8 replica set | 0009 |
 | 10 | Events dispatch after commit, replayed from a marker | 0036, 0037 |
 | 11 | Per-user views live in Presentation | 0051 |
 | 12 | Lists and budgets shared by membership | 0054, 0057, 0066 |
@@ -72,7 +72,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 17 | Open clients get a data-free sync nudge over SSE, fanned out from commit | 0076 |
 | 18 | End-to-end: Playwright in `test/e2e/` drives the compose stack in Chromium, one Keycloak user per test | 0077 |
 
-Stack: .NET 10, MongoDB 9 replica set `rs0`, Blazor WASM PWA + MudBlazor,
+Stack: .NET 10, MongoDB 8 replica set `rs0`, Blazor WASM PWA + MudBlazor,
 IndexedDB replica and outbox, Keycloak OIDC/JWT, Docker Compose, no messaging bus.
 
 ## 5. Layout

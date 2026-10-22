@@ -204,7 +204,7 @@ result without writing.
 
 ## 3. Storage
 
-**MongoDB 9, single-node replica set `rs0`.** Not optional — multi-document
+**MongoDB 8, single-node replica set `rs0`.** Not optional — multi-document
 transactions require one. Dev, prod and tests all run the same shape.
 
 | Collection | Holds | Notable fields |

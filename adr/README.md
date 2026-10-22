@@ -23,7 +23,7 @@ the old one's status line to point at the new number.
 | [0006](0006-sync-is-delta-by-version.md) | Sync pulls deltas by a monotonic version marker, never a clock | Active (amended by [0061](0061-sync-pulls-in-seq-pages-without-events.md)) | 2026-09-11 | architecture, offline, sync |
 | [0007](0007-recurrence-as-template-and-occurrences.md) | Model recurrence as a template plus derived occurrences, never a rolling date | Active (amended by [0043](0043-repeat-interval-and-until-date.md)) | 2026-09-11 | architecture, domain, recurrence |
 | [0008](0008-aggregate-boundaries.md) | Aggregate boundaries — Area, TaskList, TodoTask, Goal, Inbox, User | Active | 2026-09-11 | architecture, domain, aggregates |
-| [0009](0009-integration-tests-own-their-database.md) | Integration tests own a real, disposable MongoDB via Testcontainers | Active (amended by [0078](0078-run-mongodb-9.md)) | 2026-09-12 | testing, persistence |
+| [0009](0009-integration-tests-own-their-database.md) | Integration tests own a real, disposable MongoDB via Testcontainers | Active | 2026-09-12 | testing, persistence |
 | [0010](0010-modular-monolith-three-modules.md) | Split the modular monolith into three separate module projects | Active (supersedes [0001](0001-vertical-slice-folders-in-one-project.md); `PSPad.Module.History` renamed to `PSPad.Module.Statistics` by [0038](0038-history-renamed-to-statistics.md)) | 2026-09-12 | architecture, modularity |
 | [0011](0011-aggregate-documents-are-truth.md) | Aggregate documents are truth; events are the log beside them | Active (supersedes [0002](0002-cqrs-event-sourced-write-side.md); amended by [0064](0064-snapshot-marks-are-state-only.md)) | 2026-09-12 | architecture, persistence, event-sourcing |
 | [0012](0012-extract-ordering-into-its-own-module.md) | Extract element ordering into its own module, out of the Tasks domain | Superseded by [0051](0051-presentation-module-per-user-views.md) | 2026-09-12 | architecture, domain, ui, future-work |
@@ -92,7 +92,6 @@ the old one's status line to point at the new number.
 | [0075](0075-language-on-the-user-and-resx-localization.md) | Store the user's language on the User aggregate and localize with .NET resources | Active | 2026-10-18 | identity, ui, offline, localization |
 | [0076](0076-open-clients-get-a-sync-nudge-over-sse.md) | Open clients get a data-free sync nudge over Server-Sent Events, fanned out from commit | Active | 2026-10-14 | architecture, sync, http, sharing, deployment |
 | [0077](0077-end-to-end-tests-drive-the-compose-stack-with-playwright.md) | End-to-end tests drive the compose stack with Playwright | Active | 2026-10-18 | testing, architecture, ci |
-| [0078](0078-run-mongodb-9.md) | Run MongoDB 9 in compose, CI and integration tests | Active (amends [0009](0009-integration-tests-own-their-database.md)) | 2026-10-21 | persistence, testing, containers, ci, dependencies |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

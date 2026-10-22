@@ -305,28 +305,11 @@ docker compose -f docker/compose.yaml up -d --build</code></pre>
       or nginx only when <code>compose.yaml</code> or a <code>Dockerfile</code> in the
       release does.
     </p>
-    <Callout kind="warning" title="Upgrading to MongoDB 9">
-      <p>
-        This release moves MongoDB from 8.3.11 to 9.0.4 and Keycloak from 26.7.4 to
-        26.8.1. MongoDB 9 starts only on data whose feature compatibility version is 8.3,
-        and an install that began on <code>mongo:8</code> may still be at 8.0. Take a
-        <a href="#backups">database dump</a> first, then, while the old stack is still
-        running, raise it:
-      </p>
-      <pre><code>docker compose -f docker/compose.yaml exec mongo \
-  sh -c 'mongosh --quiet -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --eval "db.adminCommand({'{'} setFeatureCompatibilityVersion: \"8.3\", confirm: true {'}'})"'</code></pre>
-      <p>
-        Now <code>git pull</code> and <code>up -d --build</code> as above. Once
-        <code>mongo</code> reports healthy, run the same command with <code>"9.0"</code>
-        in place of <code>"8.3"</code>. After that the only way back is MongoDB 8.3, so
-        keep the dump until you're sure.
-      </p>
-    </Callout>
     <Callout kind="warning" title="Upgrading from a release with floating images">
       <p>
-        Older releases pulled <code>mongo:8</code> and Keycloak 26.0. Current releases pin
-        exact versions, and the newer Keycloak migrates its embedded database on first
-        start. Upgrading MongoDB follows the steps above. Before you run <code>up</code>, take a <a href="#backups">database dump</a> and
+        Older releases pulled <code>mongo:8</code> and Keycloak 26.0. This release pins
+        MongoDB 8.3.11 and Keycloak 26.8.1, which migrates its embedded database on first
+        start. Before you run <code>up</code>, take a <a href="#backups">database dump</a> and
         export the <strong>psplace</strong> realm. Nothing else changes: same
         <code>.env</code>, same ports, same volumes, and none of them needs new file
         permissions.

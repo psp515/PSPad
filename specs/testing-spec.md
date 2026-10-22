@@ -45,14 +45,15 @@ scenario reads fixes it in the same pull request (design §9).
 ## Testcontainers fixture
 
 One container per test run, shared by an xUnit collection. Not one per test —
-Mongo startup is seconds, per-test is unusable. Pin the image tag (`mongo:9`,
+Mongo startup is seconds, per-test is unusable. Pin the image tag (`mongo:8`,
 never `latest`) — an upstream bump changing behavior under you is a worse bug
 than the one you were testing for.
 
 ```csharp
 public sealed class MongoFixture : IAsyncLifetime
 {
-    readonly MongoDbContainer _container = new MongoDbBuilder("mongo:9")
+    readonly MongoDbContainer _container = new MongoDbBuilder()
+        .WithImage("mongo:8")
         .WithReplicaSet()
         .Build();
 
