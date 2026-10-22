@@ -1,6 +1,6 @@
 import { expect, Page } from '@playwright/test';
 import { goTo } from './nav';
-import { confirm, panel, savePanel } from './panels';
+import { confirm, openFabAction, panel, savePanel } from './panels';
 
 export type BudgetView = 'Overview' | 'Entries' | 'Balance' | 'Stats';
 
@@ -59,8 +59,7 @@ export async function addHolding(
   page: Page,
   holding: { name: string; type: 'Cash' | 'Savings' | 'Investment'; amount: string; currency?: string; rate?: string },
 ) {
-  await page.locator('.pspad-fab').getByRole('button').click();
-  await page.locator('.pspad-fab-add-holding').click();
+  await openFabAction(page, 'Add holding');
   const form = panel(page);
   await form.locator('.pspad-holding-name-field input').fill(holding.name);
   await form.locator('.pspad-holding-type-field').getByText(holding.type, { exact: true }).click();
