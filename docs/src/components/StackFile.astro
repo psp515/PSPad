@@ -3,15 +3,16 @@ import CodeBlock from './CodeBlock.astro'
 import { combinations, key } from '../data/stack/options'
 import { caddyfile, compose, env } from '../data/stack/assemble'
 
-interface Props { file: 'compose' | 'env' | 'caddyfile'; title: string }
-const { file, title } = Astro.props
+interface Props { file: 'compose' | 'env' | 'caddyfile'; title: string; initial?: string }
+const { file, title, initial } = Astro.props
 const render = { compose, env, caddyfile }[file]
 const variants = combinations()
   .map((choices) => ({ key: key(choices), text: render(choices) }))
   .filter((variant) => variant.text !== '')
+const shown = initial ?? (variants.some((variant) => variant.key === 'quick') ? 'quick' : 'vps-h2-vps-tunnel')
 ---
 {variants.map((variant) => (
-  <div class="stack-file" data-stack={variant.key} hidden={variant.key !== 'quick'}>
+  <div class="stack-file" data-stack={variant.key} hidden={variant.key !== shown}>
     <CodeBlock title={title}>{variant.text}</CodeBlock>
   </div>
 ))}

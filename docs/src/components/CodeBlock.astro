@@ -15,8 +15,12 @@ const { title } = Astro.props
     button.addEventListener('click', async () => {
       const code = button.closest('.code')?.querySelector('code')
       if (!code) return
-      await navigator.clipboard.writeText(code.textContent ?? '')
-      button.textContent = 'Copied'
+      try {
+        await navigator.clipboard.writeText(code.textContent ?? '')
+        button.textContent = 'Copied'
+      } catch {
+        button.textContent = 'Copy failed'
+      }
       setTimeout(() => { button.textContent = 'Copy' }, 1500)
     })
   })

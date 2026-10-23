@@ -58,7 +58,8 @@ const vpsSteps = ['What you need', 'Choose', 'Cloudflare', 'MongoDB', 'Files', '
           <h2>Get the files</h2>
           <p>Make a folder and put three files in it. The first is below, the other two come from the repository.</p>
           <StackFile file="compose" title="compose.yaml" />
-          <CodeBlock title="The Keycloak realm and the Mongo entrypoint">mkdir -p keycloak
+          <CodeBlock title="The Keycloak realm and the Mongo entrypoint">mkdir pspad &amp;&amp; cd pspad
+mkdir -p keycloak
 curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json
 curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
         </article>
@@ -66,10 +67,10 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
         <article data-scenario="quick" data-step="3" hidden>
           <h2>Start</h2>
           <CodeBlock title="In the folder">docker compose up -d --wait</CodeBlock>
-          <p>The first start pulls about 900 MB and takes a minute or two. When it returns, three things are running:</p>
+          <p>The first start pulls about 900 MB and takes a minute or two. It returns before the API is ready. Give it ten more seconds, then:</p>
           <ul>
             <li>The app at <a href="http://localhost:5001">http://localhost:5001</a></li>
-            <li>The API at <a href="http://localhost:5000/health">http://localhost:5000/health</a>, which says <code>Healthy</code></li>
+            <li>The API at <a href="http://localhost:5000/health">http://localhost:5000/health</a>, which says <code>healthy</code></li>
             <li>Keycloak at <a href="http://localhost:8080">http://localhost:8080</a></li>
           </ul>
         </article>
@@ -170,19 +171,20 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
               <li><strong>Network Access → Add IP address</strong>: the VPS address.</li>
               <li><strong>Connect → Drivers</strong>: copy the connection string and put the password in. It goes into <code>.env</code> in the next step.</li>
             </ol>
-            <pre><code>mongodb+srv://pspad:&lt;password&gt;@&lt;cluster&gt;.mongodb.net/pspad?retryWrites=true&amp;w=majority</code></pre>
+            <CodeBlock title="The shape of the string">mongodb+srv://pspad:&lt;password&gt;@&lt;cluster&gt;.mongodb.net/pspad?retryWrites=true&amp;w=majority</CodeBlock>
           </div>
           <div data-when="mongo=vps">
             <p>Nothing to decide here. The compose file in the next step runs MongoDB as a one-node replica set beside the API, with its data in a Docker volume.</p>
             <p>Download its entrypoint once, next to the compose file:</p>
-            <CodeBlock title="On the VPS, in ~/pspad">curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
+            <CodeBlock title="On the VPS">mkdir -p ~/pspad &amp;&amp; cd ~/pspad
+curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
           </div>
         </article>
 
         <article data-scenario="vps" data-step="5" hidden>
           <h2>Files</h2>
           <p>One folder on the VPS, <code>~/pspad</code>. The files below are assembled for your choices. Replace <code>example.com</code> with your domain and every <code>CHANGE_ME</code> with a secret.</p>
-          <StackFile file="compose" title="compose.yaml" />
+          <StackFile file="compose" title="compose.yaml" initial="vps-h2-vps-tunnel" />
           <StackFile file="env" title=".env" />
           <div data-when="expose=dns" hidden>
             <StackFile file="caddyfile" title="Caddyfile" />
@@ -197,9 +199,9 @@ curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeB
         <article data-scenario="vps" data-step="6" hidden>
           <h2>Start and check</h2>
           <CodeBlock title="In ~/pspad">docker compose up -d --wait</CodeBlock>
-          <p>Then, from anywhere:</p>
+          <p>It returns before the API is ready. Give it ten more seconds, then from anywhere:</p>
           <ul>
-            <li><code>https://pspad-api.example.com/health</code> says <code>Healthy</code>.</li>
+            <li><code>https://pspad-api.example.com/health</code> says <code>healthy</code>.</li>
             <li><code>https://auth.example.com</code> shows the Keycloak page.</li>
             <li><code>https://pspad.example.com</code> opens the app and sends you to sign in.</li>
           </ul>
@@ -220,11 +222,11 @@ curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeB
           <h2>Keep it running</h2>
           <CodeBlock title="Upgrade">docker compose pull &amp;&amp; docker compose up -d --wait</CodeBlock>
           <div data-when="mongo=vps">
-            <CodeBlock title="Back up MongoDB, nightly from cron">docker compose exec -T mongo mongodump --archive --gzip -u pspad -p "$MONGO_PASSWORD" &gt; pspad-$(date +%F).gz</CodeBlock>
+            <CodeBlock title="Back up MongoDB, nightly from cron">docker compose exec -T mongo sh -c 'mongodump --archive --gzip -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' &gt; pspad-$(date +%F).gz</CodeBlock>
           </div>
           <div data-when="mongo=atlas" hidden>
             <p>Atlas M0 keeps no backups of its own. Once a week, from the VPS:</p>
-            <CodeBlock title="Back up MongoDB">docker run --rm mongo:8.3.11 mongodump --uri "$MONGO_CONNECTION_STRING" --archive --gzip &gt; pspad-$(date +%F).gz</CodeBlock>
+            <CodeBlock title="Back up MongoDB">docker run --rm --env-file .env mongo:8.3.11 sh -c 'mongodump --uri "$MONGO_CONNECTION_STRING" --archive --gzip' &gt; pspad-$(date +%F).gz</CodeBlock>
           </div>
           <div data-when="kc=pg" hidden>
             <CodeBlock title="Back up Keycloak">docker compose exec -T postgres pg_dump -U keycloak keycloak | gzip &gt; keycloak-$(date +%F).sql.gz</CodeBlock>
@@ -257,15 +259,24 @@ curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeB
 
   function render() {
     const scenario = choices.scenario
-    all('[data-scenario].card').forEach((b) => b.classList.toggle('is-on', b.getAttribute('data-scenario') === scenario))
+    all('[data-scenario].card').forEach((b) => {
+      const on = b.getAttribute('data-scenario') === scenario
+      b.classList.toggle('is-on', on)
+      b.setAttribute('aria-pressed', String(on))
+    })
     all('.steps ol').forEach((list) => show(list, list.getAttribute('data-scenario') === scenario))
     all('.steps button').forEach((b) => {
       const n = Number(b.getAttribute('data-step'))
       b.classList.toggle('is-current', n === step)
+      if (n === step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current')
       b.classList.toggle('is-done', n < step)
     })
     all('article[data-scenario]').forEach((a) => show(a, a.getAttribute('data-scenario') === scenario && Number(a.getAttribute('data-step')) === step))
-    all('[data-choice]').forEach((b) => b.classList.toggle('is-on', choices[b.getAttribute('data-choice') as 'kc' | 'mongo' | 'expose'] === b.getAttribute('data-value')))
+    all('[data-choice]').forEach((b) => {
+      const on = choices[b.getAttribute('data-choice') as 'kc' | 'mongo' | 'expose'] === b.getAttribute('data-value')
+      b.classList.toggle('is-on', on)
+      b.setAttribute('aria-pressed', String(on))
+    })
     all('[data-when]').forEach((el) => {
       const [name, value] = (el.getAttribute('data-when') ?? '').split('=')
       show(el, choices[name as 'kc' | 'mongo' | 'expose'] === value)
@@ -287,7 +298,7 @@ curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeB
   function go(to: number) {
     step = Math.min(counts[choices.scenario], Math.max(1, to))
     render()
-    document.querySelector('.panel')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    document.querySelector('.panel')?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   }
 
   all('[data-scenario].card, button[data-scenario].button').forEach((b) => b.addEventListener('click', () => {
@@ -308,8 +319,7 @@ curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeB
 
 <noscript>
   <style>
-    article[data-scenario], .steps ol, [data-when], .stack-file { display: block !important; }
-    [hidden] { display: block !important; }
+    article[data-scenario][hidden], .steps ol[hidden] { display: block !important; }
     .pager, .selector, .where { display: none !important; }
   </style>
 </noscript>
