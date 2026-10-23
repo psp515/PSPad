@@ -180,8 +180,9 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
           </div>
           <div data-when="mongo=vps">
             <p>Nothing to decide here. The compose file in the next step runs MongoDB as a one-node replica set beside the API, with its data in a Docker volume.</p>
-            <p>Download its entrypoint once, next to the compose file:</p>
-            <CodeBlock title="On the VPS">curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
+            <p>Make the folder the stack will live in and download the entrypoint into it:</p>
+            <CodeBlock title="On the VPS">mkdir -p ~/pspad &amp;&amp; cd ~/pspad
+curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
           </div>
         </article>
 
