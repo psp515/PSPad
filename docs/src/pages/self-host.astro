@@ -205,7 +205,7 @@ docker compose -f docker/compose.yaml up -d --build</code></pre>
     <Callout kind="warning" title="Upgrading from a release with floating images">
       <p>
         Older releases pulled <code>mongo:8</code> and Keycloak 26.0. This release pins
-        MongoDB 8.3.11 and Keycloak 26.7.4, which migrates its embedded database on first
+        MongoDB 8.3.11 and Keycloak 26.8.1, which migrates its embedded database on first
         start. Before you run <code>up</code>, take a <a href="#backups">database dump</a> and
         export the <strong>psplace</strong> realm. Nothing else changes: same
         <code>.env</code>, same ports, same volumes, and none of them needs new file
