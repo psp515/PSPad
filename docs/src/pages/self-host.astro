@@ -1,309 +1,408 @@
 ---
 import Page from '../layouts/Page.astro'
 import Callout from '../components/Callout.astro'
-import EnvTable from '../components/EnvTable.astro'
-import Step from '../components/Step.astro'
-import { parseEnvExample, readRepoFile } from '../lib/repo'
+import CodeBlock from '../components/CodeBlock.astro'
+import StackFile from '../components/StackFile.astro'
 
-const entries = parseEnvExample(readRepoFile('docker/.env.example'))
-const cloudflare = readRepoFile('docker/compose.cloudflare.yaml')
+const raw = 'https://raw.githubusercontent.com/psp515/PSPad/main/docker'
+const quickSteps = ['What you need', 'Get the files', 'Start', 'Make yourself a user', 'Try it']
+const vpsSteps = ['What you need', 'Choose', 'Cloudflare', 'MongoDB', 'Files', 'Start and check', 'First sign-in', 'Keep it running']
 ---
 <Page
   title="Self-host PSPad"
-  description="Run PSPad on your own server: a quick start with Docker Compose, hosted or bundled MongoDB and Keycloak, a reverse proxy or a Cloudflare Tunnel, and how I host it myself."
+  description="Run PSPad yourself: a quick test on your computer in ten minutes, or on your own VPS with a domain in Cloudflare, one step at a time."
 >
-  <div class="wrap prose">
-    <h1>Self-host</h1>
-    <p>Your own server, one Compose file, about ten minutes.</p>
-    <nav class="toc" aria-label="On this page">
-      <a href="#need">What you need</a>
-      <a href="#quick-start">Quick start</a>
-      <a href="#options">Options</a>
-      <a href="#how-i-host-it">How I host it</a>
-      <a href="#maintenance">Maintenance</a>
-    </nav>
+  <div class="wrap">
+    <h1>Self-host PSPad</h1>
+    <p class="intro">Pick what you are doing. The steps, commands and files below change with it.</p>
 
-    <h2 id="need">What you need</h2>
-    <ul>
-      <li>A Linux machine with Docker Compose v2 and about 2 GB of disk.</li>
-      <li>A domain, if anyone but you will reach it.</li>
-      <li>MongoDB and Keycloak are bundled. Both can be yours instead, see <a href="#options">Options</a>.</li>
-      <li>Optional: outbound HTTPS from the API to <code>api.nbp.pl</code>. Only a budget's exchange-rate lookups use it; without it the NBP button fails and everything else works.</li>
-    </ul>
+    <div class="selector" role="group" aria-label="Scenario">
+      <button type="button" class="card is-on" data-scenario="quick">
+        <strong>Quick Test</strong>
+        <span>On your computer, in ten minutes. Pulls the published images, everything on localhost, nothing to build.</span>
+      </button>
+      <button type="button" class="card" data-scenario="vps">
+        <strong>VPS Hosting</strong>
+        <span>On your own server with a domain in Cloudflare. You choose where Keycloak keeps its users, where MongoDB runs and how the internet reaches it.</span>
+      </button>
+    </div>
 
-    <h2 id="quick-start">Quick start</h2>
-    <p>Everything on <code>localhost</code>, for a first look.</p>
+    <div class="stepper">
+      <nav class="steps" aria-label="Steps">
+        <ol data-scenario="quick">
+          {quickSteps.map((label, i) => (
+            <li><button type="button" data-step={i + 1}><span class="n">{i + 1}</span>{label}</button></li>
+          ))}
+        </ol>
+        <ol data-scenario="vps" hidden>
+          {vpsSteps.map((label, i) => (
+            <li><button type="button" data-step={i + 1}><span class="n">{i + 1}</span>{label}</button></li>
+          ))}
+        </ol>
+      </nav>
 
-    <Step n={1} title="Clone">
-      <pre><code>git clone https://github.com/psp515/PSPad.git
-cd PSPad</code></pre>
-    </Step>
+      <section class="panel">
+        <p class="where"><span data-scenario-name>Quick Test</span> · step <span data-step-no>1</span> of <span data-step-count>5</span></p>
 
-    <Step n={2} title="Create the environment file">
-      <pre><code>cp docker/.env.example docker/.env</code></pre>
-      <p>The defaults work on <code>localhost</code>. Change the two passwords before the machine is reachable from anywhere else. Every value, for later:</p>
-      <details>
-        <summary>All variables</summary>
-        <EnvTable entries={entries} />
-      </details>
-    </Step>
+        <article data-scenario="quick" data-step="1">
+          <h2>What you need</h2>
+          <ul>
+            <li>A computer with <a href="https://docs.docker.com/get-docker/">Docker</a>. Docker Desktop on Windows or macOS, Docker Engine on Linux.</li>
+            <li>Access to the internet, to pull four images.</li>
+            <li>Ports 5000, 5001 and 8080 free.</li>
+          </ul>
+          <p>Nothing is built and nothing leaves your computer. When you are done, one command removes it all.</p>
+        </article>
 
-    <Step n={3} title="Start">
-      <pre><code>docker compose -f docker/compose.yaml up -d --build</code></pre>
-      <p>The first build takes a few minutes. When this prints <code>401</code> the API is up and you are simply not signed in yet:</p>
-      <pre><code>curl -s -o /dev/null -w "%{'{'}http_code{'}'}\n" http://localhost:5000/api/today</code></pre>
-    </Step>
+        <article data-scenario="quick" data-step="2" hidden>
+          <h2>Get the files</h2>
+          <p>Make a folder and put three files in it. The first is below, the other two come from the repository.</p>
+          <StackFile file="compose" title="compose.yaml" />
+          <CodeBlock title="The Keycloak realm and the Mongo entrypoint">mkdir -p keycloak
+curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json
+curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
+        </article>
 
-    <Step n={4} title="Create your first user">
-      <p>Accounts live in Keycloak. Open <code>http://localhost:8080</code>, sign in as <code>admin</code> / <code>admin</code>, switch the realm from <strong>master</strong> to <strong>psplace</strong>, then <strong>Users → Create new user</strong>. Under <strong>Credentials</strong> set a password with <em>Temporary</em> off.</p>
-    </Step>
+        <article data-scenario="quick" data-step="3" hidden>
+          <h2>Start</h2>
+          <CodeBlock title="In the folder">docker compose up -d --wait</CodeBlock>
+          <p>The first start pulls about 900 MB and takes a minute or two. When it returns, three things are running:</p>
+          <ul>
+            <li>The app at <a href="http://localhost:5001">http://localhost:5001</a></li>
+            <li>The API at <a href="http://localhost:5000/health">http://localhost:5000/health</a>, which says <code>Healthy</code></li>
+            <li>Keycloak at <a href="http://localhost:8080">http://localhost:8080</a></li>
+          </ul>
+        </article>
 
-    <Step n={5} title="Sign in">
-      <p>Open <code>http://localhost:5001</code> and sign in. My Day is empty at first while three starter areas are created. Install it from the browser's address bar for the offline app.</p>
-      <Callout kind="warning" title="Give it 20–30 seconds before you trust something is saved">
-        <p>New tasks save to your browser at once and reach the server within 20–30 seconds. Restart the stack sooner and they are gone.</p>
-      </Callout>
-    </Step>
+        <article data-scenario="quick" data-step="4" hidden>
+          <h2>Make yourself a user</h2>
+          <p>PSPad has no sign-up page. Users are created in Keycloak, which takes a minute.</p>
+          <ol>
+            <li>Open <a href="http://localhost:8080/admin/">http://localhost:8080/admin/</a> and sign in with <code>admin</code> / <code>admin</code>.</li>
+            <li>Switch the realm in the top-left from <strong>master</strong> to <strong>psplace</strong>.</li>
+            <li><strong>Users → Add user</strong>: a username, an email, first and last name. <strong>Create</strong>.</li>
+            <li><strong>Credentials → Set password</strong>, with <strong>Temporary</strong> off.</li>
+          </ol>
+        </article>
 
-    <h2 id="options">Options</h2>
-    <p>Each option is one line in <code>docker/.env</code>. <code>COMPOSE_PROFILES</code> says which bundled services start; remove a name to bring your own.</p>
+        <article data-scenario="quick" data-step="5" hidden>
+          <h2>Try it</h2>
+          <p>Open <a href="http://localhost:5001">http://localhost:5001</a> and sign in with the user you just made. Three things to try first:</p>
+          <ol>
+            <li>Type anything into <strong>Inbox</strong>, then turn it into a task with today's date.</li>
+            <li>Open <strong>My Day</strong>: it is there. Add a step to it and give the step a date.</li>
+            <li>Make a <strong>Budget</strong> and add an expense in another currency.</li>
+          </ol>
+          <p>Done looking? This removes the containers and the data:</p>
+          <CodeBlock title="Stop and clean up">docker compose down -v</CodeBlock>
+          <p>Liked it? <button type="button" class="button button-secondary" data-scenario="vps">Host it on a VPS</button></p>
+        </article>
 
-    <h3 id="mongodb">MongoDB: bundled or hosted</h3>
-    <p>Hosted means any MongoDB 8 replica set the server can reach. The free Atlas M0 tier is enough for one household:</p>
-    <ol>
-      <li>Create a cluster at <a href="https://www.mongodb.com/atlas">Atlas</a>, then a database user with <strong>Specific Privileges → readWrite</strong> on the <code>pspad</code> database.</li>
-      <li>Under <strong>Network Access</strong> allow your server's public address.</li>
-      <li><strong>Connect → Drivers</strong>: copy the <code>mongodb+srv://</code> string and put the user's password in it.</li>
-      <li>In <code>docker/.env</code>:
-        <pre><code>COMPOSE_PROFILES=local-keycloak
-MONGO_CONNECTION_STRING=mongodb+srv://pspad:PASSWORD@cluster0.abcde.mongodb.net/pspad?retryWrites=true&amp;w=majority</code></pre>
-      </li>
-      <li><code>docker compose -f docker/compose.yaml up -d</code>. The <code>mongo</code> container is not started.</li>
-    </ol>
-    <p>Atlas keeps its own backups, so the <a href="#backups">dump command</a> below does not apply.</p>
+        <article data-scenario="vps" data-step="1" hidden>
+          <h2>What you need</h2>
+          <ul>
+            <li>A Linux VPS with access to the internet, 2 GB of RAM and <a href="https://docs.docker.com/engine/install/">Docker Engine</a>.</li>
+            <li>A domain managed in <a href="https://dash.cloudflare.com">Cloudflare</a>. Three names under it: the app, the API and Keycloak. This guide uses <code>pspad</code>, <code>pspad-api</code> and <code>auth</code> on <code>example.com</code>.</li>
+            <li>About thirty minutes.</li>
+          </ul>
+          <p>The images come from GitHub and are rebuilt on every change: <code>ghcr.io/psp515/pspad-frontend</code> and <code>ghcr.io/psp515/pspad-backend</code>.</p>
+        </article>
 
-    <h3 id="keycloak">Keycloak: bundled or your own</h3>
-    <p>Your own Keycloak needs the realm from <code>docker/keycloak/realm-psplace.json</code> (<strong>Realm settings → Action → Partial import</strong>), or any realm with a public client <code>pspad-frontend</code> and an audience <code>pspad-backend</code>. Then in <code>docker/.env</code>:</p>
-    <pre><code>COMPOSE_PROFILES=local-mongo
-KEYCLOAK_AUTHORITY=https://auth.example.com/realms/psplace
-KEYCLOAK_INTERNAL_AUTHORITY=https://auth.example.com/realms/psplace
-KEYCLOAK_HOSTNAME=https://auth.example.com
-KEYCLOAK_ADMIN_USER=…
-KEYCLOAK_ADMIN_PASSWORD=…</code></pre>
-    <p>The admin credentials are what the API uses to remove a login when a user deletes their account. Rotate the password there and here together.</p>
-    <Callout kind="warning" title="Two Keycloak URLs">
-      <p><code>KEYCLOAK_AUTHORITY</code> is how the <strong>browser</strong> reaches Keycloak, <code>KEYCLOAK_INTERNAL_AUTHORITY</code> how the <strong>API container</strong> does. With your own Keycloak they are the same address.</p>
-    </Callout>
+        <article data-scenario="vps" data-step="2" hidden>
+          <h2>Choose</h2>
+          <p>Three decisions. The rest of the steps follow them.</p>
+          <div class="choice">
+            <strong>Keycloak keeps its users in</strong>
+            <div class="options">
+              <button type="button" class="card is-on" data-choice="kc" data-value="h2"><strong>A file</strong><span>Simplest. Fine for one household. Backed up with the volume.</span></button>
+              <button type="button" class="card" data-choice="kc" data-value="pg"><strong>Postgres</strong><span>What Keycloak recommends. One more container, proper dumps.</span></button>
+            </div>
+          </div>
+          <div class="choice">
+            <strong>MongoDB runs</strong>
+            <div class="options">
+              <button type="button" class="card is-on" data-choice="mongo" data-value="vps"><strong>On the VPS</strong><span>A container beside the app. Your data stays on your server.</span></button>
+              <button type="button" class="card" data-choice="mongo" data-value="atlas"><strong>On MongoDB Atlas</strong><span>Free M0 cluster. Memory and backups off your VPS.</span></button>
+            </div>
+          </div>
+          <div class="choice">
+            <strong>The internet reaches it through</strong>
+            <div class="options">
+              <button type="button" class="card is-on" data-choice="expose" data-value="tunnel"><strong>Cloudflare Tunnel</strong><span>No open ports, no certificates. The VPS dials out.</span></button>
+              <button type="button" class="card" data-choice="expose" data-value="dns"><strong>Cloudflare DNS</strong><span>Three A records, ports 80 and 443 open, Caddy gets the certificates.</span></button>
+            </div>
+          </div>
+        </article>
 
-    <h3 id="internet">Reaching it from the internet</h3>
-    <p>Either way, set the four public URLs in <code>docker/.env</code> first, then update the Keycloak client:</p>
-    <pre><code>APP_BASE_ADDRESS=https://pspad.example.com
-API_BASE_ADDRESS=https://pspad-api.example.com
-KEYCLOAK_AUTHORITY=https://auth.example.com/realms/psplace
-KEYCLOAK_HOSTNAME=https://auth.example.com</code></pre>
-    <Callout kind="warning" title="Update the Keycloak client, or sign-in fails">
-      <p>The bundled realm has <code>http://localhost:5001/*</code> as the redirect URI. In Keycloak: realm <strong>psplace → Clients → pspad-frontend → Valid redirect URIs</strong>, set it to your app URL followed by <code>/*</code>.</p>
-    </Callout>
-    <p><strong>A reverse proxy on the server</strong> (nginx, Caddy):</p>
-    <ul>
-      <li>Three hostnames to the published ports: app <code>5001</code>, API <code>5000</code>, Keycloak <code>8080</code>. TLS at the proxy, HSTS on.</li>
-      <li>Forward <code>X-Forwarded-For</code> and <code>X-Forwarded-Proto</code>; nginx: <code>proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;</code>.</li>
-      <li>Set <code>API_TRUSTED_PROXY_NETWORK</code> to the stack's Docker subnet so rate limits see each visitor: <code>docker network inspect pspad_pspad --format '{'{'}range .IPAM.Config{'}'}{'{'}.Subnet{'}'}{'{'}end{'}'}'</code>.</li>
-      <li>Keep port <code>5000</code> off the internet: bind it to <code>127.0.0.1</code> or close it at the firewall.</li>
-    </ul>
-    <p><strong>A Cloudflare Tunnel</strong>: no open ports at all. That is how I host it, next.</p>
-    <Callout title="The browser only talks to the origins in .env">
-      <p>The client's security policy and the API's allowed origins are built from <code>APP_BASE_ADDRESS</code>, <code>API_BASE_ADDRESS</code> and <code>KEYCLOAK_AUTHORITY</code> when the containers start. A "Refused to connect" error in the browser console means one of them is wrong: fix it and recreate the stack.</p>
-    </Callout>
+        <article data-scenario="vps" data-step="3" hidden>
+          <h2>Cloudflare</h2>
+          <div data-when="expose=tunnel">
+            <ol>
+              <li>Open <a href="https://one.dash.cloudflare.com">Zero Trust</a> → <strong>Networks → Tunnels → Create a tunnel</strong>, type Cloudflared, name it <code>pspad</code>.</li>
+              <li>On the install page, copy only the token: the long string after <code>--token</code>. It goes into <code>.env</code> in the Files step.</li>
+              <li><strong>Public hostnames</strong>, add three:</li>
+            </ol>
+            <table>
+              <thead><tr><th>Hostname</th><th>Service</th></tr></thead>
+              <tbody>
+                <tr><td><code>pspad.example.com</code></td><td><code>http://app:8080</code></td></tr>
+                <tr><td><code>pspad-api.example.com</code></td><td><code>http://api:8080</code></td></tr>
+                <tr><td><code>auth.example.com</code></td><td><code>http://keycloak:8080</code></td></tr>
+              </tbody>
+            </table>
+            <p>Cloudflare creates the DNS records itself. Nothing on the VPS is opened.</p>
+          </div>
+          <div data-when="expose=dns" hidden>
+            <ol>
+              <li>Open your domain in <a href="https://dash.cloudflare.com">Cloudflare</a> → <strong>DNS → Records</strong>.</li>
+              <li>Add three <strong>A</strong> records pointing at the VPS address: <code>pspad</code>, <code>pspad-api</code> and <code>auth</code>. Set <strong>Proxy status</strong> to <strong>DNS only</strong> on all three, so Caddy can get certificates from Let's Encrypt.</li>
+              <li>On the VPS, open ports 80 and 443. With ufw: <code>ufw allow 80,443/tcp</code>.</li>
+            </ol>
+          </div>
+        </article>
 
-    <h2 id="how-i-host-it">How I host it</h2>
-    <p>A small VPS (a Polish <a href="https://mikr.us">Mikrus</a>), MongoDB on a free Atlas cluster, and a Cloudflare Tunnel so the server has no open ports. Nothing here is specific to that provider.</p>
-    <ol>
-      <li><strong>MongoDB.</strong> An Atlas M0 cluster, set up as in <a href="#mongodb">the option above</a>.</li>
-      <li><strong>Tunnel.</strong> In Cloudflare <strong>Zero Trust → Networks → Tunnels → Create a tunnel</strong>, pick Docker, copy the token. Then add three public hostnames, each of type HTTP:
-        <table>
-          <thead><tr><th>Hostname</th><th>Service</th></tr></thead>
-          <tbody>
-            <tr><td><code>pspad.example.com</code></td><td><code>app:8080</code></td></tr>
-            <tr><td><code>pspad-api.example.com</code></td><td><code>api:8080</code></td></tr>
-            <tr><td><code>auth.example.com</code></td><td><code>keycloak:8080</code></td></tr>
-          </tbody>
-        </table>
-      </li>
-      <li><strong>Network.</strong> One shared network the tunnel and the containers all join:
-        <pre><code>docker network create proxy
-docker network inspect proxy --format '{'{'}range .IPAM.Config{'}'}{'{'}.Subnet{'}'}{'{'}end{'}'}'</code></pre>
-      </li>
-      <li><strong>Environment.</strong> In <code>docker/.env</code>:
-        <pre><code>COMPOSE_PROFILES=local-keycloak
-KEYCLOAK_ADMIN_USER=…
-KEYCLOAK_ADMIN_PASSWORD=…
-MONGO_CONNECTION_STRING=mongodb+srv://…
-APP_BASE_ADDRESS=https://pspad.example.com
-API_BASE_ADDRESS=https://pspad-api.example.com
-KEYCLOAK_AUTHORITY=https://auth.example.com/realms/psplace
-KEYCLOAK_HOSTNAME=https://auth.example.com
-API_TRUSTED_PROXY_NETWORK=172.20.0.0/16   # the subnet printed above
-API_CLIENT_IP_HEADER=CF-Connecting-IP
-CLOUDFLARE_TUNNEL_TOKEN=…</code></pre>
-        <p>Set the admin user and password before the first <code>up</code>: Keycloak reads them once, and this console is public.</p>
-      </li>
-      <li><strong>Start.</strong> The override adds <code>cloudflared</code>, joins every service to <code>proxy</code> and publishes nothing:
-        <pre><code>docker compose -f docker/compose.yaml -f docker/compose.cloudflare.yaml up -d --build</code></pre>
-        <details>
-          <summary><code>docker/compose.cloudflare.yaml</code></summary>
-          <pre><code>{cloudflare}</code></pre>
-        </details>
-      </li>
-      <li><strong>Keycloak.</strong> Open <code>https://auth.example.com</code>, update the client's redirect URI as <a href="#internet">above</a>, create your user.</li>
-      <li><strong>HSTS.</strong> In Cloudflare <strong>SSL/TLS → Edge Certificates → HSTS</strong>, enable it. The containers speak plain HTTP to the tunnel; Cloudflare does TLS.</li>
-    </ol>
-    <p>Why <code>CF-Connecting-IP</code>: with a tunnel the only way in is Cloudflare, so the header is trustworthy and public snapshot links get rate-limited per visitor. Behind your own proxy keep the default <code>X-Forwarded-For</code> instead; anyone reaching the origin directly could forge the Cloudflare header.</p>
-    <p>I run Keycloak as a separate Compose project on the same <code>proxy</code> network, on Postgres instead of its built-in store, with <code>KC_HOSTNAME=https://auth.example.com</code>, <code>KC_HOSTNAME_STRICT=true</code>, <code>KC_HTTP_ENABLED=true</code>, <code>KC_PROXY_HEADERS=xforwarded</code> and <code>start --import-realm</code>. The bundled Keycloak is enough for one household; move to Postgres when the realm is shared with other apps.</p>
+        <article data-scenario="vps" data-step="4" hidden>
+          <h2>MongoDB</h2>
+          <div data-when="mongo=atlas" hidden>
+            <ol>
+              <li>At <a href="https://cloud.mongodb.com">cloud.mongodb.com</a> create a free <strong>M0</strong> cluster in the region nearest your VPS.</li>
+              <li><strong>Database Access → Add new database user</strong>: user <code>pspad</code>, a generated password, <strong>Specific privileges → readWrite</strong> on database <code>pspad</code>.</li>
+              <li><strong>Network Access → Add IP address</strong>: the VPS address.</li>
+              <li><strong>Connect → Drivers</strong>: copy the connection string and put the password in. It goes into <code>.env</code> in the next step.</li>
+            </ol>
+            <pre><code>mongodb+srv://pspad:&lt;password&gt;@&lt;cluster&gt;.mongodb.net/pspad?retryWrites=true&amp;w=majority</code></pre>
+          </div>
+          <div data-when="mongo=vps">
+            <p>Nothing to decide here. The compose file in the next step runs MongoDB as a one-node replica set beside the API, with its data in a Docker volume.</p>
+            <p>Download its entrypoint once, next to the compose file:</p>
+            <CodeBlock title="On the VPS, in ~/pspad">curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
+          </div>
+        </article>
 
-    <h2 id="maintenance">Maintenance</h2>
+        <article data-scenario="vps" data-step="5" hidden>
+          <h2>Files</h2>
+          <p>One folder on the VPS, <code>~/pspad</code>. The files below are assembled for your choices. Replace <code>example.com</code> with your domain and every <code>CHANGE_ME</code> with a secret.</p>
+          <StackFile file="compose" title="compose.yaml" />
+          <StackFile file="env" title=".env" />
+          <div data-when="expose=dns" hidden>
+            <StackFile file="caddyfile" title="Caddyfile" />
+          </div>
+          <CodeBlock title="The Keycloak realm">mkdir -p keycloak
+curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeBlock>
+          <Callout title="The realm is imported once">
+            <p>Keycloak reads <code>keycloak/realm-psplace.json</code> on its first start and sets the client's redirect URIs from <code>APP_BASE_ADDRESS</code>. Change the address later and you update the client in the Keycloak console, not the file.</p>
+          </Callout>
+        </article>
 
-    <h3 id="backups">Backups</h3>
-    <p>Three volumes hold everything:</p>
-    <ul>
-      <li><code>pspad_mongo-data</code> — areas, lists, tasks, the event log.</li>
-      <li><code>pspad_mongo-keyfile</code> — the replica-set key. Lose it and <code>mongo-data</code> won't start.</li>
-      <li><code>pspad_keycloak-data</code> — accounts and realm config.</li>
-    </ul>
-    <Callout kind="warning" title="Never pass -v to docker compose down">
-      <p>
-        <code>down -v</code> deletes <code>pspad_keycloak-data</code>, and with it every
-        account. PSPad keys its users by the Keycloak user's UUID, so accounts recreated
-        afterwards are new people — the old areas, lists and tasks stay in MongoDB, owned by
-        a user that can no longer sign in. <code>down</code> on its own is safe.
-      </p>
-    </Callout>
-    <p>Dump the database:</p>
-    <pre><code>docker compose -f docker/compose.yaml exec -T mongo \
-  sh -c 'mongodump --archive --username pspad --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' \
-  > pspad-backup.archive</code></pre>
-    <p>
-      Keep the single quotes — the password only exists inside the <code>mongo</code>
-      container. Double quotes would expand it on your host instead, where it's empty.
-    </p>
+        <article data-scenario="vps" data-step="6" hidden>
+          <h2>Start and check</h2>
+          <CodeBlock title="In ~/pspad">docker compose up -d --wait</CodeBlock>
+          <p>Then, from anywhere:</p>
+          <ul>
+            <li><code>https://pspad-api.example.com/health</code> says <code>Healthy</code>.</li>
+            <li><code>https://auth.example.com</code> shows the Keycloak page.</li>
+            <li><code>https://pspad.example.com</code> opens the app and sends you to sign in.</li>
+          </ul>
+          <p>Something missing? <code>docker compose logs -f api</code> and <code>docker compose logs -f keycloak</code> say why.</p>
+        </article>
 
-    <h3>Upgrading, restarting</h3>
-    <Callout kind="warning" title="Upgrading from a release without profiles">
-      <p>Older <code>docker/.env</code> files have no <code>COMPOSE_PROFILES</code> line, and without it the bundled MongoDB and Keycloak no longer start. Add <code>COMPOSE_PROFILES=local-mongo,local-keycloak</code> to <code>docker/.env</code> before <code>up</code>. Nothing else changes.</p>
-    </Callout>
-    <pre><code>git pull
-docker compose -f docker/compose.yaml up -d --build</code></pre>
-    <p>
-      Volumes survive — only <code>down -v</code> destroys them. Give Mongo 10–30 seconds to
-      report healthy again before assuming something's broken.
-    </p>
-    <p>
-      Every image is pinned to an exact version, so an upgrade changes MongoDB, Keycloak
-      or nginx only when <code>compose.yaml</code> or a <code>Dockerfile</code> in the
-      release does.
-    </p>
-    <Callout kind="warning" title="Upgrading from a release with floating images">
-      <p>
-        Older releases pulled <code>mongo:8</code> and Keycloak 26.0. This release pins
-        MongoDB 8.3.11 and Keycloak 26.8.1, which migrates its embedded database on first
-        start. Before you run <code>up</code>, take a <a href="#backups">database dump</a> and
-        export the <strong>psplace</strong> realm. Nothing else changes: same
-        <code>.env</code>, same ports, same volumes, and none of them needs new file
-        permissions.
-      </p>
-    </Callout>
+        <article data-scenario="vps" data-step="7" hidden>
+          <h2>First sign-in</h2>
+          <ol>
+            <li>Open <code>https://auth.example.com/admin/</code> with the admin user and password from <code>.env</code>.</li>
+            <li>Realm <strong>psplace</strong> → <strong>Clients → pspad-frontend</strong>: <strong>Valid redirect URIs</strong> and <strong>Web origins</strong> contain <code>https://pspad.example.com</code>. Check once.</li>
+            <li><strong>Users → Add user</strong>, then <strong>Credentials → Set password</strong> with Temporary off. That is you.</li>
+            <li>Open <code>https://pspad.example.com</code>, sign in, and install it from the browser menu for the offline app.</li>
+          </ol>
+        </article>
 
-    <h3>Live updates through a proxy</h3>
-    <p>
-      An open app holds one long-lived request, <code>GET /api/live</code>, a Server-Sent
-      Events stream that tells it to sync the moment something changes. The headers and the 25-second heartbeat are chosen so stock proxy
-      settings carry the stream.
-    </p>
-    <p>
-      <strong>Cloudflare (proxied DNS or Tunnel): expected to need no change; not tested
-      here.</strong> Per its documented behaviour Cloudflare streams
-      <code>text/event-stream</code> unbuffered and drops an origin connection silent for
-      100 s (error 524); the 25 s heartbeat stays under that. Browsers talk HTTP/2
-      to Cloudflare, so a stream does not use up the per-host connection limit. Only if a
-      Cache Rule caches the API hostname, exclude <code>/api/live</code> (better: never cache
-      the API).
-    </p>
-    <p>
-      <strong>nginx in front of the API: stock settings were tested and need no change.</strong>
-      Change only if the config has one of these:
-    </p>
-    <table>
-      <thead>
-        <tr><th>If your config has</th><th>Change it to</th></tr>
-      </thead>
-      <tbody>
-        <tr><td><code>proxy_read_timeout</code> below 30s</td><td>≥ 60s, at least for <code>location /api/live</code></td></tr>
-        <tr><td><code>proxy_ignore_headers X-Accel-Buffering</code></td><td>remove it, or add <code>proxy_buffering off;</code> in <code>location /api/live</code></td></tr>
-        <tr><td><code>proxy_cache</code> on the API</td><td><code>proxy_cache off;</code> for <code>/api/live</code></td></tr>
-        <tr><td><code>gzip_types</code> including <code>text/event-stream</code></td><td>remove it</td></tr>
-        <tr><td>TLS without <code>http2</code> and no Cloudflare in front</td><td><code>http2 on;</code> — on HTTP/1.1 each visible tab holds one of the browser's six connections to the API (hidden tabs drop their stream); the default proxy-less <code>http://localhost:5000</code> is HTTP/1.1 too</td></tr>
-      </tbody>
-    </table>
-    <p>An explicit block that does not rely on the response headers:</p>
-    <pre><code>{`location /api/live {
-    proxy_pass http://<api-upstream>;
-    proxy_buffering off;
-    proxy_cache off;
-    proxy_read_timeout 1h;
-    proxy_http_version 1.1;
-    proxy_set_header Connection "";
-}`}</code></pre>
-    <p>
-      <strong>Caddy: expected to need no change; not tested here.</strong> Per its documented
-      behaviour it flushes <code>text/event-stream</code> immediately.
-    </p>
-    <p>
-      An integration test runs the stream through
-      <code>nginxinc/nginx-unprivileged:1.31.6-alpine</code> with a stock
-      <code>proxy_pass</code> block and a short <code>proxy_read_timeout</code>. Cloudflare and
-      Caddy are not tested.
-    </p>
+        <article data-scenario="vps" data-step="8" hidden>
+          <h2>Keep it running</h2>
+          <CodeBlock title="Upgrade">docker compose pull &amp;&amp; docker compose up -d --wait</CodeBlock>
+          <div data-when="mongo=vps">
+            <CodeBlock title="Back up MongoDB, nightly from cron">docker compose exec -T mongo mongodump --archive --gzip -u pspad -p "$MONGO_PASSWORD" &gt; pspad-$(date +%F).gz</CodeBlock>
+          </div>
+          <div data-when="mongo=atlas" hidden>
+            <p>Atlas M0 keeps no backups of its own. Once a week, from the VPS:</p>
+            <CodeBlock title="Back up MongoDB">docker run --rm mongo:8.3.11 mongodump --uri "$MONGO_CONNECTION_STRING" --archive --gzip &gt; pspad-$(date +%F).gz</CodeBlock>
+          </div>
+          <div data-when="kc=pg" hidden>
+            <CodeBlock title="Back up Keycloak">docker compose exec -T postgres pg_dump -U keycloak keycloak | gzip &gt; keycloak-$(date +%F).sql.gz</CodeBlock>
+          </div>
+          <div data-when="kc=h2">
+            <CodeBlock title="Back up Keycloak">docker compose stop keycloak &amp;&amp; docker run --rm -v pspad_keycloak-data:/data -v "$PWD":/out alpine tar czf /out/keycloak-$(date +%F).tgz -C /data . &amp;&amp; docker compose start keycloak</CodeBlock>
+          </div>
+          <p>Restore is the same command backwards: <code>mongorestore --archive --gzip</code>, <code>psql</code>, or untar into the volume.</p>
+        </article>
 
-    <details>
-      <summary>Give the API its own database user</summary>
-    <p>
-      Out of the box the API signs in to MongoDB as the root user <code>pspad</code>. To
-      limit what a leaked connection string can do, create a user that can read and write
-      <code>MONGO_DATABASE</code> and nothing else, using the example script
-      <code>docker/mongo-app-user.js</code>. Run it as root inside the running
-      <code>mongo</code> container (use your own database name and a password of letters,
-      digits and <code>- . _ ~</code>):
-    </p>
-    <pre><code>docker compose -f docker/compose.yaml cp docker/mongo-app-user.js mongo:/tmp/mongo-app-user.js
-docker compose -f docker/compose.yaml exec \
-  -e MONGO_DATABASE=pspad -e MONGO_APP_USER=pspad-api -e MONGO_APP_PASSWORD='&lt;app password&gt;' \
-  mongo sh -c 'mongosh --quiet -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin /tmp/mongo-app-user.js'</code></pre>
-    <p>
-      It prints <code>created pspad-api on pspad</code>; running it again resets the password
-      and roles. Then put the new user's credentials into <code>MONGO_CONNECTION_STRING</code>
-      in <code>docker/.env</code>:
-    </p>
-    <pre><code>MONGO_CONNECTION_STRING=mongodb://pspad-api:APP_PASSWORD@mongo:27017/pspad?directConnection=true</code></pre>
-    <p>
-      The user lives in the <code>pspad</code> database, so no <code>authSource</code> is needed.
-      Recreate the API so it picks the line up:
-    </p>
-    <pre><code>docker compose -f docker/compose.yaml up -d api</code></pre>
-    <p>
-      The root user stays for the healthcheck, the script and your backups. Running PSPad
-      against your own MongoDB or Atlas? Give its user only <code>readWrite</code> on the
-      PSPad database.
-    </p>
-    </details>
-
-    <Callout kind="warning" title="Two things worth knowing">
-      <p>The bundled Keycloak runs in development mode, fine for one household behind a proxy, not for a public service. The old MongoDB keyfile is in the git history; the stack generates a fresh one on first start, so nothing in the repository unlocks your data.</p>
-    </Callout>
+        <div class="pager">
+          <button type="button" class="button button-secondary" data-back disabled>Back</button>
+          <button type="button" class="button button-primary" data-next>Next</button>
+        </div>
+      </section>
+    </div>
   </div>
 </Page>
 
+<script>
+  import { key, parse } from '../data/stack/options'
+
+  const counts = { quick: 5, vps: 8 }
+  const params = new URLSearchParams(location.search)
+  let choices = parse(params)
+  let step = Math.min(counts[choices.scenario], Math.max(1, Number(params.get('step')) || 1))
+
+  const all = <T extends Element>(selector: string) => Array.from(document.querySelectorAll<T>(selector))
+  const show = (element: Element, on: boolean) => element.toggleAttribute('hidden', !on)
+
+  function render() {
+    const scenario = choices.scenario
+    all('[data-scenario].card').forEach((b) => b.classList.toggle('is-on', b.getAttribute('data-scenario') === scenario))
+    all('.steps ol').forEach((list) => show(list, list.getAttribute('data-scenario') === scenario))
+    all('.steps button').forEach((b) => {
+      const n = Number(b.getAttribute('data-step'))
+      b.classList.toggle('is-current', n === step)
+      b.classList.toggle('is-done', n < step)
+    })
+    all('article[data-scenario]').forEach((a) => show(a, a.getAttribute('data-scenario') === scenario && Number(a.getAttribute('data-step')) === step))
+    all('[data-choice]').forEach((b) => b.classList.toggle('is-on', choices[b.getAttribute('data-choice') as 'kc' | 'mongo' | 'expose'] === b.getAttribute('data-value')))
+    all('[data-when]').forEach((el) => {
+      const [name, value] = (el.getAttribute('data-when') ?? '').split('=')
+      show(el, choices[name as 'kc' | 'mongo' | 'expose'] === value)
+    })
+    const current = key(choices)
+    all('.stack-file').forEach((el) => show(el, el.getAttribute('data-stack') === current))
+    document.querySelector('[data-scenario-name]')!.textContent = scenario === 'quick' ? 'Quick Test' : 'VPS Hosting'
+    document.querySelector('[data-step-no]')!.textContent = String(step)
+    document.querySelector('[data-step-count]')!.textContent = String(counts[scenario])
+    const back = document.querySelector<HTMLButtonElement>('[data-back]')!
+    const next = document.querySelector<HTMLButtonElement>('[data-next]')!
+    back.disabled = step === 1
+    next.disabled = step === counts[scenario]
+    const query = new URLSearchParams({ scenario, step: String(step) })
+    if (scenario === 'vps') { query.set('kc', choices.kc); query.set('mongo', choices.mongo); query.set('expose', choices.expose) }
+    history.replaceState(null, '', `?${query}`)
+  }
+
+  function go(to: number) {
+    step = Math.min(counts[choices.scenario], Math.max(1, to))
+    render()
+    document.querySelector('.panel')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }
+
+  all('[data-scenario].card, button[data-scenario].button').forEach((b) => b.addEventListener('click', () => {
+    const scenario = b.getAttribute('data-scenario') as 'quick' | 'vps'
+    choices = scenario === 'quick' ? parse(new URLSearchParams()) : { ...choices, scenario }
+    go(1)
+  }))
+  all('.steps button').forEach((b) => b.addEventListener('click', () => go(Number(b.getAttribute('data-step')))))
+  all('[data-choice]').forEach((b) => b.addEventListener('click', () => {
+    choices = { ...choices, [b.getAttribute('data-choice')!]: b.getAttribute('data-value') }
+    render()
+  }))
+  document.querySelector('[data-back]')!.addEventListener('click', () => go(step - 1))
+  document.querySelector('[data-next]')!.addEventListener('click', () => go(step + 1))
+
+  render()
+</script>
+
+<noscript>
+  <style>
+    article[data-scenario], .steps ol, [data-when], .stack-file { display: block !important; }
+    [hidden] { display: block !important; }
+    .pager, .selector, .where { display: none !important; }
+  </style>
+</noscript>
+
 <style>
-  .toc { display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0 32px; font-weight: 500; }
-  details { margin: 16px 0; }
-  summary { cursor: pointer; font-weight: 500; }
+  .intro { font-size: 1.1rem; color: var(--muted); }
+
+  .selector {
+    display: grid;
+    gap: 16px;
+    margin: 24px 0 32px;
+  }
+
+  .card {
+    font: inherit;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 20px;
+    border: 1.5px solid var(--lines);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .card span { font-size: 0.92rem; color: var(--muted); line-height: 1.5; }
+  .card:hover { border-color: var(--primary); }
+  .card.is-on { border-color: var(--primary); background: var(--raised); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent); }
+
+  .stepper { display: grid; gap: 24px; align-items: start; }
+
+  .steps ol { list-style: none; margin: 0; padding: 10px; border: 1px solid var(--lines); border-radius: var(--radius); background: var(--surface); }
+  .steps li { margin: 0; }
+  .steps button {
+    font: inherit;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    text-align: left;
+    cursor: pointer;
+  }
+  .steps button:hover { color: var(--text); }
+  .steps .n {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--raised);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .steps .is-done { color: var(--primary); }
+  .steps .is-done .n { background: var(--primary); color: var(--background); }
+  .steps .is-current { background: var(--primary); color: var(--background); font-weight: 600; }
+  .steps .is-current .n { background: var(--background); color: var(--primary); }
+
+  .panel {
+    border: 1px solid var(--lines);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 24px 28px;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .where { margin: 0 0 8px; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .panel h2 { margin-top: 0; }
+  .panel li { margin: 4px 0; }
+  .panel table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+  .panel th, .panel td { text-align: left; padding: 8px; border-bottom: 1px solid var(--lines); }
+
+  .choice { display: flex; flex-direction: column; gap: 8px; margin: 18px 0; }
+  .options { display: grid; gap: 10px; }
+
+  .pager { display: flex; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 20px; border-top: 1px solid var(--lines); }
+  .button:disabled { opacity: 0.45; cursor: default; }
+
+  @media (min-width: 820px) {
+    .selector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stepper { grid-template-columns: 260px minmax(0, 1fr); }
+    .steps { position: sticky; top: 90px; }
+    .options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
 </style>

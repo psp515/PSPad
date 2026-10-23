@@ -1,0 +1,17 @@
+---
+import CodeBlock from './CodeBlock.astro'
+import { combinations, key } from '../data/stack/options'
+import { caddyfile, compose, env } from '../data/stack/assemble'
+
+interface Props { file: 'compose' | 'env' | 'caddyfile'; title: string }
+const { file, title } = Astro.props
+const render = { compose, env, caddyfile }[file]
+const variants = combinations()
+  .map((choices) => ({ key: key(choices), text: render(choices) }))
+  .filter((variant) => variant.text !== '')
+---
+{variants.map((variant) => (
+  <div class="stack-file" data-stack={variant.key} hidden={variant.key !== 'quick'}>
+    <CodeBlock title={title}>{variant.text}</CodeBlock>
+  </div>
+))}
