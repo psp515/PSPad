@@ -7,7 +7,7 @@ RUN dotnet publish src/PSPad.App/PSPad.App.csproj -c Release -o /app \
  && mkdir /app/runtime \
  && mv /app/wwwroot/appsettings.json /app/wwwroot/appsettings.json.gz /app/runtime/
 
-FROM nginxinc/nginx-unprivileged:1.31.6-alpine
+FROM nginxinc/nginx-unprivileged:1.31.7-alpine
 COPY --from=build /app/wwwroot /usr/share/nginx/html
 COPY --from=build --chown=nginx:nginx /app/runtime/ /usr/share/nginx/html/
 COPY docker/nginx/pspad.conf /etc/nginx/conf.d/default.conf
