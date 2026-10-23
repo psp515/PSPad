@@ -41,7 +41,7 @@ services:
     networks: [pspad]
 
   mongo:
-    image: mongo:8.3.11
+    image: mongo:8.3.13
     entrypoint: ["bash", "/mongo-entrypoint.sh"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: pspad
