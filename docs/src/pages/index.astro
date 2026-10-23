@@ -2,10 +2,12 @@
 import Page from '../layouts/Page.astro'
 import Mark from '../components/Mark.astro'
 import Shot from '../components/Shot.astro'
+import Reveal from '../components/Reveal.astro'
 import { feature } from '../data/features'
 import { join } from '../lib/repo'
 
 const base = import.meta.env.BASE_URL
+const offline = feature('offline')
 
 const highlights = [
   { item: feature('today'), shot: 'my-day', alt: 'My Day with timed and overdue tasks' },
@@ -28,52 +30,104 @@ const highlights = [
         with AI. Getting Things Done got me started, and I use it every day and plan to
         keep using it.
       </p>
+      <p class="offline-line">{offline.title}. {offline.does}</p>
       <p class="actions">
         <a class="button button-primary" href={join(base, 'self-host')}>Self-host it</a>
         <a class="button button-secondary" href={join(base, 'features')}>See the features</a>
       </p>
     </div>
     <Shot name="my-day-phone" alt="My Day on a phone" phone eager />
+    <a class="cue" href="#offers">
+      <span>See what it offers</span>
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </a>
   </section>
 
-  <section class="wrap">
-    <h2>What it offers most</h2>
+  <section class="wrap" id="offers">
+    <Reveal><h2>What it offers</h2></Reveal>
     <div class="highlights">
       {highlights.map(({ item, shot, alt, phone }) => (
-        <div class="highlight">
-          <div class="text">
-            <h3>{item.title}</h3>
-            <p>{item.does}</p>
-            <p class="how">{item.how}</p>
+        <Reveal>
+          <div class="highlight">
+            <div class="text">
+              <h3>{item.title}</h3>
+              <p>{item.does}</p>
+              <p class="how">{item.how}</p>
+            </div>
+            <Shot name={shot} alt={alt} phone={phone} />
           </div>
-          <Shot name={shot} alt={alt} phone={phone} />
-        </div>
+        </Reveal>
       ))}
+      <Reveal>
+        <div class="band">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" />
+          </svg>
+          <div>
+            <h3>{offline.title}</h3>
+            <p>{offline.does}</p>
+            <p class="how">{offline.how}</p>
+          </div>
+        </div>
+      </Reveal>
     </div>
-    <p class="all"><a href={join(base, 'features')}>All features →</a></p>
+    <Reveal><p class="all"><a href={join(base, 'features')}>All features →</a></p></Reveal>
   </section>
 
   <section class="wrap">
-    <div class="call">
-      <h2>Run it yourself</h2>
-      <p>One file on your own VPS, about ten minutes.</p>
-      <p><a class="button button-primary" href={join(base, 'self-host')}>Self-host PSPad</a></p>
-      <p class="mine"><a href={join(base, 'self-host#how-i-host-it')}>How I host it</a>, on a small VPS with no open ports.</p>
-    </div>
+    <Reveal>
+      <div class="call">
+        <h2>Run it yourself</h2>
+        <p>One file on your own VPS, about ten minutes.</p>
+        <p><a class="button button-primary" href={join(base, 'self-host')}>Self-host PSPad</a></p>
+      </div>
+    </Reveal>
   </section>
 </Page>
 
 <style>
   .hero {
+    position: relative;
     display: grid;
     gap: 40px;
     align-items: center;
-    padding-top: 48px;
-    padding-bottom: 32px;
+    min-height: calc(100dvh - var(--header-height, 73px));
+    padding-top: 24px;
+    padding-bottom: 72px;
+    box-sizing: border-box;
   }
 
   .pitch { font-size: 1.15rem; max-width: var(--measure); }
+  .offline-line { color: var(--primary); font-weight: 600; }
   .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .cue {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-decoration: none;
+    animation: bob 1.8s ease-in-out infinite;
+  }
+
+  @keyframes bob {
+    0%, 100% { transform: translate(-50%, 0); }
+    50% { transform: translate(-50%, 6px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cue { animation: none; }
+  }
 
   .highlights { display: grid; gap: 48px; margin-top: 24px; }
 
@@ -83,9 +137,23 @@ const highlights = [
     align-items: center;
   }
 
-  .highlight h3 { margin: 0 0 8px; font-size: 1.35rem; }
-  .highlight p { margin: 0 0 8px; }
-  .highlight .how { color: var(--muted); }
+  .highlight h3, .band h3 { margin: 0 0 8px; font-size: 1.35rem; }
+  .highlight p, .band p { margin: 0 0 8px; }
+  .how { color: var(--muted); }
+
+  .band {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 20px;
+    align-items: center;
+    padding: 28px 32px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid var(--lines);
+    color: var(--text);
+  }
+
+  .band svg { color: var(--primary); }
 
   .all { margin-top: 32px; font-weight: 500; }
 
@@ -99,12 +167,12 @@ const highlights = [
   }
 
   .call h2 { margin-top: 0; }
-  .mine { color: var(--muted); margin-bottom: 0; }
+  .call p:last-child { margin-bottom: 0; }
 
   @media (min-width: 820px) {
     .hero { grid-template-columns: 3fr 2fr; }
     .highlight { grid-template-columns: 2fr 3fr; }
-    .highlight:nth-child(even) { grid-template-columns: 3fr 2fr; }
-    .highlight:nth-child(even) .text { order: 2; }
+    :global(.reveal):nth-child(even) .highlight { grid-template-columns: 3fr 2fr; }
+    :global(.reveal):nth-child(even) .highlight .text { order: 2; }
   }
 </style>

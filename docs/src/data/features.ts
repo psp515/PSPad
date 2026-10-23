@@ -11,12 +11,15 @@ export interface Planned {
 }
 
 export const features: Feature[] = [
+  { id: 'offline', title: 'Works offline',
+    does: 'Opens with your data and syncs when you are back.',
+    how: 'Every screen says when it last updated. Pull down on a phone or press refresh on a computer. A device untouched for 7 days asks you to sign in again.' },
   { id: 'today', title: 'My Day',
     does: 'Everything due today or earlier, from every area, on one screen.',
     how: 'Timed tasks come first in order, then anything-time tasks, with overdue pinned on top, in your own time zone. A week strip opens any other day.' },
   { id: 'inbox', title: 'Inbox',
     does: 'Capture anything in one tap and sort it out later.',
-    how: 'An item becomes a full task — list, date, priority, goal, steps — in one step when you are ready.' },
+    how: 'An item becomes a full task by setting list, date, priority, goal, steps, or just remove it.' },
   { id: 'areas', title: 'Areas and lists',
     does: 'Work, home, side projects: each area holds its own lists in your order.',
     how: 'Lists pack into columns on a big screen and stack on a phone. Deleting an area tells you how much goes with it.' },
@@ -50,9 +53,6 @@ export const features: Feature[] = [
   { id: 'statistics', title: 'Statistics',
     does: 'Charts and a heatmap of the days you finished things.',
     how: 'Built from what actually happened, so a deleted task still counts the day it was done.' },
-  { id: 'offline', title: 'Works offline',
-    does: 'Opens with your data and syncs when you are back.',
-    how: 'Every screen says when it last updated. Pull down on a phone or press refresh on a computer. A device untouched for 7 days asks you to sign in again.' },
   { id: 'live', title: 'Live updates',
     does: 'Your other devices and list members see changes within a moment.',
     how: 'An open app receives a nudge and pulls the change; no refresh, no polling.' },
