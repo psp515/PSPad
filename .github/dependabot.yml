@@ -26,6 +26,9 @@ updates:
     groups:
       compose-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: mongo
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
     directory: /test/e2e

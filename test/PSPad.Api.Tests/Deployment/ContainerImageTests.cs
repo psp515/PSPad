@@ -39,7 +39,7 @@ public partial class ContainerImageTests
     [Fact]
     public void TheBundledKeycloakIsTheReleaseProductionRuns()
     {
-        Assert.Contains("quay.io/keycloak/keycloak:26.7.4", ComposeImages());
+        Assert.Contains("quay.io/keycloak/keycloak:26.8.1", ComposeImages());
     }
 
     static IEnumerable<string> BaseImages(string dockerfile) =>
