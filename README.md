@@ -47,6 +47,7 @@ keeps reminding me about, in one place, on my own server. It is a test
 project built with AI. Getting Things Done got me started, and I use it
 every day and plan to keep using it. Questions: [psp515.com](https://psp515.com).
 
+- **Works offline** — opens with your data and syncs when you are back.
 - **My Day.** Everything due today or earlier, from every area, on one screen.
 - **Inbox.** Capture anything in one tap and sort it out later.
 - **Areas and lists.** Work, home, side projects, each with its own lists.

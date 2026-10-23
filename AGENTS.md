@@ -97,10 +97,10 @@ module; `App` never sees `Infrastructure`; `Api` sees all. Only module edges:
 - **ADR immediately** for any new or changed architectural decision, using
   `adr/template.md`, plus its index row; update §4 here if an AD changes. Never
   edit an old ADR's Decision — supersede it.
-- **Docs ship with the change:** self-hoster-facing change (compose, env, ports)
-  → `docs/src/pages/self-host.astro` and `docker/.env.example` comments;
-  user-facing capability → `docs/src/data/features.ts` (the only feature list;
-  `npm run screenshots` in `test/e2e` when a shown screen changes).
+- **Docs ship with the change:** self-hoster-facing change (images, env,
+  ports, services) → `docs/src/data/stack/` and the Self-host steps in
+  `docs/src/pages/self-host.astro`; user-facing capability →
+  `docs/src/data/features.ts`; a changed screen → `npm run screenshots`.
 - **TDD.** Failing test first; every test class has `[UnitTest]` or
   `[IntegrationTest]` (`specs/testing-spec.md`). Never claim green without running.
 - **End-to-end ships with the feature.** A new or changed user-facing flow
