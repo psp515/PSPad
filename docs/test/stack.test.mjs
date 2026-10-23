@@ -80,6 +80,7 @@ test('tunnel and dns choose the proxy and the client address header', () => {
   assert.match(compose(dns), /"80:80"/)
   assert.match(compose(dns), /"443:443"/)
   assert.equal((caddyfile(dns).match(/reverse_proxy/g) ?? []).length, 3)
+  assert.equal((caddyfile(dns).match(/Strict-Transport-Security/g) ?? []).length, 3)
 })
 
 test('every variable a compose file reads is declared in its env', () => {

@@ -286,7 +286,7 @@ zone, never machine-local (the AGENTS.md §2 invariant).
   - `PLN` never calls it.
 - **Self-hosting.** The API container needs outbound HTTPS to `api.nbp.pl`
   for the NBP button only. Everything else works without it. There is no new
-  env var or port. This gets a note in `docs/src/pages/install.astro`.
+  env var or port. It once got a note in `docs/src/pages/install.astro`; `self-host.astro` no longer carries it.
 
 ## 6. Screens
 
@@ -488,7 +488,7 @@ Each slice ships green on its own:
    navigation changes, `/budgets`, Settings tab, default currency.
    `RenameCategory`, `MergeCategory` and `RemoveCategory` moved to slice 2:
    they cascade into entries and are untestable before entries exist.
-2. `Money` (`Decimal128`), `YearMonth`, `MoneyEntry` with category auto-add, rename, merge and remove-category with their cascades, Month tab (default; tab in the URL), `EntryPanel`, `RateSuggestion`, `MonthTotals`, budget-card totals, NBP endpoint, and the `install.astro` outbound-NBP note.
+2. `Money` (`Decimal128`), `YearMonth`, `MoneyEntry` with category auto-add, rename, merge and remove-category with their cascades, Month tab (default; tab in the URL), `EntryPanel`, `RateSuggestion`, `MonthTotals`, budget-card totals, NBP endpoint, and the outbound-NBP note (`self-host.astro` no longer carries it).
 3. `BalanceSnapshot`, Balance tab, `HoldingPanel`.
 4. Summary tab and charts.
 5. Docs: `features.astro` and the landing page.

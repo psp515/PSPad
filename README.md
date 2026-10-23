@@ -60,9 +60,9 @@ The full list is on the [features page](https://psp515.com/pspad/features/).
 Full docs live at **[psp515.com/pspad](https://psp515.com/pspad/)**
 (built with Astro):
 
-- [Home](https://psp515.com/pspad/) — what it is and what it offers most.
+- [Home](https://psp515.com/pspad/) — what it is and what it offers.
 - [Features](https://psp515.com/pspad/features/) — every feature, what it does and how.
-- [Self-host](https://psp515.com/pspad/self-host/) — quick start, hosted or bundled MongoDB and Keycloak, a reverse proxy or a Cloudflare Tunnel, and how I host it.
+- [Self-host](https://psp515.com/pspad/self-host/) — Quick Test on your computer, or VPS Hosting step by step with the files assembled for your choices.
 
 ## Development
 
@@ -97,8 +97,7 @@ Adding a UI language is described in `specs/localization-design.md` §7.
 
 Each deployable carries its own `Dockerfile` next to its `.csproj`
 (`src/PSPad.Api`, `src/PSPad.App`), built with the repository root as
-context. `docker/compose.yaml` is both the development and the self-hosting
-stack — self-hosting is documented on the
+context. `docker/compose.yaml` is the development stack; self-hosters follow the
 [self-host page](https://psp515.com/pspad/self-host/).
 
 Design specs live in `specs/`, architecture decision records in `adr/` (see

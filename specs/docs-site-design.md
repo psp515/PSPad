@@ -1,6 +1,6 @@
 # Docs site — design
 
-Status: Built, second round in progress. Issue #110. No ADR: the site's
+Status: Built. Issue #110. No ADR: the site's
 stack (Astro on GitHub Pages, `docs/`) and the self-hoster-facing rules in
 `AGENTS.md` §6 are unchanged; this is content, structure and a small
 library that assembles self-host stacks.
@@ -55,9 +55,10 @@ description:
 
 ### 3.1 First screen
 
-The hero fills the viewport below the sticky header
+From 820px up the hero fills the viewport below the sticky header
 (`min-height: calc(100dvh - header height)`) and nothing of the next section
-shows until the reader scrolls. In it:
+shows until the reader scrolls; on a phone it flows naturally with the cue
+after the screenshot. In it:
 
 - Headline: *Money, tasks, ideas and your day, in one notepad you host.*
 - The pitch paragraph from §2.
@@ -83,7 +84,7 @@ phone. The fifth is a full-width band with an icon and no screenshot.
 | Budgets | budget overview, desktop | feature `budgets` |
 | Works offline | none | feature `offline` |
 
-Then "Run it yourself": *One file on your own VPS, about ten minutes.* and a
+Then "Run it yourself": *Your own VPS, a few files, about thirty minutes.* and a
 **Self-host it** button. Nothing else; the "how I host it" line is gone.
 
 ### 3.3 Scroll reveal
@@ -152,7 +153,7 @@ One page. At the top a one-line intro and a selector with two cards,
 **Quick Test** and **VPS Hosting**. Below it a stepper: the step list on
 the left (numbered, current step filled, done steps ticked), the current
 step on the right, **Back** and **Next** under it. On a phone the step list
-collapses to "Step 3 of 8" with a dropdown. Clicking a step in the list
+is a row of numbered buttons; the panel's first line says which step it is. Clicking a step in the list
 jumps to it.
 
 State lives in the URL query (`?scenario=vps&step=5&kc=pg&mongo=atlas&expose=tunnel`)
@@ -218,8 +219,9 @@ selector and stepper only hide and show.
    URLs to open and what each shows; `docker compose logs -f api` and
    `keycloak` when something is missing.
 7. **First sign-in.** Keycloak console at the auth URL with the admin from
-   `.env`; check the `pspad-frontend` client's redirect URIs and web origins
-   contain the app URL; add a user; open the app and install it from the
+   `.env`; open Realm psplace, Clients, `pspad-frontend`, replace Valid
+   redirect URIs with `https://<app>/*` and save (Web origins is `+`, which
+   follows); add a user; open the app and install it from the
    browser for the offline app.
 8. **Keep it running.** Upgrade: `docker compose pull && docker compose up
    -d --wait`. Backups for the chosen MongoDB (`mongodump` through
@@ -359,5 +361,4 @@ to `specs/localization-design.md` for adding a language.
 - The Quick Test compose, with its three ports remapped, starts on the
   maintainer's box, the API reports `Healthy`, and `down -v` removes it.
 - `/install/` responds with a redirect to `/self-host/`.
-- Home: with JavaScript the hero's bottom edge is at the fold at 1280×800
-  and 390×844; the next section's heading is below it.
+- Home: with JavaScript at 1280×800 the hero's bottom edge is at the fold; the next section's heading is below it.

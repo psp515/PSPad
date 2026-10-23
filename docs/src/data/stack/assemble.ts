@@ -207,7 +207,7 @@ export function env(c: Choices): string {
     lines.push('# From Atlas: Connect, Drivers, with the password filled in.')
     lines.push('MONGO_CONNECTION_STRING=mongodb+srv://pspad:CHANGE_ME@CLUSTER.mongodb.net/pspad?retryWrites=true&w=majority', '')
   } else {
-    lines.push('# Root password of the bundled MongoDB.', 'MONGO_PASSWORD=CHANGE_ME', '')
+    lines.push('# Root password of the bundled MongoDB. Letters and digits only.', 'MONGO_PASSWORD=CHANGE_ME', '')
   }
   if (c.kc === 'pg') lines.push('# Password of the Keycloak database.', 'POSTGRES_PASSWORD=CHANGE_ME', '')
   if (c.expose === 'tunnel') lines.push('# Token from Zero Trust, Networks, Tunnels.', 'CLOUDFLARE_TUNNEL_TOKEN=CHANGE_ME', '')
@@ -220,14 +220,17 @@ export function caddyfile(c: Choices): string {
   if (c.scenario !== 'vps' || c.expose !== 'dns') return ''
   return [
     'pspad.example.com {',
+    '    header Strict-Transport-Security "max-age=31536000"',
     '    reverse_proxy app:8080',
     '}',
     '',
     'pspad-api.example.com {',
+    '    header Strict-Transport-Security "max-age=31536000"',
     '    reverse_proxy api:8080',
     '}',
     '',
     'auth.example.com {',
+    '    header Strict-Transport-Security "max-age=31536000"',
     '    reverse_proxy keycloak:8080',
     '}'
   ].join('\n') + '\n'

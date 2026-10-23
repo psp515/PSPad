@@ -31,12 +31,12 @@ const vpsSteps = ['What you need', 'Choose', 'Cloudflare', 'MongoDB', 'Files', '
       <nav class="steps" aria-label="Steps">
         <ol data-scenario="quick">
           {quickSteps.map((label, i) => (
-            <li><button type="button" data-step={i + 1}><span class="n">{i + 1}</span>{label}</button></li>
+            <li><button type="button" data-step={i + 1}><span class="n">{i + 1}</span><span class="label">{label}</span></button></li>
           ))}
         </ol>
         <ol data-scenario="vps" hidden>
           {vpsSteps.map((label, i) => (
-            <li><button type="button" data-step={i + 1}><span class="n">{i + 1}</span>{label}</button></li>
+            <li><button type="button" data-step={i + 1}><span class="n">{i + 1}</span><span class="label">{label}</span></button></li>
           ))}
         </ol>
       </nav>
@@ -56,12 +56,14 @@ const vpsSteps = ['What you need', 'Choose', 'Cloudflare', 'MongoDB', 'Files', '
 
         <article data-scenario="quick" data-step="2" hidden>
           <h2>Get the files</h2>
-          <p>Make a folder and put three files in it. The first is below, the other two come from the repository.</p>
-          <StackFile file="compose" title="compose.yaml" />
+          <p>Make a folder and put three files in it. Two come from the repository, the third is below.</p>
+          <p>In a terminal (Git Bash or WSL on Windows):</p>
           <CodeBlock title="The Keycloak realm and the Mongo entrypoint">mkdir pspad &amp;&amp; cd pspad
 mkdir -p keycloak
 curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json
 curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
+          <p>Then save this as <code>compose.yaml</code> in that folder:</p>
+          <StackFile file="compose" title="compose.yaml" />
         </article>
 
         <article data-scenario="quick" data-step="3" hidden>
@@ -152,6 +154,9 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
               </tbody>
             </table>
             <p>Cloudflare creates the DNS records itself. Nothing on the VPS is opened.</p>
+            <ol start="4">
+              <li>SSL/TLS → Edge Certificates → turn on HSTS.</li>
+            </ol>
           </div>
           <div data-when="expose=dns" hidden>
             <ol>
@@ -176,30 +181,29 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
           <div data-when="mongo=vps">
             <p>Nothing to decide here. The compose file in the next step runs MongoDB as a one-node replica set beside the API, with its data in a Docker volume.</p>
             <p>Download its entrypoint once, next to the compose file:</p>
-            <CodeBlock title="On the VPS">mkdir -p ~/pspad &amp;&amp; cd ~/pspad
-curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
+            <CodeBlock title="On the VPS">curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
           </div>
         </article>
 
         <article data-scenario="vps" data-step="5" hidden>
           <h2>Files</h2>
-          <p>One folder on the VPS, <code>~/pspad</code>. The files below are assembled for your choices. Replace <code>example.com</code> with your domain and every <code>CHANGE_ME</code> with a secret.</p>
+          <p>One folder on the VPS, <code>~/pspad</code>. The files below are assembled for your choices. Replace <code>example.com</code> with your domain and every <code>CHANGE_ME</code> with a secret. Generate each with <code>openssl rand -hex 24</code>; letters and digits only, so nothing needs quoting. Create each file below with <code>nano</code>, paste, save.</p>
+          <CodeBlock title="On the VPS">mkdir -p ~/pspad/keycloak &amp;&amp; cd ~/pspad</CodeBlock>
           <StackFile file="compose" title="compose.yaml" initial="vps-h2-vps-tunnel" />
           <StackFile file="env" title=".env" />
           <div data-when="expose=dns" hidden>
             <StackFile file="caddyfile" title="Caddyfile" />
           </div>
-          <CodeBlock title="The Keycloak realm">mkdir -p keycloak
-curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeBlock>
+          <CodeBlock title="The Keycloak realm">curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeBlock>
           <Callout title="The realm is imported once">
-            <p>Keycloak reads <code>keycloak/realm-psplace.json</code> on its first start and sets the client's redirect URIs from <code>APP_BASE_ADDRESS</code>. Change the address later and you update the client in the Keycloak console, not the file.</p>
+            <p>Keycloak reads <code>keycloak/realm-psplace.json</code> on its first start. The realm ships with <code>http://localhost:5001/*</code> as the redirect URI. You set your app's address in the Keycloak console in the First sign-in step, not in the file.</p>
           </Callout>
         </article>
 
         <article data-scenario="vps" data-step="6" hidden>
           <h2>Start and check</h2>
           <CodeBlock title="In ~/pspad">docker compose up -d --wait</CodeBlock>
-          <p>It returns before the API is ready. Give it ten more seconds, then from anywhere:</p>
+          <p>It returns before the API is ready, and Keycloak needs about two minutes on its first start to build and import the realm. Wait, then from anywhere:</p>
           <ul>
             <li><code>https://pspad-api.example.com/health</code> says <code>healthy</code>.</li>
             <li><code>https://auth.example.com</code> shows the Keycloak page.</li>
@@ -212,7 +216,7 @@ curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeB
           <h2>First sign-in</h2>
           <ol>
             <li>Open <code>https://auth.example.com/admin/</code> with the admin user and password from <code>.env</code>.</li>
-            <li>Realm <strong>psplace</strong> → <strong>Clients → pspad-frontend</strong>: <strong>Valid redirect URIs</strong> and <strong>Web origins</strong> contain <code>https://pspad.example.com</code>. Check once.</li>
+            <li>Open <strong>Realm psplace → Clients → pspad-frontend</strong>, <strong>replace</strong> <strong>Valid redirect URIs</strong> with <code>https://pspad.example.com/*</code> and save. <strong>Web origins</strong> is <code>+</code>, which follows.</li>
             <li><strong>Users → Add user</strong>, then <strong>Credentials → Set password</strong> with Temporary off. That is you.</li>
             <li>Open <code>https://pspad.example.com</code>, sign in, and install it from the browser menu for the offline app.</li>
           </ol>
@@ -221,20 +225,26 @@ curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeB
         <article data-scenario="vps" data-step="8" hidden>
           <h2>Keep it running</h2>
           <CodeBlock title="Upgrade">docker compose pull &amp;&amp; docker compose up -d --wait</CodeBlock>
+          <p>That pulls new PSPad images. A newer MongoDB, Keycloak or Postgres means copying the compose file from this page again.</p>
+          <p>Stop the API first for a MongoDB restore: <code>docker compose stop api</code>, then <code>start</code> it after.</p>
           <div data-when="mongo=vps">
-            <CodeBlock title="Back up MongoDB, nightly from cron">docker compose exec -T mongo sh -c 'mongodump --archive --gzip -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' &gt; pspad-$(date +%F).gz</CodeBlock>
+            <p>Make the folder first: <code>mkdir -p ~/pspad/backups</code>.</p>
+            <CodeBlock title="Back up MongoDB, nightly from crontab -e">0 3 * * * cd ~/pspad &amp;&amp; docker compose exec -T mongo sh -c 'mongodump --archive --gzip -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' &gt; ~/pspad/backups/pspad-$(date +\%F).gz</CodeBlock>
+            <CodeBlock title="Restore MongoDB">docker compose exec -T mongo sh -c 'mongorestore --archive --gzip --drop -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' &lt; backups/pspad-DATE.gz</CodeBlock>
           </div>
           <div data-when="mongo=atlas" hidden>
-            <p>Atlas M0 keeps no backups of its own. Once a week, from the VPS:</p>
-            <CodeBlock title="Back up MongoDB">docker run --rm --env-file .env mongo:8.3.11 sh -c 'mongodump --uri "$MONGO_CONNECTION_STRING" --archive --gzip' &gt; pspad-$(date +%F).gz</CodeBlock>
+            <p>Atlas M0 keeps no backups of its own. Once a week, from the VPS. Make the folder first: <code>mkdir -p ~/pspad/backups</code>.</p>
+            <CodeBlock title="Back up MongoDB, weekly from crontab -e">0 3 * * 0 cd ~/pspad &amp;&amp; docker run --rm --env-file .env mongo:8.3.11 sh -c 'mongodump --uri "$MONGO_CONNECTION_STRING" --archive --gzip' &gt; ~/pspad/backups/pspad-$(date +\%F).gz</CodeBlock>
+            <CodeBlock title="Restore MongoDB">docker run --rm -i --env-file .env mongo:8.3.11 sh -c 'mongorestore --uri "$MONGO_CONNECTION_STRING" --archive --gzip --drop' &lt; backups/pspad-DATE.gz</CodeBlock>
           </div>
           <div data-when="kc=pg" hidden>
-            <CodeBlock title="Back up Keycloak">docker compose exec -T postgres pg_dump -U keycloak keycloak | gzip &gt; keycloak-$(date +%F).sql.gz</CodeBlock>
+            <CodeBlock title="Back up Keycloak">docker compose exec -T postgres pg_dump -U keycloak keycloak | gzip &gt; backups/keycloak-$(date +%F).sql.gz</CodeBlock>
+            <CodeBlock title="Restore Keycloak">gunzip -c backups/keycloak-DATE.sql.gz | docker compose exec -T postgres psql -U keycloak keycloak</CodeBlock>
           </div>
           <div data-when="kc=h2">
-            <CodeBlock title="Back up Keycloak">docker compose stop keycloak &amp;&amp; docker run --rm -v pspad_keycloak-data:/data -v "$PWD":/out alpine tar czf /out/keycloak-$(date +%F).tgz -C /data . &amp;&amp; docker compose start keycloak</CodeBlock>
+            <CodeBlock title="Back up Keycloak">docker compose stop keycloak &amp;&amp; docker run --rm -v pspad_keycloak-data:/data -v "$PWD/backups":/out alpine:3.22.2 tar czf /out/keycloak-$(date +%F).tgz -C /data . &amp;&amp; docker compose start keycloak</CodeBlock>
+            <CodeBlock title="Restore Keycloak">docker compose stop keycloak &amp;&amp; docker run --rm -v pspad_keycloak-data:/data -v "$PWD/backups":/in alpine:3.22.2 sh -c 'rm -rf /data/* &amp;&amp; tar xzf /in/keycloak-DATE.tgz -C /data' &amp;&amp; docker compose start keycloak</CodeBlock>
           </div>
-          <p>Restore is the same command backwards: <code>mongorestore --archive --gzip</code>, <code>psql</code>, or untar into the volume.</p>
         </article>
 
         <div class="pager">
@@ -408,6 +418,15 @@ curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeB
 
   .pager { display: flex; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 20px; border-top: 1px solid var(--lines); }
   .button:disabled { opacity: 0.45; cursor: default; }
+
+  @media (max-width: 819px) {
+    .steps ol { display: flex; gap: 8px; overflow-x: auto; }
+    .steps ol[hidden] { display: none; }
+    .steps li { display: inline-block; flex: none; }
+    .steps button { width: auto; padding: 4px; }
+    .steps .label { display: none; }
+    .steps .n { width: 32px; height: 32px; }
+  }
 
   @media (min-width: 820px) {
     .selector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
