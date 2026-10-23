@@ -125,7 +125,7 @@ function postgres(c: Choices): string[] {
     '      POSTGRES_USER: keycloak',
     '      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}',
     '    volumes:',
-    '      - postgres-data:/var/lib/postgresql/data',
+    '      - postgres-data:/var/lib/postgresql',
     '    healthcheck:',
     '      test: ["CMD-SHELL", "pg_isready -U keycloak"]',
     '      interval: 5s',

@@ -60,6 +60,7 @@ test('postgres keeps keycloak users when chosen', () => {
   const c = vps('pg', 'vps', 'tunnel')
   assert.ok(services(compose(c)).includes('postgres'))
   assert.match(compose(c), /KC_DB: postgres/)
+  assert.match(compose(c), /postgres-data:\/var\/lib\/postgresql$/m)
   assert.match(env(c), /^POSTGRES_PASSWORD=CHANGE_ME$/m)
   const h2 = vps('h2', 'vps', 'tunnel')
   assert.ok(!services(compose(h2)).includes('postgres'))
