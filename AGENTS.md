@@ -100,7 +100,8 @@ module; `App` never sees `Infrastructure`; `Api` sees all. Only module edges:
 - **Docs ship with the change:** self-hoster-facing change (images, env,
   ports, services) → `docs/src/data/stack/` and the Self-host steps in
   `docs/src/pages/self-host.astro`; user-facing capability →
-  `docs/src/data/features.ts`; a changed screen → `npm run screenshots`.
+  `docs/src/data/features.ts`; a changed screen → `npm run screenshots` in
+  `test/e2e`.
 - **TDD.** Failing test first; every test class has `[UnitTest]` or
   `[IntegrationTest]` (`specs/testing-spec.md`). Never claim green without running.
 - **End-to-end ships with the feature.** A new or changed user-facing flow
