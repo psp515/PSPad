@@ -82,7 +82,7 @@ const highlights = [
     <Reveal>
       <div class="call">
         <h2>Run it yourself</h2>
-        <p>One file on your own VPS, about ten minutes.</p>
+        <p>Your own VPS, a few files, about thirty minutes.</p>
         <p><a class="button button-primary" href={join(base, 'self-host')}>Self-host PSPad</a></p>
       </div>
     </Reveal>
@@ -95,9 +95,8 @@ const highlights = [
     display: grid;
     gap: 40px;
     align-items: center;
-    min-height: calc(100dvh - var(--header-height, 73px));
     padding-top: 24px;
-    padding-bottom: 72px;
+    padding-bottom: 24px;
     box-sizing: border-box;
   }
 
@@ -106,10 +105,7 @@ const highlights = [
   .actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
   .cue {
-    position: absolute;
-    left: 50%;
-    bottom: 16px;
-    transform: translateX(-50%);
+    justify-self: center;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -121,13 +117,18 @@ const highlights = [
   }
 
   @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(6px); }
+  }
+
+  @keyframes bob-centered {
     0%, 100% { transform: translate(-50%, 0); }
     50% { transform: translate(-50%, 6px); }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .cue { animation: none; }
-  }
+  .hero :global(.shot.phone) { width: min(220px, 100%); }
+
+  .cue:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
 
   .highlights { display: grid; gap: 48px; margin-top: 24px; }
 
@@ -170,9 +171,25 @@ const highlights = [
   .call p:last-child { margin-bottom: 0; }
 
   @media (min-width: 820px) {
-    .hero { grid-template-columns: 3fr 2fr; }
+    .hero {
+      grid-template-columns: 3fr 2fr;
+      min-height: calc(100dvh - var(--header-height, 73px));
+      padding-bottom: 72px;
+    }
+    .hero :global(.shot.phone) { width: min(300px, 100%); }
+    .cue {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      animation-name: bob-centered;
+    }
     .highlight { grid-template-columns: 2fr 3fr; }
     :global(.reveal):nth-child(even) .highlight { grid-template-columns: 3fr 2fr; }
     :global(.reveal):nth-child(even) .highlight .text { order: 2; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cue { animation: none; }
   }
 </style>

@@ -1,13 +1,10 @@
 ---
-interface Props { delay?: number }
-const { delay = 0 } = Astro.props
 ---
-<div class="reveal" style={delay ? `transition-delay: ${delay}ms` : undefined}>
+<div class="reveal">
   <slot />
 </div>
 
 <script>
-  document.documentElement.classList.add('js')
   const targets = document.querySelectorAll('.reveal')
   const observer = new IntersectionObserver((entries) => {
     for (const entry of entries) {
