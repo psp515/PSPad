@@ -1,8 +1,9 @@
 # Docs site — design
 
-Status: Built. Issue #110. No ADR: the site's stack (Astro on GitHub
-Pages, `docs/`) and the self-hoster-facing rules in `AGENTS.md` §6 are
-unchanged; this is content, structure and one compose override.
+Status: Built, second round in progress. Issue #110. No ADR: the site's
+stack (Astro on GitHub Pages, `docs/`) and the self-hoster-facing rules in
+`AGENTS.md` §6 are unchanged; this is content, structure and a small
+library that assembles self-host stacks.
 
 ## 1. Problem and scope
 
@@ -19,24 +20,28 @@ In:
   URL redirects to `self-host/`.
 - One feature list in one data file, read by Home and Features.
 - Real screenshots, captured by a repeatable script against the e2e stack.
-- A self-host guide with options (bundled or hosted MongoDB, bundled or own
-  Keycloak, reverse proxy or Cloudflare Tunnel) and the maintainer's own
-  deployment as a worked, copyable example.
+- A self-host page that is a guided walkthrough: pick Quick Test or VPS
+  Hosting, then one step at a time, with every file assembled for the
+  choices made and every command copyable.
 - README trimmed to point at the site.
 
 Out:
 
 - Renaming the product. The name stays PSPad; the tagline changes.
 - Any change to the application, its manifest or its icons.
-- Changing what `docker/compose.yaml` runs by default. The only edit to it
-  is profiles on `mongo` and `keycloak` (§5.3); a first run is unchanged.
-  The maintainer's deployment ships as an override file beside it.
+- Any change to what `docker/compose.yaml` runs. It is the development
+  stack and the e2e stack; self-hosters never touch it. The profiles,
+  `compose.cloudflare.yaml`, `COMPOSE_PROFILES`, `MONGO_CONNECTION_STRING`
+  and `CLOUDFLARE_TUNNEL_TOKEN` added in the first round of this work are
+  removed again; the `docker/` folder matches `main` apart from the
+  comment in `mongo-app-user.js`.
 
 ## 2. Voice
 
 First person, the maintainer speaking. Short sentences. Every page opens
 with what the reader gets, not with how it is built. Technology names
 appear on Self-host only, and only where the reader has to type them.
+"Docker Compose", never "Docker Compose v2".
 
 The one-paragraph pitch, reused on Home, in the README and as the site
 description:
@@ -48,15 +53,27 @@ description:
 
 ## 3. Home (`/`)
 
-First screen, above the fold:
+### 3.1 First screen
+
+The hero fills the viewport below the sticky header
+(`min-height: calc(100dvh - header height)`) and nothing of the next section
+shows until the reader scrolls. In it:
 
 - Headline: *Money, tasks, ideas and your day, in one notepad you host.*
 - The pitch paragraph from §2.
+- One line in the accent colour: *Works offline. Opens with your data and
+  syncs when you are back.*
 - Two buttons: **Self-host it** and **See the features**.
 - One screenshot: My Day on a phone, light or dark following the site theme.
+- At the bottom edge, centred, a scroll cue: the words *See what it offers*
+  over a chevron, gently bobbing, linking to `#offers`. It is the only
+  animation that runs without scrolling.
 
-Second screen, "What it offers most", four blocks, each a two-line summary
-and a screenshot, alternating sides on desktop and stacked on a phone:
+### 3.2 Below the fold
+
+"What it offers" (`#offers`), five blocks. The first four are a two-line
+summary and a screenshot, alternating sides on desktop and stacked on a
+phone. The fifth is a full-width band with an icon and no screenshot.
 
 | Block | Screenshot | Summary source |
 |---|---|---|
@@ -64,13 +81,19 @@ and a screenshot, alternating sides on desktop and stacked on a phone:
 | Inbox | Inbox with items, phone | feature `inbox` |
 | Areas and lists | an area with lists, desktop | feature `areas` |
 | Budgets | budget overview, desktop | feature `budgets` |
+| Works offline | none | feature `offline` |
 
-Third screen: "Run it yourself" with one sentence (one compose file, your
-own VPS, about ten minutes), a button to Self-host, and a line linking the
-Cloudflare Tunnel section as "how I host it".
+Then "Run it yourself": *One file on your own VPS, about ten minutes.* and a
+**Self-host it** button. Nothing else; the "how I host it" line is gone.
 
-Removed: the twelve cards, the CSS mock, the scroll cue, the hero-reveal
-header animation, "How it goes". The sticky header stays.
+### 3.3 Scroll reveal
+
+Every block below the hero starts invisible and shifted down 24px, and
+transitions to its place when it enters the viewport, once. An
+`IntersectionObserver` in the page adds a class; CSS does the rest. With
+`prefers-reduced-motion: reduce` nothing moves and nothing is hidden, and
+without JavaScript nothing is hidden either (the hidden state is applied
+only under a `js` class the script sets on `<html>`).
 
 Footer on every page: *PSPad is free software, GPL v3. Source on GitHub.
 Questions: psp515.com.*
@@ -90,193 +113,195 @@ interface Feature {
 }
 ```
 
-Home reads the same file and picks `today`, `inbox`, `areas`, `budgets` by
-id; a missing id fails the build. The Features page renders `features`,
-then `planned`. The `in-progress` status is dropped: a feature is on
-the page when it is usable, and the recurrence card that currently carries
-it is built.
+Home reads the same file and picks `offline`, `today`, `inbox`, `areas`,
+`budgets` by id; a missing id fails the build. The Features page renders
+`features`, then `planned`.
 
 ### 4.2 The list
 
-Built, in this order. Each entry is the `does` sentence; the `how` sentence
-is written at implementation time from the current UI and the specs, and
-kept to one line.
+Built, in this order. `does` then `how`.
 
-1. **My Day** — Everything due today or earlier, from every area, with
-   timed tasks first.
-2. **Inbox** — Capture anything in one tap and sort it out later.
-3. **Areas and lists** — Work, home, side projects, each with its own lists
-   in your order.
-4. **Tasks and steps** — Due dates, priorities, a goal and ordered steps on
-   every task.
-5. **Descriptions** — Markdown notes on every task and item, offline too.
-6. **Repeats** — Daily to yearly, with a lead time, and never overdue.
-7. **Goals** — One goal across areas, with the tasks that serve it.
-8. **Reference lists** — Lists of things you look up, not do, with typed
-   fields.
-9. **Budgets** — Expenses, incomes and monthly balances in PLN and 28 other
-   currencies.
-10. **Spreadsheet import** — Bring a budget's history in from two CSV files.
-11. **Share a list or budget** — A 30-minute invite link; whoever joins
-    works with you, offline included.
-12. **Public snapshots** — A read-only link anyone can open and tick, until
-    it expires.
-13. **Statistics** — Charts and a heatmap built from what actually happened.
-14. **Works offline** — Opens with your data and syncs when you are back.
-15. **Live updates** — Other devices and list members see changes within a
-    moment.
-16. **English and Polish** — One choice in Settings, followed on every
-    device.
-17. **Made for a phone** — A bottom bar with Inbox, Areas, My Day, Goals
-    and Budgets.
-18. **Yours** — Your server, your Keycloak, your data, as many users as you
-    invite.
+1. **Works offline** — Opens with your data and syncs when you are back. —
+   Every screen says when it last updated. Pull down on a phone or press
+   refresh on a computer. A device untouched for 7 days asks you to sign in
+   again.
+2. **My Day** — Everything due today or earlier, from every area, on one
+   screen. — unchanged.
+3. **Inbox** — Capture anything in one tap and sort it out later. — An item
+   becomes a full task by setting list, date, priority, goal, steps, or just
+   remove it.
+4. to 18. — the remaining entries, unchanged and in their current order:
+   Areas and lists, Tasks and steps, Descriptions, Repeats, Goals,
+   Reference lists, Budgets, Spreadsheet import, Share a list or budget,
+   Public snapshots, Statistics, Live updates, English and Polish, Made for
+   a phone, Yours.
 
 Planned, unchanged: Habits, Annual plans, Reminders, GitHub issues, Cloud
 storage, 3D printing, Checklists.
 
-The "Adding a language" developer section leaves the Features page; it
-already lives in `specs/localization-design.md` §7 and the README's
-Development section links there.
-
 ### 4.3 Keeping it current
 
-`AGENTS.md` §6 "Docs ship with the change" is updated to name
-`docs/src/data/features.ts`. A user-facing capability changes that file in
-the same pull request; nothing else on the site lists features.
+`AGENTS.md` §6 "Docs ship with the change" names
+`docs/src/data/features.ts` for capabilities and
+`docs/src/data/stack/` for anything a self-hoster runs (images,
+environment variables, ports, services).
 
 ## 5. Self-host (`/self-host/`)
 
-Order: what you need, quick start, options, how I host it, maintenance.
-Every section is reachable from a short table of contents at the top.
+One page. At the top a one-line intro and a selector with two cards,
+**Quick Test** and **VPS Hosting**. Below it a stepper: the step list on
+the left (numbered, current step filled, done steps ticked), the current
+step on the right, **Back** and **Next** under it. On a phone the step list
+collapses to "Step 3 of 8" with a dropdown. Clicking a step in the list
+jumps to it.
 
-### 5.1 What you need
+State lives in the URL query (`?scenario=vps&step=5&kc=pg&mongo=atlas&expose=tunnel`)
+through `history.replaceState`, so a step is linkable and reload keeps the
+place. Defaults: `quick`, step 1, `h2`, `vps`, `tunnel`.
 
-A Linux machine with Docker Compose, a domain if anyone but you will reach
-it, and about ten minutes. MongoDB and Keycloak are bundled; both can be
-yours instead (§5.3).
+Every command and file sits in a block with a **Copy** button that writes
+the block's text to the clipboard and reads *Copied* for a moment. Every
+URL the reader must open is a link.
 
-### 5.2 Quick start
+Without JavaScript the page renders Quick Test's steps and VPS Hosting's
+steps one after another, all visible, with the default choices; the
+selector and stepper only hide and show.
 
-The existing five steps, cut to what you type and what you see:
+### 5.1 Quick Test, five steps
 
-1. Clone.
-2. Copy `docker/.env.example` to `docker/.env`. The environment table is
-   rendered from the file as today, but the page explains only the four
-   URLs; everything else keeps its default on a first run.
-3. `docker compose -f docker/compose.yaml up -d`.
-4. Create a user in Keycloak at `localhost:8080`, realm `psplace`.
-5. Open `localhost:5001` and sign in.
+1. **What you need.** Docker on your computer (Docker Desktop on Windows or
+   macOS, Docker Engine on Linux), access to the internet, ports 5000, 5001
+   and 8080 free. Nothing is built; the published images are pulled.
+2. **Get the files.** A folder with three files: `compose.yaml`, shown in
+   full (§6, scenario `quick`), and two downloaded with `curl` from the
+   repository's `main` branch: `keycloak/realm-psplace.json` and
+   `mongo-entrypoint.sh`.
+3. **Start.** `docker compose up -d --wait`, then the three local URLs: the
+   app at 5001, `/health` on the API at 5000, Keycloak at 8080.
+4. **Make yourself a user.** The realm has self-registration off, said
+   plainly. Keycloak console at `localhost:8080/admin/`, `admin`/`admin`,
+   realm `psplace`, Users → Add user, Credentials → Set password with
+   Temporary off.
+5. **Try it.** Open the app, sign in, three things to do first (an inbox
+   item turned into today's task, a step on it, a budget with an expense in
+   another currency). Then `docker compose down -v` to remove everything,
+   and a button to switch to VPS Hosting.
 
-The two warnings that matter on day one stay as callouts: the Keycloak
-redirect URI when the app address changes, and the 20 to 30 seconds before
-the first sync.
+### 5.2 VPS Hosting, eight steps
 
-### 5.3 Options
+1. **What you need.** A Linux VPS with access to the internet, 2 GB of RAM
+   and Docker Engine; a domain in Cloudflare with three names under it
+   (app, API, Keycloak); about thirty minutes. The images are
+   `ghcr.io/psp515/pspad-frontend:latest` and
+   `ghcr.io/psp515/pspad-backend:latest`, rebuilt on every change.
+2. **Choose.** Three choices, each two cards with one line of consequence:
+   - Keycloak keeps its users in **a file** (`h2`) or **Postgres** (`pg`).
+   - MongoDB runs **on the VPS** (`vps`) or **on MongoDB Atlas** (`atlas`).
+   - The internet reaches it through **Cloudflare Tunnel** (`tunnel`) or
+     **Cloudflare DNS** (`dns`).
+3. **Cloudflare.** Tunnel: Zero Trust → Networks → Tunnels, create,
+   copy the token, three public hostnames to `http://app:8080`,
+   `http://api:8080`, `http://keycloak:8080`; Cloudflare creates the DNS
+   records. DNS: three A records to the VPS address with proxy status
+   *DNS only* so Caddy can obtain Let's Encrypt certificates, and ports 80
+   and 443 opened on the VPS.
+4. **MongoDB.** Atlas: free M0 cluster, database user `pspad` with
+   `readWrite` on database `pspad`, allow the VPS address, copy the
+   connection string in the form
+   `mongodb+srv://pspad:<password>@<cluster>.mongodb.net/pspad?retryWrites=true&w=majority`.
+   VPS: nothing to do except download `mongo-entrypoint.sh` beside the
+   compose file.
+5. **Files.** `compose.yaml` and `.env`, assembled for the choices (§6),
+   plus `Caddyfile` for `dns`, plus the `curl` for the realm. The reader
+   replaces `example.com` and every `CHANGE_ME`.
+6. **Start and check.** `docker compose up -d --wait`, then the three public
+   URLs to open and what each shows; `docker compose logs -f api` and
+   `keycloak` when something is missing.
+7. **First sign-in.** Keycloak console at the auth URL with the admin from
+   `.env`; check the `pspad-frontend` client's redirect URIs and web origins
+   contain the app URL; add a user; open the app and install it from the
+   browser for the offline app.
+8. **Keep it running.** Upgrade: `docker compose pull && docker compose up
+   -d --wait`. Backups for the chosen MongoDB (`mongodump` through
+   `docker compose exec` for `vps`, `docker run --rm mongo:8.3.11 mongodump
+   --uri` for `atlas`), for the chosen Keycloak store (`pg_dump` for `pg`,
+   stop and tar the volume for `h2`), and one line on restoring.
 
-Each option is one subsection: when you want it, what changes, the exact
-lines.
+### 5.3 Leaves the page
 
-**MongoDB: bundled or hosted.** Hosted means any MongoDB 8 replica set, for
-example an Atlas M0 free cluster: create the cluster, a database user with
-`readWrite` on one database, allow the VPS address, copy the
-`mongodb+srv://` string. In `docker/.env` set `MONGO_CONNECTION_STRING` to
-it and remove `local-mongo` from `COMPOSE_PROFILES`.
+The flat sections of the first round: What you need, Quick start, Options,
+How I host it, Maintenance, and the collapsed environment table rendered
+from `docker/.env.example`. `EnvTable.astro` and `lib/repo.ts` are deleted
+if nothing else uses them.
 
-This needs one change to `docker/compose.yaml`: the `mongo` service gets
-`profiles: [local-mongo]`, the `keycloak` service gets
-`profiles: [local-keycloak]`, and the API's `depends_on` on `mongo` gets
-`required: false` so Compose ignores it when the profile is off.
-`docker/.env.example` ships `COMPOSE_PROFILES=local-mongo,local-keycloak`,
-so a first run starts the same four containers as today; dropping a name
-from that line leaves the service out. The API reads
-`MONGO_CONNECTION_STRING` from `.env`, whose shipped value is the local
-string built from `MONGO_PASSWORD` and `MONGO_DATABASE` by `.env`
-interpolation; hosted means replacing that one value.
+## 6. Stack assembly
 
-**Keycloak: bundled or your own.** Your own means an existing Keycloak with
-the realm imported from `docker/keycloak/realm-psplace.json`, or any realm
-with a public client `pspad-frontend` and an audience `pspad-backend`.
-Point `KEYCLOAK_AUTHORITY` and `KEYCLOAK_INTERNAL_AUTHORITY` at it, set the
-admin credentials the API uses for account deletion, and drop
-`local-keycloak` from `COMPOSE_PROFILES`.
+`docs/src/data/stack/` is a small library the Self-host page and a check
+script share. Plain TypeScript using only syntax Node 22 strips (no enums,
+no parameter properties), so the script runs it directly.
 
-**Reaching it from the internet.** Two paths, each a short list:
+```ts
+// options.ts
+export type Scenario = 'quick' | 'vps'
+export type KeycloakStore = 'h2' | 'pg'
+export type MongoHost = 'vps' | 'atlas'
+export type Exposure = 'tunnel' | 'dns'
+export interface Choices { scenario: Scenario; kc: KeycloakStore; mongo: MongoHost; expose: Exposure }
+export const quick: Choices
+export function combinations(): Choices[]   // quick + the 8 vps combinations
+export function key(c: Choices): string     // 'quick' | 'vps-h2-vps-tunnel' …
 
-- *Reverse proxy on the VPS* (nginx, Caddy): three hostnames, TLS at the
-  proxy, `X-Forwarded-For` appended, HSTS at the proxy,
-  `API_TRUSTED_PROXY_NETWORK` set to the Docker subnet, port 5000 closed.
-- *Cloudflare Tunnel*: no open ports, `cloudflared` beside the stack,
-  `API_CLIENT_IP_HEADER=CF-Connecting-IP`, HSTS in the Cloudflare
-  dashboard. The worked example is §5.4.
+// assemble.ts
+export function compose(c: Choices): string
+export function env(c: Choices): string     // '' for quick
+export function caddyfile(c: Choices): string  // '' unless expose === 'dns'
+```
 
-The CSP and CORS callout stays, shortened to its one sentence: the browser
-only talks to the origins in `.env`.
+What the assembled files contain:
 
-### 5.4 How I host it
+- `name: pspad`. Services `api` and `app` from the GHCR `latest` images,
+  `restart: unless-stopped`. The API's environment is the same set
+  `docker/compose.yaml` passes today. Quick publishes 5000, 5001 and 8080;
+  VPS publishes nothing except Caddy's 80 and 443.
+- `mongo` (image `mongo:8.3.11`, entrypoint, keyfile and data volumes,
+  healthcheck) unless `atlas`, in which case the API reads
+  `MONGO_CONNECTION_STRING` from `.env`.
+- `keycloak` (`quay.io/keycloak/keycloak:26.8.1`): `start-dev
+  --import-realm` for quick, `start --import-realm` with
+  `KC_HTTP_ENABLED`, `KC_HOSTNAME_STRICT` and `KC_PROXY_HEADERS: xforwarded`
+  for VPS; `KC_DB*` pointing at `postgres` for `pg`, a `keycloak-data`
+  volume for `h2`. The realm folder is bind-mounted read-only.
+- `postgres` (`postgres:18.6-alpine3.24`, healthcheck, volume) for `pg`.
+- `cloudflared` (`cloudflare/cloudflared:2026.9.1`, `TUNNEL_TOKEN` from
+  `.env`) for `tunnel`; `caddy` (`caddy:2.11.2-alpine`, the Caddyfile,
+  a data volume) for `dns`.
+- VPS declares the default network with a fixed subnet `10.77.0.0/24` so
+  `.env` ships `PROXY_NETWORK=10.77.0.0/24` and the API's
+  `Proxy__KnownNetworks__0` needs no inspection step.
+  `Proxy__ClientIpHeader` is `CF-Connecting-IP` for `tunnel` and
+  `X-Forwarded-For` for `dns`.
+- `.env` for VPS: the four public URLs on `example.com`, the Keycloak admin,
+  then only the secrets the choices need (`MONGO_PASSWORD` or
+  `MONGO_CONNECTION_STRING`, `POSTGRES_PASSWORD`, `CLOUDFLARE_TUNNEL_TOKEN`),
+  every secret `CHANGE_ME`, each with a one-line comment.
 
-The maintainer's deployment on a small Polish VPS (Mikrus), written as
-steps a reader can follow with their own domain. Reconstructed from the
-running containers; secrets never appear.
+Images are pinned to the same versions `docker/compose.yaml` uses, and a
+test (§8) fails when they drift.
 
-Shape:
+The page renders all nine combinations at build time, each file in a
+`<pre data-stack="<key>">`, and the client script shows the one matching
+the choices. No templating runs in the browser.
 
-- Three compose projects on one shared external Docker network `proxy`:
-  `pspad` (app, api), `keycloak` (Keycloak 26 on Postgres 18, data under a
-  bind mount, realm imported from a folder), `cloudflare` (`cloudflared`
-  with a tunnel token).
-- MongoDB is an Atlas M0 cluster. No `mongo` service.
-- Nothing is published to the internet. App, api and Keycloak bind to
-  `127.0.0.1` only; `cloudflared` reaches them by container name over
-  `proxy`.
-- Three public hostnames in the Zero Trust dashboard: `pspad.<domain>` to
-  `app:8080`, `pspad-api.<domain>` to `api:8080`, `auth.<domain>` to
-  `keycloak:8080`.
-- API: `API_TRUSTED_PROXY_NETWORK` is the `proxy` subnet,
-  `API_CLIENT_IP_HEADER=CF-Connecting-IP`, CORS allows the app origin.
-- Keycloak: `KC_HOSTNAME=https://auth.<domain>`, `KC_HOSTNAME_STRICT=true`,
-  `KC_HTTP_ENABLED=true`, `KC_PROXY_HEADERS=xforwarded`, `start
-  --import-realm`.
-- Images pinned to exact versions, as `docker/compose.yaml` already does.
+`docs/scripts/check-stack.mjs` writes every combination to a temporary
+folder (compose, `.env` with the `CHANGE_ME` values, Caddyfile, an empty
+`keycloak/` folder and `mongo-entrypoint.sh`) and runs
+`docker compose config --quiet` on each; a non-zero exit fails it. The
+docs workflow runs it before `npm run build`; `package.json` exposes it as
+`npm run check-stack`.
 
-Shipped files, so the example is copyable rather than retyped:
+## 7. Screenshots
 
-- `docker/compose.cloudflare.yaml`: an override that adds a `cloudflared`
-  service reading `CLOUDFLARE_TUNNEL_TOKEN` from `.env` as an environment
-  variable, not a command-line argument, joins every service to an external
-  `proxy` network, removes the published ports, and leaves out `mongo`
-  through the profile from §5.3.
-- `docker/.env.example`: `CLOUDFLARE_TUNNEL_TOKEN` and
-  `MONGO_CONNECTION_STRING`, with comments in the existing style.
-
-Steps on the page:
-
-1. Create the Atlas cluster and copy the connection string.
-2. Create the tunnel in Zero Trust, copy its token, add the three public
-   hostnames.
-3. `docker network create proxy`.
-4. Fill `.env`: the four public `https://` URLs, the connection string, the
-   token, the proxy subnet.
-5. `docker compose -f docker/compose.yaml -f docker/compose.cloudflare.yaml
-   up -d`.
-6. In Keycloak at `https://auth.<domain>`, set the client's redirect URI to
-   the app URL, create the first user.
-7. Turn on HSTS in Cloudflare, SSL/TLS → Edge Certificates.
-
-Keycloak on Postgres as a separate project stays prose, with the five
-`KC_*` values above, because the bundled Keycloak in `compose.yaml` runs in
-development mode on its own store and that is enough for most self-hosters.
-
-### 5.5 Maintenance
-
-Backups, upgrading and restarting, and the optional database user, moved
-from the install page unchanged in substance, under one heading at the end.
-The two "worth knowing" warnings (Keycloak in development mode, the old
-keyfile in git history) merge into one short callout under Backups.
-
-## 6. Screenshots
-
-`test/e2e/screenshots.ts`, run as `npm run screenshots` in `test/e2e`
+`test/e2e/screenshots.spec.ts`, run as `npm run screenshots` in `test/e2e`
 against the e2e stack. It is a Playwright test file in its own project in
 `playwright.config.ts` (`screenshots`, not matched by `npm test`), so it
 reuses the account fixture, `signIn`, and the helpers in `test/e2e/helpers`.
@@ -305,24 +330,34 @@ rules `theme.css` already uses for colours.
 The script is documented in `test/e2e/README.md` and runs on demand only;
 CI does not run it.
 
-## 7. README
+## 8. README
 
-The About section becomes the pitch from §2 and the four highlight titles
+The About section becomes the pitch from §2 and the five highlight titles
 with one line each, then a link to the Features page. The Documentation
 section lists the three pages. Development is unchanged except for a link
 to `specs/localization-design.md` for adding a language.
 
-## 8. Testing and acceptance
+## 9. Testing and acceptance
 
 - `npm run build` in `docs/` passes; the docs workflow already runs it on
   every pull request.
-- `docker compose -f docker/compose.yaml -f docker/compose.cloudflare.yaml
-  --env-file docker/.env.example config` renders without error when
-  `CLOUDFLARE_TUNNEL_TOKEN` is set and fails fast naming the variable when it
-  is empty; with `COMPOSE_PROFILES=` empty it has no `mongo` or `keycloak` service, and
-  with the shipped `.env.example` it has both.
-- The screenshot script runs once on the maintainer's box against the e2e
-  stack and produces the ten files.
-- `features.ts` has an entry for every card the Features page showed on
-  `origin/main` at the time of writing, plus none that the app lacks.
+- `npm run check-stack` in `docs/` passes: all nine combinations render
+  through `docker compose config`.
+- A unit test of the assembler (`docs/test/stack.test.mjs`, `node --test`,
+  run as `npm test` in `docs/`) asserts: `quick` has `mongo` and no
+  `postgres`, `cloudflared` or `caddy`; every `atlas` combination has no
+  `mongo` service and its `.env` has `MONGO_CONNECTION_STRING`; `pg` adds
+  `postgres` and `KC_DB: postgres`; `tunnel` adds `cloudflared` and
+  `CF-Connecting-IP`; `dns` adds `caddy`, a Caddyfile with three sites and
+  `X-Forwarded-For`; no file contains `${` left unexpanded by `.env`
+  except the variables `.env` declares; the image tags for `mongo`,
+  `keycloak` and the two PSPad images equal those in `docker/compose.yaml`
+  and the CI workflow.
+- `docker/` matches `origin/main` except the comment in
+  `mongo-app-user.js`: `git diff origin/main -- docker/` lists that file
+  only.
+- The Quick Test compose, with its three ports remapped, starts on the
+  maintainer's box, the API reports `Healthy`, and `down -v` removes it.
 - `/install/` responds with a redirect to `/self-host/`.
+- Home: with JavaScript the hero's bottom edge is at the fold at 1280×800
+  and 390×844; the next section's heading is below it.
