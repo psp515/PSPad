@@ -609,12 +609,15 @@ the same row, star and meta treatment.
 A task's second line runs, in this order: the time (`TimeRow.Describe`:
 `09:30–11:00`, `09:30` without an end, `22:00–01:00 (+1)` overnight; `Color.Primary`, medium weight; hidden in My Day's
 Schedule, whose gutter shows it), due date (red when overdue,
-"Until 12 Oct" on a repeat), step progress (checklist icon and `0/4`), the
+"Until 12 Oct" on a repeat), the due step (`pspad-step-due-mark`, one-time
+tasks only: `SubdirectoryArrowRight`, the name of `EarliestDueStep`, " · ",
+its date as `d MMM`; all red once the date is past;
+`step-deadlines-design.md`), step progress (checklist icon and `0/4`), the
 repeat icon, the description icon, the snapshot mark, the goal where the
 screen passes one, then the list name where the screen passes one (My Day,
-goal screen and goal cards). Each piece keeps whole; only the goal and the
-list name shrink, with an ellipsis. The day a task was added is never on
-a row — the task panel's footer carries it.
+goal screen and goal cards). Each piece keeps whole; only the due step's
+name, the goal and the list name shrink, with an ellipsis. The day a task
+was added is never on a row — the task panel's footer carries it.
 
 **The goal on a row** (issue #200) is `Outlined.TrackChanges` — the icon
 the panel's Goal row uses — and the goal's name in caption type, the full
@@ -696,12 +699,19 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    (removing a step stays the ✕). A checked step keeps its strikethrough
    and muted colour while editable. `Disabled` (View mode) makes the field
    read-only.
-   Given `Draft` (a `List<string>`) instead of `Task`, it edits that list
-   in place and sends nothing — rows show a muted empty-box icon rather
-   than a checkbox, and the name field edits the draft entry with the same
-   empty/Escape rules. Add mode (from every page) and the Inbox convert form
-   use it this way; `TaskDraft.Steps` holds Add's list. A draft step's
-   deadline is issue #202's.
+   Each unchecked step on a one-time task ends, before the ✕, with its
+   deadline (`pspad-step-due`): the date read relatively, red when past,
+   or a muted `Event` icon when empty (shown on hover on desktop). Both open
+   `DueDateMenu` — the Due row's quick picks, "Pick a date…", and
+   "Clear date" when set — and send `SetStepDueDate`. Checked steps,
+   repeating tasks and View mode show no control (`step-deadlines-design.md`).
+   Given `Draft` (a `List<StepDraft>`, name and optional deadline) instead
+   of `Task`, it edits that list in place and sends nothing — rows show a
+   muted empty-box icon rather than a checkbox, and the name field edits the
+   draft entry with the same empty/Escape rules. Add mode (from every page)
+   and the Inbox convert form use it this way; `TaskDraft.Steps` holds
+   Add's list. A draft step's deadline is sent as `SetStepDueDate` right
+   after its `AddStep`.
 4. Property rows, each a `PropertyRow` — icon · label · value, the whole
    row a `MudMenu` activator; the label sits in a fixed 88px column, never
    wraps, and a long value wraps beneath itself rather than running into
@@ -1078,12 +1088,12 @@ addressed as `?inbox=new` (the Inbox FAB or its empty state) or
   plus a star in the header — the same order as `TaskDetailPanel`. Draft
   steps and the description live only in the panel until conversion;
   closing without converting drops them, as it drops the other draft
-  edits. Draft steps have no checkbox and no due date; their names edit
-  in place like a task's steps. The Name field is the item's own text and saves as it commits
+  edits. Draft steps have no checkbox and may carry a deadline; their names
+  edit in place like a task's steps. The Name field is the item's own text and saves as it commits
   (`RenameInboxItem`), so an item can be reworded without being converted.
   - **Convert to task** on the left sends `OrganiseInboxItem` and then only
     the edits that differ from the defaults — one `AddStep` per draft step
-    in order, and `SetTaskDescription` for a non-blank description — so one
+    in order, each followed by `SetStepDueDate` when it has a deadline, and `SetTaskDescription` for a non-blank description — so one
     tap files a finished task.
   - **Discard** on the right removes the item.
   - The List row starts on the list used for the previous conversion
