@@ -11,10 +11,11 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 
 ## 2. Invariants (never regress)
 
-- **Today rule:** task is on Today when due today or earlier, or its next
-  unchecked step is. "Today" is in the **user's stored time zone**, never
-  machine-local. **Recurring tasks are never overdue** — only today's pending
-  occurrence shows. Rule lives once in the domain layer, shared client and server.
+- **Today rule:** task is on Today when due today or earlier, or any
+  unchecked step's deadline is (`adr/0078`). "Today" is in the **user's
+  stored time zone**, never machine-local. **Recurring tasks are never
+  overdue** — only today's pending occurrence shows. Rule lives once in the
+  domain layer, shared client and server.
 - Recurrence = template + occurrences, only Done days stored (AD-7).
 - Goals are global entities; star means important only, never puts a task on Today.
 - `PSPad.Module.Tasks` and `PSPad.Module.Money` are WASM-safe: reference
@@ -48,6 +49,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Languages, resources, plurals, culture | `specs/localization-design.md` |
 | Live updates (sync nudges over SSE, proxies) | `specs/live-updates-design.md` |
 | My Day schedule timeline and sections | `specs/my-day-schedule-design.md` |
+| Step deadlines and the step trigger | `specs/step-deadlines-design.md` |
 | Why a decision was made | `adr/README.md` index → the `Active` record |
 
 Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither silently.
