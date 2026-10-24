@@ -356,10 +356,15 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
     background: var(--surface);
     color: var(--text);
     cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
   }
 
   .card span { font-size: 0.92rem; color: var(--muted); line-height: 1.5; }
-  .card:hover { border-color: var(--primary); }
+  @media (hover: hover) {
+    .card:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 20%, transparent); }
+  }
+  .card:active { transform: scale(0.98); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 25%, transparent); transition-duration: 0.05s; }
+  .card:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
   .card.is-on { border-color: var(--primary); background: var(--raised); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent); }
 
   .stepper { display: grid; gap: 24px; align-items: start; }
@@ -379,8 +384,13 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
     color: var(--muted);
     text-align: left;
     cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
   }
-  .steps button:hover { color: var(--text); }
+  @media (hover: hover) {
+    .steps button:hover { color: var(--text); background: var(--raised); transform: translateX(3px); }
+  }
+  .steps button:active { transform: scale(0.96); transition-duration: 0.05s; }
+  .steps button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   .steps .n {
     display: inline-flex;
     align-items: center;
@@ -425,8 +435,13 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
     .steps ol[hidden] { display: none; }
     .steps li { display: inline-block; flex: none; }
     .steps button { width: auto; padding: 4px; }
+    .steps button:hover { transform: translateY(-2px); }
     .steps .label { display: none; }
     .steps .n { width: 32px; height: 32px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, .steps button { transition: none; transform: none; }
   }
 
   @media (min-width: 820px) {
