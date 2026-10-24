@@ -660,9 +660,18 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    `MudTextField` with no underline or label.
 3. **Steps** (outside Add) — `StepList`: `MudCheckBox` rows with a remove
    icon, then an unboxed "Add step"/"Next step" field (Enter adds).
+   Each step's name is itself an unboxed `MudTextField` (`Underline=false`,
+   `pspad-step-name`, `MaxLength` `ContentLimits.Name`), always editable —
+   no click-to-edit mode (issue #199). It commits on blur or Enter: a
+   trimmed name that differs sends one `RenameStep`; an unchanged name
+   sends nothing; an empty name, or Escape, puts the stored name back
+   (removing a step stays the ✕). A checked step keeps its strikethrough
+   and muted colour while editable. `Disabled` (View mode) makes the field
+   read-only.
    Given `Draft` (a `List<string>`) instead of `Task`, it edits that list
    in place and sends nothing — rows show a muted empty-box icon rather
-   than a checkbox. The Inbox convert form uses it this way.
+   than a checkbox, and the name field edits the draft entry with the same
+   empty/Escape rules. The Inbox convert form uses it this way.
 4. Property rows, each a `PropertyRow` — icon · label · value, the whole
    row a `MudMenu` activator; the label sits in a fixed 88px column, never
    wraps, and a long value wraps beneath itself rather than running into
@@ -1023,7 +1032,8 @@ addressed as `?inbox=new` (the Inbox FAB or its empty state) or
   plus a star in the header — the same order as `TaskDetailPanel`. Draft
   steps and the description live only in the panel until conversion;
   closing without converting drops them, as it drops the other draft
-  edits. Draft steps have no checkbox and no due date. The Name field is the item's own text and saves as it commits
+  edits. Draft steps have no checkbox and no due date; their names edit
+  in place like a task's steps. The Name field is the item's own text and saves as it commits
   (`RenameInboxItem`), so an item can be reworded without being converted.
   - **Convert to task** on the left sends `OrganiseInboxItem` and then only
     the edits that differ from the defaults — one `AddStep` per draft step
