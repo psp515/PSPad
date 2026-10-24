@@ -444,9 +444,10 @@ plan holds only Completed.
 
 The day lives in the URL as `/?day=yyyy-MM-dd`; `/` is today and a
 malformed `day` falls back to today. Arrows, days, swipes and the picker navigate with
-`replace: false`, so Back steps through visited days. `TaskQuery.For` and
-`Without` keep `day` (opening a task gives `?day=…&task=…`, closing the
-panel keeps the day); `ForNewTask` does not.
+`replace: false`, so Back steps through visited days. `TaskQuery.For`,
+`ForNewTask` and `Without` keep `day` (opening a task gives
+`?day=…&task=…`, adding one `?day=…&task=new&due=…`, closing the panel
+keeps the day).
 
 **My Day adds tasks.** My Day carries one page-level action, **Add task**,
 as a plain `MudFab` (`pspad-fab`, `aria-label` "Add task"; the Goals page
