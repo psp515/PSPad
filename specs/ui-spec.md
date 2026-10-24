@@ -614,7 +614,8 @@ it loaded, `Goal.Holding(goals, task.Id)` over goals not deleted, so the
 link lives only in `Goal.TaskIds` (`adr/0065`) and the task stores nothing
 about its goal. It shows whatever the goal's status. My Day's rows,
 `ListPage` (open and completed) and `ThingCard` — through `GoalNameOf`,
-beside `ListNameOf`, so area-board and goal cards — pass it; `GoalPage`
+beside `ListNameOf`, filled by `ListCard` on the area board — pass it;
+`GoalPage`
 (every task there is that goal's), the signed-out Welcome demo and
 `DayTimeline` blocks (no room) do not.
 
