@@ -300,7 +300,7 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
     const back = document.querySelector<HTMLButtonElement>('[data-back]')!
     const next = document.querySelector<HTMLButtonElement>('[data-next]')!
     back.disabled = step === 1
-    next.disabled = step === counts[scenario]
+    next.textContent = step === counts[scenario] ? 'Done' : 'Next'
     const query = new URLSearchParams({ scenario, step: String(step) })
     if (scenario === 'vps') { query.set('kc', choices.kc); query.set('mongo', choices.mongo); query.set('expose', choices.expose) }
     history.replaceState(null, '', `?${query}`)
@@ -323,7 +323,12 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
     render()
   }))
   document.querySelector('[data-back]')!.addEventListener('click', () => go(step - 1))
-  document.querySelector('[data-next]')!.addEventListener('click', () => go(step + 1))
+  document.querySelector('[data-next]')!.addEventListener('click', () => {
+    if (step < counts[choices.scenario]) return go(step + 1)
+    step = 1
+    render()
+    window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  })
 
   render()
 </script>

@@ -152,7 +152,8 @@ environment variables, ports, services).
 One page. At the top a one-line intro and a selector with two cards,
 **Quick Test** and **VPS Hosting**. Below it a stepper: the step list on
 the left (numbered, current step filled, done steps ticked), the current
-step on the right, **Back** and **Next** under it. On a phone the step list
+step on the right, **Back** and **Next** under it; on the last step **Next**
+reads **Done** and returns to the top of the page. On a phone the step list
 is a row of numbered buttons; the panel's first line says which step it is. Clicking a step in the list
 jumps to it.
 
