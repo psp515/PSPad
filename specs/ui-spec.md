@@ -448,6 +448,15 @@ malformed `day` falls back to today. Arrows, days, swipes and the picker navigat
 `Without` keep `day` (opening a task gives `?day=…&task=…`, closing the
 panel keeps the day); `ForNewTask` does not.
 
+**My Day adds tasks.** My Day carries one page-level action, **Add task**,
+as a plain `MudFab` (`pspad-fab`, `aria-label` "Add task"; the Goals page
+pattern). It opens the task panel's Add mode with no list and the due date
+prefilled: `TaskQuery.ForNewTask(uri, due: day)` gives
+`?task=new&due=yyyy-MM-dd` for the day on screen, or for today when the
+day on screen is in the past — a task is never added into the past. On a
+phone it sits above `BottomNav` like every other page FAB, beside the
+raised My Day button, not replacing it.
+
 The day is two parts inside `pspad-day`: the task sections
 (`pspad-day-lists`) and the Schedule (`pspad-day-schedule`). From `md` they
 are a grid, sections on the left and a 380px schedule column on the right
@@ -639,8 +648,11 @@ appends `?task={taskId}` to the current route; `TaskDetailPanel` renders as
 a slide-in overlay (full-screen below `md`) without reflowing the page. The
 query string, not component state, so back-navigation closes the panel
 without leaving the screen, and a task is linkable. Adding a task uses the
-same panel in its new-task mode, addressed as `?task=new&list={listId}`
-(`TaskQuery.ForNewTask`) — never an inline field or a dialog.
+same panel in its new-task mode, addressed as `?task=new` with an
+optional `&list={listId}` and an optional `&due=yyyy-MM-dd`
+(`TaskQuery.ForNewTask(uri, listId?, due?)`) — never an inline field or a
+dialog. A list page and an area board pass the list; My Day passes the day
+and no list. A malformed `list` or `due` is ignored, as if absent.
 
 **Detail panels share one shell.** `Components/DetailPanel.razor` is the
 only right-anchored detail drawer: 420px from `md` up, full width below it.
@@ -669,10 +681,11 @@ and Todoist's task view: the task itself on top, its properties as
 one-line rows under it, nothing boxed in a form. Top to bottom:
 
 1. Header — X, the task's place as `Area › List` (`New task · Area › List`
-   in Add) in `Typo.body2`, star on the right.
+   in Add, plain `New task` in Add with no list yet — the title follows the
+   List row once one is picked) in `Typo.body2`, star on the right.
 2. Done checkbox (outside Add) beside the name, an unboxed `Typo.h6`
    `MudTextField` with no underline or label.
-3. **Steps** (outside Add) — `StepList`: `MudCheckBox` rows with a remove
+3. **Steps** — `StepList`: `MudCheckBox` rows with a remove
    icon, then an unboxed "Add step"/"Next step" field (Enter adds).
    Each step's name is itself an unboxed `MudTextField` (`Underline=false`,
    `pspad-step-name`, `MaxLength` `ContentLimits.Name`), always editable —
@@ -685,7 +698,9 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    Given `Draft` (a `List<string>`) instead of `Task`, it edits that list
    in place and sends nothing — rows show a muted empty-box icon rather
    than a checkbox, and the name field edits the draft entry with the same
-   empty/Escape rules. The Inbox convert form uses it this way.
+   empty/Escape rules. Add mode (from every page) and the Inbox convert form
+   use it this way; `TaskDraft.Steps` holds Add's list. A draft step's
+   deadline is issue #202's.
 4. Property rows, each a `PropertyRow` — icon · label · value, the whole
    row a `MudMenu` activator; the label sits in a fixed 88px column, never
    wraps, and a long value wraps beneath itself rather than running into
@@ -755,13 +770,29 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      it moves to Today as usual."
    - **Priority** — the four fixed levels with coloured dots.
    - **Goal** — the user's goals.
-   - **List** (outside Add) — lists grouped under area headings; picking
-     one moves the task at once. There is no Move button.
+   - **List** — lists grouped under area headings; picking
+     one moves the task at once. There is no Move button. In Add it shows
+     only when the route names no list (My Day's FAB): the same lists Move
+     offers (task lists in the user's areas plus lists shared with them),
+     empty as "No list" in the muted colour, picking one sets
+     `TaskDraft.ListId` and sends nothing. A route that names a list keeps
+     it fixed and shows no List row, as before.
 5. **Description** (outside Add) — a `PanelSection` titled "Description"
    holding the task's `MarkdownField` (see below).
 6. Footer — "Created …" on the left, a red trash `MudIconButton` on the
    right that asks via `ConfirmDialog` before deleting. In Add the footer
-   holds only **Add task**, and Enter in the name field adds too.
+   holds only **Add task**, and Enter in the name field adds too. **Add
+   task** (and Enter) is disabled until the draft has a non-blank name
+   *and* a list. A `due` in the route prefills Add's Due row
+   (`TaskDraft.DueOn`); it clears like any due date, and switching to
+   Repeating clears it as it always does.
+
+**Add sends the draft in a fixed order**, each command through the outbox,
+so adding works offline: `CreateTask`, then one `AddStep` per draft step
+in the draft's order (each with a fresh step id), then
+`SetTaskRecurrence`, `SetTaskDueDate`, `SetTaskTime`, `SetTaskLeadTime`,
+`SetTaskPriority`, `AddTaskToGoal` and `StarTask` for whichever the draft
+sets. Steps go first so the task's first sync already carries them.
 
 **An existing area's panel orders its lists.** Under the Name field,
 `AreaDetailPanel` shows a `PanelSection` **Lists · N** (`pspad-area-lists`)
@@ -1249,7 +1280,8 @@ icon reads unambiguously on its own.
 | Goal | Edit goal (→ goal panel), Delete goal | FAB Menu |
 | List | Add task (→ new-task panel) or Add item (→ new-item panel) for a `Reference` list, plus Edit list (→ list panel) and Delete list for the owner | FAB Menu |
 | Inbox | Capture (→ capture panel) | plain `MudFab` |
-| My Day, Settings, Statistics | none | no FAB |
+| My Day | Add task (→ new-task panel, no list, due = the day on screen) | plain `MudFab` |
+| Settings, Statistics | none | no FAB |
 
 Below `md`, the page FAB is a Material-3 tonal container — a 24%
 primary/surface mix with a primary-coloured icon — rather than a solid
