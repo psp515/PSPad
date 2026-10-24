@@ -599,10 +599,14 @@ the same row, star and meta treatment.
 A task's second line runs, in this order: the time (`TimeRow.Describe`:
 `09:30–11:00`, `09:30` without an end, `22:00–01:00 (+1)` overnight; `Color.Primary`, medium weight; hidden in My Day's
 Schedule, whose gutter shows it), due date (red when overdue,
-"Until 12 Oct" on a repeat), step progress (checklist icon and `0/4`), the
+"Until 12 Oct" on a repeat), the due step (`pspad-step-due-mark`, one-time
+tasks only: `SubdirectoryArrowRight`, the name of `EarliestDueStep`, " · ",
+its date as `d MMM`; all red once the date is past;
+`step-deadlines-design.md`), step progress (checklist icon and `0/4`), the
 repeat icon, the description icon, the priority dot, then the list name
 where the screen passes one (My Day, goal screen and goal cards). Each
-piece keeps whole; only the list name shrinks, with an ellipsis. The day
+piece keeps whole; only the list name and the due step's name shrink, with
+an ellipsis. The day
 a task was added is never on a row — the task panel's footer carries it.
 
 **Repeating rows.** `TaskRow` shows a repeating task's due date as
@@ -660,9 +664,16 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    `MudTextField` with no underline or label.
 3. **Steps** (outside Add) — `StepList`: `MudCheckBox` rows with a remove
    icon, then an unboxed "Add step"/"Next step" field (Enter adds).
-   Given `Draft` (a `List<string>`) instead of `Task`, it edits that list
-   in place and sends nothing — rows show a muted empty-box icon rather
-   than a checkbox. The Inbox convert form uses it this way.
+   Each unchecked step on a one-time task ends, before the ✕, with its
+   deadline (`pspad-step-due`): the date read relatively, red when past,
+   or a muted `Event` icon when empty (shown on hover on desktop). Both open
+   `DueDateMenu` — the Due row's quick picks, "Pick a date…", and
+   "Clear date" when set — and send `SetStepDueDate`. Checked steps,
+   repeating tasks and View mode show no control (`step-deadlines-design.md`).
+   Given `Draft` (a `List<StepDraft>`, name and optional deadline) instead
+   of `Task`, it edits that list in place and sends nothing — rows show a
+   muted empty-box icon rather than a checkbox. The Inbox convert form uses
+   it this way.
 4. Property rows, each a `PropertyRow` — icon · label · value, the whole
    row a `MudMenu` activator; the label sits in a fixed 88px column, never
    wraps, and a long value wraps beneath itself rather than running into
@@ -1023,11 +1034,11 @@ addressed as `?inbox=new` (the Inbox FAB or its empty state) or
   plus a star in the header — the same order as `TaskDetailPanel`. Draft
   steps and the description live only in the panel until conversion;
   closing without converting drops them, as it drops the other draft
-  edits. Draft steps have no checkbox and no due date. The Name field is the item's own text and saves as it commits
+  edits. Draft steps have no checkbox; they may carry a deadline. The Name field is the item's own text and saves as it commits
   (`RenameInboxItem`), so an item can be reworded without being converted.
   - **Convert to task** on the left sends `OrganiseInboxItem` and then only
     the edits that differ from the defaults — one `AddStep` per draft step
-    in order, and `SetTaskDescription` for a non-blank description — so one
+    in order, each followed by `SetStepDueDate` when it has a deadline, and `SetTaskDescription` for a non-blank description — so one
     tap files a finished task.
   - **Discard** on the right removes the item.
   - The List row starts on the list used for the previous conversion
