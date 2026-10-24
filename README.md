@@ -42,38 +42,27 @@
 
 ## About the project
 
-PSPad is my own vision of a notepad helping with implementing GTD ideas. One
-Today screen answers "what do I do now" across every part of your life, one
-Inbox catches everything else, and the whole thing keeps working on a phone
-with no signal.
+PSPad is my personal notepad: money, tasks, ideas and the things my day
+keeps reminding me about, in one place, on my own server. It is a test
+project built with AI. Getting Things Done got me started, and I use it
+every day and plan to keep using it. Questions: [psp515.com](https://psp515.com).
 
-- **One Today screen.** Due today or earlier, overdue pinned to the top —
-  worked out in your own time zone, never the server's.
-- **One Inbox.** Capture anything, decide where it belongs later.
-- **Areas and lists** you define yourself — work, home, a side project —
-  each with its own lists.
-- **Tasks with steps.** Due dates, priorities, goals, stars, and ordered
-  steps with their own dates.
-- **Recurrence that never nags.** Miss a day and it just stays missed —
-  never overdue.
-- **Goals across areas.** Global, not filed inside one area, because the
-  things worth calling goals rarely stay in one.
-- **A real history.** Every change logged automatically, read back from the
-  event log — no separate audit table to drift out of sync.
-- **Works with no signal.** Saves to a local replica first, syncs the moment
-  a connection returns.
-- **Multi-user**, through your own Keycloak. Everyone gets their own
-  private areas, lists and Inbox.
+- **Works offline.** Opens with your data and syncs when you are back.
+- **My Day.** Everything due today or earlier, from every area, on one screen.
+- **Inbox.** Capture anything in one tap and sort it out later.
+- **Areas and lists.** Work, home, side projects, each with its own lists.
+- **Budgets.** Expenses, incomes and monthly balances, in PLN and 28 other currencies.
+
+The full list is on the [features page](https://psp515.com/pspad/features/).
 
 ## Documentation
 
 Full docs live at **[psp515.com/pspad](https://psp515.com/pspad/)**
 (built with Astro):
 
-- [Features](https://psp515.com/pspad/features/) — what's built, what's
-  in progress, and what's still only planned.
-- [Install](https://psp515.com/pspad/install/) — run PSPad on your own
-  hardware with Docker Compose, from a clone to your first sign-in.
+- [Home](https://psp515.com/pspad/) — what it is and what it offers.
+- [Features](https://psp515.com/pspad/features/) — every feature, what it does and how.
+- [Self-host](https://psp515.com/pspad/self-host/) — Quick Test on your computer, or VPS Hosting step by step with the files assembled for your choices.
 
 ## Development
 
@@ -104,11 +93,12 @@ docker compose -f docker/compose.yaml -f docker/compose.e2e.yaml --env-file dock
 cd test/e2e && npm ci && npx playwright install chromium && npm test
 ```
 
+Adding a UI language is described in `specs/localization-design.md` §7.
+
 Each deployable carries its own `Dockerfile` next to its `.csproj`
 (`src/PSPad.Api`, `src/PSPad.App`), built with the repository root as
-context. `docker/compose.yaml` is both the development and the self-hosting
-stack — self-hosting is documented in full on the
-[install page](https://psp515.com/pspad/install/).
+context. `docker/compose.yaml` is the development stack; self-hosters follow the
+[self-host page](https://psp515.com/pspad/self-host/).
 
 Design specs live in `specs/`, architecture decision records in `adr/` (see
 `adr/README.md` for the index — they carry the reasoning and rejected

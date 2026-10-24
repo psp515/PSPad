@@ -7,7 +7,7 @@
 //     mongo sh -c 'mongosh --quiet -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin /tmp/mongo-app-user.js'
 //
 // Then point the API at it: mongodb://pspad-api:<new password>@mongo:27017/pspad?directConnection=true
-// Running it again updates the password and roles. See docs/src/pages/install.astro.
+// Running it again updates the password and roles. See docs/src/pages/self-host.astro.
 
 const database = process.env.MONGO_DATABASE;
 const user = process.env.MONGO_APP_USER;

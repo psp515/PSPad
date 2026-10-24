@@ -1,79 +1,165 @@
 ---
 import Page from '../layouts/Page.astro'
-import Hero from '../components/Hero.astro'
-import FeatureCard from '../components/FeatureCard.astro'
+import Mark from '../components/Mark.astro'
+import Shot from '../components/Shot.astro'
+import Reveal from '../components/Reveal.astro'
+import { feature } from '../data/features'
 import { join } from '../lib/repo'
 
 const base = import.meta.env.BASE_URL
+const offline = feature('offline')
 
-const proof = [
-  { title: 'One Today screen', body: 'Any day at a glance from a week strip: overdue first, then any time, with a timeline of what has a time, in your own time zone.' },
-  { title: 'One Inbox', body: 'Capture anything. Decide where it goes later.' },
-  { title: 'Areas and lists', body: 'Work, home, side projects — each with its own lists, in the order you choose.' },
-  { title: 'Tasks and steps', body: 'Due dates, priorities, goals, and steps on every task.' },
-  { title: 'Repeats and lead time', body: 'Repeat daily, weekly, monthly or yearly, never overdue — and set how far ahead each task shows up.' },
-  { title: 'Descriptions', body: 'Every task carries a Markdown description, rendered on and offline.' },
-  { title: 'Reference lists', body: 'Lists of things you look up, not do — with labelled fields for links, paths and quantities.' },
-  { title: 'Share a list', body: 'Send an invite link; whoever opens it works on the list with you, offline included.' },
-  { title: 'Public snapshots', body: 'Publish a read-only link anyone can open, no account needed. They tick things off; you see it on your own copy.' },
-  { title: 'Live updates', body: 'Changes from your other devices and from people you share with show up in an open app within a moment.' },
-  { title: 'Statistics', body: 'Charts, a consistency heatmap, a chart of what you captured each week and a record feed that show what actually got done.' },
-  { title: 'Budgets', body: 'Expenses, incomes and monthly balances in PLN and 28 other currencies, each frozen at its rate to PLN, an overview of the month against your usual spending, a forecast from your last six months, charts over any range, imported from a spreadsheet if you have one — offline included, and shared with your household if you like.' },
-  { title: 'English and Polish', body: 'Pick your language once in Settings; dates, numbers and the week start follow it.' },
-  { title: 'Yours, and multi-user', body: 'Your hardware, your Keycloak, your data.' }
+const highlights = [
+  { item: feature('today'), shot: 'my-day', alt: 'My Day with timed and overdue tasks' },
+  { item: feature('inbox'), shot: 'inbox-phone', alt: 'Inbox on a phone', phone: true },
+  { item: feature('areas'), shot: 'area', alt: 'An area with its lists' },
+  { item: feature('budgets'), shot: 'budget', alt: 'A budget overview for the month' }
 ]
 ---
 <Page
-  title="PSPad — a self-hosted GTD notepad"
-  description="PSPad is a self-hosted GTD notepad with one Today screen across every area, tasks with a start and end time, one Inbox, recurrence that never goes overdue and can repeat yearly, a lead time that shows a task as far ahead as you choose, budgets in 29 currencies, and full offline use on your phone."
-  heroNav
+  title="PSPad — a personal notepad you host"
+  description="PSPad is my personal notepad: money, tasks, ideas and the things my day keeps reminding me about, in one place, on my own server. A test project built with AI."
 >
-  <Hero />
-
-  <div class="wrap" id="more">
-    <div class="grid">
-      {proof.map((item) => <FeatureCard title={item.title}><p>{item.body}</p></FeatureCard>)}
-      <a class="card see-all" href={join(base, 'features')}>
-        <h3>See all features →</h3>
-        <p>What's built, what's in progress, what's still planned.</p>
-      </a>
+  <section class="wrap hero">
+    <div>
+      <Mark size={72} />
+      <h1>Money, tasks, ideas and your day, in one notepad you host.</h1>
+      <p class="pitch">
+        PSPad is my personal notepad: money, tasks, ideas and the things my day keeps
+        reminding me about, in one place, on my own server. It is a test project built
+        with AI. Getting Things Done got me started, and I use it every day and plan to
+        keep using it.
+      </p>
+      <p class="offline-line">{offline.title}. {offline.does}</p>
+      <p class="actions">
+        <a class="button button-primary" href={join(base, 'self-host')}>Self-host it</a>
+        <a class="button button-secondary" href={join(base, 'features')}>See the features</a>
+      </p>
     </div>
+    <Shot name="my-day-phone" alt="My Day on a phone" phone eager />
+    <a class="cue" href="#offers">
+      <span>See what it offers</span>
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </a>
+  </section>
 
-    <div class="prose steps">
-      <h2>How it goes</h2>
-      <ol>
-        <li><strong>Capture.</strong> Anything, into the Inbox, without deciding where it belongs.</li>
-        <li><strong>Organize.</strong> Give it a list, a date, a goal — once, on purpose.</li>
-        <li><strong>Today.</strong> Open the app and do what is there.</li>
-      </ol>
+  <section class="wrap" id="offers">
+    <Reveal><h2>What it offers</h2></Reveal>
+    <div class="highlights">
+      {highlights.map(({ item, shot, alt, phone }) => (
+        <Reveal>
+          <div class="highlight">
+            <div class="text">
+              <h3>{item.title}</h3>
+              <p>{item.does}</p>
+              <p class="how">{item.how}</p>
+            </div>
+            <Shot name={shot} alt={alt} phone={phone} />
+          </div>
+        </Reveal>
+      ))}
+      <Reveal>
+        <div class="band">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" />
+          </svg>
+          <div>
+            <h3>{offline.title}</h3>
+            <p>{offline.does}</p>
+            <p class="how">{offline.how}</p>
+          </div>
+        </div>
+      </Reveal>
     </div>
+    <Reveal><p class="all"><a href={join(base, 'features')}>All features →</a></p></Reveal>
+  </section>
 
-    <div class="call">
-      <h2>Run it yourself</h2>
-      <p>One Compose file, four containers, about ten minutes.</p>
-      <p><a class="button button-primary" href={join(base, 'install')}>Install PSPad</a></p>
-    </div>
-  </div>
+  <section class="wrap">
+    <Reveal>
+      <div class="call">
+        <h2>Run it yourself</h2>
+        <p>Your own VPS, a few files, about thirty minutes.</p>
+        <p><a class="button button-primary" href={join(base, 'self-host')}>Self-host PSPad</a></p>
+      </div>
+    </Reveal>
+  </section>
 </Page>
 
 <style>
-  .grid { margin: 32px 0 48px; }
-
-  .see-all {
-    display: block;
-    text-decoration: none;
-    color: inherit;
-    border-color: var(--primary);
+  .hero {
+    position: relative;
+    display: grid;
+    gap: 40px;
+    align-items: center;
+    padding-top: 24px;
+    padding-bottom: 24px;
+    box-sizing: border-box;
   }
 
-  .see-all h3 { margin-top: 0; color: var(--primary); }
-  .see-all p { margin-bottom: 0; color: var(--muted); }
+  .pitch { font-size: 1.15rem; max-width: var(--measure); }
+  .offline-line { color: var(--primary); font-weight: 600; }
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
-  .steps ol { padding-left: 1.2em; }
-  .steps li { margin-bottom: 8px; }
+  .cue {
+    justify-self: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-decoration: none;
+    animation: bob 1.8s ease-in-out infinite;
+  }
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(6px); }
+  }
+
+  @keyframes bob-centered {
+    0%, 100% { transform: translate(-50%, 0); }
+    50% { transform: translate(-50%, 6px); }
+  }
+
+  .hero :global(.shot.phone) { width: min(220px, 100%); }
+
+  .cue:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+
+  .highlights { display: grid; gap: 48px; margin-top: 24px; }
+
+  .highlight {
+    display: grid;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .highlight h3, .band h3 { margin: 0 0 8px; font-size: 1.35rem; }
+  .highlight p, .band p { margin: 0 0 8px; }
+  .how { color: var(--muted); }
+
+  .band {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 20px;
+    align-items: center;
+    padding: 28px 32px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid var(--lines);
+    color: var(--text);
+  }
+
+  .band svg { color: var(--primary); }
+
+  .all { margin-top: 32px; font-weight: 500; }
 
   .call {
-    margin-top: 64px;
+    margin-top: 48px;
     padding: 40px 24px;
     border-radius: var(--radius);
     background: var(--raised);
@@ -82,4 +168,28 @@ const proof = [
   }
 
   .call h2 { margin-top: 0; }
+  .call p:last-child { margin-bottom: 0; }
+
+  @media (min-width: 820px) {
+    .hero {
+      grid-template-columns: 3fr 2fr;
+      min-height: calc(100dvh - var(--header-height, 73px));
+      padding-bottom: 72px;
+    }
+    .hero :global(.shot.phone) { width: min(300px, 100%); }
+    .cue {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      animation-name: bob-centered;
+    }
+    .highlight { grid-template-columns: 2fr 3fr; }
+    :global(.reveal):nth-child(even) .highlight { grid-template-columns: 3fr 2fr; }
+    :global(.reveal):nth-child(even) .highlight .text { order: 2; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cue { animation: none; }
+  }
 </style>

@@ -3,12 +3,12 @@ import Mark from '../components/Mark.astro'
 import { join } from '../lib/repo'
 import '../styles/theme.css'
 
-interface Props { title: string; description: string; heroNav?: boolean }
-const { title, description, heroNav = false } = Astro.props
+interface Props { title: string; description: string }
+const { title, description } = Astro.props
 const base = import.meta.env.BASE_URL
 const nav = [
   { href: join(base, 'features'), label: 'Features' },
-  { href: join(base, 'install'), label: 'Install' },
+  { href: join(base, 'self-host'), label: 'Self-host' },
   { href: 'https://github.com/psp515/PSPad', label: 'GitHub' }
 ]
 ---
@@ -26,7 +26,8 @@ const nav = [
     <link rel="icon" href={join(base, 'favicon.svg')} type="image/svg+xml" />
     <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
     <script is:inline>
-      (() => {
+      document.documentElement.classList.add('js')
+      ;(() => {
         const stored = localStorage.getItem('pspad-theme')
         if (stored === 'light' || stored === 'dark') {
           document.documentElement.dataset.theme = stored
@@ -36,7 +37,7 @@ const nav = [
   </head>
   <body>
     <a class="skip" href="#content">Skip to content</a>
-    <header class:list={['site-header', { 'site-header-hero': heroNav }]}>
+    <header class="site-header">
       <div class="wrap header-inner">
         <a class="brand" href={base}>
           <Mark size={28} />
@@ -60,11 +61,16 @@ const nav = [
     </header>
     <main id="content"><slot /></main>
     <footer class="wrap site-footer">
-      <p>My own take on GTD. See <a href={join(base, 'features')}>what's built</a>.</p>
-      <p>Free software, GPL v3. <a href="https://github.com/psp515/PSPad">Source on GitHub</a>.</p>
+      <p>PSPad is free software, GPL v3. <a href="https://github.com/psp515/PSPad">Source on GitHub</a>.</p>
+      <p>Questions: <a href="https://psp515.com">psp515.com</a>.</p>
     </footer>
     <script is:inline>
       (() => {
+        const header = document.querySelector('.site-header')
+        const setHeight = () => document.documentElement.style.setProperty('--header-height', header.offsetHeight + 'px')
+        setHeight()
+        new ResizeObserver(setHeight).observe(header)
+
         const root = document.documentElement
         const toggle = document.querySelector('.theme-toggle')
         if (!toggle) return
@@ -104,37 +110,6 @@ const nav = [
     padding-top: 20px;
     padding-bottom: 20px;
     flex-wrap: wrap;
-  }
-
-  @supports (animation-timeline: scroll()) {
-    .site-header-hero {
-      opacity: 0;
-      transform: translateY(-12px);
-      border-bottom-color: transparent;
-      pointer-events: none;
-      animation: reveal-nav linear both;
-      animation-timeline: scroll(root block);
-      animation-range: 0 200px;
-    }
-  }
-
-  @keyframes reveal-nav {
-    to {
-      opacity: 1;
-      transform: translateY(0);
-      border-bottom-color: var(--lines);
-      pointer-events: auto;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .site-header-hero {
-      opacity: 1 !important;
-      transform: none !important;
-      animation: none !important;
-      pointer-events: auto !important;
-      border-bottom-color: var(--lines) !important;
-    }
   }
 
   .brand {

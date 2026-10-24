@@ -139,13 +139,37 @@ th { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; colo
   display: inline-block;
   padding: 12px 22px;
   border-radius: var(--radius);
+  font: inherit;
   font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
   border: 1px solid var(--primary);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 .button-primary { background: var(--primary); color: var(--background); }
-.button-secondary { color: var(--primary); }
+.button-secondary { background: transparent; color: var(--primary); }
+
+@media (hover: hover) {
+  .button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--primary) 35%, transparent);
+  }
+  .button-secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--primary) 12%, transparent); }
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 25%, transparent);
+  transition-duration: 0.05s;
+}
+
+.button:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .button, .button:hover, .button:active { transition: none; transform: none; }
+}
 
 .card {
   background: var(--surface);
