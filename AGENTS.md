@@ -37,6 +37,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Sharing, invites, public snapshots | `specs/sharing-spec.md` |
 | Reference lists | `specs/reference-lists-design.md` |
 | List ordering | `specs/list-ordering-design.md` |
+| List filter, sort, month calendar | `specs/list-filter-and-calendar-design.md` |
 | Recurrence lead time, yearly repeats | `specs/recurrence-lead-time-design.md` |
 | Phone navigation | `specs/mobile-navigation-design.md` |
 | Budgets, expenses, balances, NBP rates | `specs/money-design.md` |

@@ -352,6 +352,13 @@ not stated there:
 - The rule is tested in three places on purpose: the module (unit), the
   API's Today query (integration), and the client projection (bUnit). A
   change that breaks it should turn three suites red, not one.
+- A task's date has one source. `TodayRule.TriggerOf(task)` (a one-time
+  task's earliest trigger) and `TodayRule.DateOf(task, today)` (that, or a
+  recurring task's next unticked occurrence on or after `today`) are public,
+  and every other reader of "the task's date" calls them: the list screen's
+  sort, When filter and month calendar (`ListSort`, `ListFilter`,
+  `ListCalendar`, `specs/list-filter-and-calendar-design.md`). They never
+  apply lead time, and they don't change what `Plan` or `Select` return.
 - Ordering (lists, steps, inbox items) uses a dense `position` integer.
   Reordering rewrites the affected range rather than using fractional
   keys — ranges are short, and the rewrite touches one document.
