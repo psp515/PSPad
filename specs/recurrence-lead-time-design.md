@@ -90,8 +90,8 @@ A task's **look-ahead** is its `LeadTime`, or 7 days when it has none
 (`UpcomingDays`, unchanged). A dated day `d` is **in view** on `today` when
 `today < d` and `today >= FirstShownFor(d)`.
 
-- One-time: the earliest trigger (due date or next unchecked step, as
-  today) goes to Tomorrow when it is tomorrow, else to Upcoming, **only when
+- One-time: the earliest trigger (due date or earliest unchecked step
+  deadline, `adr/0078`) goes to Tomorrow when it is tomorrow, else to Upcoming, **only when
   in view**. A 1-day lead hides a task due in 3 days; a 1-month lead shows a
   task due in 3 weeks.
 - Repeating: the next unticked occurrence after today that is in view.

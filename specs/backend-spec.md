@@ -327,8 +327,11 @@ not stated there:
   `TodayEntry.Time` carries it (additive to `GET /api/today`).
 - `TodayRule.Plan(tasks, day, today, zone)` plans the day on screen (`day`;
   `today` is the user's today) as Overdue, Scheduled, AnyTime, Starred,
-  ComingUp and Completed. A task's date is its earliest trigger — due date
-  or next unchecked step. "Due on `day`" means a one-time open task whose
+  ComingUp and Completed. A task's date is its earliest trigger,
+  `TodayRule.TriggerOf(task)`: the earlier of its due date and the earliest
+  deadline among its unchecked steps (`TodoTask.EarliestDueStep`, a tie to
+  the lower position; `adr/0078`). Checked steps never count; a repeating
+  task ignores step dates. "Due on `day`" means a one-time open task whose
   trigger is `day`, or a recurring task that `OccursOn(day)` with `day`
   unticked; Scheduled holds those with a `Time` (by start, then name),
   AnyTime those without. By day kind: on a past day only Completed
