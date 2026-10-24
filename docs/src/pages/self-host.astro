@@ -249,7 +249,7 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
         </article>
 
         <div class="pager">
-          <button type="button" class="button button-secondary" data-back disabled>Back</button>
+          <button type="button" class="button button-secondary" data-back hidden>Back</button>
           <button type="button" class="button button-primary" data-next>Next</button>
         </div>
       </section>
@@ -299,7 +299,7 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
     document.querySelector('[data-step-count]')!.textContent = String(counts[scenario])
     const back = document.querySelector<HTMLButtonElement>('[data-back]')!
     const next = document.querySelector<HTMLButtonElement>('[data-next]')!
-    back.disabled = step === 1
+    show(back, step > 1)
     next.textContent = step === counts[scenario] ? 'Done' : 'Next'
     const query = new URLSearchParams({ scenario, step: String(step) })
     if (scenario === 'vps') { query.set('kc', choices.kc); query.set('mongo', choices.mongo); query.set('expose', choices.expose) }
@@ -433,7 +433,8 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
   .options { display: grid; gap: 10px; }
 
   .pager { display: flex; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 20px; border-top: 1px solid var(--lines); }
-  .button:disabled { opacity: 0.45; cursor: default; }
+  .pager [data-next] { margin-left: auto; }
+  .pager [hidden] { display: none; }
 
   @media (max-width: 819px) {
     .steps ol { display: flex; gap: 8px; overflow-x: auto; }
