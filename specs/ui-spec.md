@@ -600,10 +600,23 @@ A task's second line runs, in this order: the time (`TimeRow.Describe`:
 `09:30–11:00`, `09:30` without an end, `22:00–01:00 (+1)` overnight; `Color.Primary`, medium weight; hidden in My Day's
 Schedule, whose gutter shows it), due date (red when overdue,
 "Until 12 Oct" on a repeat), step progress (checklist icon and `0/4`), the
-repeat icon, the description icon, the priority dot, then the list name
-where the screen passes one (My Day, goal screen and goal cards). Each
-piece keeps whole; only the list name shrinks, with an ellipsis. The day
-a task was added is never on a row — the task panel's footer carries it.
+repeat icon, the description icon, the snapshot mark, the goal where the
+screen passes one, then the list name where the screen passes one (My Day,
+goal screen and goal cards). Each piece keeps whole; only the goal and the
+list name shrink, with an ellipsis. The day a task was added is never on
+a row — the task panel's footer carries it.
+
+**The goal on a row** (issue #200) is `Outlined.TrackChanges` — the icon
+the panel's Goal row uses — and the goal's name in caption type, the full
+name as its `title`. `TaskRow` takes it as a `GoalName` string, a render
+parameter like `ListName`: the screen derives it from the goal documents
+it loaded, `Goal.Holding(goals, task.Id)` over goals not deleted, so the
+link lives only in `Goal.TaskIds` (`adr/0065`) and the task stores nothing
+about its goal. It shows whatever the goal's status. My Day's rows,
+`ListPage` (open and completed) and `ThingCard` — through `GoalNameOf`,
+beside `ListNameOf`, so area-board and goal cards — pass it; `GoalPage`
+(every task there is that goal's), the signed-out Welcome demo and
+`DayTimeline` blocks (no room) do not.
 
 **Repeating rows.** `TaskRow` shows a repeating task's due date as
 "Until 12 Oct", never red. A repeat past its Until (`TodoTask.EndedBy`)
