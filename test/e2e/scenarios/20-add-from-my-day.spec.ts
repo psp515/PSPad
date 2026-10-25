@@ -1,5 +1,5 @@
 import { expect, test } from '../fixtures/accounts';
-import { createArea } from '../helpers/areas';
+import { createArea, openArea } from '../helpers/areas';
 import { createList, openList } from '../helpers/lists';
 import { awaitNoDrawer, panel, pickFromPropertyRow, savePanel } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
@@ -38,6 +38,7 @@ test('a task added from My Day lands on the day and in the picked list, steps in
   await expect(row).toBeVisible();
   await expect(row.locator('.pspad-steps-progress')).toContainText('0/2');
 
+  await openArea(page, area);
   await openList(page, list);
   await expect(taskRow(page, task)).toBeVisible();
 });
