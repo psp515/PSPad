@@ -53,6 +53,13 @@
                 {
                     <SnapshotMarkChip Compact="true" />
                 }
+                @if (GoalName is not null)
+                {
+                    <span class="pspad-row-goal d-inline-flex align-center gap-1" title="@GoalName">
+                        <MudIcon Icon="@Icons.Material.Outlined.TrackChanges" Size="Size.Small" />
+                        <MudText Typo="Typo.caption" Class="pspad-row-goal-name">@GoalName</MudText>
+                    </span>
+                }
                 @if (ListName is not null)
                 {
                     <MudText Typo="Typo.caption" Class="pspad-row-list">@ListName</MudText>
@@ -79,6 +86,8 @@
 
     [Parameter] public string? ListName { get; set; }
 
+    [Parameter] public string? GoalName { get; set; }
+
     [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnStar { get; set; }
@@ -91,7 +100,7 @@
 
     bool HasDescription => Task.Description.Length > 0;
 
-    bool HasMeta => ListName is not null || Task.Steps.Count > 0 || Task.DueOn is not null
+    bool HasMeta => ListName is not null || GoalName is not null || Task.Steps.Count > 0 || Task.DueOn is not null
         || (ShowTime && Task.EffectiveTime is not null) || Task.IsRecurring || HasDescription || Task.SnapshotMarks.Count > 0;
 
     public static bool IsOverdue(TodoTask task, DateOnly today) =>

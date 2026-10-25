@@ -414,11 +414,55 @@ public class TaskRowTests : Bunit.TestContext
         return task;
     }
 
-    IRenderedComponent<TaskRow> Render(TodoTask task, string? listName = null) =>
+    [Fact]
+    public void TheGoalShowsOnlyWhenGiven()
+    {
+        Arrange();
+
+        var withGoal = Render(Task("Write chapter 3"), goalName: "Publish the book");
+        var without = Render(Task("Write chapter 3"));
+
+        Assert.Equal("Publish the book", withGoal.Find(".pspad-row-goal").TextContent.Trim());
+        Assert.Empty(without.FindAll(".pspad-row-goal"));
+    }
+
+    [Fact]
+    public void TheGoalCarriesItsFullNameAsATitle()
+    {
+        Arrange();
+
+        var row = Render(Task("Write chapter 3"), goalName: "Publish the book before the summer holidays");
+
+        Assert.Equal("Publish the book before the summer holidays", row.Find(".pspad-row-goal").GetAttribute("title"));
+    }
+
+    [Fact]
+    public void TheGoalSitsBeforeTheListName()
+    {
+        Arrange();
+
+        var row = Render(Task("Write chapter 3"), "Writing", "Publish the book");
+
+        var pieces = row.Find(".pspad-row-meta").Children.Select(piece => piece.ClassName ?? "").ToList();
+        Assert.True(pieces.FindIndex(name => name.Contains("pspad-row-goal")) < pieces.FindIndex(name => name.Contains("pspad-row-list")));
+    }
+
+    [Fact]
+    public void AGoalAloneGivesTheRowASecondLine()
+    {
+        Arrange();
+
+        var row = Render(Task("Write chapter 3"), goalName: "Publish the book");
+
+        Assert.NotEmpty(row.FindAll(".pspad-row-has-meta"));
+    }
+
+    IRenderedComponent<TaskRow> Render(TodoTask task, string? listName = null, string? goalName = null) =>
         Render<TaskRow>(parameters => parameters
             .Add(p => p.Task, task)
             .Add(p => p.Today, Today)
-            .Add(p => p.ListName, listName));
+            .Add(p => p.ListName, listName)
+            .Add(p => p.GoalName, goalName));
 
     void Arrange()
     {
