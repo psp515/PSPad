@@ -12,6 +12,7 @@ using PSPad.App.Pages;
 using PSPad.App.State.Dispatch;
 using PSPad.App.State.Replica;
 using PSPad.App.Tests;
+using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Recurrence;
 using PSPad.Module.Tasks.References;
@@ -594,6 +595,47 @@ public class ListPageTests : Bunit.TestContext
         page.WaitForAssertion(() => Assert.NotNull(RowOf(page, first).Instance.Task.CompletedAt));
         Assert.Same(secondRow, RowOf(page, second).Instance);
     }
+
+    [Fact]
+    public void OpenAndCompletedRowsShowTheirGoal()
+    {
+        var list = NewList("Writing");
+        var open = NewTask(list.Id, "Write chapter 3");
+        var done = NewTask(list.Id, "Write chapter 2");
+        done.ApplyAll(TodoTask.Decide(
+            done, new CompleteTask(Guid.NewGuid(), User, done.Id), DateTimeOffset.UnixEpoch));
+        var goal = NewGoal("Publish the book");
+        Link(goal, open);
+        Link(goal, done);
+        Arrange(list, open, done, goal);
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Equal("Publish the book", RowOf(page, open).Instance.GoalName);
+        Assert.Equal("Publish the book", RowOf(page, done).Instance.GoalName);
+        Assert.Contains("Publish the book", RowOf(page, open).Find(".pspad-row-goal").TextContent);
+    }
+
+    [Fact]
+    public void ATaskWithoutAGoalShowsNone()
+    {
+        var list = NewList("Writing");
+        Arrange(list, NewTask(list.Id, "Rename drafts"), NewGoal("Publish the book"));
+
+        var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
+
+        Assert.Empty(page.FindAll(".pspad-row-goal"));
+    }
+
+    static Goal NewGoal(string name)
+    {
+        var goal = new Goal();
+        goal.ApplyAll(Goal.Decide(null, new CreateGoal(Guid.NewGuid(), User, Guid.NewGuid(), name), DateTimeOffset.UnixEpoch));
+        return goal;
+    }
+
+    static void Link(Goal goal, TodoTask task) =>
+        goal.ApplyAll(Goal.Decide(goal, new AddTaskToGoal(Guid.NewGuid(), User, goal.Id, task.Id), DateTimeOffset.UnixEpoch, task));
 
     static IRenderedComponent<TaskRow> RowOf(IRenderedComponent<ListPage> page, TodoTask task) =>
         page.FindComponents<TaskRow>().Single(row => row.Instance.Task.Id == task.Id);

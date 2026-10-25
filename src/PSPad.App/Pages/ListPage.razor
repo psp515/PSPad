@@ -7,12 +7,14 @@
 @using PSPad.Module.Presentation.AreaViews
 @using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.References
 @using PSPad.Module.Tasks.Tasks
 @inject IDocumentStore<Area> AreaStore
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<TodoTask> TaskStore
+@inject IDocumentStore<Goal> GoalStore
 @inject IDocumentStore<ReferenceItem> ItemStore
 @inject IDocumentStore<AreaView> ViewStore
 @inject IDocumentStore<ListView> ListViewStore
@@ -74,8 +76,8 @@ else if (_list is not null)
         <RowGroup Columns="true">
             @foreach (var task in _open)
             {
-                <TaskRow @key="task.Id" Task="@task" Today="@State.Today" OnToggle="@ToggleAsync" OnStar="@StarAsync"
-                         OnOpen="@Open" />
+                <TaskRow @key="task.Id" Task="@task" Today="@State.Today" GoalName="@GoalOf(task)" OnToggle="@ToggleAsync"
+                         OnStar="@StarAsync" OnOpen="@Open" />
             }
             <AddRow Text="@TaskText["AddTask"]" OnClick="@AddTask" />
         </RowGroup>
@@ -88,7 +90,7 @@ else if (_list is not null)
                 <RowGroup Columns="true">
                     @foreach (var task in _done)
                     {
-                        <TaskRow @key="task.Id" Task="@task" Today="@State.Today" OnToggle="@ToggleAsync"
+                        <TaskRow @key="task.Id" Task="@task" Today="@State.Today" GoalName="@GoalOf(task)" OnToggle="@ToggleAsync"
                                  OnStar="@StarAsync" OnOpen="@Open" />
                     }
                 </RowGroup>
@@ -141,6 +143,7 @@ else
     Guid _areaId;
     string? _areaName;
     IReadOnlyList<TodoTask> _open = [];
+    IReadOnlyList<Goal> _goals = [];
     IReadOnlyList<TodoTask> _done = [];
     IReadOnlyList<ReferenceItem> _items = [];
 
@@ -159,6 +162,8 @@ else
         await ReloadAsync();
         StateHasChanged();
     });
+
+    string? GoalOf(TodoTask task) => Goal.Holding(_goals, task.Id)?.Name;
 
     async Task ReloadAsync()
     {
@@ -184,6 +189,8 @@ else
             var all = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
             var mine = all.Where(task => task.ListId == ListId && !task.Deleted).ToArray();
 
+            var goals = await GoalStore.LoadAllAsync(State.UserId, CancellationToken.None);
+            _goals = [.. goals.Where(goal => !goal.Deleted)];
             _open = [.. mine.Where(task => !IsDone(task))];
             _done = [.. mine.Where(IsDone)];
         }
