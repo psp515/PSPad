@@ -545,6 +545,54 @@ public class TodayTests : Bunit.TestContext
             new TaskCompletionSource<IReadOnlyList<TodoTask>>().Task;
     }
 
+    [Fact]
+    public void ARowShowsTheGoalHoldingItsTask()
+    {
+        var list = NewList("Pisanie");
+        var task = Due(list.Id, "Write chapter 3", Today);
+        Arrange(list, task, Holding(NewGoal("Publish the book", GoalStatus.InProgress), task));
+
+        var page = Render<Today>();
+
+        Assert.Contains("Publish the book", page.Find(".pspad-day-anytime .pspad-row-goal").TextContent);
+    }
+
+    [Fact]
+    public void ADeletedGoalIsNotShownOnARow()
+    {
+        var list = NewList("Pisanie");
+        var task = Due(list.Id, "Write chapter 3", Today);
+        Arrange(list, task, Deleted(Holding(NewGoal("Publish the book", GoalStatus.InProgress), task)));
+
+        var page = Render<Today>();
+
+        Assert.Empty(page.FindAll(".pspad-row-goal"));
+    }
+
+    [Fact]
+    public void TheTimelineLeavesTheGoalOut()
+    {
+        var list = NewList("Praca");
+        var task = Timed(Due(list.Id, "Sprint planning", Today), 9, 30, 11, 0);
+        Arrange(list, task, Holding(NewGoal("Ship v2", GoalStatus.InProgress), task));
+
+        var page = Render<Today>();
+
+        Assert.Empty(page.FindAll(".pspad-day-schedule .pspad-row-goal"));
+    }
+
+    static Goal Holding(Goal goal, TodoTask task)
+    {
+        goal.ApplyAll(Goal.Decide(goal, new AddTaskToGoal(Guid.NewGuid(), User, goal.Id, task.Id), DateTimeOffset.UnixEpoch, task));
+        return goal;
+    }
+
+    static Goal Deleted(Goal goal)
+    {
+        goal.ApplyAll(Goal.Decide(goal, new DeleteGoal(Guid.NewGuid(), User, goal.Id), DateTimeOffset.UnixEpoch));
+        return goal;
+    }
+
     static Goal NewGoal(string name, GoalStatus status, DateOnly? dueOn = null)
     {
         var goal = new Goal();

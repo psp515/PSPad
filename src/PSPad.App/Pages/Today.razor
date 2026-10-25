@@ -6,11 +6,13 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Tasks
 @using PSPad.Module.Tasks.Today
 @inject IDocumentStore<TodoTask> TaskStore
 @inject IDocumentStore<TaskList> ListStore
+@inject IDocumentStore<Goal> GoalStore
 @inject AppState State
 @inject CommandSender Sender
 @inject NavigationManager Navigation
@@ -124,6 +126,7 @@ else
     IReadOnlySet<DateOnly> _busy = new HashSet<DateOnly>();
     IReadOnlyDictionary<Guid, TodoTask> _byId = new Dictionary<Guid, TodoTask>();
     IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
+    IReadOnlyList<Goal> _goals = [];
 
     DayTab _tab = DayTab.Tasks;
 
@@ -161,6 +164,8 @@ else
         var lists = await ListStore.LoadAllAsync(State.UserId, CancellationToken.None);
 
         _listNames = lists.Where(list => !list.Deleted).ToDictionary(list => list.Id, list => list.Name);
+        var goals = await GoalStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _goals = [.. goals.Where(goal => !goal.Deleted)];
         _byId = tasks.ToDictionary(task => task.Id);
         _day = DayQuery.From(Navigation.Uri, State.Today);
         var zone = LocalToday.Zone(State.TimeZone);
@@ -181,7 +186,7 @@ else
             {
                 var task = _byId[entry.TaskId];
                 var day = DayOf(entry);
-                <TaskRow @key="entry.TaskId" Task="@task" Today="@day" ListName="@NameOf(task.ListId)"
+                <TaskRow @key="entry.TaskId" Task="@task" Today="@day" ListName="@NameOf(task.ListId)" GoalName="@GoalOf(task)"
                          OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />
             }
         </text>;
@@ -196,6 +201,8 @@ else
     string ScheduleEmpty => _day == State.Today ? T["ScheduleEmptyToday"] : T["ScheduleEmptyOn", _day.ToString("ddd, d MMM")];
 
     string ScheduleTabText => PendingScheduled > 0 ? T["ScheduleCount", PendingScheduled] : T["Schedule"];
+
+    string? GoalOf(TodoTask task) => Goal.Holding(_goals, task.Id)?.Name;
 
     string? NameOf(Guid listId) => _listNames.TryGetValue(listId, out var name) ? name : null;
 
