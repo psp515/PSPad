@@ -1,7 +1,11 @@
 using Bunit;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Components;
+using MudBlazor;
 using PSPad.App.Components;
+using PSPad.App.State;
+using PSPad.Module.Tasks.Recurrence;
 using PSPad.App.State.Outbox;
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Tasks;
@@ -108,7 +112,7 @@ public class StepListTests : Bunit.TestContext
     public async Task ADraftCollectsStepsInOrderWithoutSendingCommands()
     {
         var replica = AppTestHost.Arrange(this, User, Today);
-        var draft = new List<string>();
+        var draft = new List<StepDraft>();
 
         var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
         var field = steps.Find(".pspad-step-add input");
@@ -119,7 +123,7 @@ public class StepListTests : Bunit.TestContext
         field.Input("Go to the shop");
         field.KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
-        Assert.Equal(["Check the fridge", "Go to the shop"], draft);
+        Assert.Equal(["Check the fridge", "Go to the shop"], draft.Select(step => step.Name));
         Assert.Equal(["Check the fridge", "Go to the shop"],
             steps.FindAll(".pspad-step-name input").Select(name => name.GetAttribute("value")));
         Assert.Empty(steps.FindAll(".pspad-step-check"));
@@ -130,12 +134,12 @@ public class StepListTests : Bunit.TestContext
     public void RemovingADraftStepDropsItFromTheDraft()
     {
         AppTestHost.Arrange(this, User, Today);
-        var draft = new List<string> { "Check the fridge", "Go to the shop" };
+        var draft = new List<StepDraft> { new("Check the fridge"), new("Go to the shop") };
 
         var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
         steps.FindAll(".pspad-step-remove")[0].Click();
 
-        Assert.Equal(["Go to the shop"], draft);
+        Assert.Equal(["Go to the shop"], draft.Select(step => step.Name));
         Assert.Single(steps.FindAll(".pspad-step-name"));
     }
 
@@ -238,24 +242,24 @@ public class StepListTests : Bunit.TestContext
     public void EditingADraftStepRewritesItInPlace()
     {
         AppTestHost.Arrange(this, User, Today);
-        var draft = new List<string> { "Check the fridge", "Go to the shop" };
+        var draft = new List<StepDraft> { new("Check the fridge"), new("Go to the shop") };
 
         var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
         steps.FindAll(".pspad-step-name input")[1].Change(" Go to the market ");
 
-        Assert.Equal(["Check the fridge", "Go to the market"], draft);
+        Assert.Equal(["Check the fridge", "Go to the market"], draft.Select(step => step.Name));
     }
 
     [Fact]
     public void EmptyingADraftStepKeepsItsName()
     {
         AppTestHost.Arrange(this, User, Today);
-        var draft = new List<string> { "Check the fridge" };
+        var draft = new List<StepDraft> { new("Check the fridge") };
 
         var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
         steps.Find(".pspad-step-name input").Change("  ");
 
-        Assert.Equal(["Check the fridge"], draft);
+        Assert.Equal(["Check the fridge"], draft.Select(step => step.Name));
         Assert.Equal("Check the fridge", steps.Find(".pspad-step-name input").GetAttribute("value"));
     }
 
@@ -263,17 +267,164 @@ public class StepListTests : Bunit.TestContext
     public void EscapeRevertsADraftStep()
     {
         AppTestHost.Arrange(this, User, Today);
-        var draft = new List<string> { "Check the fridge" };
+        var draft = new List<StepDraft> { new("Check the fridge") };
 
         var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
         var field = steps.Find(".pspad-step-name input");
         var typedInto = field.Id;
         field.KeyDown(new KeyboardEventArgs { Key = "Escape" });
 
-        Assert.Equal(["Check the fridge"], draft);
+        Assert.Equal(["Check the fridge"], draft.Select(step => step.Name));
         var restored = steps.Find(".pspad-step-name input");
         Assert.NotEqual(typedInto, restored.Id);
         Assert.Equal("Check the fridge", restored.GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task PickingTomorrowSetsTheStepDeadline()
+    {
+        var task = TaskWithStep("Order boxes");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var host = Host(task);
+        host.Find(".pspad-step-due").Click();
+        host.FindAll(".pspad-due-quick").Single(item => item.TextContent.Contains("Tomorrow")).Click();
+
+        var stored = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(Today.AddDays(1), Assert.Single(stored!.Steps).DueOn);
+    }
+
+    [Fact]
+    public async Task ClearDateRemovesTheStepDeadline()
+    {
+        var task = Dated(TaskWithStep("Order boxes"), Today);
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var host = Host(task);
+        host.Find(".pspad-step-due").Click();
+        host.Find(".pspad-due-clear").Click();
+
+        var stored = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Null(Assert.Single(stored!.Steps).DueOn);
+    }
+
+    [Fact]
+    public void APastStepDeadlineReadsRed()
+    {
+        var task = Dated(TaskWithStep("Order boxes"), Today.AddDays(-1));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var due = Host(task).Find(".pspad-step-due");
+
+        Assert.Contains("Yesterday", due.TextContent);
+        Assert.Contains("mud-button-text-error", due.ClassName);
+    }
+
+    [Fact]
+    public void ACheckedStepHasNoDateControl()
+    {
+        var task = TaskWithStep("Order boxes");
+        task.ApplyAll(TodoTask.Decide(
+            task, new CheckStep(Guid.NewGuid(), User, task.Id, task.Steps[0].Id, true), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        Assert.Empty(Host(task).FindAll(".pspad-step-due"));
+    }
+
+    [Fact]
+    public void ARepeatingTaskHasNoDateControl()
+    {
+        var task = TaskWithStep("Vacuum");
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetTaskRecurrence(Guid.NewGuid(), User, task.Id, RecurrenceRule.Daily(Today)), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        Assert.Empty(Host(task).FindAll(".pspad-step-due"));
+    }
+
+    [Fact]
+    public void DisabledShowsTheDateAsTextOnly()
+    {
+        var task = Dated(TaskWithStep("Order boxes"), Today.AddDays(1));
+        task.ApplyAll(TodoTask.Decide(
+            task, new AddStep(Guid.NewGuid(), User, task.Id, Guid.NewGuid(), "Pack"), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var host = Host(task, disabled: true);
+
+        var due = Assert.Single(host.FindAll(".pspad-step-due"));
+        Assert.Contains("Tomorrow", due.TextContent);
+        Assert.Empty(due.QuerySelectorAll("button"));
+        Assert.NotEqual("BUTTON", due.TagName);
+    }
+
+    [Fact]
+    public async Task ADraftStepTakesADeadline()
+    {
+        var replica = AppTestHost.Arrange(this, User, Today);
+        var draft = new List<StepDraft> { new("Order boxes") };
+
+        var host = HostDraft(draft, repeating: false);
+        host.Find(".pspad-step-due").Click();
+        host.FindAll(".pspad-due-quick").Single(item => item.TextContent.Contains("Tomorrow")).Click();
+
+        Assert.Equal(Today.AddDays(1), Assert.Single(draft).DueOn);
+        Assert.Equal("Order boxes", draft[0].Name);
+        Assert.Empty(await replica.LoadAllAsync<TodoTask>(User));
+    }
+
+    [Fact]
+    public void RenamingADraftStepKeepsItsDeadline()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<StepDraft> { new("Order boxes", Today.AddDays(1)) };
+
+        var host = HostDraft(draft, repeating: false);
+        host.Find(".pspad-step-name input").Change("Order big boxes");
+
+        Assert.Equal(new StepDraft("Order big boxes", Today.AddDays(1)), Assert.Single(draft));
+    }
+
+    [Fact]
+    public void ARepeatingDraftHasNoDateControl()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<StepDraft> { new("Vacuum") };
+
+        Assert.Empty(HostDraft(draft, repeating: true).FindAll(".pspad-step-due"));
+    }
+
+    IRenderedComponent<IComponent> Host(TodoTask task, bool disabled = false) =>
+        Render(builder =>
+        {
+            builder.OpenComponent<MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<StepList>(1);
+            builder.AddAttribute(2, nameof(StepList.Task), task);
+            builder.AddAttribute(3, nameof(StepList.UserId), User);
+            builder.AddAttribute(4, nameof(StepList.Today), Today);
+            builder.AddAttribute(5, nameof(StepList.Disabled), disabled);
+            builder.CloseComponent();
+        });
+
+    IRenderedComponent<IComponent> HostDraft(List<StepDraft> draft, bool repeating) =>
+        Render(builder =>
+        {
+            builder.OpenComponent<MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<StepList>(1);
+            builder.AddAttribute(2, nameof(StepList.Draft), draft);
+            builder.AddAttribute(3, nameof(StepList.UserId), User);
+            builder.AddAttribute(4, nameof(StepList.Today), Today);
+            builder.AddAttribute(5, nameof(StepList.Repeating), repeating);
+            builder.CloseComponent();
+        });
+
+    static TodoTask Dated(TodoTask task, DateOnly day)
+    {
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetStepDueDate(Guid.NewGuid(), User, task.Id, task.Steps[0].Id, day), DateTimeOffset.UnixEpoch));
+        return task;
     }
 
     static TodoTask TaskWithStep(string name)
