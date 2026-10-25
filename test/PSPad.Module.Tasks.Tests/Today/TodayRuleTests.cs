@@ -48,7 +48,7 @@ public class TodayRuleTests
     }
 
     [Fact]
-    public void ATaskWhoseNextUncheckedStepIsDueTodayIsOnToday()
+    public void ATaskWhoseStepIsDueTodayIsOnToday()
     {
         var task = TodoTaskTests.Existing();
         var stepId = Guid.NewGuid();
@@ -184,6 +184,57 @@ public class TodayRuleTests
         Assert.Equal(important.Id, entries[0].TaskId);
         Assert.Equal(urgent.Id, entries[1].TaskId);
         Assert.Equal(plain.Id, entries[2].TaskId);
+    }
+
+    [Fact]
+    public void ALaterStepDueTodayPutsTheTaskOnToday()
+    {
+        var task = WithStep(WithStep(TodoTaskTests.Existing(), "undated", null), "dated", Today);
+
+        Assert.Single(TodayRule.Select([task], Today));
+    }
+
+    [Fact]
+    public void ALaterStepDueYesterdayMakesTheTaskOverdue()
+    {
+        var task = WithStep(WithStep(TodoTaskTests.Existing(), "undated", null), "dated", Today.AddDays(-1));
+
+        Assert.True(Assert.Single(TodayRule.Select([task], Today)).Overdue);
+    }
+
+    [Fact]
+    public void AnEarlierTaskDueDateBeatsALaterStepDeadline()
+    {
+        var task = WithStep(Due(Today.AddDays(-2)), "step", Today.AddDays(5));
+
+        Assert.Equal(Today.AddDays(-2), TodayRule.TriggerOf(task));
+    }
+
+    [Fact]
+    public void AnEarlierStepDeadlineBeatsALaterTaskDueDate()
+    {
+        var task = WithStep(Due(Today.AddDays(5)), "step", Today.AddDays(1));
+
+        Assert.Equal(Today.AddDays(1), TodayRule.TriggerOf(task));
+    }
+
+    [Fact]
+    public void ARepeatingTaskIgnoresStepDeadlines()
+    {
+        var task = WithStep(DailyFrom(Today.AddDays(1)), "step", Today.AddDays(-3));
+
+        Assert.Empty(TodayRule.Select([task], Today));
+    }
+
+    static TodoTask WithStep(TodoTask task, string name, DateOnly? due)
+    {
+        var stepId = Guid.NewGuid();
+        task.ApplyAll(TodoTask.Decide(task, new AddStep(Guid.NewGuid(), User, task.Id, stepId, name), Now));
+        if (due is not null)
+        {
+            task.ApplyAll(TodoTask.Decide(task, new SetStepDueDate(Guid.NewGuid(), User, task.Id, stepId, due), Now));
+        }
+        return task;
     }
 
     static TodoTask Due(DateOnly day)

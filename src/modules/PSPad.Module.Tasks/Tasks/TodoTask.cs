@@ -57,7 +57,12 @@ public sealed class TodoTask : Aggregate
 
     public IReadOnlyList<SnapshotMark> SnapshotMarks => _snapshotMarks;
 
-    public Step? NextUncheckedStep => Steps.FirstOrDefault(step => !step.Checked);
+    [JsonIgnore]
+    public Step? EarliestDueStep => Steps
+        .Where(step => !step.Checked && step.DueOn is not null)
+        .OrderBy(step => step.DueOn)
+        .ThenBy(step => step.Position)
+        .FirstOrDefault();
 
     public IReadOnlySet<DateOnly> CompletedDays => _completedDays;
 

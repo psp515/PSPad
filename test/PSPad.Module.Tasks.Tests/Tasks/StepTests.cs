@@ -32,26 +32,6 @@ public class StepTests
     }
 
     [Fact]
-    public void TheNextUncheckedStepSkipsCheckedOnes()
-    {
-        var task = WithSteps("first", "second");
-        task.ApplyAll(TodoTask.Decide(
-            task, new CheckStep(Guid.NewGuid(), User, task.Id, task.Steps[0].Id, true), Now));
-
-        Assert.Equal("second", task.NextUncheckedStep!.Name);
-    }
-
-    [Fact]
-    public void TheNextUncheckedStepIsNothingWhenEveryStepIsChecked()
-    {
-        var task = WithSteps("only");
-        task.ApplyAll(TodoTask.Decide(
-            task, new CheckStep(Guid.NewGuid(), User, task.Id, task.Steps[0].Id, true), Now));
-
-        Assert.Null(task.NextUncheckedStep);
-    }
-
-    [Fact]
     public void MovingAStepRewritesThePositionsDensely()
     {
         var task = WithSteps("first", "second", "third");

@@ -289,6 +289,21 @@ public class DayPlanTests
             plan.Overdue.Concat(plan.AnyTime).Select(entry => entry.TaskId));
     }
 
+    [Fact]
+    public void ALaterStepDueInTwoDaysPutsItsTaskInComingUpOnThatDay()
+    {
+        var task = TodoTaskTests.Existing();
+        var dated = Guid.NewGuid();
+        task.ApplyAll(TodoTask.Decide(task, new AddStep(Guid.NewGuid(), User, task.Id, Guid.NewGuid(), "book van"), Now));
+        task.ApplyAll(TodoTask.Decide(task, new AddStep(Guid.NewGuid(), User, task.Id, dated, "order boxes"), Now));
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetStepDueDate(Guid.NewGuid(), User, task.Id, dated, Today.AddDays(2)), Now));
+
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
+
+        Assert.Equal(Today.AddDays(2), Assert.Single(plan.ComingUp).DueOn);
+    }
+
     static TodoTask Due(DateOnly day)
     {
         var task = TodoTaskTests.Existing();
