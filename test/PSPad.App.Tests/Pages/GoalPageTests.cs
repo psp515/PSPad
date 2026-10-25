@@ -21,6 +21,18 @@ public class GoalPageTests : Bunit.TestContext
     static readonly DateOnly Today = new(2026, 9, 12);
 
     [Fact]
+    public void RowsOnAGoalsOwnScreenLeaveTheGoalOut()
+    {
+        var goal = NewGoal("Eat healthier");
+        var list = NewList("Health");
+        Arrange([goal, list, NewTask(list.Id, "Cook on Sunday", goal)]);
+
+        var page = RenderPage(goal.Id);
+
+        Assert.Empty(page.FindAll(".pspad-row-goal"));
+    }
+
+    [Fact]
     public void ItNamesTheGoalAndShowsEveryOpenTask()
     {
         var goal = NewGoal("Eat healthier");
