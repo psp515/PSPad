@@ -229,6 +229,10 @@ tests would be visible, not silent.
     task panel and press Enter; close and reopen the panel, then reload:
     the new name persists. Clearing the name and blurring puts the old
     name back (issue #199).
+20. **Add from My Day.** My Day's FAB opens "New task" due Today with Add
+    task disabled; two draft steps and a name still leave it disabled until
+    the List row picks a list. Saving puts the task under "Today, any time"
+    with `0/2` steps, and the list shows it.
 
 ## 5. Timing
 
