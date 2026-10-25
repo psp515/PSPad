@@ -2,7 +2,6 @@ import { defineConfig } from '@playwright/test';
 import { env } from './env';
 
 export default defineConfig({
-  testDir: './scenarios',
   globalSetup: './global-setup.ts',
   fullyParallel: true,
   workers: process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : 4,
@@ -15,5 +14,8 @@ export default defineConfig({
     viewport: { width: 1280, height: 800 },
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+  projects: [
+    { name: 'chromium', testDir: './scenarios', use: { browserName: 'chromium' } },
+    { name: 'screenshots', testDir: '.', testMatch: 'screenshots.spec.ts', use: { browserName: 'chromium', deviceScaleFactor: 2 } },
+  ],
 });

@@ -40,6 +40,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Phone navigation | `specs/mobile-navigation-design.md` |
 | Budgets, expenses, balances, NBP rates | `specs/money-design.md` |
 | Budget CSV import | `specs/budget-import-design.md` |
+| Docs site pages, screenshots, self-host guide | `specs/docs-site-design.md` |
 | Sharing a budget | `specs/budget-sharing-design.md` |
 | Budget page views: Overview, Entries, Stats, forecast, insights | `specs/budget-overview-design.md` |
 | Length and count limits on user content | `specs/content-limits-design.md` |
@@ -96,9 +97,11 @@ module; `App` never sees `Infrastructure`; `Api` sees all. Only module edges:
 - **ADR immediately** for any new or changed architectural decision, using
   `adr/template.md`, plus its index row; update §4 here if an AD changes. Never
   edit an old ADR's Decision — supersede it.
-- **Docs ship with the change:** self-hoster-facing change (compose, env, ports)
-  → `docs/src/pages/install.astro` and `docker/.env.example` comments;
-  user-facing capability → `features.astro` and the landing page.
+- **Docs ship with the change:** self-hoster-facing change (images, env,
+  ports, services) → `docs/src/data/stack/` and the Self-host steps in
+  `docs/src/pages/self-host.astro`; user-facing capability →
+  `docs/src/data/features.ts`; a changed screen → `npm run screenshots` in
+  `test/e2e`.
 - **TDD.** Failing test first; every test class has `[UnitTest]` or
   `[IntegrationTest]` (`specs/testing-spec.md`). Never claim green without running.
 - **End-to-end ships with the feature.** A new or changed user-facing flow

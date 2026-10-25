@@ -98,7 +98,7 @@ triggers still goes through normal authorization.
 ## 3. Proxies and Cloudflare
 
 The stack serves plain HTTP; the self-hoster's own proxy sits in front of the
-API (`docs/src/pages/install.astro`, "Putting it behind a proxy"). The headers
+API (`docs/src/pages/self-host.astro`; the page no longer carries the proxy and SSE buffering note). The headers
 and heartbeat in §2 are chosen so stock proxy settings carry the stream.
 
 **Cloudflare (proxied DNS or Tunnel): expected to need no change; not tested
@@ -135,7 +135,7 @@ location /api/live {
 **Caddy: expected to need no change; not tested here.** Per its documented
 behaviour it flushes `text/event-stream` immediately.
 
-`install.astro` carries this guidance. An integration test runs the stream
+`self-host.astro` no longer carries this guidance. An integration test runs the stream
 through `nginxinc/nginx-unprivileged:1.31.6-alpine` with a stock `proxy_pass`
 block and a short `proxy_read_timeout` (§7); it passes even without
 `X-Accel-Buffering`. Cloudflare and Caddy are not tested. The Cloudflare path is checked by hand on a real
