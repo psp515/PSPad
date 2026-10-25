@@ -457,6 +457,85 @@ public class TaskRowTests : Bunit.TestContext
         Assert.NotEmpty(row.FindAll(".pspad-row-has-meta"));
     }
 
+    [Fact]
+    public void TheDueStepShowsItsNameAndDate()
+    {
+        Arrange();
+        var task = Task("Move flat");
+        Add(task, "Book the van");
+        WithStep(task, "Order boxes", Today.AddDays(1));
+
+        var row = Render(task);
+
+        var mark = row.Find(".pspad-step-due-mark");
+        Assert.Contains("Order boxes", mark.TextContent);
+        Assert.Contains(Today.AddDays(1).ToString("d MMM"), mark.TextContent);
+        Assert.Equal("Order boxes", row.Find(".pspad-step-due-name").GetAttribute("title"));
+    }
+
+    [Fact]
+    public void APastDueStepIsRed()
+    {
+        Arrange();
+        var task = Task("Renew passport");
+        WithStep(task, "Get new photos taken", Today.AddDays(-1));
+
+        var row = Render(task);
+
+        Assert.Contains("mud-error-text", row.Find(".pspad-step-due-mark").ClassName);
+    }
+
+    [Fact]
+    public void ACheckedDatedStepShowsNoMark()
+    {
+        Arrange();
+        var task = Task("Move flat");
+        var stepId = WithStep(task, "Order boxes", Today.AddDays(1));
+        task.ApplyAll(TodoTask.Decide(
+            task, new CheckStep(Guid.NewGuid(), User, task.Id, stepId, true), DateTimeOffset.UnixEpoch));
+
+        var row = Render(task);
+
+        Assert.Empty(row.FindAll(".pspad-step-due-mark"));
+    }
+
+    [Fact]
+    public void ARepeatingTaskShowsNoStepMark()
+    {
+        Arrange();
+        var task = Recurring(Task("Weekly clean"), Today);
+        WithStep(task, "Vacuum", Today.AddDays(1));
+
+        var row = Render(task);
+
+        Assert.Empty(row.FindAll(".pspad-step-due-mark"));
+    }
+
+    [Fact]
+    public void TheMarkComesAfterTheDueDateAndBeforeTheStepProgress()
+    {
+        Arrange();
+        var task = Due(Task("Move flat"), Today.AddDays(5));
+        WithStep(task, "Order boxes", Today.AddDays(1));
+
+        var row = Render(task);
+
+        var due = row.Markup.IndexOf("pspad-due", StringComparison.Ordinal);
+        var mark = row.Markup.IndexOf("pspad-step-due-mark", StringComparison.Ordinal);
+        var progress = row.Markup.IndexOf("pspad-steps-progress", StringComparison.Ordinal);
+        Assert.True(due >= 0 && due < mark && mark < progress, $"due {due}, mark {mark}, progress {progress}");
+    }
+
+    static Guid WithStep(TodoTask task, string name, DateOnly due)
+    {
+        var stepId = Guid.NewGuid();
+        task.ApplyAll(TodoTask.Decide(
+            task, new AddStep(Guid.NewGuid(), User, task.Id, stepId, name), DateTimeOffset.UnixEpoch));
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetStepDueDate(Guid.NewGuid(), User, task.Id, stepId, due), DateTimeOffset.UnixEpoch));
+        return stepId;
+    }
+
     IRenderedComponent<TaskRow> Render(TodoTask task, string? listName = null, string? goalName = null) =>
         Render<TaskRow>(parameters => parameters
             .Add(p => p.Task, task)
