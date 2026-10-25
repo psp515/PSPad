@@ -24,7 +24,7 @@ export const features: Feature[] = [
     does: 'Work, home, side projects: each area holds its own lists in your order.',
     how: 'Lists pack into columns on a big screen and stack on a phone. Deleting an area tells you how much goes with it.' },
   { id: 'tasks', title: 'Tasks and steps',
-    does: 'A due date, a priority, a goal and ordered steps on every task.',
+    does: 'A due date, a priority, a goal and ordered steps on every task; rename a step in place.',
     how: 'A step can carry its own date, and the next unchecked step is what puts the task on My Day.' },
   { id: 'descriptions', title: 'Descriptions',
     does: 'Markdown notes, links and checklists on every task and item.',
