@@ -11,7 +11,7 @@
     "check-stack": "node scripts/check-stack.mjs"
   },
   "devDependencies": {
-    "astro": "^7.2.8",
+    "astro": "^7.4.2",
     "sharp": "^0.35.4"
   }
 }
