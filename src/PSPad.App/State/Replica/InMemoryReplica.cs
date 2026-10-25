@@ -13,6 +13,9 @@ public sealed class InMemoryReplica : IReplica
     public Task<T?> LoadAsync<T>(Guid id) where T : Aggregate =>
         Task.FromResult(_documents.GetValueOrDefault(id) as T);
 
+    public Task<Aggregate?> LoadAsync(Type type, Guid id) =>
+        Task.FromResult(_documents.GetValueOrDefault(id) is { } document && type.IsInstanceOfType(document) ? document : null);
+
     public Task<IReadOnlyList<T>> LoadAllAsync<T>(Guid userId) where T : Aggregate =>
         Task.FromResult<IReadOnlyList<T>>(_documents.Values.OfType<T>().ToArray());
 

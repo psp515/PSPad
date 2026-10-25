@@ -110,6 +110,8 @@ public class LocalAccountDeletionTests
     {
         public Task<T?> LoadAsync<T>(Guid id) where T : Aggregate => throw new NotSupportedException();
 
+        public Task<Aggregate?> LoadAsync(Type type, Guid id) => throw new NotSupportedException();
+
         public Task<IReadOnlyList<T>> LoadAllAsync<T>(Guid userId) where T : Aggregate =>
             throw new NotSupportedException();
 

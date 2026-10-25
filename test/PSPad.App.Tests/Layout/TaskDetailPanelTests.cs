@@ -996,8 +996,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, task);
 
         var panel = RenderWithOverlays(taskId: task.Id);
-        var row = panel.FindComponent<TimeRow>();
-        await panel.InvokeAsync(() => row.Instance.StartChangedAsync(new TimeSpan(9, 30, 0)));
+        panel.Find(".pspad-time-start input").Change("09:30");
 
         var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
         Assert.Equal(new TimeOnly(9, 30), reloaded!.Time!.Start);
@@ -1014,8 +1013,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var due = panel.FindComponent<DueDateRow>();
         await panel.InvokeAsync(() => due.Instance.ValueChanged.InvokeAsync(Today));
         panel.WaitForAssertion(() => panel.FindComponent<TimeRow>());
-        var row = panel.FindComponent<TimeRow>();
-        await panel.InvokeAsync(() => row.Instance.StartChangedAsync(new TimeSpan(9, 30, 0)));
+        panel.Find(".pspad-time-start input").Change("09:30");
         panel.Find(".pspad-panel-save").Click();
 
         panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));

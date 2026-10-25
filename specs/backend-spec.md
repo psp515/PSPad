@@ -489,7 +489,10 @@ collections, every collection is cut there, `hasMore` is `true` and the
 marker is that `seq`; otherwise `hasMore` is `false`. `SyncService` pulls
 page after page from each page's marker, saving the rows, marker and
 fingerprint of every page before asking for the next, and stops when
-`hasMore` is `false` or the marker fails to advance. `full` is a comma-joined
+`hasMore` is `false` or the marker fails to advance. A pulled row whose
+`Version` is below the replica's copy is skipped (`adr/0078`): the local copy
+is ahead only by commands still queued in the outbox, which the next push
+replays. `full` is a comma-joined
 list of list and budget ids the caller is a member of: those lists and
 budgets and their live children
 come back in full regardless of `since`, letting a device that just joined,

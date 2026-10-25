@@ -196,6 +196,14 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
             {
                 var aggregate = (Aggregate)JsonSerializer.Deserialize(row.GetRawText(), type,
                     new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+
+                // A pull begun before a local commit carries the server's older copy; the
+                // queued command brings the server up to the local version on the next push.
+                if (await replica.LoadAsync(type, aggregate.Id) is { } held && held.Version > aggregate.Version)
+                {
+                    continue;
+                }
+
                 await replica.SaveAsync(aggregate);
                 saved++;
             }

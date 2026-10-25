@@ -284,6 +284,8 @@ public class CommandSenderTests
 
         public Task<T?> LoadAsync<T>(Guid id) where T : Aggregate => _inner.LoadAsync<T>(id);
 
+        public Task<Aggregate?> LoadAsync(Type type, Guid id) => _inner.LoadAsync(type, id);
+
         public Task<IReadOnlyList<T>> LoadAllAsync<T>(Guid userId) where T : Aggregate => _inner.LoadAllAsync<T>(userId);
 
         public Task RemoveAsync(Guid id) => _inner.RemoveAsync(id);

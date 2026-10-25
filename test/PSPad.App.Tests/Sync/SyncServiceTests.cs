@@ -408,6 +408,49 @@ public class SyncServiceTests
         new(nameof(SetTaskDescription), JsonSerializer.SerializeToElement(
             new SetTaskDescription(Guid.NewGuid(), User, Guid.NewGuid(), new string('ł', ContentLimits.Description))));
 
+    [Fact]
+    public async Task APulledCopyOlderThanTheLocalOneIsIgnored()
+    {
+        var replica = new InMemoryReplica();
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Buy milk"),
+            DateTimeOffset.UnixEpoch));
+        var stale = Row(task);
+        task.ApplyAll(TodoTask.Decide(task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, new DateOnly(2026, 10, 30)),
+            DateTimeOffset.UnixEpoch));
+        await replica.SaveAsync(task);
+        var api = new FakeApi { Pull = new(5, new Dictionary<string, JsonElement[]> { ["todotasks"] = [stale] }) };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        var stored = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(new DateOnly(2026, 10, 30), stored!.DueOn);
+        Assert.Equal(2, stored.Version);
+    }
+
+    [Fact]
+    public async Task APulledCopyNewerThanTheLocalOneReplacesIt()
+    {
+        var replica = new InMemoryReplica();
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Buy milk"),
+            DateTimeOffset.UnixEpoch));
+        await replica.SaveAsync(task);
+        var elsewhere = JsonSerializer.Deserialize<TodoTask>(Row(task).GetRawText(),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true })!;
+        elsewhere.ApplyAll(TodoTask.Decide(elsewhere, new RenameTask(Guid.NewGuid(), User, task.Id, "Buy oat milk"),
+            DateTimeOffset.UnixEpoch));
+        var api = new FakeApi { Pull = new(5, new Dictionary<string, JsonElement[]> { ["todotasks"] = [Row(elsewhere)] }) };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Equal("Buy oat milk", (await replica.LoadAsync<TodoTask>(task.Id))!.Name);
+    }
+
+    static JsonElement Row(Aggregate aggregate) =>
+        JsonSerializer.SerializeToElement(aggregate, aggregate.GetType(),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true });
+
     static SyncService ServiceFor(ISyncApi api, IOutbox outbox) =>
         new(api, new InMemoryReplica(), outbox);
 

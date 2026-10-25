@@ -759,12 +759,19 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      Due/Until is set or the task repeats, like Remind me) — the clock icon
      and "Time" label on the left (`pspad-time-head`), and on the right two
      stacked rows (`pspad-time-line`): **From** and **To** labels (12.5px,
-     `TextSecondary`, 40px wide) each followed by a 24-hour outlined, dense,
-     typeable `MudTimePicker` filling the rest of the row, `aria-label`
-     Start / End (`pspad-time-start`, `pspad-time-end`), ending in a
-     `Schedule` adornment icon that opens the picker (MudBlazor 9.9 has no
-     open-on-click for an editable picker, so the icon is the click target
-     and the field stays for typing). The From row sits on the Time line,
+     `TextSecondary`, 40px wide) each followed by an outlined, dense
+     `MudTextField` (`InputMode.numeric`) filling the rest of the row,
+     `aria-label` Start / End (`pspad-time-start`, `pspad-time-end`), showing
+     the time as `HH:mm` and ending in a `Schedule` adornment icon that opens
+     a `MudDialog` (`pspad-time-dialog`, no header, closes on Escape and
+     backdrop) holding a static 24-hour `MudTimePicker`; picking the minutes
+     sends the time and closes the dialog. Typing commits on Enter or blur
+     and is read leniently (`TimeText.TryParse`): `14` → 14:00, `9:30`,
+     `09.30`, `930` and `1430` → the obvious times; anything else keeps the
+     typed text, marks the field in error and shows "Enter a time like 14:30"
+     under the row; an empty Start clears the time, an empty End drops only
+     the end. (An editable `MudTimePicker` cannot take Enter: MudBlazor
+     prevents the keydown, so the browser never fires `change`.) The From row sits on the Time line,
      its field starting in the value column like Due's "Tomorrow"; the To row
      appears under it, same column and width, only once Start has a value. A ✕ (`pspad-property-clear`, `Size.Small`, the shared
      `PropertyRow` clear) on the From row clears both and lines up with
