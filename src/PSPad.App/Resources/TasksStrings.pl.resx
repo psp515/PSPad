@@ -357,4 +357,10 @@
   <data name="UnitYears.Many" xml:space="preserve">
     <value>lat</value>
   </data>
+  <data name="ClearDate" xml:space="preserve">
+    <value>Usuń datę</value>
+  </data>
+  <data name="SetStepDeadline" xml:space="preserve">
+    <value>Ustaw termin dla {0}</value>
+  </data>
 </root>
