@@ -28,8 +28,12 @@
             <MudCheckBox T="bool" Class="pspad-step-check" Value="@step.Checked"
                          ValueChanged="@(value => CheckAsync(step, value))" Color="Color.Primary"
                          Size="Size.Small" Disabled="@Disabled" aria-label="@step.Name" />
-            <MudText Typo="Typo.body2" Class="@($"flex-grow-1 pspad-step-name {(step.Checked ? "pspad-muted" : "")}")"
-                     Style="@(step.Checked ? "text-decoration:line-through" : "")">@step.Name</MudText>
+            <MudTextField @key="@($"{step.Id}-{_resets}")" T="string"
+                          Class="@($"flex-grow-1 mt-0 pspad-step-name {(step.Checked ? "pspad-step-done" : "")}")"
+                          Value="@step.Name" ValueChanged="@(name => RenameAsync(step, name))"
+                          Underline="false" Margin="Margin.Dense" MaxLength="@ContentLimits.Name"
+                          Disabled="@Disabled" OnKeyDown="@RevertOnEscape"
+                          UserAttributes="@NameAttributes(step.Name)" />
             @if (MarkFor(step) is not null)
             {
                 <SnapshotMarkChip />
@@ -58,6 +62,8 @@
     [Parameter] public EventCallback Changed { get; set; }
 
     string _newStep = "";
+
+    int _resets;
 
     int StepCount => Draft?.Count ?? Task?.Steps.Count ?? 0;
 
@@ -95,6 +101,32 @@
 
         var sender = Services.GetRequiredService<CommandSender>();
         await sender.SendAsync(new AddStep(Guid.NewGuid(), UserId, Task.Id, Guid.NewGuid(), name));
+        await Changed.InvokeAsync();
+    }
+
+    Dictionary<string, object> NameAttributes(string name) =>
+        new() { ["aria-label"] = T["RenameStep", name].Value };
+
+    void RevertOnEscape(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            _resets++;
+        }
+    }
+
+    async System.Threading.Tasks.Task RenameAsync(Step step, string name)
+    {
+        var trimmed = (name ?? "").Trim();
+
+        if (Disabled || Task is null || trimmed.Length == 0 || trimmed == step.Name)
+        {
+            _resets++;
+            return;
+        }
+
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new RenameStep(Guid.NewGuid(), UserId, Task.Id, step.Id, trimmed));
         await Changed.InvokeAsync();
     }
 

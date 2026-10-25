@@ -984,6 +984,11 @@ button.pspad-heatmap-cell:focus-visible {
     margin: 0;
 }
 
+.pspad-step-name.pspad-step-done input {
+    text-decoration: line-through;
+    color: var(--mud-palette-text-secondary);
+}
+
 .pspad-step-lead {
     display: inline-flex;
     justify-content: center;
