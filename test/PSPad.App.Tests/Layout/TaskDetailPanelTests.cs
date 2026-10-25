@@ -661,13 +661,13 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
-    public void ANewTaskHasNoStepsOrListRowButCanRepeat()
+    public void ANewTaskInAListHasDraftStepsButNoListRowAndCanRepeat()
     {
         AppTestHost.Arrange(this, User, Today);
 
         var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)Guid.NewGuid()));
 
-        Assert.Empty(panel.FindAll(".pspad-steps"));
+        Assert.Empty(panel.FindAll(".pspad-steps .pspad-step-check"));
         Assert.Empty(panel.FindAll(".pspad-task-list"));
         panel.FindAll(".pspad-task-kind .mud-toggle-item")[1].Click();
         panel.Find(".pspad-task-repeat");
@@ -1169,6 +1169,68 @@ public class TaskDetailPanelTests : Bunit.TestContext
         builder.AddAttribute(6, nameof(TaskDetailPanel.NewDue), newDue);
         builder.CloseComponent();
     });
+
+    [Fact]
+    public void ANewTaskOffersTheStepList()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var panel = RenderWithOverlays(newInList: Guid.NewGuid());
+
+        Assert.NotNull(panel.Find(".pspad-steps .pspad-step-add input"));
+    }
+
+    [Fact]
+    public async Task DraftStepsAreAddedInOrderWithTheNewTask()
+    {
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        var replica = AppTestHost.Arrange(this, User, Today, list);
+
+        var panel = RenderWithOverlays(newInList: list.Id);
+        panel.Find(".pspad-task-name-field input").Input("Przeprowadzka");
+        foreach (var step in new[] { "Zamówić pudła", "Spakować kuchnię" })
+        {
+            panel.Find(".pspad-step-add input").Input(step);
+            panel.Find(".pspad-step-add input").KeyDown(
+                new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        }
+        panel.Find(".pspad-panel-save").Click();
+
+        panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal(["Zamówić pudła", "Spakować kuchnię"], created.Steps.Select(step => step.Name));
+        Assert.All(created.Steps, step => Assert.False(step.Checked));
+    }
+
+    [Fact]
+    public void ANewTaskShowsTheStepListBeforeThePropertyRows()
+    {
+        AppTestHost.Arrange(this, User, Today);
+
+        var panel = RenderWithOverlays(newTask: true);
+
+        var order = new[] { "pspad-task-name-field", "pspad-steps", "pspad-task-kind", "pspad-task-due", "pspad-task-list" }
+            .Select(marker => panel.Markup.IndexOf(marker, StringComparison.Ordinal))
+            .ToArray();
+        Assert.DoesNotContain(-1, order);
+        Assert.Equal(order.Order(), order);
+    }
+
+    [Fact]
+    public void ReopeningAddStartsWithNoDraftSteps()
+    {
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        AppTestHost.Arrange(this, User, Today, list);
+
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.NewInList, (Guid?)list.Id));
+        panel.Find(".pspad-step-add input").Input("Zamówić pudła");
+        panel.Find(".pspad-step-add input").KeyDown(
+            new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        panel.Render(parameters => parameters.Add(p => p.NewInList, (Guid?)null));
+        panel.Render(parameters => parameters.Add(p => p.NewInList, (Guid?)list.Id));
+
+        Assert.DoesNotContain("Zamówić pudła", panel.Markup);
+    }
 
     [Fact]
     public void ANewTaskWithoutAListIsTitledNewTaskAndOffersTheListRow()

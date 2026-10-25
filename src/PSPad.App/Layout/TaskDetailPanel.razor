@@ -52,6 +52,12 @@
                 <StepList Task="@_task" UserId="@State.UserId" Disabled="@Disabled" Changed="@ReloadAsync" />
             </div>
         }
+        else if (Mode == PanelMode.Add)
+        {
+            <div class="pl-5 pr-3 pb-3">
+                <StepList @key="_draft" Draft="@_draft.Steps" UserId="@State.UserId" Disabled="@Disabled" />
+            </div>
+        }
 
         <MudDivider />
 
