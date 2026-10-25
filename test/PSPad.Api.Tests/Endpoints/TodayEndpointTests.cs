@@ -36,6 +36,31 @@ public class TodayEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task ATaskWhoseLaterStepIsDueTodayComesBack()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var me = await client.GetFromJsonAsync<MeResponse>("/api/me", ct);
+        var user = me!.UserId;
+        var taskId = await SeedTask(client, user);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        var dated = Guid.NewGuid();
+        await client.PostAsJsonAsync("/api/commands", new[]
+        {
+            Envelope(new AddStep(Guid.NewGuid(), user, taskId, Guid.NewGuid(), "Book the van")),
+            Envelope(new AddStep(Guid.NewGuid(), user, taskId, dated, "Order boxes")),
+            Envelope(new SetStepDueDate(Guid.NewGuid(), user, taskId, dated, today))
+        }, ct);
+
+        var entries = await client.GetFromJsonAsync<TodayEntry[]>("/api/today", ct);
+
+        var entry = Assert.Single(entries!);
+        Assert.Equal(taskId, entry.TaskId);
+        Assert.Equal(today, entry.DueOn);
+    }
+
+    [Fact]
     public async Task ARecurringTaskMissedYesterdayIsNeverOverdue()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
