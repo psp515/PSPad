@@ -12,6 +12,7 @@ using PSPad.App.State.Replica;
 using PSPad.App.Tests;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
@@ -720,6 +721,22 @@ public class AreaBoardTests : Bunit.TestContext
         builder.AddAttribute(3, nameof(AreaBoard.AreaId), areaId);
         builder.CloseComponent();
     };
+
+    [Fact]
+    public void ACardRowShowsTheGoalHoldingItsTask()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Moving", 0);
+        var task = NewTask(list.Id, "Send the lease back");
+        var goal = new Goal();
+        goal.ApplyAll(Goal.Decide(null, new CreateGoal(Guid.NewGuid(), User, Guid.NewGuid(), "Move to Kraków"), DateTimeOffset.UnixEpoch));
+        goal.ApplyAll(Goal.Decide(goal, new AddTaskToGoal(Guid.NewGuid(), User, goal.Id, task.Id), DateTimeOffset.UnixEpoch, task));
+        Arrange(area, list, task, goal);
+
+        var page = Render<AreaBoard>(parameters => parameters.Add(p => p.AreaId, area.Id));
+
+        Assert.Contains("Move to Kraków", page.Find(".pspad-row-goal").TextContent);
+    }
 
     InMemoryReplica Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, new DateOnly(2026, 9, 12), documents);

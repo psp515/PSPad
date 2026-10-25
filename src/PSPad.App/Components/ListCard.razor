@@ -7,7 +7,7 @@
 @inject IStringLocalizer<ReferenceStrings> Ref
 
 <ThingCard Id="@List.Id" Name="@List.Name" Href="@($"/lists/{List.Id}")" Icon="@ListIcon.For(List)"
-           IconTitle="@ListIcon.LabelFor(List, T)" Tasks="@Tasks" Today="@Today"
+           IconTitle="@ListIcon.LabelFor(List, T)" Tasks="@Tasks" Today="@Today" GoalNameOf="@GoalNameOf"
            Rows="@(IsReference ? ItemRows : null)" RowCount="@(IsReference ? Items.Count : (int?)null)"
            EmptyText="@(IsReference ? Ref["NoItemsYet"].Value : null)"
            OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" OnAdd="@(IsReference ? default : OnAddTaskClick)">
@@ -40,6 +40,8 @@
     [Parameter] public IReadOnlyList<ReferenceItem> Items { get; set; } = [];
 
     [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public Func<TodoTask, string?>? GoalNameOf { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
 

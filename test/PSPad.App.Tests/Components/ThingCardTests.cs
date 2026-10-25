@@ -268,6 +268,18 @@ public class ThingCardTests : Bunit.TestContext
     IRenderedComponent<ThingCard> Render(IReadOnlyList<TodoTask> tasks) =>
         Render<ThingCard>(parameters => Base(parameters, tasks));
 
+    [Fact]
+    public void ACardRowShowsTheGoalItIsGiven()
+    {
+        Arrange();
+        var tasks = Tasks(1);
+
+        var card = Render<ThingCard>(parameters => Base(parameters, tasks)
+            .Add(p => p.GoalNameOf, task => task.Id == tasks[0].Id ? "Move to Kraków" : null));
+
+        Assert.Contains("Move to Kraków", card.Find(".pspad-row-goal").TextContent);
+    }
+
     static ComponentParameterCollectionBuilder<ThingCard> Base(
         ComponentParameterCollectionBuilder<ThingCard> parameters, IReadOnlyList<TodoTask> tasks) =>
         parameters

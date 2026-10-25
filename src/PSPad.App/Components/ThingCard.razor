@@ -45,6 +45,7 @@
             {
                 <TaskRow @key="task.Id" Task="@task" Today="@Today"
                          ListName="@ListNameOf?.Invoke(task)"
+                         GoalName="@GoalNameOf?.Invoke(task)"
                          OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
             }
         }
@@ -88,6 +89,8 @@
     [Parameter] public DateOnly Today { get; set; }
 
     [Parameter] public Func<TodoTask, string?>? ListNameOf { get; set; }
+
+    [Parameter] public Func<TodoTask, string?>? GoalNameOf { get; set; }
 
     [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
 
