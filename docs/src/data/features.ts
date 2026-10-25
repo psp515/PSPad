@@ -34,7 +34,7 @@ export const features: Feature[] = [
     how: 'Only today’s occurrence shows and a missed day stays missed, so a repeat is never overdue. A lead time shows it as far ahead as you choose.' },
   { id: 'goals', title: 'Goals',
     does: 'One goal, with tasks from any area pointed at it.',
-    how: 'A due date and a status: in progress, achieved or not achieved. Goals are private to you, even on shared lists.' },
+    how: 'Every task row shows the goal it belongs to. A due date and a status: in progress, achieved or not achieved. Goals are private to you, even on shared lists.' },
   { id: 'references', title: 'Reference lists',
     does: 'Lists of things you look up rather than do: spools, documents, links.',
     how: 'Each item has labelled fields shown as links, copyable paths or quantities. They never land on My Day.' },
