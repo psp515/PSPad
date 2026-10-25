@@ -29,10 +29,14 @@ async function adminToken(): Promise<string> {
   return ((await response.json()) as { access_token: string }).access_token;
 }
 
-export async function createAccount(): Promise<Account> {
+export type Profile = { firstName: string; lastName: string; email: string };
+
+export async function createAccount(profile?: Profile): Promise<Account> {
   const suffix = randomBytes(4).toString('hex');
   const username = `e2e-${suffix}`;
-  const email = `${username}@e2e.local`;
+  const email = profile?.email ?? `${username}@e2e.local`;
+  const firstName = profile?.firstName ?? 'E2E';
+  const lastName = profile?.lastName ?? suffix;
   const token = await adminToken();
   const response = await fetch(`${env.keycloakUrl}/admin/realms/${env.realm}/users`, {
     method: 'POST',
@@ -40,8 +44,8 @@ export async function createAccount(): Promise<Account> {
     body: JSON.stringify({
       username,
       email,
-      firstName: 'E2E',
-      lastName: suffix,
+      firstName,
+      lastName,
       enabled: true,
       emailVerified: true,
       credentials: [{ type: 'password', value: password, temporary: false }],
@@ -51,7 +55,7 @@ export async function createAccount(): Promise<Account> {
     throw new Error(`Keycloak create user: ${response.status} ${await response.text()}`);
   }
   const id = response.headers.get('location')!.split('/').pop()!;
-  return { id, username, password, email, displayName: `E2E ${suffix}`, suffix };
+  return { id, username, password, email, displayName: `${firstName} ${lastName}`, suffix };
 }
 
 export async function deleteAccount(account: Account): Promise<void> {

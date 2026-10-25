@@ -1,0 +1,57 @@
+---
+interface Props { title?: string }
+const { title } = Astro.props
+---
+<div class="code">
+  <div class="code-head">
+    <span>{title}</span>
+    <button type="button" class="copy" aria-label="Copy to clipboard">Copy</button>
+  </div>
+  <pre><code><slot /></code></pre>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.code .copy').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const code = button.closest('.code')?.querySelector('code')
+      if (!code) return
+      try {
+        await navigator.clipboard.writeText(code.textContent ?? '')
+        button.textContent = 'Copied'
+      } catch {
+        button.textContent = 'Copy failed'
+      }
+      setTimeout(() => { button.textContent = 'Copy' }, 1500)
+    })
+  })
+</script>
+
+<style>
+  .code { margin: 16px 0; }
+  .code-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .copy {
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    border: 1px solid var(--lines);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  @media (hover: hover) {
+    .copy:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
+  }
+  .copy:active { transform: scale(0.94); border-color: var(--primary); transition-duration: 0.05s; }
+  .copy:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  pre { margin: 0; }
+</style>

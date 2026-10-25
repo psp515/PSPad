@@ -1,0 +1,459 @@
+---
+import Page from '../layouts/Page.astro'
+import Callout from '../components/Callout.astro'
+import CodeBlock from '../components/CodeBlock.astro'
+import StackFile from '../components/StackFile.astro'
+
+const raw = 'https://raw.githubusercontent.com/psp515/PSPad/main/docker'
+const quickSteps = ['What you need', 'Get the files', 'Start', 'Make yourself a user', 'Try it']
+const vpsSteps = ['What you need', 'Choose', 'Cloudflare', 'MongoDB', 'Files', 'Start and check', 'First sign-in', 'Keep it running']
+---
+<Page
+  title="Self-host PSPad"
+  description="Run PSPad yourself: a quick test on your computer in ten minutes, or on your own VPS with a domain in Cloudflare, one step at a time."
+>
+  <div class="wrap">
+    <h1>Self-host PSPad</h1>
+    <p class="intro">Pick what you are doing. The steps, commands and files below change with it.</p>
+
+    <div class="selector" role="group" aria-label="Scenario">
+      <button type="button" class="card is-on" data-scenario="quick">
+        <strong>Quick Test</strong>
+        <span>On your computer, in ten minutes. Pulls the published images, everything on localhost, nothing to build.</span>
+      </button>
+      <button type="button" class="card" data-scenario="vps">
+        <strong>VPS Hosting</strong>
+        <span>On your own server with a domain in Cloudflare. You choose where Keycloak keeps its users, where MongoDB runs and how the internet reaches it.</span>
+      </button>
+    </div>
+
+    <div class="stepper">
+      <nav class="steps" aria-label="Steps">
+        <ol data-scenario="quick">
+          {quickSteps.map((label, i) => (
+            <li><button type="button" data-step={i + 1}><span class="n">{i + 1}</span><span class="label">{label}</span></button></li>
+          ))}
+        </ol>
+        <ol data-scenario="vps" hidden>
+          {vpsSteps.map((label, i) => (
+            <li><button type="button" data-step={i + 1}><span class="n">{i + 1}</span><span class="label">{label}</span></button></li>
+          ))}
+        </ol>
+      </nav>
+
+      <section class="panel">
+        <p class="where"><span data-scenario-name>Quick Test</span> · step <span data-step-no>1</span> of <span data-step-count>5</span></p>
+
+        <article data-scenario="quick" data-step="1">
+          <h2>What you need</h2>
+          <ul>
+            <li>A computer with <a href="https://docs.docker.com/get-docker/">Docker</a>. Docker Desktop on Windows or macOS, Docker Engine on Linux.</li>
+            <li>Access to the internet, to pull four images.</li>
+            <li>Ports 5000, 5001 and 8080 free.</li>
+          </ul>
+          <p>Nothing is built and nothing leaves your computer. When you are done, one command removes it all.</p>
+        </article>
+
+        <article data-scenario="quick" data-step="2" hidden>
+          <h2>Get the files</h2>
+          <p>Make a folder and put three files in it. Two come from the repository, the third is below.</p>
+          <p>In a terminal (Git Bash or WSL on Windows):</p>
+          <CodeBlock title="The Keycloak realm and the Mongo entrypoint">mkdir pspad &amp;&amp; cd pspad
+mkdir -p keycloak
+curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json
+curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
+          <p>Then save this as <code>compose.yaml</code> in that folder:</p>
+          <StackFile file="compose" title="compose.yaml" />
+        </article>
+
+        <article data-scenario="quick" data-step="3" hidden>
+          <h2>Start</h2>
+          <CodeBlock title="In the folder">docker compose up -d --wait</CodeBlock>
+          <p>The first start pulls about 900 MB and takes a minute or two. It returns before the API is ready. Give it ten more seconds, then:</p>
+          <ul>
+            <li>The app at <a href="http://localhost:5001">http://localhost:5001</a></li>
+            <li>The API at <a href="http://localhost:5000/health">http://localhost:5000/health</a>, which says <code>healthy</code></li>
+            <li>Keycloak at <a href="http://localhost:8080">http://localhost:8080</a></li>
+          </ul>
+        </article>
+
+        <article data-scenario="quick" data-step="4" hidden>
+          <h2>Make yourself a user</h2>
+          <p>PSPad has no sign-up page. Users are created in Keycloak, which takes a minute.</p>
+          <ol>
+            <li>Open <a href="http://localhost:8080/admin/">http://localhost:8080/admin/</a> and sign in with <code>admin</code> / <code>admin</code>.</li>
+            <li>Switch the realm in the top-left from <strong>master</strong> to <strong>psplace</strong>.</li>
+            <li><strong>Users → Add user</strong>: a username, an email, first and last name. <strong>Create</strong>.</li>
+            <li><strong>Credentials → Set password</strong>, with <strong>Temporary</strong> off.</li>
+          </ol>
+        </article>
+
+        <article data-scenario="quick" data-step="5" hidden>
+          <h2>Try it</h2>
+          <p>Open <a href="http://localhost:5001">http://localhost:5001</a> and sign in with the user you just made. Three things to try first:</p>
+          <ol>
+            <li>Type anything into <strong>Inbox</strong>, then turn it into a task with today's date.</li>
+            <li>Open <strong>My Day</strong>: it is there. Add a step to it and give the step a date.</li>
+            <li>Make a <strong>Budget</strong> and add an expense in another currency.</li>
+          </ol>
+          <p>Done looking? This removes the containers and the data:</p>
+          <CodeBlock title="Stop and clean up">docker compose down -v</CodeBlock>
+          <p>Liked it? <button type="button" class="button button-secondary" data-scenario="vps">Host it on a VPS</button></p>
+        </article>
+
+        <article data-scenario="vps" data-step="1" hidden>
+          <h2>What you need</h2>
+          <ul>
+            <li>A Linux VPS with access to the internet, 2 GB of RAM and <a href="https://docs.docker.com/engine/install/">Docker Engine</a>.</li>
+            <li>A domain managed in <a href="https://dash.cloudflare.com">Cloudflare</a>. Three names under it: the app, the API and Keycloak. This guide uses <code>pspad</code>, <code>pspad-api</code> and <code>auth</code> on <code>example.com</code>.</li>
+            <li>About thirty minutes.</li>
+          </ul>
+          <p>The images come from GitHub and are rebuilt on every change: <code>ghcr.io/psp515/pspad-frontend</code> and <code>ghcr.io/psp515/pspad-backend</code>.</p>
+        </article>
+
+        <article data-scenario="vps" data-step="2" hidden>
+          <h2>Choose</h2>
+          <p>Three decisions. The rest of the steps follow them.</p>
+          <div class="choice">
+            <strong>Keycloak keeps its users in</strong>
+            <div class="options">
+              <button type="button" class="card is-on" data-choice="kc" data-value="h2"><strong>A file</strong><span>Simplest. Fine for one household. Backed up with the volume.</span></button>
+              <button type="button" class="card" data-choice="kc" data-value="pg"><strong>Postgres</strong><span>What Keycloak recommends. One more container, proper dumps.</span></button>
+            </div>
+          </div>
+          <div class="choice">
+            <strong>MongoDB runs</strong>
+            <div class="options">
+              <button type="button" class="card is-on" data-choice="mongo" data-value="vps"><strong>On the VPS</strong><span>A container beside the app. Your data stays on your server.</span></button>
+              <button type="button" class="card" data-choice="mongo" data-value="atlas"><strong>On MongoDB Atlas</strong><span>Free M0 cluster. Memory and backups off your VPS.</span></button>
+            </div>
+          </div>
+          <div class="choice">
+            <strong>The internet reaches it through</strong>
+            <div class="options">
+              <button type="button" class="card is-on" data-choice="expose" data-value="tunnel"><strong>Cloudflare Tunnel</strong><span>No open ports, no certificates. The VPS dials out.</span></button>
+              <button type="button" class="card" data-choice="expose" data-value="dns"><strong>Cloudflare DNS</strong><span>Three A records, ports 80 and 443 open, Caddy gets the certificates.</span></button>
+            </div>
+          </div>
+        </article>
+
+        <article data-scenario="vps" data-step="3" hidden>
+          <h2>Cloudflare</h2>
+          <div data-when="expose=tunnel">
+            <ol>
+              <li>Open <a href="https://one.dash.cloudflare.com">Zero Trust</a> → <strong>Networks → Tunnels → Create a tunnel</strong>, type Cloudflared, name it <code>pspad</code>.</li>
+              <li>On the install page, copy only the token: the long string after <code>--token</code>. It goes into <code>.env</code> in the Files step.</li>
+              <li><strong>Public hostnames</strong>, add three:</li>
+            </ol>
+            <table>
+              <thead><tr><th>Hostname</th><th>Service</th></tr></thead>
+              <tbody>
+                <tr><td><code>pspad.example.com</code></td><td><code>http://app:8080</code></td></tr>
+                <tr><td><code>pspad-api.example.com</code></td><td><code>http://api:8080</code></td></tr>
+                <tr><td><code>auth.example.com</code></td><td><code>http://keycloak:8080</code></td></tr>
+              </tbody>
+            </table>
+            <p>Cloudflare creates the DNS records itself. Nothing on the VPS is opened.</p>
+            <ol start="4">
+              <li>SSL/TLS → Edge Certificates → turn on HSTS.</li>
+            </ol>
+          </div>
+          <div data-when="expose=dns" hidden>
+            <ol>
+              <li>Open your domain in <a href="https://dash.cloudflare.com">Cloudflare</a> → <strong>DNS → Records</strong>.</li>
+              <li>Add three <strong>A</strong> records pointing at the VPS address: <code>pspad</code>, <code>pspad-api</code> and <code>auth</code>. Set <strong>Proxy status</strong> to <strong>DNS only</strong> on all three, so Caddy can get certificates from Let's Encrypt.</li>
+              <li>On the VPS, open ports 80 and 443. With ufw: <code>ufw allow 80,443/tcp</code>.</li>
+            </ol>
+          </div>
+        </article>
+
+        <article data-scenario="vps" data-step="4" hidden>
+          <h2>MongoDB</h2>
+          <div data-when="mongo=atlas" hidden>
+            <ol>
+              <li>At <a href="https://cloud.mongodb.com">cloud.mongodb.com</a> create a free <strong>M0</strong> cluster in the region nearest your VPS.</li>
+              <li><strong>Database Access → Add new database user</strong>: user <code>pspad</code>, a generated password, <strong>Specific privileges → readWrite</strong> on database <code>pspad</code>.</li>
+              <li><strong>Network Access → Add IP address</strong>: the VPS address.</li>
+              <li><strong>Connect → Drivers</strong>: copy the connection string and put the password in. It goes into <code>.env</code> in the next step.</li>
+            </ol>
+            <CodeBlock title="The shape of the string">mongodb+srv://pspad:&lt;password&gt;@&lt;cluster&gt;.mongodb.net/pspad?retryWrites=true&amp;w=majority</CodeBlock>
+          </div>
+          <div data-when="mongo=vps">
+            <p>Nothing to decide here. The compose file in the next step runs MongoDB as a one-node replica set beside the API, with its data in a Docker volume.</p>
+            <p>Make the folder the stack will live in and download the entrypoint into it:</p>
+            <CodeBlock title="On the VPS">mkdir -p ~/pspad &amp;&amp; cd ~/pspad
+curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
+          </div>
+        </article>
+
+        <article data-scenario="vps" data-step="5" hidden>
+          <h2>Files</h2>
+          <p>One folder on the VPS, <code>~/pspad</code>. The files below are assembled for your choices. Replace <code>example.com</code> with your domain and every <code>CHANGE_ME</code> with a secret. Generate each with <code>openssl rand -hex 24</code>; letters and digits only, so nothing needs quoting. Create each file below with <code>nano</code>, paste, save.</p>
+          <CodeBlock title="On the VPS">mkdir -p ~/pspad/keycloak &amp;&amp; cd ~/pspad</CodeBlock>
+          <StackFile file="compose" title="compose.yaml" initial="vps-h2-vps-tunnel" />
+          <StackFile file="env" title=".env" />
+          <div data-when="expose=dns" hidden>
+            <StackFile file="caddyfile" title="Caddyfile" />
+          </div>
+          <CodeBlock title="The Keycloak realm">curl -fsSLo keycloak/realm-psplace.json {raw}/keycloak/realm-psplace.json</CodeBlock>
+          <Callout title="The realm is imported once">
+            <p>Keycloak reads <code>keycloak/realm-psplace.json</code> on its first start. The realm ships with <code>http://localhost:5001/*</code> as the redirect URI. You set your app's address in the Keycloak console in the First sign-in step, not in the file.</p>
+          </Callout>
+        </article>
+
+        <article data-scenario="vps" data-step="6" hidden>
+          <h2>Start and check</h2>
+          <CodeBlock title="In ~/pspad">docker compose up -d --wait</CodeBlock>
+          <p>It returns before the API is ready, and Keycloak needs about two minutes on its first start to build and import the realm. Wait, then from anywhere:</p>
+          <ul>
+            <li><code>https://pspad-api.example.com/health</code> says <code>healthy</code>.</li>
+            <li><code>https://auth.example.com</code> shows the Keycloak page.</li>
+            <li><code>https://pspad.example.com</code> opens the app and sends you to sign in.</li>
+          </ul>
+          <p>Something missing? <code>docker compose logs -f api</code> and <code>docker compose logs -f keycloak</code> say why.</p>
+        </article>
+
+        <article data-scenario="vps" data-step="7" hidden>
+          <h2>First sign-in</h2>
+          <ol>
+            <li>Open <code>https://auth.example.com/admin/</code> with the admin user and password from <code>.env</code>.</li>
+            <li>Open <strong>Realm psplace → Clients → pspad-frontend</strong>, <strong>replace</strong> <strong>Valid redirect URIs</strong> with <code>https://pspad.example.com/*</code> and save. <strong>Web origins</strong> is <code>+</code>, which follows.</li>
+            <li><strong>Users → Add user</strong>, then <strong>Credentials → Set password</strong> with Temporary off. That is you.</li>
+            <li>Open <code>https://pspad.example.com</code>, sign in, and install it from the browser menu for the offline app.</li>
+          </ol>
+        </article>
+
+        <article data-scenario="vps" data-step="8" hidden>
+          <h2>Keep it running</h2>
+          <CodeBlock title="Upgrade">docker compose pull &amp;&amp; docker compose up -d --wait</CodeBlock>
+          <p>That pulls new PSPad images. A newer MongoDB, Keycloak or Postgres means copying the compose file from this page again.</p>
+          <p>Stop the API first for a MongoDB restore: <code>docker compose stop api</code>, then <code>start</code> it after.</p>
+          <div data-when="mongo=vps">
+            <p>Make the folder first: <code>mkdir -p ~/pspad/backups</code>.</p>
+            <CodeBlock title="Back up MongoDB, nightly from crontab -e">0 3 * * * cd ~/pspad &amp;&amp; docker compose exec -T mongo sh -c 'mongodump --archive --gzip -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' &gt; ~/pspad/backups/pspad-$(date +\%F).gz</CodeBlock>
+            <CodeBlock title="Restore MongoDB">docker compose exec -T mongo sh -c 'mongorestore --archive --gzip --drop -u pspad -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin' &lt; backups/pspad-DATE.gz</CodeBlock>
+          </div>
+          <div data-when="mongo=atlas" hidden>
+            <p>Atlas M0 keeps no backups of its own. Once a week, from the VPS. Make the folder first: <code>mkdir -p ~/pspad/backups</code>.</p>
+            <CodeBlock title="Back up MongoDB, weekly from crontab -e">0 3 * * 0 cd ~/pspad &amp;&amp; docker run --rm --env-file .env mongo:8.3.11 sh -c 'mongodump --uri "$MONGO_CONNECTION_STRING" --archive --gzip' &gt; ~/pspad/backups/pspad-$(date +\%F).gz</CodeBlock>
+            <CodeBlock title="Restore MongoDB">docker run --rm -i --env-file .env mongo:8.3.11 sh -c 'mongorestore --uri "$MONGO_CONNECTION_STRING" --archive --gzip --drop' &lt; backups/pspad-DATE.gz</CodeBlock>
+          </div>
+          <div data-when="kc=pg" hidden>
+            <CodeBlock title="Back up Keycloak">docker compose exec -T postgres pg_dump -U keycloak keycloak | gzip &gt; backups/keycloak-$(date +%F).sql.gz</CodeBlock>
+            <CodeBlock title="Restore Keycloak">gunzip -c backups/keycloak-DATE.sql.gz | docker compose exec -T postgres psql -U keycloak keycloak</CodeBlock>
+          </div>
+          <div data-when="kc=h2">
+            <CodeBlock title="Back up Keycloak">docker compose stop keycloak &amp;&amp; docker run --rm -v pspad_keycloak-data:/data -v "$PWD/backups":/out alpine:3.22.2 tar czf /out/keycloak-$(date +%F).tgz -C /data . &amp;&amp; docker compose start keycloak</CodeBlock>
+            <CodeBlock title="Restore Keycloak">docker compose stop keycloak &amp;&amp; docker run --rm -v pspad_keycloak-data:/data -v "$PWD/backups":/in alpine:3.22.2 sh -c 'rm -rf /data/* &amp;&amp; tar xzf /in/keycloak-DATE.tgz -C /data' &amp;&amp; docker compose start keycloak</CodeBlock>
+          </div>
+        </article>
+
+        <div class="pager">
+          <button type="button" class="button button-secondary" data-back hidden>Back</button>
+          <button type="button" class="button button-primary" data-next>Next</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</Page>
+
+<script>
+  import { key, parse } from '../data/stack/options'
+
+  const counts = { quick: 5, vps: 8 }
+  const params = new URLSearchParams(location.search)
+  let choices = parse(params)
+  let step = Math.min(counts[choices.scenario], Math.max(1, Number(params.get('step')) || 1))
+
+  const all = <T extends Element>(selector: string) => Array.from(document.querySelectorAll<T>(selector))
+  const show = (element: Element, on: boolean) => element.toggleAttribute('hidden', !on)
+
+  function render() {
+    const scenario = choices.scenario
+    all('[data-scenario].card').forEach((b) => {
+      const on = b.getAttribute('data-scenario') === scenario
+      b.classList.toggle('is-on', on)
+      b.setAttribute('aria-pressed', String(on))
+    })
+    all('.steps ol').forEach((list) => show(list, list.getAttribute('data-scenario') === scenario))
+    all('.steps button').forEach((b) => {
+      const n = Number(b.getAttribute('data-step'))
+      b.classList.toggle('is-current', n === step)
+      if (n === step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current')
+      b.classList.toggle('is-done', n < step)
+    })
+    all('article[data-scenario]').forEach((a) => show(a, a.getAttribute('data-scenario') === scenario && Number(a.getAttribute('data-step')) === step))
+    all('[data-choice]').forEach((b) => {
+      const on = choices[b.getAttribute('data-choice') as 'kc' | 'mongo' | 'expose'] === b.getAttribute('data-value')
+      b.classList.toggle('is-on', on)
+      b.setAttribute('aria-pressed', String(on))
+    })
+    all('[data-when]').forEach((el) => {
+      const [name, value] = (el.getAttribute('data-when') ?? '').split('=')
+      show(el, choices[name as 'kc' | 'mongo' | 'expose'] === value)
+    })
+    const current = key(choices)
+    all('.stack-file').forEach((el) => show(el, el.getAttribute('data-stack') === current))
+    document.querySelector('[data-scenario-name]')!.textContent = scenario === 'quick' ? 'Quick Test' : 'VPS Hosting'
+    document.querySelector('[data-step-no]')!.textContent = String(step)
+    document.querySelector('[data-step-count]')!.textContent = String(counts[scenario])
+    const back = document.querySelector<HTMLButtonElement>('[data-back]')!
+    const next = document.querySelector<HTMLButtonElement>('[data-next]')!
+    show(back, step > 1)
+    next.textContent = step === counts[scenario] ? 'Done' : 'Next'
+    const query = new URLSearchParams({ scenario, step: String(step) })
+    if (scenario === 'vps') { query.set('kc', choices.kc); query.set('mongo', choices.mongo); query.set('expose', choices.expose) }
+    history.replaceState(null, '', `?${query}`)
+  }
+
+  function go(to: number) {
+    step = Math.min(counts[choices.scenario], Math.max(1, to))
+    render()
+    document.querySelector('.panel')?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  }
+
+  all('[data-scenario].card, button[data-scenario].button').forEach((b) => b.addEventListener('click', () => {
+    const scenario = b.getAttribute('data-scenario') as 'quick' | 'vps'
+    choices = scenario === 'quick' ? parse(new URLSearchParams()) : { ...choices, scenario }
+    go(1)
+  }))
+  all('.steps button').forEach((b) => b.addEventListener('click', () => go(Number(b.getAttribute('data-step')))))
+  all('[data-choice]').forEach((b) => b.addEventListener('click', () => {
+    choices = { ...choices, [b.getAttribute('data-choice')!]: b.getAttribute('data-value') }
+    render()
+  }))
+  document.querySelector('[data-back]')!.addEventListener('click', () => go(step - 1))
+  document.querySelector('[data-next]')!.addEventListener('click', () => {
+    if (step < counts[choices.scenario]) return go(step + 1)
+    step = 1
+    render()
+    window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  })
+
+  render()
+</script>
+
+<noscript>
+  <style>
+    article[data-scenario][hidden], .steps ol[hidden] { display: block !important; }
+    .pager, .selector, .where { display: none !important; }
+  </style>
+</noscript>
+
+<style>
+  .intro { font-size: 1.1rem; color: var(--muted); }
+
+  .selector {
+    display: grid;
+    gap: 16px;
+    margin: 24px 0 32px;
+  }
+
+  .card {
+    font: inherit;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 20px;
+    border: 1.5px solid var(--lines);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .card span { font-size: 0.92rem; color: var(--muted); line-height: 1.5; }
+  @media (hover: hover) {
+    .card:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 20%, transparent); }
+  }
+  .card:active { transform: scale(0.98); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 25%, transparent); transition-duration: 0.05s; }
+  .card:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+  .card.is-on { border-color: var(--primary); background: var(--raised); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent); }
+
+  .stepper { display: grid; gap: 24px; align-items: start; }
+
+  .steps ol { list-style: none; margin: 0; padding: 10px; border: 1px solid var(--lines); border-radius: var(--radius); background: var(--surface); }
+  .steps li { margin: 0; }
+  .steps button {
+    font: inherit;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  }
+  @media (hover: hover) {
+    .steps button:hover { color: var(--text); background: var(--raised); transform: translateX(3px); }
+  }
+  .steps button:active { transform: scale(0.96); transition-duration: 0.05s; }
+  .steps button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .steps .n {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--raised);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .steps .is-done { color: var(--primary); }
+  .steps .is-done .n { background: var(--primary); color: var(--background); }
+  .steps .is-current { background: var(--primary); color: var(--background); font-weight: 600; }
+  .steps .is-current .n { background: var(--background); color: var(--primary); }
+
+  .panel {
+    border: 1px solid var(--lines);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 24px 28px;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .where { margin: 0 0 8px; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .panel h2 { margin-top: 0; }
+  .panel li { margin: 4px 0; }
+  .panel table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+  .panel th, .panel td { text-align: left; padding: 8px; border-bottom: 1px solid var(--lines); }
+
+  .choice { display: flex; flex-direction: column; gap: 8px; margin: 18px 0; }
+  .options { display: grid; gap: 10px; }
+
+  .pager { display: flex; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 20px; border-top: 1px solid var(--lines); }
+  .pager [data-next] { margin-left: auto; }
+  .pager [hidden] { display: none; }
+
+  @media (max-width: 819px) {
+    .steps ol { display: flex; gap: 8px; overflow-x: auto; }
+    .steps ol[hidden] { display: none; }
+    .steps li { display: inline-block; flex: none; }
+    .steps button { width: auto; padding: 4px; }
+    .steps button:hover { transform: translateY(-2px); }
+    .steps .label { display: none; }
+    .steps .n { width: 32px; height: 32px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, .steps button { transition: none; transform: none; }
+  }
+
+  @media (min-width: 820px) {
+    .selector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stepper { grid-template-columns: 260px minmax(0, 1fr); }
+    .steps { position: sticky; top: 90px; }
+    .options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>
