@@ -121,7 +121,7 @@ public class StepListTests : Bunit.TestContext
 
         Assert.Equal(["Check the fridge", "Go to the shop"], draft);
         Assert.Equal(["Check the fridge", "Go to the shop"],
-            steps.FindAll(".pspad-step-name").Select(name => name.TextContent));
+            steps.FindAll(".pspad-step-name input").Select(name => name.GetAttribute("value")));
         Assert.Empty(steps.FindAll(".pspad-step-check"));
         Assert.Empty(await replica.LoadAllAsync<TodoTask>(User));
     }
@@ -232,6 +232,48 @@ public class StepListTests : Bunit.TestContext
 
         var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
         Assert.Contains("pspad-step-done", steps.Find(".pspad-step-name").ClassList);
+    }
+
+    [Fact]
+    public void EditingADraftStepRewritesItInPlace()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<string> { "Check the fridge", "Go to the shop" };
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
+        steps.FindAll(".pspad-step-name input")[1].Change(" Go to the market ");
+
+        Assert.Equal(["Check the fridge", "Go to the market"], draft);
+    }
+
+    [Fact]
+    public void EmptyingADraftStepKeepsItsName()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<string> { "Check the fridge" };
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
+        steps.Find(".pspad-step-name input").Change("  ");
+
+        Assert.Equal(["Check the fridge"], draft);
+        Assert.Equal("Check the fridge", steps.Find(".pspad-step-name input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void EscapeRevertsADraftStep()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<string> { "Check the fridge" };
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
+        var field = steps.Find(".pspad-step-name input");
+        var typedInto = field.Id;
+        field.KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        Assert.Equal(["Check the fridge"], draft);
+        var restored = steps.Find(".pspad-step-name input");
+        Assert.NotEqual(typedInto, restored.Id);
+        Assert.Equal("Check the fridge", restored.GetAttribute("value"));
     }
 
     static TodoTask TaskWithStep(string name)

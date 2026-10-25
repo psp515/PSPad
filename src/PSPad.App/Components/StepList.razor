@@ -14,7 +14,11 @@
                 <span class="pspad-step-lead">
                     <MudIcon Icon="@Icons.Material.Outlined.CheckBoxOutlineBlank" Size="Size.Small" Class="pspad-muted" />
                 </span>
-                <MudText Typo="Typo.body2" Class="flex-grow-1 pspad-step-name">@name</MudText>
+                <MudTextField @key="@($"draft-{position}-{_resets}")" T="string" Class="flex-grow-1 mt-0 pspad-step-name"
+                              Value="@name" ValueChanged="@(value => RenameDraft(position, value))"
+                              Underline="false" Margin="Margin.Dense" MaxLength="@ContentLimits.Name"
+                              Disabled="@Disabled" OnKeyDown="@RevertOnEscape"
+                              UserAttributes="@NameAttributes(name)" />
                 <MudIconButton Class="pspad-step-remove" Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
                                aria-label="@T["RemoveStep", name].Value" Disabled="@Disabled"
                                OnClick="@(() => Draft.RemoveAt(position))" />
@@ -128,6 +132,19 @@
         var sender = Services.GetRequiredService<CommandSender>();
         await sender.SendAsync(new RenameStep(Guid.NewGuid(), UserId, Task.Id, step.Id, trimmed));
         await Changed.InvokeAsync();
+    }
+
+    void RenameDraft(int position, string name)
+    {
+        var trimmed = (name ?? "").Trim();
+
+        if (Disabled || Draft is null || trimmed.Length == 0)
+        {
+            _resets++;
+            return;
+        }
+
+        Draft[position] = trimmed;
     }
 
     async System.Threading.Tasks.Task CheckAsync(Step step, bool @checked)
