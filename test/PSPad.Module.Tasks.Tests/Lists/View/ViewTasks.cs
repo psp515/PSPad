@@ -9,7 +9,7 @@ static class ViewTasks
 {
     public static readonly Guid User = Guid.Parse("11111111-1111-1111-1111-111111111111");
     public static readonly DateTimeOffset Now = new(2026, 10, 23, 8, 0, 0, TimeSpan.Zero);
-    public static readonly DateOnly Today = new(2026, 10, 23);
+    public static readonly DateOnly TodayDate = new(2026, 10, 23);
 
     public static TodoTask Named(string name, DateTimeOffset? createdAt = null)
     {
