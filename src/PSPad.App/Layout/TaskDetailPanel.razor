@@ -24,7 +24,7 @@
 @inject IStringLocalizer<ListsStrings> ListText
 
 <DetailPanel Open="@(Mode != PanelMode.Closed)" Title="@Title" TitleTypo="Typo.body2" OnClose="@OnClose"
-             OnSave="@SaveCallback" SaveText="@T["AddTask"]" CanSave="@(!_creating && !string.IsNullOrWhiteSpace(_draft.Name))"
+             OnSave="@SaveCallback" SaveText="@T["AddTask"]" CanSave="@(!_creating && !string.IsNullOrWhiteSpace(_draft.Name) && _draft.ListId is not null)"
              Disabled="@Disabled">
     <HeaderActions>
         <MudIconButton Class="pspad-task-star" Color="Color.Primary" Disabled="@Disabled"
@@ -87,6 +87,11 @@
                 <ListRow Placement="@_placement" Lists="@_lists" Value="@_task.ListId" ValueChanged="@MoveToListAsync"
                          Disabled="@Disabled" />
             }
+            else if (NewInList is null)
+            {
+                <ListRow Placement="@_placement" Lists="@_lists" Value="@_draft.ListId" ValueChanged="@PickList"
+                         Disabled="@Disabled" />
+            }
         </div>
 
         @if (_task is not null)
@@ -135,6 +140,10 @@
 
     [Parameter] public Guid? NewInList { get; set; }
 
+    [Parameter] public bool NewTask { get; set; }
+
+    [Parameter] public DateOnly? NewDue { get; set; }
+
     [Parameter] public bool Disabled { get; set; }
 
     [Parameter] public EventCallback OnClose { get; set; }
@@ -145,21 +154,23 @@
     ListPlacement _placement = ListPlacement.Empty;
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<Goal> _goals = [];
-    Guid? _draftFor;
+    (bool, Guid?, DateOnly?) _draftFor;
     bool _creating;
     TaskDraft _draft = new();
 
-    PanelMode Mode => (_task, NewInList, Disabled) switch
+    bool Adding => NewTask || NewInList is not null;
+
+    PanelMode Mode => (_task, Adding, Disabled) switch
     {
         ({ }, _, true) => PanelMode.View,
         ({ }, _, false) => PanelMode.Edit,
-        (null, { }, _) => PanelMode.Add,
+        (null, true, _) => PanelMode.Add,
         _ => PanelMode.Closed
     };
 
     string Title => Mode switch
     {
-        PanelMode.Add => PathOf(NewInList!.Value) is { } path ? T["NewTaskIn", path] : T["NewTask"],
+        PanelMode.Add => _draft.ListId is { } listId && PathOf(listId) is { } path ? T["NewTaskIn", path] : T["NewTask"],
         PanelMode.Closed => "",
         _ => PathOf(_task!.ListId) ?? T["TaskTitle"]
     };
@@ -197,10 +208,10 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (NewInList != _draftFor)
+        if ((NewTask, NewInList, NewDue) != _draftFor)
         {
-            _draftFor = NewInList;
-            _draft = new TaskDraft();
+            _draftFor = (NewTask, NewInList, NewDue);
+            _draft = NewDraft();
         }
 
         await ReloadAsync();
@@ -211,7 +222,7 @@
         var loaded = TaskId is null ? null : await Store.LoadAsync(TaskId.Value, CancellationToken.None);
         _task = loaded is { Deleted: false } ? loaded : null;
 
-        if (_task is null && NewInList is null)
+        if (_task is null && !Adding)
         {
             return;
         }
@@ -260,13 +271,18 @@
     {
         var name = _draft.Name.Trim();
 
-        if (Disabled || NewInList is not { } listId || name.Length == 0)
+        if (Disabled || _draft.ListId is not { } listId || name.Length == 0)
         {
             return;
         }
 
         var taskId = Guid.NewGuid();
         await Sender.SendAsync(new CreateTask(Guid.NewGuid(), State.UserId, taskId, listId, name));
+
+        foreach (var step in _draft.Steps)
+        {
+            await Sender.SendAsync(new AddStep(Guid.NewGuid(), State.UserId, taskId, Guid.NewGuid(), step));
+        }
 
         if (_draft.Recurrence is { } rule)
         {
@@ -303,7 +319,7 @@
             await Sender.SendAsync(new StarTask(Guid.NewGuid(), State.UserId, taskId, true));
         }
 
-        _draft = new TaskDraft();
+        _draft = NewDraft();
         await OnClose.InvokeAsync();
     }
 
@@ -589,9 +605,17 @@
         await OnClose.InvokeAsync();
     }
 
+    TaskDraft NewDraft() => new() { ListId = NewInList, DueOn = NewDue };
+
+    void PickList(Guid listId) => _draft.ListId = listId;
+
     sealed class TaskDraft
     {
         public string Name { get; set; } = "";
+
+        public Guid? ListId { get; set; }
+
+        public List<string> Steps { get; } = [];
 
         public DateOnly? DueOn { get; set; }
 

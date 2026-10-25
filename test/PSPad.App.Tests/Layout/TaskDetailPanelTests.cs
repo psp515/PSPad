@@ -1155,7 +1155,8 @@ public class TaskDetailPanelTests : Bunit.TestContext
         return task;
     }
 
-    IRenderedComponent<ContainerFragment> RenderWithOverlays(Guid? taskId = null, Guid? newInList = null) => Render(builder =>
+    IRenderedComponent<ContainerFragment> RenderWithOverlays(
+        Guid? taskId = null, Guid? newInList = null, bool newTask = false, DateOnly? newDue = null) => Render(builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
         builder.CloseComponent();
@@ -1164,8 +1165,99 @@ public class TaskDetailPanelTests : Bunit.TestContext
         builder.OpenComponent<TaskDetailPanel>(2);
         builder.AddAttribute(3, nameof(TaskDetailPanel.TaskId), taskId);
         builder.AddAttribute(4, nameof(TaskDetailPanel.NewInList), newInList);
+        builder.AddAttribute(5, nameof(TaskDetailPanel.NewTask), newTask);
+        builder.AddAttribute(6, nameof(TaskDetailPanel.NewDue), newDue);
         builder.CloseComponent();
     });
+
+    [Fact]
+    public void ANewTaskWithoutAListIsTitledNewTaskAndOffersTheListRow()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        AppTestHost.Arrange(this, User, Today, area, list);
+
+        var panel = RenderWithOverlays(newTask: true);
+
+        Assert.Equal("New task", panel.Find(".pspad-panel-title").TextContent.Trim());
+        Assert.Contains("No list", panel.Find(".pspad-task-list").TextContent);
+    }
+
+    [Fact]
+    public void ANewTaskInANamedListShowsNoListRow()
+    {
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        AppTestHost.Arrange(this, User, Today, list);
+
+        var panel = RenderWithOverlays(newInList: list.Id);
+
+        Assert.Empty(panel.FindAll(".pspad-task-list"));
+    }
+
+    [Fact]
+    public void AddStaysDisabledUntilAListIsPicked()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        AppTestHost.Arrange(this, User, Today, area, list);
+
+        var panel = RenderWithOverlays(newTask: true);
+        panel.Find(".pspad-task-name-field input").Input("Kup chleb");
+        Assert.True(panel.Find(".pspad-panel-save").HasAttribute("disabled"));
+
+        OpenRow(panel, ".pspad-task-list");
+        panel.FindAll(".pspad-list-option").Single(item => item.TextContent.Contains("Zakupy")).Click();
+
+        panel.WaitForAssertion(() => Assert.False(panel.Find(".pspad-panel-save").HasAttribute("disabled")));
+        Assert.Equal("New task · Dom › Zakupy", panel.Find(".pspad-panel-title").TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task EnterWithoutAListCreatesNothing()
+    {
+        var replica = AppTestHost.Arrange(this, User, Today, NewList(Guid.NewGuid(), "Zakupy"));
+
+        var panel = RenderWithOverlays(newTask: true);
+        panel.Find(".pspad-task-name-field input").Input("Kup chleb");
+        panel.Find(".pspad-task-name-field input").KeyDown(
+            new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+
+        Assert.Empty(await replica.LoadAllAsync<TodoTask>(User));
+    }
+
+    [Fact]
+    public async Task APickedListAndARouteDueLandOnTheNewTask()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        var replica = AppTestHost.Arrange(this, User, Today, area, list);
+
+        var panel = RenderWithOverlays(newTask: true, newDue: Today.AddDays(2));
+        Assert.Contains(Today.AddDays(2).ToString("ddd, d MMM"), panel.Find(".pspad-task-due").TextContent);
+        panel.Find(".pspad-task-name-field input").Input("Kup chleb");
+        OpenRow(panel, ".pspad-task-list");
+        panel.FindAll(".pspad-list-option").Single(item => item.TextContent.Contains("Zakupy")).Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal(list.Id, created.ListId);
+        Assert.Equal(Today.AddDays(2), created.DueOn);
+    }
+
+    [Fact]
+    public void TheNewTaskListRowOffersOnlyTaskLists()
+    {
+        var area = NewArea("Dom");
+        AppTestHost.Arrange(this, User, Today, area, NewList(area.Id, "Zakupy"), NewReferenceList(area.Id, "Przepisy"));
+
+        var panel = RenderWithOverlays(newTask: true);
+        OpenRow(panel, ".pspad-task-list");
+
+        var options = panel.FindAll(".pspad-list-option").Select(item => item.TextContent.Trim()).ToArray();
+        Assert.Contains("Zakupy", options);
+        Assert.DoesNotContain("Przepisy", options);
+    }
 
     [Fact]
     public void TheGoalMenuOffersOnlyGoalsInProgressButStillNamesALinkedClosedGoal()
