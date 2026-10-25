@@ -37,11 +37,26 @@ export async function completeTaskRow(page: Page, name: string) {
   }).toPass();
 }
 
+export function stepNameField(page: Page, name: string) {
+  return panel(page).getByRole('textbox', { name: `Rename ${name}`, exact: true });
+}
+
 export async function addStep(page: Page, name: string) {
   const input = panel(page).locator('.pspad-step-add input');
   await input.fill(name);
   await input.press('Enter');
-  await expect(panel(page).locator('.pspad-step-name', { hasText: name })).toBeVisible();
+  await expect(stepNameField(page, name)).toHaveValue(name);
+}
+
+export async function renameStep(page: Page, from: string, to: string) {
+  await expect(async () => {
+    const field = stepNameField(page, from);
+    if (await field.isVisible()) {
+      await field.fill(to, { timeout: 2_000 });
+      await field.press('Enter', { timeout: 2_000 });
+    }
+    await expect(stepNameField(page, to)).toHaveValue(to, { timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
 }
 
 export async function checkStep(page: Page, name: string) {
