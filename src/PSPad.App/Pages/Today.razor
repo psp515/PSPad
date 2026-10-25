@@ -19,6 +19,7 @@
 @inject IClock Clock
 @inject IStringLocalizer<TodayStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
+@inject IStringLocalizer<TasksStrings> TaskText
 
 <PageHeading Title="@Shared["MyDay"]" />
 
@@ -119,7 +120,15 @@ else
     </div>
 }
 
+<MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="pspad-fab" OnClick="@AddTask"
+        UserAttributes="@FabAttributes" />
+
 @code {
+    Dictionary<string, object> FabAttributes => new() { ["aria-label"] = TaskText["AddTask"].Value };
+
+    void AddTask() =>
+        Navigation.NavigateTo(TaskQuery.ForNewTask(Navigation.Uri, due: _day < State.Today ? State.Today : _day));
+
     bool _loaded;
     DayPlan _plan = new([], [], [], [], [], []);
     DateOnly _day;

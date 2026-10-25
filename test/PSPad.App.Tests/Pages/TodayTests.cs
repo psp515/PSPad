@@ -527,6 +527,44 @@ public class TodayTests : Bunit.TestContext
         return task;
     }
 
+    [Fact]
+    public void TheFabAddsATaskDueOnTheDayShown()
+    {
+        Arrange();
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/?day={Today.AddDays(2):yyyy-MM-dd}");
+
+        var page = Render<Today>();
+        var fab = page.Find(".pspad-fab");
+        Assert.Equal("Add task", fab.GetAttribute("aria-label"));
+        fab.Click();
+
+        Assert.EndsWith($"/?day={Today.AddDays(2):yyyy-MM-dd}&task=new&due={Today.AddDays(2):yyyy-MM-dd}", navigation.Uri);
+    }
+
+    [Fact]
+    public void TheFabOnTodayAddsATaskDueToday()
+    {
+        Arrange();
+        var navigation = Services.GetRequiredService<NavigationManager>();
+
+        Render<Today>().Find(".pspad-fab").Click();
+
+        Assert.EndsWith($"/?task=new&due={Today:yyyy-MM-dd}", navigation.Uri);
+    }
+
+    [Fact]
+    public void TheFabOnAPastDayAddsATaskDueToday()
+    {
+        Arrange();
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/?day={Today.AddDays(-3):yyyy-MM-dd}");
+
+        Render<Today>().Find(".pspad-fab").Click();
+
+        Assert.EndsWith($"/?day={Today.AddDays(-3):yyyy-MM-dd}&task=new&due={Today:yyyy-MM-dd}", navigation.Uri);
+    }
+
     InMemoryReplica Arrange(params Aggregate[] documents) =>
         AppTestHost.Arrange(this, User, Today, documents);
 
