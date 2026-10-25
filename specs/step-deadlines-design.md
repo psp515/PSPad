@@ -1,6 +1,6 @@
 # Step deadlines — design
 
-Status: Designed, not built. Issue #202. Mockup: artifact "Step Deadlines"
+Status: Built. Issue #202. Mockup: artifact "Step Deadlines"
 (https://claude.ai/artifact/NtP3h8xfqfNy5DnBNndFAy). Decision:
 `adr/0078-any-unchecked-step-deadline-puts-its-task-on-a-day.md`.
 
@@ -59,7 +59,9 @@ answers from the same rule and changes only in which tasks it returns.
   when a date is set. Choosing sends `SetStepDueDate` with the day or
   `null`; choosing the current value sends nothing.
 - The quick picks and the picker dialog move out of `DueDateRow` into a new
-  `Components/DueDateMenu.razor`, which `DueDateRow` and `StepList` both use.
+  `Components/DueDateItems.razor` (the menu items) and `Components/DueDatePicker.razor`
+  (the "Pick a date…" dialog), which `DueDateRow` uses inside its `PropertyRow` and
+  `Components/DueDateMenu.razor` (a `MudMenu` with its own activator) wraps for `StepList`.
   `DueDateRow.QuickPicks` and `Describe` stay where callers find them.
 - A checked step shows no date control: its date no longer counts. The date
   stays stored and returns if the step is unchecked.

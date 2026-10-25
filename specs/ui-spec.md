@@ -702,7 +702,8 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    Each unchecked step on a one-time task ends, before the ✕, with its
    deadline (`pspad-step-due`): the date read relatively, red when past,
    or a muted `Event` icon when empty (shown on hover on desktop). Both open
-   `DueDateMenu` — the Due row's quick picks, "Pick a date…", and
+   `DueDateMenu` (built on `DueDateItems` and `DueDatePicker`, which the
+   Due row shares) — the Due row's quick picks, "Pick a date…", and
    "Clear date" when set — and send `SetStepDueDate`. Checked steps,
    repeating tasks and View mode show no control (`step-deadlines-design.md`).
    Given `Draft` (a `List<StepDraft>`, name and optional deadline) instead

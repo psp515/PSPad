@@ -25,7 +25,7 @@ export const features: Feature[] = [
     how: 'Lists pack into columns on a big screen and stack on a phone. Deleting an area tells you how much goes with it.' },
   { id: 'tasks', title: 'Tasks and steps',
     does: 'A due date, a priority, a goal and ordered steps on every task, steps included from the moment you add it; rename a step in place.',
-    how: 'A step can carry its own date, and the next unchecked step is what puts the task on My Day.' },
+    how: 'A step can carry its own deadline, even while you add the task. The earliest unchecked deadline puts the task on that day in My Day, and the card names the step that is due.' },
   { id: 'descriptions', title: 'Descriptions',
     does: 'Markdown notes, links and checklists on every task and item.',
     how: 'Rendered the same online and offline.' },

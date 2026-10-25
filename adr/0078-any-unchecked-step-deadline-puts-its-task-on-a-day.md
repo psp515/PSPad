@@ -2,7 +2,7 @@
 title: Any unchecked step's deadline puts its task on a day
 tags: [domain, today, steps, ui]
 date: 2026-10-24
-status: Proposed
+status: Active
 ---
 
 # ADR-0078: Any unchecked step's deadline puts its task on a day

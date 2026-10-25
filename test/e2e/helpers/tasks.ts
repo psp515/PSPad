@@ -72,3 +72,21 @@ export async function checkStep(page: Page, name: string) {
     await expect(box).toBeChecked({ timeout: 2_000 });
   }).toPass({ timeout: 30_000 });
 }
+
+export function stepRow(page: Page, name: string) {
+  return panel(page)
+    .locator('.pspad-step')
+    .filter({ has: page.getByRole('textbox', { name: `Rename ${name}`, exact: true }) });
+}
+
+export async function setStepDeadline(page: Page, step: string, day: 'Today' | 'Tomorrow') {
+  const due = stepRow(page, step).locator('.pspad-step-due');
+  await expect(async () => {
+    if (!(await due.innerText({ timeout: 2_000 })).includes(day)) {
+      await stepRow(page, step).hover({ timeout: 2_000 });
+      await due.click({ timeout: 2_000 });
+      await page.getByRole('menuitem', { name: day }).first().click({ timeout: 2_000 });
+    }
+    await expect(due).toContainText(day, { timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+}
