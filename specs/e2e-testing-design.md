@@ -270,7 +270,7 @@ test/e2e/
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
                  settings.ts  goals.ts  references.ts  sharing.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 19-step-rename.spec.ts
+  scenarios/     01-first-sign-in.spec.ts … 20-add-from-my-day.spec.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared
