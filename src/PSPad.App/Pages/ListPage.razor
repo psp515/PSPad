@@ -1,5 +1,6 @@
 @page "/lists/{ListId:guid}"
 @attribute [Authorize]
+@using System.Globalization
 @using PSPad.Abstractions
 @using PSPad.App.Components
 @using PSPad.App.State
@@ -11,6 +12,7 @@
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.References
 @using PSPad.Module.Tasks.Tasks
+@using PSPad.Module.Tasks.Today
 @inject IDocumentStore<Area> AreaStore
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<TodoTask> TaskStore
@@ -19,6 +21,7 @@
 @inject IDocumentStore<AreaView> ViewStore
 @inject IDocumentStore<ListView> ListViewStore
 @inject AppState State
+@inject ListScreenState Screen
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
@@ -73,22 +76,43 @@ else if (_list is not null)
     }
     else
     {
-        <RowGroup Columns="true">
-            @foreach (var task in _open)
-            {
-                <TaskRow @key="task.Id" Task="@task" Today="@State.Today" GoalName="@GoalOf(task)" OnToggle="@ToggleAsync"
-                         OnStar="@StarAsync" OnOpen="@Open" />
-            }
-            <AddRow Text="@TaskText["AddTask"]" OnClick="@AddTask" />
-        </RowGroup>
+        <ListToolbar Choice="@_choice" ChoiceChanged="@ChooseAsync" Goals="@_listGoals" Shown="@_shownOpen.Count" Total="@_open.Count" />
+
+        @if (_choice.View == ListScreenView.Calendar)
+        {
+            <ListMonthView Tasks="@_shownOpen" Sort="@_choice.Sort" Today="@State.Today" Undated="@UndatedCount"
+                           GoalNameOf="@GoalOf" OnShowUndated="@ShowUndatedAsync"
+                           OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open" />
+        }
+        else if (_shownOpen.Count == 0 && _open.Count > 0)
+        {
+            <RowGroup>
+                <div class="pspad-list-no-match d-flex align-center gap-2 px-3 py-2">
+                    <MudText Typo="Typo.body2" Class="pspad-muted">@T["NoTasksMatch"]</MudText>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                               OnClick="@(() => ChooseAsync(_choice with { Filter = ListFilter.None }))">@T["FilterClear"]</MudButton>
+                </div>
+            </RowGroup>
+        }
+        else
+        {
+            <RowGroup Columns="true">
+                @foreach (var task in _shownOpen)
+                {
+                    <TaskRow @key="task.Id" Task="@task" Today="@State.Today" GoalName="@GoalOf(task)" OnToggle="@ToggleAsync"
+                             OnStar="@StarAsync" OnOpen="@Open" />
+                }
+                <AddRow Text="@TaskText["AddTask"]" OnClick="@AddTask" />
+            </RowGroup>
+        }
     }
 
-    @if (_list.Kind != ListKind.Reference && _done.Count > 0)
+    @if (_list.Kind != ListKind.Reference && _choice.View == ListScreenView.List && _shownDone.Count > 0)
     {
         <MudExpansionPanels Elevation="0" Gutters="false" Class="pspad-completed mt-2">
-            <MudExpansionPanel Text="@T["CompletedCount", _done.Count]">
+            <MudExpansionPanel Text="@T["CompletedCount", _shownDone.Count]">
                 <RowGroup Columns="true">
-                    @foreach (var task in _done)
+                    @foreach (var task in _shownDone)
                     {
                         <TaskRow @key="task.Id" Task="@task" Today="@State.Today" GoalName="@GoalOf(task)" OnToggle="@ToggleAsync"
                                  OnStar="@StarAsync" OnOpen="@Open" />
@@ -146,6 +170,11 @@ else
     IReadOnlyList<Goal> _goals = [];
     IReadOnlyList<TodoTask> _done = [];
     IReadOnlyList<ReferenceItem> _items = [];
+    IReadOnlyList<Goal> _listGoals = [];
+    IReadOnlyList<TodoTask> _shownOpen = [];
+    IReadOnlyList<TodoTask> _shownDone = [];
+    ListScreenChoice _choice = ListScreenChoice.Default;
+    Guid? _choiceFor;
 
     Dictionary<string, object> ActivatorAttributes => new() { ["aria-label"] = Shared["Actions"].Value };
     Dictionary<string, object> AddTaskAttributes => new() { ["aria-label"] = TaskText["AddTask"].Value };
@@ -193,6 +222,15 @@ else
             _goals = [.. goals.Where(goal => !goal.Deleted)];
             _open = [.. mine.Where(task => !IsDone(task))];
             _done = [.. mine.Where(IsDone)];
+            _listGoals = [.. _goals.Where(goal => mine.Any(task => goal.TaskIds.Contains(task.Id))).OrderBy(goal => goal.Name, Names)];
+
+            if (_choiceFor != ListId)
+            {
+                _choiceFor = ListId;
+                _choice = await Screen.LoadAsync(ListId);
+            }
+
+            Project();
         }
 
         var items = await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None);
@@ -205,6 +243,32 @@ else
     string Summary => _list is { Kind: ListKind.Reference }
         ? _areaName ?? ""
         : string.Join(" · ", new[] { _areaName, OpenTaskCount.Describe(_open.Count, TaskText) }.Where(part => !string.IsNullOrEmpty(part)));
+
+    static StringComparer Names => StringComparer.Create(CultureInfo.CurrentCulture, ignoreCase: true);
+
+    static DayOfWeek FirstDay => CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
+
+    int UndatedCount => _shownOpen.Count(task => TodayRule.DateOf(task, State.Today) is null);
+
+    void Project()
+    {
+        bool Keep(TodoTask task) => _choice.Filter.Matches(task, State.Today, FirstDay, _goals);
+        _shownOpen = _choice.Sort.Apply(_open.Where(Keep), State.Today, Names);
+        _shownDone = _choice.Sort.Apply(_done.Where(Keep), State.Today, Names);
+    }
+
+    async Task ChooseAsync(ListScreenChoice choice)
+    {
+        _choice = choice;
+        Project();
+        await Screen.SaveAsync(ListId, choice);
+    }
+
+    Task ShowUndatedAsync() => ChooseAsync(_choice with
+    {
+        View = ListScreenView.List,
+        Filter = _choice.Filter with { When = new HashSet<WhenBucket> { WhenBucket.NoDate } }
+    });
 
     bool IsDone(TodoTask task) => task.CompletedAt is not null || task.EndedBy(State.Today);
 

@@ -590,7 +590,7 @@ public class ListPageTests : Bunit.TestContext
 
         var page = Render<ListPage>(parameters => parameters.Add(p => p.ListId, list.Id));
         var secondRow = RowOf(page, second).Instance;
-        page.FindAll("input.mud-checkbox-input")[0].Change(true);
+        RowOf(page, first).Find("input.mud-checkbox-input").Change(true);
 
         page.WaitForAssertion(() => Assert.NotNull(RowOf(page, first).Instance.Task.CompletedAt));
         Assert.Same(secondRow, RowOf(page, second).Instance);
@@ -717,6 +717,108 @@ public class ListPageTests : Bunit.TestContext
 
         var items = page.FindAll(".mud-fab-menu-item");
         Assert.Equal(["Add task"], items.Select(item => item.GetAttribute("aria-label")));
+    }
+
+    [Fact]
+    public void ATaskListShowsTheToolbarAndAReferenceListDoesNot()
+    {
+        var tasks = NewList("Zakupy");
+        var reference = NewList("Przepisy", ListKind.Reference);
+        Arrange(tasks, NewTask(tasks.Id, "Mleko"), reference);
+
+        Assert.Single(Render<ListPage>(p => p.Add(x => x.ListId, tasks.Id)).FindAll(".pspad-list-toolbar"));
+        Assert.Empty(Render<ListPage>(p => p.Add(x => x.ListId, reference.Id)).FindAll(".pspad-list-toolbar"));
+    }
+
+    [Fact]
+    public async Task TheStoredChoiceFiltersAndSortsTheRows()
+    {
+        var list = NewList("Zakupy");
+        var screen = ArrangeWithStorage(list,
+            Prioritise(NewTask(list.Id, "b-high"), Priority.High),
+            Prioritise(NewTask(list.Id, "a-high"), Priority.High),
+            NewTask(list.Id, "plain"));
+        await screen.SaveAsync(list.Id, new ListScreenChoice(
+            ListFilter.None with { Priorities = new HashSet<Priority> { Priority.High } },
+            new ListSort(ListOrder.Name, false), ListScreenView.List));
+
+        var page = Render<ListPage>(p => p.Add(x => x.ListId, list.Id));
+
+        page.WaitForAssertion(() => Assert.Equal(["a-high", "b-high"],
+            page.FindComponents<TaskRow>().Select(row => row.Instance.Task.Name)));
+    }
+
+    [Fact]
+    public async Task NothingMatchingShowsNoTasksMatchAndKeepsTheOpenCount()
+    {
+        var list = NewList("Zakupy");
+        var screen = ArrangeWithStorage(list, NewTask(list.Id, "Mleko"));
+        await screen.SaveAsync(list.Id, ListScreenChoice.Default with { Filter = ListFilter.None with { Starred = true } });
+
+        var page = Render<ListPage>(p => p.Add(x => x.ListId, list.Id));
+
+        page.WaitForAssertion(() => Assert.Contains("No tasks match", page.Markup));
+        Assert.Contains("1 open task", page.Find(".pspad-page-subtitle").TextContent);
+    }
+
+    [Fact]
+    public async Task TheCalendarViewRendersTheMonthWithTheGoalOnDayRows()
+    {
+        var list = NewList("Zakupy");
+        var task = NewTask(list.Id, "Mleko");
+        task.ApplyAll(TodoTask.Decide(task, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, Today), DateTimeOffset.UnixEpoch));
+        var goal = new Goal();
+        goal.ApplyAll(Goal.Decide(null, new CreateGoal(Guid.NewGuid(), User, Guid.NewGuid(), "Move"), DateTimeOffset.UnixEpoch));
+        goal.Apply(new TaskAddedToGoal(goal.Id, User, DateTimeOffset.UnixEpoch, task.Id, task.Name));
+        var screen = ArrangeWithStorage(list, task, goal);
+        await screen.SaveAsync(list.Id, ListScreenChoice.Default with { View = ListScreenView.Calendar });
+
+        var page = Render<ListPage>(p => p.Add(x => x.ListId, list.Id));
+
+        page.WaitForAssertion(() => Assert.Single(page.FindAll(".pspad-month-grid")));
+        Assert.Contains("Move", page.Find(".pspad-month-detail .pspad-row-goal").TextContent);
+    }
+
+    [Fact]
+    public async Task ChangingTheChoiceIsStored()
+    {
+        var list = NewList("Zakupy");
+        var screen = ArrangeWithStorage(list, NewTask(list.Id, "Mleko"));
+        var page = Render<ListPage>(p => p.Add(x => x.ListId, list.Id));
+
+        page.FindAll(".pspad-list-views .mud-toggle-item").Last().Click();
+
+        page.WaitForAssertion(() => Assert.Single(page.FindAll(".pspad-month-grid")));
+        Assert.Equal(ListScreenView.Calendar, (await screen.LoadAsync(list.Id)).View);
+    }
+
+    [Fact]
+    public async Task ShowThemSwitchesToTheListWithNoDate()
+    {
+        var list = NewList("Zakupy");
+        var dated = NewTask(list.Id, "Dated");
+        dated.ApplyAll(TodoTask.Decide(dated, new SetTaskDueDate(Guid.NewGuid(), User, dated.Id, Today), DateTimeOffset.UnixEpoch));
+        var screen = ArrangeWithStorage(list, dated, NewTask(list.Id, "Undated"));
+        await screen.SaveAsync(list.Id, ListScreenChoice.Default with { View = ListScreenView.Calendar });
+        var page = Render<ListPage>(p => p.Add(x => x.ListId, list.Id));
+
+        page.WaitForAssertion(() => page.Find(".pspad-month-undated button").Click());
+
+        page.WaitForAssertion(() => Assert.Equal(["Undated"], page.FindComponents<TaskRow>().Select(row => row.Instance.Task.Name)));
+    }
+
+    ListScreenState ArrangeWithStorage(params Aggregate[] documents)
+    {
+        Arrange(documents);
+        var screen = new ListScreenState(new FakeStorageJsRuntime());
+        Services.AddSingleton(screen);
+        return screen;
+    }
+
+    static TodoTask Prioritise(TodoTask task, Priority priority)
+    {
+        task.ApplyAll(TodoTask.Decide(task, new SetTaskPriority(Guid.NewGuid(), User, task.Id, priority), DateTimeOffset.UnixEpoch));
+        return task;
     }
 
     static TaskList NewMemberList(Guid owner, Guid member, string name)
