@@ -40,17 +40,18 @@ public class DayViewPlanTests
     }
 
     [Fact]
-    public void AFutureDayShowsWhatIsDueOnItAndNothingOverdue()
+    public void AFutureDayShowsWhatIsDueOnItAndWhatWillStillBeOverdue()
     {
         var day = Today.AddDays(3);
         var overdue = Due(Today.AddDays(-1));
         var onDay = Due(day);
         var timed = Timed(Due(day), 16, 0);
         var other = Due(Today.AddDays(1));
+        var later = Due(Today.AddDays(5));
 
-        var plan = TodayRule.Plan([overdue, onDay, timed, other], day, Today, Utc);
+        var plan = TodayRule.Plan([overdue, onDay, timed, other, later], day, Today, Utc);
 
-        Assert.Empty(plan.Overdue);
+        Assert.Equal([overdue.Id, other.Id], plan.Overdue.Select(entry => entry.TaskId));
         Assert.Equal(onDay.Id, Assert.Single(plan.AnyTime).TaskId);
         Assert.Equal(timed.Id, Assert.Single(plan.Scheduled).TaskId);
         Assert.Empty(plan.ComingUp);

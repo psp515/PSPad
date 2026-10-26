@@ -340,7 +340,9 @@ not stated there:
   `Select`'s, so the Today rule does not move; Starred and ComingUp
   (each one-time task at its trigger, each recurring task at its next
   unticked occurrence, only while `LeadTime.Shows`) fill too. On a future day
-  Overdue and ComingUp are empty and lead time is ignored — the user asked
+  Overdue holds every open one-time task whose trigger is before that day —
+  what will still be overdue then (`adr/0078`) — and a task in it is not
+  also due; ComingUp is empty and lead time is ignored — the user asked
   for that day — while Scheduled, AnyTime, Starred and Completed (ticked occurrences) are
   filled. A
   recurring task is never overdue. Overdue entries keep their `Time`.

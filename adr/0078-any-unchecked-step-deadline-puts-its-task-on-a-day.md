@@ -35,7 +35,14 @@ overdue.
 The rule stays in one place, `TodayRule`, whose trigger is exposed as
 `TodayRule.TriggerOf(task)` so other screens (list sort, filter and calendar,
 #198) read the same date. Everything downstream (Overdue, Coming up, lead
-time, Starred) is unchanged and follows the new trigger.
+time, Starred) follows the new trigger.
+
+A day after today also lists as Overdue every open one-time task whose
+trigger falls before it: what will still be overdue then unless it is done.
+A task overdue by one step and due on that day by another shows once, in
+Overdue. Today's Overdue does not change; a past day still shows only what
+was completed; the week strip still marks a future day busy only for what
+is due on it.
 
 Storage, commands, events and the API contract do not change.
 
@@ -55,6 +62,8 @@ Storage, commands, events and the API contract do not change.
 
 - A dated step anywhere in the checklist puts the task on that day, makes it
   overdue when missed, and drives Coming up and lead time.
+- Looking ahead in My Day no longer hides work: tomorrow shows today's
+  unfinished tasks as Overdue instead of "Nothing planned".
 - A task can now be overdue because of a step while its own due date is
   weeks away. The card shows the step mark in red so the reason is visible.
 - The Today rule is tested in three suites (module, API, client); all three

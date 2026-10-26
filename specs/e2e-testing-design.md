@@ -236,7 +236,9 @@ tests would be visible, not silent.
     deadline to Tomorrow from its date control. The list's card shows
     `↳ Order boxes · <date>`; My Day today does not list the task, and
     tomorrow (through the week strip's date dialog) lists it under any
-    time (issue #202, `adr/0078`).
+    time. A second task with one step due Today and one due Tomorrow is
+    under any time today and under Overdue tomorrow, not under any time
+    (issue #202, `adr/0078`).
 
 ## 5. Timing
 

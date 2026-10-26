@@ -40,7 +40,7 @@ public static class TodayRule
             return new DayPlan([], [], [], [], [], completed);
         }
 
-        var onDay = day == today ? Select(live, today) : DueOn(live, day);
+        var onDay = day == today ? Select(live, today) : [.. OverdueBy(live, day), .. DueOn(live, day)];
         var due = onDay.Where(entry => !entry.Overdue).ToArray();
 
         return new DayPlan(
@@ -62,6 +62,16 @@ public static class TodayRule
             .Select(task => Entry(task, overdue: false, dueOn: day))
             .OrderByDescending(entry => entry.Starred)
             .ThenByDescending(entry => entry.Priority)
+            .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    static TodayEntry[] OverdueBy(IEnumerable<TodoTask> tasks, DateOnly day) =>
+        tasks
+            .Where(task => !task.IsRecurring && task.CompletedAt is null && TriggerOf(task) < day)
+            .Select(task => Entry(task, overdue: true, dueOn: TriggerOf(task)))
+            .OrderByDescending(entry => entry.Starred)
+            .ThenByDescending(entry => entry.Priority)
+            .ThenBy(entry => entry.DueOn)
             .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 

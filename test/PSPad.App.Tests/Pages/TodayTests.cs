@@ -345,6 +345,20 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TomorrowStillShowsWhatIsOverdue()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Due(list.Id, "Renew passport", Today.AddDays(-2)), Due(list.Id, "Move flat", Today.AddDays(1)));
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"/?day={Today.AddDays(1):yyyy-MM-dd}");
+
+        var page = Render<Today>();
+
+        Assert.Contains("Renew passport", page.Find(".pspad-day-overdue").TextContent);
+        Assert.Contains("Move flat", page.Find(".pspad-day-anytime").TextContent);
+        Assert.DoesNotContain("Nothing planned", page.Markup);
+    }
+
+    [Fact]
     public void AnEmptyScheduleNamesAnotherDay()
     {
         var list = NewList("Praca");
@@ -445,9 +459,11 @@ public class TodayTests : Bunit.TestContext
 
         var page = Render<Today>();
 
-        Assert.Contains("Tomorrow, any time", page.Find(".pspad-day-anytime").TextContent);
-        Assert.Contains("Later", page.Markup);
-        Assert.DoesNotContain("Now", page.Markup);
+        var anyTime = page.Find(".pspad-day-anytime").TextContent;
+        Assert.Contains("Tomorrow, any time", anyTime);
+        Assert.Contains("Later", anyTime);
+        Assert.DoesNotContain("Now", anyTime);
+        Assert.Contains("Now", page.Find(".pspad-day-overdue").TextContent);
         Assert.Empty(page.FindAll(".pspad-day-comingup"));
     }
 

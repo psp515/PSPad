@@ -27,9 +27,12 @@ The card gives no sign that a step, not the task, put it on the day.
 - `TodayRule.EarliestTrigger(task)` becomes min(`task.DueOn`,
   `task.EarliestDueStep?.DueOn`), either side may be `null`. It is made
   public as `TodayRule.TriggerOf(task)` so list sort, filter and calendar
-  (#198) read the same date. Nothing else in `TodayRule` changes: Overdue is
-  still `trigger < today`, Coming up and lead time use the trigger, Starred
-  compares against it.
+  (#198) read the same date. On today Overdue is still `trigger < today`;
+  Coming up and lead time use the trigger, Starred compares against it.
+- A future day's Overdue holds every open one-time task whose trigger is
+  before that day (it was empty before). A task overdue by one step and due
+  that day by another shows once, in Overdue. The week strip's busy dot on a
+  future day still counts only what is due on it.
 - Repeating tasks ignore step dates, as today: their days come from
   `OccursOn`, and a repeat is never overdue.
 - A step date may fall after the task's own due date. `Decide` does not

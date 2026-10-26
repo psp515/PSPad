@@ -470,7 +470,8 @@ Tasks.
 
 Task sections, top to bottom, each hidden when empty:
 
-1. **Overdue** (`Color.Error` heading) — today only.
+1. **Overdue** (`Color.Error` heading) — on today, and on a future day for
+   what will still be overdue then (`adr/0078`).
 2. **Starred** — `SectionHeading` with `Hint` "· when you have time".
 3. **Scheduled · N** (`pspad-day-scheduled`, `Color.Primary` heading) — the
    day's pending timed tasks by start, each row showing its time; on every
