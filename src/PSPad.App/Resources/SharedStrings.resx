@@ -111,4 +111,19 @@
   <data name="DeleteThis" xml:space="preserve">
     <value>Delete this?</value>
   </data>
+  <data name="ThisMonth" xml:space="preserve">
+    <value>This month</value>
+  </data>
+  <data name="PickAnotherMonth" xml:space="preserve">
+    <value>Pick another month</value>
+  </data>
+  <data name="PreviousYear" xml:space="preserve">
+    <value>Previous year</value>
+  </data>
+  <data name="NextYear" xml:space="preserve">
+    <value>Next year</value>
+  </data>
+  <data name="Month" xml:space="preserve">
+    <value>Month</value>
+  </data>
 </root>

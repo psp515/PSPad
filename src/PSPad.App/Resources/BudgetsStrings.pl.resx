@@ -456,18 +456,6 @@
   <data name="OnlyYou" xml:space="preserve">
     <value>Tylko ty</value>
   </data>
-  <data name="ThisMonth" xml:space="preserve">
-    <value>Ten miesiąc</value>
-  </data>
-  <data name="PickAnotherMonth" xml:space="preserve">
-    <value>Wybierz inny miesiąc</value>
-  </data>
-  <data name="PreviousYear" xml:space="preserve">
-    <value>Poprzedni rok</value>
-  </data>
-  <data name="NextYear" xml:space="preserve">
-    <value>Następny rok</value>
-  </data>
   <data name="Currency" xml:space="preserve">
     <value>Waluta</value>
   </data>

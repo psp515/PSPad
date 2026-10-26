@@ -234,4 +234,127 @@
   <data name="SharedWithMe" xml:space="preserve">
     <value>Udostępnione mi</value>
   </data>
+  <data name="Filter" xml:space="preserve">
+    <value>Filtruj</value>
+  </data>
+  <data name="Sort" xml:space="preserve">
+    <value>Sortuj</value>
+  </data>
+  <data name="ViewList" xml:space="preserve">
+    <value>Lista</value>
+  </data>
+  <data name="ViewCalendar" xml:space="preserve">
+    <value>Kalendarz</value>
+  </data>
+  <data name="FilterWhen" xml:space="preserve">
+    <value>Kiedy</value>
+  </data>
+  <data name="FilterPriority" xml:space="preserve">
+    <value>Priorytet</value>
+  </data>
+  <data name="FilterOther" xml:space="preserve">
+    <value>Inne</value>
+  </data>
+  <data name="WhenOverdue" xml:space="preserve">
+    <value>Zaległe</value>
+  </data>
+  <data name="WhenToday" xml:space="preserve">
+    <value>Dziś</value>
+  </data>
+  <data name="WhenThisWeek" xml:space="preserve">
+    <value>Ten tydzień</value>
+  </data>
+  <data name="WhenLater" xml:space="preserve">
+    <value>Później</value>
+  </data>
+  <data name="WhenNoDate" xml:space="preserve">
+    <value>Bez daty</value>
+  </data>
+  <data name="FilterStarred" xml:space="preserve">
+    <value>Z gwiazdką</value>
+  </data>
+  <data name="FilterHasGoal" xml:space="preserve">
+    <value>Ma cel</value>
+  </data>
+  <data name="FilterClear" xml:space="preserve">
+    <value>Wyczyść</value>
+  </data>
+  <data name="FilterShown.One" xml:space="preserve">
+    <value>{1} z {0} zadania</value>
+  </data>
+  <data name="FilterShown.Few" xml:space="preserve">
+    <value>{1} z {0} zadań</value>
+  </data>
+  <data name="FilterShown.Many" xml:space="preserve">
+    <value>{1} z {0} zadań</value>
+  </data>
+  <data name="NoTasksMatch" xml:space="preserve">
+    <value>Brak pasujących zadań.</value>
+  </data>
+  <data name="SortDate" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="SortDefault" xml:space="preserve">
+    <value>domyślnie</value>
+  </data>
+  <data name="SortPriority" xml:space="preserve">
+    <value>Priorytet</value>
+  </data>
+  <data name="SortName" xml:space="preserve">
+    <value>Nazwa</value>
+  </data>
+  <data name="SortAdded" xml:space="preserve">
+    <value>Ostatnio dodane</value>
+  </data>
+  <data name="DirDateAsc" xml:space="preserve">
+    <value>Najwcześniejsze</value>
+  </data>
+  <data name="DirDateDesc" xml:space="preserve">
+    <value>Najpóźniejsze</value>
+  </data>
+  <data name="DirPriorityAsc" xml:space="preserve">
+    <value>Najpierw wysoki</value>
+  </data>
+  <data name="DirPriorityDesc" xml:space="preserve">
+    <value>Najpierw niski</value>
+  </data>
+  <data name="DirNameAsc" xml:space="preserve">
+    <value>A → Z</value>
+  </data>
+  <data name="DirNameDesc" xml:space="preserve">
+    <value>Z → A</value>
+  </data>
+  <data name="DirAddedAsc" xml:space="preserve">
+    <value>Najnowsze</value>
+  </data>
+  <data name="DirAddedDesc" xml:space="preserve">
+    <value>Najstarsze</value>
+  </data>
+  <data name="MoreOnDay" xml:space="preserve">
+    <value>+{0} więcej</value>
+  </data>
+  <data name="DayTasks.One" xml:space="preserve">
+    <value>{1}, 1 zadanie</value>
+  </data>
+  <data name="DayTasks.Few" xml:space="preserve">
+    <value>{1}, {0} zadania</value>
+  </data>
+  <data name="DayTasks.Many" xml:space="preserve">
+    <value>{1}, {0} zadań</value>
+  </data>
+  <data name="UndatedCount.One" xml:space="preserve">
+    <value>1 zadanie nie ma daty.</value>
+  </data>
+  <data name="UndatedCount.Few" xml:space="preserve">
+    <value>{0} zadania nie mają daty.</value>
+  </data>
+  <data name="UndatedCount.Many" xml:space="preserve">
+    <value>{0} zadań nie ma daty.</value>
+  </data>
+  <data name="ShowThem" xml:space="preserve">
+    <value>Pokaż je na liście</value>
+  </data>
+  <data name="NothingOnDay" xml:space="preserve">
+    <value>Nic na {0}.</value>
+  </data>
 </root>

@@ -456,18 +456,6 @@
   <data name="OnlyYou" xml:space="preserve">
     <value>Only you</value>
   </data>
-  <data name="ThisMonth" xml:space="preserve">
-    <value>This month</value>
-  </data>
-  <data name="PickAnotherMonth" xml:space="preserve">
-    <value>Pick another month</value>
-  </data>
-  <data name="PreviousYear" xml:space="preserve">
-    <value>Previous year</value>
-  </data>
-  <data name="NextYear" xml:space="preserve">
-    <value>Next year</value>
-  </data>
   <data name="Currency" xml:space="preserve">
     <value>Currency</value>
   </data>
