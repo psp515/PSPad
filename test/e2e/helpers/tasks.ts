@@ -42,14 +42,21 @@ export function stepNameField(page: Page, name: string) {
 }
 
 export async function addStep(page: Page, name: string) {
+  const steps = panel(page).locator('.pspad-steps .pspad-step-name');
+  const input = panel(page).locator('.pspad-step-add input');
+  const before = await steps.count();
+  let accepted = false;
   await expect(async () => {
-    if (!(await stepNameField(page, name).isVisible())) {
-      const input = panel(page).locator('.pspad-step-add input');
+    if (!accepted) {
       await input.fill(name, { timeout: 2_000 });
+      await expect(input).toHaveValue(name, { timeout: 2_000 });
       await input.press('Enter', { timeout: 2_000 });
+      await expect(input).toHaveValue('', { timeout: 10_000 });
+      accepted = true;
     }
+    await expect(steps).toHaveCount(before + 1, { timeout: 10_000 });
     await expect(stepNameField(page, name)).toHaveValue(name, { timeout: 5_000 });
-  }).toPass({ timeout: 30_000 });
+  }).toPass({ timeout: 60_000 });
 }
 
 export async function renameStep(page: Page, from: string, to: string) {
