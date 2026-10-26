@@ -34,8 +34,8 @@ export async function pickCalendarDay(dialog: import('@playwright/test').Locator
   }
   await expect(shown).toHaveText(wanted);
   await dialog
-    .locator('.mud-picker-calendar-day:not(.mud-hidden) button, button.mud-picker-calendar-day')
-    .filter({ hasText: new RegExp(`^${day.getUTCDate()}$`) })
+    .locator('.mud-picker-calendar-day:not(.mud-hidden) button, button.mud-picker-calendar-day:not(.mud-hidden)')
+    .filter({ hasText: new RegExp(`^${day.getUTCDate()}$`), visible: true })
     .first()
     .click();
 }
