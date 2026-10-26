@@ -5,7 +5,7 @@ date: 2026-10-25
 status: Active (amends ADR-0005)
 ---
 
-# ADR-0078: Pulled documents never replace a newer local copy
+# ADR-0079: Pulled documents never replace a newer local copy
 
 > Status: Active (amends ADR-0005)
 
