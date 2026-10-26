@@ -1,6 +1,8 @@
 using Bunit;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using PSPad.App.Components;
+using PSPad.App.State.Outbox;
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
@@ -119,7 +121,7 @@ public class StepListTests : Bunit.TestContext
 
         Assert.Equal(["Check the fridge", "Go to the shop"], draft);
         Assert.Equal(["Check the fridge", "Go to the shop"],
-            steps.FindAll(".pspad-step-name").Select(name => name.TextContent));
+            steps.FindAll(".pspad-step-name input").Select(name => name.GetAttribute("value")));
         Assert.Empty(steps.FindAll(".pspad-step-check"));
         Assert.Empty(await replica.LoadAllAsync<TodoTask>(User));
     }
@@ -135,6 +137,151 @@ public class StepListTests : Bunit.TestContext
 
         Assert.Equal(["Go to the shop"], draft);
         Assert.Single(steps.FindAll(".pspad-step-name"));
+    }
+
+    [Fact]
+    public async Task ChangingAStepNameSendsOneRenameStep()
+    {
+        var task = TaskWithStep("Check the fridge");
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
+        steps.Find(".pspad-step-name input").Change("  Check the freezer ");
+
+        var sent = await AppTestHost.SentAsync<RenameStep>(this);
+        Assert.Equal(task.Steps.Single().Id, sent.StepId);
+        Assert.Equal("Check the freezer", sent.Name);
+        var stored = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal("Check the freezer", stored!.Steps.Single().Name);
+    }
+
+    [Fact]
+    public async Task AnUnchangedStepNameSendsNothing()
+    {
+        var task = TaskWithStep("Check the fridge");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
+        steps.Find(".pspad-step-name input").Change(" Check the fridge ");
+
+        Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
+    }
+
+    [Fact]
+    public async Task AnEmptiedStepNameRevertsAndSendsNothing()
+    {
+        var task = TaskWithStep("Check the fridge");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
+        steps.Find(".pspad-step-name input").Change("   ");
+
+        Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
+        Assert.Equal("Check the fridge", steps.Find(".pspad-step-name input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task EscapeRevertsTheStepName()
+    {
+        var task = TaskWithStep("Check the fridge");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
+        var field = steps.Find(".pspad-step-name input");
+        var typedInto = field.Id;
+        field.KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        Assert.Empty(await Services.GetRequiredService<IOutbox>().PeekAsync(10));
+        var restored = steps.Find(".pspad-step-name input");
+        Assert.NotEqual(typedInto, restored.Id);
+        Assert.Equal("Check the fridge", restored.GetAttribute("value"));
+    }
+
+    [Fact]
+    public void TheStepNameFieldIsLabelledAndCapped()
+    {
+        var task = TaskWithStep("Check the fridge");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
+        var input = steps.Find(".pspad-step-name input");
+
+        Assert.Equal("Rename Check the fridge", input.GetAttribute("aria-label"));
+        Assert.Equal($"{ContentLimits.Name}", input.GetAttribute("maxlength"));
+    }
+
+    [Fact]
+    public void ADisabledListCannotRenameAStep()
+    {
+        var task = TaskWithStep("Check the fridge");
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var steps = Render<StepList>(parameters => parameters
+            .Add(p => p.Task, task).Add(p => p.UserId, User).Add(p => p.Disabled, true));
+
+        Assert.True(steps.Find(".pspad-step-name input").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void ACheckedStepNameStaysStruckThrough()
+    {
+        var task = TaskWithStep("Check the fridge");
+        task.ApplyAll(TodoTask.Decide(
+            task, new CheckStep(Guid.NewGuid(), User, task.Id, task.Steps.Single().Id, true), DateTimeOffset.UnixEpoch));
+        AppTestHost.Arrange(this, User, Today, task);
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
+        Assert.Contains("pspad-step-done", steps.Find(".pspad-step-name").ClassList);
+    }
+
+    [Fact]
+    public void EditingADraftStepRewritesItInPlace()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<string> { "Check the fridge", "Go to the shop" };
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
+        steps.FindAll(".pspad-step-name input")[1].Change(" Go to the market ");
+
+        Assert.Equal(["Check the fridge", "Go to the market"], draft);
+    }
+
+    [Fact]
+    public void EmptyingADraftStepKeepsItsName()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<string> { "Check the fridge" };
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
+        steps.Find(".pspad-step-name input").Change("  ");
+
+        Assert.Equal(["Check the fridge"], draft);
+        Assert.Equal("Check the fridge", steps.Find(".pspad-step-name input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void EscapeRevertsADraftStep()
+    {
+        AppTestHost.Arrange(this, User, Today);
+        var draft = new List<string> { "Check the fridge" };
+
+        var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
+        var field = steps.Find(".pspad-step-name input");
+        var typedInto = field.Id;
+        field.KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        Assert.Equal(["Check the fridge"], draft);
+        var restored = steps.Find(".pspad-step-name input");
+        Assert.NotEqual(typedInto, restored.Id);
+        Assert.Equal("Check the fridge", restored.GetAttribute("value"));
+    }
+
+    static TodoTask TaskWithStep(string name)
+    {
+        var task = NewTask();
+        task.ApplyAll(TodoTask.Decide(
+            task, new AddStep(Guid.NewGuid(), User, task.Id, Guid.NewGuid(), name), DateTimeOffset.UnixEpoch));
+        return task;
     }
 
     static TodoTask NewTask()
