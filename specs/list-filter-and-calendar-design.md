@@ -1,6 +1,6 @@
 # List filter, sort and month calendar — design
 
-Status: Designed, not built. Issue #198. No ADR: the change is client-only,
+Status: Built. Issue #198. No ADR: the change is client-only,
 adds no command, event, field or endpoint, and keeps its state per device.
 Mockup (layout and content only, never colours or CSS):
 <https://claude.ai/artifact/Jdi338XjQtVGxtTpBUwwB4>.
@@ -201,9 +201,10 @@ show, and Sort changes their order.
 
 ### 6.2 Filter menu and active chips
 
-- **Menu.** Three captioned groups (When, Priority, Other). Each group is a
-  `MudChipSet` of filter chips with `SelectionMode.MultiSelection`. The
-  Overdue chip uses `Color.Error` text. The footer holds **Clear**, a text
+- **Menu.** Three captioned groups (When, Priority, Other). Each choice is
+  a `MudChip` that toggles on click, filled when chosen and outlined when
+  not, so every group is a multi-select with no `MudChipSet` state of its
+  own. The Overdue chip uses `Color.Error`. The footer holds **Clear**, a text
   button that resets to `ListFilter.None`, and "N of M tasks", which counts
   open tasks. A change applies at once, with no Apply button.
 - **Active chips.** Under the toolbar, each non-empty group shows as one

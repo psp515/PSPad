@@ -22,7 +22,7 @@ export const features: Feature[] = [
     how: 'An item becomes a full task by setting list, date, priority, goal, steps, or just remove it.' },
   { id: 'areas', title: 'Areas and lists',
     does: 'Work, home, side projects: each area holds its own lists in your order.',
-    how: 'Lists pack into columns on a big screen and stack on a phone. Deleting an area tells you how much goes with it.' },
+    how: 'Lists pack into columns on a big screen and stack on a phone. Filter a list by when it is due, priority, star or goal, sort it, or switch to a month calendar to see where the work falls; each list remembers your choice on this device. Deleting an area tells you how much goes with it.' },
   { id: 'tasks', title: 'Tasks and steps',
     does: 'A due date, a priority, a goal and ordered steps on every task, steps included from the moment you add it; rename a step in place.',
     how: 'A step can carry its own deadline, even while you add the task. The earliest unchecked deadline puts the task on that day in My Day, and the card names the step that is due.' },
