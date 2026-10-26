@@ -1,0 +1,176 @@
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Goals
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Tasks
+@inject IStringLocalizer<ListsStrings> T
+@inject IStringLocalizer<TasksStrings> TaskText
+
+<div class="pspad-list-toolbar d-flex flex-wrap align-center gap-2 mb-3">
+    <MudMenu Class="pspad-list-filter-menu" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" ListClass="pa-2">
+        <ActivatorContent Context="menu">
+            <MudButton Class="pspad-list-filter" Variant="Variant.Outlined" Size="Size.Small"
+                       Color="@(Choice.Filter.IsEmpty ? Color.Default : Color.Primary)"
+                       StartIcon="@Icons.Material.Outlined.FilterList" OnClick="@(args => menu.ToggleAsync(args))">
+                @T["Filter"]
+                @if (!Choice.Filter.IsEmpty)
+                {
+                    <span class="pspad-list-filter-badge ml-2">@Choice.Filter.ActiveCount</span>
+                }
+            </MudButton>
+        </ActivatorContent>
+        <ChildContent>
+            <div class="pspad-list-filter-panel d-flex flex-column gap-1">
+                <MudText Typo="Typo.overline" Class="px-2">@T["FilterWhen"]</MudText>
+                <div class="d-flex flex-wrap gap-1 px-1">
+                    @foreach (var bucket in Enum.GetValues<WhenBucket>())
+                    {
+                        var chosen = bucket;
+                        <MudChip T="string" Class="pspad-list-filter-chip ma-0" Size="Size.Small"
+                                 Variant="@(Choice.Filter.When.Contains(chosen) ? Variant.Filled : Variant.Outlined)"
+                                 Color="@(chosen == WhenBucket.Overdue ? Color.Error : Color.Primary)"
+                                 OnClick="@(() => Filter(f => f with { When = Toggled(f.When, chosen) }))">@T[$"When{chosen}"]</MudChip>
+                    }
+                </div>
+                <MudText Typo="Typo.overline" Class="px-2">@T["FilterPriority"]</MudText>
+                <div class="d-flex flex-wrap gap-1 px-1">
+                    @foreach (var priority in Priorities)
+                    {
+                        var chosen = priority;
+                        <MudChip T="string" Class="pspad-list-filter-chip ma-0" Size="Size.Small" Color="Color.Primary"
+                                 Variant="@(Choice.Filter.Priorities.Contains(chosen) ? Variant.Filled : Variant.Outlined)"
+                                 OnClick="@(() => Filter(f => f with { Priorities = Toggled(f.Priorities, chosen) }))">@TaskText[$"Priority{chosen}"]</MudChip>
+                    }
+                </div>
+                <MudText Typo="Typo.overline" Class="px-2">@T["FilterOther"]</MudText>
+                <div class="d-flex flex-wrap gap-1 px-1">
+                    <MudChip T="string" Class="pspad-list-filter-chip ma-0" Size="Size.Small" Color="Color.Primary"
+                             Variant="@(Choice.Filter.Starred ? Variant.Filled : Variant.Outlined)"
+                             OnClick="@(() => Filter(f => f with { Starred = !f.Starred }))">@T["FilterStarred"]</MudChip>
+                    <MudChip T="string" Class="pspad-list-filter-chip ma-0" Size="Size.Small" Color="Color.Primary"
+                             Variant="@(Choice.Filter.HasGoal ? Variant.Filled : Variant.Outlined)"
+                             OnClick="@(() => Filter(f => f with { HasGoal = !f.HasGoal }))">@T["FilterHasGoal"]</MudChip>
+                    @foreach (var goal in Goals)
+                    {
+                        var id = goal.Id;
+                        <MudChip T="string" Class="pspad-list-filter-chip ma-0" Size="Size.Small" Color="Color.Primary"
+                                 Variant="@(Choice.Filter.GoalIds.Contains(id) ? Variant.Filled : Variant.Outlined)"
+                                 Icon="@Icons.Material.Outlined.TrackChanges"
+                                 OnClick="@(() => Filter(f => f with { GoalIds = Toggled(f.GoalIds, id) }))">@goal.Name</MudChip>
+                    }
+                </div>
+                <MudDivider Class="my-1 flex-grow-0" />
+                <div class="d-flex align-center justify-space-between px-1">
+                    <MudButton Class="pspad-list-filter-clear" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                               OnClick="@(() => Filter(_ => ListFilter.None))">@T["FilterClear"]</MudButton>
+                    <MudText Typo="Typo.caption" Class="pspad-muted pspad-list-filter-shown">@T.Plural(Total, "FilterShown", Shown)</MudText>
+                </div>
+            </div>
+        </ChildContent>
+    </MudMenu>
+
+    <MudMenu Class="pspad-list-sort-menu" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+        <ActivatorContent Context="menu">
+            <MudButton Class="pspad-list-sort" Variant="Variant.Outlined" Size="Size.Small"
+                       Color="@(Choice.Sort == ListSort.Default ? Color.Default : Color.Primary)"
+                       StartIcon="@Icons.Material.Outlined.Sort"
+                       EndIcon="@(Choice.Sort.Descending ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward)"
+                       OnClick="@(args => menu.ToggleAsync(args))">
+                @T[$"Sort{Choice.Sort.Order}"]
+            </MudButton>
+        </ActivatorContent>
+        <ChildContent>
+            @foreach (var order in Enum.GetValues<ListOrder>())
+            {
+                var chosen = order;
+                <MudMenuItem Class="pspad-list-sort-option" Icon="@(chosen == Choice.Sort.Order ? Icons.Material.Filled.Check : null)"
+                             OnClick="@(() => Sort(new ListSort(chosen, false)))">
+                    @T[$"Sort{chosen}"]
+                    @if (chosen == ListOrder.Date)
+                    {
+                        <span class="pspad-muted ml-2">@T["SortDefault"]</span>
+                    }
+                </MudMenuItem>
+            }
+            <MudDivider Class="flex-grow-0" />
+            <MudToggleGroup T="bool" Class="ma-2 pspad-list-sort-direction" Size="Size.Small" Color="Color.Primary"
+                            SelectionMode="SelectionMode.SingleSelection" Value="@Choice.Sort.Descending"
+                            ValueChanged="@(descending => Sort(Choice.Sort with { Descending = descending }))">
+                <MudToggleItem Value="false" Text="@T[$"Dir{Choice.Sort.Order}Asc"]" />
+                <MudToggleItem Value="true" Text="@T[$"Dir{Choice.Sort.Order}Desc"]" />
+            </MudToggleGroup>
+        </ChildContent>
+    </MudMenu>
+
+    <MudSpacer />
+
+    <MudToggleGroup T="ListScreenView" Class="pspad-list-views" Size="Size.Small" Color="Color.Primary"
+                    SelectionMode="SelectionMode.SingleSelection" Value="@Choice.View"
+                    ValueChanged="@(view => ChoiceChanged.InvokeAsync(Choice with { View = view }))">
+        <MudToggleItem Value="ListScreenView.List" Text="@T["ViewList"]"
+                       UnselectedIcon="@Icons.Material.Outlined.ViewAgenda" SelectedIcon="@Icons.Material.Filled.ViewAgenda" />
+        <MudToggleItem Value="ListScreenView.Calendar" Text="@T["ViewCalendar"]"
+                       UnselectedIcon="@Icons.Material.Outlined.CalendarMonth" SelectedIcon="@Icons.Material.Filled.CalendarMonth" />
+    </MudToggleGroup>
+</div>
+
+@if (!Choice.Filter.IsEmpty)
+{
+    <div class="pspad-list-active-chips d-flex flex-wrap align-center gap-1 mb-3">
+        @if (Choice.Filter.When.Count > 0)
+        {
+            <MudChip T="string" Class="ma-0" Size="Size.Small" OnClose="@(_ => Filter(f => f with { When = new HashSet<WhenBucket>() }))">@WhenText</MudChip>
+        }
+        @if (Choice.Filter.Priorities.Count > 0)
+        {
+            <MudChip T="string" Class="ma-0" Size="Size.Small" OnClose="@(_ => Filter(f => f with { Priorities = new HashSet<Priority>() }))">@PriorityText</MudChip>
+        }
+        @if (Choice.Filter.Starred || Choice.Filter.HasGoal || Choice.Filter.GoalIds.Count > 0)
+        {
+            <MudChip T="string" Class="ma-0" Size="Size.Small"
+                     OnClose="@(_ => Filter(f => f with { Starred = false, HasGoal = false, GoalIds = new HashSet<Guid>() }))">@OtherText</MudChip>
+        }
+        <MudButton Class="pspad-list-filter-clear" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                   OnClick="@(() => Filter(_ => ListFilter.None))">@T["FilterClear"]</MudButton>
+    </div>
+}
+
+@code {
+    static readonly Priority[] Priorities = [Priority.High, Priority.Medium, Priority.Low, Priority.None];
+
+    [Parameter, EditorRequired] public ListScreenChoice Choice { get; set; } = ListScreenChoice.Default;
+
+    [Parameter] public EventCallback<ListScreenChoice> ChoiceChanged { get; set; }
+
+    [Parameter] public IReadOnlyList<Goal> Goals { get; set; } = [];
+
+    [Parameter] public int Shown { get; set; }
+
+    [Parameter] public int Total { get; set; }
+
+    string WhenText => string.Join(", ", Enum.GetValues<WhenBucket>()
+        .Where(Choice.Filter.When.Contains).Select(bucket => T[$"When{bucket}"].Value));
+
+    string PriorityText => string.Join(", ", Priorities
+        .Where(Choice.Filter.Priorities.Contains).Select(priority => TaskText[$"Priority{priority}"].Value));
+
+    string OtherText => string.Join(", ", new[]
+    {
+        Choice.Filter.Starred ? T["FilterStarred"].Value : null,
+        Choice.Filter.HasGoal ? T["FilterHasGoal"].Value : null
+    }.Concat(Goals.Where(goal => Choice.Filter.GoalIds.Contains(goal.Id)).Select(goal => goal.Name)).OfType<string>());
+
+    static HashSet<TValue> Toggled<TValue>(IReadOnlySet<TValue> values, TValue value)
+    {
+        var next = values.ToHashSet();
+        if (!next.Remove(value))
+        {
+            next.Add(value);
+        }
+
+        return next;
+    }
+
+    Task Filter(Func<ListFilter, ListFilter> change) => ChoiceChanged.InvokeAsync(Choice with { Filter = change(Choice.Filter) });
+
+    Task Sort(ListSort sort) => ChoiceChanged.InvokeAsync(Choice with { Sort = sort });
+}

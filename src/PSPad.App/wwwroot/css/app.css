@@ -2284,3 +2284,22 @@ button.pspad-heatmap-cell:focus-visible {
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+
+.pspad-list-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background-color: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.pspad-list-filter-panel {
+    max-width: 340px;
+}
