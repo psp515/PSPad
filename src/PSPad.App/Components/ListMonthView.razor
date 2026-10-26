@@ -1,0 +1,170 @@
+@using System.Globalization
+@using PSPad.Module.Money.Values
+@using PSPad.Module.Tasks.Lists
+@using PSPad.Module.Tasks.Tasks
+@inject IStringLocalizer<ListsStrings> T
+
+<MonthStrip Month="@_month" Current="@CurrentMonth" OnMonthChanged="@ShowMonth" Class="mb-3" />
+
+<div class="pspad-month-layout">
+    <MudPaper Outlined="true" Class="pspad-month-grid">
+        @foreach (var weekday in Weekdays)
+        {
+            <div class="pspad-month-dow">@CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(weekday)</div>
+        }
+        @foreach (var day in GridDays)
+        {
+            var entries = EntriesOn(day);
+            var shown = day;
+            <button type="button" data-day="@day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
+                    aria-label="@T.Plural(entries.Count, "DayTasks", day.ToString("d MMMM"))"
+                    aria-pressed="@(day == _selected ? "true" : "false")"
+                    class="@CellClass(day)" @onclick="@(() => _selected = shown)">
+                <span class="pspad-month-number">@day.Day</span>
+                <span class="d-none d-md-flex flex-column pspad-month-entries">
+                    @foreach (var (entry, task) in entries.Take(Shown))
+                    {
+                        <span class="@($"pspad-month-entry {(entry.Overdue ? "pspad-month-entry-overdue mud-error-text" : "")}")">
+                            <span class="@PriorityClass(task)" aria-hidden="true"></span>
+                            @if (entry.Recurring)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" Class="pspad-month-entry-repeat" />
+                            }
+                            <span class="pspad-month-entry-name">@task.Name</span>
+                        </span>
+                    }
+                    @if (entries.Count > Shown)
+                    {
+                        <span class="pspad-month-more mud-primary-text">@T["MoreOnDay", entries.Count - Shown]</span>
+                    }
+                </span>
+                @if (entries.Count > 0)
+                {
+                    <span class="@($"pspad-month-dot d-md-none {(entries.Any(item => item.Entry.Overdue) ? "pspad-month-dot-overdue mud-error-text" : "")}")">@entries.Count</span>
+                }
+            </button>
+        }
+    </MudPaper>
+
+    @if (_selected is { } selected)
+    {
+        var chosen = EntriesOn(selected);
+        <section class="pspad-month-detail">
+            <SectionHeading Title="@selected.ToString("ddd, d MMM")" Count="@chosen.Count" />
+            @if (chosen.Count > 0)
+            {
+                <RowGroup>
+                    @foreach (var (_, task) in chosen)
+                    {
+                        <TaskRow @key="task.Id" Task="@task" Today="@Today" GoalName="@GoalNameOf?.Invoke(task)"
+                                 OnToggle="@OnToggle" OnStar="@OnStar" OnOpen="@OnOpen" />
+                    }
+                </RowGroup>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="pspad-muted">@T["NothingOnDay", selected.ToString("ddd, d MMM")]</MudText>
+            }
+        </section>
+    }
+</div>
+
+@if (Undated > 0)
+{
+    <div class="pspad-month-undated d-flex flex-wrap align-center gap-2 mt-3">
+        <MudIcon Icon="@Icons.Material.Outlined.EventBusy" Size="Size.Small" Class="pspad-muted" />
+        <MudText Typo="Typo.body2" Class="pspad-muted">@T.Plural(Undated, "UndatedCount")</MudText>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="@OnShowUndated">@T["ShowThem"]</MudButton>
+    </div>
+}
+
+@code {
+    const int Shown = 2;
+
+    [Parameter, EditorRequired] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
+
+    [Parameter] public ListSort Sort { get; set; } = ListSort.Default;
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public int Undated { get; set; }
+
+    [Parameter] public Func<TodoTask, string?>? GoalNameOf { get; set; }
+
+    [Parameter] public EventCallback OnShowUndated { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnToggle { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnStar { get; set; }
+
+    [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
+
+    YearMonth _month;
+
+    DateOnly? _selected;
+
+    Dictionary<DateOnly, IReadOnlyList<(CalendarEntry Entry, TodoTask Task)>> _byDay = [];
+
+    YearMonth CurrentMonth => YearMonth.Of(Today);
+
+    protected override void OnInitialized()
+    {
+        _month = CurrentMonth;
+        _selected = Today;
+    }
+
+    protected override void OnParametersSet() => Rebuild();
+
+    void ShowMonth(YearMonth month)
+    {
+        _month = month;
+        _selected = month == CurrentMonth ? Today : null;
+        Rebuild();
+    }
+
+    void Rebuild()
+    {
+        var byId = Tasks.ToDictionary(task => task.Id);
+        var order = Sort.Apply(Tasks, Today, StringComparer.Create(CultureInfo.CurrentCulture, ignoreCase: true))
+            .Select((task, index) => (task.Id, index))
+            .ToDictionary(pair => pair.Id, pair => pair.index);
+
+        _byDay = [];
+        foreach (var month in new[] { _month.Previous(), _month, _month.Next() })
+        {
+            foreach (var day in ListCalendar.Month(Tasks, month.Year, month.Month, Today))
+            {
+                _byDay[day.Day] = [.. day.Entries.OrderBy(entry => order[entry.TaskId]).Select(entry => (entry, byId[entry.TaskId]))];
+            }
+        }
+    }
+
+    IReadOnlyList<(CalendarEntry Entry, TodoTask Task)> EntriesOn(DateOnly day) => _byDay.GetValueOrDefault(day) ?? [];
+
+    static IEnumerable<DayOfWeek> Weekdays =>
+        Enumerable.Range(0, 7).Select(offset => (DayOfWeek)(((int)CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek + offset) % 7));
+
+    IEnumerable<DateOnly> GridDays
+    {
+        get
+        {
+            var last = WeekStrip.StartOfWeek(_month.LastDay).AddDays(6);
+            for (var day = WeekStrip.StartOfWeek(_month.FirstDay); day <= last; day = day.AddDays(1))
+            {
+                yield return day;
+            }
+        }
+    }
+
+    string CellClass(DateOnly day) => string.Join(' ', new[]
+    {
+        "pspad-month-day",
+        day.Month != _month.Month ? "pspad-month-day-out" : null,
+        day == Today ? "pspad-month-day-today" : null,
+        day == _selected ? "pspad-month-day-selected" : null
+    }.OfType<string>());
+
+    static string PriorityClass(TodoTask task) => task.Priority == Priority.None
+        ? "pspad-priority-slot"
+        : $"pspad-priority pspad-priority-{task.Priority.ToString().ToLowerInvariant()}";
+}
