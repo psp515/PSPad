@@ -8,6 +8,7 @@
 @using PSPad.Module.Presentation.AreaViews
 @using PSPad.Module.Presentation.ListViews
 @using PSPad.Module.Tasks.Areas
+@using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Ordering
 @using PSPad.Module.Tasks.References
@@ -15,6 +16,7 @@
 @inject IDocumentStore<Area> AreaStore
 @inject IDocumentStore<TaskList> ListStore
 @inject IDocumentStore<TodoTask> TaskStore
+@inject IDocumentStore<Goal> GoalStore
 @inject IDocumentStore<ReferenceItem> ItemStore
 @inject IDocumentStore<AreaView> ViewStore
 @inject IDocumentStore<ListView> ListViewStore
@@ -67,6 +69,7 @@ else if (_isShared || _area is not null)
             <ItemTemplate Context="list">
                 <ListCard List="@list" Tasks="@TasksOf(list.Id)" Items="@ItemsOf(list.Id)" Today="@State.Today"
                           IsMine="@_placement.IsMine(list)"
+                          GoalNameOf="@GoalOf"
                           OnToggle="@ToggleAsync" OnStar="@StarAsync" OnOpen="@Open"
                           OnOpenItem="@OpenItem" OnStarItem="@StarItemAsync"
                           OnAddTaskClick="@(() => AddTask(list.Id))"
@@ -113,6 +116,7 @@ else
     IReadOnlyList<Area> _areas = [];
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<TodoTask> _tasks = [];
+    IReadOnlyList<Goal> _goals = [];
     IReadOnlyList<ReferenceItem> _items = [];
     ListPlacement _placement = ListPlacement.Empty;
 
@@ -167,6 +171,8 @@ else
         _hasShared = _placement.HasShared;
 
         _tasks = await TaskStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var goals = await GoalStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _goals = [.. goals.Where(goal => !goal.Deleted)];
         _items = await ItemStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _loaded = true;
 
@@ -175,6 +181,8 @@ else
             await Remembered.RememberAsync(AreaId);
         }
     }
+
+    string? GoalOf(TodoTask task) => Goal.Holding(_goals, task.Id)?.Name;
 
     string Summary
     {

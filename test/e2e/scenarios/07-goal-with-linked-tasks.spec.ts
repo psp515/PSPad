@@ -25,11 +25,16 @@ test('a goal tracks its linked tasks and a star never plans a task', async ({ pa
     await linkTaskToGoal(page, goal);
     await closeTask(page);
   }
+  await expect(taskRow(page, open).locator('.pspad-row-goal')).toHaveText(goal);
   await completeTaskRow(page, done);
+
+  await openArea(page, area);
+  await expect(taskRow(page, open).locator('.pspad-row-goal')).toHaveText(goal);
 
   await goToGoals(page);
   await openGoal(page, goal);
   await expect(taskRow(page, open)).toBeVisible();
+  await expect(taskRow(page, open).locator('.pspad-row-goal')).toHaveCount(0);
   await expect(page.getByText('Completed · 1')).toBeVisible();
 
   await taskRow(page, open).getByRole('button', { name: 'Star' }).click();

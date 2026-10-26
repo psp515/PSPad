@@ -935,11 +935,18 @@ button.pspad-heatmap-cell:focus-visible {
     font-size: 1rem;
 }
 
-.pspad-row-meta > .pspad-row-list {
+.pspad-row-meta > .pspad-row-list,
+.pspad-row-meta > .pspad-row-goal {
     flex-shrink: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.pspad-row-goal-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Wrapping chips onto a clipped second line hides whole chips, never half of one. */
