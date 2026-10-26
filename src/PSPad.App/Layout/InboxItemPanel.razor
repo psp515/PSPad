@@ -52,7 +52,7 @@
         @if (_item is not null)
         {
             <div class="pl-5 pr-3 pb-3">
-                <StepList @key="_draft" Draft="@_draft.Steps" UserId="@State.UserId" Disabled="@Disabled" />
+                <StepList @key="_draft" Draft="@_draft.Steps" UserId="@State.UserId" Today="@State.Today" Disabled="@Disabled" />
             </div>
 
             <MudDivider />
@@ -211,7 +211,12 @@
 
         foreach (var step in _draft.Steps)
         {
-            await Sender.SendAsync(new AddStep(Guid.NewGuid(), userId, taskId, Guid.NewGuid(), step));
+            var stepId = Guid.NewGuid();
+            await Sender.SendAsync(new AddStep(Guid.NewGuid(), userId, taskId, stepId, step.Name));
+            if (step.DueOn is { } stepDue)
+            {
+                await Sender.SendAsync(new SetStepDueDate(Guid.NewGuid(), userId, taskId, stepId, stepDue));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(_draft.Description))
@@ -257,7 +262,7 @@
 
         public bool Starred { get; set; }
 
-        public List<string> Steps { get; } = [];
+        public List<StepDraft> Steps { get; } = [];
 
         public string Description { get; set; } = "";
     }

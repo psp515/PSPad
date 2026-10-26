@@ -153,8 +153,7 @@ tests would be visible, not silent.
    (`Pacific/Kiritimati` when the UTC hour is 12 or later, else
    `Pacific/Pago_Pago`); My Day's day bar shows that local date and the
    second task is on that day's plan or still on tomorrow's accordingly.
-   The client exposes no step due dates, so the step half of the Today rule
-   stays with the unit tests.
+   The step half of the Today rule is scenario 21.
 5. **Overdue and the week strip.** Task due yesterday through the picker;
    My Day shows it under Overdue in error colour. Previous week, next week,
    pick a date in the dialog, **Today** returns; the picked day's bar text
@@ -233,6 +232,13 @@ tests would be visible, not silent.
     task disabled; two draft steps and a name still leave it disabled until
     the List row picks a list. Saving puts the task under "Today, any time"
     with `0/2` steps, and the list shows it.
+21. **Step deadline.** A task with two steps: set the second step's
+    deadline to Tomorrow from its date control. The list's card shows
+    `↳ Order boxes · <date>`; My Day today does not list the task, and
+    tomorrow (through the week strip's date dialog) lists it under any
+    time. A second task with one step due Today and one due Tomorrow is
+    under any time today and under Overdue tomorrow, not under any time
+    (issue #202, `adr/0078`).
 
 ## 5. Timing
 
@@ -270,7 +276,7 @@ test/e2e/
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
                  settings.ts  goals.ts  references.ts  sharing.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 20-add-from-my-day.spec.ts
+  scenarios/     01-first-sign-in.spec.ts … 21-step-deadline.spec.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared

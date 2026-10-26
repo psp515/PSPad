@@ -1203,6 +1203,29 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task AddingCarriesDraftStepDeadlines()
+    {
+        var list = NewList(Guid.NewGuid(), "Zakupy");
+        var replica = AppTestHost.Arrange(this, User, Today, list);
+
+        var panel = RenderWithOverlays(newInList: list.Id);
+        panel.Find(".pspad-task-name-field input").Input("Przeprowadzka");
+        foreach (var step in new[] { "Zamówić pudła", "Spakować kuchnię" })
+        {
+            panel.Find(".pspad-step-add input").Input(step);
+            panel.Find(".pspad-step-add input").KeyDown(
+                new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        }
+        panel.FindAll(".pspad-step-due")[1].Click();
+        panel.FindAll(".pspad-due-quick").Single(item => item.TextContent.Contains("Tomorrow")).Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal([null, Today.AddDays(1)], created.Steps.Select(step => step.DueOn));
+    }
+
+    [Fact]
     public void ANewTaskShowsTheStepListBeforeThePropertyRows()
     {
         AppTestHost.Arrange(this, User, Today);

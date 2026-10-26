@@ -1,0 +1,44 @@
+@inject IStringLocalizer<TasksStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
+
+@foreach (var pick in DueDateRow.QuickPicks(Today, Shared, T))
+{
+    <MudMenuItem Class="pspad-due-quick" OnClick="@(() => ChooseAsync(pick.Day))">
+        <div class="d-flex align-center gap-4">
+            <span class="flex-grow-1">@pick.Label</span>
+            <MudText Typo="Typo.caption" Class="pspad-muted">@pick.Day.ToString("ddd, d MMM")</MudText>
+        </div>
+    </MudMenuItem>
+}
+<MudDivider />
+<MudMenuItem Class="pspad-due-pick" Icon="@Icons.Material.Outlined.CalendarMonth" OnClick="@OnPick">
+    @T["PickDate"]
+</MudMenuItem>
+@if (Clearable && Value is not null)
+{
+    <MudMenuItem Class="pspad-due-clear" Icon="@Icons.Material.Outlined.EventBusy" OnClick="@(() => ChooseAsync(null))">
+        @T["ClearDate"]
+    </MudMenuItem>
+}
+
+@code {
+    [Parameter] public DateOnly? Value { get; set; }
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public bool Clearable { get; set; }
+
+    [Parameter] public EventCallback<DateOnly?> OnChoose { get; set; }
+
+    [Parameter] public EventCallback OnPick { get; set; }
+
+    async Task ChooseAsync(DateOnly? day)
+    {
+        if (day == Value)
+        {
+            return;
+        }
+
+        await OnChoose.InvokeAsync(day);
+    }
+}

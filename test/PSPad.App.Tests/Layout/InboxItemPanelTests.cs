@@ -176,6 +176,28 @@ public class InboxItemPanelTests : Bunit.TestContext
     }
 
     [Fact]
+    public async Task ConvertingCarriesDraftStepDeadlines()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        var inbox = NewInbox("Kupić mleko");
+        var replica = AppTestHost.Arrange(this, User, Today, inbox, area, list);
+
+        var panel = RenderWithOverlays(inbox.Items[0].Id);
+        foreach (var step in new[] { "Sprawdzić lodówkę", "Iść do sklepu" })
+        {
+            panel.Find(".pspad-step-add input").Input(step);
+            panel.Find(".pspad-step-add input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        }
+        panel.FindAll(".pspad-step-due")[1].Click();
+        panel.FindAll(".pspad-due-quick").Single(item => item.TextContent.Contains("Tomorrow")).Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        var task = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal([null, Today.AddDays(1)], task.Steps.Select(s => s.DueOn));
+    }
+
+    [Fact]
     public async Task ConvertingWithoutStepsOrDescriptionLeavesThemEmpty()
     {
         var area = NewArea("Dom");

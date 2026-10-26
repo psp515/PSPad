@@ -40,7 +40,7 @@ public static class TodayRule
             return new DayPlan([], [], [], [], [], completed);
         }
 
-        var onDay = day == today ? Select(live, today) : DueOn(live, day);
+        var onDay = day == today ? Select(live, today) : [.. OverdueBy(live, day), .. DueOn(live, day)];
         var due = onDay.Where(entry => !entry.Overdue).ToArray();
 
         return new DayPlan(
@@ -58,17 +58,27 @@ public static class TodayRule
         tasks
             .Where(task => task.IsRecurring
                 ? task.OccursOn(day) && !task.CompletedDays.Contains(day)
-                : task.CompletedAt is null && EarliestTrigger(task) == day)
+                : task.CompletedAt is null && TriggerOf(task) == day)
             .Select(task => Entry(task, overdue: false, dueOn: day))
             .OrderByDescending(entry => entry.Starred)
             .ThenByDescending(entry => entry.Priority)
             .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+    static TodayEntry[] OverdueBy(IEnumerable<TodoTask> tasks, DateOnly day) =>
+        tasks
+            .Where(task => !task.IsRecurring && task.CompletedAt is null && TriggerOf(task) < day)
+            .Select(task => Entry(task, overdue: true, dueOn: TriggerOf(task)))
+            .OrderByDescending(entry => entry.Starred)
+            .ThenByDescending(entry => entry.Priority)
+            .ThenBy(entry => entry.DueOn)
+            .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
     static TodayEntry[] Starred(IEnumerable<TodoTask> tasks, DateOnly day) =>
         tasks
             .Where(task => IsStarredAhead(task, day))
-            .Select(task => Entry(task, overdue: false, dueOn: EarliestTrigger(task)))
+            .Select(task => Entry(task, overdue: false, dueOn: TriggerOf(task)))
             .OrderBy(entry => entry.DueOn ?? DateOnly.MinValue)
             .ThenByDescending(entry => entry.Priority)
             .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
@@ -92,7 +102,7 @@ public static class TodayRule
 
     static bool IsStarredAhead(TodoTask task, DateOnly day) =>
         task is { Starred: true, IsRecurring: false, CompletedAt: null }
-        && (EarliestTrigger(task) ?? DateOnly.MaxValue) > day;
+        && (TriggerOf(task) ?? DateOnly.MaxValue) > day;
 
     static TodayEntry? Ahead(TodoTask task, DateOnly today)
     {
@@ -122,7 +132,7 @@ public static class TodayRule
             return null;
         }
 
-        var trigger = EarliestTrigger(task);
+        var trigger = TriggerOf(task);
 
         return trigger is { } day && LookAheadOf(task).Shows(day, today) ? day : null;
     }
@@ -140,7 +150,7 @@ public static class TodayRule
             return null;
         }
 
-        var trigger = EarliestTrigger(task);
+        var trigger = TriggerOf(task);
         if (trigger is null || trigger > today)
         {
             return null;
@@ -149,9 +159,9 @@ public static class TodayRule
         return Entry(task, overdue: trigger < today, dueOn: trigger);
     }
 
-    static DateOnly? EarliestTrigger(TodoTask task)
+    public static DateOnly? TriggerOf(TodoTask task)
     {
-        var stepDue = task.NextUncheckedStep?.DueOn;
+        var stepDue = task.EarliestDueStep?.DueOn;
 
         return (task.DueOn, stepDue) switch
         {

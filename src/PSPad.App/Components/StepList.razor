@@ -1,7 +1,9 @@
+@using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Tasks.Tasks
 @inject IServiceProvider Services
 @inject IStringLocalizer<TasksStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
 
 <div class="pspad-steps d-flex flex-column">
     @if (Draft is not null)
@@ -9,7 +11,8 @@
         @for (var index = 0; index < Draft.Count; index++)
         {
             var position = index;
-            var name = Draft[position];
+            var draft = Draft[position];
+            var name = draft.Name;
             <div @key="position" class="pspad-step d-flex align-center gap-1">
                 <span class="pspad-step-lead">
                     <MudIcon Icon="@Icons.Material.Outlined.CheckBoxOutlineBlank" Size="Size.Small" Class="pspad-muted" />
@@ -19,6 +22,10 @@
                               Underline="false" Margin="Margin.Dense" MaxLength="@ContentLimits.Name"
                               Disabled="@Disabled" OnKeyDown="@RevertOnEscape"
                               UserAttributes="@NameAttributes(name)" />
+                @if (!Repeating)
+                {
+                    @StepDue(draft.DueOn, name, day => SetDraftDue(position, day))
+                }
                 <MudIconButton Class="pspad-step-remove" Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
                                aria-label="@T["RemoveStep", name].Value" Disabled="@Disabled"
                                OnClick="@(() => Draft.RemoveAt(position))" />
@@ -42,6 +49,10 @@
             {
                 <SnapshotMarkChip />
             }
+            @if (!step.Checked && !Task!.IsRecurring)
+            {
+                @StepDue(step.DueOn, step.Name, day => SetDueAsync(step, day))
+            }
             <MudIconButton Class="pspad-step-remove" Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
                            aria-label="@T["RemoveStep", step.Name].Value" Disabled="@Disabled"
                            OnClick="@(() => RemoveAsync(step))" />
@@ -60,7 +71,9 @@
 
 @code {
     [Parameter] public TodoTask? Task { get; set; }
-    [Parameter] public List<string>? Draft { get; set; }
+    [Parameter] public List<StepDraft>? Draft { get; set; }
+    [Parameter] public DateOnly Today { get; set; }
+    [Parameter] public bool Repeating { get; set; }
     [Parameter] public Guid UserId { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
@@ -94,7 +107,7 @@
 
         if (Draft is not null)
         {
-            Draft.Add(name);
+            Draft.Add(new StepDraft(name));
             return;
         }
 
@@ -144,7 +157,47 @@
             return;
         }
 
-        Draft[position] = trimmed;
+        Draft[position] = Draft[position] with { Name = trimmed };
+    }
+
+    RenderFragment StepDue(DateOnly? due, string name, Func<DateOnly?, System.Threading.Tasks.Task> choose) =>
+        @<text>
+            @if (Disabled)
+            {
+                @if (due is { } shown)
+                {
+                    <MudText Typo="Typo.caption" Class="pspad-step-due px-2"
+                             Color="@(shown < Today ? Color.Error : Color.Default)">@DueDateRow.Describe(shown, Today, Shared)</MudText>
+                }
+            }
+            else
+            {
+                <DueDateMenu Class="pspad-step-due" Value="@due" Today="@Today" Clearable="true"
+                             EmptyLabel="@T["SetStepDeadline", name].Value"
+                             ValueChanged="@(day => choose(day))" />
+            }
+        </text>;
+
+    System.Threading.Tasks.Task SetDraftDue(int position, DateOnly? day)
+    {
+        if (!Disabled && Draft is not null)
+        {
+            Draft[position] = Draft[position] with { DueOn = day };
+        }
+
+        return System.Threading.Tasks.Task.CompletedTask;
+    }
+
+    async System.Threading.Tasks.Task SetDueAsync(Step step, DateOnly? day)
+    {
+        if (Disabled || Task is null)
+        {
+            return;
+        }
+
+        var sender = Services.GetRequiredService<CommandSender>();
+        await sender.SendAsync(new SetStepDueDate(Guid.NewGuid(), UserId, Task.Id, step.Id, day));
+        await Changed.InvokeAsync();
     }
 
     async System.Threading.Tasks.Task CheckAsync(Step step, bool @checked)

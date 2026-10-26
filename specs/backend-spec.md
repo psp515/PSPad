@@ -327,8 +327,11 @@ not stated there:
   `TodayEntry.Time` carries it (additive to `GET /api/today`).
 - `TodayRule.Plan(tasks, day, today, zone)` plans the day on screen (`day`;
   `today` is the user's today) as Overdue, Scheduled, AnyTime, Starred,
-  ComingUp and Completed. A task's date is its earliest trigger — due date
-  or next unchecked step. "Due on `day`" means a one-time open task whose
+  ComingUp and Completed. A task's date is its earliest trigger,
+  `TodayRule.TriggerOf(task)`: the earlier of its due date and the earliest
+  deadline among its unchecked steps (`TodoTask.EarliestDueStep`, a tie to
+  the lower position; `adr/0078`). Checked steps never count; a repeating
+  task ignores step dates. "Due on `day`" means a one-time open task whose
   trigger is `day`, or a recurring task that `OccursOn(day)` with `day`
   unticked; Scheduled holds those with a `Time` (by start, then name),
   AnyTime those without. By day kind: on a past day only Completed
@@ -337,7 +340,9 @@ not stated there:
   `Select`'s, so the Today rule does not move; Starred and ComingUp
   (each one-time task at its trigger, each recurring task at its next
   unticked occurrence, only while `LeadTime.Shows`) fill too. On a future day
-  Overdue and ComingUp are empty and lead time is ignored — the user asked
+  Overdue holds every open one-time task whose trigger is before that day —
+  what will still be overdue then (`adr/0078`) — and a task in it is not
+  also due; ComingUp is empty and lead time is ignored — the user asked
   for that day — while Scheduled, AnyTime, Starred and Completed (ticked occurrences) are
   filled. A
   recurring task is never overdue. Overdue entries keep their `Time`.

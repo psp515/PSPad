@@ -1,0 +1,43 @@
+<MudDialog @bind-Visible="_visible" Class="pspad-due-dialog" ContentClass="pa-0" Options="@PickerOptions">
+    <DialogContent>
+        <MudDatePicker PickerVariant="PickerVariant.Static" Elevation="0" ShowToolbar="false" Date="@AsDateTime(Value)"
+                       @bind-PickerMonth="_shownMonth" DateChanged="@PickedAsync" />
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [Parameter] public DateOnly? Value { get; set; }
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback<DateOnly?> OnPicked { get; set; }
+
+    bool _visible;
+
+    DateTime? _shownMonth;
+
+    static readonly DialogOptions PickerOptions = new() { CloseOnEscapeKey = true, BackdropClick = true, NoHeader = true };
+
+    public void Open()
+    {
+        var shown = Value ?? Today;
+        _shownMonth = new DateTime(shown.Year, shown.Month, 1);
+        _visible = true;
+        StateHasChanged();
+    }
+
+    static DateTime? AsDateTime(DateOnly? day) => day?.ToDateTime(TimeOnly.MinValue);
+
+    async Task PickedAsync(DateTime? date)
+    {
+        _visible = false;
+        var day = date is null ? (DateOnly?)null : DateOnly.FromDateTime(date.Value);
+
+        if (day == Value)
+        {
+            return;
+        }
+
+        await OnPicked.InvokeAsync(day);
+    }
+}

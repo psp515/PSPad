@@ -34,6 +34,15 @@
                         @(Task.IsRecurring ? T["UntilDate", due.ToString("d MMM")] : due.ToString("d MMM"))
                     </MudText>
                 }
+                @if (!Task.IsRecurring && Task.EarliestDueStep is { DueOn: { } stepDue } dueStep)
+                {
+                    <MudText Typo="Typo.caption" Class="pspad-step-due-mark d-inline-flex align-center gap-1"
+                             Color="@(stepDue < Today ? Color.Error : Color.Inherit)">
+                        <MudIcon Icon="@Icons.Material.Outlined.SubdirectoryArrowRight" Size="Size.Small" />
+                        <span class="pspad-step-due-name" title="@dueStep.Name">@dueStep.Name</span>
+                        <span class="flex-shrink-0">· @stepDue.ToString("d MMM")</span>
+                    </MudText>
+                }
                 @if (Task.Steps.Count > 0)
                 {
                     <span class="pspad-steps-progress d-inline-flex align-center gap-1">

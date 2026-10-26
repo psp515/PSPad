@@ -289,6 +289,100 @@ public class DayPlanTests
             plan.Overdue.Concat(plan.AnyTime).Select(entry => entry.TaskId));
     }
 
+    [Fact]
+    public void ALaterStepDueInTwoDaysPutsItsTaskInComingUpOnThatDay()
+    {
+        var task = TodoTaskTests.Existing();
+        var dated = Guid.NewGuid();
+        task.ApplyAll(TodoTask.Decide(task, new AddStep(Guid.NewGuid(), User, task.Id, Guid.NewGuid(), "book van"), Now));
+        task.ApplyAll(TodoTask.Decide(task, new AddStep(Guid.NewGuid(), User, task.Id, dated, "order boxes"), Now));
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetStepDueDate(Guid.NewGuid(), User, task.Id, dated, Today.AddDays(2)), Now));
+
+        var plan = TodayRule.Plan([task], Today, Today, Utc);
+
+        Assert.Equal(Today.AddDays(2), Assert.Single(plan.ComingUp).DueOn);
+    }
+
+    [Fact]
+    public void AnOverdueTaskStaysOverdueOnAFutureDay()
+    {
+        var overdue = Due(Today.AddDays(-1));
+
+        var plan = TodayRule.Plan([overdue], Today.AddDays(1), Today, Utc);
+
+        var entry = Assert.Single(plan.Overdue);
+        Assert.Equal(overdue.Id, entry.TaskId);
+        Assert.True(entry.Overdue);
+        Assert.Empty(plan.AnyTime);
+    }
+
+    [Fact]
+    public void ATaskDueTomorrowIsDueTomorrowAndOverdueTheDayAfter()
+    {
+        var task = Due(Today.AddDays(1));
+
+        var tomorrow = TodayRule.Plan([task], Today.AddDays(1), Today, Utc);
+        var dayAfter = TodayRule.Plan([task], Today.AddDays(2), Today, Utc);
+
+        Assert.Empty(tomorrow.Overdue);
+        Assert.Equal(task.Id, Assert.Single(tomorrow.AnyTime).TaskId);
+        Assert.Equal(task.Id, Assert.Single(dayAfter.Overdue).TaskId);
+        Assert.Empty(dayAfter.AnyTime);
+    }
+
+    [Fact]
+    public void ATaskOverdueByOneStepWithAnotherDueTomorrowIsOverdueOnceTomorrow()
+    {
+        var task = TodoTaskTests.Existing();
+        WithStep(task, Today.AddDays(-2));
+        WithStep(task, Today.AddDays(1));
+
+        var plan = TodayRule.Plan([task], Today.AddDays(1), Today, Utc);
+
+        Assert.Equal(task.Id, Assert.Single(plan.Overdue).TaskId);
+        Assert.Empty(plan.AnyTime);
+        Assert.Empty(plan.Scheduled);
+    }
+
+    [Fact]
+    public void ARecurringTaskIsNeverCarriedAsOverdue()
+    {
+        var task = Recurring(RecurrenceRule.Daily(Today.AddDays(-5)));
+
+        var plan = TodayRule.Plan([task], Today.AddDays(2), Today, Utc);
+
+        Assert.Empty(plan.Overdue);
+    }
+
+    [Fact]
+    public void ACompletedTaskIsNotCarriedAsOverdue()
+    {
+        var task = Due(Today.AddDays(-1));
+        task.ApplyAll(TodoTask.Decide(task, new CompleteTask(Guid.NewGuid(), User, task.Id), Now));
+
+        var plan = TodayRule.Plan([task], Today.AddDays(1), Today, Utc);
+
+        Assert.Empty(plan.Overdue);
+    }
+
+    [Fact]
+    public void APastDayStillShowsOnlyWhatWasCompleted()
+    {
+        var overdue = Due(Today.AddDays(-3));
+
+        var plan = TodayRule.Plan([overdue], Today.AddDays(-1), Today, Utc);
+
+        Assert.Empty(plan.Overdue);
+    }
+
+    static void WithStep(TodoTask task, DateOnly due)
+    {
+        var stepId = Guid.NewGuid();
+        task.ApplyAll(TodoTask.Decide(task, new AddStep(Guid.NewGuid(), User, task.Id, stepId, "step"), Now));
+        task.ApplyAll(TodoTask.Decide(task, new SetStepDueDate(Guid.NewGuid(), User, task.Id, stepId, due), Now));
+    }
+
     static TodoTask Due(DateOnly day)
     {
         var task = TodoTaskTests.Existing();

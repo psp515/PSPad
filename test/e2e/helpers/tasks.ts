@@ -42,14 +42,21 @@ export function stepNameField(page: Page, name: string) {
 }
 
 export async function addStep(page: Page, name: string) {
+  const steps = panel(page).locator('.pspad-steps .pspad-step-name');
+  const input = panel(page).locator('.pspad-step-add input');
+  const before = await steps.count();
+  let accepted = false;
   await expect(async () => {
-    if (!(await stepNameField(page, name).isVisible())) {
-      const input = panel(page).locator('.pspad-step-add input');
+    if (!accepted) {
       await input.fill(name, { timeout: 2_000 });
+      await expect(input).toHaveValue(name, { timeout: 2_000 });
       await input.press('Enter', { timeout: 2_000 });
+      await expect(input).toHaveValue('', { timeout: 10_000 });
+      accepted = true;
     }
+    await expect(steps).toHaveCount(before + 1, { timeout: 10_000 });
     await expect(stepNameField(page, name)).toHaveValue(name, { timeout: 5_000 });
-  }).toPass({ timeout: 30_000 });
+  }).toPass({ timeout: 60_000 });
 }
 
 export async function renameStep(page: Page, from: string, to: string) {
@@ -70,5 +77,23 @@ export async function checkStep(page: Page, name: string) {
       await box.click({ timeout: 2_000 });
     }
     await expect(box).toBeChecked({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
+export function stepRow(page: Page, name: string) {
+  return panel(page)
+    .locator('.pspad-step')
+    .filter({ has: page.getByRole('textbox', { name: `Rename ${name}`, exact: true }) });
+}
+
+export async function setStepDeadline(page: Page, step: string, day: 'Today' | 'Tomorrow') {
+  const due = stepRow(page, step).locator('.pspad-step-due');
+  await expect(async () => {
+    if (!(await due.innerText({ timeout: 2_000 })).includes(day)) {
+      await stepRow(page, step).hover({ timeout: 2_000 });
+      await due.click({ timeout: 2_000 });
+      await page.getByRole('menuitem', { name: day }).first().click({ timeout: 2_000 });
+    }
+    await expect(due).toContainText(day, { timeout: 2_000 });
   }).toPass({ timeout: 30_000 });
 }

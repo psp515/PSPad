@@ -6,27 +6,10 @@
              Value="@(Value is not { } day ? EmptyText ?? T["NoDueDate"] : Describe(day, Today, Shared))"
              HasValue="@(Value is not null)" ValueColor="@(FlagsPast && Value < Today ? Color.Error : Color.Default)"
              Disabled="@Disabled" OnClear="@(() => ChooseAsync(null))">
-    @foreach (var pick in QuickPicks(Today, Shared, T))
-    {
-        <MudMenuItem Class="pspad-due-quick" OnClick="@(() => ChooseAsync(pick.Day))">
-            <div class="d-flex align-center gap-4">
-                <span class="flex-grow-1">@pick.Label</span>
-                <MudText Typo="Typo.caption" Class="pspad-muted">@pick.Day.ToString("ddd, d MMM")</MudText>
-            </div>
-        </MudMenuItem>
-    }
-    <MudDivider />
-    <MudMenuItem Class="pspad-due-pick" Icon="@Icons.Material.Outlined.CalendarMonth" OnClick="@OpenPicker">
-        @T["PickDate"]
-    </MudMenuItem>
+    <DueDateItems Value="@Value" Today="@Today" OnChoose="@ChooseAsync" OnPick="@(() => _picker?.Open())" />
 </PropertyRow>
 
-<MudDialog @bind-Visible="_picking" Class="pspad-due-dialog" ContentClass="pa-0" Options="@PickerOptions">
-    <DialogContent>
-        <MudDatePicker PickerVariant="PickerVariant.Static" Elevation="0" ShowToolbar="false" Date="@AsDateTime(Value)"
-                       @bind-PickerMonth="_shownMonth" DateChanged="@PickedAsync" />
-    </DialogContent>
-</MudDialog>
+<DueDatePicker @ref="_picker" Value="@Value" Today="@Today" OnPicked="@ChooseAsync" />
 
 @code {
     [Parameter] public DateOnly? Value { get; set; }
@@ -43,11 +26,8 @@
 
     [Parameter] public bool FlagsPast { get; set; } = true;
 
-    bool _picking;
+    DueDatePicker? _picker;
 
-    DateTime? _shownMonth;
-
-    static readonly DialogOptions PickerOptions = new() { CloseOnEscapeKey = true, BackdropClick = true, NoHeader = true };
 
     public sealed record QuickPick(string Label, DateOnly Day);
 
@@ -74,22 +54,6 @@
         var firstDay = CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
         var daysAhead = ((int)firstDay - (int)today.DayOfWeek + 7) % 7;
         return today.AddDays(daysAhead == 0 ? 7 : daysAhead);
-    }
-
-    static DateTime? AsDateTime(DateOnly? day) => day?.ToDateTime(TimeOnly.MinValue);
-
-    static DateTime FirstOfMonth(DateOnly day) => new(day.Year, day.Month, 1);
-
-    void OpenPicker()
-    {
-        _shownMonth = FirstOfMonth(Value ?? Today);
-        _picking = !Disabled;
-    }
-
-    async Task PickedAsync(DateTime? date)
-    {
-        _picking = false;
-        await ChooseAsync(date is null ? null : DateOnly.FromDateTime(date.Value));
     }
 
     async Task ChooseAsync(DateOnly? day)
