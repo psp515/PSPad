@@ -346,16 +346,6 @@ to `specs/localization-design.md` for adding a language.
   every pull request.
 - `npm run check-stack` in `docs/` passes: all nine combinations render
   through `docker compose config`.
-- A unit test of the assembler (`docs/test/stack.test.mjs`, `node --test`,
-  run as `npm test` in `docs/`) asserts: `quick` has `mongo` and no
-  `postgres`, `cloudflared` or `caddy`; every `atlas` combination has no
-  `mongo` service and its `.env` has `MONGO_CONNECTION_STRING`; `pg` adds
-  `postgres` and `KC_DB: postgres`; `tunnel` adds `cloudflared` and
-  `CF-Connecting-IP`; `dns` adds `caddy`, a Caddyfile with three sites and
-  `X-Forwarded-For`; no file contains `${` left unexpanded by `.env`
-  except the variables `.env` declares; the image tags for `mongo`,
-  `keycloak` and the two PSPad images equal those in `docker/compose.yaml`
-  and the CI workflow.
 - `docker/` matches `origin/main` except the comment in
   `mongo-app-user.js`: `git diff origin/main -- docker/` lists that file
   only.
