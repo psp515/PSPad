@@ -1204,10 +1204,10 @@ button.pspad-heatmap-cell:focus-visible {
 }
 
 .pspad-timeline.mud-paper-outlined {
-    --pspad-timeline-offset: 360px;
+    --pspad-timeline-offset: 483px;
     position: relative;
-    height: calc(100dvh - var(--pspad-timeline-offset));
-    min-height: 320px;
+    height: min(calc(100dvh - var(--pspad-timeline-offset)), var(--pspad-timeline-natural));
+    min-height: min(200px, var(--pspad-timeline-natural));
     overflow: hidden;
     border-radius: 12px;
     background-color: var(--pspad-raised);
@@ -1259,9 +1259,12 @@ button.pspad-heatmap-cell:focus-visible {
 
 .pspad-timeline-slot {
     flex: 1;
-    margin-left: 52px;
+    margin-left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     border: 0;
-    padding: 0;
+    padding: 0 6px 0 0;
     background: transparent;
     cursor: copy;
     border-radius: 6px;
@@ -1279,13 +1282,26 @@ button.pspad-heatmap-cell:focus-visible {
     outline-offset: -1px;
 }
 
+.pspad-timeline-slot::after {
+    content: "+";
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+    opacity: .35;
+}
+
+.pspad-timeline-slot + .pspad-timeline-slot::after {
+    content: none;
+}
+
 .pspad-timeline-slot:hover::after,
-.pspad-timeline-slot:focus-visible::after {
+.pspad-timeline-slot:focus-visible::after,
+.pspad-timeline-slot + .pspad-timeline-slot:hover::after,
+.pspad-timeline-slot + .pspad-timeline-slot:focus-visible::after {
     content: "+ " attr(data-time);
     font-size: 11px;
-    font-weight: 500;
     color: var(--mud-palette-primary);
-    padding-left: 8px;
+    opacity: 1;
 }
 
 .pspad-timeline-fold {
@@ -1315,8 +1331,8 @@ button.pspad-heatmap-cell:focus-visible {
     z-index: 1;
     top: var(--at);
     height: max(24px, calc(var(--size) - 2px));
-    left: calc(58px + (100% - 66px) * var(--lane) / var(--lanes));
-    width: calc((100% - 66px) / var(--lanes) - 2px);
+    left: calc(58px + (100% - 94px) * var(--lane) / var(--lanes));
+    width: calc((100% - 94px) / var(--lanes) - 2px);
     box-sizing: border-box;
     display: flex;
     align-items: flex-start;
@@ -1334,8 +1350,8 @@ button.pspad-heatmap-cell:focus-visible {
     z-index: 1;
     top: var(--at);
     height: max(var(--needs), calc(var(--size) - 2px));
-    left: calc(58px + (100% - 66px) * var(--lane) / var(--lanes));
-    width: calc((100% - 66px) / var(--lanes) - 2px);
+    left: calc(58px + (100% - 94px) * var(--lane) / var(--lanes));
+    width: calc((100% - 94px) / var(--lanes) - 2px);
     box-sizing: border-box;
     padding: 2px 6px 2px 2px;
     border-radius: 8px;
@@ -1449,6 +1465,7 @@ button.pspad-heatmap-cell:focus-visible {
 @media (max-width: 959.98px) {
     .pspad-day-tab-tasks .pspad-day-schedule { display: none; }
     .pspad-day-tab-schedule .pspad-day-lists { display: none; }
+    .pspad-day-tab-schedule ~ .pspad-fab { display: none; }
 }
 
 @media (min-width: 960px) {
@@ -1462,7 +1479,7 @@ button.pspad-heatmap-cell:focus-visible {
     .pspad-day-tabs { display: none; }
 
     .pspad-timeline.mud-paper-outlined {
-        --pspad-timeline-offset: 240px;
+        --pspad-timeline-offset: 346px;
     }
 
     .pspad-row-group-cols {
@@ -1574,7 +1591,9 @@ button.pspad-heatmap-cell:focus-visible {
     }
 
     .pspad-timeline-slot {
-        margin-left: 0;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0 0 4px;
     }
 
     .pspad-timeline-slot + .pspad-timeline-slot {
@@ -1596,14 +1615,14 @@ button.pspad-heatmap-cell:focus-visible {
     .pspad-timeline-group {
         left: var(--at);
         width: max(72px, calc(var(--size) - 2px));
-        top: calc(24px + (100% - 30px) * var(--lane) / var(--lanes));
-        height: calc((100% - 30px) / var(--lanes) - 4px);
+        top: calc(24px + (100% - 54px) * var(--lane) / var(--lanes));
+        height: calc((100% - 54px) / var(--lanes) - 4px);
         border-left: 0;
         border-top: 3px solid var(--mud-palette-primary);
     }
 
     .pspad-timeline-group {
-        height: max(var(--needs), calc((100% - 30px) / var(--lanes) - 4px));
+        height: max(var(--needs), calc((100% - 54px) / var(--lanes) - 4px));
     }
 
     .pspad-timeline-task-done {

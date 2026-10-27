@@ -56,6 +56,8 @@ public sealed class TimelineAxis
         return new TimelineAxis(segments);
     }
 
+    public int NaturalLength(int perUnit) => _units * perUnit + _foldPixels;
+
     public string At(int minutes)
     {
         var (units, pixels) = Offset(minutes);

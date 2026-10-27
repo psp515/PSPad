@@ -24,9 +24,14 @@ Issue #185. Proposal with screenshots: artifact "My Day fixes #185".
 Superseded the earlier "whole day, scrolled when it does not fit" (#202
 follow-up, mockup "My Day Schedule Fit"). The timeline never scrolls.
 
-- `.pspad-timeline` is `height: calc(100dvh - offset)` (at least 320px) with
-  `overflow: hidden`; `offset` is 240px from `md`, 360px below it (top bar,
-  week strip, tabs, bottom navigation).
+- `.pspad-timeline` is `height: min(calc(100dvh - offset), natural)` with
+  `overflow: hidden`. `natural` (`--pspad-timeline-natural`) is what the day
+  needs: 40px per weight unit plus 28px per band
+  (`TimelineAxis.NaturalLength(DayTimeline.HourLength)`), so a day with one
+  task is a short card, not a screen of one stretched hour. `offset` is
+  everything on the page above and below the timeline, measured against the
+  stack so the page itself never scrolls: 346px from `md`, 483px below it
+  (top bar, week strip, tabs, bottom navigation, page padding).
 - `State/TimelineAxis` splits the day into segments. An hour with no task and
   not the current hour is empty; three or more empty hours in a row
   (`FoldFrom`) fold into one band (`pspad-timeline-fold`, 28px, labelled
@@ -45,7 +50,12 @@ follow-up, mockup "My Day Schedule Fit"). The timeline never scrolls.
   (`grid-template-areas: "schedule" "lists"`) and the timeline runs left to
   right, 176px tall, lanes stacked top to bottom, bands with vertical text.
 - Each shown hour holds two half-hour buttons (`pspad-timeline-slot`,
-  `data-time`, "Add a task at 09:30") when the page passes `OnAdd`. My Day
+  `data-time`, "Add a task at 09:30") when the page passes `OnAdd`. They span
+  the whole row, gutter included, and blocks stop 28px short of the right
+  edge (from 1600px, 24px short of the bottom), so a free rail stays
+  clickable however many tasks share an hour. The rail shows one faint "+"
+  per hour and "+ 09:30" on hover. On a phone the Schedule tab hides the
+  page's add button: the schedule itself adds. My Day
   opens `?task=new&due={day}&time=HH:mm` (`TaskQuery.ForNewTask(…, time)`);
   the task panel starts the draft at that time for an hour. Blocks sit above
   the slots, so a click on a task still opens it.

@@ -3,7 +3,7 @@
 @using PSPad.Module.Tasks.Today
 @inject IStringLocalizer<TodayStrings> T
 
-<MudPaper Outlined="true" Elevation="0" Class="pspad-timeline">
+<MudPaper Outlined="true" Elevation="0" Class="pspad-timeline" Style="@($"--pspad-timeline-natural:{_axis.NaturalLength(HourLength)}px")">
     <div class="pspad-timeline-axis">
         @foreach (var segment in _axis.Segments)
         {
@@ -86,6 +86,7 @@
 </MudPaper>
 
 @code {
+    public const int HourLength = 40;
     const int HalfHour = 30;
     const int MinutesPerDay = 24 * 60;
     const int ShortestVisibleSpan = 45;

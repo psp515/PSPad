@@ -83,6 +83,16 @@ public class TimelineAxisTests
     }
 
     [Fact]
+    public void ANaturalLengthGrowsWithWhatTheDayHolds()
+    {
+        var shortDay = TimelineAxis.For([(15 * 60, 16 * 60)], null, new HashSet<int>());
+        var longDay = TimelineAxis.For([(7 * 60, 9 * 60), (12 * 60, 18 * 60)], null, new HashSet<int>());
+
+        Assert.Equal(2 * 40 + 2 * TimelineAxis.FoldSize, shortDay.NaturalLength(40));
+        Assert.True(longDay.NaturalLength(40) > shortDay.NaturalLength(40) * 3);
+    }
+
+    [Fact]
     public void AStretchIsTheDistanceBetweenTwoPositions()
     {
         var axis = TimelineAxis.For([(9 * 60, 10 * 60)], null, new HashSet<int>());

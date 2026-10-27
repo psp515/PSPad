@@ -47,6 +47,15 @@ public class DayTimelineTests : Bunit.TestContext
     }
 
     [Fact]
+    public void TheTimelineAsksForOnlyTheLengthItsDayNeeds()
+    {
+        var timeline = Render(Timed("Dentist", 15, 0, 16, 0));
+
+        var natural = Axis((900, 960)).NaturalLength(DayTimeline.HourLength);
+        Assert.Contains($"--pspad-timeline-natural:{natural}px", timeline.Find(".pspad-timeline").GetAttribute("style"));
+    }
+
+    [Fact]
     public void ABlockIsPlacedOnTheAxisAndSizedByItsLength()
     {
         var timeline = Render(Timed("Sprint planning", 9, 30, 11, 30));
