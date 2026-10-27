@@ -237,8 +237,10 @@ tests would be visible, not silent.
     `↳ Order boxes · <date>`; My Day today does not list the task, and
     tomorrow (through the week strip's date dialog) lists it under any
     time. A second task with one step due Today and one due Tomorrow is
-    under any time today and under Overdue tomorrow, not under any time
-    (issue #202, `adr/0078`).
+    under any time today and under Overdue tomorrow, not under any time.
+    Back on today, ticking its "Get new photos taken" step row (not the
+    task) says it moved to Tomorrow, and tomorrow then lists it under any
+    time (issue #202, `adr/0078`).
 22. **List filter, sort and calendar.** Two High-priority tasks due
     tomorrow and one plain task: filtering on High hides the plain one,
     sorting by Name orders the two A → Z, and both survive a reload with

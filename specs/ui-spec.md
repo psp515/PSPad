@@ -485,7 +485,10 @@ Task sections, top to bottom, each hidden when empty:
    "Nothing completed on Wed, 7 Oct." when empty.
 
 Each section is one `RowGroup` of `TaskRow`s with `pspad-row-ledger`, so
-from `md` a row is one line with its details in a right-hand column.
+from `md` a row is one line with its details in a right-hand column. A task
+there because of a step deadline lists the steps due by the day under its
+row, each with its own tick (`DayStepRow`, `step-deadlines-design.md` §2.5);
+the task's tick still completes the task.
 
 **Schedule** (`Color.Primary` heading, always present) is
 `Components/DayTimeline`, under a muted "Schedule empty for today." /

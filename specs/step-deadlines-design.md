@@ -96,8 +96,32 @@ the list name; the icon and date stay whole. The whole mark is in
 `Color.Error` when the step's date is before today. The full step name is
 the mark's `title`. `HasMeta` counts it.
 
-It shows on every screen that renders `TaskRow`, the goal screen included.
-Both the task's due date and the mark show when both are set.
+It shows on every screen that renders `TaskRow`, the goal screen included,
+except on My Day rows that carry step rows (§2.5). Both the task's due date
+and the mark show when both are set.
+
+### 2.5 Step rows on My Day
+
+A task on My Day's day sections that has unchecked steps due on or before the
+day on screen (`TodayRule.StepsDueBy(task, day)`, in step order; none for a
+repeating or completed task) lists them under its row as `DayStepRow`s, the
+task row and its steps wrapped in one `pspad-day-item`. Each step row is a
+`MudCheckBox` (`Size.Small`) labelled with the step's name, the name, and
+its date read relatively (`DueDateRow.Describe`), red when past. That row's
+`TaskRow` drops the ↳ mark (`ShowDueStep="false"`).
+
+- **The task's tick** completes the task, as everywhere else.
+- **A step's tick** sends `CheckStep` for that step only. The step stays on
+  the row, struck through, while its task is still on the day, so a slip can
+  be undone in place; changing the day forgets it.
+- **When the last step due by the day is checked** the task leaves the day
+  by the Today rule, and a snackbar says where it went — `"Move flat" moved
+  to Sat, 31 Oct`, or `has no date left` — with **Undo**, which un-checks
+  that step.
+
+The issue: ticking such a task completed the whole task when only a step
+was due. Starred, Coming up, lists, the area board, goals and the panel
+keep one tick per task.
 
 ## 3. Out of scope
 
