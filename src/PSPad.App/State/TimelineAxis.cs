@@ -6,6 +6,7 @@ public sealed class TimelineAxis
 {
     public const int FoldFrom = 3;
     public const int FoldSize = 28;
+    public const int UnitAtLeast = 26;
     const int HoursPerDay = 24;
 
     readonly int _units;
@@ -20,14 +21,25 @@ public sealed class TimelineAxis
 
     public IReadOnlyList<TimelineSegment> Segments { get; }
 
-    public static TimelineAxis For(IEnumerable<(int Start, int End)> spans, int? now, IReadOnlySet<int> unfolded)
+    public static TimelineAxis For(
+        IEnumerable<(int Start, int End)> spans, int? now, IReadOnlySet<int> unfolded,
+        IEnumerable<(int Start, int End, int Pixels)>? needs = null)
     {
         var busy = spans.ToArray();
         var overlaps = Enumerable.Range(0, HoursPerDay)
             .Select(hour => busy.Count(span => span.Start < (hour + 1) * 60 && span.End > hour * 60))
             .ToArray();
+        var least = new int[HoursPerDay];
+        foreach (var need in needs ?? [])
+        {
+            var weight = (int)Math.Ceiling(need.Pixels * 60.0 / UnitAtLeast / Math.Max(1, need.End - need.Start));
+            for (var covered = need.Start / 60; covered < HoursPerDay && covered * 60 < need.End; covered++)
+            {
+                least[covered] = Math.Max(least[covered], weight);
+            }
+        }
         var nowHour = now / 60;
-        bool Empty(int hour) => overlaps[hour] == 0 && hour != nowHour;
+        bool Empty(int hour) => overlaps[hour] == 0 && least[hour] == 0 && hour != nowHour;
 
         var segments = new List<TimelineSegment>();
         var hour = 0;
@@ -49,7 +61,7 @@ public sealed class TimelineAxis
             var last = Math.Max(end, hour + 1);
             for (; hour < last; hour++)
             {
-                segments.Add(new TimelineSegment(hour, hour + 1, false, WeightOf(overlaps[hour], hour == nowHour)));
+                segments.Add(new TimelineSegment(hour, hour + 1, false, Math.Max(least[hour], WeightOf(overlaps[hour], hour == nowHour))));
             }
         }
 
@@ -57,6 +69,8 @@ public sealed class TimelineAxis
     }
 
     public int NaturalLength(int perUnit) => _units * perUnit + _foldPixels;
+
+    public int RequiredLength => NaturalLength(UnitAtLeast);
 
     public string At(int minutes)
     {

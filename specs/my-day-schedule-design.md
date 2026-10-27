@@ -43,9 +43,17 @@ follow-up, mockup "My Day Schedule Fit"). The timeline never scrolls.
   set as `--at` and `--size` on each hour, band, block, group and the now
   line. The same values serve `top`/`height` and `left`/`width`, so the
   component never measures anything and CSS picks the orientation.
-- A block is at least 24px; a group at least its lines (`--needs`). The
-  earlier "growth" that pushed the axis below a group is gone: a busy hour
-  is already larger.
+- A block is at least 24px; a group at least its lines (`--needs`, 24px a
+  line plus 4px). A group never hides behind its neighbours:
+  - Top to bottom, every hour a group covers weighs at least
+    `ceil(needs × 60 / 26 / group minutes)`, so at 26px a unit
+    (`TimelineAxis.UnitAtLeast`) its hours hold all its lines. The timeline
+    is `max(required, min(space left on screen, natural))`, `required` being
+    26px a unit plus the bands: a day busier than the screen makes the page
+    scroll rather than stack lines over each other.
+  - Left to right (from 1600px), the band is `max(176px, cross)`, `cross`
+    being 54px of frame plus, for the most stacked block or group, its lanes
+    times (48px or its lines, whichever is more, plus 4px).
 - From 1600px My Day stacks the schedule above the tasks
   (`grid-template-areas: "schedule" "lists"`) and the timeline runs left to
   right, 176px tall, lanes stacked top to bottom, bands with vertical text.

@@ -93,6 +93,31 @@ public class TimelineAxisTests
     }
 
     [Fact]
+    public void AnHourHoldingAGroupWeighsEnoughForAllItsLines()
+    {
+        var axis = TimelineAxis.For([(540, 570), (545, 575), (550, 580), (555, 585)], null, new HashSet<int>(), [(540, 600, 100)]);
+
+        Assert.Equal(4, axis.Segments.Single(segment => segment.StartHour == 9).Weight);
+    }
+
+    [Fact]
+    public void AGroupSpanningTwoHoursSharesItsLinesBetweenThem()
+    {
+        var axis = TimelineAxis.For([(540, 660)], null, new HashSet<int>(), [(540, 660, 100)]);
+
+        Assert.Equal(2, axis.Segments.Single(segment => segment.StartHour == 9).Weight);
+        Assert.Equal(2, axis.Segments.Single(segment => segment.StartHour == 10).Weight);
+    }
+
+    [Fact]
+    public void TheRequiredLengthGivesEveryWeightUnitItsSmallestHeight()
+    {
+        var axis = TimelineAxis.For([(540, 600)], null, new HashSet<int>(), [(540, 600, 100)]);
+
+        Assert.Equal(4 * TimelineAxis.UnitAtLeast + 2 * TimelineAxis.FoldSize, axis.RequiredLength);
+    }
+
+    [Fact]
     public void AStretchIsTheDistanceBetweenTwoPositions()
     {
         var axis = TimelineAxis.For([(9 * 60, 10 * 60)], null, new HashSet<int>());

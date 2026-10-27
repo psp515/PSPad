@@ -56,6 +56,17 @@ public class DayTimelineTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AGroupMakesTheTimelineLongEnoughAndTheWideBandTallEnoughForItsLines()
+    {
+        var timeline = Render(Timed("A", 14, 0, 14, 30), Timed("B", 14, 0, 14, 30), Timed("C", 14, 10, 14, 40), Timed("D", 14, 20, 15, 0));
+
+        var style = timeline.Find(".pspad-timeline").GetAttribute("style")!;
+        var axis = TimelineAxis.For([(840, 870), (840, 870), (850, 880), (860, 900)], null, new HashSet<int>(), [(840, 905, 106)]);
+        Assert.Contains($"--pspad-timeline-required:{axis.RequiredLength}px", style);
+        Assert.Contains("--pspad-timeline-cross:164px", style);
+    }
+
+    [Fact]
     public void ABlockIsPlacedOnTheAxisAndSizedByItsLength()
     {
         var timeline = Render(Timed("Sprint planning", 9, 30, 11, 30));
@@ -144,7 +155,7 @@ public class DayTimelineTests : Bunit.TestContext
         var group = timeline.Find(".pspad-timeline-group");
         var style = group.GetAttribute("style")!;
         Assert.Contains($"--at:{Axis((540, 555), (540, 570), (540, 600)).At(540)}", style);
-        Assert.Contains("--needs:76px", style);
+        Assert.Contains("--needs:81px", style);
         Assert.Contains("--lane:0;--lanes:1", style);
         Assert.DoesNotContain("pspad-timeline-task-narrow", group.ClassList);
         var lines = group.QuerySelectorAll(".pspad-timeline-group-line");

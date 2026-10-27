@@ -1206,7 +1206,7 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-timeline.mud-paper-outlined {
     --pspad-timeline-offset: 483px;
     position: relative;
-    height: min(calc(100dvh - var(--pspad-timeline-offset)), var(--pspad-timeline-natural));
+    height: max(var(--pspad-timeline-required), min(calc(100dvh - var(--pspad-timeline-offset)), var(--pspad-timeline-natural)));
     min-height: min(200px, var(--pspad-timeline-natural));
     overflow: hidden;
     border-radius: 12px;
@@ -1555,7 +1555,7 @@ button.pspad-heatmap-cell:focus-visible {
     }
 
     .pspad-timeline.mud-paper-outlined {
-        height: 176px;
+        height: max(176px, var(--pspad-timeline-cross));
         min-height: 0;
     }
 

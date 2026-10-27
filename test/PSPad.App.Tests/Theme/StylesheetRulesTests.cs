@@ -127,7 +127,7 @@ public partial class StylesheetRulesTests
     public void TheTimelineFillsTheHeightWithoutScrolling()
     {
         var timeline = Declarations(".pspad-timeline.mud-paper-outlined");
-        Assert.Contains("height: min(calc(100dvh - var(--pspad-timeline-offset)), var(--pspad-timeline-natural))", timeline);
+        Assert.Contains("height: max(var(--pspad-timeline-required), min(calc(100dvh - var(--pspad-timeline-offset)), var(--pspad-timeline-natural)))", timeline);
         Assert.Contains("overflow: hidden", timeline);
         Assert.DoesNotContain("overflow-y: auto", timeline);
         Assert.Contains("--pspad-timeline-offset: 483px", timeline);
@@ -145,6 +145,7 @@ public partial class StylesheetRulesTests
         Assert.Contains("left: var(--at)", DeclarationsInMedia("min-width: 1600px", ".pspad-timeline-hour"));
         Assert.Contains("width: var(--size)", DeclarationsInMedia("min-width: 1600px", ".pspad-timeline-hour"));
         Assert.Contains("left: var(--at)", DeclarationsInMedia("min-width: 1600px", ".pspad-timeline-task"));
+        Assert.Contains("height: max(176px, var(--pspad-timeline-cross))", DeclarationsInMedia("min-width: 1600px", ".pspad-timeline.mud-paper-outlined"));
     }
 
     [Fact]

@@ -3,7 +3,7 @@
 @using PSPad.Module.Tasks.Today
 @inject IStringLocalizer<TodayStrings> T
 
-<MudPaper Outlined="true" Elevation="0" Class="pspad-timeline" Style="@($"--pspad-timeline-natural:{_axis.NaturalLength(HourLength)}px")">
+<MudPaper Outlined="true" Elevation="0" Class="pspad-timeline" Style="@TimelineStyle">
     <div class="pspad-timeline-axis">
         @foreach (var segment in _axis.Segments)
         {
@@ -87,11 +87,15 @@
 
 @code {
     public const int HourLength = 40;
+    const int LaneAtLeast = 48;
+    const int CrossFrame = 54;
+    const int LaneGap = 4;
     const int HalfHour = 30;
     const int MinutesPerDay = 24 * 60;
     const int ShortestVisibleSpan = 45;
     const int LineHeight = 24;
     const int GroupPadding = 4;
+    const int GroupBorder = 3;
     const int MaxLanes = 2;
     const int RoomForTwoLines = 90;
     const int RoomForList = 120;
@@ -118,7 +122,7 @@
 
     sealed record Group(IReadOnlyList<TodayEntry> Entries, int Start, int End, int Lane, int Lanes)
     {
-        public int Needs => Entries.Count * LineHeight + GroupPadding;
+        public int Needs => Entries.Count * LineHeight + (Entries.Count - 1) + GroupPadding + GroupBorder;
     }
 
     sealed record Layout(IReadOnlyList<Block> Blocks, IReadOnlyList<Group> Groups);
@@ -143,7 +147,23 @@
     void Arrange()
     {
         var spans = Entries.Where(entry => entry.Time is not null).Select(SpanOf).Select(span => (span.Start, span.End));
-        _axis = TimelineAxis.For(spans, Now is { } now ? Minutes(now) : null, _unfolded);
+        var needs = _layout.Groups.Select(group => (group.Start, group.End, group.Needs));
+        _axis = TimelineAxis.For(spans, Now is { } now ? Minutes(now) : null, _unfolded, needs);
+    }
+
+    string TimelineStyle =>
+        $"--pspad-timeline-natural:{_axis.NaturalLength(HourLength)}px;--pspad-timeline-required:{_axis.RequiredLength}px;--pspad-timeline-cross:{CrossLength}px";
+
+    int CrossLength
+    {
+        get
+        {
+            var stacked = _layout.Blocks.Select(block => block.Lanes * (LaneAtLeast + LaneGap))
+                .Concat(_layout.Groups.Select(group => group.Lanes * (Math.Max(LaneAtLeast, group.Needs) + LaneGap)))
+                .DefaultIfEmpty(0)
+                .Max();
+            return CrossFrame + stacked;
+        }
     }
 
     void Unfold(int hour)
