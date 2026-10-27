@@ -1,5 +1,4 @@
 @using PSPad.Module.Tasks.Tasks
-@inject IStringLocalizer<SharedStrings> Shared
 
 <div class="@($"pspad-day-step d-flex align-center gap-1 {(Done ? "pspad-day-step-done" : "")}")">
     <MudCheckBox T="bool" Class="pspad-day-step-check" Value="@Done" ValueChanged="@OnChecked" Color="Color.Primary"
@@ -9,7 +8,7 @@
     @if (Step.DueOn is { } due)
     {
         <MudText Typo="Typo.caption" Class="pspad-day-step-date" Color="@(due < Today ? Color.Error : Color.Default)">
-            @DueDateRow.Describe(due, Today, Shared)
+            @due.ToString("d MMM")
         </MudText>
     }
 </div>

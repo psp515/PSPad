@@ -107,7 +107,8 @@ day on screen (`TodayRule.StepsDueBy(task, day)`, in step order; none for a
 repeating or completed task) lists them under its row as `DayStepRow`s, the
 task row and its steps wrapped in one `pspad-day-item`. Each step row is a
 `MudCheckBox` (`Size.Small`) labelled with the step's name, the name, and
-its date read relatively (`DueDateRow.Describe`), red when past. That row's
+its date as `d MMM` (never "Today"/"Tomorrow", which would count from
+the real today, not the day on screen), red when past. That row's
 `TaskRow` drops the ↳ mark (`ShowDueStep="false"`).
 
 - **The task's tick** completes the task, as everywhere else.

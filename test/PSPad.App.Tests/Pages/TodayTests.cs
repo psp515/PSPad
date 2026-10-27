@@ -674,6 +674,21 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AStepRowShowsItsDateNotARelativeWord()
+    {
+        var list = NewList("Moving");
+        var task = Due(list.Id, "Move flat", Today.AddDays(4));
+        WithStep(task, "Order boxes", Today.AddDays(1));
+        Arrange(list, task);
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"/?day={Today.AddDays(1):yyyy-MM-dd}");
+
+        var page = Render<Today>();
+
+        var date = page.Find(".pspad-day-anytime .pspad-day-step-date").TextContent.Trim();
+        Assert.Equal(Today.AddDays(1).ToString("d MMM"), date);
+    }
+
+    [Fact]
     public void AnOverdueStepShowsItsDateInRed()
     {
         var list = NewList("Admin");
