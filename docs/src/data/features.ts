@@ -16,7 +16,7 @@ export const features: Feature[] = [
     how: 'Every screen says when it last updated. Pull down on a phone or press refresh on a computer. A device untouched for 7 days asks you to sign in again.' },
   { id: 'today', title: 'My Day',
     does: 'Everything due today or earlier, from every area, on one screen.',
-    how: 'Timed tasks come first in order, then anything-time tasks, with overdue pinned on top, in your own time zone. A week strip opens any other day, and still shows what will be overdue by then; the add button puts a new task on the day you are looking at, in the list you pick.' },
+    how: 'Timed tasks come first in order, then anything-time tasks, with overdue pinned on top, in your own time zone. The schedule fits the screen with empty hours folded, runs left to right on a wide screen, and a click on an empty half hour adds a task there. A week strip opens any other day, and still shows what will be overdue by then; the add button puts a new task on the day you are looking at, in the list you pick.' },
   { id: 'inbox', title: 'Inbox',
     does: 'Capture anything in one tap and sort it out later.',
     how: 'An item becomes a full task by setting list, date, priority, goal, steps, or just remove it.' },
