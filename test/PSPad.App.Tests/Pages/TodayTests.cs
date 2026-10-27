@@ -360,6 +360,21 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ClickingTheScheduleAddsATaskAtThatTimeOnTheDayShown()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Timed(Due(list.Id, "Sprint planning", Today.AddDays(1)), 9, 0, 10, 0));
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"/?day={Today.AddDays(1):yyyy-MM-dd}");
+
+        var page = Render<Today>();
+        page.Find(".pspad-timeline-slot[data-time='09:30']").Click();
+
+        Assert.EndsWith(
+            $"?day={Today.AddDays(1):yyyy-MM-dd}&task=new&due={Today.AddDays(1):yyyy-MM-dd}&time=09:30",
+            Services.GetRequiredService<NavigationManager>().Uri);
+    }
+
+    [Fact]
     public void AnEmptyScheduleNamesAnotherDay()
     {
         var list = NewList("Praca");

@@ -75,4 +75,10 @@
   <data name="StepsDoneNoDate" xml:space="preserve">
     <value>„{0}” nie ma już daty</value>
   </data>
+  <data name="ShowHours" xml:space="preserve">
+    <value>Pokaż {0}</value>
+  </data>
+  <data name="AddTaskAt" xml:space="preserve">
+    <value>Dodaj zadanie o {0}</value>
+  </data>
 </root>

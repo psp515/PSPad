@@ -115,21 +115,32 @@ public partial class StylesheetRulesTests
     }
 
     [Fact]
-    public void TheTimelineIsOnAnHourScaleWithANowLine()
+    public void TheTimelinePlacesEverythingOnItsOwnLength()
     {
-        Assert.Contains("height: var(--pspad-hour)", Declarations(".pspad-timeline-hour"));
+        Assert.Contains("top: var(--at)", Declarations(".pspad-timeline-hour"));
+        Assert.Contains("height: var(--size)", Declarations(".pspad-timeline-hour"));
+        Assert.Contains("height: max(24px, calc(var(--size) - 2px))", Declarations(".pspad-timeline-task"));
         Assert.Contains("border-top: 2px solid var(--mud-palette-error)", Declarations(".pspad-timeline-now"));
     }
 
     [Fact]
-    public void TheWholeDayFitsTheScreenWhenItCanAndScrollsWhenItCannot()
+    public void TheTimelineFillsTheHeightWithoutScrolling()
     {
         var timeline = Declarations(".pspad-timeline.mud-paper-outlined");
-        Assert.Contains("--pspad-hour: clamp(32px, (100dvh - var(--pspad-timeline-offset)) / 24, 56px)", timeline);
-        Assert.Contains("max-height: calc(100dvh - var(--pspad-timeline-offset))", timeline);
-        Assert.Contains("overflow-y: auto", timeline);
+        Assert.Contains("height: calc(100dvh - var(--pspad-timeline-offset))", timeline);
+        Assert.Contains("overflow: hidden", timeline);
+        Assert.DoesNotContain("overflow-y: auto", timeline);
         Assert.Contains("--pspad-timeline-offset: 360px", timeline);
         Assert.Contains("--pspad-timeline-offset: 240px", DeclarationsInMedia("min-width: 960px", ".pspad-timeline.mud-paper-outlined"));
+    }
+
+    [Fact]
+    public void AWideScreenRunsTheDayLeftToRightAboveTheTasks()
+    {
+        Assert.Contains("grid-template-areas: \"schedule\" \"lists\"", DeclarationsInMedia("min-width: 1600px", ".pspad-day"));
+        Assert.Contains("left: var(--at)", DeclarationsInMedia("min-width: 1600px", ".pspad-timeline-hour"));
+        Assert.Contains("width: var(--size)", DeclarationsInMedia("min-width: 1600px", ".pspad-timeline-hour"));
+        Assert.Contains("left: var(--at)", DeclarationsInMedia("min-width: 1600px", ".pspad-timeline-task"));
     }
 
     [Fact]
@@ -141,9 +152,9 @@ public partial class StylesheetRulesTests
         Assert.Contains("left: calc(58px + (100% - 66px) * var(--lane) / var(--lanes))", Declarations(".pspad-timeline-group"));
 
     [Fact]
-    public void VeryWideMyDayFlowsItsRowsIntoTwoColumnsBesideAWiderSchedule()
+    public void VeryWideMyDayFlowsItsRowsIntoTwoColumnsBelowTheSchedule()
     {
-        Assert.Contains("grid-template-columns: minmax(0, 1fr) 420px", DeclarationsInMedia("min-width: 1600px", ".pspad-day"));
+        Assert.Contains("grid-template-columns: minmax(0, 1fr)", DeclarationsInMedia("min-width: 1600px", ".pspad-day"));
         Assert.Contains("grid-template-columns: repeat(2, minmax(0, 1fr))", DeclarationsInMedia("min-width: 1600px", ".pspad-row-ledger"));
         Assert.Contains("flex-direction: column", DeclarationsInMedia("min-width: 1600px", ".pspad-row-ledger .pspad-row-body"));
     }

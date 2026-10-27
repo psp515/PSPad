@@ -11,7 +11,8 @@ test('a timed task sits on the schedule and is ticked from the timeline', async 
 
   await signIn(page, account);
   await expect(page.getByText('Schedule empty for today.')).toBeVisible();
-  await expect(page.locator('.pspad-timeline-hour')).toHaveCount(24);
+  await expect(page.locator('.pspad-timeline-hour')).toHaveCount(1);
+  await expect(page.locator('.pspad-timeline-fold').first()).toBeVisible();
 
   await createArea(page, `Errands ${account.suffix}`);
   await createList(page, `Town ${account.suffix}`);
@@ -47,4 +48,10 @@ test('a timed task sits on the schedule and is ticked from the timeline', async 
   await expect(daySection(page, 'scheduled')).toHaveCount(0);
   await expect(daySection(page, 'completed')).toContainText('Completed · 1');
   await expect(daySection(page, 'anytime')).toContainText(errand);
+
+  const slot = page.locator('.pspad-timeline-slot').first();
+  const time = await slot.getAttribute('data-time');
+  await slot.click();
+  await expect(page.locator('.pspad-task-time .pspad-time-start input')).toHaveValue(time!);
+  await expect(page).toHaveURL(new RegExp(`task=new&due=\\d{4}-\\d{2}-\\d{2}&time=${time}`));
 });

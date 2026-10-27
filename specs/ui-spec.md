@@ -492,13 +492,12 @@ the task's tick still completes the task.
 
 **Schedule** (`Color.Primary` heading, always present) is
 `Components/DayTimeline`, under a muted "Schedule empty for today." /
-"Schedule empty for Fri, 9 Oct." when the day has no timed task: a vertical
-timeline of the whole day, 00:00–24:00, hour labels in a 52px gutter, a
-dashed half-hour line. The hour is `--pspad-hour`, as tall as fits the
-screen between 32 and 56px; when 24 hours at 32px do not fit, the timeline
-scrolls inside itself and opens an hour before now (today), else 30 minutes
-before the first task, else at 08:00 (`pspad-timeline-anchor`,
-`js/timeline.js`). Each task is a block placed by its time
+"Schedule empty for Fri, 9 Oct." when the day has no timed task: a
+timeline of the whole day that fits the screen and never scrolls — busy
+hours larger, three or more empty hours folded into one band you can open,
+hour labels in a 52px gutter, a dashed half-hour line, and a click on an
+empty half hour adding a task at that time; from 1600px it runs left to
+right above the tasks (`my-day-schedule-design.md`). Each task is a block placed by its time
 (`pspad-timeline-task`, at least 24px; a task without an end takes 30
 minutes; an overnight end counts as 24:00 and adds the muted `(+1)`,
 `pspad-schedule-nextday`), holding its checkbox, `09:30–11:00`
@@ -506,7 +505,7 @@ minutes; an overnight end counts as 24:00 and adds the muted `(+1)`,
 name (one line under 90 minutes, only the start when it shares the width). Tasks are laid out by a span of at least 45
 minutes; up to two overlapping tasks share the width side by side; three or
 more starting within half an hour become one group block
-(`pspad-timeline-group`) of 24px lines, and the axis below grows to fit it;
+(`pspad-timeline-group`) of 24px lines, its hour weighted larger;
 tasks inside a long one sit beside it in the right half, grouped where they
 overlap. On today a red line (`pspad-timeline-now`)
 marks the current time in the user's zone. Ticking a block ticks the task

@@ -1,20 +1,43 @@
-@using Microsoft.JSInterop
+@using PSPad.App.State
 @using PSPad.Module.Tasks.Tasks
 @using PSPad.Module.Tasks.Today
-@inject IJSRuntime Js
-@inject ILogger<DayTimeline> Logger
-@implements IAsyncDisposable
+@inject IStringLocalizer<TodayStrings> T
 
 <MudPaper Outlined="true" Elevation="0" Class="pspad-timeline">
-    <div class="pspad-timeline-hours" @ref="_hours" style="@($"height:calc(var(--pspad-hour) * 24{Growth(MinutesPerDay)})")">
-        @for (var hour = 0; hour < 24; hour++)
+    <div class="pspad-timeline-axis">
+        @foreach (var segment in _axis.Segments)
         {
-            <div class="pspad-timeline-hour" style="@($"top:{Top(hour * 60)}")">
-                <span class="pspad-timeline-hour-label pspad-muted">@($"{hour:00}:00")</span>
-                <span class="pspad-timeline-half"></span>
-            </div>
+            var from = segment.StartHour * 60;
+            var to = segment.EndHour * 60;
+            var range = $"{segment.StartHour:00}:00–{segment.EndHour:00}:00";
+            if (segment.Folded)
+            {
+                <button type="button" class="pspad-timeline-fold" style="@Place(from, to)"
+                        aria-label="@T["ShowHours", range].Value" @onclick="@(() => Unfold(segment.StartHour))">
+                    <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" />
+                    <span class="pspad-timeline-fold-label">@range</span>
+                </button>
+            }
+            else
+            {
+                <div class="pspad-timeline-hour" style="@Place(from, to)">
+                    <span class="pspad-timeline-hour-label pspad-muted">@($"{segment.StartHour:00}:00")</span>
+                    @if (OnAdd.HasDelegate)
+                    {
+                        @foreach (var slot in new[] { new TimeOnly(segment.StartHour, 0), new TimeOnly(segment.StartHour, HalfHour) })
+                        {
+                            var label = TimeRow.Format(slot);
+                            <button type="button" class="pspad-timeline-slot" data-time="@label"
+                                    aria-label="@T["AddTaskAt", label].Value" @onclick="@(() => OnAdd.InvokeAsync(slot))"></button>
+                        }
+                    }
+                    else
+                    {
+                        <span class="pspad-timeline-half"></span>
+                    }
+                </div>
+            }
         }
-        <div class="pspad-timeline-anchor" style="@($"top:{Top(AnchorMinutes)}")" aria-hidden="true"></div>
         @foreach (var block in _layout.Blocks)
         {
             var task = Tasks[block.Entry.TaskId];
@@ -57,7 +80,7 @@
         }
         @if (Now is { } now)
         {
-            <div class="pspad-timeline-now" style="@($"top:{Top(Minutes(now))}")"><span class="pspad-timeline-now-label">@TimeRow.Format(now)</span></div>
+            <div class="pspad-timeline-now" style="@($"--at:{_axis.At(Minutes(now))}")"><span class="pspad-timeline-now-label">@TimeRow.Format(now)</span></div>
         }
     </div>
 </MudPaper>
@@ -66,11 +89,9 @@
     const int HalfHour = 30;
     const int MinutesPerDay = 24 * 60;
     const int ShortestVisibleSpan = 45;
-    const int MinHeight = 24;
     const int LineHeight = 24;
     const int GroupPadding = 4;
     const int MaxLanes = 2;
-    const int DefaultStart = 8 * 60;
     const int RoomForTwoLines = 90;
     const int RoomForList = 120;
 
@@ -88,6 +109,8 @@
 
     [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
 
+    [Parameter] public EventCallback<TimeOnly> OnAdd { get; set; }
+
     sealed record Span(TodayEntry Entry, int Start, int End, int VisibleEnd);
 
     sealed record Block(TodayEntry Entry, int Start, int End, int Lane, int Lanes);
@@ -100,50 +123,35 @@
     sealed record Layout(IReadOnlyList<Block> Blocks, IReadOnlyList<Group> Groups);
 
     Layout _layout = new([], []);
-    ElementReference _hours;
-    IJSObjectReference? _module;
-    DateOnly? _revealed;
+    TimelineAxis _axis = TimelineAxis.For([], null, new HashSet<int>());
+    readonly HashSet<int> _unfolded = [];
+    DateOnly? _shown;
 
-    protected override void OnParametersSet() => _layout = Lay(Entries);
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnParametersSet()
     {
-        if (_revealed == Day)
+        if (_shown != Day)
         {
-            return;
+            _shown = Day;
+            _unfolded.Clear();
         }
 
-        _revealed = Day;
-        try
-        {
-            _module ??= await Js.InvokeAsync<IJSObjectReference>("import", "./js/timeline.js");
-            if (_module is not null)
-            {
-                await _module.InvokeVoidAsync("reveal", _hours);
-            }
-        }
-        catch (JSException ex)
-        {
-            Logger.LogWarning(ex, "Timeline keeps its scroll position");
-        }
+        _layout = Lay(Entries);
+        Arrange();
     }
 
-    int AnchorMinutes =>
-        Now is { } now ? Math.Max(0, Minutes(now) - 60)
-        : Entries.FirstOrDefault(entry => entry.Time is not null) is { Time: { } first } ? Math.Max(0, Minutes(first.Start) - HalfHour)
-        : DefaultStart;
+    void Arrange()
+    {
+        var spans = Entries.Where(entry => entry.Time is not null).Select(SpanOf).Select(span => (span.Start, span.End));
+        _axis = TimelineAxis.For(spans, Now is { } now ? Minutes(now) : null, _unfolded);
+    }
 
-    string Top(int minutes) => $"calc(var(--pspad-hour) * {minutes} / 60{Growth(minutes)})";
+    void Unfold(int hour)
+    {
+        _unfolded.Add(hour);
+        Arrange();
+    }
 
-    string Growth(int minutes) => Growth(-1, minutes);
-
-    string Growth(int after, int upTo) =>
-        string.Concat(_layout.Groups
-            .Where(group => group.End > after && group.End <= upTo)
-            .Select(group => $" + max(0px, {group.Needs}px - var(--pspad-hour) * {group.End - group.Start} / 60)"));
-
-    string Height(int start, int end, int least) =>
-        $"max({least}px, calc(var(--pspad-hour) * {end - start} / 60{Growth(start, end)} - 2px))";
+    string Place(int from, int to) => $"--at:{_axis.At(from)};--size:{_axis.Stretch(from, to)}";
 
     static int Minutes(TimeOnly time) => time.Hour * 60 + time.Minute;
 
@@ -262,10 +270,10 @@
         </MudText>;
 
     string BlockStyle(Block block) =>
-        $"top:{Top(block.Start)};height:{Height(block.Start, block.End, MinHeight)};--lane:{block.Lane};--lanes:{block.Lanes}";
+        $"{Place(block.Start, block.End)};--lane:{block.Lane};--lanes:{block.Lanes}";
 
     string GroupStyle(Group group) =>
-        $"top:{Top(group.Start)};height:max({group.Needs}px, calc(var(--pspad-hour) * {group.End - group.Start} / 60 - 2px));--lane:{group.Lane};--lanes:{group.Lanes}";
+        $"{Place(group.Start, group.End)};--needs:{group.Needs}px;--lane:{group.Lane};--lanes:{group.Lanes}";
 
     static string BlockClass(Block block, bool done)
     {
@@ -278,18 +286,4 @@
 
     bool IsDone(TodoTask task) =>
         task.IsRecurring ? task.CompletedDays.Contains(Day) : task.CompletedAt is not null;
-
-    public async ValueTask DisposeAsync()
-    {
-        try
-        {
-            if (_module is not null)
-            {
-                await _module.DisposeAsync();
-            }
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-    }
 }

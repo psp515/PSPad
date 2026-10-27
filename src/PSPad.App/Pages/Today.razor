@@ -116,7 +116,7 @@ else
             }
             <DayTimeline Entries="@_plan.Scheduled" Tasks="@_byId" Day="@_day" Now="@NowOnTheDay"
                          ListNameOf="@(task => NameOf(task.ListId))"
-                         OnToggle="@(toggled => ToggleAsync(toggled, _day))" OnOpen="@Open" />
+                         OnToggle="@(toggled => ToggleAsync(toggled, _day))" OnOpen="@Open" OnAdd="@AddTaskAt" />
         </section>
     </div>
 }
@@ -129,6 +129,9 @@ else
 
     void AddTask() =>
         Navigation.NavigateTo(TaskQuery.ForNewTask(Navigation.Uri, due: _day < State.Today ? State.Today : _day));
+
+    void AddTaskAt(TimeOnly time) =>
+        Navigation.NavigateTo(TaskQuery.ForNewTask(Navigation.Uri, due: _day, time: time));
 
     bool _loaded;
     DayPlan _plan = new([], [], [], [], [], []);
