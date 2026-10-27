@@ -1156,7 +1156,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
     }
 
     IRenderedComponent<ContainerFragment> RenderWithOverlays(
-        Guid? taskId = null, Guid? newInList = null, bool newTask = false, DateOnly? newDue = null) => Render(builder =>
+        Guid? taskId = null, Guid? newInList = null, bool newTask = false, DateOnly? newDue = null, TimeOnly? newTime = null) => Render(builder =>
     {
         builder.OpenComponent<MudPopoverProvider>(0);
         builder.CloseComponent();
@@ -1167,6 +1167,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         builder.AddAttribute(4, nameof(TaskDetailPanel.NewInList), newInList);
         builder.AddAttribute(5, nameof(TaskDetailPanel.NewTask), newTask);
         builder.AddAttribute(6, nameof(TaskDetailPanel.NewDue), newDue);
+        builder.AddAttribute(7, nameof(TaskDetailPanel.NewTime), newTime);
         builder.CloseComponent();
     });
 
@@ -1328,6 +1329,24 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
         Assert.Equal(list.Id, created.ListId);
         Assert.Equal(Today.AddDays(2), created.DueOn);
+    }
+
+    [Fact]
+    public async Task ARouteTimeStartsTheNewTaskForAnHour()
+    {
+        var area = NewArea("Dom");
+        var list = NewList(area.Id, "Zakupy");
+        var replica = AppTestHost.Arrange(this, User, Today, area, list);
+
+        var panel = RenderWithOverlays(newTask: true, newDue: Today, newTime: new TimeOnly(14, 30));
+        panel.Find(".pspad-task-name-field input").Input("Dentist");
+        OpenRow(panel, ".pspad-task-list");
+        panel.FindAll(".pspad-list-option").Single(item => item.TextContent.Contains("Zakupy")).Click();
+        panel.Find(".pspad-panel-save").Click();
+
+        panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));
+        var created = Assert.Single(await replica.LoadAllAsync<TodoTask>(User));
+        Assert.Equal(new TaskTime(new TimeOnly(14, 30), new TimeOnly(15, 30)), created.Time);
     }
 
     [Fact]

@@ -6,6 +6,7 @@ public static class TaskQuery
 {
     const string NewTask = "new";
     const string DueFormat = "yyyy-MM-dd";
+    const string TimeFormat = "HH:mm";
 
     public static Guid? From(string uri) =>
         Guid.TryParse(QueryString.Value(uri, "task"), out var id) ? id : null;
@@ -23,12 +24,19 @@ public static class TaskQuery
             ? due
             : null;
 
-    public static string ForNewTask(string uri, Guid? listId = null, DateOnly? due = null)
+    public static TimeOnly? NewTaskTimeFrom(string uri) =>
+        IsNewTask(uri) && TimeOnly.TryParseExact(QueryString.Value(uri, "time"), TimeFormat,
+            CultureInfo.InvariantCulture, DateTimeStyles.None, out var time)
+            ? time
+            : null;
+
+    public static string ForNewTask(string uri, Guid? listId = null, DateOnly? due = null, TimeOnly? time = null)
     {
         var kept = DayQuery.Keep(uri);
         var query = $"task={NewTask}"
             + (listId is { } list ? $"&list={list}" : "")
-            + (due is { } day ? $"&due={day.ToString(DueFormat, CultureInfo.InvariantCulture)}" : "");
+            + (due is { } day ? $"&due={day.ToString(DueFormat, CultureInfo.InvariantCulture)}" : "")
+            + (time is { } start ? $"&time={start.ToString(TimeFormat, CultureInfo.InvariantCulture)}" : "");
         return $"{kept}{(kept.Contains('?') ? '&' : '?')}{query}";
     }
 

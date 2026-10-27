@@ -101,6 +101,17 @@ public class TaskQueryTests
     }
 
     [Fact]
+    public void ANewTaskQueryCarriesItsStartTime()
+    {
+        Assert.Equal(
+            "https://pspad.local/?day=2026-10-26&task=new&due=2026-10-26&time=14:30",
+            TaskQuery.ForNewTask("https://pspad.local/?day=2026-10-26", due: new DateOnly(2026, 10, 26), time: new TimeOnly(14, 30)));
+        Assert.Equal(new TimeOnly(14, 30), TaskQuery.NewTaskTimeFrom("https://pspad.local/?task=new&due=2026-10-26&time=14:30"));
+        Assert.Null(TaskQuery.NewTaskTimeFrom("https://pspad.local/?task=new&time=2pm"));
+        Assert.Null(TaskQuery.NewTaskTimeFrom($"https://pspad.local/?task={Guid.NewGuid()}&time=14:30"));
+    }
+
+    [Fact]
     public void ForNewTaskWithADueAndNoListKeepsTheDayOnScreen()
     {
         Assert.Equal(
