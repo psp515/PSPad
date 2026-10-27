@@ -226,7 +226,7 @@ selector and stepper only hide and show.
    browser for the offline app.
 8. **Keep it running.** Upgrade: `docker compose pull && docker compose up
    -d --wait`. Backups for the chosen MongoDB (`mongodump` through
-   `docker compose exec` for `vps`, `docker run --rm mongo:8.3.11 mongodump
+   `docker compose exec` for `vps`, `docker run --rm mongo:8.3.13 mongodump
    --uri` for `atlas`), for the chosen Keycloak store (`pg_dump` for `pg`,
    stop and tar the volume for `h2`), and one line on restoring.
 
@@ -266,7 +266,7 @@ What the assembled files contain:
   `restart: unless-stopped`. The API's environment is the same set
   `docker/compose.yaml` passes today. Quick publishes 5000, 5001 and 8080;
   VPS publishes nothing except Caddy's 80 and 443.
-- `mongo` (image `mongo:8.3.11`, entrypoint, keyfile and data volumes,
+- `mongo` (image `mongo:8.3.13`, entrypoint, keyfile and data volumes,
   healthcheck) unless `atlas`, in which case the API reads
   `MONGO_CONNECTION_STRING` from `.env`.
 - `keycloak` (`quay.io/keycloak/keycloak:26.8.1`): `start-dev

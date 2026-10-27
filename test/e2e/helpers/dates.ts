@@ -24,7 +24,7 @@ export function isoMonth(day: Date): string {
 
 export function shiftedZone(): { id: string; localDate: Date } {
   const today = utcToday();
-  return new Date().getUTCHours() >= 12
+  return new Date().getUTCHours() >= 10
     ? { id: 'Pacific/Kiritimati', localDate: addDays(today, 1) }
     : { id: 'Pacific/Pago_Pago', localDate: addDays(today, -1) };
 }
