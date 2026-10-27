@@ -172,6 +172,32 @@ public static class TodayRule
         };
     }
 
+    public const int DateHorizonDays = 400;
+
+    public static DateOnly? DateOf(TodoTask task, DateOnly today)
+    {
+        if (!task.IsRecurring)
+        {
+            return TriggerOf(task);
+        }
+
+        var last = today.AddDays(DateHorizonDays);
+        if (task.DueOn is { } until && until < last)
+        {
+            last = until;
+        }
+
+        for (var day = today; day <= last; day = day.AddDays(1))
+        {
+            if (task.OccursOn(day) && !task.CompletedDays.Contains(day))
+            {
+                return day;
+            }
+        }
+
+        return null;
+    }
+
     static TodayEntry Entry(TodoTask task, bool overdue, DateOnly? dueOn) =>
         new(task.Id, task.ListId, task.Name, overdue, dueOn, task.IsRecurring,
             task.Starred, (int)task.Priority, task.EffectiveTime);

@@ -75,6 +75,7 @@ public static class AppTestHost
         var collapse = new CardCollapseState(context.JSInterop.JSRuntime);
         collapse.LoadAsync().GetAwaiter().GetResult();
         context.Services.AddSingleton(collapse);
+        context.Services.AddSingleton(new ListScreenState(context.JSInterop.JSRuntime));
         context.Services.AddSingleton(new NavGroupState(context.JSInterop.JSRuntime));
 
         context.Services.AddSingleton(new LastArea(context.JSInterop.JSRuntime));

@@ -30,3 +30,29 @@ export async function deleteCurrentList(page: Page) {
   await openFabAction(page, 'Delete list');
   await confirm(page, 'Delete');
 }
+
+export function listRowNames(page: Page) {
+  return page.locator('.pspad-row-group .pspad-row-name');
+}
+
+export async function pickListFilter(page: Page, label: string) {
+  await page.locator('.pspad-list-filter').click();
+  await page.locator('.mud-popover-open .pspad-list-filter-chip', { hasText: label }).first().click();
+  await expect(page.locator('.pspad-list-filter-badge')).toBeVisible();
+  await page.locator('.pspad-list-filter').click();
+  await expect(page.locator('.mud-popover-open .pspad-list-filter-chip')).toHaveCount(0);
+}
+
+export async function sortListBy(page: Page, order: string) {
+  await page.locator('.pspad-list-sort').click();
+  await page.locator('.mud-popover-open .pspad-list-sort-option', { hasText: order }).click();
+  await expect(page.locator('.pspad-list-sort')).toContainText(order);
+}
+
+export async function showListAs(page: Page, view: 'List' | 'Calendar') {
+  await page.locator('.pspad-list-views .mud-toggle-item', { hasText: view }).click();
+}
+
+export function monthDay(page: Page, isoDay: string) {
+  return page.locator(`.pspad-month-day[data-day="${isoDay}"]`);
+}

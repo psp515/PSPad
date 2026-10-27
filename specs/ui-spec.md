@@ -909,6 +909,16 @@ never opens the item. The empty-list and delete-confirmation
 copy read "items" instead of "tasks" for a `Reference` list
 (`DeleteWarning`).
 
+**A task list filters, sorts and shows a month.** A `Tasks` list screen
+carries `ListToolbar` under its heading: **Filter** and **Sort**, two
+separate `MudMenu`s, then a **List | Calendar** `MudToggleGroup`. Filter
+narrows the rows by When, Priority and Other (starred, goal), and Sort
+orders them by Date (the default), Priority, Name or Recently added. The
+Calendar view is `ListMonthView`, a month grid with a day detail of normal
+`TaskRow`s. The choices are kept per list on this device. The heading's
+open count never filters. Reference lists have no toolbar. Design:
+`specs/list-filter-and-calendar-design.md`.
+
 **Sharing opens from the list panel's Details view as two nav rows.**
 `ListDetailPanel` shows the name, the kind label, the owner's **Area**
 `MudSelect`, then one `MudPaper` holding a `MudList` of rows: **Members**

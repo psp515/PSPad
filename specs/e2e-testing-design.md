@@ -239,6 +239,12 @@ tests would be visible, not silent.
     time. A second task with one step due Today and one due Tomorrow is
     under any time today and under Overdue tomorrow, not under any time
     (issue #202, `adr/0078`).
+22. **List filter, sort and calendar.** Two High-priority tasks due
+    tomorrow and one plain task: filtering on High hides the plain one,
+    sorting by Name orders the two A → Z, and both survive a reload with
+    the badge on 1. The Calendar view puts both on tomorrow's cell;
+    clicking it lists them as rows, and ticking one leaves one (issue
+    #198, `list-filter-and-calendar-design.md`).
 
 ## 5. Timing
 
@@ -276,7 +282,7 @@ test/e2e/
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
                  settings.ts  goals.ts  references.ts  sharing.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 21-step-deadline.spec.ts
+  scenarios/     01-first-sign-in.spec.ts … 22-list-filter-calendar.spec.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared
