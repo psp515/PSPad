@@ -2450,3 +2450,70 @@ button.pspad-heatmap-cell:focus-visible {
         padding-left: 7px;
     }
 }
+
+.pspad-day-item {
+    position: relative;
+}
+
+.pspad-row-group .pspad-row + .pspad-day-item::before,
+.pspad-row-group .pspad-day-item + .pspad-row::before,
+.pspad-row-group .pspad-day-item + .pspad-day-item::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 55px;
+    right: 0;
+    border-top: 1px solid var(--pspad-line);
+}
+
+.pspad-row-group .pspad-day-item + .pspad-row {
+    position: relative;
+}
+
+.pspad-day-steps {
+    padding: 0 8px 6px 49px;
+}
+
+.pspad-day-step {
+    min-height: 32px;
+}
+
+.pspad-day-step .mud-checkbox {
+    margin: 0;
+}
+
+.pspad-day-step-name {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pspad-day-step-date {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1600px) {
+    .pspad-row-ledger > .pspad-day-item {
+        box-shadow: -1px 0 0 var(--pspad-line);
+    }
+
+    .pspad-row-ledger > .pspad-day-item::before,
+    .pspad-row-ledger > .pspad-day-item + .pspad-row::before {
+        display: none;
+    }
+
+    .pspad-row-ledger > .pspad-day-item::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 55px;
+        right: 0;
+        border-top: 1px solid var(--pspad-line);
+    }
+
+    .pspad-row-ledger > .pspad-day-item:last-child::after {
+        display: none;
+    }
+}

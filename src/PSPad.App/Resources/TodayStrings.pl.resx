@@ -69,4 +69,10 @@
   <data name="WeekMeta" xml:space="preserve">
     <value>Tydzień {0} · {1}</value>
   </data>
+  <data name="StepsDoneMovedTo" xml:space="preserve">
+    <value>„{0}” przeniesione na: {1}</value>
+  </data>
+  <data name="StepsDoneNoDate" xml:space="preserve">
+    <value>„{0}” nie ma już daty</value>
+  </data>
 </root>
