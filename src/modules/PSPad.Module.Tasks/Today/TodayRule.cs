@@ -65,6 +65,11 @@ public static class TodayRule
             .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+    public static IReadOnlyList<Step> StepsDueBy(TodoTask task, DateOnly day) =>
+        task.IsRecurring || task.CompletedAt is not null
+            ? []
+            : [.. task.Steps.Where(step => !step.Checked && step.DueOn <= day)];
+
     static TodayEntry[] OverdueBy(IEnumerable<TodoTask> tasks, DateOnly day) =>
         tasks
             .Where(task => !task.IsRecurring && task.CompletedAt is null && TriggerOf(task) < day)

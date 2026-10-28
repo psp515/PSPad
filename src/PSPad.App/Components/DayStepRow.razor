@@ -1,0 +1,24 @@
+@using PSPad.Module.Tasks.Tasks
+
+<div class="@($"pspad-day-step d-flex align-center gap-1 {(Done ? "pspad-day-step-done" : "")}")">
+    <MudCheckBox T="bool" Class="pspad-day-step-check" Value="@Done" ValueChanged="@OnChecked" Color="Color.Primary"
+                 Size="Size.Small" Dense="true" aria-label="@Step.Name" />
+    <MudText Typo="Typo.body2" Class="@($"pspad-day-step-name flex-grow-1 {(Done ? "pspad-muted" : "")}")" title="@Step.Name"
+             Style="@(Done ? "text-decoration:line-through" : "")">@Step.Name</MudText>
+    @if (Step.DueOn is { } due)
+    {
+        <MudText Typo="Typo.caption" Class="pspad-day-step-date" Color="@(due < Today ? Color.Error : Color.Default)">
+            @due.ToString("d MMM")
+        </MudText>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Step Step { get; set; } = null!;
+
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public bool Done { get; set; }
+
+    [Parameter] public EventCallback<bool> OnChecked { get; set; }
+}

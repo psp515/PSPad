@@ -99,37 +99,55 @@ public partial class StylesheetRulesTests
     }
 
     [Fact]
-    public void ALedgerRowPutsItsMetaInAFixedColumnOnDesktop()
+    public void ALedgerRowGoesOnOneLineOnlyWhenItsListIsWideEnough()
     {
-        Assert.Contains("flex-direction: row", DeclarationsInMedia("min-width: 960px", ".pspad-row-ledger .pspad-row-body"));
-        Assert.Contains("width: 280px", DeclarationsInMedia("min-width: 960px", ".pspad-row-ledger .pspad-row-meta"));
+        Assert.Contains("container-type: inline-size", Declarations(".pspad-row-ledger"));
+        Assert.Contains("flex-direction: row", DeclarationsInContainer("min-width: 560px", ".pspad-row-ledger .pspad-row-body"));
+        Assert.Contains("width: 280px", DeclarationsInContainer("min-width: 560px", ".pspad-row-ledger .pspad-row-meta"));
+        Assert.DoesNotContain("width: 280px", DeclarationsInMedia("min-width: 960px", ".pspad-row-ledger .pspad-row-meta"));
     }
 
     [Fact]
-    public void MyDayIsTwoPanesOnDesktopAndTabsOnAPhone()
+    public void MyDayIsTwoPanesFrom1280AndTabsBelow()
     {
-        Assert.Contains("grid-template-columns: minmax(0, 1fr) 380px", DeclarationsInMedia("min-width: 960px", ".pspad-day"));
-        Assert.Contains("display: none", DeclarationsInMedia("min-width: 960px", ".pspad-day-tabs"));
-        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-day-tab-tasks .pspad-day-schedule"));
-        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-day-tab-schedule .pspad-day-lists"));
+        Assert.Contains("grid-template-columns: minmax(0, 1fr) 380px", DeclarationsInMedia("min-width: 1280px", ".pspad-day"));
+        Assert.Contains("display: none", DeclarationsInMedia("min-width: 1280px", ".pspad-day-tabs"));
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 1279.98px", ".pspad-day-tab-tasks .pspad-day-schedule"));
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 1279.98px", ".pspad-day-tab-schedule .pspad-day-lists"));
     }
 
     [Fact]
-    public void TheTimelineIsOnAnHourScaleWithANowLine()
+    public void TheTimelinePlacesEverythingOnItsOwnLength()
     {
-        Assert.Contains("height: var(--pspad-hour)", Declarations(".pspad-timeline-hour"));
+        Assert.Contains("top: var(--at)", Declarations(".pspad-timeline-hour"));
+        Assert.Contains("height: var(--size)", Declarations(".pspad-timeline-hour"));
+        Assert.Contains("height: max(24px, calc(var(--size) - 2px))", Declarations(".pspad-timeline-task"));
         Assert.Contains("border-top: 2px solid var(--mud-palette-error)", Declarations(".pspad-timeline-now"));
     }
 
     [Fact]
-    public void TheWholeDayFitsTheScreenWhenItCanAndScrollsWhenItCannot()
+    public void TheTimelineFillsTheHeightWithoutScrolling()
     {
         var timeline = Declarations(".pspad-timeline.mud-paper-outlined");
-        Assert.Contains("--pspad-hour: clamp(32px, (100dvh - var(--pspad-timeline-offset)) / 24, 56px)", timeline);
-        Assert.Contains("max-height: calc(100dvh - var(--pspad-timeline-offset))", timeline);
-        Assert.Contains("overflow-y: auto", timeline);
-        Assert.Contains("--pspad-timeline-offset: 360px", timeline);
-        Assert.Contains("--pspad-timeline-offset: 240px", DeclarationsInMedia("min-width: 960px", ".pspad-timeline.mud-paper-outlined"));
+        Assert.Contains("height: max(var(--pspad-timeline-required), min(calc(100dvh - var(--pspad-timeline-offset)), var(--pspad-timeline-natural)))", timeline);
+        Assert.Contains("overflow: hidden", timeline);
+        Assert.DoesNotContain("overflow-y: auto", timeline);
+        Assert.Contains("--pspad-timeline-offset: 483px", timeline);
+        Assert.Contains("--pspad-timeline-offset: 346px", DeclarationsInMedia("min-width: 1280px", ".pspad-timeline.mud-paper-outlined"));
+    }
+
+    [Fact]
+    public void ThePhoneScheduleTabHasNoAddButtonSinceTheScheduleAddsOnClick() =>
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 1279.98px", ".pspad-day-tab-schedule ~ .pspad-fab"));
+
+    [Fact]
+    public void AWideScreenRunsTheDayLeftToRightAboveTheTasks()
+    {
+        Assert.Contains("grid-template-areas: \"schedule\" \"lists\"", DeclarationsInMedia("min-width: 1600px", ".pspad-day"));
+        Assert.Contains("left: var(--at)", DeclarationsInMedia("min-width: 1600px", ".pspad-timeline-hour"));
+        Assert.Contains("width: var(--size)", DeclarationsInMedia("min-width: 1600px", ".pspad-timeline-hour"));
+        Assert.Contains("left: var(--at)", DeclarationsInMedia("min-width: 1600px", ".pspad-timeline-task"));
+        Assert.Contains("height: max(176px, var(--pspad-timeline-cross))", DeclarationsInMedia("min-width: 1600px", ".pspad-timeline.mud-paper-outlined"));
     }
 
     [Fact]
@@ -138,12 +156,19 @@ public partial class StylesheetRulesTests
 
     [Fact]
     public void AGroupSitsInItsLaneLikeABlock() =>
-        Assert.Contains("left: calc(58px + (100% - 66px) * var(--lane) / var(--lanes))", Declarations(".pspad-timeline-group"));
+        Assert.Contains("left: calc(58px + (100% - 94px) * var(--lane) / var(--lanes))", Declarations(".pspad-timeline-group"));
 
     [Fact]
-    public void VeryWideMyDayFlowsItsRowsIntoTwoColumnsBesideAWiderSchedule()
+    public void BlocksLeaveARailAndTheGutterFreeForAddingATask()
     {
-        Assert.Contains("grid-template-columns: minmax(0, 1fr) 420px", DeclarationsInMedia("min-width: 1600px", ".pspad-day"));
+        Assert.Contains("width: calc((100% - 94px) / var(--lanes) - 2px)", Declarations(".pspad-timeline-task"));
+        Assert.Contains("margin-left: 0", Declarations(".pspad-timeline-slot"));
+    }
+
+    [Fact]
+    public void VeryWideMyDayFlowsItsRowsIntoTwoColumnsBelowTheSchedule()
+    {
+        Assert.Contains("grid-template-columns: minmax(0, 1fr)", DeclarationsInMedia("min-width: 1600px", ".pspad-day"));
         Assert.Contains("grid-template-columns: repeat(2, minmax(0, 1fr))", DeclarationsInMedia("min-width: 1600px", ".pspad-row-ledger"));
         Assert.Contains("flex-direction: column", DeclarationsInMedia("min-width: 1600px", ".pspad-row-ledger .pspad-row-body"));
     }

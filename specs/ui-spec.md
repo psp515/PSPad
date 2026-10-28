@@ -459,10 +459,11 @@ phone it sits above `BottomNav` like every other page FAB, beside the
 raised My Day button, not replacing it.
 
 The day is two parts inside `pspad-day`: the task sections
-(`pspad-day-lists`) and the Schedule (`pspad-day-schedule`). From `md` they
-are a grid, sections on the left and a 380px schedule column on the right
-(420px from 1600px).
-Below `md` a pill-shaped tab bar under the week strip (`pspad-day-tabs`: **Tasks** and
+(`pspad-day-lists`) and the Schedule (`pspad-day-schedule`). From 1280px they
+are a grid, sections on the left and a 380px schedule column on the right;
+from 1600px the schedule is a band above the sections. Between `md` and
+1280px both columns were too narrow to read (a task row lost its name), so
+below 1280px a pill-shaped tab bar under the week strip (`pspad-day-tabs`: **Tasks** and
 **Schedule · N**, N the pending scheduled count, plain **Schedule** at zero)
 picks one; `pspad-day` carries
 `pspad-day-tab-tasks` or `pspad-day-tab-schedule`, and the page opens on
@@ -484,18 +485,22 @@ Task sections, top to bottom, each hidden when empty:
    days. On a past day it is the only section, a plain open section with
    "Nothing completed on Wed, 7 Oct." when empty.
 
-Each section is one `RowGroup` of `TaskRow`s with `pspad-row-ledger`, so
-from `md` a row is one line with its details in a right-hand column.
+Each section is one `RowGroup` of `TaskRow`s with `pspad-row-ledger`, a
+size container: when the group is at least 560px wide a row is one line
+with its details in a 280px right-hand column; narrower, the details sit
+under the name, so a name is never squeezed out. A task
+there because of a step deadline lists the steps due by the day under its
+row, each with its own tick (`DayStepRow`, `step-deadlines-design.md` §2.5);
+the task's tick still completes the task.
 
 **Schedule** (`Color.Primary` heading, always present) is
 `Components/DayTimeline`, under a muted "Schedule empty for today." /
-"Schedule empty for Fri, 9 Oct." when the day has no timed task: a vertical
-timeline of the whole day, 00:00–24:00, hour labels in a 52px gutter, a
-dashed half-hour line. The hour is `--pspad-hour`, as tall as fits the
-screen between 32 and 56px; when 24 hours at 32px do not fit, the timeline
-scrolls inside itself and opens an hour before now (today), else 30 minutes
-before the first task, else at 08:00 (`pspad-timeline-anchor`,
-`js/timeline.js`). Each task is a block placed by its time
+"Schedule empty for Fri, 9 Oct." when the day has no timed task: a
+timeline of the whole day that fits the screen and never scrolls — busy
+hours larger, three or more empty hours folded into one band you can open,
+hour labels in a 52px gutter, a dashed half-hour line, and a click on an
+empty half hour adding a task at that time; from 1600px it runs left to
+right above the tasks (`my-day-schedule-design.md`). Each task is a block placed by its time
 (`pspad-timeline-task`, at least 24px; a task without an end takes 30
 minutes; an overnight end counts as 24:00 and adds the muted `(+1)`,
 `pspad-schedule-nextday`), holding its checkbox, `09:30–11:00`
@@ -503,7 +508,7 @@ minutes; an overnight end counts as 24:00 and adds the muted `(+1)`,
 name (one line under 90 minutes, only the start when it shares the width). Tasks are laid out by a span of at least 45
 minutes; up to two overlapping tasks share the width side by side; three or
 more starting within half an hour become one group block
-(`pspad-timeline-group`) of 24px lines, and the axis below grows to fit it;
+(`pspad-timeline-group`) of 24px lines, its hour weighted larger;
 tasks inside a long one sit beside it in the right half, grouped where they
 overlap. On today a red line (`pspad-timeline-now`)
 marks the current time in the user's zone. Ticking a block ticks the task

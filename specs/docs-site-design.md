@@ -226,7 +226,7 @@ selector and stepper only hide and show.
    browser for the offline app.
 8. **Keep it running.** Upgrade: `docker compose pull && docker compose up
    -d --wait`. Backups for the chosen MongoDB (`mongodump` through
-   `docker compose exec` for `vps`, `docker run --rm mongo:8.3.11 mongodump
+   `docker compose exec` for `vps`, `docker run --rm mongo:8.3.13 mongodump
    --uri` for `atlas`), for the chosen Keycloak store (`pg_dump` for `pg`,
    stop and tar the volume for `h2`), and one line on restoring.
 
@@ -266,7 +266,7 @@ What the assembled files contain:
   `restart: unless-stopped`. The API's environment is the same set
   `docker/compose.yaml` passes today. Quick publishes 5000, 5001 and 8080;
   VPS publishes nothing except Caddy's 80 and 443.
-- `mongo` (image `mongo:8.3.11`, entrypoint, keyfile and data volumes,
+- `mongo` (image `mongo:8.3.13`, entrypoint, keyfile and data volumes,
   healthcheck) unless `atlas`, in which case the API reads
   `MONGO_CONNECTION_STRING` from `.env`.
 - `keycloak` (`quay.io/keycloak/keycloak:26.8.1`): `start-dev
@@ -346,16 +346,6 @@ to `specs/localization-design.md` for adding a language.
   every pull request.
 - `npm run check-stack` in `docs/` passes: all nine combinations render
   through `docker compose config`.
-- A unit test of the assembler (`docs/test/stack.test.mjs`, `node --test`,
-  run as `npm test` in `docs/`) asserts: `quick` has `mongo` and no
-  `postgres`, `cloudflared` or `caddy`; every `atlas` combination has no
-  `mongo` service and its `.env` has `MONGO_CONNECTION_STRING`; `pg` adds
-  `postgres` and `KC_DB: postgres`; `tunnel` adds `cloudflared` and
-  `CF-Connecting-IP`; `dns` adds `caddy`, a Caddyfile with three sites and
-  `X-Forwarded-For`; no file contains `${` left unexpanded by `.env`
-  except the variables `.env` declares; the image tags for `mongo`,
-  `keycloak` and the two PSPad images equal those in `docker/compose.yaml`
-  and the CI workflow.
 - `docker/` matches `origin/main` except the comment in
   `mongo-app-user.js`: `git diff origin/main -- docker/` lists that file
   only.

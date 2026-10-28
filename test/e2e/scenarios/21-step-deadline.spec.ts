@@ -40,4 +40,14 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
   await expect(daySection(page, 'anytime')).toContainText(task);
   await expect(daySection(page, 'overdue')).toContainText(carried);
   await expect(daySection(page, 'anytime')).not.toContainText(carried);
+
+  await page.locator('.pspad-week-today').click();
+  const photos = daySection(page, 'anytime').locator('.pspad-day-step', { hasText: 'Get new photos taken' });
+  await photos.getByRole('checkbox').click();
+  await expect(page.locator('.mud-snackbar')).toContainText(`"${carried}" moved to Tomorrow`);
+  await expect(page.locator('.pspad-day-anytime .pspad-row-name', { hasText: carried })).toHaveCount(0);
+
+  await showDay(page, addDays(utcToday(), 1));
+  await expect(daySection(page, 'anytime')).toContainText(carried);
+  await expect(page.locator('.pspad-day-overdue', { hasText: carried })).toHaveCount(0);
 });

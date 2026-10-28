@@ -235,8 +235,8 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
           </div>
           <div data-when="mongo=atlas" hidden>
             <p>Atlas M0 keeps no backups of its own. Once a week, from the VPS. Make the folder first: <code>mkdir -p ~/pspad/backups</code>.</p>
-            <CodeBlock title="Back up MongoDB, weekly from crontab -e">0 3 * * 0 cd ~/pspad &amp;&amp; docker run --rm --env-file .env mongo:8.3.11 sh -c 'mongodump --uri "$MONGO_CONNECTION_STRING" --archive --gzip' &gt; ~/pspad/backups/pspad-$(date +\%F).gz</CodeBlock>
-            <CodeBlock title="Restore MongoDB">docker run --rm -i --env-file .env mongo:8.3.11 sh -c 'mongorestore --uri "$MONGO_CONNECTION_STRING" --archive --gzip --drop' &lt; backups/pspad-DATE.gz</CodeBlock>
+            <CodeBlock title="Back up MongoDB, weekly from crontab -e">0 3 * * 0 cd ~/pspad &amp;&amp; docker run --rm --env-file .env mongo:8.3.13 sh -c 'mongodump --uri "$MONGO_CONNECTION_STRING" --archive --gzip' &gt; ~/pspad/backups/pspad-$(date +\%F).gz</CodeBlock>
+            <CodeBlock title="Restore MongoDB">docker run --rm -i --env-file .env mongo:8.3.13 sh -c 'mongorestore --uri "$MONGO_CONNECTION_STRING" --archive --gzip --drop' &lt; backups/pspad-DATE.gz</CodeBlock>
           </div>
           <div data-when="kc=pg" hidden>
             <CodeBlock title="Back up Keycloak">docker compose exec -T postgres pg_dump -U keycloak keycloak | gzip &gt; backups/keycloak-$(date +%F).sql.gz</CodeBlock>

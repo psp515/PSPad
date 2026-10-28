@@ -214,11 +214,13 @@ tests would be visible, not silent.
     under the 60 s poll, so a pass proves the nudge, not the fallback; no
     page clicks Sync now.
 17. **Scheduled day.** A fresh day shows "Schedule empty for today." over a
-    full 00:00–24:00 axis. A task due today with a time 09:00–10:30 and one
+    folded axis: the current hour between bands. A task due today with a time 09:00–10:30 and one
     due today without a time: My Day lists the first under Scheduled (count 1) and
     the second under "Today, any time"; the timeline block carries both
     times. Ticking the block's checkbox takes it off the timeline and out of
     Scheduled, the schedule reads empty again, and Completed · 1 lists it.
+    Clicking the first empty half hour opens "New task" with that start
+    time.
 18. **Language.** Settings shows English; choosing Polski reloads the app
     into Polish (Ustawienia, Mój dzień) and a reload keeps
     it. A second context of the same user signs in and lands in Polish
@@ -237,8 +239,10 @@ tests would be visible, not silent.
     `↳ Order boxes · <date>`; My Day today does not list the task, and
     tomorrow (through the week strip's date dialog) lists it under any
     time. A second task with one step due Today and one due Tomorrow is
-    under any time today and under Overdue tomorrow, not under any time
-    (issue #202, `adr/0078`).
+    under any time today and under Overdue tomorrow, not under any time.
+    Back on today, ticking its "Get new photos taken" step row (not the
+    task) says it moved to Tomorrow, and tomorrow then lists it under any
+    time (issue #202, `adr/0078`).
 22. **List filter, sort and calendar.** Two High-priority tasks due
     tomorrow and one plain task: filtering on High hides the plain one,
     sorting by Name orders the two A → Z, and both survive a reload with

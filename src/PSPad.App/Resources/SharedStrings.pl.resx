@@ -126,4 +126,7 @@
   <data name="Month" xml:space="preserve">
     <value>Miesiąc</value>
   </data>
+  <data name="Undo" xml:space="preserve">
+    <value>Cofnij</value>
+  </data>
 </root>

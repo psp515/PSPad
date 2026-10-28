@@ -2,6 +2,7 @@ using System.Globalization;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
 using PSPad.App.Pages;
@@ -359,6 +360,21 @@ public class TodayTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ClickingTheScheduleAddsATaskAtThatTimeOnTheDayShown()
+    {
+        var list = NewList("Praca");
+        Arrange(list, Timed(Due(list.Id, "Sprint planning", Today.AddDays(1)), 9, 0, 10, 0));
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"/?day={Today.AddDays(1):yyyy-MM-dd}");
+
+        var page = Render<Today>();
+        page.Find(".pspad-timeline-slot[data-time='09:30']").Click();
+
+        Assert.EndsWith(
+            $"?day={Today.AddDays(1):yyyy-MM-dd}&task=new&due={Today.AddDays(1):yyyy-MM-dd}&time=09:30",
+            Services.GetRequiredService<NavigationManager>().Uri);
+    }
+
+    [Fact]
     public void AnEmptyScheduleNamesAnotherDay()
     {
         var list = NewList("Praca");
@@ -654,6 +670,126 @@ public class TodayTests : Bunit.TestContext
         var page = Render<Today>();
 
         Assert.Empty(page.FindAll(".pspad-day-schedule .pspad-row-goal"));
+    }
+
+    [Fact]
+    public void AStepDueByTheDaySitsUnderItsTaskInsteadOfTheMark()
+    {
+        var list = NewList("Moving");
+        var task = Due(list.Id, "Move flat", Today.AddDays(4));
+        WithStep(task, "Order boxes", Today);
+        WithStep(task, "Hand over keys", Today.AddDays(4));
+        Arrange(list, task);
+
+        var page = Render<Today>();
+
+        var step = Assert.Single(page.FindAll(".pspad-day-anytime .pspad-day-step"));
+        Assert.Equal("Order boxes", step.QuerySelector(".pspad-day-step-name")!.TextContent.Trim());
+        Assert.Empty(page.FindAll(".pspad-day-anytime .pspad-step-due-mark"));
+    }
+
+    [Fact]
+    public void AStepRowShowsItsDateNotARelativeWord()
+    {
+        var list = NewList("Moving");
+        var task = Due(list.Id, "Move flat", Today.AddDays(4));
+        WithStep(task, "Order boxes", Today.AddDays(1));
+        Arrange(list, task);
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"/?day={Today.AddDays(1):yyyy-MM-dd}");
+
+        var page = Render<Today>();
+
+        var date = page.Find(".pspad-day-anytime .pspad-day-step-date").TextContent.Trim();
+        Assert.Equal(Today.AddDays(1).ToString("d MMM"), date);
+    }
+
+    [Fact]
+    public void AnOverdueStepShowsItsDateInRed()
+    {
+        var list = NewList("Admin");
+        var task = New(list.Id, "Renew passport");
+        WithStep(task, "Get new photos taken", Today.AddDays(-2));
+        Arrange(list, task);
+
+        var page = Render<Today>();
+
+        var date = page.Find(".pspad-day-overdue .pspad-day-step-date");
+        Assert.Contains("mud-error-text", date.ClassName);
+    }
+
+    [Fact]
+    public async Task TickingAStepChecksOnlyThatStep()
+    {
+        var list = NewList("Moving");
+        var task = Due(list.Id, "Move flat", Today.AddDays(4));
+        var boxes = WithStep(task, "Order boxes", Today);
+        var replica = Arrange(list, task);
+
+        var page = Render<Today>();
+        page.Find(".pspad-day-step input.mud-checkbox-input").Change(true);
+
+        var stored = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Null(stored!.CompletedAt);
+        Assert.True(stored.Steps.Single(step => step.Id == boxes).Checked);
+    }
+
+    [Fact]
+    public async Task TickingTheTaskStillCompletesIt()
+    {
+        var list = NewList("Moving");
+        var task = Due(list.Id, "Move flat", Today.AddDays(4));
+        WithStep(task, "Order boxes", Today);
+        var replica = Arrange(list, task);
+
+        var page = Render<Today>();
+        page.Find(".pspad-row input.mud-checkbox-input").Change(true);
+
+        Assert.NotNull((await replica.LoadAsync<TodoTask>(task.Id))!.CompletedAt);
+    }
+
+    [Fact]
+    public void ATickedStepStaysStruckThroughWhileItsTaskIsStillOnTheDay()
+    {
+        var list = NewList("Moving");
+        var task = Due(list.Id, "Move flat", Today.AddDays(4));
+        WithStep(task, "Order boxes", Today);
+        WithStep(task, "Book the lift", Today);
+        Arrange(list, task);
+
+        var page = Render<Today>();
+        page.Find(".pspad-day-step input.mud-checkbox-input").Change(true);
+
+        var steps = page.FindAll(".pspad-day-step");
+        Assert.Equal(2, steps.Count);
+        Assert.Contains("pspad-day-step-done", steps[0].ClassName);
+        Assert.DoesNotContain("pspad-day-step-done", steps[1].ClassName);
+    }
+
+    [Fact]
+    public void CheckingTheLastStepDueSaysWhereTheTaskWent()
+    {
+        var list = NewList("Moving");
+        var task = Due(list.Id, "Move flat", Today.AddDays(4));
+        WithStep(task, "Order boxes", Today);
+        Arrange(list, task);
+
+        var page = Render<Today>();
+        page.Find(".pspad-day-step input.mud-checkbox-input").Change(true);
+
+        Assert.DoesNotContain("Move flat", page.Find(".pspad-day-anytime").TextContent);
+        var shown = Assert.Single(Services.GetRequiredService<ISnackbar>().ShownSnackbars);
+        Assert.Contains("Move flat", shown.Message);
+        Assert.Contains(Today.AddDays(4).ToString("ddd, d MMM"), shown.Message);
+    }
+
+    static Guid WithStep(TodoTask task, string name, DateOnly due)
+    {
+        var stepId = Guid.NewGuid();
+        task.ApplyAll(TodoTask.Decide(
+            task, new AddStep(Guid.NewGuid(), User, task.Id, stepId, name), DateTimeOffset.UnixEpoch));
+        task.ApplyAll(TodoTask.Decide(
+            task, new SetStepDueDate(Guid.NewGuid(), User, task.Id, stepId, due), DateTimeOffset.UnixEpoch));
+        return stepId;
     }
 
     static Goal Holding(Goal goal, TodoTask task)

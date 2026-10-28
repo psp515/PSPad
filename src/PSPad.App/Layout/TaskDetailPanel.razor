@@ -151,6 +151,8 @@
 
     [Parameter] public DateOnly? NewDue { get; set; }
 
+    [Parameter] public TimeOnly? NewTime { get; set; }
+
     [Parameter] public bool Disabled { get; set; }
 
     [Parameter] public EventCallback OnClose { get; set; }
@@ -161,7 +163,7 @@
     ListPlacement _placement = ListPlacement.Empty;
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<Goal> _goals = [];
-    (bool, Guid?, DateOnly?) _draftFor;
+    (bool, Guid?, DateOnly?, TimeOnly?) _draftFor;
     bool _creating;
     TaskDraft _draft = new();
 
@@ -215,9 +217,9 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if ((NewTask, NewInList, NewDue) != _draftFor)
+        if ((NewTask, NewInList, NewDue, NewTime) != _draftFor)
         {
-            _draftFor = (NewTask, NewInList, NewDue);
+            _draftFor = (NewTask, NewInList, NewDue, NewTime);
             _draft = NewDraft();
         }
 
@@ -617,7 +619,12 @@
         await OnClose.InvokeAsync();
     }
 
-    TaskDraft NewDraft() => new() { ListId = NewInList, DueOn = NewDue };
+    TaskDraft NewDraft() => new()
+    {
+        ListId = NewInList,
+        DueOn = NewDue,
+        Time = NewTime is { } start ? new TaskTime(start, start.AddHours(1)) : null
+    };
 
     void PickList(Guid listId) => _draft.ListId = listId;
 

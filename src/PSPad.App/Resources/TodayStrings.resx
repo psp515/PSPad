@@ -69,4 +69,16 @@
   <data name="WeekMeta" xml:space="preserve">
     <value>Week {0} · {1}</value>
   </data>
+  <data name="StepsDoneMovedTo" xml:space="preserve">
+    <value>&quot;{0}&quot; moved to {1}</value>
+  </data>
+  <data name="StepsDoneNoDate" xml:space="preserve">
+    <value>&quot;{0}&quot; has no date left</value>
+  </data>
+  <data name="ShowHours" xml:space="preserve">
+    <value>Show {0}</value>
+  </data>
+  <data name="AddTaskAt" xml:space="preserve">
+    <value>Add a task at {0}</value>
+  </data>
 </root>

@@ -1204,30 +1204,39 @@ button.pspad-heatmap-cell:focus-visible {
 }
 
 .pspad-timeline.mud-paper-outlined {
-    --pspad-timeline-offset: 360px;
-    --pspad-hour: clamp(32px, (100dvh - var(--pspad-timeline-offset)) / 24, 56px);
-    max-height: calc(100dvh - var(--pspad-timeline-offset));
-    overflow-x: hidden;
-    overflow-y: auto;
+    --pspad-timeline-offset: 483px;
+    position: relative;
+    height: max(var(--pspad-timeline-required), min(calc(100dvh - var(--pspad-timeline-offset)), var(--pspad-timeline-natural)));
+    min-height: min(200px, var(--pspad-timeline-natural));
+    overflow: hidden;
     border-radius: 12px;
     background-color: var(--pspad-raised);
     border-color: var(--pspad-line);
     box-shadow: var(--pspad-card-shadow);
 }
 
-.pspad-timeline-hours {
-    position: relative;
+.pspad-timeline-axis {
+    position: absolute;
+    inset: 0;
 }
 
-.pspad-timeline-hour {
+.pspad-timeline-hour,
+.pspad-timeline-fold {
     position: absolute;
     left: 0;
     right: 0;
-    height: var(--pspad-hour);
+    top: var(--at);
+    height: var(--size);
+    box-sizing: border-box;
     border-top: 1px solid var(--pspad-line);
 }
 
-.pspad-timeline-hour:first-child {
+.pspad-timeline-hour {
+    display: flex;
+    flex-direction: column;
+}
+
+.pspad-timeline-axis > :first-child {
     border-top: 0;
 }
 
@@ -1237,6 +1246,7 @@ button.pspad-heatmap-cell:focus-visible {
     top: 2px;
     font-size: 11px;
     font-variant-numeric: tabular-nums;
+    pointer-events: none;
 }
 
 .pspad-timeline-half {
@@ -1247,10 +1257,82 @@ button.pspad-heatmap-cell:focus-visible {
     border-top: 1px dashed var(--pspad-line);
 }
 
+.pspad-timeline-slot {
+    flex: 1;
+    margin-left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    border: 0;
+    padding: 0 6px 0 0;
+    background: transparent;
+    cursor: copy;
+    border-radius: 6px;
+}
+
+.pspad-timeline-slot + .pspad-timeline-slot {
+    border-top: 1px dashed var(--pspad-line);
+    border-radius: 0 0 6px 6px;
+}
+
+.pspad-timeline-slot:hover,
+.pspad-timeline-slot:focus-visible {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    outline: 1px dashed var(--mud-palette-primary);
+    outline-offset: -1px;
+}
+
+.pspad-timeline-slot::after {
+    content: "+";
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+    opacity: .35;
+}
+
+.pspad-timeline-slot + .pspad-timeline-slot::after {
+    content: none;
+}
+
+.pspad-timeline-slot:hover::after,
+.pspad-timeline-slot:focus-visible::after,
+.pspad-timeline-slot + .pspad-timeline-slot:hover::after,
+.pspad-timeline-slot + .pspad-timeline-slot:focus-visible::after {
+    content: "+ " attr(data-time);
+    font-size: 11px;
+    color: var(--mud-palette-primary);
+    opacity: 1;
+}
+
+.pspad-timeline-fold {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 10px;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    background: repeating-linear-gradient(135deg, transparent 0 6px, var(--pspad-hover) 6px 12px);
+    color: var(--mud-palette-text-secondary);
+    font: inherit;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pspad-timeline-fold:hover,
+.pspad-timeline-fold:focus-visible {
+    color: var(--mud-palette-primary);
+}
+
 .pspad-timeline-task {
     position: absolute;
-    left: calc(58px + (100% - 66px) * var(--lane) / var(--lanes));
-    width: calc((100% - 66px) / var(--lanes) - 2px);
+    z-index: 1;
+    top: var(--at);
+    height: max(24px, calc(var(--size) - 2px));
+    left: calc(58px + (100% - 94px) * var(--lane) / var(--lanes));
+    width: calc((100% - 94px) / var(--lanes) - 2px);
     box-sizing: border-box;
     display: flex;
     align-items: flex-start;
@@ -1263,16 +1345,13 @@ button.pspad-heatmap-cell:focus-visible {
     cursor: pointer;
 }
 
-.pspad-timeline-anchor {
-    position: absolute;
-    left: 0;
-    height: 0;
-}
-
 .pspad-timeline-group {
     position: absolute;
-    left: calc(58px + (100% - 66px) * var(--lane) / var(--lanes));
-    width: calc((100% - 66px) / var(--lanes) - 2px);
+    z-index: 1;
+    top: var(--at);
+    height: max(var(--needs), calc(var(--size) - 2px));
+    left: calc(58px + (100% - 94px) * var(--lane) / var(--lanes));
+    width: calc((100% - 94px) / var(--lanes) - 2px);
     box-sizing: border-box;
     padding: 2px 6px 2px 2px;
     border-radius: 8px;
@@ -1354,10 +1433,12 @@ button.pspad-heatmap-cell:focus-visible {
 
 .pspad-timeline-now {
     position: absolute;
+    z-index: 2;
+    top: var(--at);
     left: 46px;
     right: 0;
-    z-index: 1;
     border-top: 2px solid var(--mud-palette-error);
+    pointer-events: none;
 }
 
 .pspad-timeline-now::before {
@@ -1381,12 +1462,19 @@ button.pspad-heatmap-cell:focus-visible {
     font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 959.98px) {
+@media (max-width: 1279.98px) {
     .pspad-day-tab-tasks .pspad-day-schedule { display: none; }
     .pspad-day-tab-schedule .pspad-day-lists { display: none; }
+    .pspad-day-tab-schedule ~ .pspad-fab { display: none; }
 }
 
-@media (min-width: 960px) {
+@media (min-width: 960px) and (max-width: 1279.98px) {
+    .pspad-timeline.mud-paper-outlined {
+        --pspad-timeline-offset: 400px;
+    }
+}
+
+@media (min-width: 1280px) {
     .pspad-day {
         display: grid;
         grid-template-columns: minmax(0, 1fr) 380px;
@@ -1397,8 +1485,11 @@ button.pspad-heatmap-cell:focus-visible {
     .pspad-day-tabs { display: none; }
 
     .pspad-timeline.mud-paper-outlined {
-        --pspad-timeline-offset: 240px;
+        --pspad-timeline-offset: 346px;
     }
+}
+
+@media (min-width: 960px) {
 
     .pspad-row-group-cols {
         display: grid;
@@ -1437,6 +1528,13 @@ button.pspad-heatmap-cell:focus-visible {
         box-shadow: none;
     }
 
+}
+
+.pspad-row-ledger {
+    container-type: inline-size;
+}
+
+@container (min-width: 560px) {
     .pspad-row-ledger .pspad-row {
         min-height: 44px;
     }
@@ -1460,7 +1558,128 @@ button.pspad-heatmap-cell:focus-visible {
 
 @media (min-width: 1600px) {
     .pspad-day {
-        grid-template-columns: minmax(0, 1fr) 420px;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "schedule" "lists";
+    }
+
+    .pspad-day-schedule {
+        grid-area: schedule;
+    }
+
+    .pspad-day-lists {
+        grid-area: lists;
+    }
+
+    .pspad-timeline.mud-paper-outlined {
+        height: max(176px, var(--pspad-timeline-cross));
+        min-height: 0;
+    }
+
+    .pspad-timeline-hour,
+    .pspad-timeline-fold {
+        top: 0;
+        bottom: 0;
+        right: auto;
+        height: auto;
+        left: var(--at);
+        width: var(--size);
+        border-top: 0;
+        border-left: 1px solid var(--pspad-line);
+    }
+
+    .pspad-timeline-hour {
+        flex-direction: row;
+        padding-top: 22px;
+    }
+
+    .pspad-timeline-hour-label {
+        left: 6px;
+        top: 4px;
+    }
+
+    .pspad-timeline-half {
+        left: 50%;
+        right: auto;
+        top: 22px;
+        bottom: 0;
+        border-top: 0;
+        border-left: 1px dashed var(--pspad-line);
+    }
+
+    .pspad-timeline-slot {
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0 0 4px;
+    }
+
+    .pspad-timeline-slot + .pspad-timeline-slot {
+        border-top: 0;
+        border-left: 1px dashed var(--pspad-line);
+        border-radius: 0 6px 6px 0;
+    }
+
+    .pspad-timeline-fold {
+        justify-content: center;
+        padding: 0;
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        border-left: 0;
+        border-right: 1px solid var(--pspad-line);
+    }
+
+    .pspad-timeline-task,
+    .pspad-timeline-group {
+        left: var(--at);
+        width: max(72px, calc(var(--size) - 2px));
+        top: calc(24px + (100% - 54px) * var(--lane) / var(--lanes));
+        height: calc((100% - 54px) / var(--lanes) - 4px);
+        border-left: 0;
+        border-top: 3px solid var(--mud-palette-primary);
+    }
+
+    .pspad-timeline-group {
+        height: max(var(--needs), calc((100% - 54px) / var(--lanes) - 4px));
+    }
+
+    .pspad-timeline-task-done {
+        border-top-color: var(--mud-palette-text-secondary);
+    }
+
+    .pspad-timeline-now {
+        top: 20px;
+        bottom: 0;
+        left: var(--at);
+        right: auto;
+        border-top: 0;
+        border-left: 2px solid var(--mud-palette-error);
+    }
+
+    .pspad-timeline-now::before {
+        left: -5px;
+        top: -4px;
+    }
+
+    .pspad-timeline-now-label {
+        left: 6px;
+        top: auto;
+        bottom: 4px;
+    }
+
+    .pspad-timeline-task-short {
+        align-items: flex-start;
+    }
+
+    .pspad-timeline-task-short .pspad-timeline-task-body {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0;
+    }
+
+    .pspad-timeline-task-name {
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
     }
 
     .pspad-row-ledger {
@@ -2448,5 +2667,72 @@ button.pspad-heatmap-cell:focus-visible {
         font-size: 12px;
         font-weight: 500;
         padding-left: 7px;
+    }
+}
+
+.pspad-day-item {
+    position: relative;
+}
+
+.pspad-row-group .pspad-row + .pspad-day-item::before,
+.pspad-row-group .pspad-day-item + .pspad-row::before,
+.pspad-row-group .pspad-day-item + .pspad-day-item::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 55px;
+    right: 0;
+    border-top: 1px solid var(--pspad-line);
+}
+
+.pspad-row-group .pspad-day-item + .pspad-row {
+    position: relative;
+}
+
+.pspad-day-steps {
+    padding: 0 8px 6px 49px;
+}
+
+.pspad-day-step {
+    min-height: 32px;
+}
+
+.pspad-day-step .mud-checkbox {
+    margin: 0;
+}
+
+.pspad-day-step-name {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pspad-day-step-date {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1600px) {
+    .pspad-row-ledger > .pspad-day-item {
+        box-shadow: -1px 0 0 var(--pspad-line);
+    }
+
+    .pspad-row-ledger > .pspad-day-item::before,
+    .pspad-row-ledger > .pspad-day-item + .pspad-row::before {
+        display: none;
+    }
+
+    .pspad-row-ledger > .pspad-day-item::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 55px;
+        right: 0;
+        border-top: 1px solid var(--pspad-line);
+    }
+
+    .pspad-row-ledger > .pspad-day-item:last-child::after {
+        display: none;
     }
 }

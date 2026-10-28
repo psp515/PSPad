@@ -19,30 +19,57 @@ Issue #185. Proposal with screenshots: artifact "My Day fixes #185".
 
 ## Decisions
 
-### Whole day, scrolled only when it does not fit
+### Fitted to the screen, busy hours larger, empty hours folded
 
-`DayTimeline` always draws 00:00–24:00. The hour height is the CSS custom
-property `--pspad-hour` on `.pspad-timeline`:
-`clamp(32px, (100dvh - offset) / 24, 56px)`, and the timeline's
-`max-height` is `calc(100dvh - offset)` with `overflow-y: auto`. When the
-viewport has room for 24 hours at 32px or more, the whole day shows with no
-scroll; otherwise the timeline scrolls inside itself. `offset` is the space
-above and below the timeline: 240px from `md`, 360px below `md` (top bar, week
-strip, tabs, bottom navigation).
+Superseded the earlier "whole day, scrolled when it does not fit" (#202
+follow-up, mockup "My Day Schedule Fit"). The timeline never scrolls.
 
-Every vertical position is a CSS expression in hour units,
-`calc(var(--pspad-hour) * minutes / 60 + growth)`, so the component never
-needs the measured height. `growth` is the sum of the extra pixels of grouped
-clusters that end at or before the position (see below).
-
-A hidden anchor (`pspad-timeline-anchor`) marks where the view starts: an hour
-before now on today, else 30 minutes before the first block, else 08:00, never
-before 00:00. `wwwroot/js/timeline.js` scrolls the timeline to the anchor the
-first time the timeline has a size (a `ResizeObserver`, since on a phone it
-is hidden behind the Tasks tab) and again when the day changes.
-
-A day without timed tasks still draws the axis (and the now line on today);
-the muted "Schedule empty for today." line sits above it.
+- `.pspad-timeline` is `height: min(calc(100dvh - offset), natural)` with
+  `overflow: hidden`. `natural` (`--pspad-timeline-natural`) is what the day
+  needs: 40px per weight unit plus 28px per band
+  (`TimelineAxis.NaturalLength(DayTimeline.HourLength)`), so a day with one
+  task is a short card, not a screen of one stretched hour. `offset` is
+  everything on the page above and below the timeline, measured against the
+  stack so the page itself never scrolls: 346px from `md`, 483px below it
+  (top bar, week strip, tabs, bottom navigation, page padding).
+- `State/TimelineAxis` splits the day into segments. An hour with no task and
+  not the current hour is empty; three or more empty hours in a row
+  (`FoldFrom`) fold into one band (`pspad-timeline-fold`, 28px, labelled
+  "00:00–07:00", a button that unfolds it until the day changes). Other hours
+  weigh 1 when empty, 2 with one or two tasks or as the current hour, 3 with
+  three or more.
+- Every position is a share of the timeline's own length:
+  `calc((100% - folds × 28px) × weightBefore / totalWeight + foldPixelsBefore)`,
+  set as `--at` and `--size` on each hour, band, block, group and the now
+  line. The same values serve `top`/`height` and `left`/`width`, so the
+  component never measures anything and CSS picks the orientation.
+- A block is at least 24px; a group at least its lines (`--needs`, 24px a
+  line plus 4px). A group never hides behind its neighbours:
+  - Top to bottom, every hour a group covers weighs at least
+    `ceil(needs × 60 / 26 / group minutes)`, so at 26px a unit
+    (`TimelineAxis.UnitAtLeast`) its hours hold all its lines. The timeline
+    is `max(required, min(space left on screen, natural))`, `required` being
+    26px a unit plus the bands: a day busier than the screen makes the page
+    scroll rather than stack lines over each other.
+  - Left to right (from 1600px), the band is `max(176px, cross)`, `cross`
+    being 54px of frame plus, for the most stacked block or group, its lanes
+    times (48px or its lines, whichever is more, plus 4px).
+- From 1600px My Day stacks the schedule above the tasks
+  (`grid-template-areas: "schedule" "lists"`) and the timeline runs left to
+  right, 176px tall, lanes stacked top to bottom, bands with vertical text.
+- Each shown hour holds two half-hour buttons (`pspad-timeline-slot`,
+  `data-time`, "Add a task at 09:30") when the page passes `OnAdd`. They span
+  the whole row, gutter included, and blocks stop 28px short of the right
+  edge (from 1600px, 24px short of the bottom), so a free rail stays
+  clickable however many tasks share an hour. The rail shows one faint "+"
+  per hour and "+ 09:30" on hover. On a phone the Schedule tab hides the
+  page's add button: the schedule itself adds. My Day
+  opens `?task=new&due={day}&time=HH:mm` (`TaskQuery.ForNewTask(…, time)`);
+  the task panel starts the draft at that time for an hour. Blocks sit above
+  the slots, so a click on a task still opens it.
+- An empty day is one band, 00:00–24:00; on today the current hour stays
+  open between two bands. The muted "Schedule empty for today." line sits
+  above it.
 
 ### Visual span, lanes and groups
 

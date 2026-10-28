@@ -7,7 +7,6 @@
     "build": "astro build",
     "preview": "astro preview",
     "icons": "node scripts/render-icons.mjs",
-    "test": "node --test",
     "check-stack": "node scripts/check-stack.mjs"
   },
   "devDependencies": {

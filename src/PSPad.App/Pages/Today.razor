@@ -20,6 +20,7 @@
 @inject IStringLocalizer<TodayStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
 @inject IStringLocalizer<TasksStrings> TaskText
+@inject ISnackbar Snackbar
 
 <PageHeading Title="@Shared["MyDay"]" />
 
@@ -115,7 +116,7 @@ else
             }
             <DayTimeline Entries="@_plan.Scheduled" Tasks="@_byId" Day="@_day" Now="@NowOnTheDay"
                          ListNameOf="@(task => NameOf(task.ListId))"
-                         OnToggle="@(toggled => ToggleAsync(toggled, _day))" OnOpen="@Open" />
+                         OnToggle="@(toggled => ToggleAsync(toggled, _day))" OnOpen="@Open" OnAdd="@AddTaskAt" />
         </section>
     </div>
 }
@@ -129,6 +130,9 @@ else
     void AddTask() =>
         Navigation.NavigateTo(TaskQuery.ForNewTask(Navigation.Uri, due: _day < State.Today ? State.Today : _day));
 
+    void AddTaskAt(TimeOnly time) =>
+        Navigation.NavigateTo(TaskQuery.ForNewTask(Navigation.Uri, due: _day, time: time));
+
     bool _loaded;
     DayPlan _plan = new([], [], [], [], [], []);
     DateOnly _day;
@@ -136,6 +140,7 @@ else
     IReadOnlyDictionary<Guid, TodoTask> _byId = new Dictionary<Guid, TodoTask>();
     IReadOnlyDictionary<Guid, string> _listNames = new Dictionary<Guid, string>();
     IReadOnlyList<Goal> _goals = [];
+    readonly HashSet<Guid> _ticked = [];
 
     DayTab _tab = DayTab.Tasks;
 
@@ -176,7 +181,13 @@ else
         var goals = await GoalStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _goals = [.. goals.Where(goal => !goal.Deleted)];
         _byId = tasks.ToDictionary(task => task.Id);
-        _day = DayQuery.From(Navigation.Uri, State.Today);
+        var day = DayQuery.From(Navigation.Uri, State.Today);
+        if (day != _day)
+        {
+            _ticked.Clear();
+        }
+
+        _day = day;
         var zone = LocalToday.Zone(State.TimeZone);
         _plan = TodayRule.Plan(tasks, _day, State.Today, zone);
         _busy = WeekStrip.WeekOf(_day)
@@ -195,10 +206,76 @@ else
             {
                 var task = _byId[entry.TaskId];
                 var day = DayOf(entry);
-                <TaskRow @key="entry.TaskId" Task="@task" Today="@day" ListName="@NameOf(task.ListId)" GoalName="@GoalOf(task)"
-                         OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />
+                var steps = DayStepsOf(task);
+                @if (steps.Count == 0)
+                {
+                    <TaskRow @key="entry.TaskId" Task="@task" Today="@day" ListName="@NameOf(task.ListId)" GoalName="@GoalOf(task)"
+                             OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />
+                }
+                else
+                {
+                    <div @key="entry.TaskId" class="pspad-day-item">
+                        <TaskRow Task="@task" Today="@day" ListName="@NameOf(task.ListId)" GoalName="@GoalOf(task)" ShowDueStep="false"
+                                 OnToggle="@(toggled => ToggleAsync(toggled, day))" OnStar="@StarAsync" OnOpen="@Open" />
+                        <div class="pspad-day-steps">
+                            @foreach (var step in steps)
+                            {
+                                <DayStepRow @key="step.Id" Step="@step" Today="@State.Today" Done="@step.Checked"
+                                            OnChecked="@(value => CheckStepAsync(task, step, value))" />
+                            }
+                        </div>
+                    </div>
+                }
             }
         </text>;
+
+    IReadOnlyList<Step> DayStepsOf(TodoTask task)
+    {
+        if (task.IsRecurring || task.CompletedAt is not null)
+        {
+            return [];
+        }
+
+        var due = TodayRule.StepsDueBy(task, _day);
+        return [.. task.Steps.Where(step => due.Contains(step) || (_ticked.Contains(step.Id) && step.DueOn <= _day))];
+    }
+
+    bool OnTheDay(Guid taskId) =>
+        _plan.Overdue.Concat(_plan.Scheduled).Concat(_plan.AnyTime).Any(entry => entry.TaskId == taskId);
+
+    async Task CheckStepAsync(TodoTask task, Step step, bool @checked)
+    {
+        var wasOnTheDay = OnTheDay(task.Id);
+        await Sender.SendAsync(new CheckStep(Guid.NewGuid(), State.UserId, task.Id, step.Id, @checked));
+
+        if (@checked)
+        {
+            _ticked.Add(step.Id);
+        }
+        else
+        {
+            _ticked.Remove(step.Id);
+        }
+
+        await ReloadAsync();
+
+        if (@checked && wasOnTheDay && !OnTheDay(task.Id) && _byId.TryGetValue(task.Id, out var moved))
+        {
+            SayWhereItWent(moved, step);
+        }
+    }
+
+    void SayWhereItWent(TodoTask task, Step step)
+    {
+        var message = TodayRule.TriggerOf(task) is { } next
+            ? T["StepsDoneMovedTo", task.Name, DueDateRow.Describe(next, State.Today, Shared)]
+            : T["StepsDoneNoDate", task.Name];
+        Snackbar.Add(message, Severity.Normal, config =>
+        {
+            config.Action = Shared["Undo"];
+            config.OnClick = _ => InvokeAsync(() => CheckStepAsync(task, step, false));
+        });
+    }
 
     bool IsBusy(DayPlan plan, DateOnly day) =>
         plan.Scheduled.Count > 0 || plan.AnyTime.Count > 0 || (day == State.Today && plan.Overdue.Count > 0);
