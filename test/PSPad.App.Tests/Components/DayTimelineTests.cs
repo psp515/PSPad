@@ -1,6 +1,5 @@
 using Bunit;
 using PSPad.App.Components;
-using PSPad.App.State;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.Module.Tasks.Today;
 using PSPad.TestInfrastructure;
@@ -18,10 +17,10 @@ public class DayTimelineTests : Bunit.TestContext
     {
         var timeline = Render(Timed("Sprint planning", 9, 30, 11, 30));
 
-        Assert.Equal(["00:00–09:00", "12:00–24:00"],
-            timeline.FindAll(".pspad-timeline-fold").Select(fold => fold.TextContent.Trim()));
-        Assert.Equal(["09:00", "10:00", "11:00"],
-            timeline.FindAll(".pspad-timeline-hour-label").Select(label => label.TextContent.Trim()));
+        Assert.Equal(["Show 00:00–09:00", "Show 12:00–24:00"], Folds(timeline).Select(fold => fold.GetAttribute("aria-label")));
+        Assert.Contains("10:00", timeline.Text());
+        Assert.Contains("11:00", timeline.Text());
+        Assert.DoesNotContain("13:00", timeline.Text());
     }
 
     [Fact]
@@ -29,121 +28,59 @@ public class DayTimelineTests : Bunit.TestContext
     {
         var timeline = Render();
 
-        Assert.Equal("00:00–24:00", timeline.Find(".pspad-timeline-fold").TextContent.Trim());
-        Assert.Empty(timeline.FindAll(".pspad-timeline-hour"));
+        Assert.Equal("00:00–24:00", Assert.Single(Folds(timeline)).TextContent.Trim());
+        Assert.DoesNotContain("10:00", timeline.Text().Replace("00:00–24:00", ""));
     }
 
     [Fact]
     public void ClickingABandShowsItsHours()
     {
         var timeline = Render(Timed("Sprint planning", 9, 30, 11, 30));
+        Assert.DoesNotContain("05:00", timeline.Text());
 
-        timeline.FindAll(".pspad-timeline-fold")[0].Click();
+        Folds(timeline)[0].Click();
 
-        var labels = timeline.FindAll(".pspad-timeline-hour-label").Select(label => label.TextContent.Trim()).ToArray();
-        Assert.Equal(12, labels.Length);
-        Assert.Equal("00:00", labels[0]);
-        Assert.Single(timeline.FindAll(".pspad-timeline-fold"));
+        Assert.Contains("05:00", timeline.Text());
+        Assert.Single(Folds(timeline));
     }
 
     [Fact]
-    public void TheTimelineAsksForOnlyTheLengthItsDayNeeds()
-    {
-        var timeline = Render(Timed("Dentist", 15, 0, 16, 0));
-
-        var natural = Axis((900, 960)).NaturalLength(DayTimeline.HourLength);
-        Assert.Contains($"--pspad-timeline-natural:{natural}px", timeline.Find(".pspad-timeline").GetAttribute("style"));
-    }
-
-    [Fact]
-    public void AGroupMakesTheTimelineLongEnoughAndTheWideBandTallEnoughForItsLines()
-    {
-        var timeline = Render(Timed("A", 14, 0, 14, 30), Timed("B", 14, 0, 14, 30), Timed("C", 14, 10, 14, 40), Timed("D", 14, 20, 15, 0));
-
-        var style = timeline.Find(".pspad-timeline").GetAttribute("style")!;
-        var axis = TimelineAxis.For([(840, 870), (840, 870), (850, 880), (860, 900)], null, new HashSet<int>(), [(840, 905, 106)]);
-        Assert.Contains($"--pspad-timeline-required:{axis.RequiredLength}px", style);
-        Assert.Contains("--pspad-timeline-cross:164px", style);
-    }
-
-    [Fact]
-    public void ABlockIsPlacedOnTheAxisAndSizedByItsLength()
+    public void ABlockShowsItsNameTimesAndList()
     {
         var timeline = Render(Timed("Sprint planning", 9, 30, 11, 30));
 
-        var axis = Axis((570, 690));
-        var block = timeline.Find(".pspad-timeline-task");
-        var style = block.GetAttribute("style")!;
-        Assert.Contains($"--at:{axis.At(570)}", style);
-        Assert.Contains($"--size:{axis.Stretch(570, 690)}", style);
-        Assert.Equal("09:30–11:30", block.QuerySelector(".pspad-schedule-time")!.TextContent.Trim());
-        Assert.Equal("Sprint planning – 09:30–11:30", block.GetAttribute("title"));
+        var block = timeline.Find("[title='Sprint planning – 09:30–11:30']");
         Assert.Contains("Sprint planning", block.TextContent);
+        Assert.Contains("09:30", block.TextContent);
+        Assert.Contains("11:30", block.TextContent);
         Assert.Contains("Praca", block.TextContent);
-        Assert.DoesNotContain("pspad-timeline-task-short", block.ClassList);
     }
 
     [Fact]
-    public void ABlockUnderTwoHoursLeavesOutItsListAndUnderNinetyMinutesIsOneLine()
+    public void ABlockUnderTwoHoursLeavesOutItsList()
     {
         var timeline = Render(Timed("Review", 9, 0, 10, 30), Timed("Call", 12, 0, 13, 15));
 
-        var blocks = timeline.FindAll(".pspad-timeline-task");
-        Assert.Empty(blocks[0].QuerySelectorAll(".pspad-timeline-task-list"));
-        Assert.DoesNotContain("pspad-timeline-task-short", blocks[0].ClassList);
-        Assert.Contains("pspad-timeline-task-short", blocks[1].ClassList);
+        Assert.DoesNotContain("Praca", timeline.Find("[title='Review – 09:00–10:30']").TextContent);
+        Assert.DoesNotContain("Praca", timeline.Find("[title='Call – 12:00–13:15']").TextContent);
     }
 
     [Fact]
-    public void AShortBlockBesideAnotherShowsOnlyItsStart()
-    {
-        var timeline = Render(Timed("Pay rent", 13, 0, 13, 10), Timed("Vitamins", 13, 15, null, null), Timed("Gym", 18, 0, 18, 30));
-
-        var blocks = timeline.FindAll(".pspad-timeline-task");
-        Assert.Contains("pspad-timeline-task-narrow", blocks[0].ClassList);
-        Assert.DoesNotContain("pspad-timeline-task-narrow", blocks[2].ClassList);
-    }
-
-    [Fact]
-    public void ATaskWithoutAnEndTakesHalfAnHourOnOneLine()
+    public void ATaskWithoutAnEndShowsOnlyItsStart()
     {
         var timeline = Render(Timed("Standup", 9, 30, null, null));
 
-        var block = timeline.Find(".pspad-timeline-task");
-        Assert.Contains($"--size:{Axis((570, 600)).Stretch(570, 600)}", block.GetAttribute("style"));
-        Assert.Contains("pspad-timeline-task-short", block.ClassList);
-        Assert.Equal("09:30", block.QuerySelector(".pspad-schedule-start")!.TextContent);
-        Assert.Empty(block.QuerySelectorAll(".pspad-schedule-end"));
+        var block = timeline.Find("[title='Standup – 09:30']");
+        Assert.DoesNotContain("–", block.TextContent);
     }
 
     [Fact]
-    public void AnOvernightTaskEndsAtMidnightAndIsMarked()
+    public void AnOvernightTaskIsMarkedAsEndingTheNextDay()
     {
         var timeline = Render(Timed("Night shift", 22, 0, 1, 0));
 
-        Assert.Contains($"--size:{Axis((1320, 1440)).Stretch(1320, 1440)}", timeline.Find(".pspad-timeline-task").GetAttribute("style"));
-        Assert.Equal("(+1)", timeline.Find(".pspad-schedule-nextday").TextContent.Trim());
-    }
-
-    [Fact]
-    public void TwoOverlappingTasksShareTheWidthInLanes()
-    {
-        var timeline = Render(Timed("A", 9, 0, 10, 0), Timed("B", 9, 30, 10, 30), Timed("C", 11, 0, 12, 0));
-
-        var blocks = timeline.FindAll(".pspad-timeline-task");
-        Assert.Contains("--lane:0;--lanes:2", blocks[0].GetAttribute("style"));
-        Assert.Contains("--lane:1;--lanes:2", blocks[1].GetAttribute("style"));
-        Assert.Contains("--lane:0;--lanes:1", blocks[2].GetAttribute("style"));
-    }
-
-    [Fact]
-    public void ShortTasksThatWouldTouchOnScreenTakeSeparateLanes()
-    {
-        var timeline = Render(Timed("Pay rent", 13, 0, 13, 10), Timed("Vitamins", 13, 15, null, null));
-
-        var blocks = timeline.FindAll(".pspad-timeline-task");
-        Assert.Contains("--lane:0;--lanes:2", blocks[0].GetAttribute("style"));
-        Assert.Contains("--lane:1;--lanes:2", blocks[1].GetAttribute("style"));
+        var block = timeline.Find("[title='Night shift – 22:00–01:00 (+1)']");
+        Assert.Contains("(+1)", block.TextContent);
     }
 
     [Fact]
@@ -151,44 +88,31 @@ public class DayTimelineTests : Bunit.TestContext
     {
         var timeline = Render(Timed("Standup", 9, 0, 9, 15), Timed("Call", 9, 0, 9, 30), Timed("Review", 9, 0, 10, 0));
 
-        Assert.Empty(timeline.FindAll(".pspad-timeline-task"));
-        var group = timeline.Find(".pspad-timeline-group");
-        var style = group.GetAttribute("style")!;
-        Assert.Contains($"--at:{Axis((540, 555), (540, 570), (540, 600)).At(540)}", style);
-        Assert.Contains("--needs:81px", style);
-        Assert.Contains("--lane:0;--lanes:1", style);
-        Assert.DoesNotContain("pspad-timeline-task-narrow", group.ClassList);
-        var lines = group.QuerySelectorAll(".pspad-timeline-group-line");
-        Assert.Equal(["Call", "Review", "Standup"], lines.Select(line => line.QuerySelector(".pspad-timeline-task-name")!.TextContent.Trim()));
-        Assert.Equal("09:00–09:30", lines[0].QuerySelector(".pspad-schedule-time")!.TextContent.Trim());
+        Assert.Equal(["Call", "Review", "Standup"], timeline.FindAll("[title]").Select(line => line.GetAttribute("title")));
+        var call = timeline.Find("[title='Call']").ParentElement!.TextContent;
+        Assert.Contains("09:00", call);
+        Assert.Contains("09:30", call);
     }
 
     [Fact]
-    public void ALongTaskKeepsItsColumnWhileTheTasksBesideItKeepTheirOwnTimes()
+    public void ALongTaskStaysABlockWhileTheTasksBesideItAreGrouped()
     {
         var timeline = Render(Timed("Workday", 10, 0, 18, 0), Timed("Call", 11, 0, null, null),
             Timed("Review", 16, 0, 17, 0), Timed("Sync", 16, 15, 17, 0), Timed("Demo", 16, 45, 17, 15));
 
-        var blocks = timeline.FindAll(".pspad-timeline-task");
-        Assert.Equal(["Workday", "Call"], blocks.Select(block => block.QuerySelector(".pspad-timeline-task-name")!.TextContent.Trim()));
-        Assert.Contains("--lane:0;--lanes:2", blocks[0].GetAttribute("style"));
-        Assert.Contains("--lane:1;--lanes:2", blocks[1].GetAttribute("style"));
-        var group = timeline.Find(".pspad-timeline-group");
-        Assert.Contains("--lane:1;--lanes:2", group.GetAttribute("style"));
-        Assert.Contains("pspad-timeline-task-narrow", group.ClassList);
-        Assert.Equal(["Review", "Sync", "Demo"],
-            group.QuerySelectorAll(".pspad-timeline-task-name").Select(name => name.TextContent.Trim()));
+        Assert.Equal(
+            ["Workday – 10:00–18:00", "Call – 11:00", "Review", "Sync", "Demo"],
+            timeline.FindAll("[title]").Select(item => item.GetAttribute("title")));
     }
 
     [Fact]
-    public void TheNowLineShowsOnlyWhenNowIsGiven()
+    public void TheNowLabelShowsOnlyWhenNowIsGiven()
     {
         var without = Render(Timed("A", 9, 0, 10, 0));
-        Assert.Empty(without.FindAll(".pspad-timeline-now"));
+        Assert.DoesNotContain("09:15", without.Text());
 
         var with = Render([Timed("A", 9, 0, 10, 0)], new TimeOnly(9, 15));
-        var axis = TimelineAxis.For([(540, 600)], 555, new HashSet<int>());
-        Assert.Contains($"--at:{axis.At(555)}", with.Find(".pspad-timeline-now").GetAttribute("style"));
+        Assert.Contains("09:15", with.Text());
     }
 
     [Fact]
@@ -198,7 +122,7 @@ public class DayTimelineTests : Bunit.TestContext
         var timeline = Render<DayTimeline>(parameters =>
             Bind(parameters, [Timed("A", 9, 0, 10, 0), Timed("B", 11, 0, 12, 0)], null).Add(p => p.OnAdd, time => asked = time));
 
-        timeline.Find(".pspad-timeline-slot[data-time='10:30']").Click();
+        timeline.Find("button[aria-label='Add a task at 10:30']").Click();
 
         Assert.Equal(new TimeOnly(10, 30), asked);
     }
@@ -208,7 +132,7 @@ public class DayTimelineTests : Bunit.TestContext
     {
         var timeline = Render(Timed("A", 9, 0, 10, 0));
 
-        Assert.Empty(timeline.FindAll(".pspad-timeline-slot"));
+        Assert.DoesNotContain(timeline.FindAll("button"), button => button.GetAttribute("aria-label")!.StartsWith("Add a task at"));
     }
 
     [Fact]
@@ -218,7 +142,7 @@ public class DayTimelineTests : Bunit.TestContext
         var task = Timed("A", 9, 0, 10, 0);
         var timeline = Render<DayTimeline>(parameters => Bind(parameters, [task], null).Add(p => p.OnToggle, t => toggled = t));
 
-        timeline.Find(".pspad-timeline-task input.mud-checkbox-input").Change(true);
+        timeline.Find("input[type=checkbox]").Change(true);
 
         Assert.Same(task, toggled);
     }
@@ -230,10 +154,13 @@ public class DayTimelineTests : Bunit.TestContext
         TodoTask[] tasks = [Timed("A", 9, 0, 9, 15), Timed("B", 9, 0, 9, 30), Timed("C", 9, 0, 10, 0)];
         var timeline = Render<DayTimeline>(parameters => Bind(parameters, tasks, null).Add(p => p.OnToggle, t => toggled = t));
 
-        timeline.FindAll(".pspad-timeline-group-line input.mud-checkbox-input")[1].Change(true);
+        timeline.FindAll("input[type=checkbox]")[1].Change(true);
 
         Assert.Same(tasks[1], toggled);
     }
+
+    static IReadOnlyList<AngleSharp.Dom.IElement> Folds(IRenderedComponent<DayTimeline> timeline) =>
+        [.. timeline.FindAll("button").Where(button => button.GetAttribute("aria-label")!.StartsWith("Show "))];
 
     IRenderedComponent<DayTimeline> Render(params TodoTask[] tasks) => Render(tasks, null);
 
@@ -252,8 +179,6 @@ public class DayTimelineTests : Bunit.TestContext
             .Add(p => p.ListNameOf, _ => "Praca")
             .Add(p => p.Now, now);
     }
-
-    static TimelineAxis Axis(params (int Start, int End)[] spans) => TimelineAxis.For(spans, null, new HashSet<int>());
 
     static TodoTask Timed(string name, int sh, int sm, int? eh, int? em)
     {

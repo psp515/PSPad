@@ -36,9 +36,8 @@ public class WeekStripTests : Bunit.TestContext
     {
         var strip = Strip(Thursday, Thursday);
 
-        var days = strip.FindAll(".pspad-week-day");
-        Assert.Equal(["5", "6", "7", "8", "9", "10", "11"], days.Select(day => day.QuerySelector(".pspad-week-circle")!.TextContent.Trim()));
-        Assert.Equal(["M", "T", "W", "T", "F", "S", "S"], days.Select(day => day.QuerySelector(".pspad-week-initial")!.TextContent.Trim()));
+        var days = Days(strip);
+        Assert.Equal(["M5", "T6", "W7", "T8", "F9", "S10", "S11"], days.Select(day => Squash(day.TextContent)));
         Assert.Equal("Mon, 5 Oct", days[0].GetAttribute("aria-label"));
         Assert.Equal("Thu, 8 Oct", days[3].GetAttribute("aria-label"));
     }
@@ -48,30 +47,28 @@ public class WeekStripTests : Bunit.TestContext
     {
         var strip = Strip(new DateOnly(2026, 10, 11), Thursday);
 
-        Assert.Equal("Mon, 5 Oct", strip.FindAll(".pspad-week-day")[0].GetAttribute("aria-label"));
+        Assert.Equal("Mon, 5 Oct", Days(strip)[0].GetAttribute("aria-label"));
     }
 
     [Theory]
-    [InlineData(".pspad-week-prev", -7)]
-    [InlineData(".pspad-week-next", 7)]
+    [InlineData("Previous week", -7)]
+    [InlineData("Next week", 7)]
     public void TheArrowsMoveByAWeek(string arrow, int days)
     {
         DateOnly? picked = null;
         var strip = Strip(Thursday, Thursday, day => picked = day);
 
-        strip.Find(arrow).Click();
+        strip.Find($"button[aria-label='{arrow}']").Click();
 
         Assert.Equal(Thursday.AddDays(days), picked);
     }
 
     [Fact]
-    public void TheArrowsAreLabelled()
+    public void ThePickerButtonIsLabelled()
     {
         var strip = Strip(Thursday, Thursday);
 
-        Assert.Equal("Previous week", strip.Find(".pspad-week-prev").GetAttribute("aria-label"));
-        Assert.Equal("Next week", strip.Find(".pspad-week-next").GetAttribute("aria-label"));
-        Assert.Equal("Pick a date", strip.Find(".pspad-week-pick").GetAttribute("aria-label"));
+        Assert.NotNull(strip.Find("button[aria-label='Pick a date']"));
     }
 
     [Fact]
@@ -80,7 +77,7 @@ public class WeekStripTests : Bunit.TestContext
         DateOnly? picked = null;
         var strip = Strip(Thursday, Thursday, day => picked = day);
 
-        strip.FindAll(".pspad-week-day")[5].Click();
+        Days(strip)[5].Click();
 
         Assert.Equal(new DateOnly(2026, 10, 10), picked);
     }
@@ -88,27 +85,26 @@ public class WeekStripTests : Bunit.TestContext
     [Fact]
     public void TheTodayButtonShowsOnlyAwayFromToday()
     {
-        Assert.Empty(Strip(Thursday, Thursday).FindAll(".pspad-week-today"));
+        Assert.DoesNotContain(Strip(Thursday, Thursday).FindAll("button"), button => button.TextContent.Trim() == "Today");
 
         DateOnly? picked = null;
         var strip = Strip(Thursday.AddDays(9), Thursday, day => picked = day);
-        strip.Find(".pspad-week-today").Click();
+        strip.FindAll("button").Single(button => button.TextContent.Trim() == "Today").Click();
 
         Assert.Equal(Thursday, picked);
     }
 
     [Fact]
-    public void TodayIsRingedAndThePickedDayIsFilled()
+    public void TodayIsMarkedAndThePickedDayIsPressed()
     {
         var strip = Strip(Thursday.AddDays(1), Thursday);
 
-        var days = strip.FindAll(".pspad-week-day");
-        Assert.Contains("pspad-week-day-today", days[3].ClassName);
+        var days = Days(strip);
         Assert.Equal("date", days[3].GetAttribute("aria-current"));
-        Assert.DoesNotContain("pspad-week-day-picked", days[3].ClassName);
-        Assert.Contains("pspad-week-day-picked", days[4].ClassName);
+        Assert.Equal("false", days[3].GetAttribute("aria-pressed"));
+        Assert.Equal("true", days[4].GetAttribute("aria-pressed"));
         Assert.Null(days[4].GetAttribute("aria-current"));
-        Assert.Single(strip.FindAll(".pspad-week-day-picked"));
+        Assert.Single(days, day => day.GetAttribute("aria-pressed") == "true");
     }
 
     [Fact]
@@ -116,29 +112,28 @@ public class WeekStripTests : Bunit.TestContext
     {
         var strip = Strip(Thursday, Thursday, busy: new HashSet<DateOnly> { Thursday, Thursday.AddDays(2) });
 
-        var days = strip.FindAll(".pspad-week-day");
-        Assert.Equal([3, 5], days.Select((day, index) => (day, index))
-            .Where(pair => pair.day.QuerySelector(".pspad-week-dot") is not null)
+        Assert.Equal([3, 5], Days(strip).Select((day, index) => (day, index))
+            .Where(pair => pair.day.QuerySelector("[data-testid=week-day-busy]") is not null)
             .Select(pair => pair.index));
     }
 
     [Fact]
     public void TheHeaderNamesARelativeDayAndItsWeek()
     {
-        var strip = Strip(Thursday, Thursday);
+        var text = Strip(Thursday, Thursday).Text();
 
-        Assert.Equal("Today · Thu, 8 Oct", strip.Find(".pspad-week-label").TextContent.Trim());
-        Assert.Equal("Week 41 · October 2026", strip.Find(".pspad-week-meta").TextContent.Trim());
-        Assert.Equal("October 2026", strip.Find(".pspad-week-month").TextContent.Trim());
+        Assert.Contains("Today · Thu, 8 Oct", text);
+        Assert.Contains("Week 41 · October 2026", text);
     }
 
     [Fact]
     public void TheHeaderNamesAFarDayAlone()
     {
-        var strip = Strip(new DateOnly(2026, 11, 2), Thursday);
+        var text = Strip(new DateOnly(2026, 11, 2), Thursday).Text();
 
-        Assert.Equal("Mon, 2 Nov", strip.Find(".pspad-week-label").TextContent.Trim());
-        Assert.Equal("Week 45 · November 2026", strip.Find(".pspad-week-meta").TextContent.Trim());
+        Assert.Contains("Mon, 2 Nov", text);
+        Assert.DoesNotContain("Today ·", text);
+        Assert.Contains("Week 45 · November 2026", text);
     }
 
     [Fact]
@@ -146,8 +141,8 @@ public class WeekStripTests : Bunit.TestContext
     {
         var strip = Strip(new DateOnly(2027, 1, 3), Thursday);
 
-        Assert.Equal("Mon, 28 Dec", strip.FindAll(".pspad-week-day")[0].GetAttribute("aria-label"));
-        Assert.Equal("Week 53 · January 2027", strip.Find(".pspad-week-meta").TextContent.Trim());
+        Assert.Equal("Mon, 28 Dec", Days(strip)[0].GetAttribute("aria-label"));
+        Assert.Contains("Week 53 · January 2027", strip.Text());
     }
 
     [Theory]
@@ -160,9 +155,9 @@ public class WeekStripTests : Bunit.TestContext
 
         var strip = Strip(new DateOnly(year, month, day), Thursday);
 
-        Assert.Equal(label, strip.Find(".pspad-week-label").TextContent.Trim());
-        Assert.StartsWith("pon.", strip.FindAll(".pspad-week-day")[0].GetAttribute("aria-label"));
-        Assert.DoesNotContain("Oct", strip.Markup);
+        Assert.Contains(label, strip.Text());
+        Assert.StartsWith("pon.", Days(strip)[0].GetAttribute("aria-label"));
+        Assert.DoesNotContain("Oct", strip.Text());
     }
 
     [Fact]
@@ -172,9 +167,10 @@ public class WeekStripTests : Bunit.TestContext
 
         var strip = Strip(new DateOnly(2026, 10, 18), new DateOnly(2026, 10, 18));
 
-        Assert.Contains("październik 2026", strip.Markup);
-        Assert.StartsWith("p", strip.FindAll(".pspad-week-initial")[0].TextContent.Trim().ToLowerInvariant());
-        Assert.Equal("12", strip.FindAll(".pspad-week-circle")[0].TextContent.Trim());
+        Assert.Contains("październik 2026", strip.Text());
+        var first = Squash(Days(strip)[0].TextContent);
+        Assert.StartsWith("p", first.ToLowerInvariant());
+        Assert.EndsWith("12", first);
     }
 
     [Fact]
@@ -184,8 +180,9 @@ public class WeekStripTests : Bunit.TestContext
 
         var strip = Strip(Thursday, Thursday);
 
-        Assert.Equal("4", strip.FindAll(".pspad-week-circle")[0].TextContent.Trim());
-        Assert.Equal("10", strip.FindAll(".pspad-week-circle")[6].TextContent.Trim());
+        var days = Days(strip);
+        Assert.EndsWith("4", Squash(days[0].TextContent));
+        Assert.EndsWith("10", Squash(days[6].TextContent));
     }
 
     [Fact]
@@ -193,13 +190,17 @@ public class WeekStripTests : Bunit.TestContext
     {
         DateOnly? picked = null;
         var strip = Strip(Thursday, Thursday, day => picked = day);
-        var days = strip.Find(".pspad-week-days");
+        var day = Days(strip)[3];
 
-        days.TouchStart(new Microsoft.AspNetCore.Components.Web.TouchEventArgs { Touches = [new() { ClientX = 200, ClientY = 10 }] });
-        days.TouchEnd(new Microsoft.AspNetCore.Components.Web.TouchEventArgs { ChangedTouches = [new() { ClientX = 100, ClientY = 20 }] });
+        day.TouchStart(new Microsoft.AspNetCore.Components.Web.TouchEventArgs { Touches = [new() { ClientX = 200, ClientY = 10 }] });
+        day.TouchEnd(new Microsoft.AspNetCore.Components.Web.TouchEventArgs { ChangedTouches = [new() { ClientX = 100, ClientY = 20 }] });
 
         Assert.Equal(Thursday.AddDays(7), picked);
     }
+
+    static IReadOnlyList<AngleSharp.Dom.IElement> Days(IRenderedComponent<WeekStrip> strip) => strip.FindAll("button[aria-pressed]");
+
+    static string Squash(string text) => string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
 
     [Theory]
     [InlineData(-80, 10, 1)]

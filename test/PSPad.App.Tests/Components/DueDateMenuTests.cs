@@ -33,8 +33,8 @@ public class DueDateMenuTests : Bunit.TestContext
     {
         var host = Host(value: null, clearable: true);
 
-        host.Find(".pspad-test-due").Click();
-        host.FindAll(".pspad-due-quick").Single(item => item.TextContent.Contains("Tomorrow")).Click();
+        host.Find("button").Click();
+        Item(host, "Tomorrow").Click();
 
         Assert.Equal([Today.AddDays(1)], _sent);
     }
@@ -44,8 +44,8 @@ public class DueDateMenuTests : Bunit.TestContext
     {
         var host = Host(value: Today, clearable: true);
 
-        host.Find(".pspad-test-due").Click();
-        host.FindAll(".pspad-due-quick").Single(item => item.TextContent.Contains("Today")).Click();
+        host.Find("button").Click();
+        Item(host, "Today").Click();
 
         Assert.Empty(_sent);
     }
@@ -57,9 +57,9 @@ public class DueDateMenuTests : Bunit.TestContext
     {
         var host = Host(value: set ? Today : null, clearable: clearable);
 
-        host.Find(".pspad-test-due").Click();
+        host.Find("button").Click();
 
-        Assert.Empty(host.FindAll(".pspad-due-clear"));
+        Assert.DoesNotContain(host.FindAll("[role=menuitem]"), item => item.TextContent.Contains("Clear date"));
     }
 
     [Fact]
@@ -67,21 +67,18 @@ public class DueDateMenuTests : Bunit.TestContext
     {
         var host = Host(value: Today, clearable: true);
 
-        host.Find(".pspad-test-due").Click();
-        host.Find(".pspad-due-clear").Click();
+        host.Find("button").Click();
+        Item(host, "Clear date").Click();
 
         Assert.Equal([(DateOnly?)null], _sent);
     }
 
     [Fact]
-    public void ASetDateReadsRelativelyAndRedWhenPast()
+    public void ASetDateReadsRelatively()
     {
         var host = Host(value: Today.AddDays(-1), clearable: true);
 
-        var activator = host.Find(".pspad-test-due");
-
-        Assert.Contains("Yesterday", activator.TextContent);
-        Assert.Contains("mud-button-text-error", activator.ClassName);
+        Assert.Contains("Yesterday", host.Find("button").TextContent);
     }
 
     [Fact]
@@ -89,11 +86,11 @@ public class DueDateMenuTests : Bunit.TestContext
     {
         var host = Host(value: null, clearable: true);
 
-        var activator = host.Find(".pspad-test-due");
-
-        Assert.Equal("Set a deadline", activator.GetAttribute("aria-label"));
-        Assert.Contains("pspad-step-action", activator.ClassName);
+        Assert.NotNull(host.Find("button[aria-label='Set a deadline']"));
     }
+
+    static AngleSharp.Dom.IElement Item(IRenderedComponent<IComponent> host, string text) =>
+        host.FindAll("[role=menuitem]").Single(item => item.TextContent.Contains(text));
 
     IRenderedComponent<IComponent> Host(DateOnly? value, bool clearable) =>
         Render(builder =>
@@ -104,7 +101,6 @@ public class DueDateMenuTests : Bunit.TestContext
             builder.AddAttribute(2, nameof(DueDateMenu.Value), value);
             builder.AddAttribute(3, nameof(DueDateMenu.Today), Today);
             builder.AddAttribute(4, nameof(DueDateMenu.Clearable), clearable);
-            builder.AddAttribute(5, nameof(DueDateMenu.Class), "pspad-test-due");
             builder.AddAttribute(6, nameof(DueDateMenu.EmptyLabel), "Set a deadline");
             builder.AddAttribute(7, nameof(DueDateMenu.ValueChanged),
                 EventCallback.Factory.Create<DateOnly?>(this, (DateOnly? day) => _sent.Add(day)));

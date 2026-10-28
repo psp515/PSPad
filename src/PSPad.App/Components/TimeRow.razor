@@ -40,11 +40,11 @@
 </div>
 @if (_error is not null)
 {
-    <MudText Typo="Typo.caption" Color="Color.Error" Class="pspad-time-error pspad-time-note d-block">@_error</MudText>
+    <MudText Typo="Typo.caption" Color="Color.Error" Class="pspad-time-error pspad-time-note d-block" role="alert">@_error</MudText>
 }
 else if (Value is { Overnight: true })
 {
-    <MudText Typo="Typo.caption" Class="pspad-time-hint pspad-time-note pspad-muted d-block">@T["EndsNextDay"]</MudText>
+    <MudText Typo="Typo.caption" Class="pspad-time-hint pspad-time-note pspad-muted d-block" role="status">@T["EndsNextDay"]</MudText>
 }
 
 @* The picker's own dialog commits once, after the minute click or a click outside; a static clock submits on every hour click. *@
