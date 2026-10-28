@@ -770,6 +770,9 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-time-clear-placeholder { flex: 0 0 30px; width: 30px; height: 30px; }
 .pspad-time-line-end { padding-right: 38px; }
 .pspad-time-note { padding: 0 38px 4px 192px; }
+/* The clock's own input is never shown; the Schedule adornment on each time field opens it. */
+.pspad-time-clock { display: contents; }
+.pspad-time-clock > .mud-input-control { display: none; }
 
 
 .pspad-muted {

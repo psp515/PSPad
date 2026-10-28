@@ -764,7 +764,7 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      `aria-label` Start / End (`pspad-time-start`, `pspad-time-end`), showing
      the time as `HH:mm` and ending in a `Schedule` adornment icon that opens
      a hidden 24-hour `MudTimePicker` in its `Dialog` variant
-     (`pspad-time-clock`, input `d-none`): the hour click moves to minutes,
+     (`pspad-time-clock`, its own input hidden by CSS): the hour click moves to minutes,
      the minute click or a click outside commits once and closes the clock
      by itself, and the row sends the time on `PickerClosed` when it differs.
      (A static clock inside a `MudDialog` would submit on the hour click.)

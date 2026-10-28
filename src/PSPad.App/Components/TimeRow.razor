@@ -48,7 +48,7 @@ else if (Value is { Overnight: true })
 }
 
 @* The picker's own dialog commits once, after the minute click or a click outside; a static clock submits on every hour click. *@
-<MudTimePicker @ref="_clock" PickerVariant="PickerVariant.Dialog" Elevation="0" Class="d-none pspad-time-clock" AmPm="false"
+<MudTimePicker @ref="_clock" PickerVariant="PickerVariant.Dialog" Elevation="0" Class="pspad-time-clock" AmPm="false"
                @bind-Time="_pickerTime" PickerClosed="@ClockClosedAsync" />
 
 @code {
