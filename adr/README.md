@@ -93,6 +93,7 @@ the old one's status line to point at the new number.
 | [0076](0076-open-clients-get-a-sync-nudge-over-sse.md) | Open clients get a data-free sync nudge over Server-Sent Events, fanned out from commit | Active | 2026-10-14 | architecture, sync, http, sharing, deployment |
 | [0077](0077-end-to-end-tests-drive-the-compose-stack-with-playwright.md) | End-to-end tests drive the compose stack with Playwright | Active | 2026-10-18 | testing, architecture, ci |
 | [0078](0078-any-unchecked-step-deadline-puts-its-task-on-a-day.md) | Any unchecked step's deadline puts its task on a day | Active | 2026-10-24 | domain, today, steps, ui |
+| [0079](0079-tests-assert-behaviour-not-shape-or-wiring.md) | Tests assert behaviour, not shape or wiring | Active | 2026-10-28 | testing |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
