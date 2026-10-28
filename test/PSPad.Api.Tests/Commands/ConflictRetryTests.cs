@@ -1,56 +1,68 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
+using MongoDB.Driver;
 using PSPad.Abstractions;
 using PSPad.Api.Commands;
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
+using static PSPad.Api.Tests.Commands.Commands;
 
 namespace PSPad.Api.Tests.Commands;
 
-[UnitTest]
-public class ConflictRetryTests
+[IntegrationTest]
+[Collection(MongoCollection.Name)]
+public class ConflictRetryTests(MongoFixture fixture)
 {
-    public sealed record Touch(Guid CommandId, Guid UserId) : ICommand;
-
-    public sealed class ConflictingHandler(int conflicts) : ICommandHandler<Touch>
-    {
-        public int Runs { get; private set; }
-
-        public async Task<CommandResult> HandleAsync(Touch command, CancellationToken ct)
-        {
-            await Task.Yield();
-            Runs++;
-            return Runs <= conflicts ? throw new ConcurrencyConflictException(command.CommandId) : CommandResult.Ok();
-        }
-    }
-
-    static (CommandDispatcher Dispatcher, ConflictingHandler Handler) With(int conflicts)
-    {
-        var handler = new ConflictingHandler(conflicts);
-        var services = new ServiceCollection().AddSingleton<ICommandHandler<Touch>>(handler).BuildServiceProvider();
-        return (new CommandDispatcher(services, NullLogger<CommandDispatcher>.Instance), handler);
-    }
-
     [Fact]
-    public async Task ConflictsAreRetriedOnFreshDataUntilTheCommandLands()
+    public async Task AConflictingSaveIsRetriedOnFreshDataUntilBothCommandsLand()
     {
-        var (dispatcher, handler) = With(conflicts: CommandDispatcher.MostAttempts - 1);
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var reads = new StaleReads();
+        await using var factory = FactoryWith(reads);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = await SignInAsync(client, ct);
+        var areaId = Guid.NewGuid();
+        await SendAsync(client, ct, new CreateArea(Guid.NewGuid(), user, areaId, "Home", 0));
+        var beforeAny = await StoredAreaAsync(areaId, ct);
+        await SendAsync(client, ct, new RenameArea(Guid.NewGuid(), user, areaId, "House"));
+        reads.Serve(beforeAny, CommandDispatcher.MostAttempts - 1);
 
-        var result = await dispatcher.RunAsync(new Touch(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None);
+        var result = Assert.Single(await TrySendAsync(client, ct, new RenameArea(Guid.NewGuid(), user, areaId, "Flat")));
 
-        Assert.True(result.Accepted);
-        Assert.Equal(CommandDispatcher.MostAttempts, handler.Runs);
+        Assert.True(result.Accepted, result.Rejection);
+        var events = await Persistence.TestContext.For(fixture).Collection<StoredEvent>("events")
+            .CountDocumentsAsync(entry => entry.AggregateId == areaId, cancellationToken: ct);
+        Assert.Equal(3, events);
+        var area = Assert.Single(await SyncedAsync(client, "areas", ct), row => row.GetProperty("id").GetGuid() == areaId);
+        Assert.Equal("Flat", area.GetProperty("name").GetString());
     }
 
     [Fact]
     public async Task ConflictsPastTheLastAttemptAreRejectedNotRetriedForever()
     {
-        var (dispatcher, handler) = With(conflicts: CommandDispatcher.MostAttempts);
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var reads = new StaleReads();
+        await using var factory = FactoryWith(reads);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = await SignInAsync(client, ct);
+        var areaId = Guid.NewGuid();
+        await SendAsync(client, ct, new CreateArea(Guid.NewGuid(), user, areaId, "Home", 0));
+        var beforeAny = await StoredAreaAsync(areaId, ct);
+        await SendAsync(client, ct, new RenameArea(Guid.NewGuid(), user, areaId, "House"));
+        reads.Serve(beforeAny, CommandDispatcher.MostAttempts);
 
-        var result = await dispatcher.RunAsync(new Touch(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None);
+        var result = Assert.Single(await TrySendAsync(client, ct, new RenameArea(Guid.NewGuid(), user, areaId, "Flat")));
 
         Assert.False(result.Accepted);
         Assert.Equal("Someone else changed this at the same time. Try again.", result.Rejection);
-        Assert.Equal(CommandDispatcher.MostAttempts, handler.Runs);
+        var area = Assert.Single(await SyncedAsync(client, "areas", ct), row => row.GetProperty("id").GetGuid() == areaId);
+        Assert.Equal("House", area.GetProperty("name").GetString());
     }
+
+    ApiFactory FactoryWith(StaleReads reads) => new(fixture, testServices: services =>
+        services.AddScoped<IDocumentStore<Area>>(provider => new StaleAreaStore(
+            ActivatorUtilities.CreateInstance<MongoDocumentStore<Area>>(provider), reads)));
+
+    async Task<Area> StoredAreaAsync(Guid areaId, CancellationToken ct) =>
+        (await new MongoDocumentStore<Area>(Persistence.TestContext.For(fixture)).LoadAsync(areaId, ct))!;
 }
