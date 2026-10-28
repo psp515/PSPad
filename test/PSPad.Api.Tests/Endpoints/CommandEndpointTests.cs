@@ -33,6 +33,7 @@ public class CommandEndpointTests(MongoFixture fixture)
         var result = Assert.Single(results!);
         Assert.True(result.Accepted);
         Assert.False(result.Unrecoverable);
+        Assert.Contains(await Commands.Commands.SyncedAsync(client, "areas", ct), row => row.GetProperty("id").GetGuid() == command.AreaId);
     }
 
     [Fact]
