@@ -1,3 +1,6 @@
+import type { Locator, Page } from '@playwright/test';
+import { escapeRegExp } from './text';
+
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -50,4 +53,12 @@ export function shiftTime(time: string, minutes: number): string {
   const [hours, mins] = time.split(':').map(Number);
   const total = (((hours * 60 + mins + minutes) % 1440) + 1440) % 1440;
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+export function monthTitle(day: Date): string {
+  return day.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+export function monthButton(scope: Page | Locator, day: Date) {
+  return scope.getByRole('button', { name: new RegExp(`^${escapeRegExp(monthTitle(day))}(,|$)`) });
 }

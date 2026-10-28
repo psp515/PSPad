@@ -2,6 +2,7 @@ import { expect, Page } from '@playwright/test';
 import { goTo, navLink } from './nav';
 import { awaitNoDrawer, chooseProperty, panel } from './panels';
 import { shortDate } from './dates';
+import { escapeRegExp } from './text';
 
 export async function goToMyDay(page: Page) {
   await goTo(page, 'My Day');
@@ -82,10 +83,6 @@ export async function pickWeekDay(page: Page, day: Date) {
 
 export function myDayLink(page: Page) {
   return navLink(page, '/');
-}
-
-function escapeRegExp(text: string) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export async function openNewTaskFromFab(page: Page) {
