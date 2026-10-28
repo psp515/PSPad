@@ -1,6 +1,5 @@
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Areas;
-using PSPad.Module.Tasks.Tests.Fakes;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Module.Tasks.Tests.Areas;
@@ -67,33 +66,22 @@ public class AreaTests
     }
 
     [Fact]
-    public async Task TheHandlerStagesTheAreaAndCommits()
+    public void ADeletedOrMissingAreaCannotBeRequired()
     {
-        var store = new FakeDocumentStore<Area>();
-        var work = new FakeUnitOfWork();
-        var handler = new CreateAreaHandler(store, work, new FixedClock(Now));
+        var area = Existing("Home");
+        area.ApplyAll(Area.Decide(area, new DeleteArea(Guid.NewGuid(), User, area.Id), Now));
 
-        var result = await handler.HandleAsync(
-            new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), "Home", 0), CancellationToken.None);
-
-        Assert.True(result.Accepted);
-        Assert.True(work.Committed);
-        Assert.IsType<AreaCreated>(Assert.Single(work.Events));
+        Assert.Contains("area", Assert.Throws<DomainRejectedException>(() => Area.Require(area, User)).Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Throws<DomainRejectedException>(() => Area.Require(null, User));
     }
 
     [Fact]
-    public async Task ARejectedCommandCommitsNothing()
+    public void ALiveAreaIsRequiredOnlyByItsOwner()
     {
-        var store = new FakeDocumentStore<Area>();
-        var work = new FakeUnitOfWork();
-        var handler = new CreateAreaHandler(store, work, new FixedClock(Now));
+        var area = Existing("Home");
 
-        var result = await handler.HandleAsync(
-            new CreateArea(Guid.NewGuid(), User, Guid.NewGuid(), " ", 0), CancellationToken.None);
-
-        Assert.False(result.Accepted);
-        Assert.False(work.Committed);
-        Assert.NotNull(result.Rejection);
+        Assert.Same(area, Area.Require(area, User));
+        Assert.Throws<DomainRejectedException>(() => Area.Require(area, Guid.NewGuid()));
     }
 
     static Area Existing(string name)

@@ -12,6 +12,7 @@ using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
+using static PSPad.Api.Tests.Commands.Commands;
 
 namespace PSPad.Api.Tests.Endpoints;
 
@@ -123,12 +124,12 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
         var listId = Guid.NewGuid();
         var itemId = Guid.NewGuid();
 
-        await Send(client, ct,
+        await SendAsync(client, ct,
             new CreateArea(Guid.NewGuid(), user, areaId, "Print shop", 0),
             new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", ListKind.Reference),
             new CreateReferenceItem(Guid.NewGuid(), user, itemId, listId, "PLA Black", 0));
 
-        await Send(client, ct, new DeleteTaskList(Guid.NewGuid(), user, listId));
+        await SendAsync(client, ct, new DeleteTaskList(Guid.NewGuid(), user, listId));
 
         var context = Persistence.TestContext.For(fixture);
         var stored = await context.Collection<BsonDocument>("referenceitems")
@@ -144,6 +145,183 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
         Assert.Contains(events, entry => entry["type"].AsString == nameof(ReferenceItemDeleted));
     }
 
+    static async Task<(Guid User, Guid ReferenceList)> ReferenceListAsync(HttpClient client, CancellationToken ct)
+    {
+        var user = await SignInAsync(client, ct);
+        var areaId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        await SendAsync(client, ct,
+            new CreateArea(Guid.NewGuid(), user, areaId, "Print shop", 0),
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", ListKind.Reference));
+        return (user, listId);
+    }
+
+    static async Task<Guid> TaskListAsync(HttpClient client, Guid user, CancellationToken ct)
+    {
+        var areaId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        await SendAsync(client, ct,
+            new CreateArea(Guid.NewGuid(), user, areaId, "Home", 0),
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Errands"));
+        return listId;
+    }
+
+    static async Task<JsonElement> ItemAsync(HttpClient client, Guid itemId, CancellationToken ct) =>
+        Assert.Single(await SyncedAsync(client, "referenceitems", ct), row => row.GetProperty("id").GetGuid() == itemId);
+
+    [Fact]
+    public async Task ATaskCannotBeMovedIntoAReferenceList()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var (user, referenceList) = await ReferenceListAsync(client, ct);
+        var origin = await TaskListAsync(client, user, ct);
+        var taskId = Guid.NewGuid();
+        await SendAsync(client, ct, new CreateTask(Guid.NewGuid(), user, taskId, origin, "buy milk"));
+
+        var result = Assert.Single(await TrySendAsync(client, ct, new MoveTaskToList(Guid.NewGuid(), user, taskId, referenceList)));
+
+        Assert.False(result.Accepted);
+        var task = Assert.Single(await SyncedAsync(client, "todotasks", ct));
+        Assert.Equal(origin, task.GetProperty("listId").GetGuid());
+    }
+
+    [Fact]
+    public async Task AnItemCannotBeCreatedInATaskList()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = await SignInAsync(client, ct);
+        var taskList = await TaskListAsync(client, user, ct);
+
+        var result = Assert.Single(await TrySendAsync(client, ct,
+            new CreateReferenceItem(Guid.NewGuid(), user, Guid.NewGuid(), taskList, "PLA Black", 0)));
+
+        Assert.False(result.Accepted);
+        Assert.Empty(await SyncedAsync(client, "referenceitems", ct));
+    }
+
+    [Fact]
+    public async Task AnItemCannotBeCreatedInADeletedList()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var (user, list) = await ReferenceListAsync(client, ct);
+        await SendAsync(client, ct, new DeleteTaskList(Guid.NewGuid(), user, list));
+
+        var result = Assert.Single(await TrySendAsync(client, ct,
+            new CreateReferenceItem(Guid.NewGuid(), user, Guid.NewGuid(), list, "PLA Black", 0)));
+
+        Assert.False(result.Accepted);
+        Assert.Empty(await SyncedAsync(client, "referenceitems", ct));
+    }
+
+    [Fact]
+    public async Task DeletingAReferenceListLeavesItemsOfOtherListsAlone()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var (user, list) = await ReferenceListAsync(client, ct);
+        var other = Guid.NewGuid();
+        var inList = Guid.NewGuid();
+        var elsewhere = Guid.NewGuid();
+        var areaId = Guid.NewGuid();
+        await SendAsync(client, ct,
+            new CreateArea(Guid.NewGuid(), user, areaId, "Shelf", 1),
+            new CreateTaskList(Guid.NewGuid(), user, other, areaId, "Resins", ListKind.Reference),
+            new CreateReferenceItem(Guid.NewGuid(), user, inList, list, "PLA Black", 0),
+            new CreateReferenceItem(Guid.NewGuid(), user, elsewhere, other, "Grey resin", 0));
+
+        await SendAsync(client, ct, new DeleteTaskList(Guid.NewGuid(), user, list));
+
+        Assert.True((await ItemAsync(client, inList, ct)).GetProperty("deleted").GetBoolean());
+        Assert.False((await ItemAsync(client, elsewhere, ct)).GetProperty("deleted").GetBoolean());
+    }
+
+    [Fact]
+    public async Task DeletingAnAreaDeletesItsReferenceListsItems()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = await SignInAsync(client, ct);
+        var areaId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        await SendAsync(client, ct,
+            new CreateArea(Guid.NewGuid(), user, areaId, "Workshop", 0),
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", ListKind.Reference),
+            new CreateReferenceItem(Guid.NewGuid(), user, itemId, listId, "PLA Black", 0));
+
+        await SendAsync(client, ct, new DeleteArea(Guid.NewGuid(), user, areaId));
+
+        Assert.True((await ItemAsync(client, itemId, ct)).GetProperty("deleted").GetBoolean());
+    }
+
+    [Fact]
+    public async Task AnItemCannotBeMovedIntoATaskList()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var (user, origin) = await ReferenceListAsync(client, ct);
+        var taskList = await TaskListAsync(client, user, ct);
+        var itemId = Guid.NewGuid();
+        await SendAsync(client, ct, new CreateReferenceItem(Guid.NewGuid(), user, itemId, origin, "PLA Black", 0));
+
+        var result = Assert.Single(await TrySendAsync(client, ct, new MoveReferenceItemToList(Guid.NewGuid(), user, itemId, taskList)));
+
+        Assert.False(result.Accepted);
+        Assert.Equal(origin, (await ItemAsync(client, itemId, ct)).GetProperty("listId").GetGuid());
+    }
+
+    [Fact]
+    public async Task AnItemMovesBetweenReferenceLists()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var (user, origin) = await ReferenceListAsync(client, ct);
+        var destination = Guid.NewGuid();
+        var areaId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        await SendAsync(client, ct,
+            new CreateArea(Guid.NewGuid(), user, areaId, "Shelf", 1),
+            new CreateTaskList(Guid.NewGuid(), user, destination, areaId, "Resins", ListKind.Reference),
+            new CreateReferenceItem(Guid.NewGuid(), user, itemId, origin, "PLA Black", 0));
+
+        await SendAsync(client, ct, new MoveReferenceItemToList(Guid.NewGuid(), user, itemId, destination));
+
+        Assert.Equal(destination, (await ItemAsync(client, itemId, ct)).GetProperty("listId").GetGuid());
+    }
+
+    [Fact]
+    public async Task AnItemIsRenamedDescribedStarredAndDeleted()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var (user, list) = await ReferenceListAsync(client, ct);
+        var itemId = Guid.NewGuid();
+        await SendAsync(client, ct, new CreateReferenceItem(Guid.NewGuid(), user, itemId, list, "PLA Black", 0));
+
+        await SendAsync(client, ct,
+            new RenameReferenceItem(Guid.NewGuid(), user, itemId, "PETG Grey"),
+            new SetReferenceItemDescription(Guid.NewGuid(), user, itemId, "Dry 4h"),
+            new StarReferenceItem(Guid.NewGuid(), user, itemId, true),
+            new DeleteReferenceItem(Guid.NewGuid(), user, itemId));
+
+        var item = await ItemAsync(client, itemId, ct);
+        Assert.Equal("PETG Grey", item.GetProperty("name").GetString());
+        Assert.Equal("Dry 4h", item.GetProperty("description").GetString());
+        Assert.True(item.GetProperty("starred").GetBoolean());
+        Assert.True(item.GetProperty("deleted").GetBoolean());
+    }
+
     [Fact]
     public async Task DeletingTheAccountRemovesReferenceItems()
     {
@@ -157,7 +335,7 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
         var areaId = Guid.NewGuid();
         var listId = Guid.NewGuid();
 
-        await Send(client, ct,
+        await SendAsync(client, ct,
             new CreateArea(Guid.NewGuid(), user, areaId, "Print shop", 0),
             new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Filaments", ListKind.Reference),
             new CreateReferenceItem(Guid.NewGuid(), user, Guid.NewGuid(), listId, "PLA Black", 0));
@@ -191,7 +369,7 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
         var listId = Guid.NewGuid();
         var taskId = Guid.NewGuid();
 
-        await Send(client, ct,
+        await SendAsync(client, ct,
             new CreateArea(Guid.NewGuid(), user, areaId, "Home", 0),
             new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Chores"),
             new CreateTask(Guid.NewGuid(), user, taskId, listId, "Read a book"));
@@ -206,15 +384,6 @@ public class ReferenceCommandEndpointTests(MongoFixture fixture)
         var context = Persistence.TestContext.For(fixture);
         var loaded = await new MongoDocumentStore<TodoTask>(context).LoadAsync(taskId, ct);
         Assert.Equal("# Notes\n\nBring `bookmark`.", loaded!.Description);
-    }
-
-    static async Task Send(HttpClient client, CancellationToken ct, params object[] commands)
-    {
-        var envelopes = commands.Select(Envelope).ToArray();
-        var response = await client.PostAsJsonAsync("/api/commands", envelopes, ct);
-        response.EnsureSuccessStatusCode();
-        var results = await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct);
-        Assert.All(results!, result => Assert.True(result.Accepted, result.Rejection));
     }
 
     static CommandEnvelope Envelope(object command) =>
