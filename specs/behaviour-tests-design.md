@@ -35,7 +35,7 @@ ports.
 |---|---|---|
 | Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; logic-bearing components (§4.2); architecture, category, resource, localization and stylesheet guards | in process, no Docker |
 | Integration `[IntegrationTest]` | A command or query through HTTP on `ApiFactory` with Testcontainers Mongo, asserting the response, documents, events and sync deltas: every handler, cascade, projection, reader, sharing and auth flow | Testcontainers |
-| End-to-end | A user's flow in Chromium against the compose stack: pages, layout, navigation, panels, localization, offline and live updates; locators by role, label or text only | compose stack |
+| End-to-end | A user's flow in Chromium against the compose stack: pages, layout, navigation, panels, localization, offline and live updates; new steps locate by role, label or text | compose stack |
 
 A new test starts at the tier its subject names: a rule with edge cases is a
 unit test, a server effect is an integration test, anything a user sees on a
