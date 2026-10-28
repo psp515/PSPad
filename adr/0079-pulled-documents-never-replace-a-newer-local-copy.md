@@ -53,3 +53,9 @@ before.
   divergence that already existed, not a new one.
 - Equal versions take the server's copy, so a second device's edit that
   lands at the same version still shows until the local command is replayed.
+- The comparison and the save are one replica transaction
+  (`IReplica.SaveUnlessNewerAsync`, a single IndexedDB `readwrite`
+  transaction). Reading the held copy and saving in two steps left a gap
+  between them, and a command's commit landing in that gap was undone by the
+  save: the panel that reloaded right after its command showed the old
+  document until it was reopened, while the next pull repaired the replica.

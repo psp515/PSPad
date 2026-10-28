@@ -25,6 +25,17 @@ public sealed class InMemoryReplica : IReplica
         return Task.CompletedTask;
     }
 
+    public Task<bool> SaveUnlessNewerAsync(Aggregate aggregate)
+    {
+        if (_documents.GetValueOrDefault(aggregate.Id) is { } held && held.Version > aggregate.Version)
+        {
+            return Task.FromResult(false);
+        }
+
+        _documents[aggregate.Id] = aggregate;
+        return Task.FromResult(true);
+    }
+
     public Task RemoveAsync(Guid id)
     {
         _documents.Remove(id);

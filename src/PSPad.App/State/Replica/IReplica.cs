@@ -13,6 +13,9 @@ public interface IReplica
 
     Task SaveAsync(Aggregate aggregate);
 
+    // The check and the save are one replica transaction: a command's commit landing between them would be undone by the save.
+    Task<bool> SaveUnlessNewerAsync(Aggregate aggregate);
+
     Task RemoveAsync(Guid id);
 
     Task<long> MarkerAsync();

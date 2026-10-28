@@ -447,6 +447,85 @@ public class SyncServiceTests
         Assert.Equal("Buy oat milk", (await replica.LoadAsync<TodoTask>(task.Id))!.Name);
     }
 
+    [Fact]
+    public async Task ALocalCommitLandingWhileAPullInspectsTheReplicaIsKept()
+    {
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), "Buy milk"),
+            DateTimeOffset.UnixEpoch));
+        var pulled = Row(task);
+        var replica = new InterleavingReplica();
+        await replica.SaveAsync(task);
+        var edited = JsonSerializer.Deserialize<TodoTask>(pulled.GetRawText(),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true })!;
+        edited.ApplyAll(TodoTask.Decide(edited, new SetTaskDueDate(Guid.NewGuid(), User, task.Id, new DateOnly(2026, 10, 30)),
+            DateTimeOffset.UnixEpoch));
+        replica.CommitWhileInspected = edited;
+        var api = new FakeApi { Pull = new(5, new Dictionary<string, JsonElement[]> { ["todotasks"] = [pulled] }) };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        var stored = await replica.LoadAsync<TodoTask>(task.Id);
+        Assert.Equal(2, stored!.Version);
+        Assert.Equal(new DateOnly(2026, 10, 30), stored.DueOn);
+    }
+
+    // A command handler's commit can run between any two awaits of a pull; this fake lands one at the pull's first look at the document.
+    sealed class InterleavingReplica : IReplica
+    {
+        readonly InMemoryReplica _inner = new();
+
+        public Aggregate? CommitWhileInspected { get; set; }
+
+        public Task<T?> LoadAsync<T>(Guid id) where T : Aggregate => _inner.LoadAsync<T>(id);
+
+        public async Task<Aggregate?> LoadAsync(Type type, Guid id)
+        {
+            var held = await _inner.LoadAsync(type, id);
+            await LandCommitAsync();
+            return held;
+        }
+
+        public Task<IReadOnlyList<T>> LoadAllAsync<T>(Guid userId) where T : Aggregate => _inner.LoadAllAsync<T>(userId);
+
+        public Task SaveAsync(Aggregate aggregate) => _inner.SaveAsync(aggregate);
+
+        public async Task<bool> SaveUnlessNewerAsync(Aggregate aggregate)
+        {
+            await LandCommitAsync();
+            return await _inner.SaveUnlessNewerAsync(aggregate);
+        }
+
+        async Task LandCommitAsync()
+        {
+            if (CommitWhileInspected is { } commit)
+            {
+                CommitWhileInspected = null;
+                await _inner.SaveAsync(commit);
+            }
+        }
+
+        public Task RemoveAsync(Guid id) => _inner.RemoveAsync(id);
+
+        public Task<long> MarkerAsync() => _inner.MarkerAsync();
+
+        public Task SetMarkerAsync(long marker) => _inner.SetMarkerAsync(marker);
+
+        public Task<string?> CollectionsFingerprintAsync() => _inner.CollectionsFingerprintAsync();
+
+        public Task SetCollectionsFingerprintAsync(string fingerprint) => _inner.SetCollectionsFingerprintAsync(fingerprint);
+
+        public Task<DateTimeOffset?> LastSyncedAtAsync() => _inner.LastSyncedAtAsync();
+
+        public Task SetLastSyncedAtAsync(DateTimeOffset at) => _inner.SetLastSyncedAtAsync(at);
+
+        public Task<Guid?> OwnerAsync() => _inner.OwnerAsync();
+
+        public Task SetOwnerAsync(Guid userId) => _inner.SetOwnerAsync(userId);
+
+        public Task ClearAsync() => _inner.ClearAsync();
+    }
+
     static JsonElement Row(Aggregate aggregate) =>
         JsonSerializer.SerializeToElement(aggregate, aggregate.GetType(),
             new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true });

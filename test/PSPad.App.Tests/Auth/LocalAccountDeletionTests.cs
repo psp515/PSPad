@@ -117,6 +117,8 @@ public class LocalAccountDeletionTests
 
         public Task SaveAsync(Aggregate aggregate) => throw new NotSupportedException();
 
+        public Task<bool> SaveUnlessNewerAsync(Aggregate aggregate) => throw new NotSupportedException();
+
         public Task RemoveAsync(Guid id) => throw new NotSupportedException();
 
         public Task<long> MarkerAsync() => throw new NotSupportedException();

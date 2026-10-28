@@ -35,6 +35,12 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
         await module.InvokeVoidAsync("put", ReplicaRow.From(aggregate));
     }
 
+    public async Task<bool> SaveUnlessNewerAsync(Aggregate aggregate)
+    {
+        var module = await ModuleAsync();
+        return await module.InvokeAsync<bool>("putUnlessNewer", ReplicaRow.From(aggregate), aggregate.Version);
+    }
+
     public async Task RemoveAsync(Guid id)
     {
         var module = await ModuleAsync();
