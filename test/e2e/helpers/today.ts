@@ -55,6 +55,19 @@ export async function setTaskTime(page: Page, start: string, end?: string) {
   }
 }
 
+export async function pickTaskTimeFromClock(page: Page, which: 'start' | 'end', hour: number, minute: number) {
+  const row = panel(page).locator('.pspad-task-time');
+  await row.locator(`.pspad-time-${which} .mud-input-adornment-end button`).click();
+  const clock = page.locator('.mud-picker .mud-overlay .mud-picker-paper');
+  await expect(clock).toBeVisible();
+  await clock.locator(`.mud-time-picker-hour .mud-hour[data-stick-value="${hour}"]`).click();
+  await expect(clock.locator('.mud-time-picker-minute')).not.toHaveClass(/mud-time-picker-dial-hidden/);
+  await clock.locator(`.mud-time-picker-minute .mud-minute[data-stick-value="${minute}"]`).click();
+  await expect(clock).toBeHidden();
+  const text = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  await expect(row.locator(`.pspad-time-${which} input`)).toHaveValue(text);
+}
+
 export function timelineBlock(page: Page, name: string) {
   return page.locator('.pspad-timeline-task').filter({ has: page.locator('.pspad-timeline-task-name', { hasText: name }) });
 }

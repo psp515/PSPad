@@ -157,29 +157,71 @@ public class TimeRowTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheClockIconOpensAClockDialog()
+    public void TheClockIconOpensTheClockWithoutSendingAnything()
     {
-        var host = RenderWithOverlays(new TaskTime(new TimeOnly(9, 0), null));
-        Assert.Empty(host.FindAll(".pspad-time-dialog"));
+        var sends = 0;
+        var host = RenderWithOverlays(new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0)), _ => sends++);
+        Assert.Empty(host.FindAll(".mud-picker .mud-overlay"));
 
-        host.Find(".pspad-time-start .mud-input-adornment-end button").Click();
+        host.Find(".pspad-time-end .mud-input-adornment-end button").Click();
 
-        host.WaitForAssertion(() => Assert.NotEmpty(host.FindAll(".pspad-time-dialog .mud-picker-static")));
+        host.WaitForAssertion(() => Assert.NotEmpty(host.FindAll(".mud-picker .mud-overlay .mud-time-picker-hour")));
+        Assert.Equal(0, sends);
     }
 
     [Fact]
-    public async Task ATimePickedFromTheEndClockIsSentAndClosesTheDialog()
+    public async Task PickingTheHourKeepsTheClockOpenAndPickingTheMinutesSendsAndCloses()
     {
         TaskTime? sent = null;
-        var host = RenderWithOverlays(new TaskTime(new TimeOnly(9, 0), null), time => sent = time);
+        var sends = 0;
+        var host = RenderWithOverlays(new TaskTime(new TimeOnly(9, 0), null), time => { sent = time; sends++; });
         host.Find(".pspad-time-end .mud-input-adornment-end button").Click();
-        host.WaitForElement(".pspad-time-dialog");
+        host.WaitForElement(".mud-picker .mud-overlay");
+        var clock = host.FindComponent<MudBlazor.MudTimePicker>().Instance;
 
-        var clock = host.FindComponent<MudBlazor.MudTimePicker>();
-        await host.InvokeAsync(() => clock.Instance.TimeChanged.InvokeAsync(new TimeSpan(10, 30, 0)));
+        await host.InvokeAsync(() => clock.SelectTimeFromStick(10, false));
+        await host.InvokeAsync(() => clock.OnStickClick(10));
 
+        Assert.Equal(0, sends);
+        Assert.NotEmpty(host.FindAll(".mud-picker .mud-overlay"));
+
+        await host.InvokeAsync(() => clock.SelectTimeFromStick(30, false));
+        await host.InvokeAsync(() => clock.OnStickClick(30));
+
+        host.WaitForAssertion(() => Assert.Empty(host.FindAll(".mud-picker .mud-overlay")), TimeSpan.FromSeconds(2));
+        Assert.Equal(1, sends);
         Assert.Equal(new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 30)), sent);
-        host.WaitForAssertion(() => Assert.Empty(host.FindAll(".pspad-time-dialog")));
+    }
+
+    [Fact]
+    public async Task ClickingOutsideAfterTheHourSendsTheNewHourWithTheOldMinutes()
+    {
+        TaskTime? sent = null;
+        var host = RenderWithOverlays(new TaskTime(new TimeOnly(9, 30), null), time => sent = time);
+        host.Find(".pspad-time-start .mud-input-adornment-end button").Click();
+        host.WaitForElement(".mud-picker .mud-overlay");
+        var clock = host.FindComponent<MudBlazor.MudTimePicker>().Instance;
+
+        await host.InvokeAsync(() => clock.SelectTimeFromStick(14, false));
+        await host.InvokeAsync(() => clock.OnStickClick(14));
+        host.Find(".mud-picker .mud-overlay").Click();
+
+        host.WaitForAssertion(() => Assert.Empty(host.FindAll(".mud-picker .mud-overlay")));
+        Assert.Equal(new TaskTime(new TimeOnly(14, 30), null), sent);
+    }
+
+    [Fact]
+    public void ClosingTheClockUntouchedSendsNothing()
+    {
+        var sends = 0;
+        var host = RenderWithOverlays(new TaskTime(new TimeOnly(9, 30), null), _ => sends++);
+        host.Find(".pspad-time-start .mud-input-adornment-end button").Click();
+        host.WaitForElement(".mud-picker .mud-overlay");
+
+        host.Find(".mud-picker .mud-overlay").Click();
+
+        host.WaitForAssertion(() => Assert.Empty(host.FindAll(".mud-picker .mud-overlay")));
+        Assert.Equal(0, sends);
     }
 
     [Theory]

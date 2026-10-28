@@ -14,7 +14,7 @@
                           InputMode="InputMode.numeric" Value="@StartText" ValueChanged="@StartTypedAsync" Error="@(_startDraft is not null)"
                           Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled"
                           Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="@T["PickStartTime"]"
-                          OnAdornmentClick="@(() => OpenPicker(false))" />
+                          OnAdornmentClick="@(() => OpenClockAsync(false))" />
             @if (Value is not null && !Disabled)
             {
                 <MudIconButton Class="pspad-property-clear pspad-time-clear" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
@@ -33,7 +33,7 @@
                               InputMode="InputMode.numeric" Value="@EndText" ValueChanged="@EndTypedAsync" Error="@(_endDraft is not null)"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled"
                               Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="@T["PickEndTime"]"
-                              OnAdornmentClick="@(() => OpenPicker(true))" />
+                              OnAdornmentClick="@(() => OpenClockAsync(true))" />
             </div>
         }
     </div>
@@ -47,11 +47,9 @@ else if (Value is { Overnight: true })
     <MudText Typo="Typo.caption" Class="pspad-time-hint pspad-time-note pspad-muted d-block">@T["EndsNextDay"]</MudText>
 }
 
-<MudDialog @bind-Visible="_picking" Class="pspad-time-dialog" ContentClass="pa-0" Options="@PickerOptions">
-    <DialogContent>
-        <MudTimePicker PickerVariant="PickerVariant.Static" Elevation="0" AmPm="false" Time="@_pickerTime" TimeChanged="@PickedAsync" />
-    </DialogContent>
-</MudDialog>
+@* The picker's own dialog commits once, after the minute click or a click outside; a static clock submits on every hour click. *@
+<MudTimePicker @ref="_clock" PickerVariant="PickerVariant.Dialog" Elevation="0" Class="d-none pspad-time-clock" AmPm="false"
+               @bind-Time="_pickerTime" PickerClosed="@ClockClosedAsync" />
 
 @code {
     [Parameter] public TaskTime? Value { get; set; }
@@ -68,13 +66,11 @@ else if (Value is { Overnight: true })
 
     string? _error;
 
-    bool _picking;
+    MudTimePicker? _clock;
 
     bool _pickingEnd;
 
     TimeSpan? _pickerTime;
-
-    static readonly DialogOptions PickerOptions = new() { CloseOnEscapeKey = true, BackdropClick = true, NoHeader = true };
 
     string StartText => _startDraft ?? (Value is { } time ? Format(time.Start) : "");
 
@@ -131,23 +127,21 @@ else if (Value is { Overnight: true })
         return TrySendAsync(current.Start, end, text);
     }
 
-    void OpenPicker(bool end)
+    Task OpenClockAsync(bool end)
     {
-        if (Disabled)
+        if (Disabled || _clock is null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         _pickingEnd = end;
         _pickerTime = end ? Value?.End?.ToTimeSpan() : Value?.Start.ToTimeSpan();
-        _picking = true;
+        return _clock.OpenAsync();
     }
 
-    async Task PickedAsync(TimeSpan? picked)
+    async Task ClockClosedAsync()
     {
-        _picking = false;
-
-        if (picked is not { } span)
+        if (_pickerTime is not { } span)
         {
             return;
         }
@@ -156,9 +150,12 @@ else if (Value is { Overnight: true })
 
         if (!_pickingEnd)
         {
-            await TrySendAsync(time, Value?.End);
+            if (Value?.Start != time)
+            {
+                await TrySendAsync(time, Value?.End);
+            }
         }
-        else if (Value is { } current)
+        else if (Value is { } current && current.End != time)
         {
             await TrySendAsync(current.Start, time, Format(time));
         }

@@ -763,9 +763,12 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      `MudTextField` (`InputMode.numeric`) filling the rest of the row,
      `aria-label` Start / End (`pspad-time-start`, `pspad-time-end`), showing
      the time as `HH:mm` and ending in a `Schedule` adornment icon that opens
-     a `MudDialog` (`pspad-time-dialog`, no header, closes on Escape and
-     backdrop) holding a static 24-hour `MudTimePicker`; picking the minutes
-     sends the time and closes the dialog. Typing commits on Enter or blur
+     a hidden 24-hour `MudTimePicker` in its `Dialog` variant
+     (`pspad-time-clock`, input `d-none`): the hour click moves to minutes,
+     the minute click or a click outside commits once and closes the clock
+     by itself, and the row sends the time on `PickerClosed` when it differs.
+     (A static clock inside a `MudDialog` would submit on the hour click.)
+     Typing commits on Enter or blur
      and is read leniently (`TimeText.TryParse`): `14` → 14:00, `9:30`,
      `09.30`, `930` and `1430` → the obvious times; anything else keeps the
      typed text, marks the field in error and shows "Enter a time like 14:30"
