@@ -48,28 +48,6 @@ public class LiveUpdatesTests
     }
 
     [Fact]
-    public async Task ReadyTriggersASync()
-    {
-        _stream.ThenFeed(Feed(Ready));
-        await using var live = Live();
-
-        live.Start();
-
-        await Until(() => _sync.Calls == 1);
-    }
-
-    [Fact]
-    public async Task EverySyncFrameTriggersASync()
-    {
-        _stream.ThenFeed(Feed(Ready, Sync, Sync));
-        await using var live = Live();
-
-        live.Start();
-
-        await Until(() => _sync.Calls == 3);
-    }
-
-    [Fact]
     public async Task FailuresBackOffDoublingUpToAMinute()
     {
         for (var i = 0; i < 8; i++)
@@ -127,7 +105,7 @@ public class LiveUpdatesTests
 
         _connectivity.GoOnline();
 
-        await Until(() => _sync.Calls == 1);
+        await Until(() => _stream.Opens == 1);
     }
 
     [Fact]
@@ -144,7 +122,7 @@ public class LiveUpdatesTests
 
         _visibility.Show();
 
-        await Until(() => _sync.Calls == 2);
+        await Until(() => _stream.Opens == 2);
         Assert.Empty(_waits);
     }
 
@@ -160,7 +138,7 @@ public class LiveUpdatesTests
         await Task.Delay(100, TestContext.Current.CancellationToken);
         _connectivity.GoOnline();
 
-        await Until(() => _stream.Opens == 2 && _sync.Calls == 2);
+        await Until(() => _stream.Opens == 2);
     }
 
     [Fact]

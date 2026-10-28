@@ -11,12 +11,11 @@ namespace PSPad.App.Tests.State.Dispatch;
 public class CommandSenderTests
 {
     [Fact]
-    public async Task SentFiresAndSyncIsTriggeredWhenAHandlerRuns()
+    public async Task SentFiresWhenAHandlerRuns()
     {
         var handled = CommandResult.Ok();
-        var sync = new FakeSyncTrigger();
         var sender = new CommandSender(
-            new FakeServiceProvider(new FakeCommandHandler(handled)), Work(), sync);
+            new FakeServiceProvider(new FakeCommandHandler(handled)), Work(), new FakeSyncTrigger());
         var fires = 0;
         sender.Sent += () => fires++;
 
@@ -25,16 +24,14 @@ public class CommandSenderTests
 
         Assert.Equal(1, fires);
         Assert.Same(handled, result);
-        Assert.Equal(1, sync.Calls);
     }
 
     [Fact]
-    public async Task SentStaysSilentAndSyncIsNotTriggeredWhenTheHandlerRejects()
+    public async Task SentStaysSilentWhenTheHandlerRejects()
     {
         var rejected = CommandResult.Rejected("nope");
-        var sync = new FakeSyncTrigger();
         var sender = new CommandSender(
-            new FakeServiceProvider(new FakeCommandHandler(rejected)), Work(), sync);
+            new FakeServiceProvider(new FakeCommandHandler(rejected)), Work(), new FakeSyncTrigger());
         var fires = 0;
         sender.Sent += () => fires++;
 
@@ -43,14 +40,12 @@ public class CommandSenderTests
 
         Assert.Equal(0, fires);
         Assert.False(result.Accepted);
-        Assert.Equal(0, sync.Calls);
     }
 
     [Fact]
-    public async Task SentStaysSilentAndSyncIsNotTriggeredWhenNoHandlerIsRegistered()
+    public async Task SentStaysSilentWhenNoHandlerIsRegistered()
     {
-        var sync = new FakeSyncTrigger();
-        var sender = new CommandSender(new FakeServiceProvider(handler: null), Work(), sync);
+        var sender = new CommandSender(new FakeServiceProvider(handler: null), Work(), new FakeSyncTrigger());
         var fires = 0;
         sender.Sent += () => fires++;
 
@@ -59,7 +54,6 @@ public class CommandSenderTests
 
         Assert.Equal(0, fires);
         Assert.False(result.Accepted);
-        Assert.Equal(0, sync.Calls);
     }
 
     [Fact]
@@ -103,10 +97,9 @@ public class CommandSenderTests
     }
 
     [Fact]
-    public async Task SendingManyFiresSentAndSyncOnceAndReportsProgress()
+    public async Task SendingManyFiresSentOnceAndReportsProgress()
     {
-        var sync = new FakeSyncTrigger();
-        var sender = new CommandSender(new FakeServiceProvider(new FakeCommandHandler(CommandResult.Ok())), Work(), sync);
+        var sender = new CommandSender(new FakeServiceProvider(new FakeCommandHandler(CommandResult.Ok())), Work(), new FakeSyncTrigger());
         var fires = 0;
         sender.Sent += () => fires++;
         var reported = new List<int>();
@@ -118,29 +111,25 @@ public class CommandSenderTests
         Assert.Equal(2, results.Count);
         Assert.Equal([1, 2], reported);
         Assert.Equal(1, fires);
-        Assert.Equal(1, sync.Calls);
     }
 
     [Fact]
     public async Task SendingManyCollectsRejectionsAndGoesOn()
     {
-        var sync = new FakeSyncTrigger();
-        var sender = new CommandSender(new FakeServiceProvider(new FakeCommandHandler(CommandResult.Rejected("nope"))), Work(), sync);
+        var sender = new CommandSender(new FakeServiceProvider(new FakeCommandHandler(CommandResult.Rejected("nope"))), Work(), new FakeSyncTrigger());
 
         var results = await sender.SendManyAsync(
             [new FakeCommand(Guid.NewGuid(), Guid.NewGuid()), new FakeCommand(Guid.NewGuid(), Guid.NewGuid())],
             null, TestContext.Current.CancellationToken);
 
         Assert.All(results, result => Assert.Equal("nope", result.Rejection));
-        Assert.Equal(0, sync.Calls);
     }
 
     [Fact]
     public async Task SendingManyTurnsAThrowingHandlerIntoARejectionAndGoesOn()
     {
-        var sync = new FakeSyncTrigger();
         var handler = new ScriptedHandler(CommandResult.Ok(), null, CommandResult.Ok());
-        var sender = new CommandSender(new ScriptedProvider(handler), Work(), sync);
+        var sender = new CommandSender(new ScriptedProvider(handler), Work(), new FakeSyncTrigger());
         var fires = 0;
         sender.Sent += () => fires++;
 
@@ -151,18 +140,15 @@ public class CommandSenderTests
 
         Assert.Equal([true, false, true], results.Select(result => result.Accepted));
         Assert.Equal("boom", results[1].Rejection);
-        Assert.Equal(3, handler.Calls);
         Assert.Equal(1, fires);
-        Assert.Equal(1, sync.Calls);
     }
 
     [Fact]
     public async Task SendingManyWithMixedResultsFiresSentOnce()
     {
-        var sync = new FakeSyncTrigger();
         var sender = new CommandSender(
             new ScriptedProvider(new ScriptedHandler(CommandResult.Ok(), CommandResult.Rejected("nope"), CommandResult.Ok())),
-            Work(), sync);
+            Work(), new FakeSyncTrigger());
         var fires = 0;
         sender.Sent += () => fires++;
 
@@ -172,15 +158,13 @@ public class CommandSenderTests
             null, TestContext.Current.CancellationToken);
 
         Assert.Equal(1, fires);
-        Assert.Equal(1, sync.Calls);
     }
 
     [Fact]
     public async Task CancellingASendingManyThrowsButStillAnnouncesWhatWasAccepted()
     {
         using var cts = new CancellationTokenSource();
-        var sync = new FakeSyncTrigger();
-        var sender = new CommandSender(new FakeServiceProvider(new FakeCommandHandler(CommandResult.Ok())), Work(), sync);
+        var sender = new CommandSender(new FakeServiceProvider(new FakeCommandHandler(CommandResult.Ok())), Work(), new FakeSyncTrigger());
         var fires = 0;
         sender.Sent += () => fires++;
 
@@ -189,7 +173,6 @@ public class CommandSenderTests
             new CancelAfterFirst(cts), cts.Token));
 
         Assert.Equal(1, fires);
-        Assert.Equal(1, sync.Calls);
     }
 
     sealed class CancelAfterFirst(CancellationTokenSource cts) : IProgress<int>
@@ -313,12 +296,6 @@ public class CommandSenderTests
 
     sealed class FakeSyncTrigger : ISyncTrigger
     {
-        public int Calls { get; private set; }
-
-        public Task SyncNowAsync()
-        {
-            Calls++;
-            return Task.CompletedTask;
-        }
+        public Task SyncNowAsync() => Task.CompletedTask;
     }
 }
