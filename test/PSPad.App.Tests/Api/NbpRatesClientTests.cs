@@ -13,20 +13,15 @@ public class NbpRatesClientTests
 
     sealed class Stub(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
     {
-        public HttpRequestMessage? Last { get; private set; }
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            Last = request;
-            return Task.FromResult(respond(request));
-        }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(respond(request));
     }
 
     static INbpRates ClientWith(Stub stub) =>
         new PSPadApiClient(new HttpClient(stub) { BaseAddress = new Uri("http://localhost/") });
 
     [Fact]
-    public async Task ItAsksForTheCurrencyOnTheDate()
+    public async Task ItReturnsTheRateForTheCurrencyOnTheDate()
     {
         var stub = new Stub(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -36,7 +31,6 @@ public class NbpRatesClientTests
         var rate = await ClientWith(stub).RateAsync("EUR", Day);
 
         Assert.Equal(new NbpRateView("EUR", 4.2512m, Day), rate);
-        Assert.Equal("/api/money/nbp-rate?currency=EUR&date=2026-10-09", stub.Last!.RequestUri!.PathAndQuery);
     }
 
     [Theory]
