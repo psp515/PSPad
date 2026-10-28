@@ -10,6 +10,7 @@ using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
+using static PSPad.Api.Tests.Commands.Commands;
 
 namespace PSPad.Api.Tests.Commands;
 
@@ -83,7 +84,7 @@ public class MemberCommandTests(MongoFixture fixture)
         var taskId = Guid.NewGuid();
         await Sharing.SendAsync(owner, ct, new CreateTask(Guid.NewGuid(), ownerId, taskId, listId, "Dune"));
 
-        var response = await PostAsync(stranger, ct, new RenameTask(Guid.NewGuid(), strangerId, taskId, "Mine now"));
+        var response = await TrySendAsync(stranger, ct, new RenameTask(Guid.NewGuid(), strangerId, taskId, "Mine now"));
 
         var result = Assert.Single(response);
         Assert.False(result.Accepted);
@@ -109,7 +110,7 @@ public class MemberCommandTests(MongoFixture fixture)
 
         (await Sharing.RemoveMemberAsync(owner, listId, memberId, ct)).EnsureSuccessStatusCode();
 
-        var response = await PostAsync(member, ct, new RenameTask(Guid.NewGuid(), memberId, taskId, "Mine now"));
+        var response = await TrySendAsync(member, ct, new RenameTask(Guid.NewGuid(), memberId, taskId, "Mine now"));
 
         var result = Assert.Single(response);
         Assert.False(result.Accepted);
@@ -130,7 +131,7 @@ public class MemberCommandTests(MongoFixture fixture)
         var listId = await Sharing.SharedListAsync(owner, ownerId, ct, token: token);
         await Sharing.JoinAsync(member, ct, token);
 
-        var response = await PostAsync(member, ct, new RenameTaskList(Guid.NewGuid(), memberId, listId, "My list"));
+        var response = await TrySendAsync(member, ct, new RenameTaskList(Guid.NewGuid(), memberId, listId, "My list"));
 
         var result = Assert.Single(response);
         Assert.False(result.Accepted);
@@ -210,7 +211,7 @@ public class MemberCommandTests(MongoFixture fixture)
         var taskId = Guid.NewGuid();
         await Sharing.SendAsync(owner, ct, new CreateTask(Guid.NewGuid(), ownerId, taskId, listId, "Dune"));
 
-        var result = Assert.Single(await PostAsync(member, ct, new MoveTaskToList(Guid.NewGuid(), memberId, taskId, membersList)));
+        var result = Assert.Single(await TrySendAsync(member, ct, new MoveTaskToList(Guid.NewGuid(), memberId, taskId, membersList)));
 
         Assert.False(result.Accepted);
         Assert.Equal("A task can only move between lists of the same owner.", result.Rejection);
@@ -268,7 +269,7 @@ public class MemberCommandTests(MongoFixture fixture)
         var itemId = Guid.NewGuid();
         await Sharing.SendAsync(owner, ct, new CreateReferenceItem(Guid.NewGuid(), ownerId, itemId, listId, "PLA Black", 0));
 
-        var result = Assert.Single(await PostAsync(stranger, ct, new RenameReferenceItem(Guid.NewGuid(), strangerId, itemId, "PETG Grey")));
+        var result = Assert.Single(await TrySendAsync(stranger, ct, new RenameReferenceItem(Guid.NewGuid(), strangerId, itemId, "PETG Grey")));
 
         Assert.False(result.Accepted);
         Assert.Equal("PLA Black", Assert.Single(await Commands.SyncedAsync(owner, "referenceitems", ct)).GetProperty("name").GetString());
@@ -284,21 +285,10 @@ public class MemberCommandTests(MongoFixture fixture)
         var itemId = Guid.NewGuid();
         await Sharing.SendAsync(owner, ct, new CreateReferenceItem(Guid.NewGuid(), ownerId, itemId, listId, "PLA Black", 0));
 
-        var result = Assert.Single(await PostAsync(member, ct, new MoveReferenceItemToList(Guid.NewGuid(), memberId, itemId, membersList)));
+        var result = Assert.Single(await TrySendAsync(member, ct, new MoveReferenceItemToList(Guid.NewGuid(), memberId, itemId, membersList)));
 
         Assert.False(result.Accepted);
         Assert.Equal("An item can only move between lists of the same owner.", result.Rejection);
         Assert.Equal(listId, Assert.Single(await Commands.SyncedAsync(owner, "referenceitems", ct)).GetProperty("listId").GetGuid());
-    }
-
-    static async Task<CommandResponse[]> PostAsync(HttpClient client, CancellationToken ct, params object[] commands)
-    {
-        var envelopes = commands
-            .Select(command => new CommandEnvelope(
-                command.GetType().Name, JsonSerializer.SerializeToElement(command, command.GetType())))
-            .ToArray();
-        var response = await client.PostAsJsonAsync("/api/commands", envelopes, ct);
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct))!;
     }
 }

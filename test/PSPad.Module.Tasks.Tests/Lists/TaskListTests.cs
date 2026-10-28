@@ -1,5 +1,6 @@
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Module.Tasks.Tests.Lists;
@@ -9,6 +10,21 @@ public class TaskListTests
 {
     static readonly Guid User = Guid.Parse("11111111-1111-1111-1111-111111111111");
     static readonly DateTimeOffset Now = new(2026, 9, 12, 8, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void DeletingAnAlreadyDeletedListIsRejectedAndCascadesNothing()
+    {
+        var list = new TaskList();
+        list.Apply(new TaskListCreated(Guid.NewGuid(), User, Now, Guid.NewGuid(), "Errands"));
+        list.ApplyAll(TaskList.Decide(list, new DeleteTaskList(Guid.NewGuid(), User, list.Id), Now));
+        var task = new TodoTask();
+        task.Apply(new TaskCreated(Guid.NewGuid(), User, Now, list.Id, "left behind"));
+
+        Assert.Throws<DomainRejectedException>(() =>
+            TaskListCascade.Delete(list, new DeleteTaskList(Guid.NewGuid(), User, list.Id), [task], [], Now));
+
+        Assert.False(task.Deleted);
+    }
 
     [Fact]
     public void ALisIsCreatedInsideOneArea()
