@@ -61,8 +61,7 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
     await expect(daySection(page, 'anytime')).toContainText(carried);
   });
 
-  const appointment = daySection(page, 'anytime').locator('.pspad-day-step', { hasText: 'Book an appointment' });
-  await appointment.getByRole('checkbox').click();
+  await page.getByRole('checkbox', { name: 'Book an appointment' }).click();
   await expect(page.locator('.mud-snackbar')).toContainText(`"${carried}" moved to Tomorrow`);
   await expect(page.locator('.pspad-day-anytime .pspad-row-name', { hasText: carried })).toHaveCount(0);
 

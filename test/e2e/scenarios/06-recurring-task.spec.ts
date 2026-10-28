@@ -92,5 +92,9 @@ test('a daily task is never overdue and comes back tomorrow', async ({ page, acc
     await expect(propertyRow(page, 'Due')).toContainText('No due date');
     await expect(taskRow(page, rent)).not.toContainText('Until');
     await closeTask(page);
+    await openTask(page, rent);
+    await expect(propertyRow(page, 'Repeat')).toHaveCount(0);
+    await expect(propertyRow(page, 'Due')).toContainText('No due date');
+    await closeTask(page);
   });
 });

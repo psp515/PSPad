@@ -122,12 +122,8 @@ export async function createTaskDueTodayFromAnotherDevice(page: Page, listId: st
 
 export async function renameTask(page: Page, to: string) {
   const name = panel(page).getByPlaceholder('Task name');
-  await expect(async () => {
-    if ((await name.inputValue({ timeout: 2_000 })) !== to) {
-      await name.fill(to, { timeout: 2_000 });
-      await name.press('Enter', { timeout: 2_000 });
-      await name.press('Tab', { timeout: 2_000 });
-    }
-    await expect(taskRow(page, to)).toBeVisible({ timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+  await name.fill(to);
+  await name.press('Enter');
+  await name.press('Tab');
+  await expect(taskRow(page, to)).toBeVisible();
 }

@@ -93,10 +93,6 @@ export async function dismissMenu(page: Page) {
 
 export async function clearProperty(page: Page, label: string) {
   const clear = panel(page).getByRole('button', { name: `Clear ${label.toLowerCase()}`, exact: true });
-  await expect(async () => {
-    if (await clear.isVisible()) {
-      await clear.click({ timeout: 2_000 });
-    }
-    await expect(clear).toHaveCount(0, { timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+  await clear.click();
+  await expect(clear).toHaveCount(0);
 }

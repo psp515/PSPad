@@ -31,7 +31,8 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
 
   await test.step('an open task names where it lives and when it was made, and shows only the rows that apply', async () => {
     await openTask(page, task);
-    await expect(panel(page).getByText(`${home} › ${shopping}`, { exact: true })).toHaveCount(2);
+    await expect(panel(page).getByText(`${home} › ${shopping}`, { exact: true }).first()).toBeVisible();
+    await expect(propertyRow(page, 'List')).toContainText(`${home} › ${shopping}`);
     await expect(panel(page).getByText(`Created ${shortDate(today)} ${today.getUTCFullYear()}`)).toBeVisible();
     await expect(panel(page).getByRole('button', { name: 'Delete task' })).toBeVisible();
     await expect(panel(page).getByRole('button', { name: 'Add task', exact: true })).toHaveCount(0);
@@ -77,6 +78,10 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
     await expect(taskRow(page, renamed)).not.toContainText('08:15');
     await expect(propertyRow(page, 'Remind me')).toHaveCount(0);
     await expect(panel(page).getByRole('textbox', { name: 'Start' })).toHaveCount(0);
+    await closeTask(page);
+    await openTask(page, renamed);
+    await expect(propertyRow(page, 'Due')).toContainText('No due date');
+    await expect(propertyRow(page, 'Remind me')).toHaveCount(0);
   });
 
   await test.step('priority and a notes marker show on the row, and the description saves rendered', async () => {
@@ -98,7 +103,8 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
     await expect(lists.filter({ hasText: recipes })).toHaveCount(0);
     await dismissMenu(page);
     await chooseProperty(page, 'List', desk);
-    await expect(panel(page).getByText(`${office} › ${desk}`, { exact: true })).toHaveCount(2);
+    await expect(panel(page).getByText(`${office} › ${desk}`, { exact: true }).first()).toBeVisible();
+    await expect(propertyRow(page, 'List')).toContainText(`${office} › ${desk}`);
     await closeTask(page);
     await expect(taskRow(page, renamed)).toHaveCount(0);
   });

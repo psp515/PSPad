@@ -46,7 +46,8 @@ export function weekdaysInWeekOrder(days: string[]): string[] {
   return [...new Set(days)].sort((a, b) => order.indexOf(a) - order.indexOf(b));
 }
 
-export function anHourAfter(time: string): string {
-  const [hours, minutes] = time.split(':').map(Number);
-  return `${String((hours + 1) % 24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+export function shiftTime(time: string, minutes: number): string {
+  const [hours, mins] = time.split(':').map(Number);
+  const total = (((hours * 60 + mins + minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }

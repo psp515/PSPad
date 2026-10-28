@@ -1,11 +1,11 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea } from '../helpers/areas';
-import { addDays, anHourAfter, shortDate, utcToday } from '../helpers/dates';
+import { addDays, shiftTime, shortDate, utcToday } from '../helpers/dates';
 import { createList, openList } from '../helpers/lists';
 import { closePanel, panel, propertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, openTask, taskRow } from '../helpers/tasks';
-import { addTaskAtFirstFreeSlot, daySection, goToMyDay, setDueDate, setTaskTime, showDay, timelineBlock } from '../helpers/today';
+import { addTaskAtFirstFreeSlot, backToToday, daySection, goToMyDay, setDueDate, setTaskTime, showDay, timelineBlock } from '../helpers/today';
 
 test('a timed task sits on the schedule and is ticked from the timeline', async ({ page, account }) => {
   const dentist = `Dentist ${account.suffix}`;
@@ -74,9 +74,9 @@ test('a timed task sits on the schedule and is ticked from the timeline', async 
     await expect(panel(page).getByText('New task', { exact: true })).toBeVisible();
     await expect(propertyRow(page, 'Due')).toContainText('Tomorrow');
     await expect(panel(page).getByRole('textbox', { name: 'Start' })).toHaveValue(start);
-    await expect(panel(page).getByRole('textbox', { name: 'End' })).toHaveValue(anHourAfter(start));
+    await expect(panel(page).getByRole('textbox', { name: 'End' })).toHaveValue(shiftTime(start, 60));
     await closePanel(page);
-    await page.locator('.pspad-week-today').click();
+    await backToToday(page);
   });
 
   const slot = page.locator('.pspad-timeline-slot').first();

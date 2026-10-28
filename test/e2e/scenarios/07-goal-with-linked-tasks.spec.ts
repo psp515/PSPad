@@ -86,5 +86,8 @@ test('a goal tracks its linked tasks and a star never plans a task', async ({ pa
     await openArea(page, area);
     await expect(taskRow(page, open)).toBeVisible();
     await expect(taskRow(page, open)).not.toContainText(other);
+    await goToMyDay(page);
+    await expect(daySection(page, 'starred')).toContainText(open);
+    await expect(taskRow(page, open)).not.toContainText(other);
   });
 });

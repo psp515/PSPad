@@ -2,14 +2,15 @@ import { expect, test } from '../fixtures/accounts';
 import { createArea, openArea } from '../helpers/areas';
 import { createGoal } from '../helpers/goals';
 import {
-  capture, captureFromAnotherDevice, captureWithEnter, goToInbox, inboxItem, inboxItemTexts, openInboxItem, renameInboxItem,
+  capture, captureFromAnotherDevice, captureWithEnter, goToInbox, inboxItem, inboxItemRows, openInboxItem, renameInboxItem,
 } from '../helpers/inbox';
 import { createList, openList } from '../helpers/lists';
 import { chooseProperty, closePanel, deleteFromPanel, dismissMenu, menuOptions, panel, propertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { pushedWithin } from '../helpers/sync';
-import { addDays, dayMonth, utcTime, utcToday } from '../helpers/dates';
-import { addStep, closeTask, openTask, taskRow } from '../helpers/tasks';
+import { addDays, dayMonth, shiftTime, utcTime, utcToday } from '../helpers/dates';
+import { goToSettings, setTimeZone } from '../helpers/settings';
+import { addStep, closeTask, openTask, setStepDeadline, stepRow, taskRow } from '../helpers/tasks';
 
 test('captured items are organised into a task or discarded', async ({ page, account }) => {
   const area = `Home ${account.suffix}`;
@@ -45,8 +46,8 @@ test('captured items are organised into a task or discarded', async ({ page, acc
     await capture(page, drop);
     const after = utcTime();
     await expect(page.getByText('2 to process').filter({ visible: true })).toBeVisible();
-    await expect(page.locator('.pspad-row-subhead')).toHaveText('Today');
-    await expect(inboxItemTexts(page)).toHaveText([new RegExp(drop), new RegExp(captured)]);
+    await expect(page.getByText('Today', { exact: true })).toBeVisible();
+    await expect(inboxItemRows(page)).toHaveText([new RegExp(drop), new RegExp(captured)]);
     await expect(inboxItem(page, captured)).toContainText(new RegExp(`${before}|${after}`));
     await expect(page.getByText('Nothing captured.')).toHaveCount(0);
   });
@@ -56,9 +57,11 @@ test('captured items are organised into a task or discarded', async ({ page, acc
     await expect(panel(page).getByText(/^Captured /)).toBeVisible();
     await expect(panel(page).getByRole('button', { name: 'Convert to task' })).toBeDisabled();
     await expect(panel(page).getByRole('button', { name: 'Discard' })).toBeEnabled();
-    await renameInboxItem(page, captured, keep);
+    await renameInboxItem(page, keep);
     await closePanel(page);
-    await expect(inboxItemTexts(page)).toHaveCount(2);
+    await expect(inboxItemRows(page)).toHaveCount(2);
+    await openInboxItem(page, keep);
+    await closePanel(page);
   });
 
   await createGoal(page, goal);
@@ -97,9 +100,28 @@ test('captured items are organised into a task or discarded', async ({ page, acc
     await expect(page.getByText('Nothing captured.')).toBeVisible();
   });
 
+  let capturedElsewhere: string[] = [];
   await test.step('an item captured on another device shows up without a reload', async () => {
+    const before = utcTime();
     await captureFromAnotherDevice(page, elsewhere);
+    capturedElsewhere = [before, utcTime()];
     await expect(inboxItem(page, elsewhere)).toBeVisible(pushedWithin);
+  });
+
+  await test.step.skip('BUG: a deadline set on a draft step is lost when an Inbox item is converted (reported in PR #225)', async () => {
+    const dated = `Call the vet ${account.suffix}`;
+    await capture(page, dated);
+    await openInboxItem(page, dated);
+    await addStep(page, 'Find the number');
+    await setStepDeadline(page, 'Find the number', 'Tomorrow');
+    await panel(page).getByRole('button', { name: 'Convert to task' }).click();
+    await expect(inboxItem(page, dated)).toBeHidden();
+    await openArea(page, area);
+    await openList(page, repairs);
+    await openTask(page, dated);
+    await expect(stepRow(page, 'Find the number')).toContainText('Tomorrow');
+    await closeTask(page);
+    await goToInbox(page);
   });
 
   await test.step('the task holds everything the inbox panel set', async () => {
@@ -122,5 +144,12 @@ test('captured items are organised into a task or discarded', async ({ page, acc
     await expect(panel(page).getByRole('strong')).toHaveText('Oat');
     await closeTask(page);
   });
-});
 
+  await test.step('capture times read in the stored time zone', async () => {
+    await goToSettings(page);
+    await setTimeZone(page, 'Asia/Kolkata');
+    await goToInbox(page);
+    const [before, after] = capturedElsewhere.map(time => shiftTime(time, 330));
+    await expect(inboxItem(page, elsewhere)).toContainText(new RegExp(`${before}|${after}`));
+  });
+});
