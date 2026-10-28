@@ -23,7 +23,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
 
         var field = Render(new ReferenceField(Guid.NewGuid(), "Colour", "black", null, 0));
 
-        Assert.Contains("pspad-field-text", field.Markup);
+        Assert.Equal("black", field.Text().Trim());
         Assert.Empty(field.FindAll("a"));
     }
 
@@ -34,7 +34,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
 
         var field = Render(new ReferenceField(Guid.NewGuid(), "Source", "https://onedrive.live.com/x", null, 0));
 
-        var link = field.Find(".pspad-field-link");
+        var link = field.Find("a");
         Assert.Equal("_blank", link.GetAttribute("target"));
         Assert.Equal("https://onedrive.live.com/x", link.GetAttribute("href"));
         Assert.Equal("noopener noreferrer", link.GetAttribute("rel"));
@@ -48,7 +48,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
         var field = Render(new ReferenceField(Guid.NewGuid(), "Source", "javascript:alert(1)", "link", 0));
 
         Assert.Empty(field.FindAll("a"));
-        Assert.Contains("javascript:alert(1)", field.Markup);
+        Assert.Contains("javascript:alert(1)", field.Text());
     }
 
     [Fact]
@@ -58,10 +58,8 @@ public class ReferenceFieldValueTests : Bunit.TestContext
 
         var field = Render(new ReferenceField(Guid.NewGuid(), "Dir", "/etc", null, 0));
 
-        var code = field.Find(".pspad-field-path");
-        Assert.Equal("code", code.TagName.ToLowerInvariant());
-        Assert.Equal("/etc", code.TextContent);
-        Assert.NotEmpty(field.FindAll(".pspad-field-copy"));
+        Assert.Equal("/etc", field.Find("code").TextContent);
+        Assert.NotEmpty(field.FindAll("button[aria-label='Copy']"));
     }
 
     [Fact]
@@ -71,7 +69,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
         JSInterop.SetupModule("./js/clipboard.js").SetupVoid("copy", "/etc").SetVoidResult();
 
         var field = Render(new ReferenceField(Guid.NewGuid(), "Dir", "/etc", null, 0));
-        field.Find(".pspad-field-copy").Click();
+        field.Find("button[aria-label='Copy']").Click();
 
         var snackbar = Services.GetRequiredService<ISnackbar>();
         Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("Copied") == true);
@@ -84,7 +82,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
         JSInterop.SetupModule("./js/clipboard.js").SetupVoid("copy", "/etc").SetException(new JSException("denied"));
 
         var field = Render(new ReferenceField(Guid.NewGuid(), "Dir", "/etc", null, 0));
-        field.Find(".pspad-field-copy").Click();
+        field.Find("button[aria-label='Copy']").Click();
 
         var snackbar = Services.GetRequiredService<ISnackbar>();
         Assert.Contains(snackbar.ShownSnackbars,
@@ -98,8 +96,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
 
         var field = Render(new ReferenceField(Guid.NewGuid(), "Weight", "350g", null, 0));
 
-        var quantity = field.Find(".pspad-field-quantity");
-        Assert.Equal("350 g", quantity.TextContent);
+        Assert.Equal("350 g", field.Text().Trim());
     }
 
     [Fact]
@@ -109,7 +106,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
 
         var editor = RenderEditor(null);
 
-        Assert.True(editor.Find(".pspad-field-save").HasAttribute("disabled"));
+        Assert.True(Button(editor, "Save").HasAttribute("disabled"));
     }
 
     [Fact]
@@ -124,12 +121,12 @@ public class ReferenceFieldValueTests : Bunit.TestContext
             return Task.CompletedTask;
         });
 
-        editor.Find(".pspad-field-label-input input").Change("Left");
-        editor.Find(".pspad-field-value-input textarea").Change("350 g");
-        editor.Find(".pspad-field-kind-input .mud-select-input").MouseDown();
-        editor.FindAll(".mud-list-item")[(int)FieldKind.Quantity + 1].Click();
+        editor.Labelled("Label").Change("Left");
+        editor.Labelled("Value").Change("350 g");
+        editor.Find("[role=combobox]").MouseDown();
+        editor.FindAll("[role=option]").Single(option => option.TextContent.Trim() == "Quantity").Click();
 
-        editor.Find(".pspad-field-save").Click();
+        Button(editor, "Save").Click();
 
         Assert.Equal(("Left", "350 g", "quantity"), saved);
     }
@@ -146,9 +143,9 @@ public class ReferenceFieldValueTests : Bunit.TestContext
             return Task.CompletedTask;
         });
 
-        editor.Find(".pspad-field-label-input input").Change("Left");
-        editor.Find(".pspad-field-value-input textarea").Change("350 g");
-        editor.Find(".pspad-field-save").Click();
+        editor.Labelled("Label").Change("Left");
+        editor.Labelled("Value").Change("350 g");
+        Button(editor, "Save").Click();
 
         Assert.Equal(("Left", "350 g", (string?)null), saved);
     }
@@ -160,7 +157,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
 
         var editor = RenderEditor(null);
 
-        Assert.Empty(editor.FindAll(".pspad-field-editor-remove"));
+        Assert.DoesNotContain(editor.FindAll("button"), button => button.TextContent.Trim() == "Remove");
     }
 
     [Fact]
@@ -170,7 +167,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
 
         var editor = RenderEditor(new ReferenceField(Guid.NewGuid(), "Dir", "/etc", null, 0));
 
-        Assert.NotEmpty(editor.FindAll(".pspad-field-editor-remove"));
+        Assert.NotNull(Button(editor, "Remove"));
     }
 
     [Fact]
@@ -183,7 +180,7 @@ public class ReferenceFieldValueTests : Bunit.TestContext
         editor.InvokeAsync(() => component.Instance.OnDropped("https://example.com/x", null, false));
         editor.Render();
 
-        Assert.Equal("https://example.com/x", editor.Find(".pspad-field-value-input textarea").TextContent);
+        Assert.Equal("https://example.com/x", editor.Labelled("Value").TextContent);
     }
 
     [Fact]
@@ -201,6 +198,9 @@ public class ReferenceFieldValueTests : Bunit.TestContext
             snack => snack.Message?.Contains("Browsers can't read a file's full path") == true
                      && snack.Severity == Severity.Info);
     }
+
+    static AngleSharp.Dom.IElement Button(IRenderedComponent<IComponent> host, string text) =>
+        host.FindAll("button").Single(button => button.TextContent.Trim() == text);
 
     IRenderedComponent<ReferenceFieldValue> Render(ReferenceField field) =>
         Render<ReferenceFieldValue>(parameters => parameters.Add(p => p.Field, field));

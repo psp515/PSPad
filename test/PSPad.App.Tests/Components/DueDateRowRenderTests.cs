@@ -23,8 +23,9 @@ public class DueDateRowRenderTests : Bunit.TestContext
     {
         var row = Render<DueDateRow>(parameters => parameters.Add(p => p.Today, new DateOnly(2026, 9, 24)));
 
-        Assert.Equal("Due", row.Find(".pspad-property-label").TextContent.Trim());
-        Assert.Equal("No due date", row.Find(".pspad-property-value").TextContent.Trim());
+        var text = row.Find("button").TextContent;
+        Assert.Contains("Due", text);
+        Assert.Contains("No due date", text);
     }
 
     [Fact]
@@ -34,7 +35,7 @@ public class DueDateRowRenderTests : Bunit.TestContext
             .Add(p => p.Today, new DateOnly(2026, 9, 24))
             .Add(p => p.EmptyText, "No end date"));
 
-        Assert.Equal("No end date", row.Find(".pspad-property-value").TextContent.Trim());
+        Assert.Contains("No end date", row.Find("button").TextContent);
     }
 
     [Fact]
@@ -50,8 +51,9 @@ public class DueDateRowRenderTests : Bunit.TestContext
 
             var row = Render<DueDateRow>(parameters => parameters.Add(p => p.Today, new DateOnly(2026, 9, 24)));
 
-            Assert.Equal("Termin", row.Find(".pspad-property-label").TextContent.Trim());
-            Assert.Equal("Brak terminu", row.Find(".pspad-property-value").TextContent.Trim());
+            var text = row.Find("button").TextContent;
+            Assert.Contains("Termin", text);
+            Assert.Contains("Brak terminu", text);
         }
         finally
         {
@@ -73,15 +75,15 @@ public class DueDateRowRenderTests : Bunit.TestContext
                 .Add(p => p.Today, new DateOnly(2026, 10, 1))
                 .Add(p => p.Value, new DateOnly(2026, 10, 18)));
 
-            Assert.Contains("18 Oct", english.Find(".pspad-property-value").TextContent);
+            Assert.Contains("18 Oct", english.Find("button").TextContent);
 
             CultureInfo.CurrentUICulture = CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("pl-PL");
             var polish = Render<DueDateRow>(parameters => parameters
                 .Add(p => p.Today, new DateOnly(2026, 10, 1))
                 .Add(p => p.Value, new DateOnly(2026, 10, 18)));
 
-            Assert.Contains("18 paź", polish.Find(".pspad-property-value").TextContent);
-            Assert.DoesNotContain("Oct", polish.Find(".pspad-property-value").TextContent);
+            Assert.Contains("18 paź", polish.Find("button").TextContent);
+            Assert.DoesNotContain("Oct", polish.Find("button").TextContent);
         }
         finally
         {

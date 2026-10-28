@@ -74,10 +74,9 @@ public class RecurrenceEditorTests
             builder.CloseComponent();
         });
 
-        Assert.Empty(menu.FindAll(".pspad-task-repeat .pspad-property-clear"));
-        menu.Find(".pspad-task-repeat .pspad-property-activator").Click();
+        menu.Find("button").Click();
 
-        var options = menu.FindAll(".pspad-repeat-option").Select(item => item.TextContent.Trim()).ToArray();
+        var options = menu.FindAll("[role=menuitem]").Select(item => item.TextContent.Trim()).ToArray();
         Assert.Contains("Yearly on 24 Sep", options);
         Assert.DoesNotContain("Never", options);
     }

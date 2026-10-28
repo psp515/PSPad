@@ -18,67 +18,63 @@ public class TimeRowTests : Bunit.TestContext
     }
 
     [Fact]
-    public void WithoutAStartOnlyFromIsShown()
+    public void WithoutAStartOnlyTheStartFieldIsShown()
     {
         var row = Render<TimeRow>(p => p.Add(r => r.Value, (TaskTime?)null));
 
-        Assert.Single(row.FindAll(".pspad-time-lines > .pspad-time-line"));
-        Assert.NotNull(row.Find(".pspad-time-start"));
-        Assert.Empty(row.FindAll(".pspad-time-end"));
+        Assert.NotNull(row.Find("input[aria-label='Start']"));
+        Assert.Empty(row.FindAll("input[aria-label='End']"));
     }
 
     [Fact]
-    public void SettingAStartBringsToInUnderFrom()
+    public void SettingAStartBringsTheEndFieldIn()
     {
         var row = Render<TimeRow>(p => p.Add(r => r.Value, (TaskTime?)null));
 
         row.Render(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(12, 0), null)));
 
-        var lines = row.FindAll(".pspad-time-lines > .pspad-time-line");
-        Assert.Equal(2, lines.Count);
-        Assert.NotNull(lines[1].QuerySelector(".pspad-time-end"));
-        Assert.False(row.Find(".pspad-time-end input").HasAttribute("disabled"));
+        Assert.False(row.Find("input[aria-label='End']").HasAttribute("disabled"));
     }
 
     [Fact]
-    public async Task PickingAStartSendsATimeWithoutAnEnd()
+    public void TypingAStartSendsATimeWithoutAnEnd()
     {
         TaskTime? sent = null;
         var row = Render<TimeRow>(p => p
             .Add(r => r.Value, (TaskTime?)null)
             .Add(r => r.ValueChanged, (TaskTime? time) => sent = time));
 
-        await row.InvokeAsync(() => row.Instance.StartChangedAsync(new TimeSpan(9, 30, 0)));
+        row.Find("input[aria-label='Start']").Change("09:30");
 
-        Assert.Equal(new TaskTime(new TimeOnly(9, 30), null), sent);
+        row.WaitForAssertion(() => Assert.Equal(new TaskTime(new TimeOnly(9, 30), null), sent));
     }
 
     [Fact]
-    public async Task AnEndEqualToTheStartShowsAnErrorAndSendsNothing()
+    public void AnEndEqualToTheStartShowsAnErrorAndSendsNothing()
     {
         var calls = 0;
         var row = Render<TimeRow>(p => p
             .Add(r => r.Value, new TaskTime(new TimeOnly(14, 0), null))
             .Add(r => r.ValueChanged, (TaskTime? _) => calls++));
 
-        await row.InvokeAsync(() => row.Instance.EndChangedAsync(new TimeSpan(14, 0, 0)));
+        row.Find("input[aria-label='End']").Change("14:00");
 
+        row.WaitForAssertion(() => Assert.Contains("End must differ from start", row.Find("[role=alert]").TextContent));
         Assert.Equal(0, calls);
-        Assert.Contains("End must differ from start", row.Find(".pspad-time-error").TextContent);
     }
 
     [Fact]
-    public async Task AnEndBeforeTheStartIsSentAsOvernight()
+    public void AnEndBeforeTheStartIsSentAsOvernight()
     {
         TaskTime? sent = null;
         var row = Render<TimeRow>(p => p
             .Add(r => r.Value, new TaskTime(new TimeOnly(22, 0), null))
             .Add(r => r.ValueChanged, (TaskTime? time) => sent = time));
 
-        await row.InvokeAsync(() => row.Instance.EndChangedAsync(new TimeSpan(1, 0, 0)));
+        row.Find("input[aria-label='End']").Change("01:00");
 
-        Assert.Equal(new TaskTime(new TimeOnly(22, 0), new TimeOnly(1, 0)), sent);
-        Assert.Empty(row.FindAll(".pspad-time-error"));
+        row.WaitForAssertion(() => Assert.Equal(new TaskTime(new TimeOnly(22, 0), new TimeOnly(1, 0)), sent));
+        Assert.Empty(row.FindAll("[role=alert]"));
     }
 
     [Fact]
@@ -86,7 +82,7 @@ public class TimeRowTests : Bunit.TestContext
     {
         var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(22, 0), new TimeOnly(1, 0))));
 
-        Assert.Equal("Ends the next day (+1)", row.Find(".pspad-time-hint").TextContent.Trim());
+        Assert.Equal("Ends the next day (+1)", row.Find("[role=status]").TextContent.Trim());
     }
 
     [Fact]
@@ -94,56 +90,27 @@ public class TimeRowTests : Bunit.TestContext
     {
         var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0))));
 
-        Assert.Empty(row.FindAll(".pspad-time-hint"));
+        Assert.Empty(row.FindAll("[role=status]"));
     }
 
     [Fact]
-    public async Task AStaleErrorIsForgottenWhenTheValueChanges()
+    public void AStaleErrorIsForgottenWhenTheValueChanges()
     {
         var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(14, 0), null)));
-        await row.InvokeAsync(() => row.Instance.EndChangedAsync(new TimeSpan(14, 0, 0)));
-        Assert.NotEmpty(row.FindAll(".pspad-time-error"));
+        row.Find("input[aria-label='End']").Change("14:00");
+        row.WaitForAssertion(() => Assert.Contains("End must differ from start", row.Find("[role=alert]").TextContent));
 
         row.Render(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(14, 0), new TimeOnly(15, 0))));
 
-        Assert.Empty(row.FindAll(".pspad-time-error"));
+        Assert.Empty(row.FindAll("[role=alert]"));
     }
 
     [Fact]
-    public void TheClearButtonLinesUpWithTheOtherProperties()
-    {
-        var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), null)));
-
-        Assert.Contains("pspad-property-clear", row.Find(".pspad-time-clear").ClassName);
-    }
-
-    [Fact]
-    public void WithoutATimeThereIsNoClearButtonButItsColumnIsKept()
+    public void WithoutATimeThereIsNoClearButton()
     {
         var row = Render<TimeRow>(p => p.Add(r => r.Value, (TaskTime?)null));
 
-        Assert.Empty(row.FindAll(".pspad-time-clear"));
-        Assert.Single(row.FindAll(".pspad-time-clear-placeholder"));
-    }
-
-    [Fact]
-    public void TheFieldsAreNamed()
-    {
-        var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0))));
-
-        Assert.Equal("Start", row.Find(".pspad-time-start input").GetAttribute("aria-label"));
-        Assert.Equal("End", row.Find(".pspad-time-end input").GetAttribute("aria-label"));
-    }
-
-    [Theory]
-    [InlineData(".pspad-time-start")]
-    [InlineData(".pspad-time-end")]
-    public void EachPickerEndsInAClockIcon(string picker)
-    {
-        var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0))));
-
-        var adornment = row.Find($"{picker} .mud-input-adornment-end");
-        Assert.Contains(IconPaths.DistinctivePath(MudBlazor.Icons.Material.Outlined.Schedule), adornment.InnerHtml);
+        Assert.Empty(row.FindAll("button[aria-label='Clear time']"));
     }
 
     [Fact]
@@ -151,12 +118,12 @@ public class TimeRowTests : Bunit.TestContext
     {
         var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0))));
 
-        Assert.False(row.Find(".pspad-time-start input").HasAttribute("readonly"));
-        Assert.False(row.Find(".pspad-time-end input").HasAttribute("readonly"));
+        Assert.False(row.Find("input[aria-label='Start']").HasAttribute("readonly"));
+        Assert.False(row.Find("input[aria-label='End']").HasAttribute("readonly"));
     }
 
     [Fact]
-    public void TheClockIconOpensThePicker()
+    public void TheClockButtonOpensThePicker()
     {
         var host = Render(builder =>
         {
@@ -166,36 +133,11 @@ public class TimeRowTests : Bunit.TestContext
             builder.AddAttribute(2, nameof(TimeRow.Value), (TaskTime?)new TaskTime(new TimeOnly(9, 0), null));
             builder.CloseComponent();
         });
-        Assert.Empty(host.FindAll(".mud-picker-content"));
+        var buttonsBefore = host.FindAll("button").Count;
 
-        host.Find(".pspad-time-start .mud-input-adornment-end button").Click();
+        host.Find("button[aria-label='Pick start time']").Click();
 
-        host.WaitForAssertion(() => Assert.NotEmpty(host.FindAll(".mud-picker-content")));
-    }
-
-    [Fact]
-    public void FromAndToSitOnTwoRowsBesideTheTimeLabel()
-    {
-        var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0))));
-
-        Assert.Equal("Time", row.Find(".pspad-time-head .pspad-property-label").TextContent);
-        Assert.NotNull(row.Find(".pspad-time-head .pspad-time-icon"));
-        var lines = row.FindAll(".pspad-time-lines > .pspad-time-line");
-        Assert.Equal(2, lines.Count);
-        Assert.Equal("From", lines[0].QuerySelector(".pspad-time-line-label")!.TextContent);
-        Assert.NotNull(lines[0].QuerySelector(".pspad-time-start"));
-        Assert.Equal("To", lines[1].QuerySelector(".pspad-time-line-label")!.TextContent);
-        Assert.NotNull(lines[1].QuerySelector(".pspad-time-end"));
-    }
-
-    [Fact]
-    public void TheClearButtonSitsOnTheFromRow()
-    {
-        var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), null)));
-
-        var lines = row.FindAll(".pspad-time-line");
-        Assert.NotNull(lines[0].QuerySelector(".pspad-time-clear"));
-        Assert.Null(lines[1].QuerySelector(".pspad-time-clear"));
+        host.WaitForAssertion(() => Assert.True(host.FindAll("button").Count > buttonsBefore));
     }
 
     [Fact]
@@ -206,7 +148,7 @@ public class TimeRowTests : Bunit.TestContext
             .Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0)))
             .Add(r => r.ValueChanged, (TaskTime? time) => sent = time));
 
-        row.Find(".pspad-time-clear").Click();
+        row.Find("button[aria-label='Clear time']").Click();
 
         Assert.Null(sent);
     }

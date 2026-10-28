@@ -19,7 +19,7 @@ public class MarkdownFieldTests : Bunit.TestContext
 
         var field = Render("## Hi");
 
-        Assert.Contains("<h2", field.Markup);
+        Assert.Equal("Hi", field.Find("h2").TextContent);
         Assert.Empty(field.FindAll("textarea"));
     }
 
@@ -30,7 +30,7 @@ public class MarkdownFieldTests : Bunit.TestContext
 
         var field = Render("");
 
-        var textarea = field.Find(".pspad-markdown-input textarea");
+        var textarea = field.Find("textarea");
         Assert.Equal("Add a description…", textarea.GetAttribute("placeholder"));
         Assert.Empty(field.FindAll("button"));
     }
@@ -42,7 +42,7 @@ public class MarkdownFieldTests : Bunit.TestContext
 
         var field = Render("");
 
-        Assert.Equal($"{ContentLimits.Description}", field.Find(".pspad-markdown-input textarea").GetAttribute("maxlength"));
+        Assert.Equal($"{ContentLimits.Description}", field.Find("textarea").GetAttribute("maxlength"));
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class MarkdownFieldTests : Bunit.TestContext
         Arrange();
         var field = Render("## Hi");
 
-        field.Find(".pspad-markdown-edit").Click();
+        field.Find("button[aria-label='Edit description']").Click();
 
         Assert.Equal("## Hi", field.Find("textarea").TextContent);
     }
@@ -107,7 +107,7 @@ public class MarkdownFieldTests : Bunit.TestContext
         Arrange();
         var field = Render("[site](https://example.com)");
 
-        await ClickRenderedText(field, onLink: true);
+        await ClickRenderedText(field, onLink: true, "a");
 
         Assert.Empty(field.FindAll("textarea"));
     }
@@ -123,7 +123,7 @@ public class MarkdownFieldTests : Bunit.TestContext
             return System.Threading.Tasks.Task.FromResult(true);
         });
 
-        field.Find(".pspad-markdown-edit").Click();
+        field.Find("button[aria-label='Edit description']").Click();
         field.Find("textarea").Input("## Bye");
         field.Find("textarea").Blur();
 
@@ -142,7 +142,7 @@ public class MarkdownFieldTests : Bunit.TestContext
             return System.Threading.Tasks.Task.FromResult(true);
         });
 
-        field.Find(".pspad-markdown-edit").Click();
+        field.Find("button[aria-label='Edit description']").Click();
         field.Find("textarea").Blur();
 
         Assert.False(saveCalled);
@@ -160,13 +160,13 @@ public class MarkdownFieldTests : Bunit.TestContext
             return System.Threading.Tasks.Task.FromResult(true);
         });
 
-        field.Find(".pspad-markdown-edit").Click();
+        field.Find("button[aria-label='Edit description']").Click();
         field.Find("textarea").Input("## Bye");
         field.Find("textarea").KeyDown(new KeyboardEventArgs { Key = "Escape" });
 
         Assert.False(saveCalled);
         Assert.Empty(field.FindAll("textarea"));
-        Assert.Contains(">Hi<", field.Markup);
+        Assert.Equal("Hi", field.Find("h2").TextContent);
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class MarkdownFieldTests : Bunit.TestContext
         Arrange();
         var field = Render("## Hi");
 
-        await field.Find(".pspad-markdown-content")
+        await field.Find("h2")
             .TriggerEventAsync("onmarkdownviewclick", new MarkdownViewClickEventArgs { HasSelection = true });
 
         Assert.Empty(field.FindAll("textarea"));
@@ -199,7 +199,7 @@ public class MarkdownFieldTests : Bunit.TestContext
         Arrange();
         var field = Render("## Hi", onSave: _ => System.Threading.Tasks.Task.FromResult(false));
 
-        field.Find(".pspad-markdown-edit").Click();
+        field.Find("button[aria-label='Edit description']").Click();
         field.Find("textarea").Input("## Bye");
         var before = FocusCalls();
         field.Find("textarea").Blur();
@@ -213,12 +213,12 @@ public class MarkdownFieldTests : Bunit.TestContext
         Arrange();
 
         var field = Render("## Hi", readOnly: true);
-        Assert.Empty(field.FindAll(".pspad-markdown-edit"));
-        Assert.Empty(field.FindAll(".pspad-markdown-content"));
+        Assert.Empty(field.FindAll("button"));
+        Assert.Equal("Hi", field.Find("h2").TextContent);
 
         var blank = Render("", readOnly: true);
         Assert.Empty(blank.FindAll("textarea"));
-        Assert.Contains("No description", blank.Markup);
+        Assert.Contains("No description", blank.Text());
     }
 
     [Fact]
@@ -227,12 +227,12 @@ public class MarkdownFieldTests : Bunit.TestContext
         Arrange();
 
         var field = Render("## Hi", disabled: true);
-        Assert.Empty(field.FindAll(".pspad-markdown-edit"));
-        Assert.Empty(field.FindAll(".pspad-markdown-content"));
+        Assert.Empty(field.FindAll("button"));
+        Assert.Equal("Hi", field.Find("h2").TextContent);
 
         var blank = Render("", disabled: true);
         Assert.Empty(blank.FindAll("textarea"));
-        Assert.Contains("No description", blank.Markup);
+        Assert.Contains("No description", blank.Text());
     }
 
     [Fact]
@@ -241,7 +241,7 @@ public class MarkdownFieldTests : Bunit.TestContext
         Arrange();
         var field = Render("## Hi", onSave: _ => throw new InvalidOperationException("boom"));
 
-        field.Find(".pspad-markdown-edit").Click();
+        field.Find("button[aria-label='Edit description']").Click();
         field.Find("textarea").Input("## Bye");
         field.Find("textarea").Blur();
 
@@ -254,7 +254,7 @@ public class MarkdownFieldTests : Bunit.TestContext
         Arrange();
         var field = Render("## Hi", onSave: _ => System.Threading.Tasks.Task.FromResult(false));
 
-        field.Find(".pspad-markdown-edit").Click();
+        field.Find("button[aria-label='Edit description']").Click();
         field.Find("textarea").Input("## Bye");
         field.Find("textarea").Blur();
 
@@ -273,7 +273,7 @@ public class MarkdownFieldTests : Bunit.TestContext
             return await gate.Task;
         });
 
-        field.Find(".pspad-markdown-edit").Click();
+        field.Find("button[aria-label='Edit description']").Click();
         field.Find("textarea").Input("## Bye");
         field.Find("textarea").Blur();
         field.Find("textarea").Blur();
@@ -283,15 +283,14 @@ public class MarkdownFieldTests : Bunit.TestContext
     }
 
     [Fact]
-    public void RerenderingWithANewValueInViewModeShowsTheNewMarkup()
+    public void RerenderingWithANewValueInViewModeShowsTheNewText()
     {
         Arrange();
         var field = Render("## Hi");
 
         field.Render(parameters => parameters.Add(p => p.Value, "## Bye"));
 
-        Assert.Contains("Bye", field.Markup);
-        Assert.DoesNotContain(">Hi<", field.Markup);
+        Assert.Equal("Bye", field.Find("h2").TextContent);
     }
 
     [Fact]
@@ -300,9 +299,9 @@ public class MarkdownFieldTests : Bunit.TestContext
         Arrange();
         var field = Render("## Hi");
 
-        Assert.Equal("Edit description", field.Find(".pspad-markdown-edit").GetAttribute("aria-label"));
+        Assert.NotNull(field.Find("button[aria-label='Edit description']"));
 
-        field.Find(".pspad-markdown-edit").Click();
+        field.Find("button[aria-label='Edit description']").Click();
 
         Assert.Equal("Description", field.Find("textarea").GetAttribute("aria-label"));
     }
@@ -313,7 +312,7 @@ public class MarkdownFieldTests : Bunit.TestContext
         Arrange();
         var field = Render("## Hi");
 
-        field.Find(".pspad-markdown-edit").Click();
+        field.Find("button[aria-label='Edit description']").Click();
         field.Find("textarea").Input("## Typed");
         field.Render(parameters => parameters.Add(p => p.Value, "## Other"));
 
@@ -334,8 +333,8 @@ public class MarkdownFieldTests : Bunit.TestContext
 
     int FocusCalls() => JSInterop.Invocations.Count(invocation => invocation.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase));
 
-    static System.Threading.Tasks.Task ClickRenderedText(IRenderedComponent<MarkdownField> field, bool onLink) =>
-        field.Find(".pspad-markdown-content")
+    static System.Threading.Tasks.Task ClickRenderedText(IRenderedComponent<MarkdownField> field, bool onLink, string selector = "h2") =>
+        field.Find(selector)
             .TriggerEventAsync("onmarkdownviewclick", new MarkdownViewClickEventArgs { OnLink = onLink });
 
     IRenderedComponent<MarkdownField> Render(

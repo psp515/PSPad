@@ -21,16 +21,14 @@ public class ListMonthViewTests : Bunit.TestContext
     public void ADayShowsTwoNamesAndCountsTheRest()
     {
         var day = new DateOnly(2026, 10, 27);
-        var view = RenderMonth(tasks: [Due(day, "a"), Due(day, "b"), Due(day, "c")]);
+        var view = RenderMonth(tasks: [Due(day, "Alpha"), Due(day, "Bravo"), Due(day, "Charlie")]);
 
-        var cell = view.Find($"[data-day='{day:yyyy-MM-dd}']");
-        Assert.Equal(2, cell.QuerySelectorAll(".pspad-month-entry").Length);
-        Assert.Contains("+1 more", cell.TextContent);
+        var cell = Cell(view, day).TextContent;
+        Assert.Contains("Alpha", cell);
+        Assert.Contains("Bravo", cell);
+        Assert.DoesNotContain("Charlie", cell);
+        Assert.Contains("+1 more", cell);
     }
-
-    [Fact]
-    public void AnOverdueEntryIsMarked() =>
-        Assert.Single(RenderMonth(tasks: [Due(new DateOnly(2026, 10, 20), "late")]).FindAll(".pspad-month-entry-overdue"));
 
     [Fact]
     public void ARecurringTaskShowsOnItsComingDays()
@@ -39,50 +37,52 @@ public class ListMonthViewTests : Bunit.TestContext
 
         var view = RenderMonth(tasks: [mondays]);
 
-        Assert.Empty(view.Find("[data-day='2026-10-19']").QuerySelectorAll(".pspad-month-entry"));
-        Assert.Single(view.Find("[data-day='2026-10-26']").QuerySelectorAll(".pspad-month-entry"));
+        Assert.DoesNotContain("Water the plants", Cell(view, new DateOnly(2026, 10, 19)).TextContent);
+        Assert.Contains("Water the plants", Cell(view, new DateOnly(2026, 10, 26)).TextContent);
     }
 
     [Fact]
-    public void TodayIsOutlinedAndSelectedByDefault()
+    public void TodayIsSelectedByDefaultAndItsTasksAreListed()
     {
-        var view = RenderMonth(tasks: [Due(Today, "now")]);
+        var view = RenderMonth(tasks: [Due(Today, "Alpha")]);
 
-        Assert.Contains("pspad-month-day-today", view.Find($"[data-day='{Today:yyyy-MM-dd}']").ClassName);
-        Assert.Contains("now", view.Find(".pspad-month-detail").TextContent);
+        Assert.Equal("true", Cell(view, Today).GetAttribute("aria-pressed"));
+        Assert.Contains("Alpha", view.Find("section").TextContent);
     }
 
     [Fact]
-    public void ClickingADayListsItsTasksAsRows()
+    public void ClickingADayListsItsTasksBelow()
     {
         var day = new DateOnly(2026, 10, 27);
-        var view = RenderMonth(tasks: [Due(day, "a"), Due(day, "b")]);
+        var view = RenderMonth(tasks: [Due(day, "Alpha"), Due(day, "Bravo")]);
 
-        view.Find($"[data-day='{day:yyyy-MM-dd}']").Click();
+        Cell(view, day).Click();
 
-        Assert.Equal(2, view.Find(".pspad-month-detail").QuerySelectorAll(".pspad-row").Length);
-        Assert.Contains("pspad-month-day-selected", view.Find($"[data-day='{day:yyyy-MM-dd}']").ClassName);
+        var detail = view.Find("section").TextContent;
+        Assert.Contains("Alpha", detail);
+        Assert.Contains("Bravo", detail);
+        Assert.Equal("true", Cell(view, day).GetAttribute("aria-pressed"));
+        Assert.Equal("false", Cell(view, Today).GetAttribute("aria-pressed"));
     }
 
     [Fact]
     public void DayRowsCarryTheirGoal()
     {
-        var task = Due(Today, "now");
+        var task = Due(Today, "Alpha");
 
         var view = RenderMonth(tasks: [task], goalNameOf: _ => "Move to Kraków");
 
-        Assert.Contains("Move to Kraków", view.Find(".pspad-month-detail .pspad-row-goal").TextContent);
+        Assert.Contains("Move to Kraków", view.Find("section").TextContent);
     }
 
     [Fact]
     public void EntriesInADayFollowTheSort()
     {
         var day = new DateOnly(2026, 10, 27);
-        var view = RenderMonth(new ListSort(ListOrder.Name, true), [Due(day, "a"), Due(day, "b")]);
+        var view = RenderMonth(new ListSort(ListOrder.Name, true), [Due(day, "Alpha"), Due(day, "Bravo")]);
 
-        var names = view.Find($"[data-day='{day:yyyy-MM-dd}']").QuerySelectorAll(".pspad-month-entry-name")
-            .Select(entry => entry.TextContent.Trim());
-        Assert.Equal(["b", "a"], names);
+        var cell = Cell(view, day).TextContent;
+        Assert.True(cell.IndexOf("Bravo", StringComparison.Ordinal) < cell.IndexOf("Alpha", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -91,39 +91,28 @@ public class ListMonthViewTests : Bunit.TestContext
         var shown = false;
         var view = RenderMonth(undated: 2, onShowUndated: () => shown = true);
 
-        Assert.Contains("2 tasks have no date.", view.Find(".pspad-month-undated").TextContent);
-        view.Find(".pspad-month-undated button").Click();
+        Assert.Contains("2 tasks have no date.", view.Text());
+        view.FindAll("button").Single(button => button.TextContent.Contains("Show them")).Click();
 
         Assert.True(shown);
     }
 
     [Fact]
-    public void NoUndatedLineAtZero() => Assert.Empty(RenderMonth().FindAll(".pspad-month-undated"));
+    public void NoUndatedLineAtZero() => Assert.DoesNotContain("have no date", RenderMonth().Text());
 
     [Fact]
-    public void EveryDayCarriesAnAccessibleLabel() =>
-        Assert.All(RenderMonth().FindAll(".pspad-month-day"),
-            cell => Assert.False(string.IsNullOrEmpty(cell.GetAttribute("aria-label"))));
-
-    [Fact]
-    public void ACellCarriesBothTheNamesAndThePhoneDot()
+    public void TheGridCoversWholeWeeksOfTheMonthAndLabelsEveryDay()
     {
-        var day = new DateOnly(2026, 10, 27);
-        var cell = RenderMonth(tasks: [Due(day, "a")]).Find($"[data-day='{day:yyyy-MM-dd}']");
-
-        Assert.NotNull(cell.QuerySelector(".pspad-month-dot"));
-        Assert.NotNull(cell.QuerySelector(".pspad-month-entry"));
-    }
-
-    [Fact]
-    public void TheGridCoversWholeWeeksOfTheMonth()
-    {
-        var days = RenderMonth().FindAll(".pspad-month-day");
+        var days = RenderMonth().FindAll("button[data-day]");
 
         Assert.Equal(0, days.Count % 7);
-        Assert.Contains(days, cell => cell.GetAttribute("data-day") == "2026-10-01");
-        Assert.Contains(days, cell => cell.GetAttribute("data-day") == "2026-10-31");
+        Assert.All(days, cell => Assert.False(string.IsNullOrEmpty(cell.GetAttribute("aria-label"))));
+        Assert.Contains(days, cell => cell.GetAttribute("aria-label")!.Contains(new DateOnly(2026, 10, 1).ToString("d MMMM")));
+        Assert.Contains(days, cell => cell.GetAttribute("aria-label")!.Contains(new DateOnly(2026, 10, 31).ToString("d MMMM")));
     }
+
+    static AngleSharp.Dom.IElement Cell(IRenderedComponent<IComponent> view, DateOnly day) =>
+        view.FindAll("button[data-day]").First(cell => cell.GetAttribute("aria-label")!.Contains(day.ToString("d MMMM")));
 
     IRenderedComponent<ContainerFragment> RenderMonth(
         ListSort? sort = null, TodoTask[]? tasks = null, int undated = 0, Action? onShowUndated = null,

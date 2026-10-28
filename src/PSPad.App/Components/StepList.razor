@@ -65,7 +65,8 @@
         </span>
         <MudTextField T="string" Class="pspad-step-add flex-grow-1 mt-0" @bind-Value="_newStep"
                       Placeholder="@(StepCount == 0 ? T["AddStep"] : T["NextStep"])" Underline="false" MaxLength="@ContentLimits.Name"
-                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
+                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync"
+                      UserAttributes="@AddAttributes" />
     </div>
 </div>
 
@@ -120,6 +121,9 @@
         await sender.SendAsync(new AddStep(Guid.NewGuid(), UserId, Task.Id, Guid.NewGuid(), name));
         await Changed.InvokeAsync();
     }
+
+    Dictionary<string, object> AddAttributes =>
+        new() { ["aria-label"] = (StepCount == 0 ? T["AddStep"] : T["NextStep"]).Value };
 
     Dictionary<string, object> NameAttributes(string name) =>
         new() { ["aria-label"] = T["RenameStep", name].Value };

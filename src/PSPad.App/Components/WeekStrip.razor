@@ -12,12 +12,12 @@
             @foreach (var day in Week)
             {
                 <MudButton @key="day" Class="@DayClass(day)" Variant="Variant.Text" aria-label="@day.ToString("ddd, d MMM")"
-                           aria-current="@(day == Today ? "date" : null)" OnClick="@(() => DayChanged.InvokeAsync(day))">
+                           aria-current="@(day == Today ? "date" : null)" aria-pressed="@(day == Day ? "true" : "false")" OnClick="@(() => DayChanged.InvokeAsync(day))">
                     <span class="pspad-week-initial">@day.ToString("ddd")[..1]</span>
                     <span class="pspad-week-circle">@day.Day</span>
                     @if (Busy.Contains(day))
                     {
-                        <span class="pspad-week-dot"></span>
+                        <span class="pspad-week-dot" data-testid="week-day-busy"></span>
                     }
                     else
                     {

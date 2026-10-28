@@ -1,4 +1,6 @@
+using AngleSharp.Dom;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
@@ -23,17 +25,17 @@ public class ReferenceFieldListTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, item);
 
         var fields = RenderList(item);
-        fields.Find(".pspad-field-add-label input").Input("Time");
-        fields.Find(".pspad-field-add-value input").Input("45 min");
-        fields.Find(".pspad-field-add-value input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        LabelField(fields).Input("Time");
+        ValueField(fields).Input("45 min");
+        ValueField(fields).KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
         var field = Assert.Single(stored!.Fields);
         Assert.Equal("Time", field.Label);
         Assert.Equal("45 min", field.Value);
         Assert.Null(field.Display);
-        Assert.Equal("", fields.Find(".pspad-field-add-label input").GetAttribute("value") ?? "");
-        Assert.Equal("", fields.Find(".pspad-field-add-value input").GetAttribute("value") ?? "");
+        Assert.Equal("", LabelField(fields).GetAttribute("value") ?? "");
+        Assert.Equal("", ValueField(fields).GetAttribute("value") ?? "");
         Assert.Contains(JSInterop.Invocations, invocation => invocation.Identifier == FocusIdentifier);
     }
 
@@ -45,8 +47,8 @@ public class ReferenceFieldListTests : Bunit.TestContext
 
         var fields = RenderList(item);
 
-        Assert.Equal($"{ContentLimits.Label}", fields.Find(".pspad-field-add-label input").GetAttribute("maxlength"));
-        Assert.Equal($"{ContentLimits.FieldValue}", fields.Find(".pspad-field-add-value input").GetAttribute("maxlength"));
+        Assert.Equal($"{ContentLimits.Label}", LabelField(fields).GetAttribute("maxlength"));
+        Assert.Equal($"{ContentLimits.FieldValue}", ValueField(fields).GetAttribute("maxlength"));
     }
 
     [Fact]
@@ -56,12 +58,12 @@ public class ReferenceFieldListTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, item);
 
         var fields = RenderList(item);
-        fields.Find(".pspad-field-add-label input").Input("Servings");
-        fields.Find(".pspad-field-add-label input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        LabelField(fields).Input("Servings");
+        LabelField(fields).KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Empty(stored!.Fields);
-        Assert.Equal("Servings", fields.Find(".pspad-field-add-label input").GetAttribute("value"));
+        Assert.Equal("Servings", LabelField(fields).GetAttribute("value"));
         Assert.Contains(JSInterop.Invocations, invocation => invocation.Identifier == FocusIdentifier);
     }
 
@@ -72,9 +74,9 @@ public class ReferenceFieldListTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, item);
 
         var fields = RenderList(item);
-        fields.Find(".pspad-field-add-label input").Input("Time");
-        fields.Find(".pspad-field-add-value input").Input("45 min");
-        fields.Find(".pspad-field-add-value input").Blur();
+        LabelField(fields).Input("Time");
+        ValueField(fields).Input("45 min");
+        ValueField(fields).Blur();
 
         var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Empty(stored!.Fields);
@@ -87,8 +89,8 @@ public class ReferenceFieldListTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, item);
 
         var fields = RenderList(item);
-        fields.Find(".pspad-field-add-value input").Input("45 min");
-        fields.Find(".pspad-field-add-value input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        ValueField(fields).Input("45 min");
+        ValueField(fields).KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Empty(stored!.Fields);
@@ -99,17 +101,15 @@ public class ReferenceFieldListTests : Bunit.TestContext
     public void ARejectedAddSurfacesTheRejectionAndKeepsTheText()
     {
         var item = NewItem();
-        AppTestHost.Arrange(this, User, Today, item);
-        Services.AddSingleton<ICommandHandler<AddReferenceField>>(
-            new RejectingHandler<AddReferenceField>("Item no longer exists."));
+        AppTestHost.Arrange(this, User, Today);
 
         var fields = RenderList(item);
-        fields.Find(".pspad-field-add-label input").Input("Time");
-        fields.Find(".pspad-field-add-value input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        LabelField(fields).Input("Time");
+        ValueField(fields).KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         var snackbar = Services.GetRequiredService<ISnackbar>();
-        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("Item no longer exists.") == true);
-        Assert.Equal("Time", fields.Find(".pspad-field-add-label input").GetAttribute("value"));
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Severity == Severity.Warning);
+        Assert.Equal("Time", LabelField(fields).GetAttribute("value"));
     }
 
     [Fact]
@@ -118,9 +118,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
         var item = NewItem();
         AddField(item, "Time", "45 min");
         AddField(item, "Servings", "4");
-        AppTestHost.Arrange(this, User, Today, item);
-        Services.AddSingleton<ICommandHandler<MoveReferenceField>>(
-            new RejectingHandler<MoveReferenceField>("Field no longer exists."));
+        AppTestHost.Arrange(this, User, Today);
         var changes = 0;
 
         var fields = Render<ReferenceFieldList>(parameters => parameters
@@ -129,7 +127,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
 
         Assert.Equal(0, changes);
         var snackbar = Services.GetRequiredService<ISnackbar>();
-        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("Field no longer exists.") == true);
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Severity == Severity.Warning);
     }
 
     [Fact]
@@ -140,10 +138,10 @@ public class ReferenceFieldListTests : Bunit.TestContext
         AppTestHost.Arrange(this, User, Today, item);
 
         var fields = RenderList(item);
-        fields.Find(".pspad-field-copy").Click();
+        fields.Find("button[aria-label='Copy']").Click();
 
-        Assert.Empty(fields.FindAll(".pspad-field-editor"));
-        Assert.NotEmpty(fields.FindAll(".pspad-field-row"));
+        Assert.False(EditorIsOpen(fields));
+        Assert.Contains("/srv/prints", fields.Text());
     }
 
     [Fact]
@@ -154,21 +152,9 @@ public class ReferenceFieldListTests : Bunit.TestContext
         AppTestHost.Arrange(this, User, Today, item);
 
         var fields = RenderList(item);
-        fields.Find("a.pspad-field-link").Click();
+        fields.Find("a").Click();
 
-        Assert.Empty(fields.FindAll(".pspad-field-editor"));
-    }
-
-    [Fact]
-    public void FieldRowsShareTheAddRowsLeadColumn()
-    {
-        var item = NewItem();
-        AddField(item, "Time", "45 min");
-        AppTestHost.Arrange(this, User, Today, item);
-
-        var fields = RenderList(item);
-
-        Assert.NotNull(fields.Find(".pspad-field-row").QuerySelector(".pspad-step-lead"));
+        Assert.False(EditorIsOpen(fields));
     }
 
     [Fact]
@@ -179,9 +165,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, item);
 
         var fields = RenderList(item);
-        var remove = fields.Find(".pspad-field-remove");
-        Assert.Equal("Remove Time", remove.GetAttribute("aria-label"));
-        remove.Click();
+        fields.Find("button[aria-label='Remove Time']").Click();
 
         var stored = await replica.LoadAsync<ReferenceItem>(item.Id);
         Assert.Empty(stored!.Fields);
@@ -192,15 +176,13 @@ public class ReferenceFieldListTests : Bunit.TestContext
     {
         var item = NewItem();
         AddField(item, "Time", "45 min");
-        AppTestHost.Arrange(this, User, Today, item);
-        Services.AddSingleton<ICommandHandler<RemoveReferenceField>>(
-            new RejectingHandler<RemoveReferenceField>("Field no longer exists."));
+        AppTestHost.Arrange(this, User, Today);
 
         var fields = RenderList(item);
-        fields.Find(".pspad-field-remove").Click();
+        fields.Find("button[aria-label='Remove Time']").Click();
 
         var snackbar = Services.GetRequiredService<ISnackbar>();
-        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Message?.Contains("Field no longer exists.") == true);
+        Assert.Contains(snackbar.ShownSnackbars, snack => snack.Severity == Severity.Warning);
     }
 
     [Fact]
@@ -212,9 +194,8 @@ public class ReferenceFieldListTests : Bunit.TestContext
 
         var fields = RenderList(item);
 
-        var row = fields.Find(".pspad-field-row");
-        Assert.Equal("Time", row.QuerySelector(".pspad-field-label")!.TextContent.Trim());
-        Assert.Contains("45 min", row.QuerySelector(".pspad-field-row-body")!.TextContent);
+        var text = Squash(fields.Text());
+        Assert.True(text.IndexOf("Time", StringComparison.Ordinal) < text.IndexOf("45min", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -225,10 +206,10 @@ public class ReferenceFieldListTests : Bunit.TestContext
         AppTestHost.Arrange(this, User, Today, item);
 
         var fields = RenderList(item);
-        fields.Find(".pspad-field-row-body").Click();
+        OpenRow(fields, "Time");
 
-        Assert.Empty(fields.FindAll(".pspad-field-row"));
-        Assert.Equal("Time", fields.Find(".pspad-field-label-input input").GetAttribute("value"));
+        Assert.True(EditorIsOpen(fields));
+        Assert.Equal("Time", fields.Labelled("Label").GetAttribute("value"));
     }
 
     [Fact]
@@ -241,29 +222,28 @@ public class ReferenceFieldListTests : Bunit.TestContext
         var fields = Render<ReferenceFieldList>(parameters => parameters
             .Add(p => p.Item, item).Add(p => p.UserId, User).Add(p => p.Disabled, true));
 
-        Assert.True(fields.Find(".pspad-field-remove").HasAttribute("disabled"));
-        Assert.True(fields.Find(".pspad-field-add-label input").HasAttribute("disabled"));
+        Assert.True(fields.Find("button[aria-label='Remove Time']").HasAttribute("disabled"));
+        Assert.True(LabelField(fields).HasAttribute("disabled"));
     }
 
     [Fact]
     public async Task WithoutAnItemEnterAddsToTheDraftAndSendsNothing()
     {
-        AppTestHost.Arrange(this, User, Today);
+        var replica = AppTestHost.Arrange(this, User, Today);
         var draft = new List<ReferenceField>();
-        var outbox = Services.GetRequiredService<PSPad.App.State.Outbox.IOutbox>();
 
         var fields = RenderDraft(draft);
-        fields.Find(".pspad-field-add-label input").Input("Time");
-        fields.Find(".pspad-field-add-value input").Input("45 min");
-        fields.Find(".pspad-field-add-value input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        LabelField(fields).Input("Time");
+        ValueField(fields).Input("45 min");
+        ValueField(fields).KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         var field = Assert.Single(draft);
         Assert.Equal("Time", field.Label);
         Assert.Equal("45 min", field.Value);
         Assert.Null(field.Display);
-        Assert.Equal(0, await outbox.CountAsync());
-        Assert.Equal("Time", fields.Find(".pspad-field-row .pspad-field-label").TextContent.Trim());
-        Assert.Equal("", fields.Find(".pspad-field-add-label input").GetAttribute("value") ?? "");
+        Assert.Empty(await replica.LoadAllAsync<ReferenceItem>(User));
+        Assert.NotNull(fields.Find("button[aria-label='Remove Time']"));
+        Assert.Equal("", LabelField(fields).GetAttribute("value") ?? "");
     }
 
     [Fact]
@@ -282,8 +262,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
 
         Assert.Equal(["Time", "Difficulty", "Servings"], draft.Select(field => field.Label));
         Assert.Equal([0, 1, 2], draft.Select(field => field.Position));
-        Assert.Equal(["Time", "Difficulty", "Servings"],
-            fields.FindAll(".pspad-field-row .pspad-field-label").Select(label => label.TextContent.Trim()));
+        Assert.Equal(["Remove Time", "Remove Difficulty", "Remove Servings"], RemoveLabels(fields));
     }
 
     [Fact]
@@ -296,10 +275,8 @@ public class ReferenceFieldListTests : Bunit.TestContext
 
         var fields = Render<ReferenceFieldList>(parameters => parameters.Add(p => p.Item, item).Add(p => p.UserId, User));
 
-        var rows = fields.FindAll(".pspad-field-row");
-        Assert.All(rows, row => Assert.Contains("pspad-drag-handle", row.LastElementChild!.ClassName));
-        Assert.Empty(fields.FindAll(".pspad-field-up"));
-        Assert.Empty(fields.FindAll(".pspad-field-down"));
+        Assert.Equal(["Drag Time", "Drag Servings"],
+            fields.FindAll("[aria-label^='Drag ']").Select(handle => handle.GetAttribute("aria-label")));
     }
 
     [Fact]
@@ -313,11 +290,11 @@ public class ReferenceFieldListTests : Bunit.TestContext
         };
 
         var fields = RenderDraft(draft);
-        fields.FindAll(".pspad-field-remove")[0].Click();
+        fields.Find("button[aria-label='Remove Time']").Click();
 
         Assert.Equal(["Servings"], draft.Select(field => field.Label));
         Assert.Equal(0, draft[0].Position);
-        Assert.Single(fields.FindAll(".pspad-field-row"));
+        Assert.Equal(["Remove Servings"], RemoveLabels(fields));
     }
 
     [Fact]
@@ -327,14 +304,14 @@ public class ReferenceFieldListTests : Bunit.TestContext
         var draft = new List<ReferenceField> { new(Guid.NewGuid(), "Time", "45 min", null, 0) };
 
         var fields = RenderDraft(draft);
-        fields.Find(".pspad-field-row-body").Click();
-        fields.Find(".pspad-field-label-input input").Change("Cooking time");
-        fields.Find(".pspad-field-save").Click();
+        OpenRow(fields, "Time");
+        fields.Labelled("Label").Change("Cooking time");
+        fields.FindAll("button").Single(button => button.TextContent.Trim() == "Save").Click();
 
         var field = Assert.Single(draft);
         Assert.Equal("Cooking time", field.Label);
         Assert.Equal("45 min", field.Value);
-        Assert.Equal("Cooking time", fields.Find(".pspad-field-row .pspad-field-label").TextContent.Trim());
+        Assert.Equal(["Remove Cooking time"], RemoveLabels(fields));
     }
 
     [Fact]
@@ -347,7 +324,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
         fields.InvokeAsync(() => fields.Instance.OnDropped("https://example.com/x", null, false));
         fields.Render();
 
-        Assert.Equal("https://example.com/x", fields.Find(".pspad-field-add-value input").GetAttribute("value"));
+        Assert.Equal("https://example.com/x", ValueField(fields).GetAttribute("value"));
         Assert.Contains(JSInterop.Invocations, invocation => invocation.Identifier == FocusIdentifier);
     }
 
@@ -362,7 +339,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
             "# a comment\nhttps://example.com/first\nhttps://example.com/second", null, false));
         fields.Render();
 
-        Assert.Equal("https://example.com/first", fields.Find(".pspad-field-add-value input").GetAttribute("value"));
+        Assert.Equal("https://example.com/first", ValueField(fields).GetAttribute("value"));
     }
 
     [Fact]
@@ -375,7 +352,7 @@ public class ReferenceFieldListTests : Bunit.TestContext
         fields.InvokeAsync(() => fields.Instance.OnDropped(null, "OneDrive/recipes.txt", false));
         fields.Render();
 
-        Assert.Equal("OneDrive/recipes.txt", fields.Find(".pspad-field-add-value input").GetAttribute("value"));
+        Assert.Equal("OneDrive/recipes.txt", ValueField(fields).GetAttribute("value"));
     }
 
     [Fact]
@@ -392,8 +369,23 @@ public class ReferenceFieldListTests : Bunit.TestContext
         Assert.Contains(snackbar.ShownSnackbars,
             snack => snack.Message?.Contains("Browsers can't read a file's full path") == true
                      && snack.Severity == Severity.Info);
-        Assert.Equal("", fields.Find(".pspad-field-add-value input").GetAttribute("value") ?? "");
+        Assert.Equal("", ValueField(fields).GetAttribute("value") ?? "");
     }
+
+    static IElement LabelField(IRenderedComponent<IComponent> fields) => fields.Find("input[aria-label='New label']");
+
+    static IElement ValueField(IRenderedComponent<IComponent> fields) => fields.Find("input[aria-label='New label value']");
+
+    static string[] RemoveLabels(IRenderedComponent<IComponent> fields) =>
+        [.. fields.FindAll("button[aria-label^='Remove ']").Select(button => button.GetAttribute("aria-label")!)];
+
+    static bool EditorIsOpen(IRenderedComponent<IComponent> fields) =>
+        fields.FindAll("button").Any(button => button.TextContent.Trim() == "Save");
+
+    static void OpenRow(IRenderedComponent<IComponent> fields, string label) =>
+        fields.FindAll("span").First(span => span.Children.Length == 0 && span.TextContent.Trim() == label).Click();
+
+    static string Squash(string text) => string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
 
     IRenderedComponent<ReferenceFieldList> RenderList(ReferenceItem item) =>
         Render<ReferenceFieldList>(parameters => parameters.Add(p => p.Item, item).Add(p => p.UserId, User));

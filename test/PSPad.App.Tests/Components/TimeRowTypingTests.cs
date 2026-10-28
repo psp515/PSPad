@@ -42,7 +42,7 @@ public class TimeRowTypingTests : Bunit.TestContext
             builder.CloseComponent();
         });
 
-        host.Find(".pspad-time-start input").Change("09:30");
+        host.FindAll("input")[0].Change("09:30");
 
         host.WaitForAssertion(
             () => Assert.Equal(new TaskTime(new TimeOnly(9, 30), null), sent),
