@@ -181,16 +181,24 @@ public class LiveEndpointTests(MongoFixture fixture)
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(TimeSpan.FromSeconds(10));
 
-        while (true)
+        try
         {
-            try
+            while (true)
             {
-                return await LiveListener.OpenAsync(client, deadline.Token);
+                try
+                {
+                    return await LiveListener.OpenAsync(client, deadline.Token);
+                }
+                catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    await Task.Yield();
+                }
             }
-            catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.TooManyRequests)
-            {
-                await Task.Yield();
-            }
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            Assert.Fail("slot never freed");
+            throw;
         }
     }
 
