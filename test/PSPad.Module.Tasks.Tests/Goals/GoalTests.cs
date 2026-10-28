@@ -1,5 +1,6 @@
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Goals;
+using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Module.Tasks.Tests.Goals;
@@ -129,6 +130,90 @@ public class GoalTests
             Goal.Decide(goal, new SetGoalStatus(Guid.NewGuid(), stranger, goal.Id, GoalStatus.Achieved), Now));
         Assert.Throws<DomainRejectedException>(() =>
             Goal.Decide(goal, new SetGoalDueDate(Guid.NewGuid(), stranger, goal.Id, new DateOnly(2026, 12, 31)), Now));
+    }
+
+    [Fact]
+    public void AddingATaskLinksItWithTheTaskName()
+    {
+        var goal = Existing();
+        var task = NewTask("Dune");
+
+        var added = Assert.IsType<TaskAddedToGoal>(Assert.Single(
+            Goal.Decide(goal, new AddTaskToGoal(Guid.NewGuid(), User, goal.Id, task.Id), Now, task)));
+        goal.Apply(added);
+
+        Assert.Equal((task.Id, "Dune", User), (added.TaskId, added.TaskName, added.UserId));
+        Assert.Contains(task.Id, goal.TaskIds);
+    }
+
+    [Fact]
+    public void AddingATaskAlreadyInTheGoalProducesNoEvent()
+    {
+        var goal = Existing();
+        var task = NewTask("Dune");
+        goal.ApplyAll(Goal.Decide(goal, new AddTaskToGoal(Guid.NewGuid(), User, goal.Id, task.Id), Now, task));
+
+        Assert.Empty(Goal.Decide(goal, new AddTaskToGoal(Guid.NewGuid(), User, goal.Id, task.Id), Now, task));
+    }
+
+    [Fact]
+    public void AddingToSomebodyElsesGoalIsRejected()
+    {
+        var goal = Existing();
+        var task = NewTask("Mine");
+
+        var rejection = Assert.Throws<DomainRejectedException>(() =>
+            Goal.Decide(goal, new AddTaskToGoal(Guid.NewGuid(), Guid.NewGuid(), goal.Id, task.Id), Now, task));
+
+        Assert.Equal("That goal belongs to somebody else.", rejection.Message);
+    }
+
+    [Fact]
+    public void AMissingOrDeletedTaskCannotBeAdded()
+    {
+        var goal = Existing();
+        var gone = NewTask("old");
+        gone.ApplyAll(TodoTask.Decide(gone, new DeleteTask(Guid.NewGuid(), User, gone.Id), Now));
+
+        Assert.Throws<DomainRejectedException>(() =>
+            Goal.Decide(goal, new AddTaskToGoal(Guid.NewGuid(), User, goal.Id, gone.Id), Now, gone));
+        Assert.Throws<DomainRejectedException>(() =>
+            Goal.Decide(goal, new AddTaskToGoal(Guid.NewGuid(), User, goal.Id, Guid.NewGuid()), Now));
+    }
+
+    [Fact]
+    public void AddingToAnotherGoalMovesTheTaskOutOfTheFirst()
+    {
+        var first = Existing();
+        var second = Existing();
+        var task = NewTask("Dune");
+        first.ApplyAll(Goal.Decide(first, new AddTaskToGoal(Guid.NewGuid(), User, first.Id, task.Id), Now, task));
+
+        var removed = Assert.IsType<TaskRemovedFromGoal>(Assert.Single(Goal.MoveOut(first, second, task, Now)));
+
+        Assert.Equal(second.Id, removed.MovedTo);
+        Assert.Empty(Goal.MoveOut(second, second, task, Now));
+        Assert.Empty(Goal.MoveOut(Existing(), second, task, Now));
+    }
+
+    [Fact]
+    public void RemovingATaskTakesItOutAndRemovingAgainProducesNoEvent()
+    {
+        var goal = Existing();
+        var task = NewTask("Dune");
+        goal.ApplyAll(Goal.Decide(goal, new AddTaskToGoal(Guid.NewGuid(), User, goal.Id, task.Id), Now, task));
+
+        goal.ApplyAll(Goal.Decide(goal, new RemoveTaskFromGoal(Guid.NewGuid(), User, goal.Id, task.Id), Now, task));
+
+        Assert.DoesNotContain(task.Id, goal.TaskIds);
+        Assert.Empty(Goal.Decide(goal, new RemoveTaskFromGoal(Guid.NewGuid(), User, goal.Id, task.Id), Now, task));
+    }
+
+    static TodoTask NewTask(string name)
+    {
+        var task = new TodoTask();
+        task.ApplyAll(TodoTask.Decide(null, new CreateTask(Guid.NewGuid(), User, Guid.NewGuid(), Guid.NewGuid(), name), Now));
+        return task;
     }
 
     static Goal Existing()

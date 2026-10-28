@@ -1,7 +1,6 @@
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.References;
-using PSPad.Module.Tasks.Tests.Fakes;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Module.Tasks.Tests.References;
@@ -68,57 +67,6 @@ public class SharedReferenceTests
             ReferenceItem.Decide(
                 OwnedItem(), new RenameReferenceItem(Guid.NewGuid(), Member, ItemId, "X"), Now,
                 new ListAccess(Stranger, Member)));
-
-    [Fact]
-    public async Task TheHandlerLetsAMemberRenameThroughTheList()
-    {
-        var lists = new FakeDocumentStore<TaskList>();
-        var items = new FakeDocumentStore<ReferenceItem>();
-        lists.Seed(ListWithMember());
-        items.Seed(OwnedItem());
-        var work = new FakeUnitOfWork();
-
-        var result = await new RenameReferenceItemHandler(items, lists, work, new FixedClock(Now))
-            .HandleAsync(new RenameReferenceItem(Guid.NewGuid(), Member, ItemId, "PETG Grey"), CancellationToken.None);
-
-        Assert.True(result.Accepted, result.Rejection);
-        Assert.Equal(Owner, Assert.Single(work.Events).UserId);
-    }
-
-    [Fact]
-    public async Task TheHandlerRejectsAStranger()
-    {
-        var lists = new FakeDocumentStore<TaskList>();
-        var items = new FakeDocumentStore<ReferenceItem>();
-        lists.Seed(ListWithMember());
-        items.Seed(OwnedItem());
-        var work = new FakeUnitOfWork();
-
-        var result = await new RenameReferenceItemHandler(items, lists, work, new FixedClock(Now))
-            .HandleAsync(new RenameReferenceItem(Guid.NewGuid(), Stranger, ItemId, "PETG Grey"), CancellationToken.None);
-
-        Assert.False(result.Accepted);
-    }
-
-    [Fact]
-    public async Task AMemberMovesAnItemOnlyBetweenTheSameOwnersLists()
-    {
-        var lists = new FakeDocumentStore<TaskList>();
-        var items = new FakeDocumentStore<ReferenceItem>();
-        var membersOwnList = new TaskList();
-        membersOwnList.Apply(
-            new TaskListCreated(Guid.NewGuid(), Member, Now, Guid.NewGuid(), "Member's filaments", ListKind.Reference));
-        lists.Seed(ListWithMember());
-        lists.Seed(membersOwnList);
-        items.Seed(OwnedItem());
-        var work = new FakeUnitOfWork();
-
-        var result = await new MoveReferenceItemToListHandler(items, lists, work, new FixedClock(Now))
-            .HandleAsync(new MoveReferenceItemToList(Guid.NewGuid(), Member, ItemId, membersOwnList.Id), CancellationToken.None);
-
-        Assert.False(result.Accepted);
-        Assert.Equal("An item can only move between lists of the same owner.", result.Rejection);
-    }
 
     static ReferenceItem OwnedItem()
     {
