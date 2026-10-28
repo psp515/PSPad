@@ -13,7 +13,8 @@ test('a timed task sits on the schedule and is ticked from the timeline', async 
 
   await signIn(page, account);
   await expect(page.getByText('Schedule empty for today.')).toBeVisible();
-  await expect(page.locator('.pspad-timeline-hour')).toHaveCount(1);
+  const nowHour = (await page.locator('.pspad-timeline-now-label').innerText()).slice(0, 2);
+  await expect(page.locator('.pspad-timeline-hour-label', { hasText: `${nowHour}:00` })).toBeVisible();
   await expect(page.locator('.pspad-timeline-fold').first()).toBeVisible();
 
   await createArea(page, `Errands ${account.suffix}`);

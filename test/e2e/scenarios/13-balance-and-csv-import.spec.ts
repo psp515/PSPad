@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures/accounts';
 import { addHolding, createBudget, digitsOf, openBudgetSettings, showView } from '../helpers/budgets';
-import { isoDate, isoMonth, utcToday } from '../helpers/dates';
+import { isoDate, isoMonth, monthButton, utcToday } from '../helpers/dates';
 import { signIn } from '../helpers/sign-in';
 
 function csv(name: string, lines: string[]) {
@@ -53,9 +53,6 @@ test('a balance month is started by hand and history arrives from CSV', async ({
   await expect(page.locator('.pspad-entry-row').filter({ hasText: 'Salary' })).toBeVisible();
 
   await showView(page, 'Balance');
-  await page.getByRole('button', {
-    name: previousMonth.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }),
-    exact: true,
-  }).click();
+  await monthButton(page, previousMonth).click();
   await expect.poll(async () => digitsOf(await page.locator('.pspad-balance-net-worth').innerText())).toBe('870000');
 });

@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea } from '../helpers/areas';
-import { addDays, isoDate, utcToday } from '../helpers/dates';
+import { addDays, isoDate, monthButton, utcToday } from '../helpers/dates';
 import { createList, listRowNames, monthDay, openList, pickListFilter, showListAs, sortListBy } from '../helpers/lists';
 import { pickFromPropertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
@@ -41,9 +41,7 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
   await showListAs(page, 'Calendar');
   const day = monthDay(page, isoDate(tomorrow));
   if ((await day.count()) === 0) {
-    await page.locator('.pspad-month-strip').getByRole('button', {
-      name: tomorrow.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }),
-    }).click();
+    await monthButton(page.locator('.pspad-month-strip'), tomorrow).click();
   }
   await expect(day.locator('.pspad-month-entry')).toHaveCount(2);
   await day.click();
