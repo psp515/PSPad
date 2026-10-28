@@ -99,19 +99,21 @@ public partial class StylesheetRulesTests
     }
 
     [Fact]
-    public void ALedgerRowPutsItsMetaInAFixedColumnOnDesktop()
+    public void ALedgerRowGoesOnOneLineOnlyWhenItsListIsWideEnough()
     {
-        Assert.Contains("flex-direction: row", DeclarationsInMedia("min-width: 960px", ".pspad-row-ledger .pspad-row-body"));
-        Assert.Contains("width: 280px", DeclarationsInMedia("min-width: 960px", ".pspad-row-ledger .pspad-row-meta"));
+        Assert.Contains("container-type: inline-size", Declarations(".pspad-row-ledger"));
+        Assert.Contains("flex-direction: row", DeclarationsInContainer("min-width: 560px", ".pspad-row-ledger .pspad-row-body"));
+        Assert.Contains("width: 280px", DeclarationsInContainer("min-width: 560px", ".pspad-row-ledger .pspad-row-meta"));
+        Assert.DoesNotContain("width: 280px", DeclarationsInMedia("min-width: 960px", ".pspad-row-ledger .pspad-row-meta"));
     }
 
     [Fact]
-    public void MyDayIsTwoPanesOnDesktopAndTabsOnAPhone()
+    public void MyDayIsTwoPanesFrom1280AndTabsBelow()
     {
-        Assert.Contains("grid-template-columns: minmax(0, 1fr) 380px", DeclarationsInMedia("min-width: 960px", ".pspad-day"));
-        Assert.Contains("display: none", DeclarationsInMedia("min-width: 960px", ".pspad-day-tabs"));
-        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-day-tab-tasks .pspad-day-schedule"));
-        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-day-tab-schedule .pspad-day-lists"));
+        Assert.Contains("grid-template-columns: minmax(0, 1fr) 380px", DeclarationsInMedia("min-width: 1280px", ".pspad-day"));
+        Assert.Contains("display: none", DeclarationsInMedia("min-width: 1280px", ".pspad-day-tabs"));
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 1279.98px", ".pspad-day-tab-tasks .pspad-day-schedule"));
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 1279.98px", ".pspad-day-tab-schedule .pspad-day-lists"));
     }
 
     [Fact]
@@ -131,12 +133,12 @@ public partial class StylesheetRulesTests
         Assert.Contains("overflow: hidden", timeline);
         Assert.DoesNotContain("overflow-y: auto", timeline);
         Assert.Contains("--pspad-timeline-offset: 483px", timeline);
-        Assert.Contains("--pspad-timeline-offset: 346px", DeclarationsInMedia("min-width: 960px", ".pspad-timeline.mud-paper-outlined"));
+        Assert.Contains("--pspad-timeline-offset: 346px", DeclarationsInMedia("min-width: 1280px", ".pspad-timeline.mud-paper-outlined"));
     }
 
     [Fact]
     public void ThePhoneScheduleTabHasNoAddButtonSinceTheScheduleAddsOnClick() =>
-        Assert.Contains("display: none", DeclarationsInMedia("max-width: 959.98px", ".pspad-day-tab-schedule ~ .pspad-fab"));
+        Assert.Contains("display: none", DeclarationsInMedia("max-width: 1279.98px", ".pspad-day-tab-schedule ~ .pspad-fab"));
 
     [Fact]
     public void AWideScreenRunsTheDayLeftToRightAboveTheTasks()

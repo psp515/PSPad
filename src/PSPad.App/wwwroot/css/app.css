@@ -1462,13 +1462,19 @@ button.pspad-heatmap-cell:focus-visible {
     font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 959.98px) {
+@media (max-width: 1279.98px) {
     .pspad-day-tab-tasks .pspad-day-schedule { display: none; }
     .pspad-day-tab-schedule .pspad-day-lists { display: none; }
     .pspad-day-tab-schedule ~ .pspad-fab { display: none; }
 }
 
-@media (min-width: 960px) {
+@media (min-width: 960px) and (max-width: 1279.98px) {
+    .pspad-timeline.mud-paper-outlined {
+        --pspad-timeline-offset: 400px;
+    }
+}
+
+@media (min-width: 1280px) {
     .pspad-day {
         display: grid;
         grid-template-columns: minmax(0, 1fr) 380px;
@@ -1481,6 +1487,9 @@ button.pspad-heatmap-cell:focus-visible {
     .pspad-timeline.mud-paper-outlined {
         --pspad-timeline-offset: 346px;
     }
+}
+
+@media (min-width: 960px) {
 
     .pspad-row-group-cols {
         display: grid;
@@ -1519,6 +1528,13 @@ button.pspad-heatmap-cell:focus-visible {
         box-shadow: none;
     }
 
+}
+
+.pspad-row-ledger {
+    container-type: inline-size;
+}
+
+@container (min-width: 560px) {
     .pspad-row-ledger .pspad-row {
         min-height: 44px;
     }

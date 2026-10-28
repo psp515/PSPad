@@ -459,10 +459,11 @@ phone it sits above `BottomNav` like every other page FAB, beside the
 raised My Day button, not replacing it.
 
 The day is two parts inside `pspad-day`: the task sections
-(`pspad-day-lists`) and the Schedule (`pspad-day-schedule`). From `md` they
-are a grid, sections on the left and a 380px schedule column on the right
-(420px from 1600px).
-Below `md` a pill-shaped tab bar under the week strip (`pspad-day-tabs`: **Tasks** and
+(`pspad-day-lists`) and the Schedule (`pspad-day-schedule`). From 1280px they
+are a grid, sections on the left and a 380px schedule column on the right;
+from 1600px the schedule is a band above the sections. Between `md` and
+1280px both columns were too narrow to read (a task row lost its name), so
+below 1280px a pill-shaped tab bar under the week strip (`pspad-day-tabs`: **Tasks** and
 **Schedule · N**, N the pending scheduled count, plain **Schedule** at zero)
 picks one; `pspad-day` carries
 `pspad-day-tab-tasks` or `pspad-day-tab-schedule`, and the page opens on
@@ -484,8 +485,10 @@ Task sections, top to bottom, each hidden when empty:
    days. On a past day it is the only section, a plain open section with
    "Nothing completed on Wed, 7 Oct." when empty.
 
-Each section is one `RowGroup` of `TaskRow`s with `pspad-row-ledger`, so
-from `md` a row is one line with its details in a right-hand column. A task
+Each section is one `RowGroup` of `TaskRow`s with `pspad-row-ledger`, a
+size container: when the group is at least 560px wide a row is one line
+with its details in a 280px right-hand column; narrower, the details sit
+under the name, so a name is never squeezed out. A task
 there because of a step deadline lists the steps due by the day under its
 row, each with its own tick (`DayStepRow`, `step-deadlines-design.md` §2.5);
 the task's tick still completes the task.
