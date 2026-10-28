@@ -264,6 +264,25 @@ public class TimeRowTests : Bunit.TestContext
         Assert.Equal(new TaskTime(new TimeOnly(14, 0), null), sent);
     }
 
+    [Theory]
+    [InlineData("7:00")]
+    [InlineData("7")]
+    [InlineData("700")]
+    [InlineData("7.00")]
+    public void ShorthandStartIsSentAndShownPadded(string typed)
+    {
+        TaskTime? sent = null;
+        var row = Render<TimeRow>(p => p
+            .Add(r => r.Value, (TaskTime?)null)
+            .Add(r => r.ValueChanged, (TaskTime? time) => sent = time));
+
+        row.Find(".pspad-time-start input").Change(typed);
+        row.Render(p => p.Add(r => r.Value, sent));
+
+        Assert.Equal(new TaskTime(new TimeOnly(7, 0), null), sent);
+        Assert.Equal("07:00", row.Find(".pspad-time-start input").GetAttribute("value"));
+    }
+
     [Fact]
     public void UnreadableStartShowsAHintKeepsTheTextAndSendsNothing()
     {
