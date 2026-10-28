@@ -81,4 +81,7 @@
   <data name="AddTaskAt" xml:space="preserve">
     <value>Add a task at {0}</value>
   </data>
+  <data name="DayHasTasks" xml:space="preserve">
+    <value>{0}, has tasks</value>
+  </data>
 </root>

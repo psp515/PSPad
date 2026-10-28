@@ -11,13 +11,13 @@
         <div class="pspad-week-days d-flex flex-grow-1" @ontouchstart="@TouchStarted" @ontouchend="@TouchEndedAsync">
             @foreach (var day in Week)
             {
-                <MudButton @key="day" Class="@DayClass(day)" Variant="Variant.Text" aria-label="@day.ToString("ddd, d MMM")"
+                <MudButton @key="day" Class="@DayClass(day)" Variant="Variant.Text" aria-label="@DayLabel(day)"
                            aria-current="@(day == Today ? "date" : null)" aria-pressed="@(day == Day ? "true" : "false")" OnClick="@(() => DayChanged.InvokeAsync(day))">
                     <span class="pspad-week-initial">@day.ToString("ddd")[..1]</span>
                     <span class="pspad-week-circle">@day.Day</span>
                     @if (Busy.Contains(day))
                     {
-                        <span class="pspad-week-dot" data-testid="week-day-busy"></span>
+                        <span class="pspad-week-dot"></span>
                     }
                     else
                     {
@@ -92,6 +92,9 @@
         : Day.ToString(Day.Year == Today.Year ? "ddd, d MMM" : "ddd, d MMM yyyy");
 
     string Meta => T["WeekMeta", ISOWeek.GetWeekOfYear(Day.ToDateTime(TimeOnly.MinValue)), Day.ToString("MMMM yyyy")];
+
+    string DayLabel(DateOnly day) =>
+        Busy.Contains(day) ? T["DayHasTasks", day.ToString("ddd, d MMM")].Value : day.ToString("ddd, d MMM");
 
     string DayClass(DateOnly day) =>
         $"pspad-week-day{(day == Today ? " pspad-week-day-today" : "")}{(day == Day ? " pspad-week-day-picked" : "")}";

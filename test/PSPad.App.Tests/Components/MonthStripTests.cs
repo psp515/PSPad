@@ -99,8 +99,8 @@ public class MonthStripTests : Bunit.TestContext
     {
         var strip = Strip(October, new YearMonth(2026, 8), new YearMonth(2025, 12));
 
-        Assert.Equal(["August 2026", "December 2025"],
-            Labels(Chips(strip).Where(chip => chip.GetAttribute("data-testid") == "month-chip-marked")));
+        Assert.Equal(["August 2026, has entries", "December 2025, has entries"],
+            Labels(Chips(strip).Where(chip => chip.GetAttribute("aria-label")!.EndsWith(", has entries"))));
     }
 
     [Fact]

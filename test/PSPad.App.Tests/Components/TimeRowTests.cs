@@ -133,11 +133,11 @@ public class TimeRowTests : Bunit.TestContext
             builder.AddAttribute(2, nameof(TimeRow.Value), (TaskTime?)new TaskTime(new TimeOnly(9, 0), null));
             builder.CloseComponent();
         });
-        var buttonsBefore = host.FindAll("button").Count;
+        Assert.Empty(host.FindAll("[role=dialog]"));
 
         host.Find("button[aria-label='Pick start time']").Click();
 
-        host.WaitForAssertion(() => Assert.True(host.FindAll("button").Count > buttonsBefore));
+        host.WaitForAssertion(() => Assert.NotEmpty(host.FindAll("[role=dialog]")));
     }
 
     [Fact]

@@ -289,12 +289,12 @@ public class BudgetPageTests : Bunit.TestContext
         page.WaitForAssertion(() => Assert.Equal(["September 2026"], Marked(page)));
     }
 
-    static IElement Chip(IRenderedComponent<IComponent> page, string month) => page.Find($".pspad-month-chip[aria-label='{month}']");
+    static IElement Chip(IRenderedComponent<IComponent> page, string month) => page.Find($".pspad-month-chip[aria-label^='{month}']");
 
-    static string ShownMonth(IRenderedComponent<IComponent> page) => page.Find(".pspad-month-chip[aria-pressed='true']").GetAttribute("aria-label")!;
+    static string ShownMonth(IRenderedComponent<IComponent> page) => page.Find(".pspad-month-chip[aria-pressed='true']").GetAttribute("aria-label")!.Replace(", has entries", "");
 
     static string[] Marked(IRenderedComponent<IComponent> page) =>
-        [.. page.FindAll(".pspad-month-chip-marked").Select(chip => chip.GetAttribute("aria-label")!)];
+        [.. page.FindAll(".pspad-month-chip-marked").Select(chip => chip.GetAttribute("aria-label")!.Replace(", has entries", ""))];
 
     [Fact]
     public void TheCurrentMonthComesFromTheUsersStoredToday()

@@ -103,7 +103,7 @@ public class ListMonthViewTests : Bunit.TestContext
     [Fact]
     public void TheGridCoversWholeWeeksOfTheMonthAndLabelsEveryDay()
     {
-        var days = RenderMonth().FindAll("button[data-day]");
+        var days = DayCells(RenderMonth());
 
         Assert.Equal(0, days.Count % 7);
         Assert.All(days, cell => Assert.False(string.IsNullOrEmpty(cell.GetAttribute("aria-label"))));
@@ -111,8 +111,12 @@ public class ListMonthViewTests : Bunit.TestContext
         Assert.Contains(days, cell => cell.GetAttribute("aria-label")!.Contains(new DateOnly(2026, 10, 31).ToString("d MMMM")));
     }
 
+    static IReadOnlyList<AngleSharp.Dom.IElement> DayCells(IRenderedComponent<IComponent> view) =>
+        [.. view.FindAll("button[aria-pressed]").Where(cell =>
+            System.Text.RegularExpressions.Regex.IsMatch(cell.GetAttribute("aria-label")!, @", \d+ tasks?$"))];
+
     static AngleSharp.Dom.IElement Cell(IRenderedComponent<IComponent> view, DateOnly day) =>
-        view.FindAll("button[data-day]").First(cell => cell.GetAttribute("aria-label")!.Contains(day.ToString("d MMMM")));
+        DayCells(view).First(cell => cell.GetAttribute("aria-label")!.Contains(day.ToString("d MMMM")));
 
     IRenderedComponent<ContainerFragment> RenderMonth(
         ListSort? sort = null, TodoTask[]? tasks = null, int undated = 0, Action? onShowUndated = null,
