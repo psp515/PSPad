@@ -1,9 +1,9 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea } from '../helpers/areas';
-import { addDays, utcToday } from '../helpers/dates';
+import { addDays, dayMonth, utcToday } from '../helpers/dates';
 import { createList, openList } from '../helpers/lists';
 import { signIn } from '../helpers/sign-in';
-import { addStep, addTask, closeTask, openTask, setStepDeadline, taskRow } from '../helpers/tasks';
+import { addStep, addTask, closeTask, completeTaskRow, openTask, setStepDeadline, taskRow } from '../helpers/tasks';
 import { daySection, goToMyDay, showDay } from '../helpers/today';
 
 test('a step deadline puts its task on that day, and an overdue task carries to later days', async ({ page, account }) => {
@@ -11,6 +11,8 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
   const list = `Moving ${account.suffix}`;
   const task = `Move flat ${account.suffix}`;
   const carried = `Renew passport ${account.suffix}`;
+  const today = utcToday();
+  const tomorrow = addDays(today, 1);
 
   await signIn(page, account);
   await createArea(page, area);
@@ -28,8 +30,10 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
   await addTask(page, carried);
   await openTask(page, carried);
   await addStep(page, 'Get new photos taken');
+  await addStep(page, 'Book an appointment');
   await addStep(page, 'Pay the fee');
   await setStepDeadline(page, 'Get new photos taken', 'Today');
+  await setStepDeadline(page, 'Book an appointment', 'Today');
   await setStepDeadline(page, 'Pay the fee', 'Tomorrow');
   await closeTask(page);
 
@@ -41,13 +45,33 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
   await expect(daySection(page, 'overdue')).toContainText(carried);
   await expect(daySection(page, 'anytime')).not.toContainText(carried);
 
+  await test.step('a step row under its task shows its date, not a relative word', async () => {
+    await expect(daySection(page, 'anytime')).toContainText(new RegExp(`Order boxes\\s*${dayMonth(tomorrow)}`));
+    await expect(daySection(page, 'overdue')).toContainText(new RegExp(`Get new photos taken\\s*${dayMonth(today)}`));
+  });
+
   await page.locator('.pspad-week-today').click();
-  const photos = daySection(page, 'anytime').locator('.pspad-day-step', { hasText: 'Get new photos taken' });
-  await photos.getByRole('checkbox').click();
+
+  await test.step('ticking one of two steps due today checks only that step and keeps the task on the day', async () => {
+    const photos = page.getByRole('checkbox', { name: 'Get new photos taken' });
+    await photos.click();
+    await expect(photos).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Book an appointment' })).not.toBeChecked();
+    await expect(taskRow(page, carried).getByRole('checkbox')).not.toBeChecked();
+    await expect(daySection(page, 'anytime')).toContainText(carried);
+  });
+
+  const appointment = daySection(page, 'anytime').locator('.pspad-day-step', { hasText: 'Book an appointment' });
+  await appointment.getByRole('checkbox').click();
   await expect(page.locator('.mud-snackbar')).toContainText(`"${carried}" moved to Tomorrow`);
   await expect(page.locator('.pspad-day-anytime .pspad-row-name', { hasText: carried })).toHaveCount(0);
 
   await showDay(page, addDays(utcToday(), 1));
   await expect(daySection(page, 'anytime')).toContainText(carried);
   await expect(page.locator('.pspad-day-overdue', { hasText: carried })).toHaveCount(0);
+
+  await test.step('ticking the task itself still completes it', async () => {
+    await completeTaskRow(page, task);
+    await expect(daySection(page, 'anytime')).not.toContainText(task);
+  });
 });

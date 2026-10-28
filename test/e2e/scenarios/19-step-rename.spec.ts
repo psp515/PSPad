@@ -31,4 +31,14 @@ test('a step can be renamed after it is added', async ({ page, account }) => {
   await field.fill('');
   await field.blur();
   await expect(stepNameField(page, 'Check the freezer')).toHaveValue('Check the freezer');
+
+  await test.step('Escape while renaming a step puts the old name back', async () => {
+    const step = stepNameField(page, 'Check the freezer');
+    await step.fill('Check the cellar');
+    await step.press('Escape');
+    await expect(stepNameField(page, 'Check the freezer')).toHaveValue('Check the freezer');
+    await closeTask(page);
+    await openTask(page, task);
+    await expect(stepNameField(page, 'Check the freezer')).toHaveValue('Check the freezer');
+  });
 });

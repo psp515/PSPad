@@ -1,17 +1,25 @@
 import { expect, Page } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { apiFor, bearerToken, me, sendCommand } from './api';
+import { isoDate, utcToday } from './dates';
 import { awaitNoDrawer, closePanel, openFabAction, panel, savePanel } from './panels';
 
 export function taskRow(page: Page, name: string) {
   return page.locator('.pspad-row').filter({ has: page.locator('.pspad-row-name', { hasText: name }) });
 }
 
-export async function addTask(page: Page, name: string) {
+export async function openNewTask(page: Page) {
   await awaitNoDrawer(page);
   if (await page.getByRole('button', { name: 'Add task' }).isVisible()) {
     await page.getByRole('button', { name: 'Add task' }).click();
   } else {
     await openFabAction(page, 'Add task');
   }
+  await expect(panel(page).getByPlaceholder('Task name')).toBeVisible();
+}
+
+export async function addTask(page: Page, name: string) {
+  await openNewTask(page);
   await panel(page).getByPlaceholder('Task name').fill(name);
   await savePanel(page);
   await expect(taskRow(page, name)).toBeVisible();
@@ -95,5 +103,31 @@ export async function setStepDeadline(page: Page, step: string, day: 'Today' | '
       await page.getByRole('menuitem', { name: day }).first().click({ timeout: 2_000 });
     }
     await expect(due).toContainText(day, { timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
+export async function createTaskDueTodayFromAnotherDevice(page: Page, listId: string, name: string) {
+  const api = await apiFor(await bearerToken(page));
+  const { userId } = await me(api);
+  const taskId = randomUUID();
+  for (const [type, payload] of [
+    ['CreateTask', { userId, taskId, listId, name }],
+    ['SetTaskDueDate', { userId, taskId, dueOn: isoDate(utcToday()) }],
+  ] as const) {
+    const result = await sendCommand(api, type, payload);
+    expect(result.accepted, result.rejection ?? '').toBe(true);
+  }
+  await api.dispose();
+}
+
+export async function renameTask(page: Page, to: string) {
+  const name = panel(page).getByPlaceholder('Task name');
+  await expect(async () => {
+    if ((await name.inputValue({ timeout: 2_000 })) !== to) {
+      await name.fill(to, { timeout: 2_000 });
+      await name.press('Enter', { timeout: 2_000 });
+      await name.press('Tab', { timeout: 2_000 });
+    }
+    await expect(taskRow(page, to)).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 30_000 });
 }

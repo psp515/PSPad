@@ -1,3 +1,4 @@
+@using PSPad.App.State
 @using PSPad.Module.Tasks.Tasks
 @using PSPad.Module.Tasks.Today
 @inject IStringLocalizer<TasksStrings> T
@@ -56,7 +57,9 @@
                 }
                 @if (HasDescription)
                 {
-                    <MudIcon Class="pspad-has-description" Icon="@Icons.Material.Outlined.Notes" Size="Size.Small" />
+                    <span class="d-inline-flex" role="img" aria-label="@T["Description"].Value">
+                        <MudIcon Class="pspad-has-description" Icon="@Icons.Material.Outlined.Notes" Size="Size.Small" />
+                    </span>
                 }
                 @if (Task.SnapshotMarks.Count > 0)
                 {
@@ -105,7 +108,7 @@
 
     [Parameter] public EventCallback<TodoTask> OnOpen { get; set; }
 
-    bool Done => Task.CompletedAt is not null || Task.CompletedDays.Contains(Today) || Task.EndedBy(Today);
+    bool Done => TaskDone.On(Task, Today);
 
     bool Overdue => IsOverdue(Task, Today);
 

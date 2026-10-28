@@ -28,3 +28,25 @@ export function shiftedZone(): { id: string; localDate: Date } {
     ? { id: 'Pacific/Kiritimati', localDate: addDays(today, 1) }
     : { id: 'Pacific/Pago_Pago', localDate: addDays(today, -1) };
 }
+
+export function dayMonth(day: Date): string {
+  return `${day.getUTCDate()} ${months[day.getUTCMonth()]}`;
+}
+
+export function utcTime(): string {
+  return new Date().toISOString().slice(11, 16);
+}
+
+export function weekdayShort(day: Date): string {
+  return weekdays[day.getUTCDay()];
+}
+
+export function weekdaysInWeekOrder(days: string[]): string[] {
+  const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return [...new Set(days)].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+}
+
+export function anHourAfter(time: string): string {
+  const [hours, minutes] = time.split(':').map(Number);
+  return `${String((hours + 1) % 24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
