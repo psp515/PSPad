@@ -255,7 +255,7 @@ tests would be visible, not silent.
 - `fullyParallel: true`, four workers locally and in CI, one test per file
   so every scenario is its own worker slot.
 - Per test timeout 90 s; expect timeout 10 s; the suite target is under
-  three minutes. A scenario that cannot fit splits, it never widens the
+  five minutes (ADR-0079). A scenario that cannot fit splits, it never widens the
   timeout.
 - Retries: 0 locally, 1 in CI; a retry is a flake to fix, reported in the
   HTML report.
@@ -320,6 +320,8 @@ Since live updates (ADR-0076) every command a device sends echoes back as a
 nudge whose pull re-renders the open panel. Helpers that close a panel or
 edit inside one retry inside `toPass`; a new helper that types into a panel
 should do the same.
+
+UI test-driven work starts with the failing end-to-end step; pages and layout have no bUnit tests (ADR-0079).
 
 ## 10. Risks
 
