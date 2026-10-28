@@ -129,4 +129,7 @@
   <data name="Undo" xml:space="preserve">
     <value>Undo</value>
   </data>
+  <data name="MonthHasEntries" xml:space="preserve">
+    <value>{0}, has entries</value>
+  </data>
 </root>

@@ -519,7 +519,7 @@ public class TodayTests : Bunit.TestContext
         var dotted = page.FindAll(".pspad-week-day")
             .Where(day => day.QuerySelector(".pspad-week-dot") is not null)
             .Select(day => day.GetAttribute("aria-label"));
-        Assert.Equal(expected.Select(day => day.ToString("ddd, d MMM", CultureInfo.InvariantCulture)), dotted);
+        Assert.Equal(expected.Select(day => day.ToString("ddd, d MMM", CultureInfo.InvariantCulture) + ", has tasks"), dotted);
     }
 
     [Fact]

@@ -16,7 +16,7 @@
             <MudButton @key="month" Class="@ChipClass(month)" Variant="@(month == Month ? Variant.Filled : Variant.Text)"
                        Color="@(month == Month ? Color.Primary : Color.Default)" Size="Size.Small"
                        aria-pressed="@(month == Month ? "true" : "false")" aria-current="@(month == Current ? "date" : null)"
-                       aria-label="@MoneyText.MonthTitle(month)" data-testid="@(Marked.Contains(month) ? "month-chip-marked" : null)" OnClick="@(() => OnMonthChanged.InvokeAsync(month))">
+                       aria-label="@ChipLabel(month)" OnClick="@(() => OnMonthChanged.InvokeAsync(month))">
                 <span class="pspad-month-chip-label">@Abbreviation(month.Month)</span>
                 @if (ShowsYear(month))
                 {
@@ -154,6 +154,9 @@
     static YearMonth Shift(YearMonth month, int months) => YearMonth.Of(month.FirstDay.AddMonths(months));
 
     bool ShowsYear(YearMonth month) => month.Month == 1 || month == _chips[^1];
+
+    string ChipLabel(YearMonth month) =>
+        Marked.Contains(month) ? Shared["MonthHasEntries", MoneyText.MonthTitle(month)].Value : MoneyText.MonthTitle(month);
 
     string ChipClass(YearMonth month) =>
         "pspad-month-chip"

@@ -22,7 +22,7 @@ public class BudgetBalanceTests : Bunit.TestContext
     static readonly YearMonth September = new(2026, 9);
     static readonly YearMonth October = new(2026, 10);
 
-    static string ShownMonth(IRenderedComponent<BudgetPage> page) => page.Find(".pspad-month-chip[aria-pressed='true']").GetAttribute("aria-label")!;
+    static string ShownMonth(IRenderedComponent<BudgetPage> page) => page.Find(".pspad-month-chip[aria-pressed='true']").GetAttribute("aria-label")!.Replace(", has entries", "");
 
     IRenderedComponent<BudgetPage> BalanceTab(Budget budget)
     {
@@ -139,8 +139,8 @@ public class BudgetBalanceTests : Bunit.TestContext
 
         var page = BalanceTab(budget);
         page.WaitForAssertion(() => page.Find(".pspad-balance-net-worth"));
-        page.Find(".pspad-month-chip[aria-label='September 2026']").Click();
-        page.Find(".pspad-month-chip[aria-label='October 2026']").Click();
+        page.Find(".pspad-month-chip[aria-label^='September 2026']").Click();
+        page.Find(".pspad-month-chip[aria-label^='October 2026']").Click();
 
         page.WaitForAssertion(() => page.Find(".pspad-balance-net-worth"));
         Assert.Empty(page.FindAll(".pspad-balance-at-nbp"));
@@ -447,7 +447,7 @@ public class BudgetBalanceTests : Bunit.TestContext
             Balances.Started(budget, September, Balances.AHolding("Wallet", 75m)));
         var page = BalanceTab(budget);
 
-        page.Find(".pspad-month-chip[aria-label='September 2026']").Click();
+        page.Find(".pspad-month-chip[aria-label^='September 2026']").Click();
 
         page.WaitForAssertion(() => Assert.Equal("September 2026", ShownMonth(page)));
         Assert.Equal("75.00 PLN", Text(page, ".pspad-balance-net-worth .pspad-money-value"));

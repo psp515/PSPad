@@ -113,7 +113,7 @@ public class WeekStripTests : Bunit.TestContext
         var strip = Strip(Thursday, Thursday, busy: new HashSet<DateOnly> { Thursday, Thursday.AddDays(2) });
 
         Assert.Equal([3, 5], Days(strip).Select((day, index) => (day, index))
-            .Where(pair => pair.day.QuerySelector("[data-testid=week-day-busy]") is not null)
+            .Where(pair => pair.day.GetAttribute("aria-label")!.EndsWith(", has tasks"))
             .Select(pair => pair.index));
     }
 

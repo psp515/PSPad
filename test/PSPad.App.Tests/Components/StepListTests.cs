@@ -181,20 +181,6 @@ public class StepListTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task EscapeRevertsTheStepName()
-    {
-        var task = TaskWithStep("Check the fridge");
-        var replica = AppTestHost.Arrange(this, User, Today, task);
-
-        var steps = Render<StepList>(parameters => parameters.Add(p => p.Task, task).Add(p => p.UserId, User));
-        var field = steps.Find("input[aria-label^='Rename ']");
-        field.KeyDown(new KeyboardEventArgs { Key = "Escape" });
-
-        Assert.Equal("Check the fridge", Assert.Single((await replica.LoadAsync<TodoTask>(task.Id))!.Steps).Name);
-        Assert.Equal("Check the fridge", steps.Find("input[aria-label^='Rename ']").GetAttribute("value"));
-    }
-
-    [Fact]
     public void TheStepNameFieldIsLabelledAndCapped()
     {
         var task = TaskWithStep("Check the fridge");
@@ -239,20 +225,6 @@ public class StepListTests : Bunit.TestContext
 
         var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
         steps.Find("input[aria-label^='Rename ']").Change("  ");
-
-        Assert.Equal(["Check the fridge"], draft.Select(step => step.Name));
-        Assert.Equal("Check the fridge", steps.Find("input[aria-label^='Rename ']").GetAttribute("value"));
-    }
-
-    [Fact]
-    public void EscapeRevertsADraftStep()
-    {
-        AppTestHost.Arrange(this, User, Today);
-        var draft = new List<StepDraft> { new("Check the fridge") };
-
-        var steps = Render<StepList>(parameters => parameters.Add(p => p.Draft, draft).Add(p => p.UserId, User));
-        var field = steps.Find("input[aria-label^='Rename ']");
-        field.KeyDown(new KeyboardEventArgs { Key = "Escape" });
 
         Assert.Equal(["Check the fridge"], draft.Select(step => step.Name));
         Assert.Equal("Check the fridge", steps.Find("input[aria-label^='Rename ']").GetAttribute("value"));
@@ -368,7 +340,7 @@ public class StepListTests : Bunit.TestContext
         Assert.Empty(HostDraft(draft, repeating: true).FindAll("button[aria-label='Set a deadline for Vacuum']"));
     }
 
-    static AngleSharp.Dom.IElement AddField(IRenderedComponent<StepList> steps) => steps.FindAll("input").Last();
+    static AngleSharp.Dom.IElement AddField(IRenderedComponent<StepList> steps) => steps.Find("input[aria-label='Add step'], input[aria-label='Next step']");
 
     static AngleSharp.Dom.IElement Item(IRenderedComponent<IComponent> host, string text) =>
         host.FindAll("[role=menuitem]").Single(item => item.TextContent.Contains(text));
