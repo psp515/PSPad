@@ -17,6 +17,9 @@ test('the language is chosen once and follows the user to another device', async
   await page.locator('.pspad-nav').getByRole('link', { name: 'Mój dzień' }).click();
   await expect(page.getByRole('heading', { name: 'Mój dzień' })).toBeVisible();
   await expect(page.getByText('Na dziś nic nie zaplanowano.')).toBeVisible();
+  await page.locator('.pspad-nav').getByRole('link', { name: 'Skrzynka' }).click();
+  await expect(page.getByRole('heading', { name: 'Skrzynka', exact: true })).toBeVisible();
+  await expect(page.getByText('Nic jeszcze nie dodano.')).toBeVisible();
 
   const deviceContext = await browser.newContext();
   const device = await deviceContext.newPage();

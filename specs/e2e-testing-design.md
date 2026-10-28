@@ -135,12 +135,21 @@ needs, checks the outcome in the UI, and where the server matters, checks
 through the API. All names carry the account's hex suffix so a leak between
 tests would be visible, not silent.
 
-1. **First sign-in.** Fresh user signs in through Keycloak; lands on My Day
-   with "Nothing planned for today."; the sidebar badge shows the Keycloak
-   name and email; Settings shows the same and time zone `Etc/UTC`.
-2. **Capture and triage.** Inbox: capture two items; open one, pick a list
-   (created on the way through Areas) and organise it into a task; discard
-   the other. Inbox shows "Nothing captured."; the list shows the task.
+1. **First sign-in.** A visitor sent to Welcome from `/inbox` sees the
+   headline, the GTD and docs links, a preview of My Day and a Log in link
+   carrying the return address. Fresh user signs in through Keycloak; lands
+   on My Day with "Nothing planned for today." and no Overdue or Starred
+   section, and the Inbox says "Nothing captured."; the sidebar badge shows
+   the Keycloak name and email; Settings shows the same and time zone
+   `Etc/UTC`.
+2. **Capture and triage.** Inbox: the empty state opens Capture, a blank
+   capture adds nothing; capture two items (Enter and Add), newest first with
+   their capture time; reword one while no list exists and Convert is off.
+   With lists, a goal and a reference list made, convert it with list, due
+   date, priority, goal, star, steps and a description; the
+   next item keeps the list; discard it: "Nothing captured.". An item
+   captured through the API shows up without a reload; the list's task
+   carries everything the panel set.
 3. **Area, list, task lifecycle.** New area, new task list, task with two
    steps. Tick a step: the row shows 1/2. Complete the task: area subtitle
    reads "1 list · no open tasks". Delete the list, then the area: Areas
@@ -249,6 +258,18 @@ tests would be visible, not silent.
     the badge on 1. The Calendar view puts both on tomorrow's cell;
     clicking it lists them as rows, and ticking one leaves one (issue
     #198, `list-filter-and-calendar-design.md`).
+23. **Task panel.** An open task names its area and list and its created
+    date and shows only the rows that apply. Rename (Enter creates nothing),
+    star, due date by quick pick and calendar, Remind presets, hint and a
+    custom lead time, a time that hides once the due date is cleared,
+    priority, a rendered description with the row's notes marker, a list
+    picker without reference lists that moves the task to another area, and
+    a delete that asks first.
+24. **New task draft.** A new task in a list waits for a name and offers no
+    list, delete, remind or description; closing forgets draft steps. Steps,
+    star, due date, reminder, priority and time land on the task Enter adds.
+    A repeating draft goes back to one-time, drops a due date before its
+    custom start and keeps its rule, end date and reminder.
 
 ## 5. Timing
 
@@ -286,7 +307,7 @@ test/e2e/
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
                  settings.ts  goals.ts  references.ts  sharing.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 22-list-filter-calendar.spec.ts
+  scenarios/     01-first-sign-in.spec.ts … 24-new-task-draft.spec.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared

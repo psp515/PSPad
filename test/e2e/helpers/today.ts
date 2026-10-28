@@ -1,6 +1,6 @@
 import { expect, Page } from '@playwright/test';
-import { goTo } from './nav';
-import { panel } from './panels';
+import { goTo, navLink } from './nav';
+import { awaitNoDrawer, chooseProperty, panel } from './panels';
 import { shortDate } from './dates';
 
 export async function goToMyDay(page: Page) {
@@ -29,8 +29,10 @@ export async function setDueDate(page: Page, day: 'Today' | 'Tomorrow' | Date) {
 export async function pickCalendarDay(dialog: import('@playwright/test').Locator, day: Date) {
   const wanted = day.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
   const shown = dialog.locator('.mud-picker-calendar-header-transition');
+  const arrows = dialog.locator('.mud-picker-calendar-header-switch .mud-icon-button');
   for (let step = 0; step < 3 && (await shown.innerText()).trim() !== wanted; step++) {
-    await dialog.locator('.mud-picker-calendar-header-switch .mud-icon-button').first().click();
+    const showing = new Date(`1 ${(await shown.innerText()).trim()} UTC`);
+    await (showing.getTime() > day.getTime() ? arrows.first() : arrows.last()).click();
   }
   await expect(shown).toHaveText(wanted);
   await dialog
@@ -70,10 +72,90 @@ export async function showDay(page: Page, day: Date) {
   await expect(dayLabel(page)).toContainText(shortDate(day));
 }
 
+export function weekDay(page: Page, day: Date) {
+  return page.getByRole('button', { name: new RegExp(`^${escapeRegExp(shortDate(day))}(,|$)`) });
+}
+
 export async function pickWeekDay(page: Page, day: Date) {
-  await page.getByRole('button', { name: new RegExp(`^${escapeRegExp(shortDate(day))}(,|$)`) }).click();
+  await weekDay(page, day).click();
+}
+
+export function myDayLink(page: Page) {
+  return navLink(page, '/');
 }
 
 function escapeRegExp(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export async function openNewTaskFromFab(page: Page) {
+  await awaitNoDrawer(page);
+  await page.getByRole('button', { name: 'Add task', exact: true }).click();
+  await expect(panel(page).getByText('New task', { exact: true })).toBeVisible();
+}
+
+export type CustomRepeat = { every?: number; unit?: string; days?: string[]; start?: Date };
+
+export async function setCustomRepeat(page: Page, repeat: CustomRepeat) {
+  await chooseProperty(page, 'Repeat', 'Custom…');
+  const dialog = page.getByRole('dialog').filter({ hasText: 'Custom repeat' });
+  await expect(dialog).toBeVisible();
+  if (repeat.every) {
+    const every = dialog.getByRole('spinbutton').first();
+    await every.fill(String(repeat.every), { timeout: 10_000 });
+    await every.press('Tab', { timeout: 10_000 });
+  }
+  if (repeat.unit) {
+    await dialog.getByRole('combobox').first().click({ timeout: 10_000 });
+    await page.getByRole('option', { name: repeat.unit, exact: true }).click({ timeout: 10_000 });
+    await expect(page.getByRole('option')).toHaveCount(0);
+  }
+  if (repeat.start) {
+    await dialog.getByLabel('Starts').click({ timeout: 10_000 });
+    await pickCalendarDay(page.locator('.mud-popover-open'), repeat.start);
+    await expect(page.locator('.mud-popover-open .mud-picker-calendar-header-transition')).toHaveCount(0);
+  }
+  for (const day of repeat.days ?? []) {
+    await dialog.getByText(day, { exact: true }).click({ timeout: 10_000 });
+  }
+  await dialog.getByRole('button', { name: 'Save' }).click({ timeout: 10_000 });
+  await expect(dialog).toBeHidden();
+}
+
+export async function addTaskAtFirstFreeSlot(page: Page): Promise<string> {
+  const slots = page.getByRole('button', { name: /^Add a task at \d\d:\d\d$/ });
+  const band = page.getByRole('button', { name: /^Show \d\d:\d\d/ }).first();
+  await expect(slots.or(band).first()).toBeVisible();
+  if ((await slots.count()) === 0) {
+    await band.click();
+  }
+  const slot = slots.first();
+  const time = (await slot.getAttribute('aria-label'))!.slice(-5);
+  await slot.click();
+  return time;
+}
+
+export async function setCustomLeadTime(page: Page, amount: number, unit: string) {
+  await chooseProperty(page, 'Remind me', 'Custom…');
+  const dialog = page.getByRole('dialog').filter({ hasText: 'Remind me' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText(/^How early the task shows in Coming up/)).toBeVisible();
+  const field = dialog.getByRole('spinbutton').first();
+  await field.fill(String(amount), { timeout: 10_000 });
+  await field.press('Tab', { timeout: 10_000 });
+  await dialog.getByRole('combobox').first().click({ timeout: 10_000 });
+  await page.getByRole('option', { name: unit, exact: true }).click({ timeout: 10_000 });
+  await expect(page.getByRole('option')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Save' }).click({ timeout: 10_000 });
+  await expect(dialog).toBeHidden();
+}
+
+export async function setOneTime(page: Page) {
+  const repeat = panel(page).getByRole('button', { name: /^Repeat\b/ });
+  await expect(async () => {
+    if ((await repeat.count()) > 0) {
+      await panel(page).getByText('One-time', { exact: true }).click({ timeout: 2_000 });
+    }
+    await expect(repeat).toHaveCount(0, { timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
 }
