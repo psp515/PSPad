@@ -25,7 +25,8 @@ Out:
 - Separate API-only end-to-end tests. The browser scenarios call the API
   directly where a check needs it (§3.4); the Testcontainers integration
   suite already covers endpoints in isolation.
-- Phone layout, cross-browser runs, visual regression, load.
+- Phone layouts beyond single steps (scenario 17 checks My Day's tabs at
+  phone width), cross-browser runs, visual regression, load.
 - Any `data-testid` in the application. Selectors use roles, labels, text
   and the existing `pspad-*` classes. A flow that cannot be driven that way
   is a separate change to the UI, with its own review.
@@ -149,7 +150,8 @@ tests would be visible, not silent.
    date, priority, goal, star, steps and a description; the
    next item keeps the list; discard it: "Nothing captured.". An item
    captured through the API shows up without a reload; the list's task
-   carries everything the panel set.
+   carries everything the panel set. After picking `Asia/Kolkata` in
+   Settings, the Inbox shows capture times in that zone.
 3. **Area, list, task lifecycle.** New area, new task list, task with two
    steps. Tick a step: the row shows 1/2. Complete the task: area subtitle
    reads "1 list · no open tasks". Delete the list, then the area: Areas
@@ -157,7 +159,12 @@ tests would be visible, not silent.
 4. **Today rule and time zone.** Three tasks: due today, due tomorrow, no
    due date. My Day lists exactly the first and neither of the others;
    picking tomorrow in the week strip's date dialog lists exactly the
-   second. Complete the first: it moves to Completed. In Settings pick a
+   second. A row names its list, there is no Overdue or Starred section,
+   today's and tomorrow's week-strip days read "has tasks" and the My Day
+   link counts 1. Clicking a row opens its panel; on tomorrow the first task
+   is carried under Overdue, the heading reads "Tomorrow, any time" and
+   opening a task keeps the day. Complete the first: it moves to Completed
+   and the count goes. In Settings pick a
    time zone whose local date differs from UTC right now
    (`Pacific/Kiritimati` when the UTC hour is 12 or later, else
    `Pacific/Pago_Pago`); My Day's day bar shows that local date and the
@@ -166,15 +173,27 @@ tests would be visible, not silent.
 5. **Overdue and the week strip.** Task due yesterday through the picker;
    My Day shows it under Overdue in error colour. Previous week, next week,
    pick a date in the dialog, **Today** returns; the picked day's bar text
-   follows each move.
+   follows each move. A later day still carries the task under Overdue and
+   its FAB adds a task due that day; a past day shows only what was
+   completed and its FAB adds a task due today. Making the task repeat drops
+   its due date, so it leaves Overdue.
 6. **Recurring task.** Task set to repeat Daily. My Day shows it in the
    anytime section, never under Overdue. Complete it: Completed section.
-   Next day in the strip shows it pending again.
+   Next day in the strip shows it pending again. Its panel shows Repeat,
+   Until and Remind and "Done 1 time · 1 in a row". A second task repeats
+   from yesterday (custom start): yesterday reads Skipped, never Overdue.
+   Custom repeats follow a moved start (weekly, monthly), save interval,
+   unit and weekdays, and yearly; Until sets the end date and going back to
+   one-time drops repeat and end, also after reopening.
 7. **Goal with linked tasks.** New goal; two tasks linked through the task
    panel's Goal row; complete one: goal page lists one open task and
    "Completed (1)". Star the goal's
    remaining task: it appears under Starred on My Day but not in the plan.
-   Set status Achieved: Goals lists it under Achieved.
+   My Day's row names its goal and the goal itself is no row. Set status
+   Achieved: Goals lists it under Achieved; the task's Goal row still names
+   it but offers no goal in progress. A second goal can be chosen, cleared
+   and chosen again; deleting it unlinks the task on its list and on My
+   Day.
 8. **Reference list and field types.** Reference list; item with five
    fields, one per display kind: Text, Link (renders a link with `href`),
    Path (renders as code), Quantity (normalised), Automatic with a URL value
@@ -226,32 +245,41 @@ tests would be visible, not silent.
     folded axis: the current hour between bands. A task due today with a time 09:00–10:30 and one
     due today without a time: My Day lists the first under Scheduled (count 1) and
     the second under "Today, any time"; the timeline block carries both
-    times. Ticking the block's checkbox takes it off the timeline and out of
+    times, and the Scheduled row reads 09:00–10:30. At phone width the
+    Schedule tab reads "Schedule · 1" and swaps the task list for the
+    timeline. Ticking the block's checkbox takes it off the timeline and out of
     Scheduled, the schedule reads empty again, and Completed · 1 lists it.
-    Clicking the first empty half hour opens "New task" with that start
-    time.
+    Tomorrow's empty schedule names its date and a free slot there opens
+    "New task" due Tomorrow for an hour from that time. Clicking the first
+    empty half hour today opens "New task" with that start time.
 18. **Language.** Settings shows English; choosing Polski reloads the app
     into Polish (Ustawienia, Mój dzień) and a reload keeps
     it. A second context of the same user signs in and lands in Polish
     without touching Settings, since the language is stored on the user.
+    The Polish Inbox reads "Nic jeszcze nie dodano."
     Choosing English brings the first page back to English.
 19. **Step rename.** A task with one step: edit the step's name in the
     task panel and press Enter; close and reopen the panel, then reload:
     the new name persists. Clearing the name and blurring puts the old
-    name back (issue #199).
+    name back, and so does Escape after typing a new one (issue #199).
 20. **Add from My Day.** My Day's FAB opens "New task" due Today with Add
     task disabled; two draft steps and a name still leave it disabled until
-    the List row picks a list. Saving puts the task under "Today, any time"
-    with `0/2` steps, and the list shows it.
+    the List row picks a list; the List row reads "No list", Enter adds
+    nothing and Escape reverts a draft step's new name. Saving puts the task
+    under "Today, any time" with `0/2` steps, and the list shows it. A task
+    made due today through the API shows on My Day without a reload.
 21. **Step deadline.** A task with two steps: set the second step's
     deadline to Tomorrow from its date control. The list's card shows
     `↳ Order boxes · <date>`; My Day today does not list the task, and
     tomorrow (through the week strip's date dialog) lists it under any
     time. A second task with one step due Today and one due Tomorrow is
     under any time today and under Overdue tomorrow, not under any time.
-    Back on today, ticking its "Get new photos taken" step row (not the
-    task) says it moved to Tomorrow, and tomorrow then lists it under any
-    time (issue #202, `adr/0078`).
+    Step rows under a task show their date, not a relative word. Back on
+    today, the second task has two steps due today: ticking "Get new photos
+    taken" checks only that step and keeps the task on the day; ticking
+    "Book an appointment" says it moved to Tomorrow, and tomorrow then lists
+    it under any time. Ticking the first task's row completes it (issue
+    #202, `adr/0078`).
 22. **List filter, sort and calendar.** Two High-priority tasks due
     tomorrow and one plain task: filtering on High hides the plain one,
     sorting by Name orders the two A → Z, and both survive a reload with

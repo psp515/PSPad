@@ -30,7 +30,7 @@ export async function linkTaskToGoal(page: Page, goalName: string) {
 
 export async function deleteGoal(page: Page, name: string) {
   await goToGoals(page);
-  await goalCard(page, name).locator('.pspad-goal-menu').getByRole('button').click();
+  await goalCard(page, name).getByRole('button', { name: 'Actions' }).click();
   await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await confirm(page, 'Delete');
   await expect(goalCard(page, name)).toHaveCount(0);

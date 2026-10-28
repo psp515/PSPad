@@ -5,7 +5,7 @@ import { createList, openList } from '../helpers/lists';
 import { goToSettings, setTimeZone } from '../helpers/settings';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, completeTaskRow, openTask, taskRow } from '../helpers/tasks';
-import { dayLabel, daySection, goToMyDay, myDayLink, setDueDate, showDay, weekDay } from '../helpers/today';
+import { backToToday, dayLabel, daySection, goToMyDay, myDayLink, setDueDate, showDay, weekDay } from '../helpers/today';
 
 test('My Day follows the Today rule in the stored time zone', async ({ page, account }) => {
   const dueToday = `Call the bank ${account.suffix}`;
@@ -63,7 +63,7 @@ test('My Day follows the Today rule in the stored time zone', async ({ page, acc
     await expect(dayLabel(page)).toContainText(shortDate(addDays(today, 1)));
     await closeTask(page);
     await expect(dayLabel(page)).toContainText(shortDate(addDays(today, 1)));
-    await page.locator('.pspad-week-today').click();
+    await backToToday(page);
   });
 
   await test.step('completing a task moves it to Completed and drops the My Day count', async () => {

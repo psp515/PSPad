@@ -172,11 +172,11 @@ export async function setCustomLeadTime(page: Page, amount: number, unit: string
 }
 
 export async function setOneTime(page: Page) {
-  const repeat = panel(page).getByRole('button', { name: /^Repeat\b/ });
-  await expect(async () => {
-    if ((await repeat.count()) > 0) {
-      await panel(page).getByText('One-time', { exact: true }).click({ timeout: 2_000 });
-    }
-    await expect(repeat).toHaveCount(0, { timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+  await panel(page).getByText('One-time', { exact: true }).click();
+  await expect(panel(page).getByRole('button', { name: /^Repeat\b/ })).toHaveCount(0);
+}
+
+export async function backToToday(page: Page) {
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(dayLabel(page)).toContainText('Today');
 }

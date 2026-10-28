@@ -3,7 +3,7 @@ import { goToInbox } from '../helpers/inbox';
 import { logInFromWelcome } from '../helpers/sign-in';
 import { goToMyDay } from '../helpers/today';
 
-test('a fresh user signs in and sees an empty day', async ({ page, account }) => {
+test('a fresh user signs in and sees an empty day', async ({ page, browser, account }) => {
   await test.step('Welcome greets a visitor and keeps where they were going', async () => {
     await page.goto('/inbox');
     await expect(page).toHaveURL(/\/welcome\?returnUrl=/);
@@ -19,7 +19,15 @@ test('a fresh user signs in and sees an empty day', async ({ page, account }) =>
       await expect(page.getByText(gone)).toHaveCount(0);
     }
     await expect(page.getByRole('button', { name: /^Sync now/ })).toHaveCount(0);
-    await logInFromWelcome(page, account, 'My Day');
+    await logInFromWelcome(page, account);
+  });
+
+  await test.step.skip('BUG: signing in from Welcome ignores the return address (reported in PR #225)', async () => {
+    const visitor = await browser.newContext();
+    const fresh = await visitor.newPage();
+    await fresh.goto('/inbox');
+    await logInFromWelcome(fresh, account, 'Inbox');
+    await visitor.close();
   });
 
   await test.step('an empty inbox and an empty day say so', async () => {

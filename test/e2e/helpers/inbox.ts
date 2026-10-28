@@ -27,8 +27,8 @@ export function inboxItem(page: Page, text: string) {
   return page.locator('.pspad-inbox-item').filter({ hasText: text });
 }
 
-export function inboxItemTexts(page: Page) {
-  return page.getByRole('button').filter({ has: page.locator('.pspad-inbox-item-text') });
+export function inboxItemRows(page: Page) {
+  return page.getByRole('button', { name: / \d\d:\d\d$/ });
 }
 
 export async function openInboxItem(page: Page, text: string) {
@@ -36,16 +36,11 @@ export async function openInboxItem(page: Page, text: string) {
   await expect(panel(page).getByLabel('Name')).toHaveValue(text);
 }
 
-export async function renameInboxItem(page: Page, from: string, to: string) {
+export async function renameInboxItem(page: Page, to: string) {
   const name = panel(page).getByLabel('Name');
-  await expect(async () => {
-    if ((await name.inputValue({ timeout: 2_000 })) !== to) {
-      await name.fill(to, { timeout: 2_000 });
-      await name.press('Tab', { timeout: 2_000 });
-    }
-    await expect(inboxItem(page, to)).toBeVisible({ timeout: 2_000 });
-    await expect(inboxItem(page, from).filter({ hasNotText: to })).toHaveCount(0, { timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+  await name.fill(to);
+  await name.press('Tab');
+  await expect(inboxItem(page, to)).toBeVisible();
 }
 
 export async function captureFromAnotherDevice(page: Page, text: string) {

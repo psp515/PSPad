@@ -1,6 +1,6 @@
 @inject IStringLocalizer<SharedStrings> Shared
 
-<MudMenu Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" Dense="true"
+<MudMenu Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" Dense="true" AriaLabel="@Shared["Actions"].Value"
          AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="@Class">
     <MudMenuItem OnClick="@OnEdit">@Shared["Edit"]</MudMenuItem>
     @Extra

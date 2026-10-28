@@ -6,7 +6,7 @@ import { chooseProperty, closePanel, panel, propertyRow, savePanel } from '../he
 import { signIn } from '../helpers/sign-in';
 import { syncNow } from '../helpers/sync';
 import {
-  addStep, closeTask, openNewTask, openTask, stepNameField, taskRow,
+  addStep, closeTask, openNewTask, openTask, setStepDeadline, stepNameField, stepRow, taskRow,
 } from '../helpers/tasks';
 import { setCustomRepeat, setDueDate, setOneTime, setRepeating, setTaskTime } from '../helpers/today';
 
@@ -99,6 +99,20 @@ test('a new task keeps everything its draft panel set', async ({ page, account }
     await expect(propertyRow(page, 'Repeat')).toContainText('Every 2 days');
     await expect(propertyRow(page, 'Until')).toContainText(shortDate(inTenDays));
     await expect(propertyRow(page, 'Remind me')).toContainText('1 month before');
+    await closeTask(page);
+  });
+
+  await test.step.skip('BUG: a deadline set on a draft step is lost when the task is added (reported in PR #225)', async () => {
+    const dated = `Book the van ${account.suffix}`;
+    await openNewTask(page);
+    await panel(page).getByPlaceholder('Task name').fill(dated);
+    await addStep(page, 'Compare prices');
+    await addStep(page, 'Pay the deposit');
+    await setStepDeadline(page, 'Pay the deposit', 'Tomorrow');
+    await savePanel(page);
+    await expect(taskRow(page, dated)).toBeVisible();
+    await openTask(page, dated);
+    await expect(stepRow(page, 'Pay the deposit')).toContainText('Tomorrow');
     await closeTask(page);
   });
 });
