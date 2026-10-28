@@ -160,6 +160,8 @@
     enum PanelMode { Closed, Add, Edit, View }
 
     TodoTask? _task;
+
+    int _reload;
     ListPlacement _placement = ListPlacement.Empty;
     IReadOnlyList<TaskList> _lists = [];
     IReadOnlyList<Goal> _goals = [];
@@ -228,11 +230,17 @@
 
     async Task ReloadAsync()
     {
+        var reload = ++_reload;
         var loaded = TaskId is null ? null : await Store.LoadAsync(TaskId.Value, CancellationToken.None);
-        _task = loaded is { Deleted: false } ? loaded : null;
+        var task = loaded is { Deleted: false } ? loaded : null;
 
-        if (_task is null && !Adding)
+        if (task is null && !Adding)
         {
+            if (reload == _reload)
+            {
+                _task = null;
+            }
+
             return;
         }
 
@@ -240,13 +248,19 @@
         var lists = await Lists.LoadAllAsync(State.UserId, CancellationToken.None);
         var views = await Views.LoadAllAsync(State.UserId, CancellationToken.None);
         var listViews = await ListViews.LoadAllAsync(State.UserId, CancellationToken.None);
-        _placement = ListPlacement.For(State.UserId, areas, lists, views, listViews);
+        var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
 
-        var current = _task is null ? null : _placement.All.FirstOrDefault(list => list.Id == _task.ListId);
+        // A reload started later has already read newer documents; letting this one land would show the task as it was before the last command.
+        if (reload != _reload)
+        {
+            return;
+        }
+
+        _task = task;
+        _placement = ListPlacement.For(State.UserId, areas, lists, views, listViews);
+        var current = task is null ? null : _placement.All.FirstOrDefault(list => list.Id == task.ListId);
         _lists = [.. _placement.All.Where(list =>
             list.Kind == ListKind.Tasks && (current is null || list.UserId == current.UserId))];
-
-        var goals = await Goals.LoadAllAsync(State.UserId, CancellationToken.None);
         _goals = [.. goals.Where(goal => !goal.Deleted)];
     }
 

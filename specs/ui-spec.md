@@ -822,6 +822,14 @@ in the draft's order (each with a fresh step id), then
 `SetTaskPriority`, `AddTaskToGoal` and `StarTask` for whichever the draft
 sets. Steps go first so the task's first sync already carries them.
 
+**Edit reloads the task after every command, and only the newest reload
+lands.** Each row's change sends its command and reloads the task from the
+replica; a parameter change (another task, the shell becoming ready) starts
+a reload of its own, and a sync pull does not. A reload that began before a
+later one finished is discarded, otherwise its copy of the task, read before
+the last command, would replace the newer one on screen and the change would
+look as if it had silently failed.
+
 **An existing area's panel orders its lists.** Under the Name field,
 `AreaDetailPanel` shows a `PanelSection` **Lists · N** (`pspad-area-lists`)
 with one row per list in board order (`ListOrder.InArea`): `ListIcon`, the
