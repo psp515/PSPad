@@ -32,7 +32,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Command pipeline, storage, domain rules, sync, identity, HTTP, containers, statistics | `specs/backend-spec.md` |
 | Client components, layout, pages, theming, navigation | `specs/ui-spec.md` |
 | Adding an aggregate, module boundaries | `specs/modules-spec.md` |
-| Writing or running tests, fixtures, guards | `specs/testing-spec.md` |
+| Writing or running tests, fixtures, guards | `specs/testing-spec.md`; migration `specs/behaviour-tests-design.md` |
 | End-to-end scenarios, Playwright harness, e2e CI job | `specs/e2e-testing-design.md` |
 | Sharing, invites, public snapshots | `specs/sharing-spec.md` |
 | Reference lists | `specs/reference-lists-design.md` |
@@ -65,7 +65,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 5–6 | LWW conflicts offline, version-checked saves on the server, final rejections dropped, a pull never replaces a newer local copy; delta sync by monotonic `seq`, paged, documents only | 0005, 0006, 0061, 0063, 0067, 0079 |
 | 7 | Recurrence template + occurrences | 0007, 0043, 0053 |
 | 8 | Aggregates: User, Area, TaskList, TodoTask, Goal, Inbox, ReferenceItem; a goal holds its task links | 0008, 0047, 0065 |
-| 9 | Integration tests own a Testcontainers MongoDB 8 replica set | 0009 |
+| 9 | Integration tests own a Testcontainers MongoDB 8 replica set; tests assert behaviour, never shape or wiring | 0009, 0080 |
 | 10 | Events dispatch after commit, replayed from a marker | 0036, 0037 |
 | 11 | Per-user views live in Presentation | 0051 |
 | 12 | Lists and budgets shared by membership | 0054, 0057, 0066 |
