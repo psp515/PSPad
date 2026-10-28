@@ -20,11 +20,19 @@ Integration classes also join the shared container:
 public class SomethingTests(MongoFixture fixture);
 ```
 
-**Unit** — pure, in-process, no Docker, no network, no filesystem. Domain rules,
-the Today rule, recurrence derivation, client state folding, bUnit components.
+## What a test asserts
 
-**Integration** — real MongoDB via Testcontainers, real HTTP host. Command
-handlers, transactions, idempotency, Today query, history, sync round trip, auth.
+A test asserts an observable result: a returned value, a decision (events or
+a rejection), a stored document, an HTTP response, a sync delta, or what a
+user sees and can do in the browser. It never asserts a CSS class, a DOM
+shape, a MudBlazor internal, or a call recorded on a fake of one of our own
+ports.
+
+| Tier | Subject | Runs |
+|---|---|---|
+| Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; logic-bearing components (parsing, date or time math, state transitions, keyboard handling); architecture, category, resource, localization and stylesheet guards | in process, no Docker |
+| Integration `[IntegrationTest]` | A command or query through HTTP on `ApiFactory` with Testcontainers Mongo, asserting the response, documents, events and sync deltas: every handler, cascade, projection, reader, sharing and auth flow | Testcontainers |
+| End-to-end | A user's flow in Chromium against the compose stack: pages, layout, navigation, panels, localization, offline and live updates; new steps locate by role, label or text | compose stack |
 
 ```bash
 dotnet test --filter Category=Unit
@@ -32,11 +40,24 @@ dotnet test --filter Category=Integration
 dotnet test
 ```
 
-Unit suite must stay under a few seconds. If it needs Docker, it is mislabeled.
+Where a new test goes: a rule with edge cases is a unit test, a server effect
+is an integration test, anything a user sees on a page is an end-to-end step.
+TDD is unchanged: the failing test comes first, and for UI work it is an
+end-to-end step. Unit suite must stay under a few seconds. If it needs Docker,
+it is mislabeled.
+
+Stubs in unit tests are allowed only at external boundaries (HTTP to Keycloak
+or NBP, the JS runtime, the clock, connectivity) and only to assert the
+client's resulting behaviour, never the outgoing request's shape.
+
+Integration tests send commands with `PSPad.Api.Tests.Commands.Commands`
+(`SignInAsync`, `TrySendAsync`, `SendAsync`, `SyncedAsync`).
+
+Migration record: `specs/behaviour-tests-design.md`; decision ADR-0079.
 
 **End-to-end** — Playwright in `test/e2e/`, outside the .NET solution, driving
 the real application in Chromium against the compose stack with one Keycloak
-user per test. Whole-scenario journeys only, twenty-two of them, under three
+user per test. Whole-scenario journeys only, twenty-two of them, under five
 minutes. Design, harness and scenario list: `specs/e2e-testing-design.md`.
 `npm test` in that folder runs it; `dotnet test` never sees it. A change to
 what a user can do adds or extends a scenario; a change to markup or copy a
