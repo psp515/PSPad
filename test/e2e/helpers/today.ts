@@ -92,5 +92,9 @@ export async function showDay(page: Page, day: Date) {
 }
 
 export async function pickWeekDay(page: Page, day: Date) {
-  await page.getByRole('button', { name: shortDate(day), exact: true }).click();
+  await page.getByRole('button', { name: new RegExp(`^${escapeRegExp(shortDate(day))}(,|$)`) }).click();
+}
+
+function escapeRegExp(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
