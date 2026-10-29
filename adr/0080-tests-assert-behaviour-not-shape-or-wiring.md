@@ -60,3 +60,5 @@ Migration plan: `specs/behaviour-tests-design.md`.
 - A thin bUnit tier for logic-bearing components is not a fallback: flakiness is
   fixed in the scenario or the helper, and a rule a scenario cannot reach
   well is extracted into `State/` and unit tested.
+- With CSS-text tests gone, a CSS fix is guarded by a browser layout
+  assertion (bounding boxes in a scenario), not a pixel snapshot.

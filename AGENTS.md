@@ -106,11 +106,12 @@ module; `App` never sees `Infrastructure`; `Api` sees all. Only module edges:
   `docs/src/data/features.ts`; a changed screen → `npm run screenshots` in
   `test/e2e`.
 - **TDD.** Failing test first; every test class has `[UnitTest]` or
-  `[IntegrationTest]` (`specs/testing-spec.md`). Never claim green without running.
+  `[IntegrationTest]` (`specs/testing-spec.md`). UI work starts with a failing
+  end-to-end step (`specs/testing-spec.md`). Never claim green without running.
 - **End-to-end ships with the feature.** A new or changed user-facing flow
   adds or extends a scenario in `test/e2e/`; a markup or copy change that a
-  scenario reads fixes that scenario in the same change
-  (`specs/e2e-testing-design.md` §9).
+  scenario reads fixes that scenario in the same change; a CSS fix adds a
+  layout assertion (`specs/e2e-testing-design.md` §9).
 - **No comments in code.** Rename or extract instead; one line only for a
   counter-intuitive *why*. XML docs only on cross-project public API.
 - **One type per file**, filename = type, grouped by operation:

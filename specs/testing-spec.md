@@ -63,7 +63,9 @@ user per test. Whole-scenario journeys only, twenty-two of them, under five
 minutes. Design, harness and scenario list: `specs/e2e-testing-design.md`.
 `npm test` in that folder runs it; `dotnet test` never sees it. A change to
 what a user can do adds or extends a scenario; a change to markup or copy a
-scenario reads fixes it in the same pull request (design §9).
+scenario reads fixes it in the same pull request (design §9). A CSS fix adds a
+layout assertion to a scenario: bounding boxes at the viewport where the bug
+showed, never pixel snapshots (`specs/behaviour-tests-design.md` §4.4).
 
 ## Testcontainers fixture
 

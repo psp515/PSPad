@@ -3,6 +3,7 @@ import { expect, test } from '../fixtures/accounts';
 import { anotherDevice, idOf } from '../helpers/api';
 import { createArea, openArea } from '../helpers/areas';
 import { addDays, dayMonth, isoDate, utcToday } from '../helpers/dates';
+import { visibleWidth } from '../helpers/layout';
 import { createList, openList } from '../helpers/lists';
 import { dismissMenu, panel } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
@@ -109,5 +110,42 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
     await setRepeating(page);
     await expect(panel(page).getByLabel(/^Set a deadline for /)).toHaveCount(0);
     await closeTask(page);
+  });
+
+  await test.step('in a tight My Day row the details give way, the task name stays readable and the due-step mark keeps its width', async () => {
+    const renewal = `Sort out the insurance renewal for the car and the flat ${account.suffix}`;
+    const quotes = 'Compare the quotes from three different insurers';
+    const device = await anotherDevice(page);
+    const taskId = randomUUID();
+    const stepId = randomUUID();
+    await device.send('CreateTask', { taskId, listId: await idOf(device, 'tasklists', list), name: renewal });
+    await device.send('SetTaskDueDate', { taskId, dueOn: isoDate(today) });
+    await device.send('SetTaskTime', { taskId, time: { start: '09:30:00', end: '10:15:00' } });
+    await device.send('AddStep', { taskId, stepId, name: quotes });
+    await device.send('SetStepDueDate', { taskId, stepId, dueOn: isoDate(addDays(today, 3)) });
+    await device.dispose();
+
+    await goToMyDay(page);
+    const row = taskRow(page, renewal);
+    const name = row.getByText(renewal, { exact: true });
+    const details = row.getByText('09:30–10:15', { exact: true }).locator('..');
+    const dueStep = row.getByText(quotes, { exact: true }).locator('..');
+    await expect(dueStep).toBeVisible();
+
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await expect.poll(() => visibleWidth(row)).toBeGreaterThan(800);
+    const roomyDetails = await visibleWidth(details);
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await expect.poll(() => visibleWidth(row), { message: 'the row sits just above the 560px ledger width' }).toBeLessThan(600);
+    expect(await visibleWidth(row)).toBeGreaterThanOrEqual(560);
+    expect(await visibleWidth(details)).toBeLessThan(roomyDetails);
+    expect(await visibleWidth(name)).toBeGreaterThanOrEqual(120);
+    expect((await dueStep.boundingBox())!.width).toBeGreaterThanOrEqual(Math.min(await visibleWidth(details), 140) - 1);
+  });
+
+  await test.step.skip('BUG: in a tight My Day row the time, date and step count push the due-step mark past the clipped details, so only its first letters show', async () => {
+    const dueStep = page.getByText('Compare the quotes from three different insurers', { exact: true }).locator('..');
+    expect(await visibleWidth(dueStep)).toBeGreaterThanOrEqual(Math.min(await visibleWidth(dueStep.locator('..')), 140) - 1);
   });
 });

@@ -19,6 +19,7 @@ Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225
 - 27-reference-items: labels drafted on a new reference item are missing when it is opened, until a reload, though the server stored them.
 - 30-reference-rows: a reference card counts its items as "open tasks".
 - 31-list-panel: going offline with Public snapshots open leaves Publish enabled until the view redraws.
+- 21-step-deadline (found 2026-10-29, after PR #225): in a tight My Day row the time, date and step count push the due-step mark past the clipped details, so only its first letters show.
 
 Noted without a step:
 
@@ -170,7 +171,18 @@ tested there. Extraction, and accessibility attributes (aria, role, localized)
 that give a test an accessible locator, are the only production changes the
 migration allows.
 
-### 4.4 End-to-end budget
+### 4.4 CSS fixes
+
+A CSS fix ships with a browser layout assertion in the scenario that shows
+the screen: the step sets the viewport where the bug showed, measures what
+the user sees with bounding boxes (`visibleWidth` in
+`test/e2e/helpers/layout.ts` clips an element's box to its overflow-hiding
+ancestors), and asserts sizes, visibility or which element gave way. No pixel
+baselines: CI's Chromium and the local Playwright container render
+differently. The assertion must fail on the CSS before the fix. Example:
+scenario 21's tight My Day row (#222).
+
+### 4.5 End-to-end budget
 
 The suite target moves from three minutes to **five minutes per shard** in CI
 with four workers; CI runs two shards (`specs/e2e-testing-design.md` §5). A scenario that would push

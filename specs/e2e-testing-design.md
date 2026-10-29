@@ -430,7 +430,11 @@ tests would be visible, not silent.
     it under any time. Ticking the first task's row completes it (issue
     #202, `adr/0078`). A past step deadline reads Yesterday and clears, an
     unset one offers no Clear date, and a ticked step or a repeating task
-    takes none.
+    takes none. At a viewport that leaves the My Day row just above 560px,
+    a timed task with a long name and a step due in three days keeps at
+    least 120px of its name, its details narrow instead, and the due-step
+    mark keeps min(details, 140px) (issue #222; that the mark is still
+    clipped by the details is a skipped BUG step).
 22. **List filter, sort and calendar.** Two High-priority tasks due
     tomorrow and one plain task: filtering on High hides the plain one,
     sorting by Name orders the two A → Z, and both survive a reload with
