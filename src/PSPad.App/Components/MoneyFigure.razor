@@ -1,4 +1,4 @@
-<div class="@($"d-flex flex-column pspad-money-figure {Class}")">
+<div class="@($"d-flex flex-column pspad-money-figure {Class}")" role="group" aria-label="@Label">
     <MudText Typo="Typo.caption" Color="Color.Secondary">@Label</MudText>
     <MudText Typo="Typo.subtitle1" Color="@(Negative ? Color.Error : Color.Default)" Class="pspad-money-value">@Text</MudText>
 </div>

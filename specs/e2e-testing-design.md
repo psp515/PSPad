@@ -14,7 +14,7 @@ talking to the API over HTTP, syncing a replica. Regressions in that seam
 
 In:
 
-- A Playwright suite in `test/e2e/` that runs thirty-one whole-scenario
+- A Playwright suite in `test/e2e/` that runs thirty-three whole-scenario
   journeys through a browser against the Docker Compose stack.
 - Fixtures that create a Keycloak user per test and sign in through the real
   login form.
@@ -119,8 +119,9 @@ envelopes (`CommandCatalogue` resolves `type` by class name, e.g.
 `CompleteTask`), and reads `CommandResponse[]` (`accepted`, `rejection`). `anotherDevice(page)`
 wraps this as a second device of the same user: scenarios 22 and 25–31
 arrange many tasks, items, goals and repeats through it (`createTasksOn`,
-`createItemsOn`, `createGoalOn`), which also proves the open page picks
-them up without a reload.
+`createItemsOn`, `createGoalOn`), and 12, 18, 32 and 33 budgets, entries
+and balances (`createBudgetOn`, `recordOn`, `startBalanceOn`), which also
+proves the open page picks them up without a reload.
 
 ### 3.5 Offline
 
@@ -225,15 +226,32 @@ tests would be visible, not silent.
     ticks a task; the public page shows Marked. Owner syncs: the task row
     shows the snapshot chip; the panel's Dismiss clears it. Revoke: the
     public page shows "This snapshot has expired or never existed."
-12. **Budget month.** New budget; expense in PLN and income in EUR with a
-    typed rate; Entries shows both and the hero totals in PLN equal the
-    expected sums. Switch month back and forth. Settings: Archive; the
-    archived banner shows and the quick add buttons are gone.
-13. **Balance and CSV import.** Balance: Start month, add a cash holding and
-    an investment holding in EUR; net worth equals the sum in PLN. Settings:
-    import the entries fixture then the balances fixture; preview counts
-    match the fixture rows; **Import N rows** completes; Entries and Balance
-    show the imported data.
+12. **Budget month.** Budgets starts empty; a new budget waits for a name
+    and opens on this month's overview. An expense in PLN and an income in
+    EUR with a typed rate sum in PLN; switch month back and forth. Last
+    month's entries from another device make the usual month: expected
+    month end, pace, "Food already past a usual month", where money went and
+    the five most recent entries, each opening its entries. Entries list by
+    day with a caption and narrow by kind, search, category (also in an
+    empty month) and sort by time recorded. An entry edits and deletes in
+    its panel; a new expense starts in the default currency with the latest
+    rate, takes NBP's (stubbed) and creates a category; adding in a past
+    month dates it on its last day. Each view has its address, the month row
+    shows on Entries and Balance only, an old address still opens its view,
+    the phone FAB offers expense or income, and the overview starts this
+    month's balance.
+13. **Balance month.** Balance: a first month offers Start; add a cash
+    holding and an investment holding in EUR; net worth equals the sum in
+    PLN, holdings group by type and the 12-month table shows them. With NBP
+    down the "At NBP today" figure stays away and is not asked again; a
+    holding renames, retypes and is removed in its panel, a new one suggests
+    the latest rate and takes NBP's. With NBP answering, the figures value
+    holdings at today's rate once per currency; offline they hide and the
+    NBP button is off, online they return. Deleting the month asks first.
+    Once another device adds last month's balance, starting this month
+    copies its holdings and the overview shows the net worth. NBP answers
+    come from a `context.route` stub; the service worker is blocked so
+    going offline reaches the connectivity probe.
 14. **Offline capture and sync.** Create a list with one task; go offline;
     the footer says offline; add a task and complete the first; go online;
     **Sync now**. A second signed-in context of the same user shows both
@@ -266,7 +284,9 @@ tests would be visible, not silent.
     into Polish (Ustawienia, Mój dzień) and a reload keeps
     it. A second context of the same user signs in and lands in Polish
     without touching Settings, since the language is stored on the user.
-    The Polish Inbox reads "Nic jeszcze nie dodano."
+    The Polish Inbox reads "Nic jeszcze nie dodano." and Budgets reads
+    "Nie masz jeszcze budżetów."; a budget from another device shows Polish
+    amounts, labels and plurals.
     Choosing English brings the first page back to English.
 19. **Step rename.** A task with one step: edit the step's name in the
     task panel and press Enter; close and reopen the panel, then reload:
@@ -370,6 +390,26 @@ tests would be visible, not silent.
     snapshots open their own views whose back arrow returns to the details.
     Deleting from the panel stays on the board there and goes to the area
     from the list's own screen; a deleted or unknown list says it is gone.
+32. **Budgets and budget settings.** Budget cards sum this month in PLN,
+    show the latest net worth up to this month or offer to start it, and
+    archived budgets wait behind Show archived. Settings list both kinds of
+    categories with their use; add, rename (a clash says to merge), merge
+    and remove them, and a category opens its entries. Rename renames the
+    budget. An archived budget reads only: no adding, editing, starting,
+    importing or category actions, its stats still show, and Restore
+    brings quick add back. An unknown budget says so.
+33. **Budget history: stats and CSV import.** An empty budget's stats read
+    as dashes with no forecast, ranking or balances and a zeroed monthly
+    table. Entries from another device average over the months that have
+    them, forecast next month, rank where money goes and fill the
+    per-month, per-category and net-worth tables (a month without a balance
+    reads as dashes). Presets pick their range, picking one again keeps it,
+    Custom shows the picker, and a ranked or forecast category opens its
+    entries. Settings: the entries fixture previews error rows, new
+    categories and rate sources, retries a missing NBP rate, asks before
+    leaving and imports; the balances fixture says when a column is missing,
+    groups rows under their month and imports; Entries and Balance show the
+    imported data. An unknown import kind says so.
 
 ## 5. Timing
 
@@ -381,7 +421,7 @@ tests would be visible, not silent.
 - Retries: 0 locally, 1 in CI; a retry is a flake to fix, reported in the
   HTML report.
 - Scenarios 10, 11, 14, 16 and 18 are the heaviest (two or three contexts);
-  25, 27, 28, 29 and 31 are the heaviest single-context ones. A scenario
+  12, 13, 25, 27, 28, 29, 31 and 32 are the heaviest single-context ones. A scenario
   that runs past a minute at two workers on a two-core machine splits;
   data a step only needs to exist is arranged through `anotherDevice`,
   not clicked through the UI.
@@ -411,7 +451,7 @@ test/e2e/
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
                  settings.ts  goals.ts  references.ts  sharing.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 31-list-panel.spec.ts
+  scenarios/     01-first-sign-in.spec.ts … 33-budget-history.spec.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared

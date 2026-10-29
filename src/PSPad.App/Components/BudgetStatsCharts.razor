@@ -7,7 +7,7 @@
 <MudGrid Spacing="4" Class="mb-4">
     <MudItem xs="12" md="5">
         <div class="d-flex flex-column gap-4 pspad-stats-column">
-        <MudPaper Outlined="true" Class="pa-3 pspad-stats-forecast">
+        <MudPaper Outlined="true" Class="pa-3 pspad-stats-forecast" role="region" aria-label="@T["Forecast", MoneyText.MonthTitle(Next)].Value">
             <SectionHeading Title="@T["Forecast", MoneyText.MonthTitle(Next)]" Hint="@ForecastHint" />
             @if (Usual.IsEmpty)
             {
@@ -38,7 +38,7 @@
                 </MudStack>
             }
         </MudPaper>
-        <MudPaper Outlined="true" Class="pa-3 pspad-stats-ranking">
+        <MudPaper Outlined="true" Class="pa-3 pspad-stats-ranking" role="region" aria-label="@T["WhereMoneyGoes"].Value">
             <SectionHeading Title="@T["WhereMoneyGoes"]" />
             @if (Summary.Ranking.Count == 0)
             {

@@ -86,7 +86,7 @@
                         </div>
                         @foreach (var group in ByType)
                         {
-                            <section @key="group.Type" class="pspad-holding-group">
+                            <section @key="group.Type" class="pspad-holding-group" aria-label="@T.Of(group.Type)">
                                 <div class="d-flex align-baseline px-1 pt-3 pb-1">
                                     <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-holding-group-name">@T.Of(group.Type)</MudText>
                                     <MudText Typo="Typo.caption" Class="pspad-muted pspad-holding-group-total">@MoneyText.Pln(group.Pln)</MudText>

@@ -5,7 +5,7 @@
 @using PSPad.Module.Money.Values
 @inject IStringLocalizer<BudgetsStrings> T
 
-<MudCard Outlined="true" Class="@($"pspad-budget-card {(Budget.IsArchived ? "pspad-archived" : "")}")">
+<MudCard Outlined="true" Class="@($"pspad-budget-card {(Budget.IsArchived ? "pspad-archived" : "")}")" role="group" aria-label="@Budget.Name">
     <MudCardContent>
         <div class="d-flex align-center">
             <MudLink Href="@BudgetLinks.For(Budget.Id)" Typo="Typo.h6" Class="pspad-budget-card-name">@Budget.Name</MudLink>

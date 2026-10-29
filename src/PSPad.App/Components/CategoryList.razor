@@ -1,7 +1,7 @@
 @using PSPad.Module.Money.Budgets
 @inject IStringLocalizer<BudgetsStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
-<MudPaper Outlined="true" Class="@($"pa-4 pspad-category-list {Class}")">
+<MudPaper Outlined="true" Class="@($"pa-4 pspad-category-list {Class}")" role="region" aria-label="@Title">
     <div class="d-flex align-center mb-2">
         <MudText Typo="Typo.subtitle2" Class="flex-grow-1">@Title</MudText>
         @if (!ReadOnly)
