@@ -8,9 +8,9 @@ import { createList, openList } from '../helpers/lists';
 import { chooseProperty, closePanel, deleteFromPanel, dismissMenu, menuOptions, panel, propertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { pushedWithin } from '../helpers/sync';
-import { addDays, dayMonth, shiftTime, utcTime, utcToday } from '../helpers/dates';
+import { addDays, dayMonth, isoDate, shiftTime, utcTime, utcToday } from '../helpers/dates';
 import { goToSettings, setTimeZone } from '../helpers/settings';
-import { addStep, closeTask, openTask, setStepDeadline, stepRow, taskRow } from '../helpers/tasks';
+import { addStep, closeTask, openTask, setStepDeadline, stepDeadlineOnAnotherDevice, stepRow, taskRow } from '../helpers/tasks';
 
 test('captured items are organised into a task or discarded', async ({ page, account }) => {
   const area = `Home ${account.suffix}`;
@@ -108,7 +108,7 @@ test('captured items are organised into a task or discarded', async ({ page, acc
     await expect(inboxItem(page, elsewhere)).toBeVisible(pushedWithin);
   });
 
-  await test.step.skip('BUG: a deadline set on a draft step is lost when an Inbox item is converted (reported in PR #225)', async () => {
+  await test.step('a deadline set on a draft step stays on the step the converted task keeps', async () => {
     const dated = `Call the vet ${account.suffix}`;
     await capture(page, dated);
     await openInboxItem(page, dated);
@@ -121,6 +121,7 @@ test('captured items are organised into a task or discarded', async ({ page, acc
     await openTask(page, dated);
     await expect(stepRow(page, 'Find the number')).toContainText('Tomorrow');
     await closeTask(page);
+    await expect.poll(() => stepDeadlineOnAnotherDevice(page, dated, 'Find the number')).toBe(isoDate(tomorrow));
     await goToInbox(page);
   });
 

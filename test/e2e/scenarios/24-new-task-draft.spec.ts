@@ -1,12 +1,13 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea } from '../helpers/areas';
-import { addDays, dayMonth, shortDate, utcToday } from '../helpers/dates';
+import { addDays, dayMonth, isoDate, shortDate, utcToday } from '../helpers/dates';
 import { createList, openList } from '../helpers/lists';
 import { chooseProperty, closePanel, panel, propertyRow, savePanel } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { syncNow } from '../helpers/sync';
 import {
-  addStep, closeTask, openNewTask, openTask, removeStep, renameStep, setStepDeadline, stepNameField, stepRow, taskRow,
+  addStep, closeTask, openNewTask, openTask, removeStep, renameStep, setStepDeadline, stepDeadlineOnAnotherDevice, stepNameField,
+  stepRow, taskRow,
 } from '../helpers/tasks';
 import { setCustomRepeat, setDueDate, setOneTime, setRepeating, setTaskTime } from '../helpers/today';
 
@@ -78,6 +79,7 @@ test('a new task keeps everything its draft panel set', async ({ page, account }
     await expect(steps).toHaveCount(2);
     await expect(steps.nth(0)).toHaveValue('Order boxes');
     await expect(steps.nth(1)).toHaveValue('Pack the kitchen');
+    await expect(stepRow(page, 'Pack the kitchen')).toContainText('Tomorrow');
     await closeTask(page);
   });
 
@@ -113,7 +115,7 @@ test('a new task keeps everything its draft panel set', async ({ page, account }
     await closeTask(page);
   });
 
-  await test.step.skip('BUG: a deadline set on a draft step is lost when the task is added (reported in PR #225)', async () => {
+  await test.step('a deadline set on a draft step stays on the step the task is added with', async () => {
     const dated = `Book the van ${account.suffix}`;
     await openNewTask(page);
     await panel(page).getByPlaceholder('Task name').fill(dated);
@@ -125,5 +127,7 @@ test('a new task keeps everything its draft panel set', async ({ page, account }
     await openTask(page, dated);
     await expect(stepRow(page, 'Pay the deposit')).toContainText('Tomorrow');
     await closeTask(page);
+    await expect.poll(() => stepDeadlineOnAnotherDevice(page, dated, 'Pay the deposit'))
+      .toBe(isoDate(addDays(today, 1)));
   });
 });

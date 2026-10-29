@@ -7,11 +7,9 @@ Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225
 - 01-first-sign-in: signing in from Welcome ignores the return address.
 - 01-first-sign-in: coming back from the fresh sign-in does not reopen the delete dialog.
 - 01-first-sign-in: deleting the account signs out before it leaves Settings, so Welcome keeps Settings as the return address.
-- 02-capture-and-triage: a deadline set on a draft step is lost when an Inbox item is converted.
 - 08-reference-list-and-field-types: Cancel in a label's editor leaves the editor open until something else redraws the list.
 - 15-search-statistics-settings: an old History address lands on an empty Statistics page.
 - 23-task-panel: an open task panel keeps the description and name it opened with after another device changes them, until it is reopened.
-- 24-new-task-draft: a deadline set on a draft step is lost when the task is added.
 - 25-area-board-cards: ticking a repeat on a day it skips shows it ticked until a reload, though nothing was saved.
 - 27-reference-items: labels drafted on a new reference item are missing when it is opened, until a reload, though the server stored them.
 - 30-reference-rows: a reference card counts its items as "open tasks".
@@ -22,6 +20,8 @@ Fixed in round 3:
 
 - 10-share-join-remove: joining a list could lose the tasks it already had: a sync running at the join purged them, or the list arrived by delta and never counted as missing. Fixed in 1c0c49e (ADR-0081).
 - 10-share-join-remove: a code in the link joined at once, but the shared list's tasks could be lost the same way. Fixed in 1c0c49e (ADR-0081).
+- 02-capture-and-triage: a deadline set on a draft step was lost when an Inbox item was converted: a pull overwrote the task with the server's older copy, so the step was unknown when `SetStepDueDate` ran locally and the command was rejected before the outbox. Fixed in 55358c4 (#220, ADR-0079: a pulled document never replaces a newer local copy); the step now also checks the server copy.
+- 24-new-task-draft: a deadline set on a draft step was lost when the task was added, for the same reason. Fixed in 55358c4; the step now also checks the server copy.
 
 Noted without a step:
 

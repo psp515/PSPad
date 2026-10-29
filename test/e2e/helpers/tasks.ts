@@ -1,6 +1,6 @@
 import { expect, Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
-import { apiFor, bearerToken, Device, me, sendCommand } from './api';
+import { anotherDevice, apiFor, bearerToken, Device, me, sendCommand } from './api';
 import { isoDate, utcToday } from './dates';
 import { awaitNoDrawer, closePanel, openFabAction, panel, savePanel } from './panels';
 
@@ -91,6 +91,17 @@ export async function setStepDeadline(page: Page, step: string, day: 'Today' | '
   await due.click();
   await page.getByRole('menuitem', { name: day }).first().click();
   await expect(due).toContainText(day);
+}
+
+export async function stepDeadlineOnAnotherDevice(page: Page, task: string, step: string): Promise<string | null> {
+  const device = await anotherDevice(page);
+  try {
+    const held = (await device.documents('todotasks')).find(doc => doc['name'] === task);
+    const steps = (held?.['steps'] ?? []) as Array<Record<string, unknown>>;
+    return (steps.find(candidate => candidate['name'] === step)?.['dueOn'] as string | undefined) ?? null;
+  } finally {
+    await device.dispose();
+  }
 }
 
 export async function clearStepDeadline(page: Page, step: string, shown: string) {
