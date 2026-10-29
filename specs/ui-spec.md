@@ -1623,8 +1623,10 @@ lands on the budget. `InviteLinkCard` is now the list wrapper over
 
 **Signed-out visitors land on `/welcome`**, not a bare login redirect.
 A login callback that could not capture a session (token exchange or
-`/api/me` failed) leaves `SignInFailure` set, and `/welcome` shows a warning
-`MudAlert` that sign-in did not finish above Log in, which retries it.
+`/api/me` failed), or that Keycloak answered with an error (`login-failed`
+redirects to `/welcome`), leaves `SignInFailure` set; `/welcome` shows a
+warning `MudAlert` that sign-in did not finish above Log in, which retries
+it, and clears the flag so a later visit does not repeat it.
 Sign-out ends the Keycloak session directly rather than only clearing local
 state. The boot splash is held — no application chrome renders — until the
 first screen is ready to draw: the signed-in shell once its data is loaded,

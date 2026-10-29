@@ -651,10 +651,13 @@ jittered pause, up to five attempts. Every commit bumps the global
 first sign-in's transaction hit MongoDB's transient write conflict; two tabs
 provisioning the same subject collide on the user's `_id`, and the retry
 reloads, sees `provisionedAt` and returns the existing user. Past the last
-attempt the `/api/me*` endpoints answer `503` with `Retry-After: 1`
+attempt `GET /api/me`, `PUT /api/me/timezone` and `PUT /api/me/language`
+answer `503` with `Retry-After: 1`
 (`RetryLaterOnConflict`), never a bare `500`. The client's login callback
-records a failed session capture in `SignInFailure`, and `/welcome` then
-says sign-in did not finish above its Log in button.
+records a failed session capture, or an identity-provider error on the
+callback (`login-failed`, via `SignInFailedRedirect`), in `SignInFailure`;
+`/welcome` then says once that sign-in did not finish, above its Log in
+button.
 
 **A durable local session, not the live access token, gates whether the
 app opens.** Two different questions were previously conflated: "who is
@@ -822,6 +825,7 @@ directly in `PSPad.Api`:
 | `GET` | `/api/money/nbp-rate?currency=&date=` | NBP table A mid rate for one currency: the last one on or before `date` (7-day lookback). `200 NbpRateView(Currency, Rate, EffectiveDate)`; `404` for an unknown currency, a date before 2002-01-02, no rate or an NBP 4xx; `502` when NBP fails (5xx, network, bad JSON) or takes over 5 s. PLN answers 1 without calling NBP. Successes cached in memory per (code, date): 24 h for past dates, 1 h otherwise. Online-only, not a command (`adr/0059`) |
 | `GET` | `/api/me` | Current user; provisions on first call, heals display name. `503` with `Retry-After` when write conflicts outlast five attempts (§6) |
 | `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only). `503` with `Retry-After` as for `/api/me` |
+| `PUT` | `/api/me/language` | Set the user's language (`en` / `pl`, `adr/0075`); `400` for an unsupported one. Online-only, not a command. `503` with `Retry-After` as for `/api/me` |
 | `DELETE` | `/api/account` | Delete the caller's account: every Mongo document scoped to their `userId`, then their Keycloak user. Needs a sign-in from the last 5 minutes, else `401` step-up challenge (`adr/0072`). Not a command — see §6 |
 | `POST` | `/api/lists/{id}/snapshots` | Owner only. Publish a frozen copy; `{expiresAt}` → `{id, token, expiresAt}`. Online-only, like `/api/me/timezone` (`adr/0056`) |
 | `GET` | `/api/lists/{id}/snapshots` | Owner only. That list's active (unexpired) snapshots |

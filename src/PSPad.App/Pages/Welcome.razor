@@ -23,7 +23,7 @@
                target="_blank" rel="noopener noreferrer">
                 @T["WelcomeTagline"]
             </a>
-            @if (Failure.Happened)
+            @if (_signInFailed)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" Class="pspad-welcome-sign-in-failed">
                     @T["SignInDidNotFinish"]
@@ -54,6 +54,8 @@
 
     IReadOnlyList<TodoTask> DemoTasks = [];
 
+    bool _signInFailed;
+
     string LoginUrl
     {
         get
@@ -66,7 +68,12 @@
         }
     }
 
-    protected override void OnInitialized() => DemoTasks = BuildDemoTasks();
+    protected override void OnInitialized()
+    {
+        DemoTasks = BuildDemoTasks();
+        _signInFailed = Failure.Happened;
+        Failure.Clear();
+    }
 
     IReadOnlyList<TodoTask> BuildDemoTasks()
     {
