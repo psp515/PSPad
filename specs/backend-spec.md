@@ -529,7 +529,9 @@ connection. A container joined on this device (`SyncService.AdoptJoinAsync`)
 is never purged by a pull that began before the join: that pull's membership
 set was read too early to speak for it. Adopting a join and the purge and
 stranded-row passes share one lock, so a join never lands between their
-reads. Last, a task or reference item the caller does not own
+reads. Adopting a join puts the container in `owedWhole` before saving the
+join's documents and takes it out only after the last one is saved, so a
+reload partway through still pulls it whole. Last, a task or reference item the caller does not own
 whose `ListId` names a list the replica does not hold is dropped — a row the
 owner moved out of a shared list, delivered through `previousListId` as a
 stub (`id`, `userId`, `listId`, `previousListId`, `version`, `deleted`,

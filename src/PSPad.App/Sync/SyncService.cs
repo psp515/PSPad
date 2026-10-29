@@ -385,7 +385,11 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         try
         {
             _freshJoins.Add(joined.Id);
+
+            // Owed until every document is saved, so a reload partway through still pulls the container whole.
+            await replica.SetOwedWholeAsync([.. await replica.OwedWholeAsync(), joined.Id]);
             await SaveAsync(joined.Documents);
+            await replica.SetOwedWholeAsync([.. (await replica.OwedWholeAsync()).Where(id => id != joined.Id)]);
         }
         finally
         {

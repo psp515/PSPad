@@ -48,7 +48,9 @@ pull begun after the join reconciles it normally, so a member removed right
 after joining still loses the container. Adopting a join, and the pull's
 purge and stranded-row pass, run under one lock (`SemaphoreSlim`), so a join
 can never land between the reads those passes make; the whole pull runs
-outside it.
+outside it. Adopting a join owes the container a whole pull until every
+document of the join response is saved, so a reload partway through the
+adopt is over-owed rather than left holding a list without its children.
 
 ## Considered alternatives
 

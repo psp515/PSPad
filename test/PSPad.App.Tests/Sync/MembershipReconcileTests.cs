@@ -356,6 +356,44 @@ public class MembershipReconcileTests
     }
 
     [Fact]
+    public async Task AJoinCutOffBeforeItsTasksAreSavedIsPulledWholeAfterAReload()
+    {
+        var list = ListOwnedBy(Owner, Guid.NewGuid());
+        var task = TaskIn(list.Id);
+        var replica = await SyncedReplicaAsync();
+        var api = new ScriptedApi(join: new JoinOutcome.Joined(list.Id, new Dictionary<string, JsonElement[]>
+        {
+            ["tasklists"] = [Serialize(list)],
+            ["todotasks"] = [Serialize(task)]
+        }));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            new SyncService(api, new TaskSaveFails(replica), new InMemoryOutbox()).JoinAsync("token", "K7M4PX", CancellationToken.None));
+        var reloaded = new StepApi(
+            () => new SyncResponse(8, new Dictionary<string, JsonElement[]>(), MemberListIds: [list.Id]),
+            () => Whole(list, task));
+
+        await new SyncService(reloaded, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.NotNull(await replica.LoadAsync<TodoTask>(task.Id));
+        Assert.Equal(new[] { list.Id }, reloaded.FullRequests[1]);
+    }
+
+    [Fact]
+    public async Task ACompletedJoinOwesNothing()
+    {
+        var list = ListOwnedBy(Owner, Guid.NewGuid());
+        var replica = await SyncedReplicaAsync();
+        var api = new ScriptedApi(join: new JoinOutcome.Joined(list.Id, new Dictionary<string, JsonElement[]>
+        {
+            ["tasklists"] = [Serialize(list)]
+        }));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).JoinAsync("token", "K7M4PX", CancellationToken.None);
+
+        Assert.Empty(await replica.OwedWholeAsync());
+    }
+
+    [Fact]
     public async Task APullBegunBeforeAJoinKeepsTheJoinedList()
     {
         var list = ListOwnedBy(Owner, Guid.NewGuid());
@@ -677,6 +715,44 @@ public class MembershipReconcileTests
         }
 
         public Task<JoinOutcome> JoinAsync(string token, string code) => Task.FromResult<JoinOutcome>(new JoinOutcome.Invalid());
+    }
+
+    sealed class TaskSaveFails(InMemoryReplica inner) : IReplica
+    {
+        public Task<bool> SaveUnlessNewerAsync(Aggregate aggregate) =>
+            aggregate is TodoTask ? throw new InvalidOperationException("Tab closed.") : inner.SaveUnlessNewerAsync(aggregate);
+
+        public Task<IReadOnlyList<T>> LoadAllAsync<T>(Guid userId) where T : Aggregate => inner.LoadAllAsync<T>(userId);
+
+        public Task<T?> LoadAsync<T>(Guid id) where T : Aggregate => inner.LoadAsync<T>(id);
+
+        public Task<Aggregate?> LoadAsync(Type type, Guid id) => inner.LoadAsync(type, id);
+
+        public Task SaveAsync(Aggregate aggregate) => inner.SaveAsync(aggregate);
+
+        public Task RemoveAsync(Guid id) => inner.RemoveAsync(id);
+
+        public Task<long> MarkerAsync() => inner.MarkerAsync();
+
+        public Task SetMarkerAsync(long marker) => inner.SetMarkerAsync(marker);
+
+        public Task<string?> CollectionsFingerprintAsync() => inner.CollectionsFingerprintAsync();
+
+        public Task SetCollectionsFingerprintAsync(string fingerprint) => inner.SetCollectionsFingerprintAsync(fingerprint);
+
+        public Task<IReadOnlyCollection<Guid>> OwedWholeAsync() => inner.OwedWholeAsync();
+
+        public Task SetOwedWholeAsync(IReadOnlyCollection<Guid> containers) => inner.SetOwedWholeAsync(containers);
+
+        public Task<DateTimeOffset?> LastSyncedAtAsync() => inner.LastSyncedAtAsync();
+
+        public Task SetLastSyncedAtAsync(DateTimeOffset at) => inner.SetLastSyncedAtAsync(at);
+
+        public Task<Guid?> OwnerAsync() => inner.OwnerAsync();
+
+        public Task SetOwnerAsync(Guid userId) => inner.SetOwnerAsync(userId);
+
+        public Task ClearAsync() => inner.ClearAsync();
     }
 
     sealed class TaskReadGate(InMemoryReplica inner) : IReplica
