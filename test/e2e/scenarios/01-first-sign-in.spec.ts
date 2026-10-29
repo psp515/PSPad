@@ -279,8 +279,9 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     await expect(page).toHaveURL(/\/welcome/);
   });
 
-  await test.step.skip('BUG: deleting the account signs out before it leaves Settings, so Welcome keeps Settings as the return address (reported in PR #225)', async () => {
+  await test.step('after deleting the account Welcome carries no return address', async () => {
     await expect(page).toHaveURL(/\/welcome$/);
+    await expect(page.getByRole('link', { name: 'Log in' })).not.toHaveAttribute('href', /returnUrl/);
   });
 
   await test.step('the deleted account can no longer log in', async () => {

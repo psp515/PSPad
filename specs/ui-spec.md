@@ -1683,7 +1683,9 @@ administrator — and either way the client clears everything local: the
 replica, the outbox too (as sign-out does, but without asking), and the session
 store/tokens — composing the three existing `IReplica`/`IOutbox`/
 `ILocalSessionStore.ClearAsync()` calls rather than adding new storage
-interop — then lands on `/welcome`, same destination as sign-out.
+interop — then reloads the app on `/welcome`, same destination as sign-out,
+with no return address: announcing the sign-out on Settings would send
+the visitor to Welcome with Settings as the return address.
 When the server answers the step-up challenge (sign-in older than five
 minutes, `adr/0072`), the dialog deletes nothing locally and instead says a
 fresh sign-in is needed, with a "Sign in again" button (`pspad-reauthenticate`)
