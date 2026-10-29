@@ -136,7 +136,7 @@ test('the list panel edits, moves and deletes a list, and a gone list says so', 
     await expect(publish).toBeEnabled();
   });
 
-  await test.step.skip('BUG: going offline with Public snapshots open leaves Publish enabled until the view redraws (reported in PR #225)', async () => {
+  await test.step('Public snapshots disables Publish as soon as the connection drops and enables it when it returns', async () => {
     const publish = panel(page).getByRole('button', { name: /^Publish until/ });
     await goOffline(page);
     await expect(publish).toBeDisabled();
