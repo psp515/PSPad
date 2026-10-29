@@ -29,18 +29,26 @@ behaviour-test migration (PR #225).
 
 ## Decision
 
-We will count a container as new by what the replica held **before** the pull
-saved anything: every id in the membership set that the replica did not hold
-when the pull began is pulled whole with `full=` at the pull's marker. A pull
-from zero skips this, since it already carries every document. When that
-whole pull fails, the containers it was fetching are removed from the replica
-again, so the next sync still sees them as new and retries.
+We will treat a list or budget as owed a whole pull when a pull page names it
+in the membership set and the replica does not hold it. The owed set is
+written to the replica's meta (`owedWhole`) **before** that page is saved, and
+an id leaves it only once its whole pull (`full=` at the pull's marker) has
+been saved, or once it is no longer in the membership set. Every pull that
+reaches reconciliation asks for everything still owed, so a pull interrupted
+by a failed later page, a whole pull that times out or fails to parse, or a
+reload or suspended PWA between the delta and the whole pull, leaves the debt
+for the next pull rather than losing the container's history. A failed whole
+pull never purges anything and never stalls the marker. A pull from zero
+clears the set, since it carries every document already.
 
 We will also remember each join (`SyncService.AdoptJoinAsync`, used by the
 list and budget join paths). A pull that began before a join landed does not
 purge the joined container: its membership set cannot speak for it. The first
 pull begun after the join reconciles it normally, so a member removed right
-after joining still loses the container.
+after joining still loses the container. Adopting a join, and the pull's
+purge and stranded-row pass, run under one lock (`SemaphoreSlim`), so a join
+can never land between the reads those passes make; the whole pull runs
+outside it.
 
 ## Considered alternatives
 
@@ -48,9 +56,11 @@ after joining still loses the container.
   first** — a pull started by the poll loop or a live-update nudge while the
   join request is out still reads the membership set before the join commits,
   so the race shrinks but stays.
-- **Store the last membership set in the replica and diff against it** — a
-  new IndexedDB meta key and migration for the same answer the replica's
-  own rows already give.
+- **Keep newness in memory only (what the replica held when the pull began)**
+  — the first version of this decision. The container's row is saved by the
+  delta before its whole pull, so any interruption in between (a later page
+  failing, a timeout, a reload) made the next pull see it as held and the
+  history was lost for good.
 - **Have the server send a joined container's children by delta (bump their
   `seq`)** — a join would rewrite every task of a large list and wake every
   other member's client.
@@ -58,11 +68,18 @@ after joining still loses the container.
 ## Consequences
 
 - A newly joined list or budget always reaches the member with its existing
-  documents, whichever device or path joined it.
-- An owner's device learning of a list shared from another device pulls that
-  list whole once: a few extra rows, saved under ADR-0079's version rule.
+  documents, whichever device or path joined it, even across failures and
+  reloads.
+- Another device of the member, learning of the join by delta, pulls the
+  container whole once.
+- One more replica meta key, cleared with the replica.
 - The fresh-join memory lives in the running app only. A reload between the
-  join and the next pull loses it, which is harmless: the reload's pull begins
-  after the join.
-- A failed whole pull removes a just-arrived container until the retry
-  succeeds, so it can blink out of view on a flaky connection.
+  join and the next pull loses it, which is harmless for purging: the
+  reload's pull begins after the join, so its membership set includes it.
+- A join waits for a running purge pass to finish before its documents are
+  written; the pass is local and short.
+
+## Related
+
+ADR-0006 (delta sync by `seq`), ADR-0061 (paged pulls), ADR-0079 (pulled rows
+never replace a newer local copy).

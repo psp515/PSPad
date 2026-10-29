@@ -195,16 +195,18 @@ this user would otherwise see every list as foreign and purge it:
   purge it and its tasks and reference items. One rule for leaving, removal,
   the owner deleting the list, and the owner deleting their account (a raw
   wipe that leaves no tombstones).
-- A list in `memberListIds` the replica did not hold when the pull began (a
+- A list in `memberListIds` the replica does not hold when a page names it (a
   join through the API or on another device of the same user; the join
   bumps the list's `seq`, so the list itself arrives in this delta but its
-  older tasks do not) — the same pull asks again with `full=<listIds>` at the
-  marker this pull just received (before it is written); the server returns those lists and all their live
-  children regardless of `since`. A pull from zero needs no second ask. A
-  failed full pull (`HttpRequestException`) is swallowed rather than written
-  to the marker, and the lists it was fetching are removed again — they stay
-  new and the next sync's reconciliation retries them, instead of a flaky
-  connection wedging every later delta pull behind it (ADR-0081).
+  older tasks do not) — it is recorded as owed (`owedWhole` replica meta)
+  before the page is saved, and after reconciling the pull asks again with
+  `full=<listIds>` at the marker this pull just received (before it is
+  written); the server returns those lists and all their live children
+  regardless of `since`. A pull from zero owes nothing. A failed full pull
+  (`HttpRequestException`, a timeout, an unparsable body) is swallowed rather
+  than written to the marker; the lists stay owed, across reloads, and the
+  next sync retries them, instead of a flaky connection wedging every later
+  delta pull behind it (ADR-0081).
 - A list joined on this device is never purged by a pull that began before
   the join landed; the first pull begun after it reconciles it as usual.
 - A task or reference item not owned by the caller whose `ListId` names a

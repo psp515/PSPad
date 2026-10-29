@@ -129,6 +129,10 @@ public class LocalAccountDeletionTests
 
         public Task SetCollectionsFingerprintAsync(string fingerprint) => Task.CompletedTask;
 
+        public Task<IReadOnlyCollection<Guid>> OwedWholeAsync() => Task.FromResult<IReadOnlyCollection<Guid>>([]);
+
+        public Task SetOwedWholeAsync(IReadOnlyCollection<Guid> containers) => Task.CompletedTask;
+
         public Task<DateTimeOffset?> LastSyncedAtAsync() => Task.FromResult<DateTimeOffset?>(null);
 
         public Task SetLastSyncedAtAsync(DateTimeOffset at) => Task.CompletedTask;

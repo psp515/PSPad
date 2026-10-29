@@ -283,6 +283,10 @@ public class CommandSenderTests
 
         public Task SetCollectionsFingerprintAsync(string fingerprint) => _inner.SetCollectionsFingerprintAsync(fingerprint);
 
+        public Task<IReadOnlyCollection<Guid>> OwedWholeAsync() => _inner.OwedWholeAsync();
+
+        public Task SetOwedWholeAsync(IReadOnlyCollection<Guid> containers) => _inner.SetOwedWholeAsync(containers);
+
         public Task<DateTimeOffset?> LastSyncedAtAsync() => _inner.LastSyncedAtAsync();
 
         public Task SetLastSyncedAtAsync(DateTimeOffset at) => _inner.SetLastSyncedAtAsync(at);

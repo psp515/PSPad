@@ -73,6 +73,21 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
         await module.InvokeVoidAsync("setMeta", "collectionsFingerprint", fingerprint);
     }
 
+    public async Task<IReadOnlyCollection<Guid>> OwedWholeAsync()
+    {
+        var module = await ModuleAsync();
+        var stored = await module.InvokeAsync<OwnerRow?>("getMeta", "owedWhole");
+        return stored is null
+            ? []
+            : stored.Value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(Guid.Parse).ToArray();
+    }
+
+    public async Task SetOwedWholeAsync(IReadOnlyCollection<Guid> containers)
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("setMeta", "owedWhole", string.Join(",", containers));
+    }
+
     public async Task<DateTimeOffset?> LastSyncedAtAsync()
     {
         var module = await ModuleAsync();

@@ -26,6 +26,11 @@ public interface IReplica
 
     Task SetCollectionsFingerprintAsync(string fingerprint);
 
+    // Lists and budgets a pull found new and has not yet pulled whole; kept so an interrupted pull still owes them.
+    Task<IReadOnlyCollection<Guid>> OwedWholeAsync();
+
+    Task SetOwedWholeAsync(IReadOnlyCollection<Guid> containers);
+
     Task<DateTimeOffset?> LastSyncedAtAsync();
 
     Task SetLastSyncedAtAsync(DateTimeOffset at);

@@ -9,6 +9,7 @@ public sealed class InMemoryReplica : IReplica
     Guid? _owner;
     string? _collectionsFingerprint;
     DateTimeOffset? _lastSyncedAt;
+    Guid[] _owedWhole = [];
 
     public Task<T?> LoadAsync<T>(Guid id) where T : Aggregate =>
         Task.FromResult(_documents.GetValueOrDefault(id) as T);
@@ -58,6 +59,14 @@ public sealed class InMemoryReplica : IReplica
         return Task.CompletedTask;
     }
 
+    public Task<IReadOnlyCollection<Guid>> OwedWholeAsync() => Task.FromResult<IReadOnlyCollection<Guid>>(_owedWhole);
+
+    public Task SetOwedWholeAsync(IReadOnlyCollection<Guid> containers)
+    {
+        _owedWhole = [.. containers];
+        return Task.CompletedTask;
+    }
+
     public Task<DateTimeOffset?> LastSyncedAtAsync() => Task.FromResult(_lastSyncedAt);
 
     public Task SetLastSyncedAtAsync(DateTimeOffset at)
@@ -81,6 +90,7 @@ public sealed class InMemoryReplica : IReplica
         _owner = null;
         _collectionsFingerprint = null;
         _lastSyncedAt = null;
+        _owedWhole = [];
         return Task.CompletedTask;
     }
 }
