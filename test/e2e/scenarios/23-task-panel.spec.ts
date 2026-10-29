@@ -209,7 +209,7 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
     await expect(description).toHaveCount(0);
   });
 
-  await test.step.skip('BUG: an open task panel keeps the description it opened with after another device changes it, until it is reopened (reported in PR #225)', async () => {
+  await test.step.skip('BUG: an open task panel keeps the description and name it opened with after another device changes them, until it is reopened (reported in PR #225)', async () => {
     const description = panel(page).getByRole('textbox', { name: 'Description' });
     const taskId = await idOf(device, 'todotasks', renamed);
     await pulledAfter(page, () => device.send('SetTaskDescription', { taskId, description: '**Skimmed** milk' }));
@@ -220,6 +220,10 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
     await expect(description).toHaveValue('**Oat** milk');
     await description.press('Escape');
     await expect(panel(page).getByRole('strong')).toHaveText('Goat');
+    await pulledAfter(page, () => device.send('RenameTask', { taskId, name: `${renamed} from elsewhere` }));
+    await expect(panel(page).getByPlaceholder('Task name')).toHaveValue(`${renamed} from elsewhere`);
+    await pulledAfter(page, () => device.send('RenameTask', { taskId, name: renamed }));
+    await expect(panel(page).getByPlaceholder('Task name')).toHaveValue(renamed);
   });
 
   await test.step('the list row offers task lists only and moves the task to another area at once', async () => {

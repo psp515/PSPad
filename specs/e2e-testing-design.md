@@ -441,7 +441,8 @@ tests would be visible, not silent.
     list's tasks is a chip, nothing matching says "No tasks match." and
     keeps the open count, each active group is one closable chip, and
     Clear keeps the sort (issue #198, `list-filter-and-calendar-design.md`).
-    Today is pressed when the month opens; a day with three tasks shows two
+    With every task dated the month has no undated line. Today is pressed
+    when the month opens; a day with three tasks shows two
     in the list's order and "+2 more" with a repeat, which shows from its
     start; a day's row names its goal; every day is labelled.
 23. **Task panel.** An open task names its area and list and its created
@@ -454,7 +455,7 @@ tests would be visible, not silent.
     priority, a rendered description with the row's notes marker (Escape
     clears a blank one; a click or Edit opens the raw text, Escape or no
     change leaves it, a link or a selection keeps the view; another device's
-    change not reaching the open panel is a skipped BUG step), a list
+    or name change not reaching the open panel is a skipped BUG step), a list
     picker without reference lists that moves the task to another area, and
     a delete that asks first.
 24. **New task draft.** A new task in a list waits for a name and offers no

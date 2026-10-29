@@ -106,12 +106,12 @@ export async function setStepDeadline(page: Page, step: string, day: 'Today' | '
   }).toPass({ timeout: 30_000 });
 }
 
-export async function clearStepDeadline(page: Page, step: string) {
+export async function clearStepDeadline(page: Page, step: string, shown: string) {
   const unset = panel(page).getByLabel(`Set a deadline for ${step}`, { exact: true });
   await expect(async () => {
     if ((await unset.count()) === 0) {
       await stepRow(page, step).hover({ timeout: 2_000 });
-      await stepRow(page, step).locator('.pspad-step-due').click({ timeout: 2_000 });
+      await stepRow(page, step).getByRole('button', { name: shown, exact: true }).first().click({ timeout: 2_000 });
       await page.getByRole('menuitem', { name: 'Clear date' }).click({ timeout: 2_000 });
     }
     await expect(unset).toBeVisible({ timeout: 2_000 });

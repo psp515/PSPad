@@ -4,7 +4,7 @@ import { areaSubtitle, createArea } from '../helpers/areas';
 import { createGoalOn, linkTasksOn } from '../helpers/goals';
 import { addDays, isoDate, monthButton, utcToday } from '../helpers/dates';
 import {
-  calendarDay, closeFilterChip, createList, listRowNames, monthDay, openList, pickListFilter, showListAs, sortListBy,
+  calendarDay, closeFilterChip, showCalendarMonth, createList, listRowNames, monthDay, openList, pickListFilter, showListAs, sortListBy,
 } from '../helpers/lists';
 import { pickFromPropertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
@@ -32,6 +32,12 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
     await setDueDate(page, 'Tomorrow');
     await closeTask(page);
   }
+  await test.step('a month with every task dated has no undated line', async () => {
+    await showListAs(page, 'Calendar');
+    await expect(page.getByText(/no date\.$/)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Show them in List' })).toHaveCount(0);
+    await showListAs(page, 'List');
+  });
   await addTask(page, plain);
 
   await pickListFilter(page, 'High');
@@ -99,14 +105,14 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
 
   await test.step('a calendar day shows two names in the list order and counts the rest, a repeat shows from its start, a row names its goal, and every day is labelled', async () => {
     const today = utcToday();
-    const inThreeDays = addDays(today, 3);
+    const midNextMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 15));
     const [alpha, bravo, charlie] = ['Crate A', 'Crate B', 'Crate C'].map(name => `${name} ${account.suffix}`);
     const herbs = `Water the herbs ${account.suffix}`;
     const planner = await anotherDevice(page);
     const listId = await idOf(planner, 'tasklists', list);
     const ids = await createTasksOn(planner, listId, [
-      { name: charlie, until: inThreeDays }, { name: alpha, until: inThreeDays }, { name: bravo, until: inThreeDays },
-      { name: herbs, repeatsFrom: inThreeDays },
+      { name: charlie, until: midNextMonth }, { name: alpha, until: midNextMonth }, { name: bravo, until: midNextMonth },
+      { name: herbs, repeatsFrom: midNextMonth },
     ]);
     const packing = await createGoalOn(planner, `Pack ${account.suffix}`);
     await linkTasksOn(planner, packing, [ids[alpha]]);
@@ -117,23 +123,15 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
     const days = page.getByRole('button', { name: /^\d{1,2} \w+, \d+ tasks?$/ });
     await expect.poll(async () => (await days.count()) % 7).toBe(0);
     expect(await days.count()).toBeGreaterThanOrEqual(28);
-    if ((await calendarDay(page, inThreeDays).count()) === 0) {
-      await monthButton(page, inThreeDays).click();
-    }
-    const cell = calendarDay(page, inThreeDays);
+    await showCalendarMonth(page, midNextMonth);
+    const cell = calendarDay(page, midNextMonth);
     await expect(cell).toHaveAccessibleName(/, 4 tasks$/);
     await expect(cell).toContainText(new RegExp(`${alpha}[\\s\\S]*${bravo}`));
     await expect(cell).not.toContainText(charlie);
     await expect(cell).not.toContainText(herbs);
     await expect(cell).toContainText('+2 more');
-    const dayBefore = calendarDay(page, addDays(inThreeDays, -1));
-    if ((await dayBefore.count()) > 0) {
-      await expect(dayBefore).not.toContainText(herbs);
-    }
-    const dayAfter = calendarDay(page, addDays(inThreeDays, 1));
-    if ((await dayAfter.count()) > 0) {
-      await expect(dayAfter).toContainText(herbs);
-    }
+    await expect(calendarDay(page, addDays(midNextMonth, -1))).not.toContainText(herbs);
+    await expect(calendarDay(page, addDays(midNextMonth, 1))).toContainText(herbs);
 
     await cell.click();
     await expect(cell).toHaveAttribute('aria-pressed', 'true');

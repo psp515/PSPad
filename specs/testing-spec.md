@@ -30,7 +30,7 @@ ports.
 
 | Tier | Subject | Runs |
 |---|---|---|
-| Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; pure client rules extracted from components into `State/` (time parsing, recurrence and due-date text, week and month windows, snapshot expiry); architecture, category, resource, localization and stylesheet guards | in process, no Docker |
+| Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; pure client rules extracted from components into `State/` (time parsing, recurrence and due-date text, week and month windows, snapshot expiry); architecture, category, resource and localization guards | in process, no Docker |
 | Integration `[IntegrationTest]` | A command or query through HTTP on `ApiFactory` with Testcontainers Mongo, asserting the response, documents, events and sync deltas: every handler, cascade, projection, reader, sharing and auth flow | Testcontainers |
 | End-to-end | A user's flow in Chromium against the compose stack: pages, layout, components, navigation, panels, localization, offline and live updates; new steps locate by role, label or text | compose stack |
 

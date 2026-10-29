@@ -57,6 +57,6 @@ Migration plan: `specs/behaviour-tests-design.md`.
 - The integration suite grows and takes longer on every PR.
 - Edge cases that only bUnit could reach are either extracted into pure
   client rules or recorded as dropped.
-- A thin bUnit tier for logic components is not a fallback: flakiness is
+- A thin bUnit tier for logic-bearing components is not a fallback: flakiness is
   fixed in the scenario or the helper, and a rule a scenario cannot reach
   well is extracted into `State/` and unit tested.

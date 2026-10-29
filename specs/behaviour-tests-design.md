@@ -60,7 +60,7 @@ ports.
 
 | Tier | Subject | Runs |
 |---|---|---|
-| Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; pure client rules extracted from components (§4.2); architecture, category, resource, localization and stylesheet guards | in process, no Docker |
+| Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; pure client rules extracted from components (§4.2); architecture, category, resource and localization guards | in process, no Docker |
 | Integration `[IntegrationTest]` | A command or query through HTTP on `ApiFactory` with Testcontainers Mongo, asserting the response, documents, events and sync deltas: every handler, cascade, projection, reader, sharing and auth flow | Testcontainers |
 | End-to-end | A user's flow in Chromium against the compose stack: pages, layout, components, navigation, panels, localization, offline and live updates; new steps locate by role, label or text | compose stack |
 
@@ -124,7 +124,7 @@ ledger (§6) confirms no behaviour is lost. The module `Fakes/` folders and
 `State/` queries and text rules, `State/Dispatch`, `State/Outbox`,
 `State/Replica`, `State/Search`, `Sync/`, `Live/` stream reading, `Auth/`
 session and token handling, `Localization/` plural rules and guards,
-`Theme/` preference and stylesheet guards, `Updates/`, `Markdown/`
+`Theme/` preference and accessibility rules, `Updates/`, `Markdown/`
 rendering. Each test is kept when it asserts a result; a test that asserts an
 outgoing request's URL, header or body shape is deleted, unless that request
 is the contract with an external system (Keycloak end-session, NBP).
@@ -207,8 +207,8 @@ every bUnit test under `Components/` (ledger 22): behaviour moved into the
 scenarios listed in §4.2, pure rules into `State/` (§4.2), and what no user
 path reaches (a disabled panel before the shell is ready, a rejected
 description save, an editor on a new field) was dropped with its reason. The
-`bunit` package stays only because `SyncCoordinatorTests` uses its
-`TestContext` as a service and navigation host; no test renders a component.
+`bunit` package is gone: `SyncCoordinatorTests` builds its services on a plain
+`ServiceCollection` with a fake `NavigationManager`.
 
 Slices, in order:
 

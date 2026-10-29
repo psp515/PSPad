@@ -46,7 +46,7 @@ export function recordedVisit(page: Page) {
 
 export async function pickSnapshotDate(page: Page, day: Date) {
   await panel(page).getByRole('checkbox', { name: 'Date…', exact: true }).click();
-  await panel(page).locator('.pspad-snapshot-date input').click();
+  await panel(page).getByRole('textbox').click();
   await pickCalendarDay(page.locator('.mud-popover-open'), day);
   await expect(page.locator('.mud-popover-open .mud-picker-calendar-header-transition')).toHaveCount(0);
 }

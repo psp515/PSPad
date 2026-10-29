@@ -103,7 +103,7 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
     await expect(page.getByRole('menuitem', { name: 'Tomorrow' }).first()).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Clear date' })).toHaveCount(0);
     await dismissMenu(page);
-    await clearStepDeadline(page, 'Load the boot');
+    await clearStepDeadline(page, 'Load the boot', 'Yesterday');
     await expect(stepRow(page, 'Load the boot')).not.toContainText('Yesterday');
 
     await setRepeating(page);

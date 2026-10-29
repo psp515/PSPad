@@ -1,9 +1,11 @@
+using System.Globalization;
 using PSPad.App.State;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.State;
 
 [UnitTest]
+[Collection("Culture")]
 public class TimeTextTests
 {
     [Theory]
@@ -41,5 +43,21 @@ public class TimeTextTests
     {
         Assert.True(TimeText.TryParse(typed, out var time));
         Assert.Null(time);
+    }
+
+    [Theory]
+    [InlineData("pl-PL")]
+    [InlineData("en-GB")]
+    public void ReadingDoesNotDependOnTheCulture(string culture)
+    {
+        using var scope = new CultureScope(culture);
+
+        Assert.True(TimeText.TryParse("9:30", out var colon));
+        Assert.True(TimeText.TryParse("9,30", out var comma));
+        Assert.True(TimeText.TryParse("930", out var digits));
+        Assert.Equal(new TimeOnly(9, 30), colon);
+        Assert.Equal(new TimeOnly(9, 30), comma);
+        Assert.Equal(new TimeOnly(9, 30), digits);
+        Assert.Equal(CultureInfo.GetCultureInfo(culture), CultureInfo.CurrentCulture);
     }
 }
