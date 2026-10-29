@@ -7,13 +7,8 @@ Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225
 - 01-first-sign-in: signing in from Welcome ignores the return address.
 - 01-first-sign-in: coming back from the fresh sign-in does not reopen the delete dialog.
 - 01-first-sign-in: deleting the account signs out before it leaves Settings, so Welcome keeps Settings as the return address.
-- 08-reference-list-and-field-types: Cancel in a label's editor leaves the editor open until something else redraws the list.
 - 15-search-statistics-settings: an old History address lands on an empty Statistics page.
-- 23-task-panel: an open task panel keeps the description and name it opened with after another device changes them, until it is reopened.
-- 25-area-board-cards: ticking a repeat on a day it skips shows it ticked until a reload, though nothing was saved.
-- 27-reference-items: labels drafted on a new reference item are missing when it is opened, until a reload, though the server stored them.
 - 30-reference-rows: a reference card counts its items as "open tasks".
-- 31-list-panel: going offline with Public snapshots open leaves Publish enabled until the view redraws.
 - 21-step-deadline (found 2026-10-29, after PR #225): in a tight My Day row the time, date and step count push the due-step mark past the clipped details, so only its first letters show.
 
 Fixed in round 3:
@@ -22,6 +17,11 @@ Fixed in round 3:
 - 10-share-join-remove: a code in the link joined at once, but the shared list's tasks could be lost the same way. Fixed in 1c0c49e (ADR-0081).
 - 02-capture-and-triage: a deadline set on a draft step was lost when an Inbox item was converted: a pull overwrote the task with the server's older copy, so the step was unknown when `SetStepDueDate` ran locally and the command was rejected before the outbox. Fixed in 55358c4 (#220, ADR-0079: a pulled document never replaces a newer local copy); the step now also checks the server copy.
 - 24-new-task-draft: a deadline set on a draft step was lost when the task was added, for the same reason. Fixed in 55358c4; the step now also checks the server copy.
+- 23-task-panel: an open task panel kept the name and description it opened with after another device changed them: panels sat outside the `SyncRevision` cascade. Fixed in 8dc1386.
+- 31-list-panel: going offline with Public snapshots open left Publish enabled until the view redrew: the publisher ignored `Connectivity.Changed`. Fixed in d16b3c0.
+- 08-reference-list-and-field-types: Cancel in a label's editor left it open until something else redrew the list: the cancel callback never re-rendered. Fixed in fade77a.
+- 25-area-board-cards: ticking a repeat on a day it skips showed it ticked until a reload, though nothing was saved: the checkbox flipped its own state. Fixed in ac94b26 (`TaskTick.Toggles`; the checkbox is read-only on such a day).
+- 27-reference-items: labels drafted on a new reference item were missing when it was opened at once. Fixed by 55358c4 (#220, ADR-0079); reverting the guard fails the step 3 of 3. The step now closes the open panel before adding (f1e8f68).
 
 Noted without a step:
 
