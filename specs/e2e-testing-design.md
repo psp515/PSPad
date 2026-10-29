@@ -270,11 +270,8 @@ tests would be visible, not silent.
     shows no shared marker until **Create invite link** (a QR code, "30 min
     left", a link carrying the XXX-XXX code, "Shared · 1 person"); **End link
     now** before anyone joins unshares it. The other user opens the list's
-    join link, which asks for the list's code. **Gap:** joining a list from
-    its link (typed code or a code in the link) is covered only by two
-    skipped BUG steps (PR #225: a join can lose the tasks the list already
-    had), so the member joins through the API and the owner adds the tasks
-    afterwards; the join page itself is exercised on the budget link in 34.
+    join link, which asks for the list's code; typing it opens the list with
+    the tasks it already had, and My Day lists the one due today.
     The member's My Day lists the shared task due today. With no areas of
     their own, Areas lands on Shared with me (its phone chip current, no FAB,
     only the card's Edit, Back to area leading there); the owner has no such
@@ -284,8 +281,9 @@ tests would be visible, not silent.
     the list under their own area (Back follows), sees only Add task in the
     FAB with a Goal row in its draft, completes a task and links a shared
     task to their own goal, then leaves, which empties Shared with me. Five
-    wrong codes (API) close the link and the owner reads why; the member
-    rejoins with a new link (API). Offline the owner can't remove, stop or
+    wrong codes (API) close the link and the owner reads why; a new link
+    with the code in it rejoins the member at once, the list opening with its
+    open tasks and the completed one. Offline the owner can't remove, stop or
     renew; ending the link keeps the member and the marker. The owner
     removes the member: the list is gone for them, the API sync lacks it and
     `CompleteTask` on its other task comes back `accepted: false`. Stop

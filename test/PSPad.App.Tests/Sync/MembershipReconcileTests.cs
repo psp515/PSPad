@@ -128,8 +128,7 @@ public class MembershipReconcileTests
     public async Task AMissingMemberListIsPulledWhole()
     {
         var listId = Guid.NewGuid();
-        var replica = new InMemoryReplica();
-        await replica.SetOwnerAsync(Me);
+        var replica = await SyncedReplicaAsync();
         var list = ListOwnedBy(Owner, listId);
         var task = TaskIn(listId);
         var api = new ScriptedApi(
@@ -152,8 +151,7 @@ public class MembershipReconcileTests
     public async Task AFailedFullPullNeverStallsTheMarker()
     {
         var listId = Guid.NewGuid();
-        var replica = new InMemoryReplica();
-        await replica.SetOwnerAsync(Me);
+        var replica = await SyncedReplicaAsync();
         var area = new Module.Tasks.Areas.Area();
         area.ApplyAll(Module.Tasks.Areas.Area.Decide(
             null, new Module.Tasks.Areas.CreateArea(Guid.NewGuid(), Me, Guid.NewGuid(), "Home", 0),
@@ -169,6 +167,163 @@ public class MembershipReconcileTests
 
         Assert.NotNull(await replica.LoadAsync<Module.Tasks.Areas.Area>(area.Id));
         Assert.Equal(5, await replica.MarkerAsync());
+    }
+
+    [Fact]
+    public async Task AListJoinedElsewhereThatArrivesByDeltaIsPulledWhole()
+    {
+        var list = ListOwnedBy(Owner, Guid.NewGuid());
+        var task = TaskIn(list.Id);
+        var replica = await SyncedReplicaAsync();
+        var api = new ScriptedApi(
+            new SyncResponse(8, new Dictionary<string, JsonElement[]> { ["tasklists"] = [Serialize(list)] },
+                MemberListIds: [list.Id]),
+            new SyncResponse(8, new Dictionary<string, JsonElement[]>
+            {
+                ["tasklists"] = [Serialize(list)],
+                ["todotasks"] = [Serialize(task)]
+            }));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.NotNull(await replica.LoadAsync<TodoTask>(task.Id));
+        Assert.Equal(new[] { list.Id }, api.FullRequests[1]);
+    }
+
+    [Fact]
+    public async Task ABudgetJoinedElsewhereThatArrivesByDeltaIsPulledWhole()
+    {
+        var budget = BudgetOwnedBy(Owner);
+        var entry = EntryIn(budget);
+        var replica = await SyncedReplicaAsync();
+        var api = new ScriptedApi(
+            new SyncResponse(8, new Dictionary<string, JsonElement[]> { ["budgets"] = [Serialize(budget)] },
+                MemberListIds: [], MemberBudgetIds: [budget.Id]),
+            new SyncResponse(8, new Dictionary<string, JsonElement[]>
+            {
+                ["budgets"] = [Serialize(budget)],
+                ["moneyentries"] = [Serialize(entry)]
+            }));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.NotNull(await replica.LoadAsync<MoneyEntry>(entry.Id));
+        Assert.Equal(new[] { budget.Id }, api.FullRequests[1]);
+    }
+
+    [Fact]
+    public async Task AListAlreadyHeldIsNotPulledWholeAgain()
+    {
+        var list = ListOwnedBy(Owner, Guid.NewGuid());
+        var replica = await SyncedReplicaAsync();
+        await replica.SaveAsync(list);
+        var api = new ScriptedApi(new SyncResponse(8,
+            new Dictionary<string, JsonElement[]> { ["tasklists"] = [Serialize(list)] }, MemberListIds: [list.Id]));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Single(api.FullRequests);
+    }
+
+    [Fact]
+    public async Task APullFromZeroNeedsNoSecondWholePull()
+    {
+        var list = ListOwnedBy(Owner, Guid.NewGuid());
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        var api = new ScriptedApi(new SyncResponse(8,
+            new Dictionary<string, JsonElement[]> { ["tasklists"] = [Serialize(list)] }, MemberListIds: [list.Id]));
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.NotNull(await replica.LoadAsync<TaskList>(list.Id));
+        Assert.Single(api.FullRequests);
+    }
+
+    [Fact]
+    public async Task AListWhoseWholePullFailedIsPulledWholeOnTheNextSync()
+    {
+        var list = ListOwnedBy(Owner, Guid.NewGuid());
+        var task = TaskIn(list.Id);
+        var replica = await SyncedReplicaAsync();
+        var delta = new SyncResponse(8,
+            new Dictionary<string, JsonElement[]> { ["tasklists"] = [Serialize(list)] }, MemberListIds: [list.Id]);
+        await new SyncService(new ScriptedApi(delta, throwOnFull: true), replica, new InMemoryOutbox())
+            .SyncAsync(CancellationToken.None);
+        var retry = new ScriptedApi(
+            new SyncResponse(8, new Dictionary<string, JsonElement[]>(), MemberListIds: [list.Id]),
+            new SyncResponse(8, new Dictionary<string, JsonElement[]>
+            {
+                ["tasklists"] = [Serialize(list)],
+                ["todotasks"] = [Serialize(task)]
+            }));
+
+        await new SyncService(retry, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.NotNull(await replica.LoadAsync<TodoTask>(task.Id));
+    }
+
+    [Fact]
+    public async Task APullBegunBeforeAJoinKeepsTheJoinedList()
+    {
+        var list = ListOwnedBy(Owner, Guid.NewGuid());
+        var task = TaskIn(list.Id);
+        var replica = await SyncedReplicaAsync();
+        var api = new GatedApi(new JoinOutcome.Joined(list.Id, new Dictionary<string, JsonElement[]>
+        {
+            ["tasklists"] = [Serialize(list)],
+            ["todotasks"] = [Serialize(task)]
+        }));
+        var sync = new SyncService(api, replica, new InMemoryOutbox());
+
+        var pull = sync.SyncAsync(CancellationToken.None);
+        await sync.JoinAsync("token", "K7M4PX", CancellationToken.None);
+        api.Answer(new SyncResponse(8, new Dictionary<string, JsonElement[]>(), MemberListIds: []));
+        await pull;
+
+        Assert.NotNull(await replica.LoadAsync<TaskList>(list.Id));
+        Assert.NotNull(await replica.LoadAsync<TodoTask>(task.Id));
+    }
+
+    [Fact]
+    public async Task APullBegunBeforeABudgetJoinKeepsTheJoinedBudget()
+    {
+        var budget = BudgetOwnedBy(Owner);
+        var entry = EntryIn(budget);
+        var replica = await SyncedReplicaAsync();
+        var api = new GatedApi();
+        var sync = new SyncService(api, replica, new InMemoryOutbox());
+
+        var pull = sync.SyncAsync(CancellationToken.None);
+        await sync.AdoptJoinAsync(new JoinOutcome.Joined(budget.Id, new Dictionary<string, JsonElement[]>
+        {
+            ["budgets"] = [Serialize(budget)],
+            ["moneyentries"] = [Serialize(entry)]
+        }));
+        api.Answer(new SyncResponse(8, new Dictionary<string, JsonElement[]>(), MemberListIds: [], MemberBudgetIds: []));
+        await pull;
+
+        Assert.NotNull(await replica.LoadAsync<Budget>(budget.Id));
+        Assert.NotNull(await replica.LoadAsync<MoneyEntry>(entry.Id));
+    }
+
+    [Fact]
+    public async Task APullBegunAfterAJoinStillPurgesAListTheMemberNoLongerBelongsTo()
+    {
+        var list = ListOwnedBy(Owner, Guid.NewGuid());
+        var replica = await SyncedReplicaAsync();
+        var api = new ScriptedApi(
+            new SyncResponse(8, new Dictionary<string, JsonElement[]>(), MemberListIds: []),
+            join: new JoinOutcome.Joined(list.Id, new Dictionary<string, JsonElement[]>
+            {
+                ["tasklists"] = [Serialize(list)]
+            }));
+        var sync = new SyncService(api, replica, new InMemoryOutbox());
+
+        await sync.JoinAsync("token", "K7M4PX", CancellationToken.None);
+        await sync.SyncAsync(CancellationToken.None);
+
+        Assert.Null(await replica.LoadAsync<TaskList>(list.Id));
     }
 
     [Fact]
@@ -279,8 +434,7 @@ public class MembershipReconcileTests
     {
         var budget = BudgetOwnedBy(Owner);
         var entry = EntryIn(budget);
-        var replica = new InMemoryReplica();
-        await replica.SetOwnerAsync(Me);
+        var replica = await SyncedReplicaAsync();
         var api = new ScriptedApi(
             new SyncResponse(5, new Dictionary<string, JsonElement[]>(), MemberListIds: [], MemberBudgetIds: [budget.Id]),
             new SyncResponse(5, new Dictionary<string, JsonElement[]>
@@ -336,10 +490,19 @@ public class MembershipReconcileTests
         var budget = BudgetOwnedBy(Owner);
         var replica = new InMemoryReplica();
 
-        await new SyncService(new ScriptedApi(), replica, new InMemoryOutbox()).AdoptAsync(
-            new Dictionary<string, JsonElement[]> { ["budgets"] = [Serialize(budget)] });
+        await new SyncService(new ScriptedApi(), replica, new InMemoryOutbox()).AdoptJoinAsync(
+            new JoinOutcome.Joined(budget.Id, new Dictionary<string, JsonElement[]> { ["budgets"] = [Serialize(budget)] }));
 
         Assert.NotNull(await replica.LoadAsync<Budget>(budget.Id));
+    }
+
+    static async Task<InMemoryReplica> SyncedReplicaAsync()
+    {
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        await replica.SetMarkerAsync(7);
+        await replica.SetCollectionsFingerprintAsync(SyncService.CollectionsFingerprint);
+        return replica;
     }
 
     static Budget BudgetOwnedBy(Guid owner)
@@ -396,6 +559,23 @@ public class MembershipReconcileTests
 
     static JsonElement Serialize<T>(T value) =>
         JsonSerializer.SerializeToElement(value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+    sealed class GatedApi(JoinOutcome? join = null) : ISyncApi
+    {
+        readonly TaskCompletionSource<SyncResponse?> _answer = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int _calls;
+
+        public void Answer(SyncResponse response) => _answer.SetResult(response);
+
+        public Task<IReadOnlyList<CommandResponse>> SendAsync(IReadOnlyList<CommandEnvelope> envelopes) =>
+            Task.FromResult<IReadOnlyList<CommandResponse>>([]);
+
+        public Task<SyncResponse?> SyncAsync(long since, IReadOnlyCollection<Guid> full) =>
+            ++_calls == 1 ? _answer.Task : Task.FromResult<SyncResponse?>(null);
+
+        public Task<JoinOutcome> JoinAsync(string token, string code) =>
+            Task.FromResult(join ?? new JoinOutcome.Invalid());
+    }
 
     sealed class ScriptedApi(
         SyncResponse? first = null,

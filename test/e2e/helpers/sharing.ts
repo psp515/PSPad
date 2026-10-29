@@ -59,9 +59,7 @@ export function joinButton(page: Page) {
 }
 
 export async function joinWithCode(page: Page, link: string, code: string, beforeTyping?: () => Promise<void>) {
-  const openingSync = page.waitForResponse(response => response.url().includes('/api/sync') && response.ok());
   await page.goto(new URL(link).pathname);
-  await openingSync;
   await expect(page.getByText('Enter the invite code')).toBeVisible();
   await beforeTyping?.();
   await page.getByLabel('Code').fill(code);

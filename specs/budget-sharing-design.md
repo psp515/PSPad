@@ -164,10 +164,13 @@ does not own. The client reconciles after writing the delta, under the same
 - A budget in the replica, not owned by the caller, not in
   `MemberBudgetIds` → purge it and its entries and snapshots. One rule for
   leaving, removal and the owner's account deletion.
-- A budget in `MemberBudgetIds` missing from the replica (another device
-  joined) → the same pull asks again with `full=<ids>`; `full` accepts list
-  and budget ids alike and the server returns each with all its live
-  children. A failed full pull is swallowed and retried next sync.
+- A budget in `MemberBudgetIds` the replica did not hold when the pull began
+  (another device joined, or a join through the API) → the same pull asks
+  again with `full=<ids>`; `full` accepts list and budget ids alike and the
+  server returns each with all its live children. A failed full pull is
+  swallowed, the budget is removed again and retried next sync (ADR-0081).
+- A budget joined on this device is never purged by a pull that began
+  before the join.
 - An entry or snapshot not owned by the caller whose budget the replica does
   not hold → drop it.
 

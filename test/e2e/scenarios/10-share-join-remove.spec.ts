@@ -61,7 +61,7 @@ test('a shared list is joined, edited, and closed to a removed member', async ({
 
   const invite = await createInvite(page);
   await closePanel(page);
-  const taskIds = await createTasksOn(owner, listId, [{ name: doneByMember }, { name: stillOpen }, { name: dueToday, until: utcToday() }]);
+  await createTasksOn(owner, listId, [{ name: doneByMember }, { name: stillOpen }, { name: dueToday, until: utcToday() }]);
 
   const memberContext = await browser.newContext({ serviceWorkers: 'block' });
   const member = await memberContext.newPage();
@@ -80,7 +80,7 @@ test('a shared list is joined, edited, and closed to a removed member', async ({
     await expect(joinButton(member)).toBeDisabled();
   });
 
-  await test.step.skip("BUG: joining a list can lose the tasks it already had: a sync running at the join purges them, or the list arrives by delta and never counts as missing, so no later sync brings them back (reported in PR #225)", async () => {
+  await test.step('joining with the typed code opens the list with the tasks it already had, and My Day lists the one due today', async () => {
     await joinWithCode(member, invite.link, invite.code);
     await expect(member).toHaveURL(new RegExp(`/lists/${listId}`));
     for (const name of [doneByMember, stillOpen, dueToday]) {
@@ -90,16 +90,6 @@ test('a shared list is joined, edited, and closed to a removed member', async ({
     await expect(member.getByRole('heading', { name: 'My Day', exact: true })).toBeVisible();
     await expect(taskRow(member, dueToday)).toBeVisible();
   });
-
-  const listsOf = async () => ((await fullSync(memberApi)).documents['tasklists'] ?? []) as Record<string, unknown>[];
-  if (!(await listsOf()).some(doc => String(doc['id'] ?? doc['Id']) === listId)) {
-    expect(await tryJoin(memberApi, 'lists', invite.token, invite.code)).toBe(200);
-    // the join can lose the tasks; touching them sends them again (reported in PR #225)
-    for (const taskId of Object.values(taskIds)) {
-      await owner.send('StarTask', { taskId, starred: true });
-      await owner.send('StarTask', { taskId, starred: false });
-    }
-  }
 
   await test.step("the member's My Day lists the shared task due today", async () => {
     await goTo(member, 'My Day');
@@ -218,15 +208,14 @@ test('a shared list is joined, edited, and closed to a removed member', async ({
   const again = await createInvite(page, 'Create link · 30 min');
   await closePanel(page);
 
-  await test.step.skip("BUG: a code in the link joins at once, but the shared list's tasks can be lost the same way (reported in PR #225)", async () => {
+  await test.step('a code in the link joins at once and opens the list with its open tasks and the one completed', async () => {
     await member.goto(again.link);
     await expect(member).toHaveURL(new RegExp(`/lists/${listId}$`));
-    for (const name of [doneByMember, stillOpen, dueToday]) {
+    for (const name of [stillOpen, dueToday]) {
       await expect(taskRow(member, name)).toBeVisible();
     }
+    await expect(member.getByText('Completed · 1')).toBeVisible();
   });
-
-  expect(await tryJoin(memberApi, 'lists', again.token, again.code)).toBe(200);
 
   await syncNow(page);
   await openCardMembers(page, list);

@@ -9,8 +9,6 @@ Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225
 - 01-first-sign-in: deleting the account signs out before it leaves Settings, so Welcome keeps Settings as the return address.
 - 02-capture-and-triage: a deadline set on a draft step is lost when an Inbox item is converted.
 - 08-reference-list-and-field-types: Cancel in a label's editor leaves the editor open until something else redraws the list.
-- 10-share-join-remove: joining a list can lose the tasks it already had: a sync running at the join purges them, or the list arrives by delta and never counts as missing, so no later sync brings them back.
-- 10-share-join-remove: a code in the link joins at once, but the shared list's tasks can be lost the same way.
 - 15-search-statistics-settings: an old History address lands on an empty Statistics page.
 - 23-task-panel: an open task panel keeps the description and name it opened with after another device changes them, until it is reopened.
 - 24-new-task-draft: a deadline set on a draft step is lost when the task is added.
@@ -19,6 +17,11 @@ Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225
 - 30-reference-rows: a reference card counts its items as "open tasks".
 - 31-list-panel: going offline with Public snapshots open leaves Publish enabled until the view redraws.
 - 21-step-deadline (found 2026-10-29, after PR #225): in a tight My Day row the time, date and step count push the due-step mark past the clipped details, so only its first letters show.
+
+Fixed in round 3:
+
+- 10-share-join-remove: joining a list could lose the tasks it already had: a sync running at the join purged them, or the list arrived by delta and never counted as missing. Fixed in COMMIT_B1 (ADR-0081).
+- 10-share-join-remove: a code in the link joined at once, but the shared list's tasks could be lost the same way. Fixed in COMMIT_B1 (ADR-0081).
 
 Noted without a step:
 

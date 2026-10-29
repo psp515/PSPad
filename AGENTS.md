@@ -68,7 +68,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 9 | Integration tests own a Testcontainers MongoDB 8 replica set; tests assert behaviour, never shape or wiring | 0009, 0080 |
 | 10 | Events dispatch after commit, replayed from a marker | 0036, 0037 |
 | 11 | Per-user views live in Presentation | 0051 |
-| 12 | Lists and budgets shared by membership | 0054, 0057, 0066 |
+| 12 | Lists and budgets shared by membership; a membership new to the replica is pulled whole | 0054, 0057, 0066, 0081 |
 | 13 | Public snapshots, server-only module | 0056, 0064 |
 | 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount | 0059 |
 | 15 | Containers non-root on exact-version-tagged images; central package versions; Dependabot weekly | 0071 |

@@ -512,14 +512,20 @@ and reference items; one rule covers leaving, removal, the owner deleting
 the list, and the owner deleting their account. Budgets reconcile the same
 way against `memberBudgetIds` (purging a budget's entries and snapshots with
 it), and an entry or snapshot the caller does not own whose budget the
-replica does not hold is dropped. A list in `memberListIds`
-missing from the replica is pulled in the same pull, by asking again with
-`full=` at the just-saved marker. A device holding nothing yet for this user
+replica does not hold is dropped. A list or budget in the membership set that
+the replica did not hold **when the pull began** is new to this device and is
+pulled whole in the same pull, by asking again with `full=` at the just-saved
+marker — the join bumps the container's own `seq`, so it arrives by delta
+while its older children do not (ADR-0081). A pull from zero skips this, as
+it already carries everything. A device holding nothing yet for this user
 has no recorded owner, so reconciliation is skipped entirely — every list
 would otherwise look foreign. A failed full pull (`HttpRequestException`) is
-swallowed and never written to the marker; the missing list stays missing
-and the next sync retries it, instead of every delta pull wedging behind a
-flaky connection. Last, a task or reference item the caller does not own
+swallowed and never written to the marker; the containers it was fetching are
+removed again so they stay new, and the next sync retries them, instead of
+every delta pull wedging behind a flaky connection. A container joined on
+this device (`SyncService.AdoptJoinAsync`) is never purged by a pull that
+began before the join: that pull's membership set was read too early to
+speak for it. Last, a task or reference item the caller does not own
 whose `ListId` names a list the replica does not hold is dropped — a row the
 owner moved out of a shared list, delivered through `previousListId` as a
 stub (`id`, `userId`, `listId`, `previousListId`, `version`, `deleted`,
