@@ -47,12 +47,24 @@ test('a public snapshot collects ticks until it is revoked', async ({ page, brow
   await openList(page, list);
 
   let link = '';
-  await test.step('a task added just before publishing goes into the 1 day link, whose QR code opens it', async () => {
+  await test.step('a task still waiting to sync when Publish is pressed goes into the 1 day link, whose QR code opens it', async () => {
+    let release = () => {};
+    const held = new Promise<void>(resolve => { release = resolve; });
+    await page.context().route('**/api/commands', async route => { await held; await route.continue(); });
+    let pushedAt = 0;
+    let publishedAt = 0;
+    page.on('response', response => { if (!pushedAt && response.url().endsWith('/api/commands')) pushedAt = Date.now(); });
+    page.on('request', request => { if (request.url().endsWith(`/api/lists/${listId}/snapshots`) && request.method() === 'POST') publishedAt = Date.now(); });
     await addTask(page, bread);
     await openListSnapshots(page);
     await panel(page).getByRole('checkbox', { name: '1 day', exact: true }).click();
     await panel(page).getByRole('button', { name: /^Publish until / }).click();
+    release();
     await expect(panel(page).getByText('Live links · 1')).toBeVisible();
+    await page.context().unroute('**/api/commands');
+    expect(publishedAt).toBeGreaterThan(0);
+    expect(pushedAt).toBeGreaterThan(0);
+    expect(publishedAt).toBeGreaterThanOrEqual(pushedAt);
     const open = await showNewestSnapshot(page);
     await expect(panel(page).getByRole('img', { name: 'Snapshot link QR code' })).toBeVisible();
     link = (await open.getAttribute('href'))!;

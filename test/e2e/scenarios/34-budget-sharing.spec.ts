@@ -9,7 +9,7 @@ import { goOffline, goOnline, pushedWithin, syncNow } from '../helpers/sync';
 
 test.use({ serviceWorkers: 'block' });
 
-test('a budget is shared, read by its member, left, rejoined, removed and stopped', async ({ page, browser, account, otherAccount }) => {
+test('a budget is shared, read by its member, removed, left, rejoined and stopped', async ({ page, browser, account, otherAccount }) => {
   const household = `Household ${account.suffix}`;
   const mine = `Pocket money ${account.suffix}`;
   const ownerName = account.displayName;
@@ -81,6 +81,13 @@ test('a budget is shared, read by its member, left, rejoined, removed and stoppe
     await expect(member.getByRole('heading', { name: household, exact: true })).toBeVisible();
   });
 
+  await test.step('joining replaces the invite in history: Back leaves the budget for the page before the link', async () => {
+    await member.goBack();
+    await expect(member.getByRole('heading', { name: 'My Day', exact: true })).toBeVisible();
+    await member.goForward();
+    await expect(member.getByRole('heading', { name: household, exact: true })).toBeVisible();
+  });
+
   await test.step('the member sees who shared it instead of Rename and Archive, and can still add categories', async () => {
     await openBudgetSettings(member);
     await expect(member.getByText(`Shared by ${ownerName}.`)).toBeVisible();
@@ -134,7 +141,27 @@ test('a budget is shared, read by its member, left, rejoined, removed and stoppe
     await expect(panel(page).getByRole('button', { name: 'New link' })).toBeEnabled();
   });
 
+  await test.step('removing the member takes the budget from them, and a code in the link brings them back at once', async () => {
+    await panel(page).getByRole('button', { name: `Remove ${memberName}` }).click();
+    await confirm(page, 'Remove');
+    await expect(panel(page).getByRole('button', { name: `Remove ${memberName}` })).toHaveCount(0);
+    await syncNow(member);
+    await goTo(member, 'My Day');
+    await goTo(member, 'Budgets');
+    await expect(card(member, household)).toHaveCount(0);
+    await expect(card(member, mine)).toBeVisible();
+
+    await member.goto(invite.link);
+    await expect(member).toHaveURL(new RegExp(`/budgets/${budgetId}`));
+    await expect(member.getByRole('heading', { name: household, exact: true })).toBeVisible();
+  });
+
+  await closePanel(page);
+  await syncNow(page);
+  await membersButton(page).click();
+
   await test.step('an archived budget cannot invite, and its member reads who archived it with no way to restore', async () => {
+    await expect(panel(page).getByRole('button', { name: `Remove ${memberName}` })).toBeVisible();
     await panel(page).getByRole('button', { name: 'End link now' }).click();
     await expect(panel(page).getByText('Nobody can join with the old link and code. 1 person already in the budget stays.')).toBeVisible();
     await closePanel(page);
@@ -145,6 +172,7 @@ test('a budget is shared, read by its member, left, rejoined, removed and stoppe
     await expect(panel(page).getByRole('button', { name: 'Create link · 30 min' })).toBeDisabled();
     await expect(panel(page).getByRole('button', { name: `Remove ${memberName}` })).toBeEnabled();
 
+    await goTo(member, 'Budgets');
     await syncNow(member);
     await expect(card(member, household)).toHaveCount(0);
     await member.getByRole('switch', { name: 'Show archived' }).click();
@@ -185,21 +213,20 @@ test('a budget is shared, read by its member, left, rejoined, removed and stoppe
     await expect(member).toHaveURL(new RegExp(`/budgets/join/${again.token}$`));
   });
 
-  await test.step('removing the member takes the budget from them, and stopping sharing ends the link', async () => {
-    await panel(page).getByRole('button', { name: `Remove ${memberName}` }).click();
-    await confirm(page, 'Remove');
-    await expect(panel(page).getByRole('button', { name: `Remove ${memberName}` })).toHaveCount(0);
-    await goTo(member, 'Budgets');
-    await syncNow(member);
-    await expect(card(member, household)).toHaveCount(0);
-    await expect(card(member, mine)).toBeVisible();
-
+  await test.step('stopping sharing with the member still in ends the link and takes the budget from them', async () => {
+    await expect(panel(page).getByRole('button', { name: `Remove ${memberName}` })).toBeVisible();
     await panel(page).getByRole('button', { name: 'Stop sharing · remove everyone' }).click();
     await confirm(page, 'Stop sharing');
     await expect(panel(page).getByText('Only you use this budget')).toBeVisible();
-    await expect(panel(page).getByRole('button', { name: 'Stop sharing · remove everyone' })).toHaveCount(0);
+    await expect(panel(page).getByRole('button', { name: `Remove ${memberName}` })).toHaveCount(0);
     await closePanel(page);
     await expect(membersButton(page)).toHaveCount(0);
+
+    await goTo(member, 'My Day');
+    await syncNow(member);
+    await goTo(member, 'Budgets');
+    await expect(card(member, household)).toHaveCount(0);
+    await expect(card(member, mine)).toBeVisible();
   });
   await memberContext.close();
 });

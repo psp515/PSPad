@@ -50,14 +50,16 @@ export async function openFabAction(page: Page, name: string) {
 
 export async function openFab(page: Page) {
   await awaitNoDrawer(page);
-  const menu = page.locator('.pspad-fab .mud-fab-menu');
+  const fab = page.getByRole('menu', { name: 'Actions', exact: true });
+  const items = fab.getByRole('menuitem');
+  const clickable = () => items.first().click({ trial: true, timeout: 1_000 }).then(() => true, () => false);
   await expect(async () => {
-    if (!(await menu.evaluate(element => element.classList.contains('mud-fab-menu-open')))) {
-      await page.locator('.pspad-fab').getByRole('button').click();
+    if (!(await clickable())) {
+      await fab.getByRole('button').click({ timeout: 2_000 });
     }
-    await expect(menu).toHaveClass(/mud-fab-menu-open/, { timeout: 2_000 });
+    expect(await clickable()).toBe(true);
   }).toPass({ timeout: 30_000 });
-  return page.getByRole('menuitem');
+  return items;
 }
 
 export async function pickFromPropertyRow(page: Page, rowClass: string, option: string) {
