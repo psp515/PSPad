@@ -28,7 +28,19 @@ export function liveStreamOpened(page: Page) {
 }
 
 export async function settled(page: Page, edit: () => Promise<void>) {
-  const pulled = page.waitForResponse(response => response.url().includes('/api/sync') && response.ok(), pushedWithin);
+  let committedAt = Number.POSITIVE_INFINITY;
+  const committed = page.waitForResponse(response => {
+    if (!response.url().includes('/api/commands') || !response.ok()) {
+      return false;
+    }
+    const timing = response.request().timing();
+    committedAt = timing.startTime + timing.responseEnd;
+    return true;
+  }, pushedWithin);
+  const pulled = page.waitForResponse(
+    response => response.url().includes('/api/sync') && response.ok() && response.request().timing().startTime >= committedAt,
+    pushedWithin);
   await edit();
+  await committed;
   await pulled;
 }

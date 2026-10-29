@@ -14,7 +14,7 @@ talking to the API over HTTP, syncing a replica. Regressions in that seam
 
 In:
 
-- A Playwright suite in `test/e2e/` that runs thirty-two whole-scenario
+- A Playwright suite in `test/e2e/` that runs thirty-one whole-scenario
   journeys through a browser against the Docker Compose stack.
 - Fixtures that create a Keycloak user per test and sign in through the real
   login form.
@@ -117,7 +117,7 @@ triggers **Sync now** and reads the `Authorization` header of the next
 /api/sync?since=0`, `POST /api/commands` with `[{type, payload}]`
 envelopes (`CommandCatalogue` resolves `type` by class name, e.g.
 `CompleteTask`), and reads `CommandResponse[]` (`accepted`, `rejection`). `anotherDevice(page)`
-wraps this as a second device of the same user: scenarios 22 and 25–32
+wraps this as a second device of the same user: scenarios 22 and 25–31
 arrange many tasks, items, goals and repeats through it (`createTasksOn`,
 `createItemsOn`, `createGoalOn`), which also proves the open page picks
 them up without a reload.
@@ -322,12 +322,11 @@ tests would be visible, not silent.
     tick the first leaves is a skipped BUG step). A collapsed card stays
     collapsed across a reload. The card menu edits the list; deleting an
     area or a list warns how many lists and tasks go with it.
-26. **List page.** An empty task list names its kind and area and offers its
-    first task from the FAB. Tasks from the API appear without a reload,
-    other lists' and deleted tasks never; completed and ended ones sit
-    under Completed. Ticking an ended repeat or a skipped day saves
-    nothing, a ticked repeat unticks today; completing one of two
-    same-named tasks leaves the other open.
+26. **List page.** Tasks from the API appear without a reload, other
+    lists' and deleted tasks never; completed and ended ones sit under
+    Completed. Ticking an ended repeat or a skipped day saves nothing, a
+    ticked repeat unticks today; completing one of two same-named tasks
+    leaves the other open.
 27. **Reference items.** An empty reference list offers Add item but no
     task, filter or view toggle; the new-item panel shows Labels,
     Description and its list. Draft labels keep their order and kind,
@@ -337,37 +336,40 @@ tests would be visible, not silent.
     The panel renames and stars, its List row offers reference lists only
     and moves the item to another area; a new item can go to another list,
     and a closed draft is forgotten.
-28. **Goals and the goal panel.** The empty state opens "New goal", which
-    waits for a name and keeps a due date picked first. Goals from the API
-    appear without a reload, in progress ordered by due date, undated last,
-    an overdue one marked. Rows count done tasks (an ended repeat counts),
-    the row menu offers the two closing statuses without opening the goal,
-    and Not achieved gets its own section. The panel renames as you type,
-    sets and clears the due date, saves the status, and Delete asks first.
-    Deleting a list takes its tasks off the goal; the FAB opens a new goal.
+28. **Goals, the goal panel and a goal page.** The empty state opens "New
+    goal", which waits for a name and keeps a due date picked first. Goals
+    from the API appear without a reload, in progress ordered by due date,
+    undated last, an overdue one marked. Rows count done tasks (an ended
+    repeat counts), the row menu offers the two closing statuses without
+    opening the goal, and Not achieved gets its own section. The panel
+    renames as you type, sets and clears the due date, saves the status,
+    and Delete asks first. A goal page shows status, "2 of 3 done", the due
+    date with days left, a Progress chart (recurring tasks not counted) and
+    a Pace card; rows name their list but not the goal, another goal's
+    tasks stay off, and a task opens on the page. An overdue goal says how
+    late it is; an empty one says "No tasks linked" and "No open tasks."
+    with no chart. Deleting the goal asks first and returns to Goals; its
+    address then says it is gone. Deleting a list takes its tasks off the
+    goal; the FAB opens a new goal.
 29. **Areas index and chips.** At phone width every area is a chip in
     order with the open one marked current, and New area opens the panel.
     `/areas` opens the remembered area, falls back to the first once it is
-    deleted (its chip gone), and with no areas offers a new one.
+    deleted (its chip gone), and once another device deletes every area it
+    offers a new one.
 30. **Reference rows.** A reference card adds an item without opening it,
-    previews five of seven with the count, stars a row to the top and opens
+    previews five of seven with "Show all 7" (its count reading "open
+    tasks" is a skipped BUG step), stars a row to the top and opens
     a row. The board counts lists, open tasks and items, and deleting the
     list or the area warns what goes with it. On the list, starred items
     come first, then by position; labels are chips in order, a quantity
     normalised, a link opening in a new tab, a path copied to the
     clipboard.
-31. **List panel.** The panel names the list, its kind and area, renames as
+31. **List panel.** An empty task list names its kind and area and offers
+    its first task from the FAB. The panel names the list, its kind and area, renames as
     you type and moves the list to another area. Members and Public
     snapshots open their own views whose back arrow returns to the details.
     Deleting from the panel stays on the board there and goes to the area
     from the list's own screen; a deleted or unknown list says it is gone.
-32. **Goal page.** A goal page shows status, "2 of 3 done", the due date
-    with days left, a Progress chart (recurring tasks not counted) and a
-    Pace card; rows name their list but not the goal, another goal's tasks
-    stay off, and a task opens on the page. An overdue goal says how late
-    it is; an empty one says "No tasks linked" and "No open tasks." with no
-    chart. Deleting the goal asks first and returns to Goals; its address
-    then says it is gone.
 
 ## 5. Timing
 
@@ -378,7 +380,11 @@ tests would be visible, not silent.
   timeout.
 - Retries: 0 locally, 1 in CI; a retry is a flake to fix, reported in the
   HTML report.
-- Scenarios 10, 11, 14, 16 and 18 are the heaviest (two or three contexts).
+- Scenarios 10, 11, 14, 16 and 18 are the heaviest (two or three contexts);
+  25, 27, 28, 29 and 31 are the heaviest single-context ones. A scenario
+  that runs past a minute at two workers on a two-core machine splits;
+  data a step only needs to exist is arranged through `anotherDevice`,
+  not clicked through the UI.
 
 ## 6. CI
 
@@ -405,7 +411,7 @@ test/e2e/
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
                  settings.ts  goals.ts  references.ts  sharing.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 32-goal-page.spec.ts
+  scenarios/     01-first-sign-in.spec.ts … 31-list-panel.spec.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared

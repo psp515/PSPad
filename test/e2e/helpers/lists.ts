@@ -58,5 +58,5 @@ export function monthDay(page: Page, isoDay: string) {
 }
 
 export async function closeFilterChip(page: Page, text: string) {
-  await page.getByText(text, { exact: true }).locator('..').getByRole('button').click();
+  await page.getByText(text, { exact: true }).getByRole('button', { name: 'Close' }).click();
 }

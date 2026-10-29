@@ -20,6 +20,16 @@ test('the list panel edits, moves and deletes a list, and a gone list says so', 
   await createList(page, errands);
   await openList(page, errands);
   const subtitle = areaSubtitle(page);
+
+  await test.step('an empty task list names its kind and area and offers its first task from the FAB', async () => {
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Task list');
+    await expect(page.getByText('No tasks yet.')).toBeVisible();
+    await expect(subtitle).toHaveText(`${home} · no open tasks`);
+    await openFabAction(page, 'Add task');
+    await expect(panel(page).getByText(`New task · ${home} › ${errands}`)).toBeVisible();
+    await closePanel(page);
+  });
+
   const device = await anotherDevice(page);
   await createTasksOn(device, listIdFromUrl(page), [{ name: 'Milk' }, { name: 'Bread' }]);
   await expect(subtitle).toHaveText(`${home} · 2 open tasks`);

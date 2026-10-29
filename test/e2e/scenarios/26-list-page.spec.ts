@@ -3,34 +3,22 @@ import { anotherDevice, idOf } from '../helpers/api';
 import { areaSubtitle, createArea } from '../helpers/areas';
 import { addDays, utcToday } from '../helpers/dates';
 import { createList, listIdFromUrl, openList } from '../helpers/lists';
-import { closePanel, openFabAction, panel } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { syncNow } from '../helpers/sync';
 import { createTasksOn, taskRow } from '../helpers/tasks';
 
 test('a list page shows its own tasks, with done and ended ones under Completed', async ({ page, account }) => {
   const home = `Home ${account.suffix}`;
-  const work = `Work ${account.suffix}`;
   const errands = `Errands ${account.suffix}`;
   const desk = `Desk ${account.suffix}`;
   const today = utcToday();
 
   await signIn(page, account);
-  await createArea(page, work);
-  await createList(page, desk);
   await createArea(page, home);
+  await createList(page, desk);
   await createList(page, errands);
   await openList(page, errands);
   const subtitle = areaSubtitle(page);
-
-  await test.step('an empty task list names its kind and area and offers its first task from the FAB', async () => {
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Task list');
-    await expect(page.getByText('No tasks yet.')).toBeVisible();
-    await expect(subtitle).toHaveText(`${home} · no open tasks`);
-    await openFabAction(page, 'Add task');
-    await expect(panel(page).getByText(`New task · ${home} › ${errands}`)).toBeVisible();
-    await closePanel(page);
-  });
 
   const device = await anotherDevice(page);
   await test.step('tasks from another device appear without a reload, done and ended ones under Completed', async () => {
