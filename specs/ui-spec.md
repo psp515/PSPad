@@ -662,7 +662,10 @@ same panel in its new-task mode, addressed as `?task=new` with an
 optional `&list={listId}` and an optional `&due=yyyy-MM-dd`
 (`TaskQuery.ForNewTask(uri, listId?, due?)`) — never an inline field or a
 dialog. A list page and an area board pass the list; My Day passes the day
-and no list. A malformed `list` or `due` is ignored, as if absent.
+and no list. A malformed `list` or `due` is ignored, as if absent. The
+shell cascades `SyncRevision` to the panel as it does to the page, so an
+open task re-reads on every pull and shows another device's name or
+description without reopening; a description being edited keeps its draft.
 
 **Detail panels share one shell.** `Components/DetailPanel.razor` is the
 only right-anchored detail drawer: 420px from `md` up, full width below it.

@@ -157,6 +157,8 @@
 
     [Parameter] public EventCallback OnClose { get; set; }
 
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
     enum PanelMode { Closed, Add, Edit, View }
 
     TodoTask? _task;

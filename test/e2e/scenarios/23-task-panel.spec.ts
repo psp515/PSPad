@@ -209,7 +209,7 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
     await expect(description).toHaveCount(0);
   });
 
-  await test.step.skip('BUG: an open task panel keeps the description and name it opened with after another device changes them, until it is reopened (reported in PR #225)', async () => {
+  await test.step('an open task panel shows the description and name another device changes, and keeps a description being edited', async () => {
     const description = panel(page).getByRole('textbox', { name: 'Description' });
     const taskId = await idOf(device, 'todotasks', renamed);
     await pulledAfter(page, () => device.send('SetTaskDescription', { taskId, description: '**Skimmed** milk' }));
