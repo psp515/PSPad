@@ -42,7 +42,7 @@ test('a step can be renamed after it is added', async ({ page, account }) => {
     await expect(stepNameField(page, 'Check the freezer')).toHaveValue('Check the freezer');
   });
 
-  await test.step.skip('BUG: an edit made just before a sync pull is undone (reported in PR #225)', async () => {
+  await test.step('a rename made right after another edit survives the sync that follows', async () => {
     const field = stepNameField(page, 'Check the freezer');
     await field.fill('Check the pantry');
     await field.press('Enter');

@@ -53,31 +53,18 @@ export async function addStep(page: Page, name: string) {
   const steps = panel(page).locator('.pspad-steps .pspad-step-name');
   const input = panel(page).locator('.pspad-step-add input');
   const before = await steps.count();
-  // a sync pull can undo a just-made edit (reported in PR #225)
-  let accepted = false;
-  await expect(async () => {
-    if (!accepted) {
-      await input.fill(name, { timeout: 2_000 });
-      await expect(input).toHaveValue(name, { timeout: 2_000 });
-      await input.press('Enter', { timeout: 2_000 });
-      await expect(input).toHaveValue('', { timeout: 10_000 });
-      accepted = true;
-    }
-    await expect(steps).toHaveCount(before + 1, { timeout: 10_000 });
-    await expect(stepNameField(page, name)).toHaveValue(name, { timeout: 5_000 });
-  }).toPass({ timeout: 60_000 });
+  await input.fill(name);
+  await input.press('Enter');
+  await expect(input).toHaveValue('');
+  await expect(steps).toHaveCount(before + 1);
+  await expect(stepNameField(page, name)).toHaveValue(name);
 }
 
 export async function renameStep(page: Page, from: string, to: string) {
-  // a sync pull can undo a just-made edit (reported in PR #225)
-  await expect(async () => {
-    const field = stepNameField(page, from);
-    if (await field.isVisible()) {
-      await field.fill(to, { timeout: 2_000 });
-      await field.press('Enter', { timeout: 2_000 });
-    }
-    await expect(stepNameField(page, to)).toHaveValue(to, { timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+  const field = stepNameField(page, from);
+  await field.fill(to);
+  await field.press('Enter');
+  await expect(stepNameField(page, to)).toHaveValue(to);
 }
 
 export async function checkStep(page: Page, name: string) {

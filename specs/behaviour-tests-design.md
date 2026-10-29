@@ -12,7 +12,6 @@ Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225
 - 10-share-join-remove: joining a list can lose the tasks it already had: a sync running at the join purges them, or the list arrives by delta and never counts as missing, so no later sync brings them back.
 - 10-share-join-remove: a code in the link joins at once, but the shared list's tasks can be lost the same way.
 - 15-search-statistics-settings: an old History address lands on an empty Statistics page.
-- 19-step-rename: an edit made just before a sync pull is undone.
 - 24-new-task-draft: a deadline set on a draft step is lost when the task is added.
 - 25-area-board-cards: ticking a repeat on a day it skips shows it ticked until a reload, though nothing was saved.
 - 27-reference-items: labels drafted on a new reference item are missing when it is opened, until a reload, though the server stored them.
