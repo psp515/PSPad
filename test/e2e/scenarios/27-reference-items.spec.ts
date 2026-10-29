@@ -78,7 +78,8 @@ test('reference items are drafted, edited, moved and listed with their labels as
     await expect(panel(page).getByRole('button', { name: 'Add item' })).toHaveCount(0);
   });
 
-  await test.step.skip('BUG: labels drafted on a new reference item are missing when it is opened, until a reload, though the server stored them (reported in PR #225)', async () => {
+  await test.step('a new item opened right after it is added shows its drafted labels', async () => {
+    await closePanel(page);
     await openFabAction(page, 'Add item');
     await panel(page).getByPlaceholder('Item name').fill('Gulasz');
     await addDraftField(page, 'Time', '90 min');
@@ -90,6 +91,8 @@ test('reference items are drafted, edited, moved and listed with their labels as
     await panel(page).getByRole('button', { name: 'Delete item' }).click();
     await confirm(page, 'Delete');
     await awaitNoDrawer(page);
+    await referenceRow(page, 'Bigos').getByText('Bigos', { exact: true }).click();
+    await expect(panel(page).getByPlaceholder('Item name')).toHaveValue('Bigos');
   });
 
   await test.step('the panel renames and stars an item, and its list row offers reference lists only and moves it', async () => {
