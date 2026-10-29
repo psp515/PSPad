@@ -108,6 +108,21 @@ public partial class StylesheetRulesTests
     }
 
     [Fact]
+    public void ALedgerRowSqueezesItsMetaBeforeTheTaskName()
+    {
+        Assert.Contains("justify-content: flex-start", DeclarationsInContainer("min-width: 560px", ".pspad-row-ledger .pspad-row-body"));
+        Assert.Contains("min-width: 120px", DeclarationsInContainer("min-width: 560px", ".pspad-row-ledger .pspad-row-name"));
+
+        var meta = DeclarationsInContainer("min-width: 560px", ".pspad-row-ledger .pspad-row-meta");
+        Assert.Contains("flex-shrink: 1", meta);
+        Assert.Contains("min-width: 0", meta);
+    }
+
+    [Fact]
+    public void ADueStepKeepsItsNameWhenTheMetaLineIsCrowded() =>
+        Assert.Contains("min-width: min(100%, 140px)", Declarations(".pspad-row-meta > .pspad-step-due-mark"));
+
+    [Fact]
     public void MyDayIsTwoPanesFrom1280AndTabsBelow()
     {
         Assert.Contains("grid-template-columns: minmax(0, 1fr) 380px", DeclarationsInMedia("min-width: 1280px", ".pspad-day"));
