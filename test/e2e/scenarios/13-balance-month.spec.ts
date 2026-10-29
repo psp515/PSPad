@@ -1,7 +1,7 @@
 import { expect, test } from '../fixtures/accounts';
 import { anotherDevice } from '../helpers/api';
 import {
-  addHolding, budgetIdFromUrl, createBudget, digitsOf, figure, openBudgetSettings, pickOption, region, showView, startBalanceOn, stubNbp,
+  addHolding, budgetIdFromUrl, createBudget, figure, openBudgetSettings, pickOption, region, showView, startBalanceOn, stubNbp,
 } from '../helpers/budgets';
 import { monthButton, monthTitle, utcToday } from '../helpers/dates';
 import { closePanel, confirm, deleteFromPanel, openFabAction, panel, savePanel } from '../helpers/panels';
@@ -39,7 +39,7 @@ test('a balance month is started by hand, valued at NBP\'s rate, deleted, and st
 
   await addHolding(page, { name: 'Wallet', type: 'Cash', amount: '350' });
   await addHolding(page, { name: 'ETF', type: 'Investment', amount: '2500', currency: 'EUR', rate: '4.265' });
-  await expect.poll(async () => digitsOf(await page.locator('.pspad-balance-net-worth').innerText())).toBe('1101250');
+  await expect(figure(page, 'Net worth')).toContainText('11,012.50 PLN');
   await expect(page.locator('.pspad-holding-group-name')).toHaveCount(2);
 
   await test.step('holdings group by type with their amount, rate and PLN value, and a failed NBP lookup is not retried', async () => {
@@ -132,7 +132,7 @@ test('a balance month is started by hand, valued at NBP\'s rate, deleted, and st
 
   await showView(page, 'Balance');
   await monthButton(page, previousMonth).click();
-  await expect.poll(async () => digitsOf(await page.locator('.pspad-balance-net-worth').innerText())).toBe('870000');
+  await expect(figure(page, 'Net worth')).toContainText('8,700.00 PLN');
 
   await test.step('starting this month copies the latest earlier balance, and the overview shows it', async () => {
     await page.getByRole('button', { name: 'This month' }).click();

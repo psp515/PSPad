@@ -1,9 +1,9 @@
 import { expect, test } from '../fixtures/accounts';
 import { anotherDevice } from '../helpers/api';
 import {
-  createBudgetOn, entryRow, figure, monthOf, openBudgetSettings, recordOn, region, shortRange, showView, startBalanceOn, stubNbp,
+  createBudgetOn, entryRow, figure, monthOf, nbpDayBefore, openBudgetSettings, recordOn, region, shortRange, showView, startBalanceOn, stubNbp,
 } from '../helpers/budgets';
-import { addDays, isoDate, isoMonth, monthTitle, utcToday } from '../helpers/dates';
+import { addDays, isoDate, isoMonth, monthButton, monthTitle, utcToday } from '../helpers/dates';
 import { confirm } from '../helpers/panels';
 import { goTo } from '../helpers/nav';
 import { signIn } from '../helpers/sign-in';
@@ -148,7 +148,7 @@ test('stats average the months with entries and chart them, and history arrives 
     await expect(steam).toContainText(`No NBP rate for EUR on ${today.toLocaleDateString('en-GB', { timeZone: 'UTC' })}.`);
     await stubNbp(page, { EUR: 4.4 });
     await page.getByRole('button', { name: 'Retry rates' }).click();
-    await expect(steam).toContainText(`4.4 (NBP ${isoDate(addDays(today, -1))})`);
+    await expect(steam).toContainText(`4.4 (NBP ${isoDate(nbpDayBefore(today))})`);
     for (const chip of ['To import 5', 'Errors 1', 'Already in budget 0', 'New categories 2', 'Rates from NBP 1']) {
       await expect(page.getByText(chip, { exact: true })).toBeVisible();
     }
@@ -196,6 +196,9 @@ test('stats average the months with entries and chart them, and history arrives 
   await showView(page, 'Entries');
   await expect(entryRow(page, 'Biedronka')).toBeVisible();
   await expect(entryRow(page, 'Salary')).toBeVisible();
+  await showView(page, 'Balance');
+  await monthButton(page, lastMonth).click();
+  await expect(figure(page, 'Net worth')).toContainText('8,700.00 PLN');
 
   await test.step('an unknown import says so', async () => {
     await page.goto(`/budgets/${budgetId}/import/receipts`);
