@@ -10,7 +10,7 @@ import { closePanel, panel } from '../helpers/panels';
 import { goToSettings } from '../helpers/settings';
 import { signIn } from '../helpers/sign-in';
 import {
-  capturesTable, heatmapDay, heatmapDays, heatmapMonthLabel, readoutDay, recordFeed, statRange, statTile,
+  capturesTable, heatmapDay, heatmapDays, heatmapMonthGroup, readoutDay, recordFeed, statRange, statTile,
 } from '../helpers/statistics';
 import { syncNow } from '../helpers/sync';
 import { addTask, completeTaskRow, createTasksOn } from '../helpers/tasks';
@@ -67,7 +67,7 @@ test('search finds a task, statistics count it, settings change the look and sig
 
     await expect(heatmapDays(page)).toHaveCount(30);
     await expect(heatmapDay(page, today)).toHaveAccessibleName(/: 3 completed$/);
-    await expect(heatmapMonthLabel(page, today)).toHaveCount(0);
+    await expect(heatmapMonthGroup(page, today)).toHaveCount(0);
     await expect(page.getByText('Each square is one day; darker means more tasks finished that day.')).toBeVisible();
     await expect(page.getByText('Less', { exact: true })).toBeVisible();
     await expect(page.getByText('More', { exact: true })).toBeVisible();
@@ -83,7 +83,7 @@ test('search finds a task, statistics count it, settings change the look and sig
     await expect(statRange(page, 90)).toBeChecked();
     await expect(statRange(page, 30)).not.toBeChecked();
     await expect(heatmapDays(page)).toHaveCount(90);
-    await expect(heatmapMonthLabel(page, today)).toBeVisible();
+    await expect(heatmapMonthGroup(page, today)).toBeVisible();
   });
 
   await test.step('the record feed opens on demand, opens a task, and a deleted task stays put', async () => {
@@ -115,7 +115,7 @@ test('search finds a task, statistics count it, settings change the look and sig
     await expect(statTile(page, 'Done today')).toHaveText('3');
   });
 
-  await test.step('offline, Statistics keeps the last numbers it had', async () => {
+  await test.step('with the statistics API unreachable, Statistics keeps the last numbers it had', async () => {
     await page.goto('/statistics');
     await expect(statTile(page, 'Done today')).toHaveText('3');
     await page.route('**/api/statistics/**', route => route.abort());

@@ -2,7 +2,7 @@ import { Page } from '@playwright/test';
 import { isoDate } from './dates';
 
 export function statTile(page: Page, label: string) {
-  return page.getByText(label, { exact: true }).locator('..').getByRole('heading', { level: 5 });
+  return page.getByRole('group', { name: label, exact: true }).getByRole('heading', { level: 5 });
 }
 
 export function statRange(page: Page, days: 30 | 90 | 365) {
@@ -21,8 +21,8 @@ export function heatmapMonth(day: Date) {
   return day.toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
-export function heatmapMonthLabel(page: Page, day: Date) {
-  return page.getByText(heatmapMonth(day), { exact: true }).and(page.locator('span'));
+export function heatmapMonthGroup(page: Page, day: Date) {
+  return page.getByRole('group', { name: heatmapMonth(day), exact: true });
 }
 
 export function readoutDay(day: Date) {

@@ -1,7 +1,7 @@
 import { expect, Page } from '@playwright/test';
 import { goTo, navLink } from './nav';
 import { awaitNoDrawer, chooseProperty, panel } from './panels';
-import { shortDate } from './dates';
+import { shortDate, utcToday } from './dates';
 import { escapeRegExp } from './text';
 
 export async function goToMyDay(page: Page) {
@@ -176,4 +176,10 @@ export async function setOneTime(page: Page) {
 export async function backToToday(page: Page) {
   await page.getByRole('button', { name: 'Today', exact: true }).click();
   await expect(dayLabel(page)).toContainText('Today');
+}
+
+export async function passUtcMidnight(page: Page) {
+  const nextMidnight = utcToday().getTime() + 86_400_000;
+  await page.clock.fastForward(nextMidnight - Date.now() + 90_000);
+  await page.clock.fastForward(61_000);
 }

@@ -6,7 +6,7 @@
     {
         @foreach (var month in Days.GroupBy(day => new DateOnly(day.Day.Year, day.Day.Month, 1)))
         {
-            <div class="pspad-heatmap-month">
+            <div class="pspad-heatmap-month" role="group" aria-label="@month.Key.ToString("MMM yyyy")">
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pspad-heatmap-month-label">
                     @month.Key.ToString("MMM yyyy")
                 </MudText>

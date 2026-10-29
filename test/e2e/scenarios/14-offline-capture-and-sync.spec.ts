@@ -8,7 +8,9 @@ import { goToSettings } from '../helpers/settings';
 import { shellMenu } from '../helpers/shell';
 import { signIn } from '../helpers/sign-in';
 import { goOffline, goOnline, syncButton, syncNow } from '../helpers/sync';
+import { addDays, shortDate, utcToday } from '../helpers/dates';
 import { addTask, completeTaskRow, taskRow } from '../helpers/tasks';
+import { passUtcMidnight } from '../helpers/today';
 
 // Chromium's offline emulation skips requests a service worker makes, so this context runs without one.
 test.use({ serviceWorkers: 'block' });
@@ -139,6 +141,17 @@ test('changes made offline reach the server after the next sync', async ({ page,
     await expect(page.getByText('That area no longer exists.', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Everything is synced.')).toBeVisible();
     await expect(shellMenu(page).getByRole('link', { name: new RegExp(shed) })).toHaveCount(0);
+  });
+
+  await test.step('an open My Day turns to the next day once midnight passes', async () => {
+    const today = utcToday();
+    await page.clock.install();
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'My Day' })).toBeVisible({ timeout: 30_000 });
+    const label = page.getByText(/^Today · /);
+    await expect(label).toContainText(shortDate(today));
+    await passUtcMidnight(page);
+    await expect(label).toContainText(shortDate(addDays(today, 1)), { timeout: 20_000 });
   });
 
   await device.dispose();

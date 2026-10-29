@@ -172,7 +172,8 @@ tests would be visible, not silent.
    place. App info shows the version, the licence and both links; an
    unknown address says "Not found". At phone width the bottom bar holds
    Inbox (with its badge), Areas, My Day, Goals and Budgets, marks the
-   current one and none on Settings; the top bar names the screen, a list
+   current one and none on Settings; a touch pull on My Day syncs (a CDP
+   touch drag); the top bar names the screen, a list
    with its area subtitle and a Back to area link, carries Sync now with
    the stamp, and forgets a list that is gone; the avatar opens the account
    drawer (Statistics, List snapshots, Settings, App info, footer), which
@@ -180,8 +181,10 @@ tests would be visible, not silent.
    shows the account, time zone `Etc/UTC` and a Change password link to
    Keycloak's account console in a new tab. Deleting the account wants the
    email typed (any case), a fresh sign-in when the API asks for one (a
-   Keycloak password prompt), keeps the dialog open on a failure, then
-   lands on Welcome, and the account can no longer log in. Skipped BUG
+   Keycloak password prompt), keeps the dialog open on a failure, says an
+   administrator must remove the sign-in when the API reports Keycloak was
+   not cleaned up, then lands on Welcome, and the account can no longer
+   log in. Skipped BUG
    steps (PR #225): a first sign-in while another user saves a change can
    fail (`UserProvisioner` is not retried on a write conflict, so the
    login callback stores no session), the return address after login is
@@ -332,7 +335,9 @@ tests would be visible, not silent.
     task opens the list, the task panel and the stored name. An area
     renamed offline while another device deletes it comes back refused:
     the belt's Details opens Settings, which lists "That area no longer
-    exists." until Discard this change; Dismiss closes the belt.
+    exists." until Discard this change; Dismiss closes the belt. With
+    `page.clock` installed, fast-forwarding past UTC midnight moves an open
+    My Day to the next day.
 15. **Search, statistics, settings, sign out.** Create and complete a task
     linked to a goal; another device adds a completed, then deleted task and
     an Inbox capture. `/search?q=` finds the task; its result opens the
