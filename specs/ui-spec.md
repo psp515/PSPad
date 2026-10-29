@@ -1689,5 +1689,6 @@ minutes, `adr/0072`), the dialog deletes nothing locally and instead says a
 fresh sign-in is needed, with a "Sign in again" button (`pspad-reauthenticate`)
 that starts an interactive Keycloak login with `prompt=login` and `max_age=0`.
 The login returns to `/settings?deleteAccount=confirm`; Settings replaces that
-URL with `/settings` and reopens the delete dialog, empty — the person types
+URL with `/settings` and, once that location change lands (`MudDialogProvider`
+closes every dialog on a location change), reopens the delete dialog, empty — the person types
 their email again to delete.

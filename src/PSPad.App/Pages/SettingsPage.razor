@@ -1,5 +1,6 @@
 @page "/settings"
 @attribute [Authorize]
+@using Microsoft.AspNetCore.Components.Routing
 @using PSPad.Abstractions
 @using PSPad.App.Api
 @using PSPad.App.Auth
@@ -183,13 +184,24 @@
     [SupplyParameterFromQuery(Name = StepUpSignIn.DeleteAccountQuery)]
     public string? DeleteAccount { get; set; }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender && DeleteAccount is not null)
         {
+            Navigation.LocationChanged += ReopenDeleteAccountDialog;
             Navigation.NavigateTo("settings", replace: true);
-            await OpenDeleteAccountDialogAsync();
         }
+    }
+
+    // MudDialogProvider dismisses every dialog on a location change, so the dialog opens only after the query is gone.
+    void ReopenDeleteAccountDialog(object? sender, LocationChangedEventArgs args)
+    {
+        Navigation.LocationChanged -= ReopenDeleteAccountDialog;
+        _ = InvokeAsync(async () =>
+        {
+            await Task.Yield();
+            await OpenDeleteAccountDialogAsync();
+        });
     }
 
     protected override async Task OnInitializedAsync()
@@ -279,6 +291,7 @@
 
     public void Dispose()
     {
+        Navigation.LocationChanged -= ReopenDeleteAccountDialog;
         Sender.Sent -= OnCommandSent;
         SyncStatus.Changed -= OnSyncChanged;
         Connectivity.Changed -= OnConnectivityChanged;

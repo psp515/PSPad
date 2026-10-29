@@ -253,14 +253,14 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     await expect(page).toHaveURL(/\/settings$/);
   });
 
-  await test.step.skip('BUG: coming back from the fresh sign-in does not reopen the delete dialog (reported in PR #225)', async () => {
+  await test.step('coming back from the fresh sign-in reopens the delete dialog', async () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByLabel('Email')).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Delete account' })).toBeDisabled();
   });
 
   await test.step('a failed deletion keeps the dialog open, and a deletion Keycloak could not finish says an administrator is needed', async () => {
-    const dialog = await deleteAccountDialog(page);
+    const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('button', { name: 'Delete account' })).toBeDisabled();
     await dialog.getByLabel('Email').fill(account.email);
     await answerAccountDeletionOnce(page, 500);
