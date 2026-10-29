@@ -1,5 +1,21 @@
 # Behaviour tests — design
 
+Status: done 2026-10-29 — unit 2479, integration 413, e2e scenarios 34.
+
+Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225):
+
+- 01-first-sign-in: a first sign-in while another user saves a change can fail and land back on Welcome.
+- 01-first-sign-in: signing in from Welcome ignores the return address.
+- 01-first-sign-in: coming back from the fresh sign-in does not reopen the delete dialog.
+- 01-first-sign-in: deleting the account signs out before it leaves Settings, so Welcome keeps Settings as the return address.
+- 02-capture-and-triage: a deadline set on a draft step is lost when an Inbox item is converted.
+- 15-search-statistics-settings: an old History address lands on an empty Statistics page.
+- 19-step-rename: an edit made just before a sync pull is undone.
+- 24-new-task-draft: a deadline set on a draft step is lost when the task is added.
+- 25-area-board-cards: ticking a repeat on a day it skips shows it ticked until a reload, though nothing was saved.
+- 27-reference-items: labels drafted on a new reference item are missing when it is opened, until a reload, though the server stored them.
+- 30-reference-rows: a reference card counts its items as "open tasks".
+
 Tests assert what the code does, never how it looks or how it is wired.
 Decision record: ADR-0080. Standing rules after the migration live in
 `specs/testing-spec.md`; this file describes the migration.
@@ -134,8 +150,8 @@ tested there. That is the only production change the migration allows.
 
 ### 4.4 End-to-end budget
 
-The suite target moves from three minutes to **five minutes** in CI with
-four workers (`specs/e2e-testing-design.md` §5). A scenario that would push
+The suite target moves from three minutes to **five minutes per shard** in CI
+with four workers; CI runs two shards (`specs/e2e-testing-design.md` §5). A scenario that would push
 past it splits. Locators stay role, label or text; no CSS-class locators in
 new steps.
 

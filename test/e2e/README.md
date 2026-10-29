@@ -1,6 +1,6 @@
 # End-to-end tests
 
-Playwright scenarios that drive the real application in Chromium against the
+34 Playwright scenarios that drive the real application in Chromium against the
 Docker Compose stack. Design: `specs/e2e-testing-design.md`.
 
 ## Run
@@ -15,6 +15,9 @@ npm ci
 npx playwright install chromium
 npm test
 ```
+
+CI splits the suite into two shards, each on its own stack: `npm test -- --shard=1/2`
+and `npm test -- --shard=2/2`.
 
 `npm run test:ui` opens Playwright's UI mode; `npm run report` opens the last
 HTML report (CI only writes one). `npm run stack:up` and `npm run stack:down`

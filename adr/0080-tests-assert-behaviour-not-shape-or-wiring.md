@@ -49,6 +49,8 @@ Migration plan: `specs/behaviour-tests-design.md`.
 - Refactors of markup, styling and handler wiring stop breaking tests.
 - The end-to-end suite grows; its CI budget rises from three to five
   minutes, and UI TDD starts with a slower end-to-end step.
+- CI runs the end-to-end suite as two shards, each with its own compose stack,
+  to stay under five minutes per shard with four workers.
 - The integration suite grows and takes longer on every PR.
 - Edge cases that only bUnit could reach are either extracted into pure
   client rules or recorded as dropped.
