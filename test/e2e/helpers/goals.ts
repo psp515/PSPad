@@ -1,6 +1,9 @@
 import { expect, Page } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { Device } from './api';
+import { isoDate } from './dates';
 import { goTo } from './nav';
-import { confirm, panel, pickFromPropertyRow, savePanel } from './panels';
+import { awaitNoDrawer, closePanel, confirm, panel, pickFromPropertyRow, savePanel } from './panels';
 
 export async function goToGoals(page: Page) {
   await goTo(page, 'Goals');
@@ -34,4 +37,37 @@ export async function deleteGoal(page: Page, name: string) {
   await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   await confirm(page, 'Delete');
   await expect(goalCard(page, name)).toHaveCount(0);
+}
+
+export function goalRow(page: Page, name: string) {
+  return page.getByRole('link', { name, exact: true });
+}
+
+export async function openGoalMenu(page: Page, name: string) {
+  await goalRow(page, name).getByRole('button', { name: 'Actions' }).click();
+}
+
+export async function createGoalOn(device: Device, name: string, dueOn?: Date): Promise<string> {
+  const goalId = randomUUID();
+  await device.send('CreateGoal', { goalId, name });
+  if (dueOn) {
+    await device.send('SetGoalDueDate', { goalId, dueOn: isoDate(dueOn) });
+  }
+  return goalId;
+}
+
+export async function linkTasksOn(device: Device, goalId: string, taskIds: string[]) {
+  for (const taskId of taskIds) {
+    await device.send('AddTaskToGoal', { goalId, taskId });
+  }
+}
+
+export async function editGoal(page: Page, name: string) {
+  if (await panel(page).getByPlaceholder('Goal name').isVisible()) {
+    await closePanel(page);
+  }
+  await awaitNoDrawer(page);
+  await openGoalMenu(page, name);
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
+  await expect(panel(page).getByPlaceholder('Goal name')).toHaveValue(name);
 }

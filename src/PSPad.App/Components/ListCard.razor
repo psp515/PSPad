@@ -5,6 +5,7 @@
 @inject IClock Clock
 @inject IStringLocalizer<ListsStrings> T
 @inject IStringLocalizer<ReferenceStrings> Ref
+@inject IStringLocalizer<TasksStrings> TaskText
 
 <ThingCard Id="@List.Id" Name="@List.Name" Href="@($"/lists/{List.Id}")" Icon="@ListIcon.For(List)"
            IconTitle="@ListIcon.LabelFor(List, T)" Tasks="@Tasks" Today="@Today" GoalNameOf="@GoalNameOf"
@@ -26,7 +27,7 @@
         else
         {
             <MudIconButton Class="pspad-add-task" Size="Size.Small" Icon="@Icons.Material.Filled.Add"
-                           OnClick="@OnAddTaskClick" />
+                           aria-label="@TaskText["AddTask"].Value" OnClick="@OnAddTaskClick" />
         }
         <ThingMenu Class="pspad-list-menu" OnEdit="@OnEdit" OnDelete="@(IsMine ? OnDelete : default)" />
     </Actions>

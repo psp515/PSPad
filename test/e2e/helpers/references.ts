@@ -1,4 +1,6 @@
 import { expect, Locator, Page } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { Device } from './api';
 import { awaitNoDrawer, closePanel, openFabAction, panel, savePanel } from './panels';
 
 export type FieldKind = 'Automatic' | 'Text' | 'Link' | 'Path' | 'Quantity';
@@ -100,4 +102,47 @@ export async function dragRow(source: Locator, target: Locator) {
   await expect(source).toBeInViewport();
   await expect(target).toBeInViewport();
   await source.dragTo(target, { force: true, targetPosition: { x: 20, y: 4 } });
+}
+
+export async function createItemsOn(
+  device: Device, listId: string, names: string[], firstPosition: number,
+): Promise<Record<string, string>> {
+  const ids: Record<string, string> = {};
+  for (const [index, name] of names.entries()) {
+    ids[name] = randomUUID();
+    await device.send('CreateReferenceItem', { itemId: ids[name], listId, name, position: firstPosition + index });
+  }
+  return ids;
+}
+
+export async function addDraftField(page: Page, label: string, value: string) {
+  await panel(page).getByLabel('New label', { exact: true }).fill(label);
+  const valueInput = panel(page).getByLabel('New label value', { exact: true });
+  await valueInput.fill(value);
+  await valueInput.press('Enter');
+  await expect(fieldRow(page, label)).toBeVisible();
+}
+
+export async function addFieldsOn(device: Device, itemId: string, fields: Array<[string, string]>) {
+  for (const [label, value] of fields) {
+    await device.send('AddReferenceField', { itemId, fieldId: randomUUID(), label, value, display: null });
+  }
+}
+
+function field(doc: Record<string, unknown>, name: string): unknown {
+  return doc[name] ?? doc[name.charAt(0).toUpperCase() + name.slice(1)];
+}
+
+export async function storedItem(device: Device, name: string) {
+  const doc = (await device.documents('referenceitems')).find(item => field(item, 'name') === name && !field(item, 'deleted'));
+  if (!doc) {
+    return null;
+  }
+  const fields = (field(doc, 'fields') as Array<Record<string, unknown>> | undefined) ?? [];
+  return {
+    listId: String(field(doc, 'listId')),
+    labels: fields.map(item => field(item, 'label')),
+    displays: fields.map(item => field(item, 'display') ?? null),
+    description: field(doc, 'description') ?? null,
+  };
 }

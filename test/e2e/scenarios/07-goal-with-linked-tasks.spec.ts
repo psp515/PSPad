@@ -56,6 +56,9 @@ test('a goal tracks its linked tasks and a star never plans a task', async ({ pa
   await achieved.getByRole('link', { name: goal }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText(goal);
   await expect(page.locator('.pspad-goal-status')).toHaveText('Achieved');
+  await test.step('an achieved goal still lists its tasks', async () => {
+    await expect(page.getByText(open, { exact: true })).toBeVisible();
+  });
 
   await openArea(page, area);
   await expect(page.getByRole('link', { name: list, exact: true })).toBeVisible();

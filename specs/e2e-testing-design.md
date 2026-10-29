@@ -14,7 +14,7 @@ talking to the API over HTTP, syncing a replica. Regressions in that seam
 
 In:
 
-- A Playwright suite in `test/e2e/` that runs eighteen whole-scenario
+- A Playwright suite in `test/e2e/` that runs thirty-two whole-scenario
   journeys through a browser against the Docker Compose stack.
 - Fixtures that create a Keycloak user per test and sign in through the real
   login form.
@@ -116,7 +116,11 @@ triggers **Sync now** and reads the `Authorization` header of the next
 `APIRequestContext` with that header then calls the API: `GET
 /api/sync?since=0`, `POST /api/commands` with `[{type, payload}]`
 envelopes (`CommandCatalogue` resolves `type` by class name, e.g.
-`CompleteTask`), and reads `CommandResponse[]` (`accepted`, `rejection`).
+`CompleteTask`), and reads `CommandResponse[]` (`accepted`, `rejection`). `anotherDevice(page)`
+wraps this as a second device of the same user: scenarios 22 and 25–32
+arrange many tasks, items, goals and repeats through it (`createTasksOn`,
+`createItemsOn`, `createGoalOn`), which also proves the open page picks
+them up without a reload.
 
 ### 3.5 Offline
 
@@ -152,10 +156,16 @@ tests would be visible, not silent.
    captured through the API shows up without a reload; the list's task
    carries everything the panel set. After picking `Asia/Kolkata` in
    Settings, the Inbox shows capture times in that zone.
-3. **Area, list, task lifecycle.** New area, new task list, task with two
-   steps. Tick a step: the row shows 1/2. Complete the task: area subtitle
-   reads "1 list · no open tasks". Delete the list, then the area: Areas
-   shows "No areas yet."
+3. **Area, list, task lifecycle.** A new area waits for a name (a blank
+   Enter adds nothing) and opens once added; its empty state, by Enter,
+   opens "New list · <area>", which also waits for a name and makes a task
+   list. The list reads "No tasks yet." and counts open tasks under its
+   area name; a task with two steps, one ticked, shows 1/2; completing it
+   moves it under "Completed · 1" and the area reads "1 list · no open
+   tasks". Deleting the list warns how many tasks go with it and lands on
+   the area; its old address says the list is gone. The area panel renames
+   as you type, says it has no lists, and its Delete asks first (Cancel
+   keeps it); the FAB's Delete area lands on My Day.
 4. **Today rule and time zone.** Three tasks: due today, due tomorrow, no
    due date. My Day lists exactly the first and neither of the others;
    picking tomorrow in the week strip's date dialog lists exactly the
@@ -193,7 +203,7 @@ tests would be visible, not silent.
    Achieved: Goals lists it under Achieved; the task's Goal row still names
    it but offers no goal in progress. A second goal can be chosen, cleared
    and chosen again; deleting it unlinks the task on its list and on My
-   Day.
+   Day. An achieved goal's page still lists its task.
 8. **Reference list and field types.** Reference list; item with five
    fields, one per display kind: Text, Link (renders a link with `href`),
    Path (renders as code), Quantity (normalised), Automatic with a URL value
@@ -284,8 +294,12 @@ tests would be visible, not silent.
     tomorrow and one plain task: filtering on High hides the plain one,
     sorting by Name orders the two A → Z, and both survive a reload with
     the badge on 1. The Calendar view puts both on tomorrow's cell;
-    clicking it lists them as rows, and ticking one leaves one (issue
-    #198, `list-filter-and-calendar-design.md`).
+    clicking it lists them as rows, and ticking one leaves one. Cleared,
+    the month says one task has no date and "Show them in List" lists just
+    that one. Filter chips toggle and count on the badge, a goal of the
+    list's tasks is a chip, nothing matching says "No tasks match." and
+    keeps the open count, each active group is one closable chip, and
+    Clear keeps the sort (issue #198, `list-filter-and-calendar-design.md`).
 23. **Task panel.** An open task names its area and list and its created
     date and shows only the rows that apply. Rename (Enter creates nothing),
     star, due date by quick pick and calendar, Remind presets, hint and a
@@ -298,6 +312,62 @@ tests would be visible, not silent.
     star, due date, reminder, priority and time land on the task Enter adds.
     A repeating draft goes back to one-time, drops a due date before its
     custom start and keeps its rule, end date and reminder.
+
+25. **Area board cards.** An empty task card offers "Add one" and its
+    header Add task opens "New task · <area> › <list>". Tasks sent through
+    the API show on their card without a reload: a card previews five, counts
+    all seven, and "Show all 7" opens the list; completed, deleted and ended
+    tasks stay off it. Ticking a repeat on a day it skips saves nothing and
+    ticking a ticked repeat unticks today, both after a reload (the stale
+    tick the first leaves is a skipped BUG step). A collapsed card stays
+    collapsed across a reload. The card menu edits the list; deleting an
+    area or a list warns how many lists and tasks go with it.
+26. **List page.** An empty task list names its kind and area and offers its
+    first task from the FAB. Tasks from the API appear without a reload,
+    other lists' and deleted tasks never; completed and ended ones sit
+    under Completed. Ticking an ended repeat or a skipped day saves
+    nothing, a ticked repeat unticks today; completing one of two
+    same-named tasks leaves the other open.
+27. **Reference items.** An empty reference list offers Add item but no
+    task, filter or view toggle; the new-item panel shows Labels,
+    Description and its list. Draft labels keep their order and kind,
+    Enter in the label row does not add the item, and the server stores
+    labels, kinds and description; the item is added without opening (its
+    labels missing from the panel until a reload is a skipped BUG step).
+    The panel renames and stars, its List row offers reference lists only
+    and moves the item to another area; a new item can go to another list,
+    and a closed draft is forgotten.
+28. **Goals and the goal panel.** The empty state opens "New goal", which
+    waits for a name and keeps a due date picked first. Goals from the API
+    appear without a reload, in progress ordered by due date, undated last,
+    an overdue one marked. Rows count done tasks (an ended repeat counts),
+    the row menu offers the two closing statuses without opening the goal,
+    and Not achieved gets its own section. The panel renames as you type,
+    sets and clears the due date, saves the status, and Delete asks first.
+    Deleting a list takes its tasks off the goal; the FAB opens a new goal.
+29. **Areas index and chips.** At phone width every area is a chip in
+    order with the open one marked current, and New area opens the panel.
+    `/areas` opens the remembered area, falls back to the first once it is
+    deleted (its chip gone), and with no areas offers a new one.
+30. **Reference rows.** A reference card adds an item without opening it,
+    previews five of seven with the count, stars a row to the top and opens
+    a row. The board counts lists, open tasks and items, and deleting the
+    list or the area warns what goes with it. On the list, starred items
+    come first, then by position; labels are chips in order, a quantity
+    normalised, a link opening in a new tab, a path copied to the
+    clipboard.
+31. **List panel.** The panel names the list, its kind and area, renames as
+    you type and moves the list to another area. Members and Public
+    snapshots open their own views whose back arrow returns to the details.
+    Deleting from the panel stays on the board there and goes to the area
+    from the list's own screen; a deleted or unknown list says it is gone.
+32. **Goal page.** A goal page shows status, "2 of 3 done", the due date
+    with days left, a Progress chart (recurring tasks not counted) and a
+    Pace card; rows name their list but not the goal, another goal's tasks
+    stay off, and a task opens on the page. An overdue goal says how late
+    it is; an empty one says "No tasks linked" and "No open tasks." with no
+    chart. Deleting the goal asks first and returns to Goals; its address
+    then says it is gone.
 
 ## 5. Timing
 
@@ -335,7 +405,7 @@ test/e2e/
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
                  settings.ts  goals.ts  references.ts  sharing.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 24-new-task-draft.spec.ts
+  scenarios/     01-first-sign-in.spec.ts … 32-goal-page.spec.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared
