@@ -4,7 +4,7 @@
 @inject CardCollapseState Collapse
 @inject IStringLocalizer<TasksStrings> T
 
-<MudPaper Elevation="0" Outlined="true">
+<MudPaper Elevation="0" Outlined="true" role="group" aria-label="@Name">
     <div class="pspad-card-header d-flex align-center gap-2 px-3 py-2">
         <MudIconButton Class="pspad-card-tile pspad-list-icon" Size="Size.Small"
                        Icon="@(Icon ?? Icons.Material.Outlined.List)" Color="Color.Primary"

@@ -56,3 +56,7 @@ export async function showListAs(page: Page, view: 'List' | 'Calendar') {
 export function monthDay(page: Page, isoDay: string) {
   return page.locator(`.pspad-month-day[data-day="${isoDay}"]`);
 }
+
+export async function closeFilterChip(page: Page, text: string) {
+  await page.getByText(text, { exact: true }).locator('..').getByRole('button').click();
+}

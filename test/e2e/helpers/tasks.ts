@@ -1,6 +1,6 @@
 import { expect, Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
-import { apiFor, bearerToken, me, sendCommand } from './api';
+import { apiFor, bearerToken, Device, me, sendCommand } from './api';
 import { isoDate, utcToday } from './dates';
 import { awaitNoDrawer, closePanel, openFabAction, panel, savePanel } from './panels';
 
@@ -126,4 +126,40 @@ export async function renameTask(page: Page, to: string) {
   await name.press('Enter');
   await name.press('Tab');
   await expect(taskRow(page, to)).toBeVisible();
+}
+
+export type TaskSetup = {
+  name: string;
+  repeatsFrom?: Date;
+  every?: number;
+  until?: Date;
+  completed?: boolean;
+  deleted?: boolean;
+  tickedToday?: boolean;
+};
+
+export async function createTasksOn(device: Device, listId: string, tasks: TaskSetup[]): Promise<Record<string, string>> {
+  const ids: Record<string, string> = {};
+  for (const task of tasks) {
+    const taskId = randomUUID();
+    ids[task.name] = taskId;
+    await device.send('CreateTask', { taskId, listId, name: task.name });
+    if (task.repeatsFrom) {
+      const rule = { kind: 0, startsOn: isoDate(task.repeatsFrom), days: [], dayOfMonth: 0, interval: task.every ?? 1 };
+      await device.send('SetTaskRecurrence', { taskId, rule });
+    }
+    if (task.until) {
+      await device.send('SetTaskDueDate', { taskId, dueOn: isoDate(task.until) });
+    }
+    if (task.tickedToday) {
+      await device.send('CompleteOccurrence', { taskId, day: isoDate(utcToday()), completed: true });
+    }
+    if (task.completed) {
+      await device.send('CompleteTask', { taskId });
+    }
+    if (task.deleted) {
+      await device.send('DeleteTask', { taskId });
+    }
+  }
+  return ids;
 }

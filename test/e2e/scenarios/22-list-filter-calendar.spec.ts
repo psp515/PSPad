@@ -1,7 +1,9 @@
 import { expect, test } from '../fixtures/accounts';
-import { createArea } from '../helpers/areas';
+import { anotherDevice, idOf } from '../helpers/api';
+import { areaSubtitle, createArea } from '../helpers/areas';
+import { createGoalOn, linkTasksOn } from '../helpers/goals';
 import { addDays, isoDate, monthButton, utcToday } from '../helpers/dates';
-import { createList, listRowNames, monthDay, openList, pickListFilter, showListAs, sortListBy } from '../helpers/lists';
+import { closeFilterChip, createList, listRowNames, monthDay, openList, pickListFilter, showListAs, sortListBy } from '../helpers/lists';
 import { pickFromPropertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, openTask, taskRow } from '../helpers/tasks';
@@ -13,6 +15,7 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
   const zebra = `Zebra crate ${account.suffix}`;
   const apple = `Apple boxes ${account.suffix}`;
   const plain = `Plain chore ${account.suffix}`;
+  const goal = `Move out ${account.suffix}`;
   const tomorrow = addDays(utcToday(), 1);
 
   await signIn(page, account);
@@ -50,4 +53,45 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
   await expect(detail.locator('.pspad-row')).toHaveCount(2);
   await detail.locator('.pspad-row', { hasText: apple }).getByRole('checkbox').first().click();
   await expect(detail.locator('.pspad-row')).toHaveCount(1);
+
+  const filter = page.getByRole('button', { name: /^Filter/ }).last();
+  await test.step('the month counts the undated tasks, and Show them in List lists just those', async () => {
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await expect(page.getByText('1 task has no date.')).toBeVisible();
+    await page.getByRole('button', { name: 'Show them in List' }).click();
+    await expect(page.getByText(plain)).toBeVisible();
+    await expect(page.getByText(zebra)).toHaveCount(0);
+    await expect(filter).toHaveText(/^Filter\s*1$/);
+  });
+
+  const device = await anotherDevice(page);
+  await test.step('filter chips toggle, each active group is one closable chip, and Clear keeps the sort', async () => {
+    const goalId = await createGoalOn(device, goal);
+    await linkTasksOn(device, goalId, [await idOf(device, 'todotasks', plain)]);
+    await filter.click();
+    const chip = (name: string) => page.getByRole('button', { name, exact: true });
+    await expect(chip(goal)).toBeVisible();
+    await chip('Starred').click();
+    await expect(filter).toHaveText(/^Filter\s*2$/);
+    await chip('Starred').click();
+    await expect(filter).toHaveText(/^Filter\s*1$/);
+    await chip(goal).click();
+    await chip('High').click();
+    await expect(filter).toHaveText(/^Filter\s*3$/);
+    await filter.click();
+    await expect(chip('Starred')).toHaveCount(0);
+    await expect(page.getByText(goal, { exact: true })).toBeVisible();
+    await expect(page.getByText('No date', { exact: true })).toBeVisible();
+    await expect(page.getByText('No tasks match.')).toBeVisible();
+    await expect(areaSubtitle(page)).toHaveText(`${area} · 2 open tasks`);
+
+    await closeFilterChip(page, 'High');
+    await expect(filter).toHaveText(/^Filter\s*2$/);
+    await expect(page.getByText(plain)).toBeVisible();
+    await page.getByRole('button', { name: 'Clear', exact: true }).first().click();
+    await expect(filter).toHaveText('Filter');
+    await expect(page.getByRole('button', { name: /^Name/ }).last()).toBeVisible();
+    await expect(listRowNames(page).filter({ visible: true })).toHaveText([plain, zebra]);
+  });
+  await device.dispose();
 });

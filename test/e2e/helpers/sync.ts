@@ -26,3 +26,9 @@ export const pushedWithin = { timeout: 20_000 };
 export function liveStreamOpened(page: Page) {
   return page.waitForResponse(response => response.url().endsWith('/api/live') && response.status() === 200, { timeout: 30_000 });
 }
+
+export async function settled(page: Page, edit: () => Promise<void>) {
+  const pulled = page.waitForResponse(response => response.url().includes('/api/sync') && response.ok(), pushedWithin);
+  await edit();
+  await pulled;
+}

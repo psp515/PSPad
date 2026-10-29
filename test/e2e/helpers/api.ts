@@ -62,3 +62,34 @@ export async function sendCommand(
   const [first] = (await response.json()) as CommandResponse[];
   return first;
 }
+
+export type Device = {
+  userId: string;
+  send: (type: string, payload: Record<string, unknown>) => Promise<void>;
+  documents: (collection: string) => Promise<Array<Record<string, unknown>>>;
+  dispose: () => Promise<void>;
+};
+
+export async function anotherDevice(page: Page): Promise<Device> {
+  const api = await apiFor(await bearerToken(page));
+  const { userId } = await me(api);
+  return {
+    userId,
+    send: async (type, payload) => {
+      const result = await sendCommand(api, type, { userId, ...payload });
+      if (!result.accepted) {
+        throw new Error(`${type} rejected: ${result.rejection}`);
+      }
+    },
+    documents: async collection => (await fullSync(api)).documents[collection] ?? [],
+    dispose: () => api.dispose(),
+  };
+}
+
+export async function idOf(device: Device, collection: string, name: string): Promise<string> {
+  const found = (await device.documents(collection)).find(doc => (doc['name'] ?? doc['Name']) === name);
+  if (!found) {
+    throw new Error(`no ${collection} document named ${name}`);
+  }
+  return String(found['id'] ?? found['Id']);
+}
