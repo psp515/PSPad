@@ -11,10 +11,10 @@ public static partial class BehaviourGuard
     private static partial Regex FakeStore();
 
     public static void AssertNoShapeAssertions(string testProjectName) =>
-        AssertNoMatch(ProjectDirectory(testProjectName), ShapeAssertion(), "asserts shape, not behaviour (ADR-0079)");
+        AssertNoMatch(ProjectDirectory(testProjectName), ShapeAssertion(), "asserts shape, not behaviour (ADR-0080)");
 
     public static void AssertNoFakeStores(string testProjectName) =>
-        AssertNoMatch(ProjectDirectory(testProjectName), FakeStore(), "drives a handler through a fake store; test it through the API (ADR-0079)");
+        AssertNoMatch(ProjectDirectory(testProjectName), FakeStore(), "drives a handler through a fake store; test it through the API (ADR-0080)");
 
     static string ProjectDirectory(string testProjectName)
     {

@@ -53,7 +53,7 @@ client's resulting behaviour, never the outgoing request's shape.
 Integration tests send commands with `PSPad.Api.Tests.Commands.Commands`
 (`SignInAsync`, `TrySendAsync`, `SendAsync`, `SyncedAsync`).
 
-Migration record: `specs/behaviour-tests-design.md`; decision ADR-0079.
+Migration record: `specs/behaviour-tests-design.md`; decision ADR-0080.
 
 **End-to-end** — Playwright in `test/e2e/`, outside the .NET solution, driving
 the real application in Chromium against the compose stack with one Keycloak
@@ -157,7 +157,7 @@ integration tests start their own MongoDB. They never touch the compose stack.
 module edges (`Statistics` → `Tasks`, `Sharing` → `Tasks`), Presentation
 references `Abstractions` only.
 
-`BehaviourGuard` (ADR-0079), called from a `BehaviourGuardTests` class in every
+`BehaviourGuard` (ADR-0080), called from a `BehaviourGuardTests` class in every
 test project, scans the test sources and fails on shape assertions (`ClassList`,
 `ClassName`, `.Markup`, `MarkupMatches`, CSS-class selectors in `Find` and
 `QuerySelector`) in all projects, and on `FakeDocumentStore`, `FakeUnitOfWork`
