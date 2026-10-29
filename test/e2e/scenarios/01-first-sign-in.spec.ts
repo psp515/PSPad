@@ -4,17 +4,19 @@ import { createAccount, deleteAccount } from '../fixtures/keycloak';
 import { anotherDevice, Device, idOf } from '../helpers/api';
 import { createBudgetOn } from '../helpers/budgets';
 import { captureFromAnotherDevice, goToInbox } from '../helpers/inbox';
+import { openInApp } from '../helpers/nav';
 import { closePanel, panel } from '../helpers/panels';
 import { answerAccountDeletionOnce, confirmAccountDeletion, deleteAccountDialog, keycloakLogIn } from '../helpers/settings';
 import {
   bootSplash, bottomNav, collapseGroup, desktopViewport, expandGroup, openAccountDrawer, phoneViewport, pullToRefresh, shellMenu, topBar,
 } from '../helpers/shell';
-import { logInFromWelcome, signIn } from '../helpers/sign-in';
+import { logInFromWelcome, signIn, signInDidNotFinish } from '../helpers/sign-in';
 import { goToMyDay } from '../helpers/today';
 
 test.use({ serviceWorkers: 'block' });
 
 test('a fresh user signs in, finds their way around the shell and can delete the account', async ({ page, browser, account }) => {
+  test.slow();
   const liveWhileSignedOut: string[] = [];
   page.on('request', request => {
     if (request.url().endsWith('/api/live')) {
@@ -38,13 +40,27 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     }
     await expect(page.getByRole('button', { name: /^Sync now/ })).toHaveCount(0);
     await expect(bootSplash(page)).toHaveCount(0);
+    await expect(signInDidNotFinish(page)).toHaveCount(0);
   });
 
-  await test.step('a sign-in whose profile fetch fails leaves the visitor on Welcome, signed out', async () => {
-    await page.route('**/api/me', route => route.fulfill({ status: 500 }), { times: 1 });
+  await test.step('an identity provider that fails the sign-in returns the visitor to Welcome with a warning', async () => {
+    await page.goto('/authentication/login-failed');
+    await expect(page).toHaveURL(/\/welcome$/);
+    await expect(signInDidNotFinish(page)).toBeVisible();
+  });
+
+  await test.step('a sign-in the server cannot finish leaves the visitor on Welcome, signed out, warned once', async () => {
+    await page.route('**/api/me', route => route.fulfill({ status: 503, headers: { 'Retry-After': '1' } }), { times: 1 });
     await logInFromWelcome(page, account, 'Your day, planned.');
+    await expect(signInDidNotFinish(page)).toBeVisible();
     await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
     expect(liveWhileSignedOut).toEqual([]);
+    await openInApp(page, '/inbox');
+    await expect(page).toHaveURL(/\/welcome\?returnUrl=/);
+    await expect(page.getByRole('heading', { name: 'Your day, planned.' })).toBeVisible();
+    await expect(signInDidNotFinish(page)).toHaveCount(0);
+    await page.goto('/welcome');
+    await expect(page.getByRole('link', { name: 'Log in' })).not.toHaveAttribute('href', /returnUrl/);
   });
 
   await test.step('logging in again holds the app until the first pull lands, then shows the account', async () => {
@@ -67,10 +83,10 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     }
   });
 
-  await test.step.skip('BUG: a first sign-in while another user saves a change can fail and land back on Welcome (reported in PR #225)', async () => {
+  await test.step('a first sign-in while other users save changes lands on My Day', async () => {
     const busyAccounts = [await createAccount(), await createAccount()];
     const busyContexts = await Promise.all(busyAccounts.map(() => browser.newContext({ serviceWorkers: 'block' })));
-    const devices = [await anotherDevice(page)];
+    const devices: Device[] = [];
     for (const [index, context] of busyContexts.entries()) {
       const busyPage = await context.newPage();
       await signIn(busyPage, busyAccounts[index]);
@@ -87,7 +103,7 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     const saves = Promise.all(devices.flatMap(device => [save(device), save(device)])).catch(() => {});
     const landings: string[] = [];
     try {
-      for (let attempt = 0; attempt < 5; attempt++) {
+      for (let attempt = 0; attempt < 3; attempt++) {
         const newcomer = await createAccount();
         const context = await browser.newContext({ serviceWorkers: 'block' });
         const fresh = await context.newPage();

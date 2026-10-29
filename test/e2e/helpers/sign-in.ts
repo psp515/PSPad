@@ -17,3 +17,7 @@ export async function logInFromWelcome(page: Page, account: Account, landing?: s
   }
   await expect(page.getByRole('button', { name: /^Sync now/ }).first()).toBeVisible({ timeout: 30_000 });
 }
+
+export function signInDidNotFinish(page: Page) {
+  return page.getByText('Signing in did not finish. Log in again to retry.');
+}

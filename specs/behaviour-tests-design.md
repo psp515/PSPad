@@ -4,7 +4,6 @@ Status: migration done 2026-10-29; round 2 done 2026-10-29 (R1–R3): 2206 unit,
 
 Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225):
 
-- 01-first-sign-in: a first sign-in while another user saves a change can fail and land back on Welcome.
 - 01-first-sign-in: signing in from Welcome ignores the return address.
 - 01-first-sign-in: coming back from the fresh sign-in does not reopen the delete dialog.
 - 01-first-sign-in: deleting the account signs out before it leaves Settings, so Welcome keeps Settings as the return address.

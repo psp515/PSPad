@@ -829,3 +829,20 @@ Class level: `Class` (rows dropped) → covering test or scenario.
 ## 5. Skipped BUG steps
 
 Bugs found during the migration are listed in `specs/behaviour-tests-design.md` (skipped `BUG:` steps). Not duplicated here.
+
+## 6. Sign-in fix client tests (2026-10-29)
+
+The first-sign-in fix (aa093a0, 8296286) came from a branch that still had bUnit; its client tests were dropped when it was cherry-picked and are covered here instead.
+
+| Old test (Class.Method) | Verdict | Now covered by / reason |
+|---|---|---|
+| AuthenticationTests.AFailedProfileFetchIsRecordedSoWelcomeCanSaySignInDidNotFinish | moved | 01-first-sign-in.spec.ts › a sign-in the server cannot finish leaves the visitor on Welcome, signed out, warned once |
+| AuthenticationTests.AnIdentityProviderErrorOnTheCallbackIsRecordedAndLandsOnWelcome | moved | 01-first-sign-in.spec.ts › an identity provider that fails the sign-in returns the visitor to Welcome with a warning |
+| AuthenticationTests.ASuccessfulLoginClearsAnEarlierFailure | moved | App.Tests SignInFailureTests.ClearingForgetsAnEarlierFailure; 01-first-sign-in.spec.ts › logging in again holds the app until the first pull lands, then shows the account |
+| WelcomeTests.ItSaysNothingAboutSigningInWhenNoAttemptFailed | moved | 01-first-sign-in.spec.ts › Welcome greets a visitor and keeps where they were going; App.Tests SignInFailureTests.NothingHasFailedBeforeASignInIsAttempted |
+| WelcomeTests.AfterAFailedSignInItSaysSoAndOffersTheLoginAgain | moved | 01-first-sign-in.spec.ts › a sign-in the server cannot finish leaves the visitor on Welcome, signed out, warned once |
+| WelcomeTests.ItShowsTheSignInWarningOnlyOnce | moved | 01-first-sign-in.spec.ts › a sign-in the server cannot finish leaves the visitor on Welcome, signed out, warned once |
+
+kept 0 · moved 6 · dropped 0
+
+The skipped step "BUG: a first sign-in while another user saves a change can fail and land back on Welcome" now runs as 01-first-sign-in.spec.ts › a first sign-in while other users save changes lands on My Day.
