@@ -32,7 +32,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Command pipeline, storage, domain rules, sync, identity, HTTP, containers, statistics | `specs/backend-spec.md` |
 | Client components, layout, pages, theming, navigation | `specs/ui-spec.md` |
 | Adding an aggregate, module boundaries | `specs/modules-spec.md` |
-| Writing or running tests, fixtures, guards | `specs/testing-spec.md`; migration `specs/behaviour-tests-design.md` |
+| Writing or running tests, fixtures, guards | `specs/testing-spec.md`; migration `specs/behaviour-tests-design.md`; record `specs/behaviour-tests-ledger.md` |
 | End-to-end scenarios, Playwright harness, e2e CI job | `specs/e2e-testing-design.md` |
 | Sharing, invites, public snapshots | `specs/sharing-spec.md` |
 | Reference lists | `specs/reference-lists-design.md` |

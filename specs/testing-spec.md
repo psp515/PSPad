@@ -59,7 +59,7 @@ Migration record: `specs/behaviour-tests-design.md`; decision ADR-0080.
 
 **End-to-end** — Playwright in `test/e2e/`, outside the .NET solution, driving
 the real application in Chromium against the compose stack with one Keycloak
-user per test. Whole-scenario journeys only, twenty-two of them, under five
+user per test. Whole-scenario journeys only, thirty-four of them, under five
 minutes. Design, harness and scenario list: `specs/e2e-testing-design.md`.
 `npm test` in that folder runs it; `dotnet test` never sees it. A change to
 what a user can do adds or extends a scenario; a change to markup or copy a
