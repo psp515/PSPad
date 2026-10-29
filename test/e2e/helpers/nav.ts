@@ -26,3 +26,7 @@ export async function goTo(page: Page, target: NavTarget) {
   }
   await expect(page.getByRole('heading', { name: target, exact: true })).toBeVisible();
 }
+
+export async function openInApp(page: Page, path: string) {
+  await page.evaluate(target => (window as unknown as { Blazor: { navigateTo: (url: string) => void } }).Blazor.navigateTo(target), path);
+}

@@ -16,7 +16,7 @@
         @if (IsShared)
         {
             <MudTooltip Text="@SharedTooltip">
-                <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Class="pspad-list-shared" />
+                <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Class="pspad-list-shared" role="img" aria-label="@SharedTooltip" />
             </MudTooltip>
         }
         @if (IsReference)

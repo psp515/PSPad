@@ -48,7 +48,7 @@ else
         {
             try
             {
-                _rows = Sorted(await SnapshotsApi.VisitsAsync(), now);
+                _rows = SnapshotVisitRows.Live(await SnapshotsApi.VisitsAsync(), now);
                 return;
             }
             catch (HttpRequestException)
@@ -56,16 +56,6 @@ else
             }
         }
 
-        _rows = Sorted(await CachedRowsAsync(), now);
+        _rows = SnapshotVisitRows.Live(SnapshotVisitRows.FromCache(await Cache.AllAsync()), now);
     }
-
-    async Task<IReadOnlyList<SnapshotVisitView>> CachedRowsAsync()
-    {
-        var cached = await Cache.AllAsync();
-        return [.. cached.Select(entry => new SnapshotVisitView(
-            entry.Token, entry.Snapshot.Name, entry.Snapshot.ExpiresAt, entry.OpenedAt))];
-    }
-
-    static IReadOnlyList<SnapshotVisitView> Sorted(IReadOnlyList<SnapshotVisitView> rows, DateTimeOffset now) =>
-        [.. rows.Where(row => row.ExpiresAt > now).OrderByDescending(row => row.VisitedAt)];
 }

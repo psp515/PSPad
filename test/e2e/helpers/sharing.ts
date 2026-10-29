@@ -1,39 +1,80 @@
-import { expect, Page } from '@playwright/test';
+import { APIRequestContext, expect, Locator, Page } from '@playwright/test';
+import { listCard } from './areas';
 import { openFabAction, panel } from './panels';
+import { openInApp } from './nav';
+import { syncNow } from './sync';
+
+export type Invite = { link: string; code: string; token: string };
+
+export async function openMembersView(page: Page) {
+  await panel(page).getByRole('option', { name: /^Members/ }).click();
+  await expect(panel(page).getByText(/^People · \d+$/)).toBeVisible();
+}
 
 export async function openListMembers(page: Page) {
   await openFabAction(page, 'Edit list');
-  await panel(page).locator('.pspad-list-members-link').click();
-  await expect(panel(page).locator('.pspad-list-members')).toBeVisible();
+  await openMembersView(page);
+}
+
+export async function openSharedWithMe(page: Page) {
+  await page.getByRole('navigation').getByRole('link', { name: 'Shared with me', exact: true }).first().click();
+  await expect(page.getByRole('heading', { name: 'Shared with me', exact: true })).toBeVisible();
+}
+
+export async function openCardMembers(page: Page, listName: string) {
+  await listCard(page, listName).getByRole('button', { name: 'Actions' }).click();
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
+  await openMembersView(page);
 }
 
 export async function openSharedListMembersFromBoard(page: Page, listName: string) {
-  await page.locator('.pspad-nav').getByRole('link', { name: 'Shared with me' }).click();
-  await expect(page.getByRole('heading', { name: 'Shared with me', exact: true })).toBeVisible();
-  const card = page.locator('.mud-paper').filter({ has: page.locator('.pspad-card-header a', { hasText: listName }) }).first();
-  await card.locator('.pspad-list-menu').getByRole('button').click();
-  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
-  await panel(page).locator('.pspad-list-members-link').click();
-  await expect(panel(page).locator('.pspad-list-members')).toBeVisible();
+  await openSharedWithMe(page);
+  await openCardMembers(page, listName);
 }
 
 export async function openListSnapshots(page: Page) {
   await openFabAction(page, 'Edit list');
-  await panel(page).locator('.pspad-list-snapshots-link').click();
-  await expect(panel(page).locator('.pspad-snapshot-publisher')).toBeVisible();
+  await panel(page).getByRole('option', { name: /^Public snapshots/ }).click();
+  await expect(panel(page).getByText('Link works for')).toBeVisible();
 }
 
-export async function createInvite(page: Page): Promise<{ link: string; code: string }> {
-  await panel(page).locator('.pspad-invite-create').click();
-  const link = await panel(page).locator('.pspad-share-link input').inputValue();
-  const code = (await panel(page).locator('.pspad-invite-code-value').innerText()).trim();
-  return { link, code };
+export async function createInvite(page: Page, button: 'Create invite link' | 'Create link · 30 min' = 'Create invite link'): Promise<Invite> {
+  await panel(page).getByRole('button', { name: button }).click();
+  return readInvite(page);
 }
 
-export async function joinWithCode(page: Page, link: string, code: string) {
-  const url = new URL(link);
-  await page.goto(url.pathname);
+export async function readInvite(page: Page): Promise<Invite> {
+  const shown = panel(page).getByText(/^[A-Z0-9]{3}-[A-Z0-9]{3}$/);
+  await expect(shown).toBeVisible();
+  const link = await panel(page).getByRole('textbox').first().inputValue();
+  const code = (await shown.innerText()).trim().replace('-', '');
+  const token = new URL(link).pathname.split('/').pop()!;
+  return { link, code, token };
+}
+
+export function sharedMarker(card: Locator) {
+  return card.getByRole('img', { name: /^Shared · / });
+}
+
+export function joinButton(page: Page) {
+  return page.getByRole('button', { name: /^Join (list|budget)$/ });
+}
+
+// A join during a running sync can lose the list's rows (PR #225), so a typed join starts from a settled app.
+export async function joinWithCode(page: Page, link: string, code: string, beforeTyping?: () => Promise<void>) {
+  await syncNow(page);
+  await openInApp(page, new URL(link).pathname);
   await expect(page.getByText('Enter the invite code')).toBeVisible();
+  await beforeTyping?.();
   await page.getByLabel('Code').fill(code);
-  await page.locator('.pspad-join-submit').click();
+  await joinButton(page).click();
+}
+
+export async function tryJoin(api: APIRequestContext, kind: 'lists' | 'budgets', token: string, code: string) {
+  const response = await api.post(`/api/${kind}/join`, { data: { token, code } });
+  return response.status();
+}
+
+export function wrongCode(code: string) {
+  return code === 'ZZZ999' ? 'ZZZ998' : 'ZZZ999';
 }
