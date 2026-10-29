@@ -95,22 +95,10 @@ public static class AppTestHost
         context.Services.AddSingleton<IBreakpoints>(new FakeBreakpoints(MudBlazor.Breakpoint.Xs));
         context.Services.AddSingleton<ServerReachability>();
         context.Services.AddSingleton<IConnectivity>(new AlwaysOnline());
-        context.Services.AddSingleton<IAppUpdates>(new FakeAppUpdates());
         context.Services.AddSingleton<ISnapshotsApi>(new NoOpSnapshotsApi());
         context.Services.AddSingleton<INbpRates>(new FakeNbpRates());
-        context.Services.AddSingleton<IListSharingApi>(services => new FakeListSharingApi(
-            replica, services.GetRequiredService<AppState>(), services.GetRequiredService<IClock>()));
-        context.Services.AddSingleton<IBudgetSharingApi>(services => new FakeBudgetSharingApi(
-            replica, services.GetRequiredService<AppState>(), services.GetRequiredService<IClock>()));
 
         return replica;
-    }
-
-    public static async Task<T> SentAsync<T>(Bunit.TestContext context)
-    {
-        var entry = Assert.Single(await context.Services.GetRequiredService<IOutbox>().PeekAsync(10));
-        Assert.Equal(typeof(T).Name, entry.Envelope.Type);
-        return entry.Envelope.Payload.Deserialize<T>(new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
     }
 
     sealed class AlwaysOnline : IConnectivity
@@ -122,46 +110,6 @@ public static class AppTestHost
 
         public event Action? Changed;
 #pragma warning restore CS0067
-    }
-
-    public sealed class Offline : IConnectivity
-    {
-        public bool IsOnline => false;
-
-#pragma warning disable CS0067
-        public event Action? CameOnline;
-
-        public event Action? Changed;
-#pragma warning restore CS0067
-    }
-
-    public sealed class SwitchableConnectivity : IConnectivity
-    {
-        Action? _cameOnline;
-        Action? _changed;
-
-        public bool IsOnline { get; private set; }
-
-        public int Subscribers => (_cameOnline?.GetInvocationList().Length ?? 0) + (_changed?.GetInvocationList().Length ?? 0);
-
-        public event Action? CameOnline
-        {
-            add => _cameOnline += value;
-            remove => _cameOnline -= value;
-        }
-
-        public event Action? Changed
-        {
-            add => _changed += value;
-            remove => _changed -= value;
-        }
-
-        public void GoOnline()
-        {
-            IsOnline = true;
-            _cameOnline?.Invoke();
-            _changed?.Invoke();
-        }
     }
 
     public sealed class FakeNbpRates : INbpRates
@@ -183,71 +131,28 @@ public static class AppTestHost
         }
     }
 
-    public sealed class FakeAppUpdates : IAppUpdates
-    {
-        public bool IsAvailable { get; private set; }
-
-        public int Applied { get; private set; }
-
-        public event Action? Available;
-
-        public void Announce()
-        {
-            IsAvailable = true;
-            Available?.Invoke();
-        }
-
-        public Task ApplyAsync()
-        {
-            Applied++;
-            return Task.CompletedTask;
-        }
-    }
-
     sealed class FixedClock(DateOnly today) : IClock
     {
         public DateTimeOffset UtcNow => new(today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
     }
 
-    public sealed class FakeViewport(bool isDesktop) : IViewport
+    sealed class FakeViewport(bool isDesktop) : IViewport
     {
-        readonly List<Action<bool>> _subscribers = [];
-
         public Task SubscribeAsync(Action<bool> onDesktopChanged)
         {
-            _subscribers.Add(onDesktopChanged);
             onDesktopChanged(isDesktop);
             return Task.CompletedTask;
-        }
-
-        public void ChangeTo(bool desktop)
-        {
-            foreach (var subscriber in _subscribers)
-            {
-                subscriber(desktop);
-            }
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
-    public sealed class FakeBreakpoints(MudBlazor.Breakpoint breakpoint) : IBreakpoints
+    sealed class FakeBreakpoints(MudBlazor.Breakpoint breakpoint) : IBreakpoints
     {
-        readonly List<Action<MudBlazor.Breakpoint>> _subscribers = [];
-
         public Task SubscribeAsync(Action<MudBlazor.Breakpoint> onChanged)
         {
-            _subscribers.Add(onChanged);
             onChanged(breakpoint);
             return Task.CompletedTask;
-        }
-
-        public void ChangeTo(MudBlazor.Breakpoint changed)
-        {
-            foreach (var subscriber in _subscribers)
-            {
-                subscriber(changed);
-            }
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;

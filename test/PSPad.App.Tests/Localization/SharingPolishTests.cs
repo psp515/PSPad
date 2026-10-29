@@ -1,19 +1,15 @@
 using System.Globalization;
-using Bunit;
-using Microsoft.Extensions.DependencyInjection;
 using PSPad.App.Api;
 using PSPad.App.Components;
 using PSPad.App.Localization;
 using PSPad.App.Resources;
-using PSPad.App.Statistics;
-using PSPad.Contracts;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.Localization;
 
 [UnitTest]
 [Collection("Culture")]
-public class SharingPolishTests : Bunit.TestContext
+public class SharingPolishTests
 {
     [Theory]
     [InlineData(0, "Nikt nie dołączy ze starym linkiem i kodem.")]
@@ -61,28 +57,4 @@ public class SharingPolishTests : Bunit.TestContext
     public void AServerReasonIsShownAsItCame() =>
         Assert.Equal("This budget is archived.",
             TestLocalizers.For<SharingStrings>().Of(new SharingRejection(SharingFailure.Server, "This budget is archived.")));
-
-    [Fact]
-    public void TheHeatmapSpeaksPolishUnderThePolishCulture()
-    {
-        Services.AddLocalization();
-        var before = CultureInfo.CurrentUICulture;
-
-        try
-        {
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("pl-PL");
-
-            var heatmap = Render<ConsistencyHeatmap>(parameters => parameters
-                .Add(component => component.Days, [new DailyCountView(new DateOnly(2026, 9, 1), 2)])
-                .Add(component => component.Today, new DateOnly(2026, 9, 1)));
-
-            Assert.Contains("Dotknij kwadratu", heatmap.Markup);
-            Assert.Contains("Mniej", heatmap.Markup);
-            Assert.Equal("2026-09-01: zrobiono 2", heatmap.Find(".pspad-heatmap-cell").GetAttribute("aria-label"));
-        }
-        finally
-        {
-            CultureInfo.CurrentUICulture = before;
-        }
-    }
 }

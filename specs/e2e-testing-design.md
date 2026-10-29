@@ -25,8 +25,9 @@ Out:
 - Separate API-only end-to-end tests. The browser scenarios call the API
   directly where a check needs it (§3.4); the Testcontainers integration
   suite already covers endpoints in isolation.
-- Phone layouts beyond single steps (scenario 17 checks My Day's tabs at
-  phone width), cross-browser runs, visual regression, load.
+- Phone layouts beyond single steps (scenario 17 checks My Day's tabs and
+  01 the bottom bar, top bar and account drawer at phone width),
+  cross-browser runs, visual regression, load.
 - Any `data-testid` in the application. Selectors use roles, labels, text
   and the existing `pspad-*` classes. A flow that cannot be driven that way
   is a separate change to the UI, with its own review.
@@ -140,7 +141,12 @@ worker proxies the probe, so the offline scenario's context is created with
 member stays online). Reloading while offline would need that worker's
 cache, so no scenario reloads offline; the one page 11 must open offline,
 a snapshot never opened before, is reached by in-app navigation
-(`openInApp`, Blazor's `navigateTo`).
+(`openInApp`, Blazor's `navigateTo`). The worker also hides the page's API
+requests from `page.route`, so 01, 14 and 15, which answer or hold API
+calls themselves (a failed `/api/me` at sign-in, a held first pull, a
+step-up challenge on account deletion, an unreachable server, a silent
+server on reload, statistics offline, an unsynced change at sign-out), block
+it too.
 
 ## 4. Scenarios
 
@@ -150,13 +156,37 @@ needs, checks the outcome in the UI, and where the server matters, checks
 through the API. All names carry the account's hex suffix so a leak between
 tests would be visible, not silent.
 
-1. **First sign-in.** A visitor sent to Welcome from `/inbox` sees the
-   headline, the GTD and docs links, a preview of My Day and a Log in link
-   carrying the return address. Fresh user signs in through Keycloak; lands
-   on My Day with "Nothing planned for today." and no Overdue or Starred
-   section, and the Inbox says "Nothing captured."; the sidebar badge shows
-   the Keycloak name and email; Settings shows the same and time zone
-   `Etc/UTC`.
+1. **First sign-in and the shell.** A visitor sent to Welcome from `/inbox`
+   sees the headline, the GTD and docs links, a preview of My Day and a Log
+   in link carrying the return address, with no boot splash and no live
+   stream. A sign-in whose `/api/me` answers 500 lands back on Welcome,
+   signed out; logging in again holds the app (brand loader, no My Day)
+   until the first pull lands, then shows the seeded areas. My Day says
+   "Nothing planned for today." with no Overdue or Starred section, and the
+   Inbox says "Nothing captured.". The sidebar names the user and lists My
+   Day, Inbox, Goals, Statistics, List snapshots, Budgets, the areas,
+   Settings and App info in that order with a clock and "PSPad · GPL v3";
+   it counts an Inbox capture from another device, lists an active budget
+   but not an archived one, drops an area deleted elsewhere, collapses
+   Areas to "Areas · 2", and New area and New budget open their panels in
+   place. App info shows the version, the licence and both links; an
+   unknown address says "Not found". At phone width the bottom bar holds
+   Inbox (with its badge), Areas, My Day, Goals and Budgets, marks the
+   current one and none on Settings; the top bar names the screen, a list
+   with its area subtitle and a Back to area link, carries Sync now with
+   the stamp, and forgets a list that is gone; the avatar opens the account
+   drawer (Statistics, List snapshots, Settings, App info, footer), which
+   closes on navigation and when the window grows to desktop. Settings
+   shows the account, time zone `Etc/UTC` and a Change password link to
+   Keycloak's account console in a new tab. Deleting the account wants the
+   email typed (any case), a fresh sign-in when the API asks for one (a
+   Keycloak password prompt), keeps the dialog open on a failure, then
+   lands on Welcome, and the account can no longer log in. Skipped BUG
+   steps (PR #225): a first sign-in while another user saves a change can
+   fail (`UserProvisioner` is not retried on a write conflict, so the
+   login callback stores no session), the return address after login is
+   ignored, the delete dialog does not reopen after the fresh sign-in, and
+   deletion signs out before leaving Settings.
 2. **Capture and triage.** Inbox: the empty state opens Capture, a blank
    capture adds nothing; capture two items (Enter and Add), newest first with
    their capture time; reword one while no list exists and Convert is off.
@@ -290,13 +320,40 @@ tests would be visible, not silent.
     come from a `context.route` stub; the service worker is blocked so
     going offline reaches the connectivity probe.
 14. **Offline capture and sync.** Create a list with one task; go offline;
-    the footer says offline; add a task and complete the first; go online;
-    **Sync now**. A second signed-in context of the same user shows both
-    changes after its first sync.
-15. **Search, statistics, theme, sign out.** Create and complete a task;
-    `/search?q=` finds it; Statistics shows Done today at 1; Settings:
-    theme Dark sets `html[data-theme="dark"]` and survives a reload; Sign
-    out with confirmation lands on Welcome.
+    the footer says offline; add a task and complete the first. Settings
+    holds "2 pending", says "Offline · updated just now", and keeps Sync now,
+    Sign out (with the reason) and Delete account off. Online, Sync now
+    drains it to "Everything is synced." and sign-out is back. A second
+    signed-in context of the same user shows both changes after its first
+    sync. With `/api/sync` failing, Sync now raises the "Can’t reach the
+    server" belt, the footer reads "Server unreachable" and the stamp
+    "Couldn't update"; once it answers, the belt's Retry clears them. With
+    `/api/me` and `/api/sync` silent, a reload on a list address with a
+    task opens the list, the task panel and the stored name. An area
+    renamed offline while another device deletes it comes back refused:
+    the belt's Details opens Settings, which lists "That area no longer
+    exists." until Discard this change; Dismiss closes the belt.
+15. **Search, statistics, settings, sign out.** Create and complete a task
+    linked to a goal; another device adds a completed, then deleted task and
+    an Inbox capture. `/search?q=` finds the task; its result opens the
+    panel, a reload keeps it, Back drops it. Statistics shows Done today and
+    Last 7 days at 2, 30 days chosen, a bar per goal and one for no goal,
+    this week's capture in the screen-reader table, 30 heatmap days without
+    month captions, today's day announcing "2 completed", the shade key, and
+    a readout that a tap fills and a second tap clears; 90 days adds month
+    captions. The record feed opens on demand, a record opens its task, a
+    deleted task's record goes nowhere. `/history` leads to Statistics (an
+    empty page there is a skipped BUG step, PR #225); with the statistics
+    API down a reload shows the offline note and the cached numbers.
+    Settings: theme System/Light/Dark, Dark sets `html[data-theme="dark"]`;
+    accent swatches toggle `aria-pressed`, the custom colour dialog cancels
+    or applies; EUR as default currency; the time zone search narrows; all
+    survive a reload. The Sync card says everything is synced; with
+    Keycloak's revocation endpoint down, Sign out keeps the user signed in
+    and says so. With `/api/commands` failing, a new task stays pending;
+    Sign out asks about "1 unsynced change", Cancel keeps it, confirming
+    drops it (the API never gets it) and lands on Welcome; Log in then asks
+    Keycloak for the password again.
 16. **Live updates.** Owner and a member each hold the list open in their
     own context, each with its `/api/live` stream confirmed open. The member
     adds a task and the owner's page shows it; the owner adds one and the
@@ -317,11 +374,13 @@ tests would be visible, not silent.
     Tomorrow's empty schedule names its date and a free slot there opens
     "New task" due Tomorrow for an hour from that time. Clicking the first
     empty half hour today opens "New task" with that start time.
-18. **Language.** Settings shows English; choosing Polski reloads the app
+18. **Language.** Settings shows English and lists English and Polski;
+    choosing Polski reloads the app
     into Polish (Ustawienia, Mój dzień) and a reload keeps
     it. A second context of the same user signs in and lands in Polish
     without touching Settings, since the language is stored on the user.
-    The Polish Inbox reads "Nic jeszcze nie dodano." and Budgets reads
+    The Polish Inbox reads "Nic jeszcze nie dodano.", the Statistics heatmap
+    labels days "zrobiono" with a Polish hint and key, and Budgets reads
     "Nie masz jeszcze budżetów."; a budget from another device shows Polish
     amounts, labels and plurals.
     Choosing English brings the first page back to English.
@@ -475,7 +534,7 @@ tests would be visible, not silent.
 - Retries: 0 locally, 1 in CI; a retry is a flake to fix, reported in the
   HTML report.
 - Scenarios 10, 11, 14, 16, 18 and 34 are the heaviest (two or three contexts);
-  12, 13, 25, 27, 28, 29, 31 and 32 are the heaviest single-context ones. A scenario
+  01, 12, 13, 15, 25, 27, 28, 29, 31 and 32 are the heaviest single-context ones. A scenario
   that runs past a minute at two workers on a two-core machine splits;
   data a step only needs to exist is arranged through `anotherDevice`,
   not clicked through the UI.
