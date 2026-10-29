@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '../fixtures/accounts';
 import { createAccount, deleteAccount } from '../fixtures/keycloak';
-import { anotherDevice, idOf } from '../helpers/api';
+import { anotherDevice, Device, idOf } from '../helpers/api';
 import { createBudgetOn } from '../helpers/budgets';
 import { captureFromAnotherDevice, goToInbox } from '../helpers/inbox';
 import { closePanel, panel } from '../helpers/panels';
 import { answerAccountDeletionOnce, confirmAccountDeletion, deleteAccountDialog, keycloakLogIn } from '../helpers/settings';
 import {
-  bootSplash, bottomNav, collapseGroup, desktopViewport, expandGroup, openAccountDrawer, phoneViewport, shellMenu, topBar,
+  bootSplash, bottomNav, collapseGroup, desktopViewport, expandGroup, openAccountDrawer, phoneViewport, pullToRefresh, shellMenu, topBar,
 } from '../helpers/shell';
 import { logInFromWelcome, signIn } from '../helpers/sign-in';
 import { goToMyDay } from '../helpers/today';
@@ -68,19 +68,36 @@ test('a fresh user signs in, finds their way around the shell and can delete the
   });
 
   await test.step.skip('BUG: a first sign-in while another user saves a change can fail and land back on Welcome (reported in PR #225)', async () => {
-    const busy = await anotherDevice(page);
+    const busyAccounts = [await createAccount(), await createAccount()];
+    const busyContexts = await Promise.all(busyAccounts.map(() => browser.newContext({ serviceWorkers: 'block' })));
+    const devices = [await anotherDevice(page)];
+    for (const [index, context] of busyContexts.entries()) {
+      const busyPage = await context.newPage();
+      await signIn(busyPage, busyAccounts[index]);
+      devices.push(await anotherDevice(busyPage));
+    }
     let saving = true;
-    const saves = (async () => {
+    const save = async (device: Device) => {
       while (saving) {
-        await busy.send('CreateArea', { areaId: randomUUID(), name: `Noise ${account.suffix}`, position: 9 });
+        await device.send('CreateArea', { areaId: randomUUID(), name: `Noise ${account.suffix}`, position: 9 })
+          .catch(() => {});
+        await new Promise(resolve => setTimeout(resolve, 350));
       }
-    })();
+    };
+    const saves = Promise.all(devices.flatMap(device => [save(device), save(device)])).catch(() => {});
+    const landings: string[] = [];
     try {
       for (let attempt = 0; attempt < 5; attempt++) {
         const newcomer = await createAccount();
         const context = await browser.newContext({ serviceWorkers: 'block' });
+        const fresh = await context.newPage();
         try {
-          await signIn(await context.newPage(), newcomer);
+          await fresh.goto('/');
+          await fresh.getByRole('link', { name: 'Log in' }).click();
+          await keycloakLogIn(fresh, newcomer);
+          await expect(fresh.getByRole('heading', { name: 'My Day' }).or(fresh.getByRole('heading', { name: 'Your day, planned.' })))
+            .toBeVisible({ timeout: 30_000 });
+          landings.push(new URL(fresh.url()).pathname);
         } finally {
           await context.close();
           await deleteAccount(newcomer);
@@ -89,8 +106,11 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     } finally {
       saving = false;
       await saves;
-      await busy.dispose();
+      await Promise.all(devices.map(device => device.dispose()));
+      await Promise.all(busyContexts.map(context => context.close()));
+      await Promise.all(busyAccounts.map(deleteAccount));
     }
+    expect(landings.filter(path => path.startsWith('/welcome'))).toEqual([]);
   });
 
   await test.step.skip('BUG: signing in from Welcome ignores the return address (reported in PR #225)', async () => {
@@ -181,6 +201,9 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     await expect(topBar(page).getByRole('button', { name: /^Sync now\. Updated/ })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'My Day', level: 1 })).toBeHidden();
     await expect(shellMenu(page).getByRole('link', { name: 'Work', exact: true })).toHaveCount(0);
+    const pulled = page.waitForRequest(request => request.url().includes('/api/sync'));
+    await pullToRefresh(page);
+    await pulled;
 
     await bottomNav(page).getByRole('link', { name: 'Areas' }).click();
     await expect(bottomNav(page).getByRole('link', { name: 'Areas' })).toHaveAttribute('aria-current', 'page');
@@ -255,7 +278,7 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     await expect(dialog.getByRole('button', { name: 'Delete account' })).toBeDisabled();
   });
 
-  await test.step('a failed deletion keeps the dialog open, and a deleted account is gone from Keycloak too', async () => {
+  await test.step('a failed deletion keeps the dialog open, and a deletion Keycloak could not finish says an administrator is needed', async () => {
     const dialog = await deleteAccountDialog(page);
     await expect(dialog.getByRole('button', { name: 'Delete account' })).toBeDisabled();
     await dialog.getByLabel('Email').fill(account.email);
@@ -264,7 +287,13 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     await expect(dialog).toContainText('Something went wrong.');
     await expect(dialog.getByRole('button', { name: 'Delete account' })).toBeEnabled();
 
+    await page.route('**/api/account', async route => {
+      const response = await route.fetch();
+      await route.fulfill({ response, json: { keycloakRemoved: false } });
+    }, { times: 1 });
     await confirmAccountDeletion(page);
+    await expect(dialog).toContainText('Your data is gone. Removing your sign-in still needs an administrator.');
+    await dialog.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByRole('heading', { name: 'Your day, planned.' })).toBeVisible();
     await expect(page).toHaveURL(/\/welcome/);
   });

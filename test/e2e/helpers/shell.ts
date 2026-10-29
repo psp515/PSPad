@@ -5,7 +5,7 @@ export const desktopViewport = { width: 1280, height: 800 };
 
 export function shellMenu(page: Page) {
   return page.getByRole('complementary')
-    .filter({ has: page.locator('a[href="/app-info"]') })
+    .filter({ has: page.getByRole('link', { name: /^(App info|O aplikacji)$/ }) })
     .filter({ visible: true });
 }
 
@@ -40,4 +40,15 @@ export async function collapseGroup(page: Page, group: 'areas' | 'budgets') {
 
 export async function expandGroup(page: Page, group: 'areas' | 'budgets') {
   await shellMenu(page).getByRole('button', { name: `Expand ${group}`, exact: true }).click();
+}
+
+export async function pullToRefresh(page: Page) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 200, y: 100 }] });
+  for (const y of [150, 200, 250, 300]) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 200, y }] });
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.detach();
 }
