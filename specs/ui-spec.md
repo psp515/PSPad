@@ -1622,6 +1622,9 @@ lands on the budget. `InviteLinkCard` is now the list wrapper over
 | `?item={itemId}`, `?item=new&list={listId}` | reference item detail overlay, on any of the above |
 
 **Signed-out visitors land on `/welcome`**, not a bare login redirect.
+A login callback that could not capture a session (token exchange or
+`/api/me` failed) leaves `SignInFailure` set, and `/welcome` shows a warning
+`MudAlert` that sign-in did not finish above Log in, which retries it.
 Sign-out ends the Keycloak session directly rather than only clearing local
 state. The boot splash is held — no application chrome renders — until the
 first screen is ready to draw: the signed-in shell once its data is loaded,

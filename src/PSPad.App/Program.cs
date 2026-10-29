@@ -50,6 +50,7 @@ builder.Services.AddSingleton(services => new TokenRefresher(
 builder.Services.AddSingleton(new KeycloakTokenRevoker(
     new HttpClient { Timeout = stalledRequestLimit }, keycloakAuthority, keycloakClientId));
 builder.Services.AddScoped<SessionBootstrapper>();
+builder.Services.AddSingleton<SignInFailure>();
 
 builder.Services.AddScoped<IRemoteAuthenticationService<RemoteAuthenticationState>>(services =>
     services.GetServices<AuthenticationStateProvider>()

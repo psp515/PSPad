@@ -642,6 +642,20 @@ the token's name differs from the stored one (`MeEndpoints` issues it on
 every `/api/me` call), so a Keycloak profile change picks up on next
 sign-in with no migration.
 
+`UserProvisioner` writes outside `CommandDispatcher`, so it applies the same
+conflict rule itself (`adr/0063`): provisioning and the time zone, language
+and display-name writes run through `ConflictRetry`, which re-runs the whole
+load-decide-commit on a `ConcurrencyConflictException` with the dispatcher's
+jittered pause, up to five attempts. Every commit bumps the global
+`counters/events` sequence, so any other user's concurrent save can make a
+first sign-in's transaction hit MongoDB's transient write conflict; two tabs
+provisioning the same subject collide on the user's `_id`, and the retry
+reloads, sees `provisionedAt` and returns the existing user. Past the last
+attempt the `/api/me*` endpoints answer `503` with `Retry-After: 1`
+(`RetryLaterOnConflict`), never a bare `500`. The client's login callback
+records a failed session capture in `SignInFailure`, and `/welcome` then
+says sign-in did not finish above its Log in button.
+
 **A durable local session, not the live access token, gates whether the
 app opens.** Two different questions were previously conflated: "who is
 this device's user" (answerable offline) and "may I call the API right
@@ -806,8 +820,8 @@ directly in `PSPad.Api`:
 | `GET` | `/api/statistics/records?before=&limit=` | The statistics feed, newest first. `limit` clamps to 1..200, default 50 |
 | `GET` | `/api/statistics/overview?days=` | Tiles and the five chart series. `days` is 30, 90 or 365, default 30 |
 | `GET` | `/api/money/nbp-rate?currency=&date=` | NBP table A mid rate for one currency: the last one on or before `date` (7-day lookback). `200 NbpRateView(Currency, Rate, EffectiveDate)`; `404` for an unknown currency, a date before 2002-01-02, no rate or an NBP 4xx; `502` when NBP fails (5xx, network, bad JSON) or takes over 5 s. PLN answers 1 without calling NBP. Successes cached in memory per (code, date): 24 h for past dates, 1 h otherwise. Online-only, not a command (`adr/0059`) |
-| `GET` | `/api/me` | Current user; provisions on first call, heals display name |
-| `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only) |
+| `GET` | `/api/me` | Current user; provisions on first call, heals display name. `503` with `Retry-After` when write conflicts outlast five attempts (§6) |
+| `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only). `503` with `Retry-After` as for `/api/me` |
 | `DELETE` | `/api/account` | Delete the caller's account: every Mongo document scoped to their `userId`, then their Keycloak user. Needs a sign-in from the last 5 minutes, else `401` step-up challenge (`adr/0072`). Not a command — see §6 |
 | `POST` | `/api/lists/{id}/snapshots` | Owner only. Publish a frozen copy; `{expiresAt}` → `{id, token, expiresAt}`. Online-only, like `/api/me/timezone` (`adr/0056`) |
 | `GET` | `/api/lists/{id}/snapshots` | Owner only. That list's active (unexpired) snapshots |

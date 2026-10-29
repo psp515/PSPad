@@ -10,7 +10,7 @@ namespace PSPad.Api.Commands;
 
 public sealed class CommandDispatcher(IServiceProvider services, ILogger<CommandDispatcher> logger)
 {
-    public const int MostAttempts = 5;
+    public const int MostAttempts = ConflictRetry.MostAttempts;
 
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -87,21 +87,14 @@ public sealed class CommandDispatcher(IServiceProvider services, ILogger<Command
 
         var method = handler.GetType().GetMethod(nameof(ICommandHandler<ICommand>.HandleAsync))!;
 
-        for (var attempt = 1; ; attempt++)
+        try
         {
-            try
-            {
-                return await (Task<CommandResult>)method.Invoke(handler, [command, ct])!;
-            }
-            catch (ConcurrencyConflictException) when (attempt < MostAttempts)
-            {
-                // Jittered so requests that collided once do not retry in lockstep and collide again.
-                await Task.Delay(Random.Shared.Next(10, 40) * attempt, ct);
-            }
-            catch (ConcurrencyConflictException)
-            {
-                return CommandResult.Rejected("Someone else changed this at the same time. Try again.");
-            }
+            return await ConflictRetry.RunAsync(
+                () => (Task<CommandResult>)method.Invoke(handler, [command, ct])!, ct);
+        }
+        catch (ConcurrencyConflictException)
+        {
+            return CommandResult.Rejected("Someone else changed this at the same time. Try again.");
         }
     }
 }

@@ -1,4 +1,5 @@
 using PSPad.Abstractions;
+using PSPad.Api.Commands;
 using PSPad.Module.Identity;
 using PSPad.Module.Identity.Provisioning;
 using PSPad.Module.Tasks.Areas;
@@ -16,7 +17,11 @@ public sealed class UserProvisioner(
     readonly IDocumentStore<Area> _areas = areas;
     readonly IDocumentStore<Inbox> _inboxes = inboxes;
 
-    public async Task<User> EnsureAsync(
+    public Task<User> EnsureAsync(
+        string subject, string displayName, string timeZone, string language, CancellationToken ct) =>
+        ConflictRetry.RunAsync(() => ProvisionAsync(subject, displayName, timeZone, language, ct), ct);
+
+    async Task<User> ProvisionAsync(
         string subject, string displayName, string timeZone, string language, CancellationToken ct)
     {
         var id = User.IdFor(subject);
@@ -57,49 +62,37 @@ public sealed class UserProvisioner(
         return user;
     }
 
-    public async Task<User> SetTimeZoneAsync(User user, string timeZone, CancellationToken ct)
-    {
-        var commandId = Guid.NewGuid();
-        var events = User.Decide(
-            user, new SetUserTimeZone(commandId, user.Id, timeZone), clock.UtcNow);
+    public Task<User> SetTimeZoneAsync(User user, string timeZone, CancellationToken ct) =>
+        DecideAndCommitAsync(
+            user.Id, fresh => new SetUserTimeZone(Guid.NewGuid(), fresh.Id, timeZone), ct);
 
-        return await StageAndCommitAsync(user, events, commandId, ct);
-    }
+    public Task<User> SetLanguageAsync(User user, string language, CancellationToken ct) =>
+        DecideAndCommitAsync(
+            user.Id, fresh => new SetUserLanguage(Guid.NewGuid(), fresh.Id, language), ct);
 
-    public async Task<User> SetLanguageAsync(User user, string language, CancellationToken ct)
-    {
-        var commandId = Guid.NewGuid();
-        var events = User.Decide(user, new SetUserLanguage(commandId, user.Id, language), clock.UtcNow);
+    public Task<User> RenameAsync(User user, string displayName, CancellationToken ct) =>
+        string.IsNullOrWhiteSpace(displayName) || user.DisplayName == displayName
+            ? Task.FromResult(user)
+            : DecideAndCommitAsync(
+                user.Id, fresh => new SetUserDisplayName(Guid.NewGuid(), fresh.Id, displayName), ct);
 
-        return await StageAndCommitAsync(user, events, commandId, ct);
-    }
-
-    public async Task<User> RenameAsync(User user, string displayName, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(displayName) || user.DisplayName == displayName)
+    Task<User> DecideAndCommitAsync(Guid userId, Func<User, ICommand> commandFor, CancellationToken ct) =>
+        ConflictRetry.RunAsync(async () =>
         {
+            var user = await users.LoadAsync(userId, ct)
+                ?? throw new InvalidOperationException($"User {userId} is not provisioned.");
+            var command = commandFor(user);
+            var events = User.Decide(user, command, clock.UtcNow);
+
+            if (events.Count == 0)
+            {
+                return user;
+            }
+
+            user.ApplyAll(events);
+            work.Stage(user, events);
+            await work.CommitAsync(command.CommandId, user.Id, ct);
+
             return user;
-        }
-
-        var commandId = Guid.NewGuid();
-        var events = User.Decide(
-            user, new SetUserDisplayName(commandId, user.Id, displayName), clock.UtcNow);
-
-        return await StageAndCommitAsync(user, events, commandId, ct);
-    }
-
-    async Task<User> StageAndCommitAsync(
-        User user, IReadOnlyList<DomainEvent> events, Guid commandId, CancellationToken ct)
-    {
-        if (events.Count == 0)
-        {
-            return user;
-        }
-
-        user.ApplyAll(events);
-        work.Stage(user, events);
-        await work.CommitAsync(commandId, user.Id, ct);
-
-        return user;
-    }
+        }, ct);
 }

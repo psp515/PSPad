@@ -16,6 +16,7 @@
 @inject PSPadApiClient Api
 @inject TokenRefresher Refresher
 @inject LocalSignOut SignOut
+@inject SignInFailure Failure
 @inject IClock Clock
 @inject ILogger<Authentication> Logger
 
@@ -32,6 +33,16 @@
 
     async Task CaptureSessionAsync()
     {
+        Failure.Clear();
+
+        if (!await TryCaptureSessionAsync())
+        {
+            Failure.Record();
+        }
+    }
+
+    async Task<bool> TryCaptureSessionAsync()
+    {
         try
         {
             var module = await Js.InvokeAsync<IJSObjectReference>("import", "./js/session.js");
@@ -43,21 +54,21 @@
 
             if (string.IsNullOrEmpty(refreshToken))
             {
-                return;
+                return false;
             }
 
             // No session exists yet, so the handler has no stored token to refresh from: this
             // exchange is what puts a bearer token on the /api/me call below.
             if (await Refresher.RefreshAsync(refreshToken) is not RefreshOutcome.Renewed renewed)
             {
-                return;
+                return false;
             }
 
             var account = (await Api.MeAsync()).Sanitized();
 
             if (account is null)
             {
-                return;
+                return false;
             }
 
             var session = new LocalSession(
@@ -66,10 +77,12 @@
 
             await Sessions.SaveAsync(session);
             AuthProvider.SignedIn(session);
+            return true;
         }
         catch (Exception exception)
         {
             Logger.LogWarning("Session capture failed: {Reason}", exception.Message);
+            return false;
         }
     }
 }

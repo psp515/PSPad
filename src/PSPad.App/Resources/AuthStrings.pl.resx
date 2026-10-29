@@ -21,6 +21,9 @@
   <data name="WelcomeTagline" xml:space="preserve">
     <value>Podejście do technik GTD</value>
   </data>
+  <data name="SignInDidNotFinish" xml:space="preserve">
+    <value>Logowanie nie zostało dokończone. Zaloguj się ponownie.</value>
+  </data>
   <data name="LogIn" xml:space="preserve">
     <value>Zaloguj się</value>
   </data>
