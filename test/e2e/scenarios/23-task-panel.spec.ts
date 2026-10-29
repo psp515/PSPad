@@ -6,6 +6,7 @@ import {
   awaitNoDrawer, chooseProperty, clearProperty, confirm, dismissMenu, menuOptions, panel, propertyRow,
 } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
+import { anotherDevice, idOf } from '../helpers/api';
 import { addTask, closeTask, openTask, renameTask, taskRow } from '../helpers/tasks';
 import { setCustomLeadTime, setDueDate, setTaskTime } from '../helpers/today';
 
@@ -21,6 +22,7 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
   const later = addDays(today, 12);
 
   await signIn(page, account);
+  const device = await anotherDevice(page);
   await createArea(page, office);
   await createList(page, desk);
   await createArea(page, home);
@@ -62,6 +64,19 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
     await expect(propertyRow(page, 'Due')).toContainText(shortDate(later));
     await setTaskTime(page, '08:15');
     await expect(taskRow(page, renamed)).toContainText('08:15');
+
+    await test.step('a pull right after a time change does not undo it on screen', async () => {
+      const taskId = await idOf(device, 'todotasks', renamed);
+      await setTaskTime(page, '09:45');
+      await device.send('RenameTask', { taskId, name: `${renamed} from elsewhere` });
+      await expect(taskRow(page, `${renamed} from elsewhere`)).toBeVisible();
+      await expect(panel(page).getByRole('textbox', { name: 'Start' })).toHaveValue('09:45');
+      await device.send('RenameTask', { taskId, name: renamed });
+      await expect(taskRow(page, renamed)).toContainText('09:45');
+      await closeTask(page);
+      await openTask(page, renamed);
+      await expect(panel(page).getByRole('textbox', { name: 'Start' })).toHaveValue('09:45');
+    });
 
     await menuOptions(page, 'Remind me');
     await expect(page.getByText(/^How early the task shows in Coming up/)).toBeVisible();
@@ -126,4 +141,6 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
     await expect(page).toHaveURL(/task=/);
     await expect(panel(page).getByPlaceholder('Task name')).toHaveCount(0);
   });
+
+  await device.dispose();
 });

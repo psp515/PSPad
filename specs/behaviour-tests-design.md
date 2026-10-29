@@ -1,6 +1,6 @@
 # Behaviour tests — design
 
-Status: done 2026-10-29 — unit 2479, integration 413, e2e scenarios 34.
+Status: migration done 2026-10-29; round 2 in progress (R1 done: stylesheet tests removed, theme tests trimmed to accessibility and theme rules).
 
 Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225):
 
