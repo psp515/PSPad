@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '../fixtures/accounts';
-import { createAccount, deleteAccount } from '../fixtures/keycloak';
-import { anotherDevice, Device, idOf } from '../helpers/api';
+import { anotherDevice, idOf } from '../helpers/api';
 import { createBudgetOn } from '../helpers/budgets';
 import { captureFromAnotherDevice, goToInbox } from '../helpers/inbox';
 import { openInApp } from '../helpers/nav';
@@ -10,13 +9,12 @@ import { answerAccountDeletionOnce, confirmAccountDeletion, deleteAccountDialog,
 import {
   bootSplash, bottomNav, collapseGroup, desktopViewport, expandGroup, openAccountDrawer, phoneViewport, pullToRefresh, shellMenu, topBar,
 } from '../helpers/shell';
-import { logInFromWelcome, signIn, signInDidNotFinish } from '../helpers/sign-in';
+import { logInFromWelcome, signInDidNotFinish } from '../helpers/sign-in';
 import { goToMyDay } from '../helpers/today';
 
 test.use({ serviceWorkers: 'block' });
 
 test('a fresh user signs in, finds their way around the shell and can delete the account', async ({ page, browser, account }) => {
-  test.slow();
   const liveWhileSignedOut: string[] = [];
   page.on('request', request => {
     if (request.url().endsWith('/api/live')) {
@@ -81,52 +79,6 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     for (const name of ['Personal', 'Work', 'Home']) {
       await expect(shellMenu(page).getByRole('link', { name, exact: true })).toBeVisible();
     }
-  });
-
-  await test.step('a first sign-in while other users save changes lands on My Day', async () => {
-    const busyAccounts = [await createAccount(), await createAccount()];
-    const busyContexts = await Promise.all(busyAccounts.map(() => browser.newContext({ serviceWorkers: 'block' })));
-    const devices: Device[] = [];
-    for (const [index, context] of busyContexts.entries()) {
-      const busyPage = await context.newPage();
-      await signIn(busyPage, busyAccounts[index]);
-      devices.push(await anotherDevice(busyPage));
-    }
-    let saving = true;
-    const save = async (device: Device) => {
-      while (saving) {
-        await device.send('CreateArea', { areaId: randomUUID(), name: `Noise ${account.suffix}`, position: 9 })
-          .catch(() => {});
-        await new Promise(resolve => setTimeout(resolve, 350));
-      }
-    };
-    const saves = Promise.all(devices.flatMap(device => [save(device), save(device)])).catch(() => {});
-    const landings: string[] = [];
-    try {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const newcomer = await createAccount();
-        const context = await browser.newContext({ serviceWorkers: 'block' });
-        const fresh = await context.newPage();
-        try {
-          await fresh.goto('/');
-          await fresh.getByRole('link', { name: 'Log in' }).click();
-          await keycloakLogIn(fresh, newcomer);
-          await expect(fresh.getByRole('heading', { name: 'My Day' }).or(fresh.getByRole('heading', { name: 'Your day, planned.' })))
-            .toBeVisible({ timeout: 30_000 });
-          landings.push(new URL(fresh.url()).pathname);
-        } finally {
-          await context.close();
-          await deleteAccount(newcomer);
-        }
-      }
-    } finally {
-      saving = false;
-      await saves;
-      await Promise.all(devices.map(device => device.dispose()));
-      await Promise.all(busyContexts.map(context => context.close()));
-      await Promise.all(busyAccounts.map(deleteAccount));
-    }
-    expect(landings.filter(path => path.startsWith('/welcome'))).toEqual([]);
   });
 
   await test.step.skip('BUG: signing in from Welcome ignores the return address (reported in PR #225)', async () => {

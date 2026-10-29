@@ -569,6 +569,12 @@ tests would be visible, not silent.
     told to wait. Stop sharing with the member still in ends the link and
     takes the budget from them.
 
+35. **First sign-in under load.** While another user's API client saves
+    an area four times in parallel every 350 ms, three new accounts log in
+    from Welcome one after another, each in a fresh browser, and each lands
+    on My Day, never back on Welcome (`UserProvisioner` retries a write
+    conflict).
+
 ## 5. Timing
 
 - `fullyParallel: true`, four workers locally and in CI, one test per file
@@ -579,7 +585,7 @@ tests would be visible, not silent.
   timeout.
 - Retries: 0 locally, 1 in CI; a retry is a flake to fix, reported in the
   HTML report.
-- Scenarios 10, 11, 14, 16, 18 and 34 are the heaviest (two or three contexts);
+- Scenarios 10, 11, 14, 16, 18, 34 and 35 are the heaviest (two or more contexts);
   01, 12, 13, 15, 25, 27, 28, 29, 31 and 32 are the heaviest single-context ones. A scenario
   that runs past a minute at two workers on a two-core machine splits;
   data a step only needs to exist is arranged through `anotherDevice`,
@@ -611,7 +617,7 @@ test/e2e/
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
                  settings.ts  goals.ts  references.ts  sharing.ts  snapshots.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 34-budget-sharing.spec.ts
+  scenarios/     01-first-sign-in.spec.ts … 35-first-sign-in-under-load.spec.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared
