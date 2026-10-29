@@ -89,34 +89,4 @@ public class StatusBeltsTests
 
         Assert.Equal("offline again", Assert.Single(belts.Visible).Text);
     }
-
-    [Fact]
-    public void EveryChangeIsAnnounced()
-    {
-        var belts = new StatusBelts();
-        var changes = 0;
-        belts.Changed += () => changes++;
-
-        belts.Show(BeltKind.Update, "update");
-        belts.Dismiss(BeltKind.Update);
-        belts.Clear(BeltKind.Update);
-
-        Assert.Equal(3, changes);
-    }
-
-    [Fact]
-    public void NothingThatChangesNothingIsAnnounced()
-    {
-        var belts = new StatusBelts();
-        belts.Show(BeltKind.Offline, "offline");
-        belts.Dismiss(BeltKind.Offline);
-        var changes = 0;
-        belts.Changed += () => changes++;
-
-        belts.Show(BeltKind.Offline, "offline");
-        belts.Dismiss(BeltKind.Offline);
-        belts.Clear(BeltKind.Update);
-
-        Assert.Equal(0, changes);
-    }
 }

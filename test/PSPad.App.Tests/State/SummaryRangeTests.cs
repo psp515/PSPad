@@ -22,6 +22,10 @@ public class SummaryRangeTests
             SummaryRange.For(SummaryPreset.LastSixMonths, new DateOnly(2026, 2, 14)));
 
     [Fact]
+    public void TheLastTwelveMonthsStartOnTheFirstOfTheMonthElevenMonthsBack() =>
+        Assert.Equal(new SummaryRange(new DateOnly(2025, 11, 1), Today), SummaryRange.For(SummaryPreset.Last12Months, Today));
+
+    [Fact]
     public void ACustomRangeHasNoPresetDays() =>
         Assert.Throws<ArgumentOutOfRangeException>(() => SummaryRange.For(SummaryPreset.Custom, Today));
 
