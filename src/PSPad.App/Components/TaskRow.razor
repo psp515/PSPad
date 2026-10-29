@@ -27,7 +27,7 @@
             <div class="pspad-row-meta">
                 @if (ShowTime && Task.EffectiveTime is { } time)
                 {
-                    <MudText Typo="Typo.caption" Class="pspad-row-time" Color="Color.Primary">@TimeRow.Describe(time)</MudText>
+                    <MudText Typo="Typo.caption" Class="pspad-row-time" Color="Color.Primary">@TaskTimeText.Describe(time)</MudText>
                 }
                 @if (Task.DueOn is { } due)
                 {

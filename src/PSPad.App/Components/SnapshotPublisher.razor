@@ -158,7 +158,7 @@
 
     (int Days, bool Urgent) DaysLeft(PublishedSnapshotView snapshot)
     {
-        var days = Math.Max(1, (int)Math.Ceiling((snapshot.ExpiresAt - Clock.UtcNow).TotalDays));
+        var days = SnapshotExpiry.DaysLeft(snapshot.ExpiresAt, Clock.UtcNow);
         return (days, days <= 1);
     }
 
@@ -259,12 +259,7 @@
         }
     }
 
-    DateTimeOffset EndOfLocalDay(DateOnly day)
-    {
-        var zone = LocalToday.Zone(State.TimeZone);
-        var nextLocalMidnight = DateTime.SpecifyKind(day.AddDays(1).ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
-        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(nextLocalMidnight, zone), TimeSpan.Zero);
-    }
+    DateTimeOffset EndOfLocalDay(DateOnly day) => SnapshotExpiry.EndOfLocalDay(day, LocalToday.Zone(State.TimeZone));
 
     async Task CopyAsync(string token)
     {

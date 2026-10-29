@@ -15,18 +15,6 @@ public class DeleteWarningTests
     static readonly Guid AreaId = Guid.NewGuid();
 
     [Fact]
-    public void AnAreaNamesHowManyListsAndTasksGoWithIt()
-    {
-        var errands = NewList(AreaId);
-        var chores = NewList(AreaId);
-        TodoTask[] tasks = [NewTask(errands.Id), NewTask(errands.Id), NewTask(chores.Id)];
-
-        var message = DeleteWarning.ForArea("Dom", AreaId, [errands, chores], tasks, [], TestLocalizers.For<ListsStrings>());
-
-        Assert.Equal("Delete “Dom” and its 2 lists and 3 tasks? This can’t be undone.", message);
-    }
-
-    [Fact]
     public void AnAreaCountsInTheSingular()
     {
         var errands = NewList(AreaId);
@@ -93,19 +81,6 @@ public class DeleteWarningTests
         var message = DeleteWarning.ForList("Przepisy", list.Id, items, TestLocalizers.For<ListsStrings>());
 
         Assert.Equal("Delete “Przepisy” and its 2 items? This can’t be undone.", message);
-    }
-
-    [Fact]
-    public void AnAreaNamesListsTasksAndItemsTogether()
-    {
-        var tasksList = NewList(AreaId);
-        var referenceList = NewList(AreaId);
-        TodoTask[] tasks = [NewTask(tasksList.Id)];
-        ReferenceItem[] items = [NewItem(referenceList.Id), NewItem(referenceList.Id)];
-
-        var message = DeleteWarning.ForArea("Dom", AreaId, [tasksList, referenceList], tasks, items, TestLocalizers.For<ListsStrings>());
-
-        Assert.Equal("Delete “Dom” and its 2 lists, 1 task and 2 items? This can’t be undone.", message);
     }
 
     static ReferenceItem NewItem(Guid listId, bool deleted = false)

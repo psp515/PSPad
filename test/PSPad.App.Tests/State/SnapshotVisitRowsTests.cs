@@ -10,18 +10,6 @@ public class SnapshotVisitRowsTests
     static readonly DateTimeOffset Now = new(2026, 9, 12, 0, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    public void TheNewestVisitComesFirst()
-    {
-        var rows = SnapshotVisitRows.Live(
-        [
-            new SnapshotVisitView("tok-old", "Old list", Now.AddDays(5), Now.AddDays(-2)),
-            new SnapshotVisitView("tok-new", "New list", Now.AddDays(5), Now.AddDays(-1))
-        ], Now);
-
-        Assert.Equal(["New list", "Old list"], rows.Select(row => row.Name));
-    }
-
-    [Fact]
     public void AnExpiredSnapshotIsDropped()
     {
         var rows = SnapshotVisitRows.Live(

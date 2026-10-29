@@ -1,11 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import { expect, test } from '../fixtures/accounts';
+import { anotherDevice, idOf } from '../helpers/api';
 import { createArea } from '../helpers/areas';
-import { addDays, shiftTime, shortDate, utcToday } from '../helpers/dates';
+import { addDays, isoDate, shiftTime, shortDate, utcToday } from '../helpers/dates';
 import { createList, openList } from '../helpers/lists';
 import { closePanel, panel, propertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, openTask, taskRow } from '../helpers/tasks';
-import { addTaskAtFirstFreeSlot, backToToday, daySection, goToMyDay, setDueDate, setTaskTime, showDay, timelineBlock } from '../helpers/today';
+import {
+  addTaskAtFirstFreeSlot, backToToday, daySection, goToMyDay, pickTaskTimeFromClock, schedule, setDueDate, setTaskTime, showDay, timelineBlock,
+} from '../helpers/today';
 
 test('a timed task sits on the schedule and is ticked from the timeline', async ({ page, account }) => {
   const dentist = `Dentist ${account.suffix}`;
@@ -24,7 +28,8 @@ test('a timed task sits on the schedule and is ticked from the timeline', async 
   await addTask(page, dentist);
   await openTask(page, dentist);
   await setDueDate(page, 'Today');
-  await setTaskTime(page, '09:00', '10:30');
+  await setTaskTime(page, '08:00', '10:30');
+  await pickTaskTimeFromClock(page, 'start', 9, 0);
   await closeTask(page);
   await expect(taskRow(page, dentist)).toContainText('09:00');
 
@@ -85,4 +90,47 @@ test('a timed task sits on the schedule and is ticked from the timeline', async 
   await slot.click();
   await expect(page.locator('.pspad-task-time .pspad-time-start input')).toHaveValue(time!);
   await expect(page).toHaveURL(new RegExp(`task=new&due=\\d{4}-\\d{2}-\\d{2}&time=${time}`));
+  await closePanel(page);
+
+  await test.step('overlapping tasks share lines that tick one at a time, a long block names its list, a late one runs past midnight, and a band unfolds its hours', async () => {
+    const [standup, call, review] = ['Standup', 'Call', 'Review'].map(name => `${name} ${account.suffix}`);
+    const workshop = `Workshop ${account.suffix}`;
+    const night = `Night shift ${account.suffix}`;
+    const gym = `Gym ${account.suffix}`;
+    const device = await anotherDevice(page);
+    const listId = await idOf(device, 'tasklists', `Town ${account.suffix}`);
+    const timed: Array<[string, string, string | null]> = [
+      [standup, '05:00', '05:15'], [call, '05:00', '05:30'], [review, '05:00', '06:00'],
+      [workshop, '13:00', '15:00'], [night, '22:00', '01:00'], [gym, '18:00', null],
+    ];
+    for (const [name, start, end] of timed) {
+      const taskId = randomUUID();
+      await device.send('CreateTask', { taskId, listId, name });
+      await device.send('SetTaskDueDate', { taskId, dueOn: isoDate(utcToday()) });
+      await device.send('SetTaskTime', { taskId, time: { start: `${start}:00`, end: end && `${end}:00` } });
+    }
+    await device.dispose();
+
+    const timeline = schedule(page);
+    await expect(timeline.getByTitle(`${workshop} – 13:00–15:00`)).toContainText(`Town ${account.suffix}`);
+    await expect(timeline.getByTitle(`${night} – 22:00–01:00 (+1)`)).toContainText('(+1)');
+    await expect(timeline.getByTitle(`${gym} – 18:00`)).toContainText('18:00');
+    await expect(timeline.getByTitle(`${gym} – 18:00`)).not.toContainText('–');
+    await expect(timeline.getByTitle(`${gym} – 18:00`)).not.toContainText(`Town ${account.suffix}`);
+    await expect(timeline.getByTitle(call, { exact: true })).toBeVisible();
+    await expect(timeline.getByTitle(`${call} – 05:00–05:30`)).toHaveCount(0);
+
+    await timeline.getByRole('checkbox', { name: call }).click();
+    await expect(timeline.getByRole('checkbox', { name: call })).toHaveCount(0);
+    await expect(timeline.getByRole('checkbox', { name: standup })).not.toBeChecked();
+    await expect(timeline.getByRole('checkbox', { name: review })).not.toBeChecked();
+    await expect(daySection(page, 'completed')).toContainText(call);
+
+    const band = timeline.getByRole('button', { name: /^Show \d\d:00–\d\d:00$/ }).first();
+    const range = (await band.getAttribute('aria-label'))!.slice('Show '.length);
+    const firstHour = Number(range.slice(0, 2));
+    await band.click();
+    await expect(timeline.getByRole('button', { name: `Show ${range}`, exact: true })).toHaveCount(0);
+    await expect(timeline.getByRole('button', { name: `Add a task at ${String(firstHour + 1).padStart(2, '0')}:30` })).toBeVisible();
+  });
 });

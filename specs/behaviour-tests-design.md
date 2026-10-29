@@ -1,6 +1,6 @@
 # Behaviour tests — design
 
-Status: done 2026-10-29 — unit 2479, integration 413, e2e scenarios 34.
+Status: migration done 2026-10-29; round 2 done 2026-10-29 (R1–R3): 2206 unit, 413 integration, 34 e2e scenarios.
 
 Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225):
 
@@ -9,14 +9,17 @@ Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225
 - 01-first-sign-in: coming back from the fresh sign-in does not reopen the delete dialog.
 - 01-first-sign-in: deleting the account signs out before it leaves Settings, so Welcome keeps Settings as the return address.
 - 02-capture-and-triage: a deadline set on a draft step is lost when an Inbox item is converted.
+- 08-reference-list-and-field-types: Cancel in a label's editor leaves the editor open until something else redraws the list.
 - 10-share-join-remove: joining a list can lose the tasks it already had: a sync running at the join purges them, or the list arrives by delta and never counts as missing, so no later sync brings them back.
 - 10-share-join-remove: a code in the link joins at once, but the shared list's tasks can be lost the same way.
 - 15-search-statistics-settings: an old History address lands on an empty Statistics page.
-- 19-step-rename: an edit made just before a sync pull is undone.
+- 23-task-panel: an open task panel keeps the description and name it opened with after another device changes them, until it is reopened.
 - 24-new-task-draft: a deadline set on a draft step is lost when the task is added.
 - 25-area-board-cards: ticking a repeat on a day it skips shows it ticked until a reload, though nothing was saved.
 - 27-reference-items: labels drafted on a new reference item are missing when it is opened, until a reload, though the server stored them.
 - 30-reference-rows: a reference card counts its items as "open tasks".
+- 31-list-panel: going offline with Public snapshots open leaves Publish enabled until the view redraws.
+- 21-step-deadline (found 2026-10-29, after PR #225): in a tight My Day row the time, date and step count push the due-step mark past the clipped details, so only its first letters show.
 
 Noted without a step:
 
@@ -26,7 +29,7 @@ Noted without a step:
 - `AuthenticationLogging.OnForbidden` is unreachable: there are no authorization policies.
 
 Tests assert what the code does, never how it looks or how it is wired.
-Decision record: ADR-0079. Standing rules after the migration live in
+Decision record: ADR-0080. Standing rules after the migration live in
 `specs/testing-spec.md`; this file describes the migration.
 
 ## 1. Problem
@@ -58,9 +61,9 @@ ports.
 
 | Tier | Subject | Runs |
 |---|---|---|
-| Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; logic-bearing components (§4.2); architecture, category, resource, localization and stylesheet guards | in process, no Docker |
+| Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; pure client rules extracted from components (§4.2); architecture, category, resource and localization guards | in process, no Docker |
 | Integration `[IntegrationTest]` | A command or query through HTTP on `ApiFactory` with Testcontainers Mongo, asserting the response, documents, events and sync deltas: every handler, cascade, projection, reader, sharing and auth flow | Testcontainers |
-| End-to-end | A user's flow in Chromium against the compose stack: pages, layout, navigation, panels, localization, offline and live updates; new steps locate by role, label or text | compose stack |
+| End-to-end | A user's flow in Chromium against the compose stack: pages, layout, components, navigation, panels, localization, offline and live updates; new steps locate by role, label or text | compose stack |
 
 A new test starts at the tier its subject names: a rule with edge cases is a
 unit test, a server effect is an integration test, anything a user sees on a
@@ -122,28 +125,37 @@ ledger (§6) confirms no behaviour is lost. The module `Fakes/` folders and
 `State/` queries and text rules, `State/Dispatch`, `State/Outbox`,
 `State/Replica`, `State/Search`, `Sync/`, `Live/` stream reading, `Auth/`
 session and token handling, `Localization/` plural rules and guards,
-`Theme/` preference and stylesheet guards, `Updates/`, `Markdown/`
+`Theme/` preference and accessibility rules, `Updates/`, `Markdown/`
 rendering. Each test is kept when it asserts a result; a test that asserts an
 outgoing request's URL, header or body shape is deleted, unless that request
 is the contract with an external system (Keycloak end-session, NBP).
 
-### 4.2 Components: logic only
+### 4.2 Components: end-to-end, their pure rules in State
 
-bUnit stays only for components with their own decision logic: parsing,
-date or time math, state transitions, keyboard handling. Starting list:
-`RecurrenceEditor`, `DueDateMenu`, `DueDatePicker`, `DueDateRow`, `TimeRow`,
-`LeadTimeRow`, `ListMonthView`, `WeekStrip`, `MonthStrip`, `DayTimeline`,
-`StepList`, `MarkdownField`, `ImportEntriesTable`, `ReferenceFieldList`,
-`ReferenceFieldValue`, `SnapshotPublisher`, `AddRow`. Kept tests are
-rewritten to parameters in, callbacks and visible text, roles, labels and
-`aria-*` out. Pure helpers next to components (`AreaSummary`, `ListIcon`,
-`GoalStatusText`, `OpenTaskCount`) are plain unit tests and stay.
+No component is rendered in a unit test. Every component behaviour a user
+sees is an end-to-end step in a scenario that already reaches it (time and
+due rows in 17, 23 and 24, steps in 11, 19, 21 and 24, reference fields in
+08 and 27, the snapshot publisher in 11 and 31, the week strip in 05, the
+month strip in 13, the list month in 22, the import table in 33, the add row
+in 03, the description field in 11 and 23, the repeat menu in 06).
+
+A component's rule worth an edge-case table is extracted verbatim into
+`src/PSPad.App/State/`, the component calls it, and it is unit tested there:
+`TimeText` (typed times), `TaskTimeText`, `DueDayText` and `QuickPicks`,
+`LeadTimeText`, `RecurrenceText`, `WeekDays` and `WeekHeading`,
+`MonthWindow`, `SnapshotExpiry` and `DroppedText`, alongside the earlier
+`TimelineLayout` and `TimelineAxis`. Pure helpers that live next to
+components (`AreaSummary`, `ListIcon`, `GoalStatusText`, `OpenTaskCount`)
+are plain unit tests and stay where they are.
 
 Tests of presentational components (`BrandMark`, `BrandLoader`,
 `EmptyState`, `SectionHeading`, `PageHeading`, skeletons, `MasonryGrid`,
 `ThingCard`, `MoneyHero`, `PanelSection`, `RowGroup`, `QrCode`, charts) are
 deleted; what matters about them is covered by the end-to-end step that
 shows the screen they sit on.
+
+The first round (slice 6) kept a thin bUnit tier for logic-bearing
+components; round 2 removed it (§6).
 
 ### 4.3 Pages and layout go to end-to-end
 
@@ -159,7 +171,18 @@ tested there. Extraction, and accessibility attributes (aria, role, localized)
 that give a test an accessible locator, are the only production changes the
 migration allows.
 
-### 4.4 End-to-end budget
+### 4.4 CSS fixes
+
+A CSS fix ships with a browser layout assertion in the scenario that shows
+the screen: the step sets the viewport where the bug showed, measures what
+the user sees with bounding boxes (`visibleWidth` in
+`test/e2e/helpers/layout.ts` clips an element's box to its overflow-hiding
+ancestors), and asserts sizes, visibility or which element gave way. No pixel
+baselines: CI's Chromium and the local Playwright container render
+differently. The assertion must fail on the CSS before the fix. Example:
+scenario 21's tight My Day row (#222).
+
+### 4.5 End-to-end budget
 
 The suite target moves from three minutes to **five minutes per shard** in CI
 with four workers; CI runs two shards (`specs/e2e-testing-design.md` §5). A scenario that would push
@@ -190,11 +213,20 @@ commit series per slice, not as stacked pull requests. Every slice:
 4. Runs `dotnet test --filter Category=Unit`, the touched integration
    project, and, for frontend slices, the end-to-end suite.
 
+Round 2 (2026-10-29): the maintainer decided that component bUnit tests go
+too. R1 removed the stylesheet tests and trimmed the theme tests. R2 deleted
+every bUnit test under `Components/` (ledger 22): behaviour moved into the
+scenarios listed in §4.2, pure rules into `State/` (§4.2), and what no user
+path reaches (a disabled panel before the shell is ready, a rejected
+description save, an editor on a new field) was dropped with its reason. The
+`bunit` package is gone: `SyncCoordinatorTests` builds its services on a plain
+`ServiceCollection` with a fake `NavigationManager`.
+
 Slices, in order:
 
 | # | Slice | Scope |
 |---|---|---|
-| 0 | Rules | ADR-0079, `testing-spec.md`, `e2e-testing-design.md` §5 and §9, `AGENTS.md` index row |
+| 0 | Rules | ADR-0080, `testing-spec.md`, `e2e-testing-design.md` §5 and §9, `AGENTS.md` index row |
 | 1 | Money backend | Money handler and cascade tests → integration; Money fakes removed |
 | 2 | Tasks and Presentation backend | Tasks handler, cascade and fake-store tests; Presentation handlers → integration; fakes removed |
 | 3 | Statistics and Sharing backend | Projections, replay, readers, snapshot publishing → integration; in-memory stores removed |

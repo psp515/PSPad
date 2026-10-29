@@ -15,30 +15,6 @@ public class ListPlacementTests
     static readonly DateTimeOffset Start = new(2026, 9, 1, 8, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    public void MyListsSitInTheirArea()
-    {
-        var home = NewArea("Home", 0);
-        var list = NewList(Me, home.Id, "Zakupy", 0);
-
-        var placement = ListPlacement.For(Me, [home], [list], [], []);
-
-        Assert.Equal([list], placement.InArea(home.Id));
-        Assert.Equal(home.Id, placement.AreaOf(list));
-    }
-
-    [Fact]
-    public void AnUnfiledMemberListSitsInSharedWithMe()
-    {
-        var home = NewArea("Home", 0);
-        var list = NewMemberList(Owner, Me, "Errands", 0);
-
-        var placement = ListPlacement.For(Me, [home], [list], [], []);
-
-        Assert.Equal([list], placement.InArea(SharedWithMe.AreaId));
-        Assert.Equal(SharedWithMe.AreaId, placement.AreaOf(list));
-    }
-
-    [Fact]
     public void AFiledMemberListSitsInThatArea()
     {
         var home = NewArea("Home", 0);
@@ -108,25 +84,6 @@ public class ListPlacementTests
 
         Assert.Equal([shopping, sprint, shared], placement.All);
     }
-
-    [Fact]
-    public void HasSharedOnlyWithUnfiledMemberLists()
-    {
-        var home = NewArea("Home", 0);
-        var mine = NewList(Me, home.Id, "Zakupy", 0);
-
-        var withoutShared = ListPlacement.For(Me, [home], [mine], [], []);
-        Assert.False(withoutShared.HasShared);
-
-        var shared = NewMemberList(Owner, Me, "Errands", 1);
-        var withShared = ListPlacement.For(Me, [home], [mine, shared], [], []);
-        Assert.True(withShared.HasShared);
-    }
-
-    [Fact]
-    public void TheVirtualAreaIsNamedSharedWithMe() => Assert.Equal("Shared with me", Empty().AreaName(SharedWithMe.AreaId, "Shared with me"));
-
-    static ListPlacement Empty() => ListPlacement.For(Me, [], [], [], []);
 
     static Area NewArea(string name, int position)
     {

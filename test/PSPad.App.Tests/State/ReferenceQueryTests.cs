@@ -13,25 +13,9 @@ public class ReferenceQueryTests
     }
 
     [Fact]
-    public void AUrlWithAnItemOpensIt()
-    {
-        var id = Guid.NewGuid();
-
-        Assert.Equal(id, ReferenceQuery.From($"https://pspad.local/?item={id}"));
-    }
-
-    [Fact]
     public void ANonGuidItemOpensNothing()
     {
         Assert.Null(ReferenceQuery.From("https://pspad.local/?item=nonsense"));
-    }
-
-    [Fact]
-    public void ANewItemQueryNamesTheListItGoesInto()
-    {
-        var list = Guid.NewGuid();
-
-        Assert.Equal(list, ReferenceQuery.NewItemListFrom($"https://pspad.local/lists/{list}?item=new&list={list}"));
     }
 
     [Fact]

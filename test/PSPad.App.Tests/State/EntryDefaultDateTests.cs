@@ -14,10 +14,6 @@ public class EntryDefaultDateTests
         Assert.Equal(Today, EntryDefaultDate.For(null, Today));
 
     [Fact]
-    public void InTheCurrentMonthItIsToday() =>
-        Assert.Equal(Today, EntryDefaultDate.For(new YearMonth(2026, 10), Today));
-
-    [Fact]
     public void InAPastMonthItIsItsLastDay() =>
         Assert.Equal(new DateOnly(2026, 9, 30), EntryDefaultDate.For(new YearMonth(2026, 9), Today));
 

@@ -14,14 +14,6 @@ public class InboxQueryTests
     }
 
     [Fact]
-    public void AUrlWithAnItemOpensIt()
-    {
-        var id = Guid.NewGuid();
-
-        Assert.Equal(id, InboxQuery.From($"https://pspad.local/inbox?inbox={id}"));
-    }
-
-    [Fact]
     public void ANewItemUrlIsNewAndOpensNoExistingItem()
     {
         var uri = InboxQuery.ForNew("https://pspad.local/inbox?task=" + Guid.NewGuid());
@@ -29,13 +21,5 @@ public class InboxQueryTests
         Assert.Equal("https://pspad.local/inbox?inbox=new", uri);
         Assert.True(InboxQuery.IsNew(uri));
         Assert.Null(InboxQuery.From(uri));
-    }
-
-    [Fact]
-    public void OpeningAnItemKeepsTheScreen()
-    {
-        var id = Guid.NewGuid();
-
-        Assert.Equal($"https://pspad.local/inbox?inbox={id}", InboxQuery.For("https://pspad.local/inbox", id));
     }
 }

@@ -2,7 +2,7 @@ import { expect, test } from '../fixtures/accounts';
 import { createArea, openArea } from '../helpers/areas';
 import { addDays, dayMonth, shortDate, utcToday, weekdayShort, weekdaysInWeekOrder } from '../helpers/dates';
 import { createList, openList } from '../helpers/lists';
-import { chooseProperty, panel, propertyRow } from '../helpers/panels';
+import { chooseProperty, dismissMenu, menuOptions, panel, propertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, completeTaskRow, openTask, taskRow } from '../helpers/tasks';
 import { daySection, goToMyDay, pickWeekDay, setCustomRepeat, setOneTime, setRepeating } from '../helpers/today';
@@ -69,6 +69,10 @@ test('a daily task is never overdue and comes back tomorrow', async ({ page, acc
   });
 
   await test.step('custom repeats follow a moved start and save interval, unit and weekdays', async () => {
+    const options = await menuOptions(page, 'Repeat');
+    await expect(options.filter({ hasText: `Yearly on ${dayMonth(today)}` })).toHaveCount(1);
+    await expect(options.filter({ hasText: /^\s*Never\s*$/ })).toHaveCount(0);
+    await dismissMenu(page);
     await setCustomRepeat(page, { unit: 'week', start: inTwoDays });
     await expect(propertyRow(page, 'Repeat')).toContainText(`Weekly on ${weekdayShort(inTwoDays)}`);
     await setCustomRepeat(page, { unit: 'month', start: inThreeDays });

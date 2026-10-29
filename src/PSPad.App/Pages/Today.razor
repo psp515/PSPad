@@ -86,7 +86,7 @@ else
             @if (_plan.AnyTime.Count > 0 || (_plan.Scheduled.Count == 0 && _plan.Overdue.Count == 0))
             {
                 <section class="pspad-day-anytime mb-4">
-                    <SectionHeading Title="@T["AnyTime", DueDateRow.Describe(_day, State.Today, Shared)]" />
+                    <SectionHeading Title="@T["AnyTime", DueDayText.Describe(_day, State.Today, Shared)]" />
                     @if (_plan.AnyTime.Count > 0)
                     {
                         @Rows(_plan.AnyTime)
@@ -190,7 +190,7 @@ else
         _day = day;
         var zone = LocalToday.Zone(State.TimeZone);
         _plan = TodayRule.Plan(tasks, _day, State.Today, zone);
-        _busy = WeekStrip.WeekOf(_day)
+        _busy = WeekDays.WeekOf(_day)
             .Where(day => IsBusy(TodayRule.Plan(tasks, day, State.Today, zone), day))
             .ToHashSet();
 
@@ -268,7 +268,7 @@ else
     void SayWhereItWent(TodoTask task, Step step)
     {
         var message = TodayRule.TriggerOf(task) is { } next
-            ? T["StepsDoneMovedTo", task.Name, DueDateRow.Describe(next, State.Today, Shared)]
+            ? T["StepsDoneMovedTo", task.Name, DueDayText.Describe(next, State.Today, Shared)]
             : T["StepsDoneNoDate", task.Name];
         Snackbar.Add(message, Severity.Normal, config =>
         {

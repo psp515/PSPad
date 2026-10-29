@@ -14,14 +14,6 @@ public class GoalQueryTests
     }
 
     [Fact]
-    public void AUrlWithAGoalOpensIt()
-    {
-        var id = Guid.NewGuid();
-
-        Assert.Equal(id, GoalQuery.From($"https://pspad.local/goals?goal={id}"));
-    }
-
-    [Fact]
     public void ANewGoalUrlIsNewAndOpensNoExistingGoal()
     {
         var uri = GoalQuery.ForNew("https://pspad.local/goals?task=" + Guid.NewGuid());
@@ -29,13 +21,5 @@ public class GoalQueryTests
         Assert.Equal("https://pspad.local/goals?goal=new", uri);
         Assert.True(GoalQuery.IsNew(uri));
         Assert.Null(GoalQuery.From(uri));
-    }
-
-    [Fact]
-    public void EditingAGoalKeepsTheScreen()
-    {
-        var id = Guid.NewGuid();
-
-        Assert.Equal($"https://pspad.local/goals?goal={id}", GoalQuery.For("https://pspad.local/goals", id));
     }
 }

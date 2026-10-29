@@ -171,7 +171,7 @@
                 @if (due is { } shown)
                 {
                     <MudText Typo="Typo.caption" Class="pspad-step-due px-2"
-                             Color="@(shown < Today ? Color.Error : Color.Default)">@DueDateRow.Describe(shown, Today, Shared)</MudText>
+                             Color="@(shown < Today ? Color.Error : Color.Default)">@DueDayText.Describe(shown, Today, Shared)</MudText>
                 }
             }
             else

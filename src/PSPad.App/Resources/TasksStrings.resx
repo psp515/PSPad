@@ -87,6 +87,9 @@
   <data name="EndMustDiffer" xml:space="preserve">
     <value>End must differ from start</value>
   </data>
+  <data name="TimeFormatHint" xml:space="preserve">
+    <value>Enter a time like 14:30</value>
+  </data>
   <data name="RemindMe" xml:space="preserve">
     <value>Remind me</value>
   </data>

@@ -58,6 +58,60 @@ export async function setTaskTime(page: Page, start: string, end?: string) {
   }
 }
 
+export function timeField(page: Page, which: 'Start' | 'End') {
+  return panel(page).getByRole('textbox', { name: which, exact: true });
+}
+
+export async function typeTaskTime(page: Page, which: 'Start' | 'End', text: string) {
+  const field = timeField(page, which);
+  await field.fill(text);
+  await field.press('Enter');
+}
+
+async function openClock(page: Page, which: 'Start' | 'End') {
+  await panel(page).getByRole('button', { name: `Pick ${which.toLowerCase()} time` }).click();
+  const clock = page.locator('.mud-picker .mud-overlay .mud-picker-paper');
+  await expect(clock).toBeVisible();
+  return clock;
+}
+
+export async function leaveClockUntouched(page: Page, which: 'Start' | 'End') {
+  const clock = await openClock(page, which);
+  await page.mouse.click(5, 5);
+  await expect(clock).toBeHidden();
+}
+
+export async function pickClockHourAndLeave(page: Page, which: 'Start' | 'End', hour: number) {
+  const clock = await openClock(page, which);
+  await clickClockNumber(page, clock.locator('.mud-time-picker-hour'), hour);
+  await expect(clock.locator('.mud-time-picker-minute')).not.toHaveClass(/mud-time-picker-dial-hidden/);
+  await page.mouse.click(5, 5);
+  await expect(clock).toBeHidden();
+}
+
+export async function pickTaskTimeFromClock(page: Page, which: 'start' | 'end', hour: number, minute: number) {
+  const row = panel(page).locator('.pspad-task-time');
+  const clock = await openClock(page, which === 'start' ? 'Start' : 'End');
+  await clickClockNumber(page, clock.locator('.mud-time-picker-hour'), hour);
+  await expect(clock.locator('.mud-time-picker-minute')).not.toHaveClass(/mud-time-picker-dial-hidden/);
+  await clickClockNumber(page, clock.locator('.mud-time-picker-minute'), minute);
+  await expect(clock).toBeHidden();
+  const text = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  await expect(row.locator(`.pspad-time-${which} input`)).toHaveValue(text);
+}
+
+// The outer-ring hour sticks are zero-width, so Playwright never sees them as visible; a user clicks the number instead.
+async function clickClockNumber(page: Page, dial: import('@playwright/test').Locator, value: number) {
+  const label = dial.locator('.mud-clock-number', { hasText: new RegExp(`^${String(value).padStart(2, '0')}$`) });
+  await expect(label).toBeVisible();
+  const box = (await label.boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+}
+
+export function schedule(page: Page) {
+  return page.locator('section').filter({ has: page.getByRole('heading', { name: 'Schedule', exact: true }) });
+}
+
 export function timelineBlock(page: Page, name: string) {
   return page.locator('.pspad-timeline-task').filter({ has: page.locator('.pspad-timeline-task-name', { hasText: name }) });
 }
@@ -75,6 +129,21 @@ export async function showDay(page: Page, day: Date) {
 
 export function weekDay(page: Page, day: Date) {
   return page.getByRole('button', { name: new RegExp(`^${escapeRegExp(shortDate(day))}(,|$)`) });
+}
+
+export async function swipeWeek(page: Page, towards: 'left' | 'right') {
+  const box = (await weekDay(page, utcToday()).or(page.getByRole('button', { pressed: true })).first().boundingBox())!;
+  const y = box.y + box.height / 2;
+  const from = box.x + box.width / 2;
+  const to = towards === 'left' ? from - 120 : from + 120;
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from, y }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: (from + to) / 2, y }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: to, y }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+  await cdp.detach();
 }
 
 export async function pickWeekDay(page: Page, day: Date) {

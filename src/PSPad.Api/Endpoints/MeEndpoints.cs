@@ -8,7 +8,9 @@ public static class MeEndpoints
 {
     public static void MapMeEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("me", async (
+        var me = app.MapGroup("me").AddEndpointFilter<RetryLaterOnConflict>();
+
+        me.MapGet("", async (
             ICurrentUser current, UserProvisioner provisioner, ILogger<MeResponse> logger, CancellationToken ct) =>
         {
             var user = await provisioner.EnsureAsync(
@@ -23,7 +25,7 @@ public static class MeEndpoints
             return Results.Ok(new MeResponse(user.Id, user.DisplayName, current.Email, user.TimeZone, user.Language));
         });
 
-        app.MapPut("me/timezone", async (
+        me.MapPut("timezone", async (
             SetTimeZoneRequest request,
             ICurrentUser current,
             UserProvisioner provisioner,
@@ -46,7 +48,7 @@ public static class MeEndpoints
             return Results.Ok(new MeResponse(user.Id, user.DisplayName, current.Email, user.TimeZone, user.Language));
         });
 
-        app.MapPut("me/language", async (
+        me.MapPut("language", async (
             SetLanguageRequest request,
             ICurrentUser current,
             UserProvisioner provisioner,

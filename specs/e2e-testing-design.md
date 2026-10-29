@@ -6,7 +6,7 @@ Extends `specs/testing-spec.md`, which keeps the unit and integration rules.
 
 ## 1. Problem and scope
 
-Unit tests cover the domain and bUnit components; integration tests cover
+Unit tests cover the domain and pure client rules; integration tests cover
 handlers and HTTP against a Testcontainers MongoDB. Nothing drives the real
 application: the WebAssembly client in a browser, signed in through Keycloak,
 talking to the API over HTTP, syncing a replica. Regressions in that seam
@@ -205,7 +205,8 @@ tests would be visible, not silent.
    list. The list reads "No tasks yet." and counts open tasks under its
    area name; a task with two steps, one ticked, shows 1/2; completing it
    moves it under "Completed · 1" and the area reads "1 list · no open
-   tasks". Deleting the list warns how many tasks go with it and lands on
+   tasks"; the Add task row under the tasks opens a new task from the
+   keyboard. Deleting the list warns how many tasks go with it and lands on
    the area; its old address says the list is gone. The area panel renames
    as you type, says it has no lists, and its Delete asks first (Cancel
    keeps it); the FAB's Delete area lands on My Day.
@@ -224,7 +225,9 @@ tests would be visible, not silent.
    second task is on that day's plan or still on tomorrow's accordingly.
    The step half of the Today rule is scenario 21.
 5. **Overdue and the week strip.** Task due yesterday through the picker;
-   My Day shows it under Overdue in error colour. Previous week, next week,
+   My Day shows it under Overdue in error colour. Today is the current and
+   pressed day with no Today button, the strip names its ISO week, and a
+   touch swipe turns the week and back. Previous week, next week,
    pick a date in the dialog, **Today** returns; the picked day's bar text
    follows each move. A later day still carries the task under Overdue and
    its FAB adds a task due that day; a past day shows only what was
@@ -235,7 +238,8 @@ tests would be visible, not silent.
    Next day in the strip shows it pending again. Its panel shows Repeat,
    Until and Remind and "Done 1 time · 1 in a row". A second task repeats
    from yesterday (custom start): yesterday reads Skipped, never Overdue.
-   Custom repeats follow a moved start (weekly, monthly), save interval,
+   The Repeat menu offers Yearly on today and no Never. Custom repeats
+   follow a moved start (weekly, monthly), save interval,
    unit and weekdays, and yearly; Until sets the end date and going back to
    one-time drops repeat and end, also after reopening.
 7. **Goal with linked tasks.** New goal; two tasks linked through the task
@@ -251,7 +255,13 @@ tests would be visible, not silent.
    fields, one per display kind: Text, Link (renders a link with `href`),
    Path (renders as code), Quantity (normalised), Automatic with a URL value
    (detected as a link). Reorder two fields by their drag handles, edit one,
-   remove one. Reload: order and kinds persist. Delete the item.
+   remove one. Reload: order and kinds persist. Delete the item. Copying a
+   path (or failing to) and following a link leave the row closed; a
+   `javascript:` value set to Link stays text; the field editor offers
+   Remove, takes a dropped link, says a dropped file has no path and waits
+   for a label. The add row moves from label to value on Enter, adds only on
+   Enter with a label, and takes a dropped URI list or text. Cancel in the
+   editor not closing it is a skipped BUG step.
 9. **Reorder lists and move a task.** Area with two lists; reorder them in
    the area panel by drag; the board follows after reload. Move a task to
    the other list through the task panel's List row; it shows there and the
@@ -286,10 +296,11 @@ tests would be visible, not silent.
     opens it. A visitor without an account, in a
     Polish browser, reads the frozen copy (owner, progress, to-do and done
     sections, a description, a step done by the owner without a checkbox)
-    and ticks a task and a step; a reference list's snapshot (published
+    and ticks a task and a step, with no way to edit the description; a
+    reference list's snapshot (published
     through the API) shows an item's field and ticks. The owner sees one
     mark on a task ticked on two snapshots and on a task with only a step
-    ticked; the panel's Dismiss clears the task's and the reference item's
+    ticked, whose step reads "Marked on a snapshot"; the panel's Dismiss clears the task's and the reference item's
     marks. A signed-in visitor gets Open PSPad; List snapshots starts empty,
     then lists both newest first with expiry and opening dates; offline a
     row opens its saved copy with ticks paused, one never opened asks to
@@ -319,7 +330,10 @@ tests would be visible, not silent.
     holdings at today's rate once per currency; offline they hide and the
     NBP button is off, online they return. Deleting the month asks first.
     Once another device adds last month's balance, starting this month
-    copies its holdings and the overview shows the net worth. NBP answers
+    copies its holdings and the overview shows the net worth. The month strip
+    marks the current month, rests This month on it, names January's year,
+    reads a month with a balance as "has entries", and its sheet opens on the
+    shown year, picks a month of another year and jumps back. NBP answers
     come from a `context.route` stub; the service worker is blocked so
     going offline reaches the connectivity probe.
 14. **Offline capture and sync.** Create a list with one task; go offline;
@@ -378,7 +392,10 @@ tests would be visible, not silent.
     Scheduled, the schedule reads empty again, and Completed · 1 lists it.
     Tomorrow's empty schedule names its date and a free slot there opens
     "New task" due Tomorrow for an hour from that time. Clicking the first
-    empty half hour today opens "New task" with that start time.
+    empty half hour today opens "New task" with that start time. Tasks from
+    another device: three overlapping ones share lines that tick one at a
+    time, a two-hour block names its list, a half-hour one does not, a late
+    one reads (+1), and a band unfolds its hours.
 18. **Language.** Settings shows English and lists English and Polski;
     choosing Polski reloads the app
     into Polish (Ustawienia, Mój dzień) and a reload keeps
@@ -392,7 +409,8 @@ tests would be visible, not silent.
 19. **Step rename.** A task with one step: edit the step's name in the
     task panel and press Enter; close and reopen the panel, then reload:
     the new name persists. Clearing the name and blurring puts the old
-    name back, and so does Escape after typing a new one (issue #199).
+    name back, and so does Escape after typing a new one (issue #199). A
+    blank step is not added, and a removed step stays gone.
 20. **Add from My Day.** My Day's FAB opens "New task" due Today with Add
     task disabled; two draft steps and a name still leave it disabled until
     the List row picks a list; the List row reads "No list", Enter adds
@@ -410,7 +428,13 @@ tests would be visible, not silent.
     taken" checks only that step and keeps the task on the day; ticking
     "Book an appointment" says it moved to Tomorrow, and tomorrow then lists
     it under any time. Ticking the first task's row completes it (issue
-    #202, `adr/0078`).
+    #202, `adr/0078`). A past step deadline reads Yesterday and clears, an
+    unset one offers no Clear date, and a ticked step or a repeating task
+    takes none. At a viewport that leaves the My Day row just above 560px,
+    a timed task with a long name and a step due in three days keeps at
+    least 120px of its name, its details narrow instead, and the due-step
+    mark keeps min(details, 140px) (issue #222; that the mark is still
+    clipped by the details is a skipped BUG step).
 22. **List filter, sort and calendar.** Two High-priority tasks due
     tomorrow and one plain task: filtering on High hides the plain one,
     sorting by Name orders the two A → Z, and both survive a reload with
@@ -421,15 +445,27 @@ tests would be visible, not silent.
     list's tasks is a chip, nothing matching says "No tasks match." and
     keeps the open count, each active group is one closable chip, and
     Clear keeps the sort (issue #198, `list-filter-and-calendar-design.md`).
+    With every task dated the month has no undated line. Today is pressed
+    when the month opens; a day with three tasks shows two
+    in the list's order and "+2 more" with a repeat, which shows from its
+    start; a day's row names its goal; every day is labelled.
 23. **Task panel.** An open task names its area and list and its created
     date and shows only the rows that apply. Rename (Enter creates nothing),
     star, due date by quick pick and calendar, Remind presets, hint and a
-    custom lead time, a time that hides once the due date is cleared,
-    priority, a rendered description with the row's notes marker, a list
+    custom lead time, a typed time (shorthand, a hint for unreadable text,
+    an end equal to the start refused, an end past midnight hinted (+1), an
+    emptied end or start, the clock left untouched or with only the hour
+    picked, Clear time), a time that hides once the due date is cleared,
+    priority, a rendered description with the row's notes marker (Escape
+    clears a blank one; a click or Edit opens the raw text, Escape or no
+    change leaves it, a link or a selection keeps the view; another device's
+    or name change not reaching the open panel is a skipped BUG step), a list
     picker without reference lists that moves the task to another area, and
     a delete that asks first.
 24. **New task draft.** A new task in a list waits for a name and offers no
-    list, delete, remind or description; closing forgets draft steps. Steps,
+    list, delete, remind or description; closing forgets draft steps. Draft
+    steps remove, rename, keep their name when emptied and keep a deadline
+    through a rename; a repeating draft offers no step deadline. Steps,
     star, due date, reminder, priority and time land on the task Enter adds.
     A repeating draft goes back to one-time, drops a due date before its
     custom start and keeps its rule, end date and reminder.
@@ -452,7 +488,8 @@ tests would be visible, not silent.
     task, filter or view toggle; the new-item panel shows Labels,
     Description and its list. Draft labels keep their order and kind,
     Enter in the label row does not add the item, and the server stores
-    labels, kinds and description; the item is added without opening (its
+    labels, kinds and description, a draft label edits and removes; the
+    item is added without opening (its
     labels missing from the panel until a reload is a skipped BUG step).
     The panel renames and stars, its List row offers reference lists only
     and moves the item to another area; a new item can go to another list,
@@ -489,6 +526,11 @@ tests would be visible, not silent.
     its first task from the FAB. The panel names the list, its kind and area, renames as
     you type and moves the list to another area. Members and Public
     snapshots open their own views whose back arrow returns to the details.
+    Public snapshots names the expiry it publishes (a preset or a picked
+    date), warns when publishing or revoking fails, reads days left, ticks
+    and entries, hides the QR code on its toggle, says live links need a
+    connection when the server is unreachable and disables Publish offline
+    (only after a redraw: a skipped BUG step).
     Deleting from the panel stays on the board there and goes to the area
     from the list's own screen; a deleted or unknown list says it is gone.
 32. **Budgets and budget settings.** Budget cards sum this month in PLN,
@@ -508,7 +550,7 @@ tests would be visible, not silent.
     Custom shows the picker, and a ranked or forecast category opens its
     entries. Settings: the entries fixture previews error rows, new
     categories and rate sources, retries a missing NBP rate, asks before
-    leaving and imports; the balances fixture says when a column is missing,
+    leaving, counts an unticked row out of the import and imports; the balances fixture says when a column is missing,
     groups rows under their month and imports; Entries and Balance show the
     imported data. An unknown import kind says so.
 34. **Share a budget.** An unshared budget has no members button; settings
@@ -534,7 +576,7 @@ tests would be visible, not silent.
 - `fullyParallel: true`, four workers locally and in CI, one test per file
   so every scenario is its own worker slot.
 - Per test timeout 90 s; expect timeout 10 s; the suite target is under
-  five minutes per shard in CI with four workers (ADR-0079); CI splits the suite
+  five minutes per shard in CI with four workers (ADR-0080); CI splits the suite
   into two shards (`--shard=N/2`), each with its own compose stack. A scenario that cannot fit splits, it never widens the
   timeout.
 - Retries: 0 locally, 1 in CI; a retry is a flake to fix, reported in the
@@ -606,7 +648,7 @@ nudge whose pull re-renders the open panel. Helpers that close a panel or
 edit inside one retry inside `toPass`; a new helper that types into a panel
 should do the same.
 
-UI test-driven work starts with the failing end-to-end step; pages and layout have no bUnit tests (ADR-0079).
+UI test-driven work starts with the failing end-to-end step; pages, layout and components have no bUnit tests (ADR-0080).
 
 ## 10. Risks
 

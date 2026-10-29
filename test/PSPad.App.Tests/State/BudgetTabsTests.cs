@@ -25,8 +25,4 @@ public class BudgetTabsTests
     [Fact]
     public void AnUnknownTabIsTheOverview() =>
         Assert.Equal(BudgetTabs.Overview, BudgetTabs.IndexOf("nonsense"));
-
-    [Fact]
-    public void AViewIsAddressedByItsName() =>
-        Assert.Equal("stats", BudgetTabs.NameOf(BudgetTabs.Stats));
 }

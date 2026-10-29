@@ -3,10 +3,12 @@ import { anotherDevice, idOf } from '../helpers/api';
 import { areaSubtitle, createArea } from '../helpers/areas';
 import { createGoalOn, linkTasksOn } from '../helpers/goals';
 import { addDays, isoDate, monthButton, utcToday } from '../helpers/dates';
-import { closeFilterChip, createList, listRowNames, monthDay, openList, pickListFilter, showListAs, sortListBy } from '../helpers/lists';
+import {
+  calendarDay, closeFilterChip, showCalendarMonth, createList, listRowNames, monthDay, openList, pickListFilter, showListAs, sortListBy,
+} from '../helpers/lists';
 import { pickFromPropertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
-import { addTask, closeTask, openTask, taskRow } from '../helpers/tasks';
+import { addTask, closeTask, createTasksOn, openTask, taskRow } from '../helpers/tasks';
 import { setDueDate } from '../helpers/today';
 
 test('a list filters, sorts, remembers its choice and shows a month', async ({ page, account }) => {
@@ -30,6 +32,12 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
     await setDueDate(page, 'Tomorrow');
     await closeTask(page);
   }
+  await test.step('a month with every task dated has no undated line', async () => {
+    await showListAs(page, 'Calendar');
+    await expect(page.getByText(/no date\.$/)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Show them in List' })).toHaveCount(0);
+    await showListAs(page, 'List');
+  });
   await addTask(page, plain);
 
   await pickListFilter(page, 'High');
@@ -94,4 +102,41 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
     await expect(listRowNames(page).filter({ visible: true })).toHaveText([plain, zebra]);
   });
   await device.dispose();
+
+  await test.step('a calendar day shows two names in the list order and counts the rest, a repeat shows from its start, a row names its goal, and every day is labelled', async () => {
+    const today = utcToday();
+    const midNextMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 15));
+    const [alpha, bravo, charlie] = ['Crate A', 'Crate B', 'Crate C'].map(name => `${name} ${account.suffix}`);
+    const herbs = `Water the herbs ${account.suffix}`;
+    const planner = await anotherDevice(page);
+    const listId = await idOf(planner, 'tasklists', list);
+    const ids = await createTasksOn(planner, listId, [
+      { name: charlie, until: midNextMonth }, { name: alpha, until: midNextMonth }, { name: bravo, until: midNextMonth },
+      { name: herbs, repeatsFrom: midNextMonth },
+    ]);
+    const packing = await createGoalOn(planner, `Pack ${account.suffix}`);
+    await linkTasksOn(planner, packing, [ids[alpha]]);
+    await planner.dispose();
+
+    await showListAs(page, 'Calendar');
+    await expect(calendarDay(page, today)).toHaveAttribute('aria-pressed', 'true');
+    const days = page.getByRole('button', { name: /^\d{1,2} \w+, \d+ tasks?$/ });
+    await expect.poll(async () => (await days.count()) % 7).toBe(0);
+    expect(await days.count()).toBeGreaterThanOrEqual(28);
+    await showCalendarMonth(page, midNextMonth);
+    const cell = calendarDay(page, midNextMonth);
+    await expect(cell).toHaveAccessibleName(/, 4 tasks$/);
+    await expect(cell).toContainText(new RegExp(`${alpha}[\\s\\S]*${bravo}`));
+    await expect(cell).not.toContainText(charlie);
+    await expect(cell).not.toContainText(herbs);
+    await expect(cell).toContainText('+2 more');
+    await expect(calendarDay(page, addDays(midNextMonth, -1))).not.toContainText(herbs);
+    await expect(calendarDay(page, addDays(midNextMonth, 1))).toContainText(herbs);
+
+    await cell.click();
+    await expect(cell).toHaveAttribute('aria-pressed', 'true');
+    await expect(taskRow(page, alpha)).toContainText(`Pack ${account.suffix}`);
+    await expect(taskRow(page, charlie)).toBeVisible();
+    await expect(taskRow(page, herbs)).toBeVisible();
+  });
 });

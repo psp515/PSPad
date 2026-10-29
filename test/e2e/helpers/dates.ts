@@ -62,3 +62,9 @@ export function monthTitle(day: Date): string {
 export function monthButton(scope: Page | Locator, day: Date) {
   return scope.getByRole('button', { name: new RegExp(`^${escapeRegExp(monthTitle(day))}(,|$)`) });
 }
+
+export function isoWeek(day: Date): number {
+  const thursday = addDays(day, 3 - ((day.getUTCDay() + 6) % 7));
+  const firstThursday = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 4));
+  return 1 + Math.round((thursday.getTime() - addDays(firstThursday, 3 - ((firstThursday.getUTCDay() + 6) % 7)).getTime()) / (7 * 86_400_000));
+}

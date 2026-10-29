@@ -25,6 +25,9 @@ test('a balance month is started by hand, valued at NBP\'s rate, deleted, and st
   await test.step('a first month offers to start it, and a started month waits for holdings', async () => {
     await showView(page, 'Balance');
     await expect(monthButton(page, today)).toHaveAttribute('aria-pressed', 'true');
+    await expect(monthButton(page, today)).toHaveAttribute('aria-current', 'date');
+    await expect(page.getByRole('button', { name: 'This month' })).toBeDisabled();
+    await expect(monthButton(page, new Date(Date.UTC(today.getUTCFullYear(), 0, 1)))).toContainText(String(today.getUTCFullYear()));
     await expect(page.getByText(`${monthTitle(today)} has no balance yet`)).toBeVisible();
     await expect(page.getByText('Start it and add your holdings.')).toBeVisible();
     await expect(page.getByText(`No holdings in ${monthTitle(today)}.`)).toBeVisible();
@@ -131,8 +134,29 @@ test('a balance month is started by hand, valued at NBP\'s rate, deleted, and st
   ]);
 
   await showView(page, 'Balance');
+  await expect(monthButton(page, previousMonth)).toHaveAccessibleName(`${monthTitle(previousMonth)}, has entries`);
   await monthButton(page, previousMonth).click();
   await expect(figure(page, 'Net worth')).toContainText('8,700.00 PLN');
+  await expect(monthButton(page, previousMonth)).toHaveAttribute('aria-pressed', 'true');
+  await expect(monthButton(page, today)).toHaveAttribute('aria-pressed', 'false');
+
+  await test.step('the month sheet opens on the shown year, picks a month of another year, and This month jumps back', async () => {
+    const year = previousMonth.getUTCFullYear();
+    await page.getByRole('button', { name: 'Pick another month' }).click();
+    const sheet = page.getByRole('dialog');
+    await expect(sheet.getByText(String(year), { exact: true })).toBeVisible();
+    await sheet.getByRole('button', { name: 'Previous year' }).click();
+    await expect(sheet.getByText(String(year - 1), { exact: true })).toBeVisible();
+    await sheet.getByRole('button', { name: 'Jan', exact: true }).click();
+    await expect(sheet).toBeHidden();
+    await expect(monthButton(page, new Date(Date.UTC(year - 1, 0, 1)))).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText(`${monthTitle(new Date(Date.UTC(year - 1, 0, 1)))} has no balance yet`)).toBeVisible();
+    await page.getByRole('button', { name: 'Pick another month' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'This month' }).click();
+    await expect(monthButton(page, today)).toHaveAttribute('aria-pressed', 'true');
+    await monthButton(page, previousMonth).click();
+    await expect(figure(page, 'Net worth')).toContainText('8,700.00 PLN');
+  });
 
   await test.step('starting this month copies the latest earlier balance, and the overview shows it', async () => {
     await page.getByRole('button', { name: 'This month' }).click();

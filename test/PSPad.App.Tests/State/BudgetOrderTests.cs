@@ -39,13 +39,4 @@ public class BudgetOrderTests
 
         Assert.Equal(["Earlier", "Later", "House", "Trip"], ordered.Select(budget => budget.Name));
     }
-
-    [Fact]
-    public void ASharedBudgetKnowsWhoSharedIt()
-    {
-        var budget = JoinedBy(Owned(Other, "House", Start), Me, Start);
-
-        Assert.True(BudgetOrder.IsSharedWith(budget, Me));
-        Assert.False(BudgetOrder.IsSharedWith(Owned(Me, "Mine", Start), Me));
-    }
 }

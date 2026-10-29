@@ -15,6 +15,13 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
         return row?.To<T>();
     }
 
+    public async Task<Aggregate?> LoadAsync(Type type, Guid id)
+    {
+        var module = await ModuleAsync();
+        var row = await module.InvokeAsync<ReplicaRow?>("get", id);
+        return row?.To(type);
+    }
+
     public async Task<IReadOnlyList<T>> LoadAllAsync<T>(Guid userId) where T : Aggregate
     {
         var module = await ModuleAsync();
@@ -26,6 +33,12 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
     {
         var module = await ModuleAsync();
         await module.InvokeVoidAsync("put", ReplicaRow.From(aggregate));
+    }
+
+    public async Task<bool> SaveUnlessNewerAsync(Aggregate aggregate)
+    {
+        var module = await ModuleAsync();
+        return await module.InvokeAsync<bool>("putUnlessNewer", ReplicaRow.From(aggregate), aggregate.Version);
     }
 
     public async Task RemoveAsync(Guid id)

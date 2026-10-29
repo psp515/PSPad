@@ -44,3 +44,13 @@ export async function settled(page: Page, edit: () => Promise<void>) {
   await committed;
   await pulled;
 }
+
+export async function pulledAfter(page: Page, change: () => Promise<void>) {
+  let changedAt = Number.POSITIVE_INFINITY;
+  const pulled = page.waitForResponse(
+    response => response.url().includes('/api/sync') && response.ok() && response.request().timing().startTime >= changedAt,
+    pushedWithin);
+  await change();
+  changedAt = Date.now();
+  await pulled;
+}

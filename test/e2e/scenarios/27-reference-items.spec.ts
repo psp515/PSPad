@@ -7,7 +7,7 @@ import {
   awaitNoDrawer, chooseProperty, closePanel, confirm, dismissMenu, menuOptions, openFabAction, panel, propertyRow, savePanel,
 } from '../helpers/panels';
 import {
-  addDraftField, dragRow, fieldLabels, fieldRow, referenceRow, setFieldKind, storedItem,
+  addDraftField, dragRow, editFieldValue, fieldLabels, fieldRow, referenceRow, setFieldKind, storedItem,
 } from '../helpers/references';
 import { signIn } from '../helpers/sign-in';
 import { settled } from '../helpers/sync';
@@ -51,6 +51,11 @@ test('reference items are drafted, edited, moved and listed with their labels as
     await expect(panel(page).getByText('New item', { exact: true })).toBeVisible();
     await expect(referenceRow(page, 'Bigos')).toHaveCount(0);
     await addDraftField(page, 'Site', '/srv/recipes/bigos.md');
+    await addDraftField(page, 'Serves', '4');
+    await editFieldValue(page, 'Serves', '6');
+    await expect(fieldRow(page, 'Serves')).toContainText('6');
+    await panel(page).getByRole('button', { name: 'Remove Serves', exact: true }).click();
+    await expect(panel(page).getByRole('button', { name: 'Remove Serves', exact: true })).toHaveCount(0);
     await setFieldKind(page, 'Site', 'Path');
     await dragRow(fieldRow(page, 'Site').getByLabel('Drag Site'), fieldRow(page, 'Time'));
     await expect.poll(() => fieldLabels(page)).toEqual(['Site', 'Time']);

@@ -114,15 +114,6 @@ public class ProgramAuthRegistrationTests
         return collection.BuildServiceProvider(validateScopes: true);
     }
 
-    sealed class FakeNavigationManager : NavigationManager
-    {
-        public FakeNavigationManager() => Initialize("http://localhost/", "http://localhost/");
-
-        protected override void NavigateToCore(string uri, bool forceLoad)
-        {
-        }
-    }
-
     sealed class ThrowingJSRuntime : IJSRuntime
     {
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>

@@ -759,12 +759,22 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      Due/Until is set or the task repeats, like Remind me) — the clock icon
      and "Time" label on the left (`pspad-time-head`), and on the right two
      stacked rows (`pspad-time-line`): **From** and **To** labels (12.5px,
-     `TextSecondary`, 40px wide) each followed by a 24-hour outlined, dense,
-     typeable `MudTimePicker` filling the rest of the row, `aria-label`
-     Start / End (`pspad-time-start`, `pspad-time-end`), ending in a
-     `Schedule` adornment icon that opens the picker (MudBlazor 9.9 has no
-     open-on-click for an editable picker, so the icon is the click target
-     and the field stays for typing). The From row sits on the Time line,
+     `TextSecondary`, 40px wide) each followed by an outlined, dense
+     `MudTextField` (`InputMode.numeric`) filling the rest of the row,
+     `aria-label` Start / End (`pspad-time-start`, `pspad-time-end`), showing
+     the time as `HH:mm` and ending in a `Schedule` adornment icon that opens
+     a hidden 24-hour `MudTimePicker` in its `Dialog` variant
+     (`pspad-time-clock`, its own input hidden by CSS): the hour click moves to minutes,
+     the minute click or a click outside commits once and closes the clock
+     by itself, and the row sends the time on `PickerClosed` when it differs.
+     (A static clock inside a `MudDialog` would submit on the hour click.)
+     Typing commits on Enter or blur
+     and is read leniently (`TimeText.TryParse`): `14` → 14:00, `9:30`,
+     `09.30`, `930` and `1430` → the obvious times; anything else keeps the
+     typed text, marks the field in error and shows "Enter a time like 14:30"
+     under the row; an empty Start clears the time, an empty End drops only
+     the end. (An editable `MudTimePicker` cannot take Enter: MudBlazor
+     prevents the keydown, so the browser never fires `change`.) The From row sits on the Time line,
      its field starting in the value column like Due's "Tomorrow"; the To row
      appears under it, same column and width, only once Start has a value. A ✕ (`pspad-property-clear`, `Size.Small`, the shared
      `PropertyRow` clear) on the From row clears both and lines up with
@@ -811,6 +821,14 @@ in the draft's order (each with a fresh step id), then
 `SetTaskRecurrence`, `SetTaskDueDate`, `SetTaskTime`, `SetTaskLeadTime`,
 `SetTaskPriority`, `AddTaskToGoal` and `StarTask` for whichever the draft
 sets. Steps go first so the task's first sync already carries them.
+
+**Edit reloads the task after every command, and only the newest reload
+lands.** Each row's change sends its command and reloads the task from the
+replica; a parameter change (another task, the shell becoming ready) starts
+a reload of its own, and a sync pull does not. A reload that began before a
+later one finished is discarded, otherwise its copy of the task, read before
+the last command, would replace the newer one on screen and the change would
+look as if it had silently failed.
 
 **An existing area's panel orders its lists.** Under the Name field,
 `AreaDetailPanel` shows a `PanelSection` **Lists · N** (`pspad-area-lists`)
@@ -1604,6 +1622,11 @@ lands on the budget. `InviteLinkCard` is now the list wrapper over
 | `?item={itemId}`, `?item=new&list={listId}` | reference item detail overlay, on any of the above |
 
 **Signed-out visitors land on `/welcome`**, not a bare login redirect.
+A login callback that could not capture a session (token exchange or
+`/api/me` failed), or that Keycloak answered with an error (`login-failed`
+redirects to `/welcome`), leaves `SignInFailure` set; `/welcome` shows a
+warning `MudAlert` that sign-in did not finish above Log in, which retries
+it, and clears the flag so a later visit does not repeat it.
 Sign-out ends the Keycloak session directly rather than only clearing local
 state. The boot splash is held — no application chrome renders — until the
 first screen is ready to draw: the signed-in shell once its data is loaded,

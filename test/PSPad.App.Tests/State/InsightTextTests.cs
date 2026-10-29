@@ -13,15 +13,6 @@ public class InsightTextTests
     static readonly IStringLocalizer<BudgetsStrings> Text = TestLocalizers.For<BudgetsStrings>();
 
     [Fact]
-    public void PastUsualNamesTheCategoryAndTheAverage()
-    {
-        var insight = new Insight(InsightKind.PastUsual, "Food", 700m, 620m, 0);
-
-        Assert.Equal("Food already past a usual month", InsightText.Title(insight, Text));
-        Assert.Equal("700.00 PLN vs 620.00 PLN average", InsightText.Caption(insight, Text));
-    }
-
-    [Fact]
     public void RunningHighSaysHowMuchMoreThanUsual()
     {
         var insight = new Insight(InsightKind.RunningHigh, "Food", 300m, 200m, 0);

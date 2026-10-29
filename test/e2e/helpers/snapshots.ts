@@ -1,6 +1,7 @@
 import { APIRequestContext, expect, Locator, Page, request } from '@playwright/test';
 import { env } from '../env';
 import { panel } from './panels';
+import { pickCalendarDay } from './today';
 
 export type PublishedSnapshot = { id: string; token: string };
 
@@ -41,4 +42,11 @@ export function snapshotDate(day: Date): string {
 export function recordedVisit(page: Page) {
   return page.waitForResponse(response =>
     response.url().endsWith('/api/me/snapshot-visits') && response.request().method() === 'POST' && response.ok());
+}
+
+export async function pickSnapshotDate(page: Page, day: Date) {
+  await panel(page).getByRole('checkbox', { name: 'Date…', exact: true }).click();
+  await panel(page).getByRole('textbox').click();
+  await pickCalendarDay(page.locator('.mud-popover-open'), day);
+  await expect(page.locator('.mud-popover-open .mud-picker-calendar-header-transition')).toHaveCount(0);
 }

@@ -7,6 +7,7 @@
 @using PSPad.Module.Tasks.Recurrence
 @using PSPad.Module.Tasks.Tasks
 @inject NavigationManager Navigation
+@inject SignInFailure Failure
 @inject IClock Clock
 @inject IStringLocalizer<AuthStrings> T
 @inject IStringLocalizer<SharedStrings> S
@@ -22,6 +23,12 @@
                target="_blank" rel="noopener noreferrer">
                 @T["WelcomeTagline"]
             </a>
+            @if (_signInFailed)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="pspad-welcome-sign-in-failed">
+                    @T["SignInDidNotFinish"]
+                </MudAlert>
+            }
             <p class="pspad-welcome-actions">
                 <a class="pspad-welcome-button pspad-welcome-login" href="@LoginUrl">@T["LogIn"]</a>
                 <a class="pspad-welcome-button pspad-welcome-docs" href="https://psp515.com/pspad">
@@ -47,6 +54,8 @@
 
     IReadOnlyList<TodoTask> DemoTasks = [];
 
+    bool _signInFailed;
+
     string LoginUrl
     {
         get
@@ -59,7 +68,12 @@
         }
     }
 
-    protected override void OnInitialized() => DemoTasks = BuildDemoTasks();
+    protected override void OnInitialized()
+    {
+        DemoTasks = BuildDemoTasks();
+        _signInFailed = Failure.Happened;
+        Failure.Clear();
+    }
 
     IReadOnlyList<TodoTask> BuildDemoTasks()
     {

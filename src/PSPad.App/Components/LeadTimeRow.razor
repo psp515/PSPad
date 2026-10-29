@@ -1,16 +1,17 @@
+@using PSPad.App.State
 @using PSPad.Module.Tasks.Tasks
 @inject IStringLocalizer<TasksStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
 
 <PropertyRow Class="pspad-task-lead" Icon="@Icons.Material.Outlined.NotificationsNone" Label="@T["RemindMe"]"
-             Value="@Describe(Value, T)" HasValue="@(Value is not null)" Disabled="@Disabled"
+             Value="@LeadTimeText.Describe(Value, T)" HasValue="@(Value is not null)" Disabled="@Disabled"
              OnClear="@(() => ChooseAsync(null))">
     <MudText Typo="Typo.caption" Class="pspad-lead-hint pspad-muted d-block px-4 pt-2 pb-1" Style="max-width:260px">
         @T["LeadHint"]
     </MudText>
     @foreach (var preset in Presets)
     {
-        <MudMenuItem Class="pspad-lead-option" OnClick="@(() => ChooseAsync(preset))">@Describe(preset, T)</MudMenuItem>
+        <MudMenuItem Class="pspad-lead-option" OnClick="@(() => ChooseAsync(preset))">@LeadTimeText.Describe(preset, T)</MudMenuItem>
     }
     <MudDivider />
     <MudMenuItem Class="pspad-lead-custom" Icon="@Icons.Material.Outlined.Tune" OnClick="@OpenCustom">@T["CustomEllipsis"]</MudMenuItem>
@@ -29,7 +30,7 @@
                        Variant="Variant.Outlined" Margin="Margin.Dense">
                 @foreach (var unit in Units)
                 {
-                    <MudSelectItem T="LeadUnit" Value="@unit">@UnitLabel(unit, _amount, T)</MudSelectItem>
+                    <MudSelectItem T="LeadUnit" Value="@unit">@LeadTimeText.UnitLabel(unit, _amount, T)</MudSelectItem>
                 }
             </MudSelect>
             <MudText Typo="Typo.body2">@T["LeadBefore"]</MudText>
@@ -63,28 +64,7 @@
 
     static readonly LeadUnit[] Units = [LeadUnit.Days, LeadUnit.Weeks, LeadUnit.Months];
 
-    static readonly LeadTime DefaultLookAhead = new(1, LeadUnit.Weeks);
-
     bool CanSave => _amount is >= 1 and <= 99;
-
-    public static string Describe(LeadTime? lead, IStringLocalizer<TasksStrings> localizer)
-    {
-        var shown = lead ?? DefaultLookAhead;
-        return localizer.Plural(shown.Amount, shown.Unit switch
-        {
-            LeadUnit.Weeks => "LeadWeeks",
-            LeadUnit.Months => "LeadMonths",
-            _ => "LeadDays"
-        });
-    }
-
-    public static string UnitLabel(LeadUnit unit, int amount, IStringLocalizer<TasksStrings> localizer) =>
-        localizer.Plural(amount, unit switch
-        {
-            LeadUnit.Weeks => "UnitWeeks",
-            LeadUnit.Months => "UnitMonths",
-            _ => "UnitDays"
-        });
 
     void OpenCustom()
     {
