@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace PSPad.App.Components;
+namespace PSPad.App.State;
 
 public static partial class TimeText
 {

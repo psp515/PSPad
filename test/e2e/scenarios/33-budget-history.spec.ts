@@ -168,6 +168,12 @@ test('stats average the months with entries and chart them, and history arrives 
     await confirm(page, 'Cancel');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Import expenses and incomes into ${budget}`);
 
+    const lego = page.getByRole('checkbox', { name: 'Import line 5', exact: true });
+    await lego.click();
+    await expect(lego).not.toBeChecked();
+    await expect(page.getByRole('button', { name: 'Import 4 rows' })).toBeVisible();
+    await lego.click();
+    await expect(lego).toBeChecked();
     await page.getByRole('button', { name: 'Import 5 rows' }).click();
     await expect(page.getByText('Imported 5 entries and 0 holdings in 0 months.')).toBeVisible();
   });

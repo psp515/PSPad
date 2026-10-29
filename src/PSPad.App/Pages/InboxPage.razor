@@ -35,7 +35,7 @@ else
         <RowGroup Columns="true">
             @foreach (var day in Days)
             {
-                <div class="pspad-row-subhead">@DueDateRow.Describe(day.Key, State.Today, Shared)</div>
+                <div class="pspad-row-subhead">@DueDayText.Describe(day.Key, State.Today, Shared)</div>
                 @foreach (var item in day)
                 {
                     <InboxItemRow @key="item.Id" Item="@item" Zone="@Zone" OnOpen="@Open" />

@@ -1,3 +1,4 @@
+@using PSPad.App.State
 @using System.Globalization
 @using PSPad.Module.Money.Values
 @using PSPad.Module.Tasks.Lists
@@ -148,8 +149,8 @@
     {
         get
         {
-            var last = WeekStrip.StartOfWeek(_month.LastDay).AddDays(6);
-            for (var day = WeekStrip.StartOfWeek(_month.FirstDay); day <= last; day = day.AddDays(1))
+            var last = WeekDays.StartOfWeek(_month.LastDay).AddDays(6);
+            for (var day = WeekDays.StartOfWeek(_month.FirstDay); day <= last; day = day.AddDays(1))
             {
                 yield return day;
             }

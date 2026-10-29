@@ -6,7 +6,7 @@ import { chooseProperty, closePanel, panel, propertyRow, savePanel } from '../he
 import { signIn } from '../helpers/sign-in';
 import { syncNow } from '../helpers/sync';
 import {
-  addStep, closeTask, openNewTask, openTask, setStepDeadline, stepNameField, stepRow, taskRow,
+  addStep, closeTask, openNewTask, openTask, removeStep, renameStep, setStepDeadline, stepNameField, stepRow, taskRow,
 } from '../helpers/tasks';
 import { setCustomRepeat, setDueDate, setOneTime, setRepeating, setTaskTime } from '../helpers/today';
 
@@ -44,7 +44,16 @@ test('a new task keeps everything its draft panel set', async ({ page, account }
   await test.step('steps, star, due date, reminder, priority and time land on the task Enter adds', async () => {
     await panel(page).getByPlaceholder('Task name').fill(task);
     await addStep(page, 'Order boxes');
-    await addStep(page, 'Pack the kitchen');
+    await addStep(page, 'Pack the kitchn');
+    await addStep(page, 'Label boxes');
+    await removeStep(page, 'Label boxes');
+    await setStepDeadline(page, 'Pack the kitchn', 'Tomorrow');
+    await renameStep(page, 'Pack the kitchn', 'Pack the kitchen');
+    await expect(stepRow(page, 'Pack the kitchen')).toContainText('Tomorrow');
+    await stepNameField(page, 'Order boxes').fill('');
+    await stepNameField(page, 'Order boxes').blur();
+    await expect(stepNameField(page, 'Order boxes')).toHaveValue('Order boxes');
+    await expect(panel(page).getByRole('textbox', { name: /^Rename / })).toHaveCount(2);
     await panel(page).getByRole('button', { name: 'Star', exact: true }).click();
     await chooseProperty(page, 'Due', /^In 2 days/);
     await chooseProperty(page, 'Remind me', '3 days before');
@@ -78,6 +87,8 @@ test('a new task keeps everything its draft panel set', async ({ page, account }
     await setRepeating(page);
     await expect(propertyRow(page, 'Repeat')).toContainText('Daily');
     await expect(propertyRow(page, 'Until')).toContainText('No end date');
+    await addStep(page, 'Mist the leaves');
+    await expect(panel(page).getByLabel('Set a deadline for Mist the leaves')).toHaveCount(0);
     await setOneTime(page);
     await expect(propertyRow(page, 'Repeat')).toHaveCount(0);
     await expect(propertyRow(page, 'Due')).toContainText('No due date');

@@ -22,7 +22,7 @@ public class ImportRatesTests
     [Fact]
     public async Task AnsweredRatesBecomeKnownAndMissingOnesFail()
     {
-        var nbp = new AppTestHost.FakeNbpRates();
+        var nbp = new FakeNbpRates();
         nbp.ByCurrency["EUR"] = new NbpRateView("EUR", 4.25m, new DateOnly(2026, 9, 4));
         nbp.ByCurrency["USD"] = null;
 
@@ -35,7 +35,7 @@ public class ImportRatesTests
     [Fact]
     public async Task OfflineEveryRequestFailsWithoutAsking()
     {
-        var nbp = new AppTestHost.FakeNbpRates();
+        var nbp = new FakeNbpRates();
 
         var book = await ImportRates.FetchAsync(nbp, false, Today, [Eur], RateBook.Empty, Text);
 
@@ -53,7 +53,7 @@ public class ImportRatesTests
         {
             System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("pl-PL");
             System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("pl-PL");
-            var nbp = new AppTestHost.FakeNbpRates();
+            var nbp = new FakeNbpRates();
             nbp.ByCurrency["USD"] = null;
 
             var book = await ImportRates.FetchAsync(nbp, true, Today, [Usd], RateBook.Empty, Text);
@@ -70,7 +70,7 @@ public class ImportRatesTests
     [Fact]
     public async Task RetryingReplacesAnEarlierFailure()
     {
-        var nbp = new AppTestHost.FakeNbpRates { Next = new NbpRateView("EUR", 4.3m, Eur.Date) };
+        var nbp = new FakeNbpRates { Next = new NbpRateView("EUR", 4.3m, Eur.Date) };
         var failed = new RateBook(new Dictionary<RateRequest, ImportRate>(),
             new Dictionary<RateRequest, string> { [Eur] = Offline });
 
@@ -83,7 +83,7 @@ public class ImportRatesTests
     [Fact]
     public async Task AFutureDateFailsWithoutAskingAndSaysTheRateIsNotPublishedYet()
     {
-        var nbp = new AppTestHost.FakeNbpRates();
+        var nbp = new FakeNbpRates();
         var future = new RateRequest("USD", new DateOnly(2026, 10, 31));
 
         var book = await ImportRates.FetchAsync(nbp, true, Today, [future], RateBook.Empty, Text);

@@ -1,3 +1,4 @@
+@using PSPad.App.State
 @inject IStringLocalizer<SharedStrings> Shared
 
 <MudMenu Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
@@ -7,7 +8,7 @@
             <MudButton Class="@Class" Variant="Variant.Text" Size="Size.Small" Disabled="@Disabled"
                        Color="@(day < Today ? Color.Error : Color.Default)"
                        StartIcon="@Icons.Material.Outlined.Event"
-                       OnClick="@(args => menu.ToggleAsync(args))">@DueDateRow.Describe(day, Today, Shared)</MudButton>
+                       OnClick="@(args => menu.ToggleAsync(args))">@DueDayText.Describe(day, Today, Shared)</MudButton>
         }
         else
         {

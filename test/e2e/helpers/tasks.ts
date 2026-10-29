@@ -67,6 +67,17 @@ export async function renameStep(page: Page, from: string, to: string) {
   await expect(stepNameField(page, to)).toHaveValue(to);
 }
 
+export async function removeStep(page: Page, name: string) {
+  const field = stepNameField(page, name);
+  await expect(async () => {
+    if ((await field.count()) > 0) {
+      await stepRow(page, name).hover({ timeout: 2_000 });
+      await panel(page).getByRole('button', { name: `Remove ${name}`, exact: true }).click({ timeout: 2_000 });
+    }
+    await expect(field).toHaveCount(0, { timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
 export async function checkStep(page: Page, name: string) {
   const box = panel(page).getByRole('checkbox', { name, exact: true });
   await expect(async () => {
@@ -92,6 +103,18 @@ export async function setStepDeadline(page: Page, step: string, day: 'Today' | '
       await page.getByRole('menuitem', { name: day }).first().click({ timeout: 2_000 });
     }
     await expect(due).toContainText(day, { timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
+export async function clearStepDeadline(page: Page, step: string) {
+  const unset = panel(page).getByLabel(`Set a deadline for ${step}`, { exact: true });
+  await expect(async () => {
+    if ((await unset.count()) === 0) {
+      await stepRow(page, step).hover({ timeout: 2_000 });
+      await stepRow(page, step).locator('.pspad-step-due').click({ timeout: 2_000 });
+      await page.getByRole('menuitem', { name: 'Clear date' }).click({ timeout: 2_000 });
+    }
+    await expect(unset).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 30_000 });
 }
 

@@ -57,6 +57,11 @@ export function monthDay(page: Page, isoDay: string) {
   return page.locator(`.pspad-month-day[data-day="${isoDay}"]`);
 }
 
+export function calendarDay(page: Page, day: Date) {
+  const name = `${day.getUTCDate()} ${day.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })}`;
+  return page.getByRole('button', { name: new RegExp(`^${name}, \\d+ tasks?$`) });
+}
+
 export async function closeFilterChip(page: Page, text: string) {
   await page.getByText(text, { exact: true }).getByRole('button', { name: 'Close' }).click();
 }

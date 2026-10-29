@@ -48,6 +48,13 @@ test('an area, a list and a task live and die', async ({ page, account }) => {
   await expect(areaSubtitle(page)).toHaveText(`${area} · no open tasks`);
   await addTask(page, task);
   await expect(areaSubtitle(page)).toHaveText(`${area} · 1 open task`);
+
+  await test.step('the Add task row under the tasks opens a new task from the keyboard', async () => {
+    await page.getByRole('button', { name: 'Add task', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await expect(panel(page).getByText(`New task · ${area} › ${list}`, { exact: true })).toBeVisible();
+    await closePanel(page);
+  });
   await openTask(page, task);
   await addStep(page, 'Buy seeds');
   await addStep(page, 'Prepare soil');

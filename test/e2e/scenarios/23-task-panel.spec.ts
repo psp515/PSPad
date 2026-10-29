@@ -6,9 +6,12 @@ import {
   awaitNoDrawer, chooseProperty, clearProperty, confirm, dismissMenu, menuOptions, panel, propertyRow,
 } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
+import { pulledAfter } from '../helpers/sync';
 import { anotherDevice, idOf } from '../helpers/api';
 import { addTask, closeTask, openTask, renameTask, taskRow } from '../helpers/tasks';
-import { setCustomLeadTime, setDueDate, setTaskTime } from '../helpers/today';
+import {
+  leaveClockUntouched, pickClockHourAndLeave, setCustomLeadTime, setDueDate, setTaskTime, timeField, typeTaskTime,
+} from '../helpers/today';
 
 test('the task panel edits a task in place, and deleting asks first', async ({ page, account }) => {
   const home = `Home ${account.suffix}`;
@@ -60,6 +63,58 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
     await expect(propertyRow(page, 'Due')).toContainText('Tomorrow');
     await expect(propertyRow(page, 'Remind me')).toContainText('1 week before');
     await expect(panel(page).getByRole('textbox', { name: 'Start' })).toBeVisible();
+
+    await test.step('a typed time reads shorthand, says what is wrong, runs past midnight, and the clock changes only what is picked', async () => {
+      const alert = panel(page).getByRole('alert');
+      await expect(timeField(page, 'End')).toHaveCount(0);
+      await expect(panel(page).getByRole('button', { name: 'Clear time' })).toHaveCount(0);
+      await typeTaskTime(page, 'Start', '930');
+      await expect(timeField(page, 'Start')).toHaveValue('09:30');
+      await expect(timeField(page, 'End')).toBeVisible();
+      await expect(taskRow(page, renamed)).toContainText('09:30');
+
+      await typeTaskTime(page, 'Start', 'nine');
+      await expect(alert).toHaveText('Enter a time like 14:30');
+      await expect(timeField(page, 'Start')).toHaveValue('nine');
+      await expect(taskRow(page, renamed)).toContainText('09:30');
+      await typeTaskTime(page, 'Start', '2145');
+      await expect(timeField(page, 'Start')).toHaveValue('21:45');
+      await expect(alert).toHaveCount(0);
+
+      await typeTaskTime(page, 'End', '21:45');
+      await expect(alert).toHaveText('End must differ from start');
+      await expect(taskRow(page, renamed)).not.toContainText('–');
+      await typeTaskTime(page, 'End', '1');
+      await expect(timeField(page, 'End')).toHaveValue('01:00');
+      await expect(alert).toHaveCount(0);
+      await expect(panel(page).getByText('Ends the next day (+1)')).toBeVisible();
+      await expect(taskRow(page, renamed)).toContainText('21:45–01:00 (+1)');
+      await typeTaskTime(page, 'End', '');
+      await expect(timeField(page, 'End')).toHaveValue('');
+      await expect(panel(page).getByText('Ends the next day (+1)')).toHaveCount(0);
+      await expect(taskRow(page, renamed)).not.toContainText('01:00');
+      await expect(taskRow(page, renamed)).toContainText('21:45');
+
+      await leaveClockUntouched(page, 'Start');
+      await expect(timeField(page, 'Start')).toHaveValue('21:45');
+      await pickClockHourAndLeave(page, 'Start', 14);
+      await expect(timeField(page, 'Start')).toHaveValue('14:45');
+      await expect(taskRow(page, renamed)).toContainText('14:45');
+
+      await typeTaskTime(page, 'End', '1530');
+      await expect(taskRow(page, renamed)).toContainText('14:45–15:30');
+      await panel(page).getByRole('button', { name: 'Clear time' }).click();
+      await expect(timeField(page, 'Start')).toHaveValue('');
+      await expect(timeField(page, 'End')).toHaveCount(0);
+      await expect(taskRow(page, renamed)).not.toContainText('14:45');
+
+      await typeTaskTime(page, 'Start', '8');
+      await expect(timeField(page, 'Start')).toHaveValue('08:00');
+      await typeTaskTime(page, 'Start', '');
+      await expect(timeField(page, 'End')).toHaveCount(0);
+      await expect(taskRow(page, renamed)).not.toContainText('08:00');
+    });
+
     await setDueDate(page, later);
     await expect(propertyRow(page, 'Due')).toContainText(shortDate(later));
     await setTaskTime(page, '08:15');
@@ -103,6 +158,14 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
     await chooseProperty(page, 'Priority', 'High');
     await expect(propertyRow(page, 'Priority')).toContainText('High');
     await expect(taskRow(page, renamed).getByRole('img', { name: 'High priority' })).toBeVisible();
+    await expect(panel(page).getByPlaceholder('Add a description…')).toBeVisible();
+    await expect(panel(page).getByRole('button', { name: 'Edit description' })).toHaveCount(0);
+    const blank = panel(page).getByRole('textbox', { name: 'Description' });
+    await blank.fill('Typed by mistake');
+    await blank.press('Escape');
+    await expect(blank).toHaveValue('');
+    await blank.blur();
+    await expect(taskRow(page, renamed).getByRole('img', { name: 'Description' })).toHaveCount(0);
     await panel(page).getByLabel('Description').fill('**Whole** milk');
     await panel(page).getByLabel('Description').blur();
     await expect(panel(page).getByRole('strong')).toHaveText('Whole');
@@ -110,6 +173,53 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
     await closeTask(page);
     await openTask(page, renamed);
     await expect(panel(page).getByRole('strong')).toHaveText('Whole');
+  });
+
+  await test.step('the description opens raw on a click or Edit, Escape or no change leaves it, and a link or a selection keeps the view', async () => {
+    const description = panel(page).getByRole('textbox', { name: 'Description' });
+    await panel(page).getByRole('strong').click();
+    await expect(description).toHaveValue('**Whole** milk');
+    await description.fill('**Skimmed** milk');
+    await description.press('Escape');
+    await expect(description).toHaveCount(0);
+    await expect(panel(page).getByRole('strong')).toHaveText('Whole');
+
+    await panel(page).getByRole('button', { name: 'Edit description' }).click();
+    await expect(description).toHaveValue('**Whole** milk');
+    await description.blur();
+    await expect(description).toHaveCount(0);
+
+    await panel(page).getByRole('button', { name: 'Edit description' }).click();
+    await description.fill('**Whole** milk from [the shop](https://example.com/shop)');
+    await description.blur();
+    const link = panel(page).getByRole('link', { name: 'the shop' });
+    await expect(link).toBeVisible();
+    await page.context().route('https://example.com/**', route => route.fulfill({ body: 'shop' }));
+    const shop = page.waitForEvent('popup');
+    await link.click();
+    await (await shop).close();
+    await page.context().unroute('https://example.com/**');
+    await expect(description).toHaveCount(0);
+
+    const words = (await panel(page).getByRole('strong').boundingBox())!;
+    await page.mouse.move(words.x + 1, words.y + words.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(words.x + words.width - 1, words.y + words.height / 2, { steps: 5 });
+    await page.mouse.up();
+    await expect(description).toHaveCount(0);
+  });
+
+  await test.step.skip('BUG: an open task panel keeps the description it opened with after another device changes it, until it is reopened (reported in PR #225)', async () => {
+    const description = panel(page).getByRole('textbox', { name: 'Description' });
+    const taskId = await idOf(device, 'todotasks', renamed);
+    await pulledAfter(page, () => device.send('SetTaskDescription', { taskId, description: '**Skimmed** milk' }));
+    await expect(panel(page).getByRole('strong')).toHaveText('Skimmed');
+    await panel(page).getByRole('button', { name: 'Edit description' }).click();
+    await description.fill('**Oat** milk');
+    await pulledAfter(page, () => device.send('SetTaskDescription', { taskId, description: '**Goat** milk' }));
+    await expect(description).toHaveValue('**Oat** milk');
+    await description.press('Escape');
+    await expect(panel(page).getByRole('strong')).toHaveText('Goat');
   });
 
   await test.step('the list row offers task lists only and moves the task to another area at once', async () => {

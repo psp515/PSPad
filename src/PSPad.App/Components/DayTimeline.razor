@@ -26,7 +26,7 @@
                     {
                         @foreach (var slot in new[] { new TimeOnly(segment.StartHour, 0), new TimeOnly(segment.StartHour, HalfHour) })
                         {
-                            var label = TimeRow.Format(slot);
+                            var label = TaskTimeText.Format(slot);
                             <button type="button" class="pspad-timeline-slot" data-time="@label"
                                     aria-label="@T["AddTaskAt", label].Value" @onclick="@(() => OnAdd.InvokeAsync(slot))"></button>
                         }
@@ -43,10 +43,10 @@
             var task = Tasks[block.Entry.TaskId];
             var done = IsDone(task);
             <div @key="block.Entry.TaskId" class="@BlockClass(block, done)" style="@BlockStyle(block)"
-                 title="@($"{task.Name} – {TimeRow.Describe(block.Entry.Time!)}")">
+                 title="@($"{task.Name} – {TaskTimeText.Describe(block.Entry.Time!)}")">
                 <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))"
                              Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
-                             UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" />
+                             UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" aria-label="@task.Name" />
                 <div class="pspad-timeline-task-body" @onclick="@(() => OnOpen.InvokeAsync(task))">
                     @Time(block.Entry.Time!)
                     <MudText Typo="Typo.body2" Class="pspad-timeline-task-name pspad-task-name"
@@ -68,7 +68,7 @@
                     <div @key="entry.TaskId" class="pspad-timeline-group-line">
                         <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))"
                                      Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
-                                     UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" />
+                                     UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" aria-label="@task.Name" />
                         <div class="pspad-timeline-task-body" @onclick="@(() => OnOpen.InvokeAsync(task))">
                             @Time(entry.Time!)
                             <MudText Typo="Typo.body2" Class="pspad-timeline-task-name pspad-task-name" title="@task.Name"
@@ -80,7 +80,7 @@
         }
         @if (Now is { } now)
         {
-            <div class="pspad-timeline-now" style="@($"--at:{_axis.At(TimelineSpan.Minutes(now))}")"><span class="pspad-timeline-now-label">@TimeRow.Format(now)</span></div>
+            <div class="pspad-timeline-now" style="@($"--at:{_axis.At(TimelineSpan.Minutes(now))}")"><span class="pspad-timeline-now-label">@TaskTimeText.Format(now)</span></div>
         }
     </div>
 </MudPaper>
@@ -146,7 +146,7 @@
 
     RenderFragment Time(TaskTime time) =>
         @<MudText Typo="Typo.caption" Color="Color.Primary" Class="pspad-schedule-time">
-            <span class="pspad-schedule-start">@TimeRow.Format(time.Start)</span>@if (time.End is { } end){<span class="pspad-schedule-dash">–</span><span class="pspad-schedule-end">@TimeRow.Format(end)</span>}@if (time.Overnight){<span class="pspad-schedule-nextday pspad-muted">@TimeRow.NextDay</span>}
+            <span class="pspad-schedule-start">@TaskTimeText.Format(time.Start)</span>@if (time.End is { } end){<span class="pspad-schedule-dash">–</span><span class="pspad-schedule-end">@TaskTimeText.Format(end)</span>}@if (time.Overnight){<span class="pspad-schedule-nextday pspad-muted">@TaskTimeText.NextDay</span>}
         </MudText>;
 
     string BlockStyle(TimelineBlock block) =>

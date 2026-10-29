@@ -1,11 +1,13 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea } from '../helpers/areas';
-import { addDays, shortDate, utcToday } from '../helpers/dates';
+import { addDays, isoWeek, monthTitle, shortDate, utcToday } from '../helpers/dates';
 import { createList, openList } from '../helpers/lists';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, openTask, taskRow } from '../helpers/tasks';
 import { closePanel, propertyRow } from '../helpers/panels';
-import { dayLabel, daySection, goToMyDay, openNewTaskFromFab, pickCalendarDay, pickWeekDay, setDueDate, setRepeating } from '../helpers/today';
+import {
+  dayLabel, daySection, goToMyDay, openNewTaskFromFab, pickCalendarDay, pickWeekDay, setDueDate, setRepeating, swipeWeek, weekDay,
+} from '../helpers/today';
 
 test('an overdue task shows in red and the week strip moves the day', async ({ page, account }) => {
   const today = utcToday();
@@ -27,6 +29,19 @@ test('an overdue task shows in red and the week strip moves the day', async ({ p
   await expect(dayLabel(page)).toHaveText(`Today · ${shortDate(today)}`);
   await expect(page.getByText('Nothing planned for today.')).toBeHidden();
 
+  await test.step('today is current and picked, there is no Today button on it, the week is named, and a swipe turns the week', async () => {
+    await expect(weekDay(page, today)).toHaveAttribute('aria-current', 'date');
+    await expect(weekDay(page, today)).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: 'Today', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Pick a date' })).toBeVisible();
+    await expect(page.getByText(`Week ${isoWeek(today)} · ${monthTitle(today)}`, { exact: true })).toBeVisible();
+    await swipeWeek(page, 'left');
+    await expect(dayLabel(page)).toHaveText(shortDate(addDays(today, 7)));
+    await expect(weekDay(page, today)).toHaveCount(0);
+    await swipeWeek(page, 'right');
+    await expect(dayLabel(page)).toHaveText(`Today · ${shortDate(today)}`);
+  });
+
   await page.locator('.pspad-week-prev').click();
   await expect(dayLabel(page)).toHaveText(shortDate(addDays(today, -7)));
   await page.locator('.pspad-week-next').click();
@@ -36,6 +51,8 @@ test('an overdue task shows in red and the week strip moves the day', async ({ p
   await page.locator('.pspad-week-pick').click();
   await pickCalendarDay(page.locator('.pspad-day-dialog'), inTwoDays);
   await expect(dayLabel(page)).toHaveText(shortDate(inTwoDays));
+  await expect(weekDay(page, inTwoDays)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Today', exact: true })).toBeVisible();
 
   await test.step('a later day still carries the overdue task, and the FAB adds a task due that day', async () => {
     await expect(daySection(page, 'overdue')).toContainText(task);

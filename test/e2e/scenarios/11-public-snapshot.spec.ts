@@ -11,7 +11,7 @@ import { openListSnapshots } from '../helpers/sharing';
 import { markOnSnapshot, publishSnapshotOn, recordedVisit, showNewestSnapshot, snapshotDate, snapshotRows } from '../helpers/snapshots';
 import { signIn } from '../helpers/sign-in';
 import { goOffline, goOnline, syncNow } from '../helpers/sync';
-import { addTask, closeTask, createTasksOn, openTask, taskRow } from '../helpers/tasks';
+import { addTask, closeTask, createTasksOn, openTask, stepRow, taskRow } from '../helpers/tasks';
 
 test.use({ serviceWorkers: 'block' });
 
@@ -61,6 +61,7 @@ test('a public snapshot collects ticks until it is revoked', async ({ page, brow
     await panel(page).getByRole('button', { name: /^Publish until / }).click();
     release();
     await expect(panel(page).getByText('Live links · 1')).toBeVisible();
+    await expect(panel(page).getByText('day left', { exact: true })).toBeVisible();
     await page.context().unroute('**/api/commands');
     expect(publishedAt).toBeGreaterThan(0);
     expect(pushedAt).toBeGreaterThan(0);
@@ -89,6 +90,9 @@ test('a public snapshot collects ticks until it is revoked', async ({ page, brow
     await expect(visitor.getByText(bread)).toBeVisible();
     await expect(visitor.getByText('Extra virgin only')).toBeVisible();
     await expect(visitor.getByText('Brak opisu')).toHaveCount(0);
+    await expect(visitor.getByRole('button', { name: 'Edytuj opis' })).toHaveCount(0);
+    await visitor.getByText('Extra virgin only').click();
+    await expect(visitor.getByRole('textbox', { name: 'Opis' })).toHaveCount(0);
     await expect(visitor.getByText(`Już zrobione przez właściciela (${account.displayName}) · 1`)).toBeVisible();
     await expect(visitor.getByText(domain)).toBeVisible();
     await expect(visitor.getByRole('checkbox', { name: domain })).toHaveCount(0);
@@ -128,6 +132,10 @@ test('a public snapshot collects ticks until it is revoked', async ({ page, brow
     await expect(taskRow(page, oil).getByRole('img', { name: marked })).toHaveCount(1);
     await expect(taskRow(page, invoice).getByRole('img', { name: marked })).toBeVisible();
     await expect(taskRow(page, bread).getByRole('img', { name: marked })).toHaveCount(0);
+    await openTask(page, invoice);
+    await expect(stepRow(page, stamps)).toContainText(marked);
+    await expect(stepRow(page, printed)).not.toContainText(marked);
+    await closeTask(page);
   });
 
   await openTask(page, oil);

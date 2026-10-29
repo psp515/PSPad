@@ -1,10 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import { expect, test } from '../fixtures/accounts';
-import { createArea } from '../helpers/areas';
-import { addDays, dayMonth, utcToday } from '../helpers/dates';
+import { anotherDevice, idOf } from '../helpers/api';
+import { createArea, openArea } from '../helpers/areas';
+import { addDays, dayMonth, isoDate, utcToday } from '../helpers/dates';
 import { createList, openList } from '../helpers/lists';
+import { dismissMenu, panel } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
-import { addStep, addTask, closeTask, completeTaskRow, openTask, setStepDeadline, taskRow } from '../helpers/tasks';
-import { daySection, goToMyDay, showDay } from '../helpers/today';
+import {
+  addStep, addTask, clearStepDeadline, closeTask, completeTaskRow, openTask, setStepDeadline, stepRow, taskRow,
+} from '../helpers/tasks';
+import { daySection, goToMyDay, setRepeating, showDay } from '../helpers/today';
 
 test('a step deadline puts its task on that day, and an overdue task carries to later days', async ({ page, account }) => {
   const area = `Home ${account.suffix}`;
@@ -72,5 +77,37 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
   await test.step('ticking the task itself still completes it', async () => {
     await completeTaskRow(page, task);
     await expect(daySection(page, 'anytime')).not.toContainText(task);
+  });
+
+  await test.step('a past step deadline reads Yesterday and clears, a ticked step or a repeating task takes none', async () => {
+    const packing = `Pack the car ${account.suffix}`;
+    const device = await anotherDevice(page);
+    const taskId = randomUUID();
+    const [load, fuel, tyres] = [randomUUID(), randomUUID(), randomUUID()];
+    await device.send('CreateTask', { taskId, listId: await idOf(device, 'tasklists', list), name: packing });
+    await device.send('AddStep', { taskId, stepId: load, name: 'Load the boot' });
+    await device.send('AddStep', { taskId, stepId: fuel, name: 'Fill the tank' });
+    await device.send('AddStep', { taskId, stepId: tyres, name: 'Check the tyres' });
+    await device.send('SetStepDueDate', { taskId, stepId: load, dueOn: isoDate(addDays(today, -1)) });
+    await device.send('CheckStep', { taskId, stepId: fuel, checked: true });
+    await device.dispose();
+
+    await openArea(page, area);
+    await page.getByRole('link', { name: list, exact: true }).first().click();
+    await openTask(page, packing);
+    const deadline = (step: string) => panel(page).getByLabel(`Set a deadline for ${step}`, { exact: true });
+    await expect(stepRow(page, 'Load the boot')).toContainText('Yesterday');
+    await expect(deadline('Fill the tank')).toHaveCount(0);
+    await stepRow(page, 'Check the tyres').hover();
+    await deadline('Check the tyres').click();
+    await expect(page.getByRole('menuitem', { name: 'Tomorrow' }).first()).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Clear date' })).toHaveCount(0);
+    await dismissMenu(page);
+    await clearStepDeadline(page, 'Load the boot');
+    await expect(stepRow(page, 'Load the boot')).not.toContainText('Yesterday');
+
+    await setRepeating(page);
+    await expect(panel(page).getByLabel(/^Set a deadline for /)).toHaveCount(0);
+    await closeTask(page);
   });
 });

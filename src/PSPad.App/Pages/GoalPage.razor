@@ -156,7 +156,7 @@ else
 
     string DueText(DateOnly due)
     {
-        var text = DueDateRow.Describe(due, State.Today, Shared);
+        var text = DueDayText.Describe(due, State.Today, Shared);
         var days = due.DayNumber - State.Today.DayNumber;
 
         return _goal?.Status == GoalStatus.InProgress && days > 0

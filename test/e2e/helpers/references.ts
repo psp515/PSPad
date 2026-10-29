@@ -146,3 +146,17 @@ export async function storedItem(device: Device, name: string) {
     description: field(doc, 'description') ?? null,
   };
 }
+
+export async function dropOn(target: Locator, data: Record<string, string>, fileName?: string) {
+  const transfer = await target.page().evaluateHandle(({ data, fileName }) => {
+    const dropped = new DataTransfer();
+    for (const [type, value] of Object.entries(data)) {
+      dropped.setData(type, value);
+    }
+    if (fileName) {
+      dropped.items.add(new File(['x'], fileName));
+    }
+    return dropped;
+  }, { data, fileName });
+  await target.dispatchEvent('drop', { dataTransfer: transfer });
+}
