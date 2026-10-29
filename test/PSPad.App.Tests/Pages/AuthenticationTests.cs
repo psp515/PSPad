@@ -187,6 +187,20 @@ public class AuthenticationTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AnIdentityProviderErrorOnTheCallbackIsRecordedAndLandsOnWelcome()
+    {
+        Arrange(
+            new InMemoryLocalSessionStore(),
+            new StubMeHandler(HttpStatusCode.NotFound, null));
+
+        Render<PSPad.App.Pages.Authentication>(
+            parameters => parameters.Add(p => p.Action, "login-failed"));
+
+        Assert.True(Services.GetRequiredService<SignInFailure>().Happened);
+        Assert.EndsWith("/welcome", Services.GetRequiredService<NavigationManager>().Uri);
+    }
+
+    [Fact]
     public void ASuccessfulLoginClearsAnEarlierFailure()
     {
         Arrange(

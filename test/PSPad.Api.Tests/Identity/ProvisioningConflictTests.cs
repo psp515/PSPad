@@ -21,14 +21,15 @@ public class ProvisioningConflictTests(MongoFixture fixture)
     public sealed class ConflictBudget
     {
         int _remaining;
+        int _commits;
 
-        public int Commits { get; private set; }
+        public int Commits => Volatile.Read(ref _commits);
 
         public void Arm(int conflicts) => Interlocked.Exchange(ref _remaining, conflicts);
 
         public bool Spend()
         {
-            Commits++;
+            Interlocked.Increment(ref _commits);
             return Interlocked.Decrement(ref _remaining) >= 0;
         }
     }
@@ -133,8 +134,7 @@ public class ProvisioningConflictTests(MongoFixture fixture)
         var response = await client.PutAsJsonAsync("/api/me/timezone", new SetTimeZoneRequest("Europe/Warsaw"), ct);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var me = await response.Content.ReadFromJsonAsync<MeResponse>(ct);
-        Assert.Equal("Europe/Warsaw", me!.TimeZone);
+        Assert.Equal("Europe/Warsaw", (await StoredUserAsync(factory, subject, ct))["timeZone"].AsString);
     }
 
     [Fact]
@@ -154,8 +154,7 @@ public class ProvisioningConflictTests(MongoFixture fixture)
         var response = await client.GetAsync("/api/me", ct);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var me = await response.Content.ReadFromJsonAsync<MeResponse>(ct);
-        Assert.Equal("Zoe Renamed", me!.DisplayName);
+        Assert.Equal("Zoe Renamed", (await StoredUserAsync(factory, subject, ct))["displayName"].AsString);
     }
 
     [Fact]
@@ -183,6 +182,13 @@ public class ProvisioningConflictTests(MongoFixture fixture)
             ProvisioningPlan.SeedAreaNames("en").Count,
             await CountAsync(factory, "areas", "userId", userId, ct));
     }
+
+    static Task<BsonDocument> StoredUserAsync(ApiFactory factory, string subject, CancellationToken ct) =>
+        factory.Services.GetRequiredService<MongoContext>()
+            .Collection<BsonDocument>("users")
+            .Find(Builders<BsonDocument>.Filter.Eq(
+                "_id", new BsonBinaryData(User.IdFor(subject), GuidRepresentation.Standard)))
+            .SingleAsync(ct);
 
     static Task<long> CountAsync(ApiFactory factory, string collection, string field, Guid id, CancellationToken ct) =>
         factory.Services.GetRequiredService<MongoContext>()

@@ -89,6 +89,17 @@ public class WelcomeTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItShowsTheSignInWarningOnlyOnce()
+    {
+        Services.GetRequiredService<PSPad.App.Auth.SignInFailure>().Record();
+        Render<Welcome>();
+
+        var later = Render<Welcome>();
+
+        Assert.Empty(later.FindAll(".pspad-welcome-sign-in-failed"));
+    }
+
+    [Fact]
     public void ItSendsAnyoneWantingDetailToTheDocumentationSite()
     {
         var page = Render<Welcome>();
