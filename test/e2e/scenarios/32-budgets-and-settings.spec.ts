@@ -162,7 +162,11 @@ test('budget cards sum this month, settings edit categories, and an archived bud
     await expect(page.getByText(`${monthTitle(today)} has no balance yet`)).toBeVisible();
     await expect(page.getByRole('button', { name: /^Start / })).toHaveCount(0);
     await monthButton(page, previous).click();
-    await expect(page.getByRole('button', { name: /^Konto / })).toBeVisible();
+    await page.getByRole('button', { name: /^Konto / }).click();
+    await expect(panel(page).getByRole('textbox', { name: 'Name' })).toHaveValue('Konto');
+    await expect(panel(page).getByRole('button', { name: 'Save' })).toHaveCount(0);
+    await expect(panel(page).getByRole('button', { name: 'Remove' })).toHaveCount(0);
+    await closePanel(page);
     await expect(page.getByRole('menu', { name: 'Month actions' })).toHaveCount(0);
 
     await showView(page, 'Stats');

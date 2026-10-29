@@ -26,7 +26,7 @@ test('the language is chosen once and follows the user to another device', async
   await expect(page.getByText('Nic jeszcze nie dodano.')).toBeVisible();
 
   await test.step('Budgets speak Polish, with Polish amounts and plurals', async () => {
-    await page.locator('.pspad-nav').getByRole('link', { name: 'Budżety' }).click();
+    await page.getByRole('navigation').getByRole('link', { name: 'Budżety', exact: true }).click();
     await expect(page.getByText('Nie masz jeszcze budżetów.')).toBeVisible();
     const budgetId = await createBudgetOn(api, `Osobisty ${account.suffix}`);
     await recordOn(api, budgetId, [

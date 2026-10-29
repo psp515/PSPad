@@ -160,11 +160,23 @@ export async function stubNbp(page: Page, rates: Record<string, number> | 'down'
   await page.context().route('**/api/money/nbp-rate**', route => {
     const currency = new URL(route.request().url()).searchParams.get('currency') ?? '';
     asked.push(currency);
-    return rates === 'down' || !(currency in rates)
-      ? route.fulfill({ status: 502 })
-      : route.fulfill({ json: { currency, rate: rates[currency], effectiveDate: isoDate(addDays(utcToday(), -1)) } });
+    const asOf = new Date(`${new URL(route.request().url()).searchParams.get('date')}T00:00:00Z`);
+    if (rates === 'down') {
+      return route.fulfill({ status: 502 });
+    }
+    return currency in rates
+      ? route.fulfill({ json: { currency, rate: rates[currency], effectiveDate: isoDate(nbpDayBefore(asOf)) } })
+      : route.fulfill({ status: 404 });
   });
   return asked;
+}
+
+export function nbpDayBefore(day: Date): Date {
+  let previous = addDays(day, -1);
+  while (previous.getUTCDay() === 0 || previous.getUTCDay() === 6) {
+    previous = addDays(previous, -1);
+  }
+  return previous;
 }
 
 export function region(page: Page, name: string): Locator {
