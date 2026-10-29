@@ -53,6 +53,7 @@ public static class AppTestHost
         context.Services.AddSingleton(work);
         context.Services.AddSingleton<IUnitOfWork>(work);
         context.Services.AddSingleton<IClock>(new FixedClock(today));
+        context.Services.AddSingleton(new PSPad.App.Auth.SignInFailure());
         context.Services.AddScoped<IViewTargets, StoreViewTargets>();
         context.Services.AddSingleton<IDocumentStore<Area>>(new ReplicaDocumentStore<Area>(replica));
         context.Services.AddSingleton<IDocumentStore<TaskList>>(new ReplicaDocumentStore<TaskList>(replica));

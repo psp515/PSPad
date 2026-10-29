@@ -70,6 +70,25 @@ public class WelcomeTests : Bunit.TestContext
     }
 
     [Fact]
+    public void ItSaysNothingAboutSigningInWhenNoAttemptFailed()
+    {
+        var page = Render<Welcome>();
+
+        Assert.Empty(page.FindAll(".pspad-welcome-sign-in-failed"));
+    }
+
+    [Fact]
+    public void AfterAFailedSignInItSaysSoAndOffersTheLoginAgain()
+    {
+        Services.GetRequiredService<PSPad.App.Auth.SignInFailure>().Record();
+
+        var page = Render<Welcome>();
+
+        Assert.Contains("Signing in did not finish", page.Find(".pspad-welcome-sign-in-failed").TextContent);
+        Assert.NotNull(page.Find(".pspad-welcome-login"));
+    }
+
+    [Fact]
     public void ItSendsAnyoneWantingDetailToTheDocumentationSite()
     {
         var page = Render<Welcome>();

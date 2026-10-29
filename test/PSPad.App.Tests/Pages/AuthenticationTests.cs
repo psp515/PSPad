@@ -172,6 +172,38 @@ public class AuthenticationTests : Bunit.TestContext
     }
 
     [Fact]
+    public void AFailedProfileFetchIsRecordedSoWelcomeCanSaySignInDidNotFinish()
+    {
+        Arrange(
+            new InMemoryLocalSessionStore(),
+            new StubMeHandler(HttpStatusCode.ServiceUnavailable, null),
+            completeSignInStatus: RemoteAuthenticationStatus.Success,
+            refreshToken: "refresh-token-value");
+
+        Render<PSPad.App.Pages.Authentication>(
+            parameters => parameters.Add(p => p.Action, "login-callback"));
+
+        Assert.True(Services.GetRequiredService<SignInFailure>().Happened);
+    }
+
+    [Fact]
+    public void ASuccessfulLoginClearsAnEarlierFailure()
+    {
+        Arrange(
+            new InMemoryLocalSessionStore(),
+            new StubMeHandler(
+                HttpStatusCode.OK, new MeResponse(Guid.NewGuid(), "Zoe", "zoe@example.com", "Europe/Warsaw", "en")),
+            completeSignInStatus: RemoteAuthenticationStatus.Success,
+            refreshToken: "refresh-token-value");
+        Services.GetRequiredService<SignInFailure>().Record();
+
+        Render<PSPad.App.Pages.Authentication>(
+            parameters => parameters.Add(p => p.Action, "login-callback"));
+
+        Assert.False(Services.GetRequiredService<SignInFailure>().Happened);
+    }
+
+    [Fact]
     public void ItWritesNothingWhenTheProfileCarriesNoUserId()
     {
         var sessions = new InMemoryLocalSessionStore();
@@ -250,6 +282,7 @@ public class AuthenticationTests : Bunit.TestContext
         Services.AddSingleton<IReplica>(_replica);
         Services.AddSingleton<IClock>(clock);
         Services.AddSingleton(sessions);
+        Services.AddSingleton(new SignInFailure());
         Services.AddSingleton(authProvider);
         Services.AddSingleton<AuthenticationStateProvider>(authProvider);
         Services.AddSingleton(new LocalSignOut(
