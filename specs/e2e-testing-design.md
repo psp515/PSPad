@@ -14,7 +14,7 @@ talking to the API over HTTP, syncing a replica. Regressions in that seam
 
 In:
 
-- A Playwright suite in `test/e2e/` that runs thirty-three whole-scenario
+- A Playwright suite in `test/e2e/` that runs thirty-four whole-scenario
   journeys through a browser against the Docker Compose stack.
 - Fixtures that create a Keycloak user per test and sign in through the real
   login form.
@@ -119,9 +119,13 @@ envelopes (`CommandCatalogue` resolves `type` by class name, e.g.
 `CompleteTask`), and reads `CommandResponse[]` (`accepted`, `rejection`). `anotherDevice(page)`
 wraps this as a second device of the same user: scenarios 22 and 25–31
 arrange many tasks, items, goals and repeats through it (`createTasksOn`,
-`createItemsOn`, `createGoalOn`), and 12, 18, 32 and 33 budgets, entries
+`createItemsOn`, `createGoalOn`), and 12, 18, 32, 33 and 34 budgets, entries
 and balances (`createBudgetOn`, `recordOn`, `startBalanceOn`), which also
-proves the open page picks them up without a reload.
+proves the open page picks them up without a reload. The sharing scenarios
+also use the API for what a user can't click cheaply: 10 and 34 spend join
+attempts (`tryJoin`) to close a link by wrong codes or reach the join limit,
+and 11 publishes a second snapshot and ticks it as an anonymous visitor
+(`publishSnapshotOn`, `markOnSnapshot`).
 
 ### 3.5 Offline
 
@@ -130,8 +134,10 @@ the page makes; the client's `BrowserConnectivity` then probes the API,
 fails, and the status footer and sync stamp show offline. Chromium's offline
 emulation does not reach requests a service worker makes, and the PWA's
 worker proxies the probe, so the offline scenario's context is created with
-`serviceWorkers: 'block'`. Reloading while offline would need that worker's
-cache, so no scenario reloads offline.
+`serviceWorkers: 'block'` (13, 14 and the sharing scenarios 10, 11 and 34
+too). Reloading while offline would need that worker's cache, so no
+scenario reloads offline; a page that must open offline is reached by
+in-app navigation (`openInApp`, Blazor's `navigateTo`).
 
 ## 4. Scenarios
 
@@ -214,18 +220,41 @@ tests would be visible, not silent.
    the area panel by drag; the board follows after reload. Move a task to
    the other list through the task panel's List row; it shows there and the
    source list's count drops.
-10. **Share a list, join, remove, and the API says no.** Owner opens Members,
-    **Create link**, reads the code. Other user opens the join link, enters
-    the code, picks an area; the list shows under Shared with me. Member
-    completes a task; owner syncs and sees it done. Owner removes the member.
-    Member syncs: the list is gone. With the member's token the API returns
-    a sync without the list or its id in `memberListIds`, and `CompleteTask`
-    on the list's other task comes back `accepted: false`.
-11. **Public snapshot.** Owner publishes a 1 day snapshot from Public
-    snapshots; opens the **Open** link in a fresh unauthenticated context;
-    ticks a task; the public page shows Marked. Owner syncs: the task row
-    shows the snapshot chip; the panel's Dismiss clears it. Revoke: the
-    public page shows "This snapshot has expired or never existed."
+10. **Share a list, join, remove, and the API says no.** The owner's card
+    shows no shared marker until **Create invite link** (a QR code, "30 min
+    left", a link carrying the XXX-XXX code, "Shared · 1 person"); **End link
+    now** before anyone joins unshares it. The other user opens the list's
+    join link, which asks for the list's code, and joins with it from a
+    settled app; Back skips the join page, and their My Day lists the shared
+    task due today. With no areas of their own, Areas lands on Shared with
+    me (its phone chip current, only the card's Edit, Back to area leading
+    there); the owner has no such chip and the card says "Shared · 2
+    people". Sent to the list's snapshots view, the member gets read-only
+    details; Members names the owner with no invite, and offline Leave is
+    off while filing stays on. Leaving empties Shared with me; five wrong
+    codes (API) close the link and the owner reads why; a new link is
+    joined (a code in the link joining at once is a skipped BUG step: an
+    opening sync can drop the list's tasks). The member files the list under
+    their own area (Back follows), sees only Add task in the FAB with a Goal
+    row in its draft, completes a task and links a shared task to their own
+    goal. Offline the owner can't remove, stop or renew; ending the link
+    keeps the member and the marker. The owner removes the member: the list
+    is gone for them, the API sync lacks it and `CompleteTask` on its other
+    task comes back `accepted: false`.
+11. **Public snapshot.** A task added just before publishing goes into the
+    1 day link, whose QR code opens it. A visitor without an account, in a
+    Polish browser, reads the frozen copy (owner, progress, to-do and done
+    sections, a description, a step done by the owner without a checkbox)
+    and ticks a task and a step; a reference list's snapshot (published
+    through the API) shows an item's field and ticks. The owner sees one
+    mark on a task ticked on two snapshots and on a task with only a step
+    ticked; the panel's Dismiss clears the task's and the reference item's
+    marks. A signed-in visitor gets Open PSPad; List snapshots starts empty,
+    then lists both newest first with expiry and opening dates; offline a
+    row opens its saved copy with ticks paused, one never opened asks to
+    connect, and an unreachable server falls back to the saved copies.
+    After Revoke a tick is refused and unticks, and a reload says "This
+    snapshot has expired or never existed."
 12. **Budget month.** Budgets starts empty; a new budget waits for a name
     and opens on this month's overview. An expense in PLN and an income in
     EUR with a typed rate sum in PLN; switch month back and forth. Last
@@ -410,6 +439,21 @@ tests would be visible, not silent.
     leaving and imports; the balances fixture says when a column is missing,
     groups rows under their month and imports; Entries and Balance show the
     imported data. An unknown import kind says so.
+34. **Share a budget.** An unshared budget has no members button; settings
+    offer sharing from "Only you", and the panel creates a budget invite. The
+    other user's budget link with a wrong code says so above the entry card
+    and drops the code; an incomplete code can't join, a typed wrong one
+    keeps the input, and a lower-case code with a dash goes on Enter; a
+    dropped connection offers Retry, which joins and opens the budget. The
+    member sees "Shared by", no Rename or Archive but category Add, and a
+    members panel with the owner and no invite; Budgets lists their own
+    budget first, then the shared one saying who shared it. The owner's head
+    count opens the members, the card reads "Shared · 2 people", and offline
+    nothing changes who is in. Archived, the panel can't invite and the
+    member reads who archived it with no Restore. The member leaves (back to
+    Budgets), rejoins from a link with its code, then runs out of join
+    attempts and is told to wait. Removing the member takes the budget from
+    them; Stop sharing ends the link.
 
 ## 5. Timing
 
@@ -420,7 +464,7 @@ tests would be visible, not silent.
   timeout.
 - Retries: 0 locally, 1 in CI; a retry is a flake to fix, reported in the
   HTML report.
-- Scenarios 10, 11, 14, 16 and 18 are the heaviest (two or three contexts);
+- Scenarios 10, 11, 14, 16, 18 and 34 are the heaviest (two or three contexts);
   12, 13, 25, 27, 28, 29, 31 and 32 are the heaviest single-context ones. A scenario
   that runs past a minute at two workers on a two-core machine splits;
   data a step only needs to exist is arranged through `anotherDevice`,
@@ -450,8 +494,8 @@ test/e2e/
   package.json  package-lock.json  tsconfig.json  playwright.config.ts  env.ts  global-setup.ts
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
-                 settings.ts  goals.ts  references.ts  sharing.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 33-budget-history.spec.ts
+                 settings.ts  goals.ts  references.ts  sharing.ts  snapshots.ts  sync.ts  api.ts  budgets.ts
+  scenarios/     01-first-sign-in.spec.ts … 34-budget-sharing.spec.ts
 ```
 
 One helper module per screen family, one scenario per file, no shared

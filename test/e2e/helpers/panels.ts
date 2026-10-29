@@ -48,6 +48,18 @@ export async function openFabAction(page: Page, name: string) {
   await expect(menu).not.toHaveClass(/mud-fab-menu-open/);
 }
 
+export async function openFab(page: Page) {
+  await awaitNoDrawer(page);
+  const menu = page.locator('.pspad-fab .mud-fab-menu');
+  await expect(async () => {
+    if (!(await menu.evaluate(element => element.classList.contains('mud-fab-menu-open')))) {
+      await page.locator('.pspad-fab').getByRole('button').click();
+    }
+    await expect(menu).toHaveClass(/mud-fab-menu-open/, { timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+  return page.getByRole('menuitem');
+}
+
 export async function pickFromPropertyRow(page: Page, rowClass: string, option: string) {
   await panel(page).locator(`.${rowClass} .pspad-property-activator`).click();
   await page.getByRole('menuitem', { name: option, exact: true }).click();
