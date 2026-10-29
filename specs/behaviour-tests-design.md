@@ -20,8 +20,8 @@ Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225
 
 Fixed in round 3:
 
-- 10-share-join-remove: joining a list could lose the tasks it already had: a sync running at the join purged them, or the list arrived by delta and never counted as missing. Fixed in COMMIT_B1 (ADR-0081).
-- 10-share-join-remove: a code in the link joined at once, but the shared list's tasks could be lost the same way. Fixed in COMMIT_B1 (ADR-0081).
+- 10-share-join-remove: joining a list could lose the tasks it already had: a sync running at the join purged them, or the list arrived by delta and never counted as missing. Fixed in 1c0c49e (ADR-0081).
+- 10-share-join-remove: a code in the link joined at once, but the shared list's tasks could be lost the same way. Fixed in 1c0c49e (ADR-0081).
 
 Noted without a step:
 
