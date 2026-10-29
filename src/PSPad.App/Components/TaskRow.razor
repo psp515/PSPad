@@ -14,7 +14,7 @@
         <span class="pspad-priority-slot" aria-hidden="true"></span>
     }
     @Lead
-    <MudCheckBox T="bool" Value="@Done" ValueChanged="@(_ => OnToggle.InvokeAsync(Task))"
+    <MudCheckBox T="bool" Value="@Done" ValueChanged="@(_ => OnToggle.InvokeAsync(Task))" ReadOnly="@(!TaskTick.Toggles(Task, Today))"
                  Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
                  UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" />
 

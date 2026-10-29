@@ -81,7 +81,7 @@ test('an area board previews each list as a card', async ({ page, account }) => 
     await expect(ticked).not.toBeChecked();
   });
 
-  await test.step.skip('BUG: ticking a repeat on a day it skips shows it ticked until a reload, though nothing was saved (reported in PR #225)', async () => {
+  await test.step('a repeat ticked on a day it skips does not show ticked', async () => {
     const skipped = taskRow(page, 'Water plants').getByRole('checkbox');
     await skipped.click();
     await syncNow(page);

@@ -35,7 +35,7 @@
         <div class="d-flex align-center gap-1 px-2 pt-3 pb-1">
             @if (_task is not null)
             {
-                <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync"
+                <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync" ReadOnly="@(!TaskTick.Toggles(_task, State.Today))"
                              Color="Color.Primary" Disabled="@Disabled" aria-label="@Shared["Done"].Value" />
             }
             <MudTextField T="string" Class="@($"pspad-task-name-field flex-grow-1 {(_task is null ? "px-2" : "")}")"
@@ -565,7 +565,7 @@
             return;
         }
 
-        if (_task.IsRecurring && !_task.OccursOn(State.Today) && !_task.CompletedDays.Contains(State.Today))
+        if (!TaskTick.Toggles(_task, State.Today))
         {
             return;
         }

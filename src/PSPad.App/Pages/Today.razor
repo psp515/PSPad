@@ -322,7 +322,7 @@ else
     {
         if (task.IsRecurring)
         {
-            if (!task.OccursOn(day) && !task.CompletedDays.Contains(day))
+            if (!TaskTick.Toggles(task, day))
             {
                 return;
             }

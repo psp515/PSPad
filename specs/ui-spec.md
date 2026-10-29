@@ -645,7 +645,10 @@ leave it out of their open tasks, and `GoalListRow` counts it done. My
 Day never shows it — it has no occurrence left. Every tick handler (My Day,
 list screen, area board, goals, panel) toggles the occurrence and does
 nothing on a day the task does not occur on (an off-day of "every 2 days",
-or past its Until) unless that day is already ticked.
+or past its Until) unless that day is already ticked. The rule is
+`TaskTick.Toggles`; on such a day the row's and the panel's `MudCheckBox` is
+`ReadOnly`, so a click leaves it as it was instead of showing a tick that was
+never saved.
 
 **Every repeated row or card carries `@key` on its entity id.** Ticking a
 task moves it between sections, and without a key Blazor hands the vacated
