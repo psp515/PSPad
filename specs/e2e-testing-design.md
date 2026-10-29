@@ -123,7 +123,8 @@ arrange many tasks, items, goals and repeats through it (`createTasksOn`,
 and balances (`createBudgetOn`, `recordOn`, `startBalanceOn`), which also
 proves the open page picks them up without a reload. The sharing scenarios
 also use the API for what a user can't click cheaply: 10 and 34 spend join
-attempts (`tryJoin`) to close a link by wrong codes or reach the join limit,
+attempts (`tryJoin`) to close a link by wrong codes or reach the join limit
+(10's member also joins through it, see §4 entry 10),
 and 11 publishes a second snapshot and ticks it as an anonymous visitor
 (`publishSnapshotOn`, `markOnSnapshot`).
 
@@ -134,10 +135,12 @@ the page makes; the client's `BrowserConnectivity` then probes the API,
 fails, and the status footer and sync stamp show offline. Chromium's offline
 emulation does not reach requests a service worker makes, and the PWA's
 worker proxies the probe, so the offline scenario's context is created with
-`serviceWorkers: 'block'` (13, 14 and the sharing scenarios 10, 11 and 34
-too). Reloading while offline would need that worker's cache, so no
-scenario reloads offline; a page that must open offline is reached by
-in-app navigation (`openInApp`, Blazor's `navigateTo`).
+`serviceWorkers: 'block'`; so are the contexts that go offline in 13, 10
+(owner and member), 11 (owner and signed-in reader) and 34 (owner only; its
+member stays online). Reloading while offline would need that worker's
+cache, so no scenario reloads offline; the one page 11 must open offline,
+a snapshot never opened before, is reached by in-app navigation
+(`openInApp`, Blazor's `navigateTo`).
 
 ## 4. Scenarios
 
@@ -224,25 +227,30 @@ tests would be visible, not silent.
     shows no shared marker until **Create invite link** (a QR code, "30 min
     left", a link carrying the XXX-XXX code, "Shared · 1 person"); **End link
     now** before anyone joins unshares it. The other user opens the list's
-    join link, which asks for the list's code, and joins with it from a
-    settled app; Back skips the join page, and their My Day lists the shared
-    task due today. With no areas of their own, Areas lands on Shared with
-    me (its phone chip current, only the card's Edit, Back to area leading
-    there); the owner has no such chip and the card says "Shared · 2
-    people". Sent to the list's snapshots view, the member gets read-only
-    details; Members names the owner with no invite, and offline Leave is
-    off while filing stays on. Leaving empties Shared with me; five wrong
-    codes (API) close the link and the owner reads why; a new link is
-    joined (a code in the link joining at once is a skipped BUG step: an
-    opening sync can drop the list's tasks). The member files the list under
-    their own area (Back follows), sees only Add task in the FAB with a Goal
-    row in its draft, completes a task and links a shared task to their own
-    goal. Offline the owner can't remove, stop or renew; ending the link
-    keeps the member and the marker. The owner removes the member: the list
-    is gone for them, the API sync lacks it and `CompleteTask` on its other
-    task comes back `accepted: false`.
-11. **Public snapshot.** A task added just before publishing goes into the
-    1 day link, whose QR code opens it. A visitor without an account, in a
+    join link, which asks for the list's code. **Gap:** joining a list from
+    its link (typed code or a code in the link) is covered only by two
+    skipped BUG steps (PR #225: a join can lose the tasks the list already
+    had), so the member joins through the API and the owner adds the tasks
+    afterwards; the join page itself is exercised on the budget link in 34.
+    The member's My Day lists the shared task due today. With no areas of
+    their own, Areas lands on Shared with me (its phone chip current, no FAB,
+    only the card's Edit, Back to area leading there); the owner has no such
+    chip and the card says "Shared · 2 people". Sent to the list's snapshots
+    view, the member gets read-only details; Members names the owner with no
+    invite, and offline Leave is off while filing stays on. The member files
+    the list under their own area (Back follows), sees only Add task in the
+    FAB with a Goal row in its draft, completes a task and links a shared
+    task to their own goal, then leaves, which empties Shared with me. Five
+    wrong codes (API) close the link and the owner reads why; the member
+    rejoins with a new link (API). Offline the owner can't remove, stop or
+    renew; ending the link keeps the member and the marker. The owner
+    removes the member: the list is gone for them, the API sync lacks it and
+    `CompleteTask` on its other task comes back `accepted: false`. Stop
+    sharing on a list with a member in it has no step (34 covers the budget's
+    separate implementation).
+11. **Public snapshot.** A task whose push is still held when Publish is
+    pressed goes into the 1 day link (publish syncs first), whose QR code
+    opens it. A visitor without an account, in a
     Polish browser, reads the frozen copy (owner, progress, to-do and done
     sections, a description, a step done by the owner without a checkbox)
     and ticks a task and a step; a reference list's snapshot (published
@@ -444,16 +452,18 @@ tests would be visible, not silent.
     other user's budget link with a wrong code says so above the entry card
     and drops the code; an incomplete code can't join, a typed wrong one
     keeps the input, and a lower-case code with a dash goes on Enter; a
-    dropped connection offers Retry, which joins and opens the budget. The
-    member sees "Shared by", no Rename or Archive but category Add, and a
-    members panel with the owner and no invite; Budgets lists their own
-    budget first, then the shared one saying who shared it. The owner's head
-    count opens the members, the card reads "Shared · 2 people", and offline
-    nothing changes who is in. Archived, the panel can't invite and the
-    member reads who archived it with no Restore. The member leaves (back to
-    Budgets), rejoins from a link with its code, then runs out of join
-    attempts and is told to wait. Removing the member takes the budget from
-    them; Stop sharing ends the link.
+    dropped connection offers Retry, which joins and opens the budget, and
+    Back skips the join page. The member sees "Shared by", no Rename or
+    Archive but category Add, and a members panel with the owner and no
+    invite; Budgets lists their own budget first, then the shared one saying
+    who shared it. The owner's head count opens the members, the card reads
+    "Shared · 2 people", and offline nothing changes who is in. Removing the
+    member takes the budget from them; a code in the link brings them back
+    at once. Archived, the panel can't invite and the member reads who
+    archived it with no Restore. The member leaves (back to Budgets),
+    rejoins from a link with its code, then runs out of join attempts and is
+    told to wait. Stop sharing with the member still in ends the link and
+    takes the budget from them.
 
 ## 5. Timing
 

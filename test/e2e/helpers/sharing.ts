@@ -1,8 +1,6 @@
 import { APIRequestContext, expect, Locator, Page } from '@playwright/test';
 import { listCard } from './areas';
 import { openFabAction, panel } from './panels';
-import { openInApp } from './nav';
-import { syncNow } from './sync';
 
 export type Invite = { link: string; code: string; token: string };
 
@@ -60,10 +58,10 @@ export function joinButton(page: Page) {
   return page.getByRole('button', { name: /^Join (list|budget)$/ });
 }
 
-// A join during a running sync can lose the list's rows (PR #225), so a typed join starts from a settled app.
 export async function joinWithCode(page: Page, link: string, code: string, beforeTyping?: () => Promise<void>) {
-  await syncNow(page);
-  await openInApp(page, new URL(link).pathname);
+  const openingSync = page.waitForResponse(response => response.url().includes('/api/sync') && response.ok());
+  await page.goto(new URL(link).pathname);
+  await openingSync;
   await expect(page.getByText('Enter the invite code')).toBeVisible();
   await beforeTyping?.();
   await page.getByLabel('Code').fill(code);
