@@ -947,6 +947,10 @@ button.pspad-heatmap-cell:focus-visible {
     text-overflow: ellipsis;
 }
 
+.pspad-row-meta > .pspad-step-due-mark {
+    min-width: min(100%, 140px);
+}
+
 .pspad-row-goal-name,
 .pspad-step-due-name {
     overflow: hidden;
@@ -1545,17 +1549,19 @@ button.pspad-heatmap-cell:focus-visible {
     .pspad-row-ledger .pspad-row-body {
         flex-direction: row;
         align-items: center;
+        justify-content: flex-start;
         gap: 12px;
     }
 
     .pspad-row-ledger .pspad-row-name {
         flex-grow: 1;
-        min-width: 0;
+        min-width: 120px;
     }
 
     .pspad-row-ledger .pspad-row-meta {
         width: 280px;
-        flex-shrink: 0;
+        flex-shrink: 1;
+        min-width: 0;
     }
 }
 
