@@ -142,13 +142,11 @@ else
 }
 
 @code {
-    const int OverviewTab = 0;
-    const int EntriesTab = 1;
-    const int BalanceTab = 2;
-    const int StatsTab = 3;
-    const int SettingsTab = 4;
-    static readonly string[] Tabs = ["overview", "entries", "balance", "stats", "settings"];
-    static readonly Dictionary<string, string> Aliases = new() { ["month"] = "entries", ["summary"] = "stats" };
+    const int OverviewTab = BudgetTabs.Overview;
+    const int EntriesTab = BudgetTabs.Entries;
+    const int BalanceTab = BudgetTabs.Balance;
+    const int StatsTab = BudgetTabs.Stats;
+    const int SettingsTab = BudgetTabs.Settings;
     Dictionary<string, object> ActivatorAttributes => Labelled("AddEntry");
     Dictionary<string, object> AddExpenseAttributes => Labelled("AddExpense");
     Dictionary<string, object> AddIncomeAttributes => Labelled("AddIncome");
@@ -178,14 +176,7 @@ else
     YearMonth _month;
     EntryFilters _filters = EntryFilters.None;
 
-    int TabIndex
-    {
-        get
-        {
-            var tab = Tab?.ToLowerInvariant() ?? "";
-            return Math.Max(OverviewTab, Array.IndexOf(Tabs, Aliases.GetValueOrDefault(tab, tab)));
-        }
-    }
+    int TabIndex => BudgetTabs.IndexOf(Tab);
 
     MonthPace Pace => MonthPace.For(_entries, Current, State.Today);
 
@@ -237,7 +228,7 @@ else
     {
         if (index != TabIndex)
         {
-            Navigation.NavigateTo(BudgetLinks.ForTab(BudgetId, Tabs[index]));
+            Navigation.NavigateTo(BudgetLinks.ForTab(BudgetId, BudgetTabs.NameOf(index)));
         }
     }
 

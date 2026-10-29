@@ -12,17 +12,17 @@ public class EntryFiltersTests
     [Fact]
     public void NoneShowsEverything()
     {
-        var budget = Pages.BudgetsPageTests.Named("Personal");
+        var budget = MoneyEntries.ABudget("Personal");
 
-        Assert.True(EntryFilters.None.Shows(Pages.MoneyEntries.Expense(budget, "Rolls", "Food", 3m, Today)));
+        Assert.True(EntryFilters.None.Shows(MoneyEntries.Expense(budget, "Rolls", "Food", 3m, Today)));
     }
 
     [Fact]
     public void KindCategoryAndSearchNarrowTheList()
     {
-        var budget = Pages.BudgetsPageTests.Named("Personal");
-        var rolls = Pages.MoneyEntries.Expense(budget, "Rolls", "Food", 3m, Today);
-        var pay = Pages.MoneyEntries.Income(budget, "Pay", "Salary", 3000m, Today);
+        var budget = MoneyEntries.ABudget("Personal");
+        var rolls = MoneyEntries.Expense(budget, "Rolls", "Food", 3m, Today);
+        var pay = MoneyEntries.Income(budget, "Pay", "Salary", 3000m, Today);
 
         var income = EntryFilters.None with { Kind = EntryFilter.Income };
 

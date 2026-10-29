@@ -74,15 +74,13 @@
 
     decimal Rate => IsPln ? 1m : _rate.GetValueOrDefault();
 
-    DateOnly? RateDay => _snapshot is null ? null : RateDayOf(_snapshot.Month, State.Today);
+    DateOnly? RateDay => _snapshot is null ? null : HoldingRateDay.Of(_snapshot.Month, State.Today);
 
     bool CanSave => !ReadOnly && !string.IsNullOrWhiteSpace(_name) && _amount.GetValueOrDefault() > 0 && Rate > 0;
 
     EventCallback SaveCallback => ReadOnly ? default : EventCallback.Factory.Create(this, SaveAsync);
 
     EventCallback RemoveCallback => ReadOnly || IsNew ? default : EventCallback.Factory.Create(this, RemoveAsync);
-
-    static DateOnly RateDayOf(YearMonth month, DateOnly today) => month.LastDay < today ? month.LastDay : today;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -187,7 +185,7 @@
 
         var snapshot = _snapshot;
         var money = new Money(_amount.GetValueOrDefault(), _currency, Rate,
-            _rateDate ?? RateDayOf(snapshot.Month, State.Today));
+            _rateDate ?? HoldingRateDay.Of(snapshot.Month, State.Today));
         var name = _name.Trim();
 
         _saving = true;
