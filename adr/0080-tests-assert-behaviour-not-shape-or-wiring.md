@@ -23,19 +23,22 @@ gives integration tests a real MongoDB.
 
 We will test behaviour at the cheapest tier that can observe it, and never
 shape or wiring. Pure rules (domain decisions, Today, recurrence, money,
-list views, CSV parsing, client queries, offline sync folding,
-logic-bearing components) stay unit tests. Every command handler, cascade,
-projection and reader is tested through HTTP on `ApiFactory` with
-Testcontainers MongoDB. Pages, layout and presentational components are
-tested only by Playwright end-to-end scenarios. No test asserts a CSS class,
-a DOM shape or a call on a fake of our own port; guard tests enforce it.
+list views, CSV parsing, client queries, offline sync folding, pure client
+rules extracted from components) stay unit tests. Every command handler,
+cascade, projection and reader is tested through HTTP on `ApiFactory` with
+Testcontainers MongoDB. Pages, layout and components are tested only by
+Playwright end-to-end scenarios. No test asserts a CSS class, a DOM shape or
+a call on a fake of our own port; guard tests enforce it.
 Migration plan: `specs/behaviour-tests-design.md`.
 
 ## Considered alternatives
 
 - **Keep bUnit, rewritten to user-facing queries** — rejected: the tier
   drifts back to markup assertions and still duplicates what end-to-end
-  scenarios see.
+  scenarios see. A thin bUnit tier for logic-bearing components was kept in
+  the first round and removed in the second (2026-10-29): its tests asserted
+  through component internals what a scenario sees, and the rules worth an
+  edge-case table now live in `State/`.
 - **Move domain rules to HTTP tests as well** — rejected: edge-case tables
   (time zones, leap years, currency rates) become slow and awkward through
   HTTP with no gain in confidence.
@@ -54,5 +57,6 @@ Migration plan: `specs/behaviour-tests-design.md`.
 - The integration suite grows and takes longer on every PR.
 - Edge cases that only bUnit could reach are either extracted into pure
   client rules or recorded as dropped.
-- If end-to-end flakiness grows past what retries absorb, a thin bUnit tier
-  for logic components is the fallback already allowed by this decision.
+- A thin bUnit tier for logic components is not a fallback: flakiness is
+  fixed in the scenario or the helper, and a rule a scenario cannot reach
+  well is extracted into `State/` and unit tested.

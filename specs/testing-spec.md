@@ -30,9 +30,9 @@ ports.
 
 | Tier | Subject | Runs |
 |---|---|---|
-| Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; logic-bearing components (parsing, date or time math, state transitions, keyboard handling); architecture, category, resource, localization and stylesheet guards | in process, no Docker |
+| Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; pure client rules extracted from components into `State/` (time parsing, recurrence and due-date text, week and month windows, snapshot expiry); architecture, category, resource, localization and stylesheet guards | in process, no Docker |
 | Integration `[IntegrationTest]` | A command or query through HTTP on `ApiFactory` with Testcontainers Mongo, asserting the response, documents, events and sync deltas: every handler, cascade, projection, reader, sharing and auth flow | Testcontainers |
-| End-to-end | A user's flow in Chromium against the compose stack: pages, layout, navigation, panels, localization, offline and live updates; new steps locate by role, label or text | compose stack |
+| End-to-end | A user's flow in Chromium against the compose stack: pages, layout, components, navigation, panels, localization, offline and live updates; new steps locate by role, label or text | compose stack |
 
 ```bash
 dotnet test --filter Category=Unit
@@ -42,6 +42,8 @@ dotnet test
 
 Where a new test goes: a rule with edge cases is a unit test, a server effect
 is an integration test, anything a user sees on a page is an end-to-end step.
+No component is rendered in a unit test: a component's rule worth an edge-case
+table is extracted verbatim into `src/PSPad.App/State/` and tested there.
 TDD is unchanged: the failing test comes first, and for UI work it is an
 end-to-end step. Unit suite must stay under a few seconds. If it needs Docker,
 it is mislabeled.
