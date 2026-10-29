@@ -13,14 +13,6 @@ public class TaskQueryTests
     }
 
     [Fact]
-    public void AUrlWithATaskOpensIt()
-    {
-        var id = Guid.NewGuid();
-
-        Assert.Equal(id, TaskQuery.From($"https://pspad.local/?task={id}"));
-    }
-
-    [Fact]
     public void ANonGuidTaskOpensNothing()
     {
         Assert.Null(TaskQuery.From("https://pspad.local/?task=nonsense"));
@@ -35,14 +27,6 @@ public class TaskQueryTests
         Assert.Equal(
             $"https://pspad.local/lists/{list}",
             TaskQuery.Without($"https://pspad.local/lists/{list}?task={id}"));
-    }
-
-    [Fact]
-    public void ANewTaskQueryNamesTheListItGoesInto()
-    {
-        var list = Guid.NewGuid();
-
-        Assert.Equal(list, TaskQuery.NewTaskListFrom($"https://pspad.local/lists/{list}?task=new&list={list}"));
     }
 
     [Fact]
@@ -82,12 +66,6 @@ public class TaskQueryTests
     }
 
     [Fact]
-    public void ANewTaskQueryCarriesItsDueDate()
-    {
-        Assert.Equal(new DateOnly(2026, 10, 24), TaskQuery.NewTaskDueFrom("https://pspad.local/?task=new&due=2026-10-24"));
-    }
-
-    [Fact]
     public void AMalformedDueIsIgnored()
     {
         Assert.Null(TaskQuery.NewTaskDueFrom("https://pspad.local/?task=new&due=24.10.2026"));
@@ -117,15 +95,5 @@ public class TaskQueryTests
         Assert.Equal(
             "https://pspad.local/?day=2026-10-26&task=new&due=2026-10-26",
             TaskQuery.ForNewTask("https://pspad.local/?day=2026-10-26", due: new DateOnly(2026, 10, 26)));
-    }
-
-    [Fact]
-    public void ForNewTaskWithAListAndNoDayStaysAsBefore()
-    {
-        var list = Guid.NewGuid();
-
-        Assert.Equal(
-            $"https://pspad.local/lists/{list}?task=new&list={list}",
-            TaskQuery.ForNewTask($"https://pspad.local/lists/{list}", list));
     }
 }

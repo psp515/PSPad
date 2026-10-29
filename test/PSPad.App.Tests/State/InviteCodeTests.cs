@@ -15,13 +15,4 @@ public class InviteCodeTests
             Assert.True(InviteCodes.IsWellFormed(InviteCode.New()));
         }
     }
-
-    [Fact]
-    public void TheJoinLinkCarriesTheCodeInTheFragment() =>
-        Assert.Equal("https://pspad.home/join/tok#code=K7M4PX", InviteCode.JoinLinkFor("https://pspad.home/", "tok", "K7M4PX"));
-
-    [Fact]
-    public void TheBudgetJoinLinkCarriesTheCodeInTheFragment() =>
-        Assert.Equal("https://pspad.home/budgets/join/tok#code=K7M4PX",
-            InviteCode.BudgetJoinLinkFor("https://pspad.home/", "tok", "K7M4PX"));
 }

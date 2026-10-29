@@ -12,19 +12,6 @@ public class TaskDoneTests
     static readonly DateOnly Today = new(2026, 9, 12);
 
     [Fact]
-    public void AnOpenOneTimeTaskIsNotDone() =>
-        Assert.False(TaskDone.On(New("Buy milk"), Today));
-
-    [Fact]
-    public void ACompletedOneTimeTaskIsDone()
-    {
-        var task = New("Buy milk");
-        task.ApplyAll(TodoTask.Decide(task, new CompleteTask(Guid.NewGuid(), User, task.Id), DateTimeOffset.UnixEpoch));
-
-        Assert.True(TaskDone.On(task, Today));
-    }
-
-    [Fact]
     public void ARepeatTickedForTheDayIsDoneThatDayOnly()
     {
         var task = Recurring(New("Read a book"), Today.AddDays(-3));

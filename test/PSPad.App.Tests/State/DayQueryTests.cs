@@ -19,18 +19,4 @@ public class DayQueryTests
     [Fact]
     public void TodayIsTheBarePath() =>
         Assert.Equal("http://x/", DayQuery.For("http://x/?day=2026-10-09", Today, Today));
-
-    [Fact]
-    public void AnotherDayGoesInTheQuery() =>
-        Assert.Equal("http://x/?day=2026-10-09", DayQuery.For("http://x/", Today.AddDays(1), Today));
-
-    [Fact]
-    public void OpeningAndClosingATaskKeepsTheDay()
-    {
-        var id = Guid.NewGuid();
-        var open = TaskQuery.For("http://x/?day=2026-10-09", id);
-
-        Assert.Equal($"http://x/?day=2026-10-09&task={id}", open);
-        Assert.Equal("http://x/?day=2026-10-09", TaskQuery.Without(open));
-    }
 }

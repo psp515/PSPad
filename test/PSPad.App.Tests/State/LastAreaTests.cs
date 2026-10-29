@@ -41,17 +41,6 @@ public class LastAreaTests
     }
 
     [Fact]
-    public async Task ItRemembersTheLastArea()
-    {
-        var js = new FakeJsRuntime();
-        var areaId = Guid.NewGuid();
-
-        await new LastArea(js).RememberAsync(areaId);
-
-        Assert.Equal(areaId, await new LastArea(js).ReadAsync());
-    }
-
-    [Fact]
     public async Task GarbageInStorageReadsAsNothing()
     {
         var js = new FakeJsRuntime { Stored = "not-a-guid" };

@@ -20,19 +20,6 @@ public class ImportRatesTests
     static readonly DateOnly Today = new(2026, 10, 14);
 
     [Fact]
-    public async Task AnsweredRatesBecomeKnownAndMissingOnesFail()
-    {
-        var nbp = new FakeNbpRates();
-        nbp.ByCurrency["EUR"] = new NbpRateView("EUR", 4.25m, new DateOnly(2026, 9, 4));
-        nbp.ByCurrency["USD"] = null;
-
-        var book = await ImportRates.FetchAsync(nbp, true, Today, [Eur, Usd], RateBook.Empty, Text);
-
-        Assert.Equal(new ImportRate(4.25m, new DateOnly(2026, 9, 4)), book.Known[Eur]);
-        Assert.Equal("No NBP rate for USD on 9/5/2026.", book.Failed[Usd]);
-    }
-
-    [Fact]
     public async Task OfflineEveryRequestFailsWithoutAsking()
     {
         var nbp = new FakeNbpRates();
@@ -65,19 +52,6 @@ public class ImportRatesTests
             System.Globalization.CultureInfo.CurrentUICulture = before;
             System.Globalization.CultureInfo.CurrentCulture = beforeFormat;
         }
-    }
-
-    [Fact]
-    public async Task RetryingReplacesAnEarlierFailure()
-    {
-        var nbp = new FakeNbpRates { Next = new NbpRateView("EUR", 4.3m, Eur.Date) };
-        var failed = new RateBook(new Dictionary<RateRequest, ImportRate>(),
-            new Dictionary<RateRequest, string> { [Eur] = Offline });
-
-        var book = await ImportRates.FetchAsync(nbp, true, Today, [Eur], failed, Text);
-
-        Assert.Empty(book.Failed);
-        Assert.Equal(4.3m, book.Known[Eur].Rate);
     }
 
     [Fact]

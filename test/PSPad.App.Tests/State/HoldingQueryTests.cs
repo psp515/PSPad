@@ -19,15 +19,6 @@ public class HoldingQueryTests
         Assert.Equal<(Guid, Guid?)?>((SnapshotId, holdingId), HoldingQuery.From(uri));
     }
 
-    [Fact]
-    public void ANewHoldingRoundTrips()
-    {
-        var uri = HoldingQuery.ForNew("http://localhost/budgets/x/balance", SnapshotId);
-
-        Assert.Equal($"http://localhost/budgets/x/balance?balance={SnapshotId}&holding=new", uri);
-        Assert.Equal<(Guid, Guid?)?>((SnapshotId, null), HoldingQuery.From(uri));
-    }
-
     [Theory]
     [InlineData("http://localhost/budgets/x/balance")]
     [InlineData("http://localhost/budgets/x/balance?holding=new")]

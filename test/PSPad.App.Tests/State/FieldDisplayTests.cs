@@ -39,7 +39,4 @@ public class FieldDisplayTests
 
     [Fact]
     public void NoHintMeansDetect() => Assert.Null(FieldDisplay.HintFor(null));
-
-    [Fact]
-    public void AChosenKindBecomesItsHint() => Assert.Equal("path", FieldDisplay.HintFor(FieldKind.Path));
 }

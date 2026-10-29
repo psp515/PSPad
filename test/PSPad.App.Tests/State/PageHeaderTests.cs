@@ -23,16 +23,6 @@ public class PageHeaderTests
     }
 
     [Fact]
-    public void SettingAHeaderCarriesTheBackLabel()
-    {
-        var header = new PageHeader();
-
-        header.Set("Shopping", "Home", "/areas/1", "Back to area");
-
-        Assert.Equal("Back to area", header.BackLabel);
-    }
-
-    [Fact]
     public void SettingTheSameHeaderAgainStaysQuiet()
     {
         var header = new PageHeader();

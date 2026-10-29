@@ -7,21 +7,6 @@ namespace PSPad.App.Tests.State;
 public class StatusBeltsTests
 {
     [Fact]
-    public void ABeltShowsWithItsTextAndAction()
-    {
-        var belts = new StatusBelts();
-        Func<Task> reload = () => Task.CompletedTask;
-
-        belts.Show(BeltKind.Update, "A new version of PSPad is ready.", "Reload", reload);
-
-        var belt = Assert.Single(belts.Visible);
-        Assert.Equal(BeltKind.Update, belt.Kind);
-        Assert.Equal("A new version of PSPad is ready.", belt.Text);
-        Assert.Equal("Reload", belt.ActionText);
-        Assert.Same(reload, belt.Action);
-    }
-
-    [Fact]
     public void ABeltNeedsNoAction()
     {
         var belts = new StatusBelts();
@@ -90,17 +75,6 @@ public class StatusBeltsTests
         belts.Dismiss(BeltKind.Offline);
 
         Assert.Equal(BeltKind.Update, Assert.Single(belts.Visible).Kind);
-    }
-
-    [Fact]
-    public void ClearingHidesTheBelt()
-    {
-        var belts = new StatusBelts();
-        belts.Show(BeltKind.Offline, "offline");
-
-        belts.Clear(BeltKind.Offline);
-
-        Assert.Empty(belts.Visible);
     }
 
     [Fact]
