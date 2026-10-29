@@ -6,6 +6,7 @@ using MudBlazor;
 using PSPad.Abstractions;
 using PSPad.App.Components;
 using PSPad.App.Layout;
+using PSPad.App.State.Replica;
 using PSPad.App.State.Viewport;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Goals;
@@ -996,11 +997,70 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var replica = AppTestHost.Arrange(this, User, Today, task);
 
         var panel = RenderWithOverlays(taskId: task.Id);
-        var row = panel.FindComponent<TimeRow>();
-        await panel.InvokeAsync(() => row.Instance.StartChangedAsync(new TimeSpan(9, 30, 0)));
+        panel.Find(".pspad-time-start input").Change("09:30");
 
         var reloaded = await replica.LoadAsync<TodoTask>(task.Id);
         Assert.Equal(new TimeOnly(9, 30), reloaded!.Time!.Start);
+    }
+
+    [Fact]
+    public void AReloadStartedBeforeATimeChangeCannotUndoItOnScreen()
+    {
+        var task = Due(NewTask("Sprint planning"), Today);
+        var replica = AppTestHost.Arrange(this, User, Today, task);
+        var store = new HeldTaskStore(new ReplicaDocumentStore<TodoTask>(replica));
+        Services.AddSingleton<IDocumentStore<TodoTask>>(store);
+        var panel = Render<TaskDetailPanel>(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+
+        store.Hold = true;
+        panel.Render(parameters => parameters.Add(p => p.TaskId, (Guid?)task.Id));
+        store.Hold = false;
+        Assert.Equal(1, store.Held);
+        panel.Find(".pspad-time-start input").Change("09:30");
+        panel.WaitForAssertion(() => Assert.NotEmpty(panel.FindAll(".pspad-time-clear")));
+        var renders = panel.RenderCount;
+        store.Release();
+        panel.WaitForState(() => panel.RenderCount > renders);
+
+        Assert.NotEmpty(panel.FindAll(".pspad-time-clear"));
+        Assert.Equal("09:30", panel.Find(".pspad-time-start input").GetAttribute("value"));
+    }
+
+    sealed class HeldTaskStore(IDocumentStore<TodoTask> inner) : IDocumentStore<TodoTask>
+    {
+        readonly List<TaskCompletionSource> _held = [];
+
+        public bool Hold { get; set; }
+
+        public async Task<TodoTask?> LoadAsync(Guid id, CancellationToken ct)
+        {
+            var hold = Hold;
+            var loaded = await inner.LoadAsync(id, ct);
+            var copy = loaded is null ? null : ReplicaRow.From(loaded).To<TodoTask>();
+
+            if (hold)
+            {
+                var gate = new TaskCompletionSource();
+                _held.Add(gate);
+                await gate.Task;
+            }
+
+            return copy;
+        }
+
+        public int Held => _held.Count;
+
+        public Task<IReadOnlyList<TodoTask>> LoadAllAsync(Guid userId, CancellationToken ct) => inner.LoadAllAsync(userId, ct);
+
+        public void Release()
+        {
+            foreach (var gate in _held)
+            {
+                gate.SetResult();
+            }
+
+            _held.Clear();
+        }
     }
 
     [Fact]
@@ -1014,8 +1074,7 @@ public class TaskDetailPanelTests : Bunit.TestContext
         var due = panel.FindComponent<DueDateRow>();
         await panel.InvokeAsync(() => due.Instance.ValueChanged.InvokeAsync(Today));
         panel.WaitForAssertion(() => panel.FindComponent<TimeRow>());
-        var row = panel.FindComponent<TimeRow>();
-        await panel.InvokeAsync(() => row.Instance.StartChangedAsync(new TimeSpan(9, 30, 0)));
+        panel.Find(".pspad-time-start input").Change("09:30");
         panel.Find(".pspad-panel-save").Click();
 
         panel.WaitForAssertion(() => Assert.Single(replica.LoadAllAsync<TodoTask>(User).GetAwaiter().GetResult()));

@@ -19,7 +19,7 @@ the old one's status line to point at the new number.
 | [0002](0002-cqrs-event-sourced-write-side.md) | Use CQRS with an event-sourced write side on Marten/PostgreSQL | Superseded by [0011](0011-aggregate-documents-are-truth.md) | 2026-09-11 | architecture, persistence, event-sourcing |
 | [0003](0003-commands-are-the-shared-contract.md) | Commands are the shared client/server contract | Active | 2026-09-11 | architecture, offline, contracts |
 | [0004](0004-tasks-module-compiles-to-wasm.md) | The Tasks module must compile to WebAssembly with zero infrastructure references | Active | 2026-09-11 | architecture, offline, purity |
-| [0005](0005-offline-conflicts-last-write-wins.md) | Resolve offline conflicts last-write-wins per aggregate | Active | 2026-09-11 | architecture, offline, sync |
+| [0005](0005-offline-conflicts-last-write-wins.md) | Resolve offline conflicts last-write-wins per aggregate | Active (amended by [0063](0063-server-saves-check-the-loaded-version.md), [0079](0079-pulled-documents-never-replace-a-newer-local-copy.md)) | 2026-09-11 | architecture, offline, sync |
 | [0006](0006-sync-is-delta-by-version.md) | Sync pulls deltas by a monotonic version marker, never a clock | Active (amended by [0061](0061-sync-pulls-in-seq-pages-without-events.md)) | 2026-09-11 | architecture, offline, sync |
 | [0007](0007-recurrence-as-template-and-occurrences.md) | Model recurrence as a template plus derived occurrences, never a rolling date | Active (amended by [0043](0043-repeat-interval-and-until-date.md)) | 2026-09-11 | architecture, domain, recurrence |
 | [0008](0008-aggregate-boundaries.md) | Aggregate boundaries — Area, TaskList, TodoTask, Goal, Inbox, User | Active | 2026-09-11 | architecture, domain, aggregates |
@@ -93,6 +93,7 @@ the old one's status line to point at the new number.
 | [0076](0076-open-clients-get-a-sync-nudge-over-sse.md) | Open clients get a data-free sync nudge over Server-Sent Events, fanned out from commit | Active | 2026-10-14 | architecture, sync, http, sharing, deployment |
 | [0077](0077-end-to-end-tests-drive-the-compose-stack-with-playwright.md) | End-to-end tests drive the compose stack with Playwright | Active | 2026-10-18 | testing, architecture, ci |
 | [0078](0078-any-unchecked-step-deadline-puts-its-task-on-a-day.md) | Any unchecked step's deadline puts its task on a day | Active | 2026-10-24 | domain, today, steps, ui |
+| [0079](0079-pulled-documents-never-replace-a-newer-local-copy.md) | Pulled documents never replace a newer local copy | Active (amends [0005](0005-offline-conflicts-last-write-wins.md)) | 2026-10-25 | architecture, offline, sync |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

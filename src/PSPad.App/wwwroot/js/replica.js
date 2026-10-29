@@ -82,6 +82,32 @@ export function put(document) {
   return run('documents', 'readwrite', documents => documents.put(document));
 }
 
+export function putUnlessNewer(document, version) {
+  return open().then(db => new Promise((resolve, reject) => {
+    const transaction = db.transaction('documents', 'readwrite');
+    const documents = transaction.objectStore('documents');
+    let saved = false;
+    const held = documents.get(document.id);
+    held.onsuccess = () => {
+      if (held.result && versionOf(held.result) > version) {
+        return;
+      }
+      documents.put(document);
+      saved = true;
+    };
+    transaction.oncomplete = () => resolve(saved);
+    transaction.onerror = () => reject(transaction.error);
+  }));
+}
+
+function versionOf(row) {
+  try {
+    return JSON.parse(row.json).version ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function putMany(items) {
   return run('documents', 'readwrite', documents => {
     items.forEach(item => documents.put(item));

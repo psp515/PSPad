@@ -6,10 +6,15 @@ public interface IReplica
 {
     Task<T?> LoadAsync<T>(Guid id) where T : Aggregate;
 
+    Task<Aggregate?> LoadAsync(Type type, Guid id);
+
     // A replica holds one user's whole visible world (ReplicaOwnership), shared lists included.
     Task<IReadOnlyList<T>> LoadAllAsync<T>(Guid userId) where T : Aggregate;
 
     Task SaveAsync(Aggregate aggregate);
+
+    // The check and the save are one replica transaction: a command's commit landing between them would be undone by the save.
+    Task<bool> SaveUnlessNewerAsync(Aggregate aggregate);
 
     Task RemoveAsync(Guid id);
 

@@ -3,7 +3,7 @@ import { createArea } from '../helpers/areas';
 import { createList, openList } from '../helpers/lists';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, openTask, taskRow } from '../helpers/tasks';
-import { daySection, goToMyDay, setDueDate, setTaskTime, timelineBlock } from '../helpers/today';
+import { daySection, goToMyDay, pickTaskTimeFromClock, setDueDate, setTaskTime, timelineBlock } from '../helpers/today';
 
 test('a timed task sits on the schedule and is ticked from the timeline', async ({ page, account }) => {
   const dentist = `Dentist ${account.suffix}`;
@@ -21,7 +21,8 @@ test('a timed task sits on the schedule and is ticked from the timeline', async 
   await addTask(page, dentist);
   await openTask(page, dentist);
   await setDueDate(page, 'Today');
-  await setTaskTime(page, '09:00', '10:30');
+  await setTaskTime(page, '08:00', '10:30');
+  await pickTaskTimeFromClock(page, 'start', 9, 0);
   await closeTask(page);
   await expect(taskRow(page, dentist)).toContainText('09:00');
 

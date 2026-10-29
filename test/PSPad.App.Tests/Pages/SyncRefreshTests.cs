@@ -194,6 +194,8 @@ public class SyncRefreshTests : Bunit.TestContext
 
         public Task<T?> LoadAsync<T>(Guid id) where T : Aggregate => inner.LoadAsync<T>(id);
 
+        public Task<Aggregate?> LoadAsync(Type type, Guid id) => inner.LoadAsync(type, id);
+
         public Task<IReadOnlyList<T>> LoadAllAsync<T>(Guid userId) where T : Aggregate
         {
             Reads++;
@@ -201,6 +203,8 @@ public class SyncRefreshTests : Bunit.TestContext
         }
 
         public Task SaveAsync(Aggregate aggregate) => inner.SaveAsync(aggregate);
+
+        public Task<bool> SaveUnlessNewerAsync(Aggregate aggregate) => inner.SaveUnlessNewerAsync(aggregate);
 
         public Task RemoveAsync(Guid id) => inner.RemoveAsync(id);
 

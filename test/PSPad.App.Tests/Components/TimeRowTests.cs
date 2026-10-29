@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using PSPad.App.Components;
@@ -41,41 +42,41 @@ public class TimeRowTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task PickingAStartSendsATimeWithoutAnEnd()
+    public void TypingAStartSendsATimeWithoutAnEnd()
     {
         TaskTime? sent = null;
         var row = Render<TimeRow>(p => p
             .Add(r => r.Value, (TaskTime?)null)
             .Add(r => r.ValueChanged, (TaskTime? time) => sent = time));
 
-        await row.InvokeAsync(() => row.Instance.StartChangedAsync(new TimeSpan(9, 30, 0)));
+        row.Find(".pspad-time-start input").Change("09:30");
 
         Assert.Equal(new TaskTime(new TimeOnly(9, 30), null), sent);
     }
 
     [Fact]
-    public async Task AnEndEqualToTheStartShowsAnErrorAndSendsNothing()
+    public void AnEndEqualToTheStartShowsAnErrorAndSendsNothing()
     {
         var calls = 0;
         var row = Render<TimeRow>(p => p
             .Add(r => r.Value, new TaskTime(new TimeOnly(14, 0), null))
             .Add(r => r.ValueChanged, (TaskTime? _) => calls++));
 
-        await row.InvokeAsync(() => row.Instance.EndChangedAsync(new TimeSpan(14, 0, 0)));
+        row.Find(".pspad-time-end input").Change("14:00");
 
         Assert.Equal(0, calls);
         Assert.Contains("End must differ from start", row.Find(".pspad-time-error").TextContent);
     }
 
     [Fact]
-    public async Task AnEndBeforeTheStartIsSentAsOvernight()
+    public void AnEndBeforeTheStartIsSentAsOvernight()
     {
         TaskTime? sent = null;
         var row = Render<TimeRow>(p => p
             .Add(r => r.Value, new TaskTime(new TimeOnly(22, 0), null))
             .Add(r => r.ValueChanged, (TaskTime? time) => sent = time));
 
-        await row.InvokeAsync(() => row.Instance.EndChangedAsync(new TimeSpan(1, 0, 0)));
+        row.Find(".pspad-time-end input").Change("01:00");
 
         Assert.Equal(new TaskTime(new TimeOnly(22, 0), new TimeOnly(1, 0)), sent);
         Assert.Empty(row.FindAll(".pspad-time-error"));
@@ -98,10 +99,10 @@ public class TimeRowTests : Bunit.TestContext
     }
 
     [Fact]
-    public async Task AStaleErrorIsForgottenWhenTheValueChanges()
+    public void AStaleErrorIsForgottenWhenTheValueChanges()
     {
         var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(14, 0), null)));
-        await row.InvokeAsync(() => row.Instance.EndChangedAsync(new TimeSpan(14, 0, 0)));
+        row.Find(".pspad-time-end input").Change("14:00");
         Assert.NotEmpty(row.FindAll(".pspad-time-error"));
 
         row.Render(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(14, 0), new TimeOnly(15, 0))));
@@ -156,22 +157,198 @@ public class TimeRowTests : Bunit.TestContext
     }
 
     [Fact]
-    public void TheClockIconOpensThePicker()
+    public void TheClockIconOpensTheClockWithoutSendingAnything()
     {
-        var host = Render(builder =>
-        {
-            builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
-            builder.CloseComponent();
-            builder.OpenComponent<TimeRow>(1);
-            builder.AddAttribute(2, nameof(TimeRow.Value), (TaskTime?)new TaskTime(new TimeOnly(9, 0), null));
-            builder.CloseComponent();
-        });
-        Assert.Empty(host.FindAll(".mud-picker-content"));
+        var sends = 0;
+        var host = RenderWithOverlays(new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0)), _ => sends++);
+        Assert.Empty(host.FindAll(".mud-picker .mud-overlay"));
 
-        host.Find(".pspad-time-start .mud-input-adornment-end button").Click();
+        host.Find(".pspad-time-end .mud-input-adornment-end button").Click();
 
-        host.WaitForAssertion(() => Assert.NotEmpty(host.FindAll(".mud-picker-content")));
+        host.WaitForAssertion(() => Assert.NotEmpty(host.FindAll(".mud-picker .mud-overlay .mud-time-picker-hour")));
+        Assert.Equal(0, sends);
     }
+
+    [Fact]
+    public async Task PickingTheHourKeepsTheClockOpenAndPickingTheMinutesSendsAndCloses()
+    {
+        TaskTime? sent = null;
+        var sends = 0;
+        var host = RenderWithOverlays(new TaskTime(new TimeOnly(9, 0), null), time => { sent = time; sends++; });
+        host.Find(".pspad-time-end .mud-input-adornment-end button").Click();
+        host.WaitForElement(".mud-picker .mud-overlay");
+        var clock = host.FindComponent<MudBlazor.MudTimePicker>().Instance;
+
+        await host.InvokeAsync(() => clock.SelectTimeFromStick(10, false));
+        await host.InvokeAsync(() => clock.OnStickClick(10));
+
+        Assert.Equal(0, sends);
+        Assert.NotEmpty(host.FindAll(".mud-picker .mud-overlay"));
+
+        await host.InvokeAsync(() => clock.SelectTimeFromStick(30, false));
+        await host.InvokeAsync(() => clock.OnStickClick(30));
+
+        host.WaitForAssertion(() => Assert.Empty(host.FindAll(".mud-picker .mud-overlay")), TimeSpan.FromSeconds(2));
+        Assert.Equal(1, sends);
+        Assert.Equal(new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 30)), sent);
+    }
+
+    [Fact]
+    public async Task ClickingOutsideAfterTheHourSendsTheNewHourWithTheOldMinutes()
+    {
+        TaskTime? sent = null;
+        var host = RenderWithOverlays(new TaskTime(new TimeOnly(9, 30), null), time => sent = time);
+        host.Find(".pspad-time-start .mud-input-adornment-end button").Click();
+        host.WaitForElement(".mud-picker .mud-overlay");
+        var clock = host.FindComponent<MudBlazor.MudTimePicker>().Instance;
+
+        await host.InvokeAsync(() => clock.SelectTimeFromStick(14, false));
+        await host.InvokeAsync(() => clock.OnStickClick(14));
+        host.Find(".mud-picker .mud-overlay").Click();
+
+        host.WaitForAssertion(() => Assert.Empty(host.FindAll(".mud-picker .mud-overlay")));
+        Assert.Equal(new TaskTime(new TimeOnly(14, 30), null), sent);
+    }
+
+    [Fact]
+    public void ClosingTheClockUntouchedSendsNothing()
+    {
+        var sends = 0;
+        var host = RenderWithOverlays(new TaskTime(new TimeOnly(9, 30), null), _ => sends++);
+        host.Find(".pspad-time-start .mud-input-adornment-end button").Click();
+        host.WaitForElement(".mud-picker .mud-overlay");
+
+        host.Find(".mud-picker .mud-overlay").Click();
+
+        host.WaitForAssertion(() => Assert.Empty(host.FindAll(".mud-picker .mud-overlay")));
+        Assert.Equal(0, sends);
+    }
+
+    [Theory]
+    [InlineData("14", 14, 0)]
+    [InlineData("9", 9, 0)]
+    [InlineData("930", 9, 30)]
+    [InlineData("1430", 14, 30)]
+    [InlineData("14.30", 14, 30)]
+    [InlineData(" 7:05 ", 7, 5)]
+    public void TypedTextIsReadLeniently(string typed, int hour, int minute)
+    {
+        Assert.True(TimeText.TryParse(typed, out var time));
+        Assert.Equal(new TimeOnly(hour, minute), time);
+    }
+
+    [Theory]
+    [InlineData("24:00")]
+    [InlineData("12:60")]
+    [InlineData("abc")]
+    [InlineData("12:3")]
+    public void UnreadableTextIsRejected(string typed) => Assert.False(TimeText.TryParse(typed, out _));
+
+    [Fact]
+    public void EmptyTextReadsAsNoTime()
+    {
+        Assert.True(TimeText.TryParse("  ", out var time));
+        Assert.Null(time);
+    }
+
+    [Fact]
+    public void TypingJustAnHourSetsTheFullHour()
+    {
+        TaskTime? sent = null;
+        var row = Render<TimeRow>(p => p
+            .Add(r => r.Value, (TaskTime?)null)
+            .Add(r => r.ValueChanged, (TaskTime? time) => sent = time));
+
+        row.Find(".pspad-time-start input").Change("14");
+
+        Assert.Equal(new TaskTime(new TimeOnly(14, 0), null), sent);
+    }
+
+    [Theory]
+    [InlineData("7:00")]
+    [InlineData("7")]
+    [InlineData("700")]
+    [InlineData("7.00")]
+    public void ShorthandStartIsSentAndShownPadded(string typed)
+    {
+        TaskTime? sent = null;
+        var row = Render<TimeRow>(p => p
+            .Add(r => r.Value, (TaskTime?)null)
+            .Add(r => r.ValueChanged, (TaskTime? time) => sent = time));
+
+        row.Find(".pspad-time-start input").Change(typed);
+        row.Render(p => p.Add(r => r.Value, sent));
+
+        Assert.Equal(new TaskTime(new TimeOnly(7, 0), null), sent);
+        Assert.Equal("07:00", row.Find(".pspad-time-start input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void UnreadableStartShowsAHintKeepsTheTextAndSendsNothing()
+    {
+        var calls = 0;
+        var row = Render<TimeRow>(p => p
+            .Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), null))
+            .Add(r => r.ValueChanged, (TaskTime? _) => calls++));
+
+        row.Find(".pspad-time-start input").Change("nine");
+
+        Assert.Equal(0, calls);
+        Assert.Equal("Enter a time like 14:30", row.Find(".pspad-time-error").TextContent.Trim());
+        Assert.Equal("nine", row.Find(".pspad-time-start input").GetAttribute("value"));
+        Assert.Contains("mud-input-error", row.Find(".pspad-time-start .mud-input").ClassName);
+    }
+
+    [Fact]
+    public void EmptyingTheStartClearsTheTime()
+    {
+        TaskTime? sent = new(new TimeOnly(9, 0), null);
+        var row = Render<TimeRow>(p => p
+            .Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0)))
+            .Add(r => r.ValueChanged, (TaskTime? time) => sent = time));
+
+        row.Find(".pspad-time-start input").Change("");
+
+        Assert.Null(sent);
+    }
+
+    [Fact]
+    public void EmptyingTheEndDropsOnlyTheEnd()
+    {
+        TaskTime? sent = null;
+        var row = Render<TimeRow>(p => p
+            .Add(r => r.Value, new TaskTime(new TimeOnly(9, 0), new TimeOnly(10, 0)))
+            .Add(r => r.ValueChanged, (TaskTime? time) => sent = time));
+
+        row.Find(".pspad-time-end input").Change("");
+
+        Assert.Equal(new TaskTime(new TimeOnly(9, 0), null), sent);
+    }
+
+    [Fact]
+    public void TheFieldsShowTheTimeAsHoursAndMinutes()
+    {
+        var row = Render<TimeRow>(p => p.Add(r => r.Value, new TaskTime(new TimeOnly(9, 5), new TimeOnly(22, 0))));
+
+        Assert.Equal("09:05", row.Find(".pspad-time-start input").GetAttribute("value"));
+        Assert.Equal("22:00", row.Find(".pspad-time-end input").GetAttribute("value"));
+    }
+
+    IRenderedComponent<ContainerFragment> RenderWithOverlays(TaskTime? value, Action<TaskTime?>? onChanged = null) => Render(builder =>
+    {
+        builder.OpenComponent<MudBlazor.MudPopoverProvider>(0);
+        builder.CloseComponent();
+        builder.OpenComponent<MudBlazor.MudDialogProvider>(1);
+        builder.CloseComponent();
+        builder.OpenComponent<TimeRow>(2);
+        builder.AddAttribute(3, nameof(TimeRow.Value), value);
+        if (onChanged is not null)
+        {
+            builder.AddAttribute(4, nameof(TimeRow.ValueChanged),
+                Microsoft.AspNetCore.Components.EventCallback.Factory.Create<TaskTime?>(this, onChanged));
+        }
+        builder.CloseComponent();
+    });
 
     [Fact]
     public void FromAndToSitOnTwoRowsBesideTheTimeLabel()

@@ -47,7 +47,7 @@ public class TimeRowTypingTests : Bunit.TestContext
         host.WaitForAssertion(
             () => Assert.Equal(new TaskTime(new TimeOnly(9, 30), null), sent),
             TimeSpan.FromSeconds(10));
-        Assert.Equal(new TimeSpan(9, 30, 0), host.FindComponent<MudTimePicker>().Instance.Time);
+        Assert.Equal("09:30", host.Find(".pspad-time-start input").GetAttribute("value"));
     }
 
     protected override void Dispose(bool disposing)
