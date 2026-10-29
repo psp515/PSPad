@@ -243,6 +243,7 @@
     Task CancelEditAsync()
     {
         _editingFieldId = null;
+        StateHasChanged();
         return Task.CompletedTask;
     }
 

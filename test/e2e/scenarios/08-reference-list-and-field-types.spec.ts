@@ -79,7 +79,7 @@ test('a reference item renders each field kind and keeps its field order', async
     await removeField(page, 'Trap');
   });
 
-  await test.step.skip('BUG: Cancel in a label\'s editor leaves the editor open until something else redraws the list (reported in PR #225)', async () => {
+  await test.step('Cancel in a label\'s editor closes it and keeps the label', async () => {
     const save = panel(page).getByRole('button', { name: 'Save', exact: true });
     await panel(page).getByText('RT-AX88U', { exact: true }).click();
     await panel(page).getByRole('textbox', { name: 'Label', exact: true }).fill('Router model');
