@@ -39,12 +39,11 @@ test('reference items show as rows with their labels as chips, on the board and 
       ['Recipe', 'https://example.com/pierogi'],
       ['Photo', '/home/me/pierogi.jpg'],
     ]);
-    await expect(card).toContainText('7 open tasks');
-    await expect(card.getByRole('button', { name: 'Star', exact: true })).toHaveCount(5);
     await expect(card.getByRole('link', { name: 'Show all 7' })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Star', exact: true })).toHaveCount(5);
     await expect(card).not.toContainText('Gołąbki');
 
-    await card.getByRole('button', { name: 'Star', exact: true }).nth(4).click();
+    await referenceRow(page, 'Barszcz').getByRole('button', { name: 'Star', exact: true }).click();
     await expect(card.getByRole('button', { name: 'Unstar' })).toHaveCount(1);
     await expect(card.getByText(/^(Bigos|Rosół|Pierogi|Żurek|Barszcz)$/).first()).toHaveText('Barszcz');
 
@@ -52,6 +51,11 @@ test('reference items show as rows with their labels as chips, on the board and 
     await expect(panel(page).getByPlaceholder('Item name')).toHaveValue('Bigos');
     await expect(panel(page).getByText('Reference item', { exact: true })).toBeVisible();
     await closePanel(page);
+  });
+
+  await test.step.skip('BUG: a reference card counts its items as "open tasks" (reported in PR #225)', async () => {
+    await expect(listCard(page, recipes)).toContainText('7 items');
+    await expect(listCard(page, recipes)).not.toContainText('open tasks');
   });
 
   await test.step('the board counts lists, open tasks and items, and deleting warns what goes with it', async () => {

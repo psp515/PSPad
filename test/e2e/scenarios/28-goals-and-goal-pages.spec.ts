@@ -4,11 +4,11 @@ import { createArea } from '../helpers/areas';
 import { addDays, dayMonth, shortDate, utcToday } from '../helpers/dates';
 import { createGoalOn, editGoal, goalRow, goToGoals, linkTasksOn, openGoalMenu } from '../helpers/goals';
 import { createList } from '../helpers/lists';
-import { awaitNoDrawer, chooseProperty, clearProperty, closePanel, confirm, panel, propertyRow } from '../helpers/panels';
+import { awaitNoDrawer, chooseProperty, clearProperty, closePanel, confirm, openFabAction, panel, propertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
-import { createTasksOn } from '../helpers/tasks';
+import { createTasksOn, taskRow } from '../helpers/tasks';
 
-test('goals are listed by status and due date, and the goal panel edits a goal', async ({ page, account }) => {
+test('goals are listed by status and due date, the goal panel edits a goal, and a goal page tracks its tasks and pace', async ({ page, account }) => {
   const area = `Self ${account.suffix}`;
   const list = `Kitchen ${account.suffix}`;
   const bake = `Bake bread ${account.suffix}`;
@@ -105,6 +105,59 @@ test('goals are listed by status and due date, and the goal panel edits a goal',
     await closePanel(page);
     await expect(goalRow(page, learn)).toContainText('No tasks linked');
     await expect(goalRow(page, later)).toHaveCount(0);
+  });
+
+  await test.step('a goal page sums up its status, progress and pace, and lists its own tasks by list', async () => {
+    await goalRow(page, bake).click();
+    await expect(page).toHaveURL(new RegExp(`/goals/${ids[bake]}$`));
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(bake);
+    await expect(page.getByText('In progress', { exact: true }).filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByText('2 of 3 done')).toBeVisible();
+    await expect(page.getByText(`Due ${shortDate(addDays(today, 2))} · 2 days left`)).toBeVisible();
+    await expect(page.getByText('Progress', { exact: true })).toBeVisible();
+    await expect(page.getByText('On the goal', { exact: true })).toBeVisible();
+    await expect(page.getByText('Done', { exact: true })).toBeVisible();
+    await expect(page.getByText('Recurring tasks not counted')).toBeVisible();
+    await expect(page.getByText('Pace', { exact: true })).toBeVisible();
+    await expect(page.getByText('2 days left', { exact: true })).toBeVisible();
+    await expect(page.getByText('50%', { exact: true })).toBeVisible();
+
+    await expect(taskRow(page, 'Knead the dough')).toContainText(list);
+    await expect(taskRow(page, 'Knead the dough')).not.toContainText(bake);
+    await expect(page.getByText('Climb the ladder')).toHaveCount(0);
+    await expect(page.getByText('Completed · 2')).toBeVisible();
+
+    await taskRow(page, 'Knead the dough').getByText('Knead the dough').click();
+    await expect(page).toHaveURL(new RegExp(`/goals/${ids[bake]}\\?task=`));
+    await expect(panel(page).getByPlaceholder('Task name')).toHaveValue('Knead the dough');
+    await closePanel(page);
+
+    await openFabAction(page, 'Edit goal');
+    await expect(panel(page).getByPlaceholder('Goal name')).toHaveValue(bake);
+    await closePanel(page);
+  });
+
+  await test.step('an overdue goal says how late it is, an undated or empty one has no pace and says so', async () => {
+    await page.goto(`/goals/${ids[late]}`);
+    await expect(page.getByText('3 days overdue')).toBeVisible();
+    await page.goto(`/goals/${ids[undated]}`);
+    await expect(page.getByText('No tasks linked')).toBeVisible();
+    await expect(page.getByText('No open tasks.')).toBeVisible();
+    await expect(page.getByText('Pace', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Progress', { exact: true })).toHaveCount(0);
+    await page.getByRole('link', { name: 'Back to goals' }).click();
+    await expect(page).toHaveURL(/\/goals$/);
+  });
+
+  await test.step('deleting a goal from its page asks first and goes back to Goals, and the gone goal says so', async () => {
+    await goalRow(page, late).click();
+    await openFabAction(page, 'Delete goal');
+    await expect(page.getByRole('dialog')).toContainText(`Delete “${late}”? Its tasks stay, without a goal.`);
+    await confirm(page, 'Delete');
+    await expect(page).toHaveURL(/\/goals$/);
+    await expect(goalRow(page, late)).toHaveCount(0);
+    await page.goto(`/goals/${ids[late]}`);
+    await expect(page.getByText('This goal is not there anymore.')).toBeVisible();
   });
 
   await test.step('deleting a list takes its tasks off the goal but keeps the goal', async () => {

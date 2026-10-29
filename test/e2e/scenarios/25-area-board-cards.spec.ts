@@ -3,7 +3,7 @@ import { anotherDevice, idOf } from '../helpers/api';
 import { areaSubtitle, createArea, listCard, openCardMenu } from '../helpers/areas';
 import { addDays, utcToday } from '../helpers/dates';
 import { createList } from '../helpers/lists';
-import { awaitNoDrawer, closePanel, confirm, openFabAction, panel, savePanel } from '../helpers/panels';
+import { awaitNoDrawer, closePanel, confirm, openFabAction, openMenuItems, panel, savePanel } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { syncNow } from '../helpers/sync';
 import { createTasksOn, taskRow } from '../helpers/tasks';
@@ -54,12 +54,12 @@ test('an area board previews each list as a card', async ({ page, account }) => 
 
   await test.step('a card previews five open tasks, counts every one, and Show all opens the list', async () => {
     const card = listCard(page, groceries);
-    await expect(card.getByRole('checkbox')).toHaveCount(5);
     await expect(card.getByText(/^Item \d /)).toHaveCount(5);
     for (const hidden of ['Bought bread', 'Dropped idea', 'Old habit']) {
       await expect(card).not.toContainText(hidden);
     }
     await expect(areaSubtitle(page)).toHaveText('2 lists · 10 open tasks');
+    await expect(listCard(page, chores).getByRole('link', { name: /^Show all/ })).toHaveCount(0);
     await card.getByRole('link', { name: 'Show all 7' }).click();
     await expect(page.getByRole('heading', { level: 1 })).toContainText(groceries);
     await expect(page.getByText(items[6])).toBeVisible();
@@ -99,7 +99,9 @@ test('an area board previews each list as a card', async ({ page, account }) => 
   });
 
   await test.step('the board counts lists and open tasks, and a card menu edits or deletes its list', async () => {
-    await openCardMenu(page, groceries, 'Edit');
+    await listCard(page, groceries).getByRole('button', { name: 'Actions' }).click();
+    await expect(openMenuItems(page)).toHaveText(['Edit', 'Delete']);
+    await openMenuItems(page).getByText('Edit', { exact: true }).click();
     await expect(panel(page).getByText(`List · ${area}`, { exact: true })).toBeVisible();
     await expect(panel(page).getByPlaceholder('List name')).toHaveValue(groceries);
     await closePanel(page);

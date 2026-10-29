@@ -1,5 +1,6 @@
 import { expect, test } from '../fixtures/accounts';
-import { areaChips, createArea, deleteCurrentArea, openArea } from '../helpers/areas';
+import { anotherDevice, idOf } from '../helpers/api';
+import { areaChips, createArea, deleteCurrentArea } from '../helpers/areas';
 import { goTo } from '../helpers/nav';
 import { closePanel, panel } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
@@ -42,12 +43,16 @@ test('Areas opens the remembered area, and on a phone every area is a chip', asy
   });
 
   await test.step('with every area deleted Areas offers a new one', async () => {
+    const device = await anotherDevice(page);
     for (const name of ['Personal', 'Work', garden]) {
-      await openArea(page, name);
-      await deleteCurrentArea(page);
-      await expect(page.getByRole('heading', { name: 'My Day', exact: true })).toBeVisible();
+      await device.send('DeleteArea', { areaId: await idOf(device, 'areas', name) });
+    }
+    await device.dispose();
+    for (const name of ['Personal', 'Work', garden]) {
+      await expect(page.getByRole('link', { name, exact: true })).toHaveCount(0);
     }
     await page.goto('/areas');
+    await expect(page.getByText('No areas yet.')).toBeVisible();
     await page.getByText('No areas yet.').click();
     await expect(panel(page).getByText('New area', { exact: true })).toBeVisible();
     await panel(page).getByPlaceholder('Area name').fill(garden);
