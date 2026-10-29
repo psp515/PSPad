@@ -68,24 +68,15 @@ export async function renameStep(page: Page, from: string, to: string) {
 }
 
 export async function removeStep(page: Page, name: string) {
-  const field = stepNameField(page, name);
-  await expect(async () => {
-    if ((await field.count()) > 0) {
-      await stepRow(page, name).hover({ timeout: 2_000 });
-      await panel(page).getByRole('button', { name: `Remove ${name}`, exact: true }).click({ timeout: 2_000 });
-    }
-    await expect(field).toHaveCount(0, { timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+  await stepRow(page, name).hover();
+  await panel(page).getByRole('button', { name: `Remove ${name}`, exact: true }).click();
+  await expect(stepNameField(page, name)).toHaveCount(0);
 }
 
 export async function checkStep(page: Page, name: string) {
   const box = panel(page).getByRole('checkbox', { name, exact: true });
-  await expect(async () => {
-    if (!(await box.isChecked())) {
-      await box.click({ timeout: 2_000 });
-    }
-    await expect(box).toBeChecked({ timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+  await box.click();
+  await expect(box).toBeChecked();
 }
 
 export function stepRow(page: Page, name: string) {
@@ -96,26 +87,17 @@ export function stepRow(page: Page, name: string) {
 
 export async function setStepDeadline(page: Page, step: string, day: 'Today' | 'Tomorrow') {
   const due = stepRow(page, step).locator('.pspad-step-due');
-  await expect(async () => {
-    if (!(await due.innerText({ timeout: 2_000 })).includes(day)) {
-      await stepRow(page, step).hover({ timeout: 2_000 });
-      await due.click({ timeout: 2_000 });
-      await page.getByRole('menuitem', { name: day }).first().click({ timeout: 2_000 });
-    }
-    await expect(due).toContainText(day, { timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+  await stepRow(page, step).hover();
+  await due.click();
+  await page.getByRole('menuitem', { name: day }).first().click();
+  await expect(due).toContainText(day);
 }
 
 export async function clearStepDeadline(page: Page, step: string, shown: string) {
-  const unset = panel(page).getByLabel(`Set a deadline for ${step}`, { exact: true });
-  await expect(async () => {
-    if ((await unset.count()) === 0) {
-      await stepRow(page, step).hover({ timeout: 2_000 });
-      await stepRow(page, step).getByRole('button', { name: shown, exact: true }).first().click({ timeout: 2_000 });
-      await page.getByRole('menuitem', { name: 'Clear date' }).click({ timeout: 2_000 });
-    }
-    await expect(unset).toBeVisible({ timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+  await stepRow(page, step).hover();
+  await stepRow(page, step).getByRole('button', { name: shown, exact: true }).first().click();
+  await page.getByRole('menuitem', { name: 'Clear date' }).click();
+  await expect(panel(page).getByLabel(`Set a deadline for ${step}`, { exact: true })).toBeVisible();
 }
 
 export async function createTaskDueTodayFromAnotherDevice(page: Page, listId: string, name: string) {

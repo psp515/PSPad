@@ -1,19 +1,19 @@
 # Behaviour tests — design
 
-Status: migration done 2026-10-29; round 2 in progress (R1 done: stylesheet tests removed, theme tests trimmed to accessibility and theme rules; R2 done: component bUnit tests removed, their behaviour in scenarios and their pure rules in `State/`).
+Status: migration done 2026-10-29; round 2 done 2026-10-29 (R1–R3): 2206 unit, 413 integration, 34 e2e scenarios.
 
 Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225):
 
 - 01-first-sign-in: a first sign-in while another user saves a change can fail and land back on Welcome.
-- 08-reference-list-and-field-types: Cancel in a label's editor leaves the editor open until something else redraws the list.
 - 01-first-sign-in: signing in from Welcome ignores the return address.
 - 01-first-sign-in: coming back from the fresh sign-in does not reopen the delete dialog.
 - 01-first-sign-in: deleting the account signs out before it leaves Settings, so Welcome keeps Settings as the return address.
 - 02-capture-and-triage: a deadline set on a draft step is lost when an Inbox item is converted.
+- 08-reference-list-and-field-types: Cancel in a label's editor leaves the editor open until something else redraws the list.
 - 10-share-join-remove: joining a list can lose the tasks it already had: a sync running at the join purges them, or the list arrives by delta and never counts as missing, so no later sync brings them back.
 - 10-share-join-remove: a code in the link joins at once, but the shared list's tasks can be lost the same way.
 - 15-search-statistics-settings: an old History address lands on an empty Statistics page.
-- 23-task-panel: an open task panel keeps the description (and name) it opened with after another device changes them, until it is reopened.
+- 23-task-panel: an open task panel keeps the description and name it opened with after another device changes them, until it is reopened.
 - 24-new-task-draft: a deadline set on a draft step is lost when the task is added.
 - 25-area-board-cards: ticking a repeat on a day it skips shows it ticked until a reload, though nothing was saved.
 - 27-reference-items: labels drafted on a new reference item are missing when it is opened, until a reload, though the server stored them.
