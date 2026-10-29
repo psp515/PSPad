@@ -1,5 +1,4 @@
 @page "/statistics"
-@page "/history"
 @attribute [Authorize]
 @using PSPad.Abstractions
 @using PSPad.App.Components
@@ -14,194 +13,190 @@
 @inject IStringLocalizer<StatisticsStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
 
-@if (!_redirectedFromHistory)
+<PageHeading Title="@Shared["Statistics"]" />
+
+@if (_offline)
 {
-    <PageHeading Title="@Shared["Statistics"]" />
+    <MudAlert Severity="Severity.Warning" Class="mb-4">
+        @T["OfflineLastNumbers"]
+    </MudAlert>
+}
 
-    @if (_offline)
+@if (!_loaded)
+{
+    <RowSkeleton Count="4" />
+}
+else
+{
+    @if (_overview is { } overview)
     {
-        <MudAlert Severity="Severity.Warning" Class="mb-4">
-            @T["OfflineLastNumbers"]
-        </MudAlert>
-    }
+        <MudGrid Spacing="4" Class="mb-4">
+            <MudItem xs="6" sm="3">
+                <StatTile Label="@T["DoneToday"]" Value="@overview.Tiles.DoneToday" />
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <StatTile Label="@T["OpenedToday"]" Value="@overview.Tiles.OpenedToday" />
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <StatTile Label="@T["LastSevenDays"]" Value="@overview.Tiles.DoneThisWeek" />
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <StatTile Label="@T["NetChange"]" Value="@overview.Tiles.NetChange" Signed="true" />
+            </MudItem>
+        </MudGrid>
 
-    @if (!_loaded)
-    {
-        <RowSkeleton Count="4" />
-    }
-    else
-    {
-        @if (_overview is { } overview)
-        {
-            <MudGrid Spacing="4" Class="mb-4">
-                <MudItem xs="6" sm="3">
-                    <StatTile Label="@T["DoneToday"]" Value="@overview.Tiles.DoneToday" />
-                </MudItem>
-                <MudItem xs="6" sm="3">
-                    <StatTile Label="@T["OpenedToday"]" Value="@overview.Tiles.OpenedToday" />
-                </MudItem>
-                <MudItem xs="6" sm="3">
-                    <StatTile Label="@T["LastSevenDays"]" Value="@overview.Tiles.DoneThisWeek" />
-                </MudItem>
-                <MudItem xs="6" sm="3">
-                    <StatTile Label="@T["NetChange"]" Value="@overview.Tiles.NetChange" Signed="true" />
-                </MudItem>
-            </MudGrid>
+        <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-4">
+            <MudToggleGroup T="int" Value="_days" ValueChanged="SetDaysAsync"
+                             SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary">
+                <MudToggleItem Value="30" Text="@T.Plural(30, "DaysRange")" />
+                <MudToggleItem Value="90" Text="@T.Plural(90, "DaysRange")" />
+                <MudToggleItem Value="365" Text="@T.Plural(365, "DaysRange")" />
+            </MudToggleGroup>
 
-            <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-4">
-                <MudToggleGroup T="int" Value="_days" ValueChanged="SetDaysAsync"
-                                 SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary">
-                    <MudToggleItem Value="30" Text="@T.Plural(30, "DaysRange")" />
-                    <MudToggleItem Value="90" Text="@T.Plural(90, "DaysRange")" />
-                    <MudToggleItem Value="365" Text="@T.Plural(365, "DaysRange")" />
-                </MudToggleGroup>
+            @if (_updatedAt is not null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @UpdatedLabel()
+                </MudText>
+            }
+        </div>
 
-                @if (_updatedAt is not null)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        @UpdatedLabel()
+        var completionsSeries = CompletionsSeries(overview);
+        var completionsLabels = ChartAxis.Labels(overview.Completions, day => day.Day);
+        var completionsOptions = StackedAxisOptions(overview.Completions);
+        var openedSeries = LineSeries(T["SeriesOpened"], overview.Opened);
+        var openedLabels = ChartAxis.Labels(overview.Opened, day => day.Day);
+        var openedOptions = LineAxisOptions(overview.Opened);
+        var outstandingSeries = LineSeries(T["SeriesOutstanding"], overview.Outstanding);
+        var outstandingLabels = ChartAxis.Labels(overview.Outstanding, day => day.Day);
+        var outstandingOptions = LineAxisOptions(overview.Outstanding);
+        var maxGoalCount = Math.Max(overview.ByGoal.Count == 0 ? 0 : overview.ByGoal.Max(goal => goal.Count), 1);
+        var capturesSeries = BarSeries(T["SeriesCaptured"], overview.InboxCaptures);
+        var capturesLabels = ChartAxis.Labels(overview.InboxCaptures, week => week.WeekStart, DaySpanOf(overview.InboxCaptures));
+        var capturesOptions = BarAxisOptions(overview.InboxCaptures);
+
+        <MudGrid Spacing="4" Class="mb-4">
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-3">
+                    <SectionHeading Title="@T["CompletionsPerDay"]" />
+                    <MudChart ChartType="ChartType.StackedBar" ChartSeries="@completionsSeries"
+                              ChartLabels="@completionsLabels" ChartOptions="@completionsOptions"
+                              Width="100%" Height="260px" />
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-3">
+                    <SectionHeading Title="@T["TasksOpenedPerDay"]" />
+                    <MudChart ChartType="ChartType.Line" ChartSeries="@openedSeries"
+                              ChartLabels="@openedLabels" ChartOptions="@openedOptions"
+                              Width="100%" Height="260px" />
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-3">
+                    <SectionHeading Title="@T["OpenTasksOutstanding"]" />
+                    <MudChart ChartType="ChartType.Line" ChartSeries="@outstandingSeries"
+                              ChartLabels="@outstandingLabels" ChartOptions="@outstandingOptions"
+                              Width="100%" Height="260px" />
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-3">
+                    <SectionHeading Title="@T["WhereTheWorkWent"]" />
+                    <MudStack Spacing="3">
+                        @foreach (var goal in overview.ByGoal)
+                        {
+                            <div>
+                                <div class="d-flex justify-space-between mb-1">
+                                    <MudText Typo="Typo.body2">@goal.Name</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@goal.Count</MudText>
+                                </div>
+                                <MudProgressLinear Color="Color.Primary" Rounded="true" Min="0"
+                                                    Max="@maxGoalCount" Value="@goal.Count" aria-label="@goal.Name" />
+                            </div>
+                        }
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid Spacing="4" Class="mb-4">
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-3">
+                    <SectionHeading Title="@T["Consistency"]" />
+                    <ConsistencyHeatmap Days="@overview.Heatmap" Today="@State.Today" />
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-3">
+                    <SectionHeading Title="@T["CapturedEachWeek"]" />
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
+                        @T["CapturedEachWeekExplain"]
                     </MudText>
-                }
-            </div>
-
-            var completionsSeries = CompletionsSeries(overview);
-            var completionsLabels = ChartAxis.Labels(overview.Completions, day => day.Day);
-            var completionsOptions = StackedAxisOptions(overview.Completions);
-            var openedSeries = LineSeries(T["SeriesOpened"], overview.Opened);
-            var openedLabels = ChartAxis.Labels(overview.Opened, day => day.Day);
-            var openedOptions = LineAxisOptions(overview.Opened);
-            var outstandingSeries = LineSeries(T["SeriesOutstanding"], overview.Outstanding);
-            var outstandingLabels = ChartAxis.Labels(overview.Outstanding, day => day.Day);
-            var outstandingOptions = LineAxisOptions(overview.Outstanding);
-            var maxGoalCount = Math.Max(overview.ByGoal.Count == 0 ? 0 : overview.ByGoal.Max(goal => goal.Count), 1);
-            var capturesSeries = BarSeries(T["SeriesCaptured"], overview.InboxCaptures);
-            var capturesLabels = ChartAxis.Labels(overview.InboxCaptures, week => week.WeekStart, DaySpanOf(overview.InboxCaptures));
-            var capturesOptions = BarAxisOptions(overview.InboxCaptures);
-
-            <MudGrid Spacing="4" Class="mb-4">
-                <MudItem xs="12" md="6">
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <SectionHeading Title="@T["CompletionsPerDay"]" />
-                        <MudChart ChartType="ChartType.StackedBar" ChartSeries="@completionsSeries"
-                                  ChartLabels="@completionsLabels" ChartOptions="@completionsOptions"
-                                  Width="100%" Height="260px" />
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <SectionHeading Title="@T["TasksOpenedPerDay"]" />
-                        <MudChart ChartType="ChartType.Line" ChartSeries="@openedSeries"
-                                  ChartLabels="@openedLabels" ChartOptions="@openedOptions"
-                                  Width="100%" Height="260px" />
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <SectionHeading Title="@T["OpenTasksOutstanding"]" />
-                        <MudChart ChartType="ChartType.Line" ChartSeries="@outstandingSeries"
-                                  ChartLabels="@outstandingLabels" ChartOptions="@outstandingOptions"
-                                  Width="100%" Height="260px" />
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <SectionHeading Title="@T["WhereTheWorkWent"]" />
-                        <MudStack Spacing="3">
-                            @foreach (var goal in overview.ByGoal)
+                    <MudChart ChartType="ChartType.Bar" ChartSeries="@capturesSeries"
+                              ChartLabels="@capturesLabels" ChartOptions="@capturesOptions"
+                              Width="100%" Height="260px" />
+                    <table class="mud-sr-only">
+                        <caption>@T["CapturedEachWeek"]</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">@T["WeekOf"]</th>
+                                <th scope="col">@T["Captured"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var week in overview.InboxCaptures)
                             {
-                                <div>
-                                    <div class="d-flex justify-space-between mb-1">
-                                        <MudText Typo="Typo.body2">@goal.Name</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@goal.Count</MudText>
-                                    </div>
-                                    <MudProgressLinear Color="Color.Primary" Rounded="true" Min="0"
-                                                        Max="@maxGoalCount" Value="@goal.Count" aria-label="@goal.Name" />
-                                </div>
-                            }
-                        </MudStack>
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
-
-            <MudGrid Spacing="4" Class="mb-4">
-                <MudItem xs="12" md="6">
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <SectionHeading Title="@T["Consistency"]" />
-                        <ConsistencyHeatmap Days="@overview.Heatmap" Today="@State.Today" />
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <SectionHeading Title="@T["CapturedEachWeek"]" />
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
-                            @T["CapturedEachWeekExplain"]
-                        </MudText>
-                        <MudChart ChartType="ChartType.Bar" ChartSeries="@capturesSeries"
-                                  ChartLabels="@capturesLabels" ChartOptions="@capturesOptions"
-                                  Width="100%" Height="260px" />
-                        <table class="mud-sr-only">
-                            <caption>@T["CapturedEachWeek"]</caption>
-                            <thead>
                                 <tr>
-                                    <th scope="col">@T["WeekOf"]</th>
-                                    <th scope="col">@T["Captured"]</th>
+                                    <td>@week.WeekStart.ToString("yyyy-MM-dd")</td>
+                                    <td>@week.Count</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var week in overview.InboxCaptures)
-                                {
-                                    <tr>
-                                        <td>@week.WeekStart.ToString("yyyy-MM-dd")</td>
-                                        <td>@week.Count</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
-        }
+                            }
+                        </tbody>
+                    </table>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
 
-        <MudExpansionPanels Elevation="0" Outlined="true" Class="mb-4">
-            <MudExpansionPanel Text="@T["EverythingThatHappened"]">
-                @foreach (var day in _records.GroupBy(DayOf))
+    <MudExpansionPanels Elevation="0" Outlined="true" Class="mb-4">
+        <MudExpansionPanel Text="@T["EverythingThatHappened"]">
+            @foreach (var day in _records.GroupBy(DayOf))
+            {
+                <MudText Typo="Typo.subtitle1" Class="mt-4">@day.Key.ToString("d MMM yyyy")</MudText>
+                @foreach (var record in day)
                 {
-                    <MudText Typo="Typo.subtitle1" Class="mt-4">@day.Key.ToString("d MMM yyyy")</MudText>
-                    @foreach (var record in day)
+                    @if (record.CurrentStatus == "Gone")
                     {
-                        @if (record.CurrentStatus == "Gone")
-                        {
-                            <MudPaper Outlined="true" Class="mb-2 pspad-record-gone">
-                                <div class="px-3 py-2">
-                                    <RecordRow Record="@record" />
-                                </div>
-                            </MudPaper>
-                        }
-                        else
-                        {
-                            <MudPaper Outlined="true" Class="mb-2">
-                                <div class="px-3 py-2" style="cursor:pointer" @onclick="@(() => Open(record))">
-                                    <RecordRow Record="@record" />
-                                </div>
-                            </MudPaper>
-                        }
+                        <MudPaper Outlined="true" Class="mb-2 pspad-record-gone">
+                            <div class="px-3 py-2">
+                                <RecordRow Record="@record" />
+                            </div>
+                        </MudPaper>
+                    }
+                    else
+                    {
+                        <MudPaper Outlined="true" Class="mb-2">
+                            <div class="px-3 py-2" style="cursor:pointer" @onclick="@(() => Open(record))">
+                                <RecordRow Record="@record" />
+                            </div>
+                        </MudPaper>
                     }
                 }
+            }
 
-                @if (_records.Count > 0)
-                {
-                    <MudButton OnClick="@LoadOlderAsync">@T["LoadOlder"]</MudButton>
-                }
-            </MudExpansionPanel>
-        </MudExpansionPanels>
-    }
+            @if (_records.Count > 0)
+            {
+                <MudButton OnClick="@LoadOlderAsync">@T["LoadOlder"]</MudButton>
+            }
+        </MudExpansionPanel>
+    </MudExpansionPanels>
 }
 
 @code {
     const int RecordsPageSize = 50;
     const int DefaultDays = 30;
 
-    bool _redirectedFromHistory;
     bool _loaded;
     bool _offline;
     int _days = DefaultDays;
@@ -211,22 +206,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (OnHistoryRoute())
-        {
-            _redirectedFromHistory = true;
-            Navigation.NavigateTo("/statistics", replace: true);
-            return;
-        }
-
         _overview = await Cache.ReadAsync(_days);
         _loaded = _overview is not null;
 
         await RefreshAsync();
     }
-
-    bool OnHistoryRoute() =>
-        Navigation.ToBaseRelativePath(Navigation.Uri).Split('?')[0].TrimEnd('/')
-            .Equals("history", StringComparison.OrdinalIgnoreCase);
 
     async Task RefreshAsync()
     {

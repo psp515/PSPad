@@ -105,13 +105,9 @@ test('search finds a task, statistics count it, settings change the look and sig
     await expect(completed).toBeVisible();
   });
 
-  await test.step('an old History address leads to Statistics', async () => {
+  await test.step('an old History address leads to Statistics and shows its numbers', async () => {
     await page.goto('/history');
     await expect(page).toHaveURL(/\/statistics$/);
-  });
-
-  await test.step.skip('BUG: an old History address lands on an empty Statistics page (reported in PR #225)', async () => {
-    await page.goto('/history');
     await expect(statTile(page, 'Done today')).toHaveText('3');
   });
 
