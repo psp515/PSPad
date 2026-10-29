@@ -40,7 +40,7 @@
 
 <MudGrid Spacing="4">
     <MudItem xs="12" sm="6" lg="4" xl="3">
-        <MudPaper Outlined="true" Class="pa-4 pspad-account-card">
+        <MudPaper Outlined="true" Class="pa-4 pspad-account-card" role="region" aria-label="@S["Account"].Value">
             <SectionHeading Title="@S["Account"]" />
             <div class="d-flex align-center gap-3 mb-3">
                 <MudAvatar Style="@($"background:{AvatarColor.For(State.UserId)};color:#FFFFFF")" Size="Size.Large">

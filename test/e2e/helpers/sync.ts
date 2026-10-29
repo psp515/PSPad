@@ -34,7 +34,7 @@ export async function settled(page: Page, edit: () => Promise<void>) {
       return false;
     }
     const timing = response.request().timing();
-    committedAt = timing.startTime + timing.responseEnd;
+    committedAt = timing.responseEnd < 0 ? Date.now() : timing.startTime + timing.responseEnd;
     return true;
   }, pushedWithin);
   const pulled = page.waitForResponse(

@@ -243,7 +243,7 @@ test('a fresh user signs in, finds their way around the shell and can delete the
   });
 
   await test.step('Settings shows the account, its time zone and a link to change the password', async () => {
-    const card = page.locator('.pspad-account-card');
+    const card = page.getByRole('region', { name: 'Account', exact: true });
     await expect(card).toContainText(account.displayName);
     await expect(card).toContainText(account.email);
     await expect(page.getByLabel('Time zone')).toHaveValue('Etc/UTC');
