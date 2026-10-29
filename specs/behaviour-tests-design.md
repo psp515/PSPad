@@ -4,10 +4,6 @@ Status: migration done 2026-10-29; round 2 done 2026-10-29 (R1–R3): 2206 unit,
 
 Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225):
 
-- 01-first-sign-in: signing in from Welcome ignores the return address.
-- 01-first-sign-in: coming back from the fresh sign-in does not reopen the delete dialog.
-- 01-first-sign-in: deleting the account signs out before it leaves Settings, so Welcome keeps Settings as the return address.
-- 15-search-statistics-settings: an old History address lands on an empty Statistics page.
 - 30-reference-rows: a reference card counts its items as "open tasks".
 - 21-step-deadline (found 2026-10-29, after PR #225): in a tight My Day row the time, date and step count push the due-step mark past the clipped details, so only its first letters show.
 
@@ -22,6 +18,12 @@ Fixed in round 3:
 - 08-reference-list-and-field-types: Cancel in a label's editor left it open until something else redrew the list: the cancel callback never re-rendered. Fixed in fade77a.
 - 25-area-board-cards: ticking a repeat on a day it skips showed it ticked until a reload, though nothing was saved: the checkbox flipped its own state. Fixed in ac94b26 (`TaskTick.Toggles`; the checkbox is read-only on such a day).
 - 27-reference-items: labels drafted on a new reference item were missing when it was opened at once. Fixed by 55358c4 (#220, ADR-0079); reverting the guard fails the step 3 of 3. The step now closes the open panel before adding (f1e8f68).
+- 01-first-sign-in: signing in from Welcome ignored the return address: the login route ignores a `returnUrl` query since .NET 7. Welcome starts the login with `NavigateToLogin` and an in-app return address (`ReturnUrlQuery.SafeFrom`). Fixed in 5ffaa20.
+- 01-first-sign-in (follow-up): the Welcome sign-in warning stayed when an in-app navigation reused the open Welcome: the flag was read only on creation. Welcome takes it (`SignInFailure.Take`) on every arrival. Fixed in 5ffaa20.
+- 01-first-sign-in: coming back from the fresh sign-in did not reopen the delete dialog: it opened before the query-stripping navigation landed, and `MudDialogProvider` closes every dialog on a location change. Fixed in d485a9d.
+- 01-first-sign-in: deleting the account signed out before it left Settings, so Welcome kept Settings as the return address. Settings now reloads the app on Welcome. Fixed in 5f9a7ca.
+- 15-search-statistics-settings: an old History address landed on an empty Statistics page: both routes shared one page, which Blazor reused after the redirect with its "redirecting" flag still set. `/history` is its own redirect page. Fixed in ecdf443.
+- 01-first-sign-in (follow-up): the first sign-in under load widened its timeout with `test.slow()`; it is now scenario 35 within the normal timeout (de3ec7e).
 
 Noted without a step:
 

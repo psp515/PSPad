@@ -159,8 +159,10 @@ tests would be visible, not silent.
 1. **First sign-in and the shell.** A visitor sent to Welcome from `/inbox`
    sees the headline, the GTD and docs links, a preview of My Day and a Log
    in link carrying the return address, with no boot splash and no live
-   stream. A sign-in whose `/api/me` answers 500 lands back on Welcome,
-   signed out; logging in again holds the app (brand loader, no My Day)
+   stream; signing in from there in a second browser lands on the Inbox.
+   An identity-provider failure and a sign-in whose `/api/me` answers 503
+   land back on Welcome, signed out, with a warning shown once per arrival
+   (an in-app return to Welcome drops it); logging in again holds the app (brand loader, no My Day)
    until the first pull lands, then shows the seeded areas. My Day says
    "Nothing planned for today." with no Overdue or Starred section, and the
    Inbox says "Nothing captured.". The sidebar names the user and lists My
@@ -181,15 +183,11 @@ tests would be visible, not silent.
    shows the account, time zone `Etc/UTC` and a Change password link to
    Keycloak's account console in a new tab. Deleting the account wants the
    email typed (any case), a fresh sign-in when the API asks for one (a
-   Keycloak password prompt), keeps the dialog open on a failure, says an
-   administrator must remove the sign-in when the API reports Keycloak was
-   not cleaned up, then lands on Welcome, and the account can no longer
-   log in. Skipped BUG
-   steps (PR #225): a first sign-in while another user saves a change can
-   fail (`UserProvisioner` is not retried on a write conflict, so the
-   login callback stores no session), the return address after login is
-   ignored, the delete dialog does not reopen after the fresh sign-in, and
-   deletion signs out before leaving Settings.
+   Keycloak password prompt) after which the dialog reopens empty, keeps
+   the dialog open on a failure, says an administrator must remove the
+   sign-in when the API reports Keycloak was not cleaned up, then lands on
+   Welcome with no return address, and the account can no longer log in.
+   The first sign-in under load is scenario 35.
 2. **Capture and triage.** Inbox: the empty state opens Capture, a blank
    capture adds nothing; capture two items (Enter and Add), newest first with
    their capture time; reword one while no list exists and Convert is off.
