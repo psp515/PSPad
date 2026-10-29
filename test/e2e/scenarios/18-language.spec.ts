@@ -1,7 +1,8 @@
 import { expect, test } from '../fixtures/accounts';
 import { anotherDevice } from '../helpers/api';
 import { createBudgetOn, recordOn } from '../helpers/budgets';
-import { utcToday } from '../helpers/dates';
+import { isoDate, utcToday } from '../helpers/dates';
+import { shellMenu } from '../helpers/shell';
 import { goToSettings, setLanguage } from '../helpers/settings';
 import { signIn } from '../helpers/sign-in';
 
@@ -10,6 +11,13 @@ test('the language is chosen once and follows the user to another device', async
   const api = await anotherDevice(page);
   await goToSettings(page);
   await expect(page.locator('.pspad-language')).toContainText('English');
+
+  await test.step('the language picker lists every language by its own name', async () => {
+    await page.getByRole('combobox', { name: 'Language' }).click();
+    await expect(page.getByRole('option')).toHaveText(['English', 'Polski']);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('option')).toHaveCount(0);
+  });
 
   await setLanguage(page, 'Polski');
   await expect(page.getByRole('heading', { name: 'Ustawienia', exact: true })).toBeVisible();
@@ -24,6 +32,13 @@ test('the language is chosen once and follows the user to another device', async
   await page.locator('.pspad-nav').getByRole('link', { name: 'Skrzynka' }).click();
   await expect(page.getByRole('heading', { name: 'Skrzynka', exact: true })).toBeVisible();
   await expect(page.getByText('Nic jeszcze nie dodano.')).toBeVisible();
+
+  await test.step('the consistency heatmap speaks Polish', async () => {
+    await shellMenu(page).getByRole('link', { name: 'Statystyki', exact: true }).click();
+    await expect(page.getByRole('button', { name: `${isoDate(utcToday())}: zrobiono 0`, exact: true })).toBeVisible();
+    await expect(page.getByText('Dotknij kwadratu, żeby zobaczyć dzień i liczbę zadań.')).toBeVisible();
+    await expect(page.getByText('Mniej', { exact: true })).toBeVisible();
+  });
 
   await test.step('Budgets speak Polish, with Polish amounts and plurals', async () => {
     await page.getByRole('navigation').getByRole('link', { name: 'Budżety', exact: true }).click();

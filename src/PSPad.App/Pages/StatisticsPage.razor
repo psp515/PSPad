@@ -115,7 +115,7 @@
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">@goal.Count</MudText>
                                     </div>
                                     <MudProgressLinear Color="Color.Primary" Rounded="true" Min="0"
-                                                        Max="@maxGoalCount" Value="@goal.Count" />
+                                                        Max="@maxGoalCount" Value="@goal.Count" aria-label="@goal.Name" />
                                 </div>
                             }
                         </MudStack>
