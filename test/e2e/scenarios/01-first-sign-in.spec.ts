@@ -47,6 +47,17 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     await expect(signInDidNotFinish(page)).toBeVisible();
   });
 
+  await test.step('the sign-in warning shows once per arrival on Welcome', async () => {
+    await openInApp(page, '/welcome');
+    await expect(page.getByRole('heading', { name: 'Your day, planned.' })).toBeVisible();
+    await expect(signInDidNotFinish(page)).toHaveCount(0);
+    await openInApp(page, '/authentication/login-failed');
+    await expect(page).toHaveURL(/\/welcome$/);
+    await expect(signInDidNotFinish(page)).toBeVisible();
+    await openInApp(page, '/welcome');
+    await expect(signInDidNotFinish(page)).toHaveCount(0);
+  });
+
   await test.step('a sign-in the server cannot finish leaves the visitor on Welcome, signed out, warned once', async () => {
     await page.route('**/api/me', route => route.fulfill({ status: 503, headers: { 'Retry-After': '1' } }), { times: 1 });
     await logInFromWelcome(page, account, 'Your day, planned.');
@@ -81,11 +92,13 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     }
   });
 
-  await test.step.skip('BUG: signing in from Welcome ignores the return address (reported in PR #225)', async () => {
-    const visitor = await browser.newContext();
+  await test.step('signing in from Welcome returns the visitor to where they were going', async () => {
+    const visitor = await browser.newContext({ serviceWorkers: 'block' });
     const fresh = await visitor.newPage();
     await fresh.goto('/inbox');
+    await expect(fresh).toHaveURL(/\/welcome\?returnUrl=/);
     await logInFromWelcome(fresh, account, 'Inbox');
+    await expect(fresh).toHaveURL(/\/inbox$/);
     await visitor.close();
   });
 

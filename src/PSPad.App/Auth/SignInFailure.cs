@@ -7,4 +7,11 @@ public sealed class SignInFailure
     public void Record() => Happened = true;
 
     public void Clear() => Happened = false;
+
+    public bool Take()
+    {
+        var happened = Happened;
+        Happened = false;
+        return happened;
+    }
 }

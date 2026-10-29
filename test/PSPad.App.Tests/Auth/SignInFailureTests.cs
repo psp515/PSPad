@@ -32,4 +32,21 @@ public class SignInFailureTests
 
         Assert.False(failure.Happened);
     }
+
+    [Fact]
+    public void TakingAFailureReportsItOnce()
+    {
+        var failure = new SignInFailure();
+        failure.Record();
+
+        Assert.True(failure.Take());
+        Assert.False(failure.Take());
+        Assert.False(failure.Happened);
+    }
+
+    [Fact]
+    public void TakingWithNoFailureReportsNothing()
+    {
+        Assert.False(new SignInFailure().Take());
+    }
 }

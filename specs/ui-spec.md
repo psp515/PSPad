@@ -1628,11 +1628,18 @@ lands on the budget. `InviteLinkCard` is now the list wrapper over
 | `?item={itemId}`, `?item=new&list={listId}` | reference item detail overlay, on any of the above |
 
 **Signed-out visitors land on `/welcome`**, not a bare login redirect.
+`RedirectToLogin` puts the address they were going to in `returnUrl`; Welcome
+keeps it only when it lies inside the app and is not Welcome or an
+`authentication/` route (`ReturnUrlQuery.SafeFrom`), shows it on the Log in
+link and starts the login with `NavigateToLogin`, whose `ReturnUrl` is where
+the login lands (the login route ignores a `returnUrl` query since .NET 7).
 A login callback that could not capture a session (token exchange or
 `/api/me` failed), or that Keycloak answered with an error (`login-failed`
 redirects to `/welcome`), leaves `SignInFailure` set; `/welcome` shows a
 warning `MudAlert` that sign-in did not finish above Log in, which retries
-it, and clears the flag so a later visit does not repeat it.
+it, and takes the flag (`SignInFailure.Take`) on each arrival at `/welcome`,
+also when an in-app navigation reuses the open Welcome, so the warning shows
+once per failed sign-in.
 Sign-out ends the Keycloak session directly rather than only clearing local
 state. The boot splash is held — no application chrome renders — until the
 first screen is ready to draw: the signed-in shell once its data is loaded,
