@@ -9,12 +9,21 @@ Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225
 - 01-first-sign-in: coming back from the fresh sign-in does not reopen the delete dialog.
 - 01-first-sign-in: deleting the account signs out before it leaves Settings, so Welcome keeps Settings as the return address.
 - 02-capture-and-triage: a deadline set on a draft step is lost when an Inbox item is converted.
+- 10-share-join-remove: joining a list can lose the tasks it already had: a sync running at the join purges them, or the list arrives by delta and never counts as missing, so no later sync brings them back.
+- 10-share-join-remove: a code in the link joins at once, but the shared list's tasks can be lost the same way.
 - 15-search-statistics-settings: an old History address lands on an empty Statistics page.
 - 19-step-rename: an edit made just before a sync pull is undone.
 - 24-new-task-draft: a deadline set on a draft step is lost when the task is added.
 - 25-area-board-cards: ticking a repeat on a day it skips shows it ticked until a reload, though nothing was saved.
 - 27-reference-items: labels drafted on a new reference item are missing when it is opened, until a reload, though the server stored them.
 - 30-reference-rows: a reference card counts its items as "open tasks".
+
+Noted without a step:
+
+- An open budget members panel does not update when the budget is archived on another device.
+- A removed budget member keeps seeing the budget on the open screen after Sync now, until navigating away.
+- `TaskCompleted` is always raised with `GoalId` null, so a completed feed record never names a goal.
+- `AuthenticationLogging.OnForbidden` is unreachable: there are no authorization policies.
 
 Tests assert what the code does, never how it looks or how it is wired.
 Decision record: ADR-0079. Standing rules after the migration live in
@@ -146,7 +155,9 @@ journey none covers. A behaviour that is shape only is dropped.
 
 A page holding a rule worth edge-case testing (a computation, not markup)
 may have that rule extracted into `State/` as a pure function and unit
-tested there. That is the only production change the migration allows.
+tested there. Extraction, and accessibility attributes (aria, role, localized)
+that give a test an accessible locator, are the only production changes the
+migration allows.
 
 ### 4.4 End-to-end budget
 
@@ -166,8 +177,8 @@ last slice, once the sources are clean.
 
 ## 6. Migration
 
-Incremental by slice, one pull request per slice, stacked on the previous
-slice's branch. Every slice:
+Incremental by slice. The slices shipped as one pull request (#225) with a
+commit series per slice, not as stacked pull requests. Every slice:
 
 1. Writes a ledger `.superpowers/sdd/behaviour-tests/ledger-<slice>.md`
    (uncommitted) listing each test method it touches as **kept** (rewritten

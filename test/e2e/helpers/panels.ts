@@ -1,4 +1,5 @@
 import { expect, Page } from '@playwright/test';
+import { escapeRegExp } from './text';
 
 export function panel(page: Page) {
   return page.locator('.pspad-detail-panel');
@@ -68,7 +69,7 @@ export async function pickFromPropertyRow(page: Page, rowClass: string, option: 
 }
 
 export function propertyRow(page: Page, label: string) {
-  return panel(page).getByRole('button', { name: new RegExp(`^${label}\\b`) }).last();
+  return panel(page).getByRole('button', { name: new RegExp(`^${escapeRegExp(label)}\\b`) }).last();
 }
 
 export async function chooseProperty(page: Page, label: string, option: string | RegExp) {
@@ -79,9 +80,10 @@ export async function chooseProperty(page: Page, label: string, option: string |
     if (!(await item.first().isVisible())) {
       await propertyRow(page, label).click({ timeout: 2_000 });
     }
-    await item.first().click({ timeout: 2_000 });
-    await expect(openMenuItems(page)).toHaveCount(0, { timeout: 2_000 });
+    await expect(item.first()).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 30_000 });
+  await item.first().click();
+  await expect(openMenuItems(page)).toHaveCount(0);
 }
 
 export async function menuOptions(page: Page, label: string) {

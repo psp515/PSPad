@@ -53,6 +53,7 @@ export async function addStep(page: Page, name: string) {
   const steps = panel(page).locator('.pspad-steps .pspad-step-name');
   const input = panel(page).locator('.pspad-step-add input');
   const before = await steps.count();
+  // a sync pull can undo a just-made edit (reported in PR #225)
   let accepted = false;
   await expect(async () => {
     if (!accepted) {
@@ -68,6 +69,7 @@ export async function addStep(page: Page, name: string) {
 }
 
 export async function renameStep(page: Page, from: string, to: string) {
+  // a sync pull can undo a just-made edit (reported in PR #225)
   await expect(async () => {
     const field = stepNameField(page, from);
     if (await field.isVisible()) {
