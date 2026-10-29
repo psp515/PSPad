@@ -32,8 +32,8 @@ Out:
   and the existing `pspad-*` classes. A flow that cannot be driven that way
   is a separate change to the UI, with its own review.
 
-Budget: the whole suite finishes in **two to three minutes** wall clock on a
-laptop and in CI, excluding the image build.
+Budget: **under five minutes per shard in CI with four workers**, excluding the
+image build; CI runs the suite as two shards (§5).
 
 ## 2. Stack and tooling
 
@@ -534,7 +534,8 @@ tests would be visible, not silent.
 - `fullyParallel: true`, four workers locally and in CI, one test per file
   so every scenario is its own worker slot.
 - Per test timeout 90 s; expect timeout 10 s; the suite target is under
-  five minutes (ADR-0079). A scenario that cannot fit splits, it never widens the
+  five minutes per shard in CI with four workers (ADR-0079); CI splits the suite
+  into two shards (`--shard=N/2`), each with its own compose stack. A scenario that cannot fit splits, it never widens the
   timeout.
 - Retries: 0 locally, 1 in CI; a retry is a flake to fix, reported in the
   HTML report.
@@ -546,19 +547,20 @@ tests would be visible, not silent.
 
 ## 6. CI
 
-A new `e2e` job in `.github/workflows/ci.yml`, after
-`build-and-unit-test`:
+An `e2e` job in `.github/workflows/ci.yml`, after `build-and-unit-test`, runs as
+a matrix of two shards; each shard does the following on its own runner and
+stack:
 
 1. `docker compose -f docker/compose.yaml --env-file docker/.env.example -p
    pspad-e2e up -d --build --wait`.
 2. `npm ci` and `npx playwright install --with-deps chromium` in
    `test/e2e`.
-3. `npm test`.
+3. `npm test -- --shard=N/2`.
 4. On failure upload `test/e2e/playwright-report` and the traces (`trace:
-   on-first-retry`), and print the stack's logs.
+   on-first-retry`) as `playwright-report-N`, and print the stack's logs.
 5. Always `docker compose -p pspad-e2e down -v`.
 
-`deploy` adds `e2e` to its `needs`. Dependabot gets an `npm` entry for
+`deploy` adds `e2e` to its `needs` and so waits for both shards. Dependabot gets an `npm` entry for
 `/test/e2e`, weekly, grouped minor and patch, like the others.
 
 ## 7. Layout

@@ -156,3 +156,11 @@ integration tests start their own MongoDB. They never touch the compose stack.
 `Abstractions` only), Infrastructure references no module, the two allowed
 module edges (`Statistics` → `Tasks`, `Sharing` → `Tasks`), Presentation
 references `Abstractions` only.
+
+`BehaviourGuard` (ADR-0079), called from a `BehaviourGuardTests` class in every
+test project, scans the test sources and fails on shape assertions (`ClassList`,
+`ClassName`, `.Markup`, `MarkupMatches`, CSS-class selectors in `Find` and
+`QuerySelector`) in all projects, and on `FakeDocumentStore`, `FakeUnitOfWork`
+and `InMemory*Store` in the module and API projects. `PSPad.App.Tests` gets only
+the shape guard, because `InMemoryLocalSessionStore` is a legitimate double at
+the browser-storage boundary.

@@ -140,6 +140,10 @@ jobs:
     # mongo:8 refuses the ubuntu-24.04 image's 7.0.0-azure kernel (actions/runner-images#15005); back to ubuntu-latest once MongoDB 8.3.14 ships
     runs-on: ubuntu-22.04
     needs: build-and-unit-test
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     env:
       COMPOSE: docker compose -f docker/compose.yaml -f docker/compose.e2e.yaml --env-file docker/.env.example -p pspad-e2e
     steps:
@@ -160,7 +164,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: test/e2e
 
-      - run: npm test
+      - run: npm test -- --shard=${{ matrix.shard }}/2
         working-directory: test/e2e
         env:
           CI: "true"
@@ -172,7 +176,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: |
             test/e2e/playwright-report
             test/e2e/test-results
