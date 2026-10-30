@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { expect, test } from '../fixtures/accounts';
 import { anotherDevice } from '../helpers/api';
 import { addDays, dayMonth, utcToday } from '../helpers/dates';
-import { areaSubtitle, createArea, listCard, openCardMenu } from '../helpers/areas';
+import { pageHeading, createArea, listCard, openCardMenu } from '../helpers/areas';
 import { createList, listIdFromUrl, openList } from '../helpers/lists';
 import { awaitNoDrawer, closePanel, confirm, openFabAction, panel } from '../helpers/panels';
 import { openListSnapshots } from '../helpers/sharing';
@@ -25,12 +25,12 @@ test('the list panel edits, moves and deletes a list, and a gone list says so', 
   await createArea(page, home);
   await createList(page, errands);
   await openList(page, errands);
-  const subtitle = areaSubtitle(page);
+  const heading = pageHeading(page);
 
   await test.step('an empty task list names its kind and area and offers its first task from the FAB', async () => {
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Task list');
     await expect(page.getByText('No tasks yet.')).toBeVisible();
-    await expect(subtitle).toHaveText(`${home} · no open tasks`);
+    await expect(heading).toHaveAccessibleDescription(`${home} · no open tasks`);
     await openFabAction(page, 'Add task');
     await expect(panel(page).getByText(`New task · ${home} › ${errands}`)).toBeVisible();
     await closePanel(page);
@@ -38,7 +38,7 @@ test('the list panel edits, moves and deletes a list, and a gone list says so', 
 
   const device = await anotherDevice(page);
   const tasks = await createTasksOn(device, listIdFromUrl(page), [{ name: 'Milk' }, { name: 'Bread' }]);
-  await expect(subtitle).toHaveText(`${home} · 2 open tasks`);
+  await expect(heading).toHaveAccessibleDescription(`${home} · 2 open tasks`);
 
   await test.step('the list panel names the list, its kind and area, renames as you type and moves it to another area', async () => {
     await openFabAction(page, 'Edit list');
@@ -52,7 +52,7 @@ test('the list panel edits, moves and deletes a list, and a gone list says so', 
 
     await panel(page).getByLabel('Area').click();
     await page.getByRole('option', { name: work, exact: true }).click();
-    await expect(subtitle).toHaveText(`${work} · 2 open tasks`);
+    await expect(heading).toHaveAccessibleDescription(`${work} · 2 open tasks`);
     await expect(panel(page).getByText(`List · ${work}`, { exact: true })).toBeVisible();
   });
 

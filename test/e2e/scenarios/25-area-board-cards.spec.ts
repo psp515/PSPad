@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures/accounts';
 import { anotherDevice, idOf } from '../helpers/api';
-import { areaSubtitle, createArea, listCard, openCardMenu } from '../helpers/areas';
+import { pageHeading, createArea, listCard, openCardMenu } from '../helpers/areas';
 import { addDays, utcToday } from '../helpers/dates';
 import { createList } from '../helpers/lists';
 import { awaitNoDrawer, closePanel, confirm, openFabAction, openMenuItems, panel, savePanel } from '../helpers/panels';
@@ -58,7 +58,7 @@ test('an area board previews each list as a card', async ({ page, account }) => 
     for (const hidden of ['Bought bread', 'Dropped idea', 'Old habit']) {
       await expect(card).not.toContainText(hidden);
     }
-    await expect(areaSubtitle(page)).toHaveText('2 lists · 10 open tasks');
+    await expect(pageHeading(page)).toHaveAccessibleDescription('2 lists · 10 open tasks');
     await expect(listCard(page, chores).getByRole('link', { name: /^Show all/ })).toHaveCount(0);
     await card.getByRole('link', { name: 'Show all 7' }).click();
     await expect(page.getByRole('heading', { level: 1 })).toContainText(groceries);
@@ -115,7 +115,7 @@ test('an area board previews each list as a card', async ({ page, account }) => 
     await confirm(page, 'Delete');
     await expect(listCard(page, chores)).toHaveCount(0);
     await expect(listCard(page, groceries)).toBeVisible();
-    await expect(areaSubtitle(page)).toHaveText('1 list · 7 open tasks');
+    await expect(pageHeading(page)).toHaveAccessibleDescription('1 list · 7 open tasks');
   });
 
   await device.dispose();

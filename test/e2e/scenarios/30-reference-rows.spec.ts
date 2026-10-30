@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures/accounts';
 import { anotherDevice, idOf } from '../helpers/api';
-import { areaSubtitle, createArea, listCard, openCardMenu } from '../helpers/areas';
+import { pageHeading, createArea, listCard, openCardMenu } from '../helpers/areas';
 import { createList, openList } from '../helpers/lists';
 import { awaitNoDrawer, closePanel, confirm, openFabAction, panel, savePanel } from '../helpers/panels';
 import { addFieldsOn, createItemsOn, referenceRow } from '../helpers/references';
@@ -59,7 +59,7 @@ test('reference items show as rows with their labels as chips, on the board and 
   });
 
   await test.step('the board counts lists, open tasks and items, and deleting warns what goes with it', async () => {
-    await expect(areaSubtitle(page)).toHaveText('2 lists · 1 open task · 7 items');
+    await expect(pageHeading(page)).toHaveAccessibleDescription('2 lists · 1 open task · 7 items');
     await openCardMenu(page, recipes, 'Delete');
     await expect(page.getByRole('dialog')).toContainText(`Delete “${recipes}” and its 7 items? This can’t be undone.`);
     await confirm(page, 'Cancel');

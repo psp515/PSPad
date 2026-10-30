@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures/accounts';
 import { anotherDevice, idOf } from '../helpers/api';
-import { areaSubtitle, createArea } from '../helpers/areas';
+import { pageHeading, createArea } from '../helpers/areas';
 import { addDays, utcToday } from '../helpers/dates';
 import { createList, listIdFromUrl, openList } from '../helpers/lists';
 import { signIn } from '../helpers/sign-in';
@@ -18,7 +18,7 @@ test('a list page shows its own tasks, with done and ended ones under Completed'
   await createList(page, desk);
   await createList(page, errands);
   await openList(page, errands);
-  const subtitle = areaSubtitle(page);
+  const heading = pageHeading(page);
 
   const device = await anotherDevice(page);
   await test.step('tasks from another device appear without a reload, done and ended ones under Completed', async () => {
@@ -33,7 +33,7 @@ test('a list page shows its own tasks, with done and ended ones under Completed'
       { name: 'Water plants', repeatsFrom: addDays(today, -1), every: 2 },
       { name: 'Read a book', repeatsFrom: today, tickedToday: true },
     ]);
-    await expect(subtitle).toHaveText(`${home} · 5 open tasks`);
+    await expect(heading).toHaveAccessibleDescription(`${home} · 5 open tasks`);
     await expect(page.getByText('No tasks yet.')).toHaveCount(0);
     await expect(page.getByText('Milk', { exact: true })).toHaveCount(2);
     await expect(page.getByText('Fix printer')).toHaveCount(0);
@@ -50,7 +50,7 @@ test('a list page shows its own tasks, with done and ended ones under Completed'
     await expect(taskRow(page, 'Read a book').getByRole('checkbox')).not.toBeChecked();
     await syncNow(page);
     await page.reload();
-    await expect(subtitle).toHaveText(`${home} · 5 open tasks`);
+    await expect(heading).toHaveAccessibleDescription(`${home} · 5 open tasks`);
     await page.getByText('Completed · 2').click();
     await expect(taskRow(page, 'Old habit').getByRole('checkbox')).toBeChecked();
     await expect(taskRow(page, 'Water plants').getByRole('checkbox')).not.toBeChecked();
@@ -60,7 +60,7 @@ test('a list page shows its own tasks, with done and ended ones under Completed'
   await test.step('completing one of two same-named tasks leaves the other open on its own row', async () => {
     await taskRow(page, 'Milk').first().getByRole('checkbox').click();
     await expect(page.getByText('Completed · 3')).toBeVisible();
-    await expect(subtitle).toHaveText(`${home} · 4 open tasks`);
+    await expect(heading).toHaveAccessibleDescription(`${home} · 4 open tasks`);
     await expect(taskRow(page, 'Milk').getByRole('checkbox', { checked: false })).toHaveCount(1);
     await expect(taskRow(page, 'Milk').getByRole('checkbox', { checked: true })).toHaveCount(1);
   });

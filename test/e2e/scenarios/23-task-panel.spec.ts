@@ -1,7 +1,7 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea, openArea } from '../helpers/areas';
 import { addDays, shortDate, utcToday } from '../helpers/dates';
-import { createList, listRowNames, openList } from '../helpers/lists';
+import { createList, listRows, openList } from '../helpers/lists';
 import {
   awaitNoDrawer, chooseProperty, clearProperty, confirm, dismissMenu, menuOptions, panel, propertyRow,
 } from '../helpers/panels';
@@ -49,7 +49,7 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
   await test.step('renaming takes effect at once, and Enter on the name creates nothing', async () => {
     await renameTask(page, renamed);
     await expect(taskRow(page, renamed)).toBeVisible();
-    await expect(listRowNames(page)).toHaveCount(1);
+    await expect(listRows(page)).toHaveCount(1);
   });
 
   await test.step('the header star stars the task', async () => {

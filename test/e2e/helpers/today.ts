@@ -30,13 +30,14 @@ export function dayShown(page: Page, day: Date) {
 }
 
 export async function setDueDate(page: Page, day: 'Today' | 'Tomorrow' | Date) {
+  const label = (await propertyRow(page, 'Until').count()) > 0 ? 'Until' : 'Due';
   if (day instanceof Date) {
-    await chooseProperty(page, 'Due', 'Pick a date…');
+    await chooseProperty(page, label, 'Pick a date…');
     const dialog = page.getByRole('dialog');
     await pickCalendarDay(dialog, day);
     await expect(dialog).toBeHidden();
   } else {
-    await chooseProperty(page, 'Due', day);
+    await chooseProperty(page, label, day);
   }
 }
 
