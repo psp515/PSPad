@@ -8,7 +8,7 @@ public static partial class EndToEndLocatorGuard
 
     static readonly string[] ScannedFolders = ["scenarios", "helpers"];
 
-    [GeneratedRegex(@"\.(pspad|mud)-[\w-]|\btoHaveClass\(|\bclassList\b")]
+    [GeneratedRegex(@"\.(pspad|mud)-|['""`](pspad|mud)-|\[class[~*^$|]?=|getAttribute\(\s*['""`]class['""`]|\btoHaveClass\(|\bclassList\b")]
     private static partial Regex ClassLocator();
 
     public static void AssertLocatorsAreAccessible() => AssertLocatorsAreAccessible(EndToEndDirectory());
@@ -16,17 +16,14 @@ public static partial class EndToEndLocatorGuard
     public static void AssertLocatorsAreAccessible(string endToEndDirectory)
     {
         var allowed = ReadAllowlist(endToEndDirectory);
-        var lines = ScannedFolders
-            .Select(folder => Path.Combine(endToEndDirectory, folder))
-            .Where(Directory.Exists)
-            .SelectMany(folder => Directory.EnumerateFiles(folder, "*.ts", SearchOption.AllDirectories))
+        var lines = ScannedFiles(endToEndDirectory)
             .SelectMany(path => File.ReadLines(path)
                 .Select((line, index) => (File: RelativePath(endToEndDirectory, path), Line: line, Number: index + 1)))
             .Where(entry => ClassLocator().IsMatch(entry.Line))
             .ToList();
 
         var offenders = lines
-            .Where(entry => !allowed.Any(allowance => allowance.Covers(entry.File, entry.Line)))
+            .Where(entry => ClassLocator().IsMatch(Unallowed(allowed, entry.File, entry.Line)))
             .Select(entry => $"{entry.File}:{entry.Number} locates by a CSS class; use a role, label or text (ADR-0080) or add it to {AllowlistFile} with the reason");
         var stale = allowed
             .Where(allowance => !lines.Any(entry => allowance.Covers(entry.File, entry.Line)))
@@ -36,6 +33,25 @@ public static partial class EndToEndLocatorGuard
         if (problems.Count > 0)
             throw new Xunit.Sdk.XunitException(string.Join(Environment.NewLine, problems));
     }
+
+    static List<string> ScannedFiles(string endToEndDirectory)
+    {
+        var missing = ScannedFolders.Where(folder => !Directory.Exists(Path.Combine(endToEndDirectory, folder))).ToList();
+        if (missing.Count > 0)
+            throw new Xunit.Sdk.XunitException($"{endToEndDirectory} has no {string.Join(" or ", missing)} folder to scan");
+
+        var files = ScannedFolders
+            .SelectMany(folder => Directory.EnumerateFiles(Path.Combine(endToEndDirectory, folder), "*.ts", SearchOption.AllDirectories))
+            .ToList();
+        if (files.Count == 0)
+            throw new Xunit.Sdk.XunitException($"{endToEndDirectory} has no .ts files to scan");
+
+        return files;
+    }
+
+    static string Unallowed(IEnumerable<Allowance> allowed, string file, string line) =>
+        allowed.Where(allowance => allowance.File == file)
+            .Aggregate(line, (rest, allowance) => rest.Replace(allowance.Pattern, " ", StringComparison.Ordinal));
 
     static IReadOnlyList<Allowance> ReadAllowlist(string endToEndDirectory)
     {
@@ -57,7 +73,9 @@ public static partial class EndToEndLocatorGuard
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "PSPad.slnx")))
             directory = directory.Parent;
-        return Path.Combine(directory!.FullName, "test", "e2e");
+        if (directory is null)
+            throw new Xunit.Sdk.XunitException($"No PSPad.slnx above {AppContext.BaseDirectory}; cannot find test/e2e");
+        return Path.Combine(directory.FullName, "test", "e2e");
     }
 
     sealed record Allowance(string File, string Pattern, string Reason)
