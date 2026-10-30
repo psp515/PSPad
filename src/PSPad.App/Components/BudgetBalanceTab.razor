@@ -77,6 +77,13 @@
                 else
                 {
                     <div class="pspad-holdings">
+                        @if (CanRefresh)
+                        {
+                            <div class="d-flex justify-end pspad-holdings-actions">
+                                <MudButton Class="pspad-refresh-from-investments" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                           OnClick="@OnRefreshFromInvestments">@T["RefreshFromInvestments"]</MudButton>
+                            </div>
+                        }
                         <div class="pspad-holdings-head" aria-hidden="true">
                             <span>@T["Holding"]</span>
                             <span class="pspad-holding-cell">@T["Amount"]</span>
@@ -94,14 +101,22 @@
                                 <MudPaper Outlined="true" Class="pspad-holding-list">
                                     @foreach (var holding in group.Holdings)
                                     {
-                                        <button @key="holding.HoldingId" type="button" class="pspad-holding-row" @onclick="@(() => OnOpen.InvokeAsync(holding))">
+                                        <div @key="holding.HoldingId" class="pspad-holding-row-wrap">
+                                        <button type="button" class="@RowClass(holding)" @onclick="@(() => OnOpen.InvokeAsync(holding))">
                                             <span class="d-flex align-center gap-3 pspad-holding-main">
                                                 <span class="@($"pspad-holding-icon pspad-holding-icon-{group.Type.ToString().ToLowerInvariant()}")" aria-hidden="true">
                                                     <MudIcon Icon="@TypeIcon(group.Type)" Size="Size.Small" />
                                                 </span>
                                                 <span class="d-flex flex-column pspad-holding-text">
                                                     <span class="pspad-holding-name">@holding.Name</span>
-                                                    <span class="pspad-holding-sub">@SubText(holding)</span>
+                                                    <span class="pspad-holding-sub">
+                                                        @if (holding.InvestmentAccountId is not null)
+                                                        {
+                                                            <MudIcon Class="pspad-holding-link" Icon="@Icons.Material.Outlined.Link" Size="Size.Small"
+                                                                     Title="@T["LinkedToInvestments"]" />
+                                                        }
+                                                        @SubText(holding)
+                                                    </span>
                                                 </span>
                                             </span>
                                             <span class="pspad-holding-cell pspad-holding-amount">@MoneyText.Amount(holding.Money.Amount) @holding.Money.Currency</span>
@@ -111,6 +126,15 @@
                                                 <span class="pspad-holding-today">@TodayText(holding)</span>
                                             </span>
                                         </button>
+                                        @if (HasMenu(holding) && holding.InvestmentAccountId is { } accountId)
+                                        {
+                                            <MudMenu Class="pspad-holding-link-menu" Icon="@Icons.Material.Outlined.MoreVert" Size="Size.Small"
+                                                     AriaLabel="@T["LinkedAccountOptions"].Value" Dense="true">
+                                                <MudMenuItem Class="pspad-holding-open-account" OnClick="@(() => OnOpenAccount.InvokeAsync(accountId))">@T["OpenAccount"]</MudMenuItem>
+                                                <MudMenuItem Class="pspad-holding-unlink" OnClick="@(() => OnUnlink.InvokeAsync(holding))">@T["Unlink"]</MudMenuItem>
+                                            </MudMenu>
+                                        }
+                                        </div>
                                     }
                                 </MudPaper>
                             </section>
@@ -143,6 +167,16 @@
 
     [Parameter] public EventCallback<Holding> OnOpen { get; set; }
 
+    [Parameter] public bool CanRefresh { get; set; }
+
+    [Parameter] public IReadOnlySet<Guid> OwnAccountIds { get; set; } = new HashSet<Guid>();
+
+    [Parameter] public EventCallback OnRefreshFromInvestments { get; set; }
+
+    [Parameter] public EventCallback<Guid> OnOpenAccount { get; set; }
+
+    [Parameter] public EventCallback<Holding> OnUnlink { get; set; }
+
     [Parameter] public string Class { get; set; } = "";
 
     BalanceSnapshot? Snapshot => Totals.Snapshot;
@@ -155,6 +189,12 @@
     IReadOnlyList<HoldingTypeTotal> ByType => Snapshot is null ? [] : BalanceTotals.ByType(Snapshot);
 
     IReadOnlyList<CategoryTotal> TypeTotals => [.. ByType.Select(total => new CategoryTotal(T.Of(total.Type), total.Pln))];
+
+    string RowClass(Holding holding) =>
+        HasMenu(holding) ? "pspad-holding-row pspad-holding-row-menu" : "pspad-holding-row";
+
+    bool HasMenu(Holding holding) =>
+        holding.InvestmentAccountId is { } id && OwnAccountIds.Contains(id) && !ReadOnly;
 
     string SubText(Holding holding) => holding.Money.Currency == Currencies.Pln
         ? holding.Money.Currency

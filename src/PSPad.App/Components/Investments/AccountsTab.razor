@@ -1,0 +1,35 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<div class="pspad-investment-accounts">
+    <MudGrid Spacing="4">
+        @foreach (var account in Shown)
+        {
+            <MudItem @key="account.Id" xs="12" md="6" lg="4">
+                <AccountCard Account="@account" Figures="@Overview.Figures.GetValueOrDefault(account.Id)"
+                             Operations="@Overview.OperationsOf(account.Id).Count(operation => !operation.Deleted)"
+                             OnEdit="@(() => OnEdit.InvokeAsync(account))" OnImport="@(() => OnImport.InvokeAsync(account))"
+                             OnArchive="@(() => OnArchive.InvokeAsync(account))" OnRestore="@(() => OnRestore.InvokeAsync(account))" />
+            </MudItem>
+        }
+    </MudGrid>
+    @if (Overview.Accounts.Any(account => account.IsArchived))
+    {
+        <MudSwitch T="bool" Class="mt-4 pspad-show-archived" @bind-Value="_showArchived" Color="Color.Primary" Label="@T["ShowArchived"]" />
+    }
+</div>
+
+@code {
+    bool _showArchived;
+
+    [Parameter, EditorRequired] public InvestmentOverview Overview { get; set; } = default!;
+
+    [Parameter] public EventCallback<InvestmentAccount> OnEdit { get; set; }
+
+    [Parameter] public EventCallback<InvestmentAccount> OnImport { get; set; }
+
+    [Parameter] public EventCallback<InvestmentAccount> OnArchive { get; set; }
+
+    [Parameter] public EventCallback<InvestmentAccount> OnRestore { get; set; }
+
+    IEnumerable<InvestmentAccount> Shown => _showArchived ? Overview.Accounts : Overview.Open;
+}

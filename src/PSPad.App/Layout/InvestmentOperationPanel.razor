@@ -1,0 +1,363 @@
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.App.State.Investments
+@using PSPad.Contracts
+@using PSPad.Module.Investments.Accounts
+@using PSPad.Module.Investments.Instruments
+@using PSPad.Module.Investments.Operations
+@using PSPad.Module.Money.Values
+@using MoneyValue = PSPad.Module.Money.Money
+@inject IDocumentStore<InvestmentAccount> Accounts
+@inject IDocumentStore<InvestmentOperation> Operations
+@inject IDocumentStore<Instrument> Instruments
+@inject AppState State
+@inject IClock Clock
+@inject CommandSender Sender
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<InvestmentsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
+
+<DetailPanel Open="@Open" Title="@Title" Class="pspad-investment-operation-panel" OnClose="@OnClose" OnSave="@SaveCallback"
+             CanSave="@CanSave" OnDelete="@DeleteCallback" Disabled="@(Disabled || _saving)">
+    <ChildContent>
+        <div class="d-flex flex-column gap-3 pa-4">
+            <MudSelect T="OperationKind" Class="pspad-operation-kind-field" Label="@T["Kind"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                       @bind-Value="_kind" Disabled="@ReadOnly">
+                @foreach (var kind in OperationKinds.All)
+                {
+                    <MudSelectItem T="OperationKind" Value="@kind">@T[OperationKinds.Key(kind)]</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="Guid" Class="pspad-operation-account-field" Label="@T["Account"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                       Value="@(_account?.Id ?? Guid.Empty)" ValueChanged="@AccountChanged" Disabled="@(ReadOnly || _operation is not null)">
+                @foreach (var account in _open)
+                {
+                    <MudSelectItem T="Guid" Value="@account.Id">@account.Name · @account.Currency</MudSelectItem>
+                }
+            </MudSelect>
+            <div class="d-flex gap-3">
+                <MudDatePicker Class="pspad-operation-date-field flex-grow-1" Label="@T["Day"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                               Date="@_date" DateChanged="@(date => _date = date)" Disabled="@ReadOnly" />
+                <MudTimePicker Class="pspad-operation-time-field" Label="@T["Time"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                               AmPm="false" Time="@_time" TimeChanged="@(time => _time = time)" Disabled="@ReadOnly" />
+            </div>
+            @if (OperationKinds.HasTicker(_kind))
+            {
+                <MudAutocomplete T="string" Class="pspad-operation-ticker-field" Label="@T["Ticker"]" Variant="Variant.Outlined"
+                                 Margin="Margin.Dense" Value="@_ticker" ValueChanged="@(ticker => _ticker = ticker?.Trim().ToUpperInvariant() ?? "")"
+                                 SearchFunc="@SearchTickersAsync" CoerceValue="true" DebounceInterval="0" ResetValueOnEmptyText="false"
+                                 MaxLength="@Instrument.MaxTickerLength" Disabled="@ReadOnly">
+                    <ItemTemplate Context="ticker">
+                        @(_instruments.TryGetValue(ticker, out var instrument) && instrument.Name != ticker ? $"{ticker} · {instrument.Name}" : ticker)
+                    </ItemTemplate>
+                </MudAutocomplete>
+                @if (IsNewTicker)
+                {
+                    <MudTextField T="string" Class="pspad-operation-instrument-field" Label="@T["InstrumentName"]" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" MaxLength="@Instrument.MaxNameLength" @bind-Value="_instrumentName"
+                                  HelperText="@T["NewInstrumentHint"]" Disabled="@ReadOnly" />
+                }
+            }
+            @if (OperationKinds.Traded(_kind))
+            {
+                <div class="d-flex gap-3">
+                    <MudNumericField T="decimal?" Class="pspad-operation-quantity-field flex-grow-1" Label="@T["Quantity"]" Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" @bind-Value="_quantity" Immediate="true" HideSpinButtons="true"
+                                     Max="@InvestmentOperation.MaxQuantity" Disabled="@ReadOnly" />
+                    <MudNumericField T="decimal?" Class="pspad-operation-price-field flex-grow-1" Label="@T["Price"]" Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" @bind-Value="_price" Immediate="true" HideSpinButtons="true"
+                                     Max="@InvestmentOperation.MaxPrice" Disabled="@ReadOnly" />
+                </div>
+            }
+            @if (_account is not null)
+            {
+                <RateFields @key="@_loaded" CssPrefix="pspad-operation" @bind-Amount="_amount" Currency="@_account.Currency" CurrencyFixed="true"
+                            Rate="@_rate" RateTyped="@RateTyped" NbpDate="@Day" NbpFetched="@ApplyNbpRate" ReadOnly="@ReadOnly" />
+            }
+            <MudTextField T="string" Class="pspad-operation-note-field" Label="@T["Note"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Lines="2" MaxLength="@InvestmentOperation.MaxNoteLength" @bind-Value="_note" Disabled="@ReadOnly" />
+            @if (_operation?.Deleted == true)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">@T["OperationDeleted"]</MudAlert>
+            }
+        </div>
+    </ChildContent>
+    <Footer>
+        @if (_operation?.Deleted == true && _account?.IsArchived == false)
+        {
+            <MudButton Class="pspad-operation-restore" Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Outlined.RestoreFromTrash" Disabled="@(Disabled || _saving)" OnClick="@RestoreAsync">@T["Restore"]</MudButton>
+        }
+    </Footer>
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? OperationId { get; set; }
+
+    [Parameter] public bool IsNew { get; set; }
+
+    [Parameter] public Guid? DefaultAccountId { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    InvestmentOperation? _operation;
+    InvestmentAccount? _account;
+    IReadOnlyList<InvestmentAccount> _open = [];
+    Dictionary<string, Instrument> _instruments = new(StringComparer.Ordinal);
+    (Guid?, bool, Guid?)? _loaded;
+    OperationKind _kind = OperationKind.Buy;
+    DateTime? _date;
+    TimeSpan? _time;
+    string _ticker = "";
+    string? _instrumentName;
+    decimal? _quantity;
+    decimal? _price;
+    decimal? _amount;
+    decimal? _rate;
+    DateOnly? _rateDate;
+    string? _note;
+    bool _saving;
+
+    bool Open => IsNew ? _open.Count > 0 : _operation is not null && _account is not null;
+
+    bool ReadOnly => _account?.IsArchived == true || _operation?.Deleted == true;
+
+    string Title => _operation is null ? T["NewOperation"] : T[OperationKinds.Key(_operation.Kind)];
+
+    bool IsPln => _account?.Currency == Currencies.Pln;
+
+    decimal Rate => IsPln ? 1m : _rate.GetValueOrDefault();
+
+    DateOnly? Day => _date is null ? null : DateOnly.FromDateTime(_date.Value);
+
+    bool IsNewTicker => _ticker.Length > 0 && !_instruments.ContainsKey(_ticker);
+
+    bool CanSave => !ReadOnly && _account is not null && _date is not null && _time is not null
+        && _amount.GetValueOrDefault() > 0 && Rate > 0
+        && (!OperationKinds.HasTicker(_kind) || _ticker.Length > 0)
+        && (!OperationKinds.Traded(_kind) || (_quantity.GetValueOrDefault() > 0 && _price.GetValueOrDefault() > 0));
+
+    EventCallback SaveCallback => ReadOnly ? default : EventCallback.Factory.Create(this, SaveAsync);
+
+    EventCallback DeleteCallback => ReadOnly || _operation is null ? default : EventCallback.Factory.Create(this, DeleteAsync);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loaded == (OperationId, IsNew, DefaultAccountId))
+        {
+            return;
+        }
+
+        _loaded = (OperationId, IsNew, DefaultAccountId);
+        _operation = null;
+        _account = null;
+        if (OperationId is null && !IsNew)
+        {
+            _open = [];
+            return;
+        }
+
+        var accounts = (await Accounts.LoadAllAsync(State.UserId, CancellationToken.None))
+            .Where(account => account.UserId == State.UserId).ToList();
+        _open = [.. accounts.Where(account => !account.IsArchived).OrderBy(account => account.Name, StringComparer.CurrentCultureIgnoreCase)];
+        _instruments = (await Instruments.LoadAllAsync(State.UserId, CancellationToken.None))
+            .Where(instrument => instrument.UserId == State.UserId)
+            .GroupBy(instrument => instrument.Ticker, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
+        if (OperationId is { } id)
+        {
+            var operation = await Operations.LoadAsync(id, CancellationToken.None);
+            _operation = operation?.UserId == State.UserId ? operation : null;
+            _account = _operation is null ? null : accounts.FirstOrDefault(account => account.Id == _operation.AccountId);
+            if (_operation is not null)
+            {
+                Fill(_operation);
+            }
+        }
+        else
+        {
+            _account = _open.FirstOrDefault(account => account.Id == DefaultAccountId) ?? _open.FirstOrDefault();
+            await StartNewAsync();
+        }
+    }
+
+    void Fill(InvestmentOperation operation)
+    {
+        var local = TimeZoneInfo.ConvertTime(operation.At, LocalToday.Zone(State.TimeZone));
+        _kind = operation.Kind;
+        _date = local.Date;
+        _time = local.TimeOfDay;
+        _ticker = operation.Ticker ?? "";
+        _instrumentName = null;
+        _quantity = operation.Quantity;
+        _price = operation.Price;
+        _amount = operation.Money.Amount;
+        _rate = operation.Money.RateToPln;
+        _rateDate = operation.Money.RateDate;
+        _note = operation.Note;
+    }
+
+    async Task StartNewAsync()
+    {
+        var now = TimeZoneInfo.ConvertTime(Clock.UtcNow, LocalToday.Zone(State.TimeZone));
+        _kind = OperationKind.Buy;
+        _date = now.Date;
+        _time = new TimeSpan(now.Hour, now.Minute, 0);
+        _ticker = "";
+        _instrumentName = null;
+        _quantity = null;
+        _price = null;
+        _amount = null;
+        _note = null;
+        await SuggestRateAsync();
+    }
+
+    async Task AccountChanged(Guid accountId)
+    {
+        _account = _open.FirstOrDefault(account => account.Id == accountId);
+        await SuggestRateAsync();
+    }
+
+    async Task SuggestRateAsync()
+    {
+        if (_account is null)
+        {
+            return;
+        }
+
+        var accountId = _account.Id;
+        var latest = (await Operations.LoadAllAsync(State.UserId, CancellationToken.None))
+            .Where(operation => operation.AccountId == accountId && !operation.Deleted)
+            .MaxBy(operation => operation.At);
+        _rate = IsPln ? 1m : latest?.Money.RateToPln;
+        _rateDate = IsPln ? null : latest?.Money.RateDate;
+    }
+
+    void RateTyped(decimal? rate)
+    {
+        _rate = rate;
+        _rateDate = null;
+    }
+
+    void ApplyNbpRate(NbpRateView rate)
+    {
+        _rate = rate.Rate;
+        _rateDate = rate.EffectiveDate;
+    }
+
+    Task<IEnumerable<string>> SearchTickersAsync(string? text, CancellationToken ct)
+    {
+        var typed = text?.Trim().ToUpperInvariant() ?? "";
+        var matches = _instruments.Values
+            .Where(instrument => typed.Length == 0 || instrument.Ticker.Contains(typed, StringComparison.Ordinal)
+                || instrument.Name.Contains(typed, StringComparison.CurrentCultureIgnoreCase))
+            .Select(instrument => instrument.Ticker)
+            .Order(StringComparer.Ordinal)
+            .Take(20)
+            .ToList();
+        if (typed.Length > 0 && !matches.Contains(typed))
+        {
+            matches.Insert(0, typed);
+        }
+
+        return Task.FromResult<IEnumerable<string>>(matches);
+    }
+
+    async Task SaveAsync()
+    {
+        if (Disabled || _saving || !CanSave || _account is null)
+        {
+            return;
+        }
+
+        var zone = LocalToday.Zone(State.TimeZone);
+        var local = _date!.Value.Date + _time!.Value;
+        var at = new DateTimeOffset(local, zone.GetUtcOffset(local));
+        var money = new MoneyValue(_amount.GetValueOrDefault(), _account.Currency, Rate, IsPln ? Day!.Value : _rateDate ?? Day!.Value);
+        var hasTicker = OperationKinds.HasTicker(_kind);
+        var traded = OperationKinds.Traded(_kind);
+        var ticker = hasTicker ? _ticker : null;
+        var quantity = traded ? _quantity : null;
+        var price = traded ? _price : null;
+        var note = string.IsNullOrWhiteSpace(_note) ? null : _note.Trim();
+
+        _saving = true;
+        try
+        {
+            if (ticker is not null && IsNewTicker &&
+                !Accepted(await Sender.SendAsync(new EnsureInstrument(Guid.NewGuid(), State.UserId, ticker, _instrumentName ?? ""))))
+            {
+                return;
+            }
+
+            var result = _operation is not null
+                ? await Sender.SendAsync(new EditInvestmentOperation(Guid.NewGuid(), State.UserId, _operation.Id, _kind, at, ticker,
+                    quantity, price, money, _operation.PositionId, note))
+                : await Sender.SendAsync(new RecordInvestmentOperation(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _account.Id, _kind,
+                    at, ticker, quantity, price, money, null, OperationSource.Manual, null, note));
+            if (!Accepted(result))
+            {
+                return;
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        await OnClose.InvokeAsync();
+    }
+
+    async Task DeleteAsync()
+    {
+        if (Disabled || _saving || _operation is null)
+        {
+            return;
+        }
+
+        if (await SendWhileSavingAsync(new DeleteInvestmentOperation(Guid.NewGuid(), State.UserId, _operation.Id)))
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+    async Task RestoreAsync()
+    {
+        if (Disabled || _saving || _operation is null)
+        {
+            return;
+        }
+
+        if (await SendWhileSavingAsync(new RestoreInvestmentOperation(Guid.NewGuid(), State.UserId, _operation.Id)))
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+    async Task<bool> SendWhileSavingAsync(ICommand command)
+    {
+        _saving = true;
+        try
+        {
+            return Accepted(await Sender.SendAsync(command));
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    bool Accepted(CommandResult result)
+    {
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? T["SaveOperationFailed"].Value, Severity.Warning);
+        }
+
+        return result.Accepted;
+    }
+}

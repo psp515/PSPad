@@ -151,6 +151,27 @@ Know that Tasks, Statistics or Presentation exist. Recompute a stored rate.
 **Extension points.** Budget sharing by membership, following `adr/0054`:
 widen `BudgetAccess.To` and the sync filter. Not built.
 
+`Money` and `Currencies` now live in the `PSPad.Abstractions` assembly with
+their namespaces unchanged (`adr/0083`).
+
+---
+
+## PSPad.Module.Investments
+
+**Purpose.** Brokerage investment accounts, instruments, operations and
+holdings, with XTB import and server-fetched quotes
+(`specs/investments-design.md`, `adr/0082`).
+
+**Owns.** The investment aggregates and their collections, as the design spec
+lists them.
+
+**Must not.** Reference anything but `PSPad.Abstractions` (it is WASM-safe,
+like Tasks and Money). Call Yahoo Finance or any network: quote fetching lives
+in `PSPad.Api`. Reference Money or any other module; `Money` and `Currencies`
+come from Abstractions (`adr/0083`).
+
+**Extension points.** See `specs/investments-design.md`.
+
 ---
 
 ## Future modules

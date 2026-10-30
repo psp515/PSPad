@@ -1,0 +1,104 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<div class="pspad-price-chart">
+    <RangeChips Value="@_range" ValueChanged="@RangeChanged" />
+    @if (_closes.Count > 1)
+    {
+        var scale = ChartScale.For(_closes, PlotWidth, PlotHeight, Padding);
+        <svg viewBox="@($"0 0 {AxisWidth + PlotWidth} {PlotHeight + DateHeight}")" class="pspad-price-chart-svg" role="img"
+             aria-label="@T["PriceChartOf", Ticker].Value">
+            <g class="pspad-price-chart-axis">
+                <text x="@(AxisWidth - 6)" y="@ChartScale.Number(scale.Top + 4)" text-anchor="end">@InvestmentText.Price(scale.High)</text>
+                <text x="@(AxisWidth - 6)" y="@ChartScale.Number(scale.Bottom)" text-anchor="end">@InvestmentText.Price(scale.Low)</text>
+                <text x="@AxisWidth" y="@(PlotHeight + DateHeight - 4)" text-anchor="start">@InvestmentText.Day(scale.First)</text>
+                <text x="@(AxisWidth + PlotWidth)" y="@(PlotHeight + DateHeight - 4)" text-anchor="end">@InvestmentText.Day(scale.Last)</text>
+            </g>
+            <g transform="@($"translate({AxisWidth},0)")">
+                <line class="pspad-price-chart-grid" x1="0" x2="@PlotWidth" y1="@ChartScale.Number(scale.Top)" y2="@ChartScale.Number(scale.Top)" />
+                <line class="pspad-price-chart-grid" x1="0" x2="@PlotWidth" y1="@ChartScale.Number(scale.Bottom)" y2="@ChartScale.Number(scale.Bottom)" />
+                <path class="pspad-price-chart-area" d="@scale.Area(_closes)" />
+                <path class="pspad-price-chart-line" d="@scale.Line(_closes)" />
+                @foreach (var marker in _shown)
+                {
+                    <circle @key="marker.OperationId" class="@($"pspad-price-marker pspad-price-marker-{marker.Kind.ToString().ToLowerInvariant()}")"
+                            cx="@ChartScale.Number(scale.X(marker.Day))" cy="@ChartScale.Number(scale.Y(CloseOn(marker.Day)))" r="5">
+                        <title>@Describe(marker)</title>
+                    </circle>
+                }
+            </g>
+        </svg>
+        <div class="d-flex flex-wrap gap-3 pspad-price-chart-legend">
+            <span class="d-flex align-center gap-1"><span class="pspad-price-swatch pspad-price-marker-buy"></span>@T["KindBuy"]</span>
+            <span class="d-flex align-center gap-1"><span class="pspad-price-swatch pspad-price-marker-sell"></span>@T["KindSell"]</span>
+            <span class="d-flex align-center gap-1"><span class="pspad-price-swatch pspad-price-marker-dividend"></span>@T["KindDividend"]</span>
+        </div>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="pspad-muted pa-2">@T["NotEnoughHistory"]</MudText>
+    }
+</div>
+
+@code {
+    const double AxisWidth = 64;
+    const double PlotWidth = 576;
+    const double PlotHeight = 200;
+    const double DateHeight = 20;
+    const double Padding = 8;
+
+    ChartRange _range = ChartRange.OneYear;
+
+    [Parameter, EditorRequired] public string Ticker { get; set; } = "";
+
+    [Parameter, EditorRequired] public PriceHistory History { get; set; } = default!;
+
+    [Parameter, EditorRequired] public IReadOnlyList<PriceMarker> Markers { get; set; } = [];
+
+    [Parameter, EditorRequired] public string AccountCurrency { get; set; } = "";
+
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+
+    IReadOnlyList<DailyClose> _closes = [];
+    IReadOnlyList<PriceMarker> _shown = [];
+
+    protected override void OnParametersSet() => Build();
+
+    void RangeChanged(ChartRange range)
+    {
+        _range = range;
+        Build();
+    }
+
+    (PriceHistory, IReadOnlyList<PriceMarker>, DateOnly, ChartRange)? _builtFor;
+
+    void Build()
+    {
+        if (_builtFor is { } built && ReferenceEquals(built.Item1, History) && ReferenceEquals(built.Item2, Markers)
+            && built.Item3 == Today && built.Item4 == _range)
+        {
+            return;
+        }
+
+        _builtFor = (History, Markers, Today, _range);
+        _closes = ChartRanges.Within(History.Closes, close => close.Date, _range, Today);
+        _shown = _closes.Count == 0
+            ? []
+            : [.. Markers.Where(marker => marker.Day >= _closes[0].Date && marker.Day <= _closes[^1].Date)];
+    }
+
+    decimal CloseOn(DateOnly day) => History.On(day)?.Close ?? _closes[0].Close;
+
+    string Describe(PriceMarker marker)
+    {
+        var kind = marker.Kind switch
+        {
+            MarkerKind.Buy => T["KindBuy"].Value,
+            MarkerKind.Sell => T["KindSell"].Value,
+            _ => T["KindDividend"].Value
+        };
+        var traded = marker is { Quantity: { } quantity, Price: { } price }
+            ? $" {InvestmentText.Quantity(quantity)} @ {InvestmentText.Price(price)}"
+            : "";
+        return $"{kind}{traded} · {InvestmentText.Money(marker.Amount, AccountCurrency)} · {InvestmentText.Day(marker.Day)}";
+    }
+}

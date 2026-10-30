@@ -57,6 +57,27 @@ Money applies the same limits through its own constants, which point at
 | `Budget.MaxCategoriesPerKind` | 64 | `AddCategory` and the auto-add on entries |
 | `BalanceSnapshot.MaxHoldings` | 64 | `AddHolding` |
 
+### 2.2 Investments
+
+Investments follows the same rules (`specs/investments-design.md` §3.2).
+Counts are checked inside one aggregate: the portfolio for accounts and
+instruments, the account for its operations.
+
+| Limit | Value | Applies to |
+|---|---|---|
+| `InvestmentAccount.MaxNameLength` | 64 (`Name`) | account name |
+| `InvestmentAccount.MaxBrokerAccountNumberLength` | 32 | broker account number |
+| `InvestmentOperation.MaxNoteLength` | 1,024 (`FieldValue`) | operation note |
+| `InvestmentOperation.MaxPositionIdLength` | 32 | broker position id |
+| `Instrument.MaxTickerLength` | 24 | ticker |
+| `Instrument.MaxQuoteSymbolLength` | 24 | Yahoo symbol |
+| `Instrument.MaxNameLength` | 64 | instrument name |
+| `InvestmentOperation.MaxQuantity`, `MaxPrice` | 1,000,000,000, at most 8 decimals | quantity and price |
+| `InvestmentPortfolio.MaxAccounts` | 32, archived included | `CreateInvestmentAccount` |
+| `InvestmentPortfolio.MaxInstruments` | 500 | `EnsureInstrument` |
+| `InvestmentAccount.MaxOperations` | 20,000, deleted included | `RecordInvestmentOperation` |
+| `XlsxReader.MaxBytes`, `XtbParser.MaxRows` | 5 MB, 20,000 data rows | XTB import file |
+
 ## 3. Client
 
 - Every name, label, value and description input sets `MaxLength` from

@@ -1,0 +1,62 @@
+@using System.Globalization
+@using PSPad.Module.Investments.Import
+@inject IStringLocalizer<InvestmentImportStrings> T
+
+<MudTable T="ImportRowPreview" Items="@Rows" Dense="true" Hover="true" Virtualize="true" FixedHeader="true"
+          Class="pspad-import-rows">
+    <HeaderContent>
+        <MudTh></MudTh><MudTh>@T["ColStatus"]</MudTh><MudTh>@T["ColType"]</MudTh><MudTh>@T["ColTicker"]</MudTh>
+        <MudTh>@T["ColTime"]</MudTh><MudTh>@T["ColDetail"]</MudTh><MudTh Style="text-align: right">@T["ColAmount"]</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>
+            @if (context.Status is ImportRowStatus.ToImport or ImportRowStatus.DeletedEarlier)
+            {
+                <MudCheckBox T="bool" Value="@context.Ticked" Dense="true" ValueChanged="@(_ => OnToggle.InvokeAsync(context))"
+                             aria-label="@T["TickRow", context.Row.SheetRow].Value" />
+            }
+        </MudTd>
+        <MudTd DataLabel="@T["ColStatus"]"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@ColorOf(context.Status)">@StatusText(context.Status)</MudChip></MudTd>
+        <MudTd DataLabel="@T["ColType"]">@(context.Row.Kind is { } kind ? KindText(kind) : context.Row.Type)</MudTd>
+        <MudTd DataLabel="@T["ColTicker"]">@context.Row.Ticker</MudTd>
+        <MudTd DataLabel="@T["ColTime"]">@context.Row.At?.UtcDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</MudTd>
+        <MudTd DataLabel="@T["ColDetail"]">@Detail(context.Row)</MudTd>
+        <MudTd DataLabel="@T["ColAmount"]" Style="text-align: right">@context.Row.Amount?.ToString("0.00######", CultureInfo.InvariantCulture)</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ImportRowPreview> Rows { get; set; } = [];
+
+    [Parameter] public EventCallback<ImportRowPreview> OnToggle { get; set; }
+
+    static Color ColorOf(ImportRowStatus status) => status switch
+    {
+        ImportRowStatus.ToImport => Color.Success,
+        ImportRowStatus.Error => Color.Error,
+        ImportRowStatus.DeletedEarlier => Color.Warning,
+        _ => Color.Default
+    };
+
+    string StatusText(ImportRowStatus status) => status switch
+    {
+        ImportRowStatus.ToImport => T["StatusToImport"],
+        ImportRowStatus.AlreadyImported => T["StatusAlready"],
+        ImportRowStatus.DeletedEarlier => T["StatusDeleted"],
+        ImportRowStatus.Error => T["StatusError"],
+        _ => T["StatusWaiting"]
+    };
+
+    string KindText(XtbRowKind kind) => T["Kind" + kind];
+
+    string Detail(XtbRow row)
+    {
+        if (row.Quantity is { } quantity && row.Price is { } price)
+        {
+            var trade = T["TradeDetail", quantity.ToString("0.########", CultureInfo.InvariantCulture), price.ToString("0.########", CultureInfo.InvariantCulture)].Value;
+            return row.PositionId is { } position && row.Kind == XtbRowKind.Sell ? $"{trade} · {T["ClosesPosition", position]}" : trade;
+        }
+
+        return row.Comment ?? "";
+    }
+}

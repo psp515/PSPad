@@ -1,0 +1,404 @@
+@page "/investments/import"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Components.Routing
+@using PSPad.Abstractions
+@using PSPad.App.Components.Investments
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.App.State.Investments
+@using PSPad.App.Sync
+@using PSPad.Module.Investments.Accounts
+@using PSPad.Module.Investments.Import
+@using PSPad.App.Components
+@using PSPad.Module.Investments.Operations
+@using PSPad.Module.Investments.Portfolio
+@using PSPad.Module.Money.Preferences
+@using PSPad.Module.Money.Values
+@using System.Text.Json
+@inject IDocumentStore<InvestmentAccount> AccountStore
+@inject IDocumentStore<InvestmentOperation> OperationStore
+@inject IDocumentStore<InvestmentPortfolio> PortfolioStore
+@inject IDocumentStore<MoneyPreferences> PreferencesStore
+@inject IInvestmentQuotes Quotes
+@inject AppState State
+@inject CommandSender Sender
+@inject IConnectivity Connectivity
+@inject NavigationManager Navigation
+@inject IDialogService Dialogs
+@implements IDisposable
+@inject IStringLocalizer<InvestmentImportStrings> T
+
+<PageHeading Title="@T["ImportTitle"]" Icon="@Icons.Material.Outlined.ShowChart" BackHref="@(AccountId is { } back ? $"/investments/{back}" : "/investments")" />
+
+@if (!_loaded)
+{
+    <CardSkeleton Count="2" />
+}
+else if (AccountId is not null && _target is null)
+{
+    <MudAlert Severity="Severity.Warning">@T["AccountMissing"]</MudAlert>
+}
+else if (_outcome is not null)
+{
+    <MudPaper Outlined="true" Class="pa-4 pspad-import-summary">
+        <MudText Typo="Typo.subtitle1">@T["ImportedSummary", _outcome.Count(result => result.Accepted)]</MudText>
+        @if (_outcome.Any(result => !result.Accepted))
+        {
+            <MudText Typo="Typo.body2" Color="Color.Warning" Class="mt-2">@T["NotImported"]</MudText>
+            <MudList T="string" Dense="true">
+                @foreach (var message in _outcome.Where(result => !result.Accepted).Select(result => result.Rejection).Distinct())
+                {
+                    <MudListItem T="string" Text="@message" />
+                }
+            </MudList>
+        }
+        <MudButton Class="mt-2" Variant="Variant.Text" Color="Color.Primary" Href="@AccountHref">@T["OpenAccount"]</MudButton>
+    </MudPaper>
+}
+else
+{
+    <div class="pspad-investment-import">
+        <MudText Typo="Typo.body2" Class="pspad-muted mb-2">@T["ImportDropHint"]</MudText>
+        <ImportFilePicker @key="_pickerKey" Class="mb-4" Accept=".xlsx" Limit="@MaxBytes" FileName="@_fileName" Disabled="@_running" OnPicked="@PickAsync" />
+
+        @if (_fileError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-3 pspad-import-file-error">@_fileError</MudAlert>
+        }
+
+        @if (_file is not null && _fileError is null)
+        {
+            <div class="d-flex align-items-center justify-space-between mb-2">
+                <MudText Typo="Typo.caption" Class="pspad-muted">@T["FileSummary", _file.AccountNumber, _file.Rows.Count]</MudText>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@_running" OnClick="@ChooseAnother">@T["ChooseAnother"]</MudButton>
+            </div>
+
+            @if (_preview?.NewAccount is not null)
+            {
+                <ImportNewAccount AccountNumber="@_file.AccountNumber" Name="@_name" NameChanged="@(value => _name = value)"
+                                  Currency="@Currency" CurrencyChanged="@PickCurrencyAsync" />
+            }
+
+            @if (_preview is not null)
+            {
+                @if (_preview.FileError is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-3 pspad-import-file-error">@_preview.FileError</MudAlert>
+                }
+                @if (_preview.LimitError is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mb-3 pspad-import-limit">@_preview.LimitError</MudAlert>
+                }
+                @if (Waiting > 0)
+                {
+                    <MudAlert Severity="Severity.Info" Class="mb-3 pspad-import-rates">
+                        @RatesMessage
+                        @if (!_fetching)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => FetchRatesAsync())">@T["RetryRates"]</MudButton>
+                        }
+                    </MudAlert>
+                }
+
+                <ImportErrorList Rows="@_preview.Rows" />
+
+                <div class="d-flex flex-wrap gap-2 mb-3 pspad-import-chips">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">@T["ChipToImport", Count(ImportRowStatus.ToImport)]</MudChip>
+                    <MudChip T="string" Size="Size.Small">@T["ChipAlready", Count(ImportRowStatus.AlreadyImported)]</MudChip>
+                    <MudChip T="string" Size="Size.Small">@T["ChipDeleted", Count(ImportRowStatus.DeletedEarlier)]</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Error">@T["ChipErrors", Count(ImportRowStatus.Error)]</MudChip>
+                    @if (Waiting > 0)
+                    {
+                        <MudChip T="string" Size="Size.Small">@T["ChipWaiting", Waiting]</MudChip>
+                    }
+                    <MudChip T="string" Size="Size.Small">@T["ChipNewInstruments", _preview.NewTickers.Count]</MudChip>
+                    @foreach (var kind in KindCounts)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@T["Kind" + kind.Kind] · @kind.Count</MudChip>
+                    }
+                </div>
+
+                @if (_preview.NewTickers.Count > 0)
+                {
+                    <MudText Typo="Typo.caption" Class="pspad-muted d-block">@T["NewInstruments"]</MudText>
+                    <div class="d-flex flex-wrap gap-1 mb-2 pspad-import-new-instruments">
+                        @foreach (var ticker in _preview.NewTickers)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0" Text="@ticker" />
+                        }
+                    </div>
+                }
+
+                <ImportOpenPositions Differences="@_preview.OpenPositionDifferences" />
+
+                <MudSwitch T="bool" Value="@_errorsOnly" ValueChanged="@(value => _errorsOnly = value)" Color="Color.Primary"
+                           Label="@T["ErrorsOnly"]" Class="pspad-import-errors-only" />
+                <ImportRowsTable Rows="@Shown" OnToggle="@Toggle" />
+
+                @if (_running)
+                {
+                    <MudProgressLinear Class="mt-3" Color="Color.Primary" Value="@_done" Max="@_total" />
+                }
+
+                <div class="d-flex justify-end gap-2 mt-3">
+                    <MudButton Variant="Variant.Text" Href="@(AccountId is { } id ? $"/investments/{id}" : "/investments")" Disabled="@_running">@T["Cancel"]</MudButton>
+                    <MudButton Class="pspad-import-run" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanImport)" OnClick="@ImportAsync">
+                        @T.Plural(Ticked, _preview.NewAccount is not null ? "CreateAndImport" : "ImportOperations")
+                    </MudButton>
+                </div>
+            }
+        }
+    </div>
+    <NavigationLock ConfirmExternalNavigation="@HasUnimportedData" OnBeforeInternalNavigation="@ConfirmLeaveAsync" />
+}
+
+@code {
+    const long MaxBytes = 5 * 1024 * 1024;
+
+    [SupplyParameterFromQuery(Name = "account")] public Guid? AccountId { get; set; }
+
+    bool _loaded;
+    InvestmentAccount? _target;
+    IReadOnlyList<InvestmentAccount> _accounts = [];
+    IReadOnlyList<InvestmentOperation> _operations = [];
+    InvestmentPortfolio? _portfolio;
+    string? _fileName;
+    string? _fileError;
+    XtbFile? _file;
+    string _name = "";
+    string? _currency;
+    string _defaultCurrency = Currencies.Pln;
+    int _version;
+    Guid _pickerKey = Guid.NewGuid();
+    readonly CancellationTokenSource _disposed = new();
+    Guid _newAccountId = Guid.NewGuid();
+    IReadOnlyDictionary<ImportRateKey, (decimal Rate, DateOnly RateDate)> _rates = new Dictionary<ImportRateKey, (decimal, DateOnly)>();
+    readonly HashSet<int> _unticked = [];
+    readonly HashSet<int> _tickedDeleted = [];
+    InvestmentImportPreview? _preview;
+    bool _errorsOnly;
+    bool _fetching;
+    bool _running;
+    int _done;
+    int _total;
+    IReadOnlyList<CommandResult>? _outcome;
+
+    TimeZoneInfo Zone => LocalToday.Zone(State.TimeZone);
+
+    InvestmentAccount? Matching => _file is null ? null : _target ?? _accounts.FirstOrDefault(account => account.BrokerAccountNumber == _file.AccountNumber);
+
+    bool NeedsNewAccount => _file is not null && Matching is null;
+
+    string? Currency => Matching?.Currency ?? _currency ?? _defaultCurrency;
+
+    IReadOnlyList<ImportRowPreview> Shown => [.. ImportRowFilter.Visible(_preview!.Rows, _errorsOnly)];
+
+    int Waiting => _preview?.Rows.Count(row => row.Status == ImportRowStatus.WaitingForRate) ?? 0;
+
+    int Ticked => _preview?.Rows.Count(row => row.Ticked) ?? 0;
+
+    int Count(ImportRowStatus status) => _preview!.Rows.Count(row => row.Status == status);
+
+    IEnumerable<(XtbRowKind Kind, int Count)> KindCounts => _preview!.Rows
+        .Where(row => row is { Ticked: true, Row.Kind: not null })
+        .GroupBy(row => row.Row.Kind!.Value).OrderBy(group => group.Key).Select(group => (group.Key, group.Count()));
+
+    string RatesMessage => !Connectivity.IsOnline ? T["NoRateConnection"] : _fetching ? T["RatesLoading"] : T["RatesMissing"];
+
+    bool NameValid => _preview?.NewAccount is null || !string.IsNullOrWhiteSpace(_name);
+
+    bool CanImport => _preview is { CanImport: true } && NameValid && !_running && !_fetching;
+
+    string AccountHref => $"/investments/{_importedAccountId}";
+
+    Guid _importedAccountId;
+
+    bool HasUnimportedData => _file is not null && _outcome is null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _accounts = await AccountStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _operations = await OperationStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _portfolio = await PortfolioStore.LoadAsync(InvestmentPortfolio.IdFor(State.UserId), CancellationToken.None);
+        var preferences = await PreferencesStore.LoadAsync(MoneyPreferences.IdFor(State.UserId), CancellationToken.None);
+        _defaultCurrency = preferences?.DefaultCurrency ?? Currencies.Pln;
+        Connectivity.CameOnline += OnCameOnline;
+        _loaded = true;
+    }
+
+    void OnCameOnline()
+    {
+        if (_file is not null && Waiting > 0 && !_fetching && !_running)
+        {
+            _ = InvokeAsync(FetchRatesAsync);
+        }
+    }
+
+    public void Dispose()
+    {
+        Connectivity.CameOnline -= OnCameOnline;
+        _disposed.Cancel();
+        _disposed.Dispose();
+    }
+
+    void ChooseAnother()
+    {
+        Reset(null);
+        _pickerKey = Guid.NewGuid();
+    }
+
+    void Reset(string? fileName)
+    {
+        _version++;
+        _fileName = fileName;
+        _file = null;
+        _preview = null;
+        _fileError = null;
+        _currency = null;
+        _fetching = false;
+        _errorsOnly = false;
+        _rates = new Dictionary<ImportRateKey, (decimal, DateOnly)>();
+        _unticked.Clear();
+        _tickedDeleted.Clear();
+        _newAccountId = Guid.NewGuid();
+    }
+
+    protected override void OnParametersSet() =>
+        _target = AccountId is { } id ? _accounts.FirstOrDefault(account => account.Id == id) : null;
+
+    async Task PickAsync((string Name, byte[]? Bytes) picked)
+    {
+        Reset(picked.Name);
+
+        if (picked.Bytes is null)
+        {
+            _fileError = T["FileTooLarge"];
+            return;
+        }
+
+        try
+        {
+            using var stream = new MemoryStream(picked.Bytes);
+            _file = XtbParser.Parse(XlsxReader.Read(stream));
+        }
+        catch (XtbFileError error)
+        {
+            _fileError = error.Message;
+            return;
+        }
+
+        _name = ProposedName();
+        await ReadyToPreviewAsync();
+    }
+
+    string ProposedName() => InvestmentImportPreviewer
+        .Preview(_file!, _target, _accounts, _operations, _portfolio, Currencies.Pln, Zone, _rates, _unticked, _tickedDeleted)
+        .NewAccount?.Name ?? "";
+
+    async Task PickCurrencyAsync(string? currency)
+    {
+        _currency = currency;
+        _rates = new Dictionary<ImportRateKey, (decimal, DateOnly)>();
+        await ReadyToPreviewAsync();
+    }
+
+    async Task ReadyToPreviewAsync()
+    {
+        Rebuild();
+        await FetchRatesAsync();
+    }
+
+    async Task FetchRatesAsync()
+    {
+        var version = ++_version;
+        var needed = InvestmentImportPreviewer.RatesNeeded(_file!, Currency!, Zone);
+        _fetching = true;
+        StateHasChanged();
+        IReadOnlyDictionary<ImportRateKey, (decimal Rate, DateOnly RateDate)> fetched;
+
+        try
+        {
+            fetched = await InvestmentImportRates.FetchAsync(Quotes, [.. needed], Connectivity.IsOnline, _disposed.Token);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException
+            || (exception is TaskCanceledException && !_disposed.IsCancellationRequested))
+        {
+            fetched = new Dictionary<ImportRateKey, (decimal, DateOnly)>();
+        }
+
+        if (version != _version)
+        {
+            return;
+        }
+
+        _rates = fetched;
+        _fetching = false;
+        Rebuild();
+        StateHasChanged();
+    }
+
+    void Rebuild() => _preview = InvestmentImportPreviewer.Preview(
+        _file!, _target, _accounts, _operations, _portfolio, Currency!, Zone, _rates, _unticked, _tickedDeleted);
+
+    void Toggle(ImportRowPreview row)
+    {
+        var set = row.Status == ImportRowStatus.DeletedEarlier ? _tickedDeleted : _unticked;
+        if (!set.Remove(row.Row.SheetRow))
+        {
+            set.Add(row.Row.SheetRow);
+        }
+
+        Rebuild();
+    }
+
+    async Task ImportAsync()
+    {
+        _importedAccountId = _preview!.Account?.Id ?? _newAccountId;
+        var commands = InvestmentImportPlan.Commands(_preview, State.UserId, _newAccountId, _name.Trim(), Currency!, _rates, Guid.NewGuid);
+        (_running, _done, _total) = (true, 0, commands.Count);
+        var progress = new Progress<int>(done =>
+        {
+            _done = done;
+
+            if (ImportProgress.IsDue(done, _total))
+            {
+                StateHasChanged();
+            }
+        });
+
+        try
+        {
+            _outcome = await Sender.SendManyAsync(commands, progress, CancellationToken.None);
+        }
+        finally
+        {
+            _running = false;
+        }
+
+        if (_outcome.All(result => result.Accepted))
+        {
+            Navigation.NavigateTo(AccountHref);
+        }
+    }
+
+    async Task ConfirmLeaveAsync(LocationChangingContext context)
+    {
+        if (!HasUnimportedData)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, _running ? T["ImportRunningMessage"].Value : T["LeaveImportMessage"].Value },
+            { dialog => dialog.ConfirmText, T["Leave"].Value }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["LeaveImport"], parameters);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+        {
+            context.PreventNavigation();
+        }
+    }
+}

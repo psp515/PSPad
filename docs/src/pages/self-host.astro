@@ -96,6 +96,7 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
             <li>Open <strong>My Day</strong>: it is there. Add a step to it and give the step a date.</li>
             <li>Make a <strong>Budget</strong> and add an expense in another currency.</li>
           </ol>
+          <p>The API container needs outbound HTTPS to <code>query1.finance.yahoo.com</code> for investment prices and to <code>api.nbp.pl</code> for exchange rates. Without it, investments show their cost value and “No price”.</p>
           <p>Done looking? This removes the containers and the data:</p>
           <CodeBlock title="Stop and clean up">docker compose down -v</CodeBlock>
           <p>Liked it? <button type="button" class="button button-secondary" data-scenario="vps">Host it on a VPS</button></p>
@@ -225,6 +226,7 @@ curl -fsSLo mongo-entrypoint.sh {raw}/mongo-entrypoint.sh</CodeBlock>
 
         <article data-scenario="vps" data-step="8" hidden>
           <h2>Keep it running</h2>
+          <p>The API container needs outbound HTTPS to <code>query1.finance.yahoo.com</code> for investment prices and to <code>api.nbp.pl</code> for exchange rates. Without it, investments show their cost value and “No price”.</p>
           <CodeBlock title="Upgrade">docker compose pull &amp;&amp; docker compose up -d --wait</CodeBlock>
           <p>That pulls new PSPad images. A newer MongoDB, Keycloak or Postgres means copying the compose file from this page again.</p>
           <p>Stop the API first for a MongoDB restore: <code>docker compose stop api</code>, then <code>start</code> it after.</p>

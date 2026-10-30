@@ -18,7 +18,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
   domain layer, shared client and server.
 - Recurrence = template + occurrences, only Done days stored (AD-7).
 - Goals are global entities; star means important only, never puts a task on Today.
-- `PSPad.Module.Tasks` and `PSPad.Module.Money` are WASM-safe: reference
+- `PSPad.Module.Tasks`, `PSPad.Module.Money` and `PSPad.Module.Investments` are WASM-safe: reference
   `PSPad.Abstractions` only.
 - Money totals are PLN; every amount carries its rate frozen at entry (AD-14).
 - Aggregate documents are truth; events are the log beside them. No audit table.
@@ -44,6 +44,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Budget CSV import | `specs/budget-import-design.md` |
 | Docs site pages, screenshots, self-host guide | `specs/docs-site-design.md` |
 | Sharing a budget | `specs/budget-sharing-design.md` |
+| Investments, XTB import, quotes, budget link | `specs/investments-design.md` |
 | Budget page views: Overview, Entries, Stats, forecast, insights | `specs/budget-overview-design.md` |
 | Length and count limits on user content | `specs/content-limits-design.md` |
 | List density, row groups, Inbox and goal rows | `specs/grouped-lists-design.md` |
@@ -59,7 +60,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 
 | AD | Summary | ADR |
 |----|---------|-----|
-| 1 | Modular monolith: Tasks, Statistics, Identity, Presentation, Sharing, Money | 0010, 0045, 0059 |
+| 1 | Modular monolith: Tasks, Statistics, Identity, Presentation, Sharing, Money, Investments | 0010, 0045, 0059, 0082 |
 | 2 | Documents are truth, events are the log; snapshot marks are state-only | 0011, 0064 |
 | 3–4 | Commands shared; Tasks compiles to WASM | 0003, 0004 |
 | 5–6 | LWW conflicts offline, version-checked saves on the server, final rejections dropped, a pull never replaces a newer local copy; delta sync by monotonic `seq`, paged, documents only | 0005, 0006, 0061, 0063, 0067, 0079 |
@@ -70,11 +71,12 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 11 | Per-user views live in Presentation | 0051 |
 | 12 | Lists and budgets shared by membership; a membership new to the replica is pulled whole | 0054, 0057, 0066, 0081 |
 | 13 | Public snapshots, server-only module | 0056, 0064 |
-| 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount | 0059 |
+| 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount; `Money` and `Currencies` live in Abstractions | 0059, 0083 |
 | 15 | Containers non-root on exact-version-tagged images; central package versions; Dependabot weekly | 0071 |
 | 16 | Language on `User`, `.resx` per feature, culture-driven formats; Keycloak untouched | 0075 |
 | 17 | Open clients get a data-free sync nudge over SSE, fanned out from commit | 0076 |
 | 18 | End-to-end: Playwright in `test/e2e/` drives the compose stack in Chromium, one Keycloak user per test | 0077 |
+| 19 | Investments: WASM-safe module, Yahoo quotes via cached server proxy, budget holdings link by account id | 0082, 0083, 0084, 0085 |
 
 Stack: .NET 10, MongoDB 8 replica set `rs0`, Blazor WASM PWA + MudBlazor,
 IndexedDB replica and outbox, Keycloak OIDC/JWT, Docker Compose, no messaging bus.
@@ -83,11 +85,11 @@ IndexedDB replica and outbox, Keycloak OIDC/JWT, Docker Compose, no messaging bu
 
 ```
 src/PSPad.Api  src/PSPad.App  src/shared/{Abstractions,Contracts,Infrastructure}
-src/modules/PSPad.Module.{Tasks,Statistics,Identity,Presentation,Sharing,Money}
+src/modules/PSPad.Module.{Tasks,Statistics,Identity,Presentation,Sharing,Money,Investments}
 test/  brand/  docs/  specs/  adr/  docker/  .superpowers/sdd/ (uncommitted plans)
 ```
 
-References run one way: `Tasks` and `Money` see `Abstractions` only; `Infrastructure` sees no
+References run one way: `Tasks`, `Money` and `Investments` see `Abstractions` only; `Infrastructure` sees no
 module; `App` never sees `Infrastructure`; `Api` sees all. Only module edges:
 `Statistics`→`Tasks`, `Sharing`→`Tasks`. Detail: `specs/backend-spec.md` §1.
 

@@ -1,0 +1,130 @@
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Investments.Accounts
+@using PSPad.Module.Money.Values
+@inject IDocumentStore<InvestmentAccount> Accounts
+@inject AppState State
+@inject CommandSender Sender
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<InvestmentsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
+
+<DetailPanel Open="@(IsNew || _account is not null)" Title="@(IsNew ? T["NewAccount"] : T["Account"])" Class="pspad-investment-account-panel"
+             OnClose="@OnClose" OnSave="@SaveCallback" CanSave="@CanSave" Disabled="@(Disabled || _saving)">
+    <div class="d-flex flex-column gap-3 pa-4">
+        <MudTextField T="string" Class="pspad-account-name-field" Label="@Shared["Name"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      MaxLength="@InvestmentAccount.MaxNameLength" @bind-Value="_name" Immediate="true" AutoFocus="@IsNew" Disabled="@ReadOnly" />
+        <MudSelect T="string" Class="pspad-account-currency-field" Label="@T["Currency"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                   @bind-Value="_currency" Disabled="@(!IsNew)" HelperText="@(IsNew ? T["CurrencyFixed"].Value : null)">
+            @foreach (var currency in Currencies.All)
+            {
+                <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="Broker" Class="pspad-account-broker-field" Label="@T["Broker"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                   @bind-Value="_broker" Disabled="@(!IsNew)">
+            @foreach (var broker in Enum.GetValues<Broker>())
+            {
+                <MudSelectItem T="Broker" Value="@broker">@T[$"Broker{broker}"]</MudSelectItem>
+            }
+        </MudSelect>
+        <MudTextField T="string" Class="pspad-account-number-field" Label="@T["BrokerAccountNumber"]" Variant="Variant.Outlined"
+                      Margin="Margin.Dense" MaxLength="@InvestmentAccount.MaxBrokerAccountNumberLength" @bind-Value="_number"
+                      Disabled="@(ReadOnly || _account?.BrokerAccountNumber is not null)" />
+    </div>
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? AccountId { get; set; }
+
+    [Parameter] public bool IsNew { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    InvestmentAccount? _account;
+    (Guid?, bool)? _loaded;
+    string _name = "";
+    string _currency = Currencies.Pln;
+    Broker _broker = Broker.Xtb;
+    string? _number;
+    bool _saving;
+
+    bool ReadOnly => _account?.IsArchived == true;
+
+    bool CanSave => !ReadOnly && !string.IsNullOrWhiteSpace(_name);
+
+    EventCallback SaveCallback => ReadOnly ? default : EventCallback.Factory.Create(this, SaveAsync);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loaded == (AccountId, IsNew))
+        {
+            return;
+        }
+
+        _loaded = (AccountId, IsNew);
+        var account = AccountId is { } id ? await Accounts.LoadAsync(id, CancellationToken.None) : null;
+        _account = account?.UserId == State.UserId ? account : null;
+        _name = _account?.Name ?? "";
+        _currency = _account?.Currency ?? Currencies.Pln;
+        _broker = _account?.Broker ?? Broker.Xtb;
+        _number = _account?.BrokerAccountNumber;
+    }
+
+    async Task SaveAsync()
+    {
+        if (Disabled || _saving || !CanSave)
+        {
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (!await SendAsync())
+            {
+                return;
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        await OnClose.InvokeAsync();
+    }
+
+    async Task<bool> SendAsync()
+    {
+        var name = _name.Trim();
+        var number = string.IsNullOrWhiteSpace(_number) ? null : _number.Trim();
+
+        if (_account is null)
+        {
+            return Accepted(await Sender.SendAsync(
+                new CreateInvestmentAccount(Guid.NewGuid(), State.UserId, Guid.NewGuid(), name, _currency, _broker, number)));
+        }
+
+        if (name != _account.Name &&
+            !Accepted(await Sender.SendAsync(new RenameInvestmentAccount(Guid.NewGuid(), State.UserId, _account.Id, name))))
+        {
+            return false;
+        }
+
+        return number is null || _account.BrokerAccountNumber is not null ||
+               Accepted(await Sender.SendAsync(new SetBrokerAccountNumber(Guid.NewGuid(), State.UserId, _account.Id, number)));
+    }
+
+    bool Accepted(CommandResult result)
+    {
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? T["SaveAccountFailed"].Value, Severity.Warning);
+        }
+
+        return result.Accepted;
+    }
+}

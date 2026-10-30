@@ -1,0 +1,85 @@
+@using PSPad.App.Statistics
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<MudPaper Outlined="true" Class="pa-3 pspad-value-chart">
+    <SectionHeading Title="@T["ValueOverTime"]" Hint="@T["VsNetDeposits"]" />
+    <RangeChips Value="@_range" ValueChanged="@RangeChanged" />
+    @if (_shown.Count > 1)
+    {
+        <MudChart ChartType="ChartType.Line" ChartSeries="@_series" ChartLabels="@_labels" ChartOptions="@_options"
+                  Width="100%" Height="@Height" />
+        <div class="pspad-sr-only">
+            <table>
+                <caption>@T["ValueOverTime"]</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Day"]</th>
+                        <th scope="col">@T["Value"]</th>
+                        <th scope="col">@T["NetDeposits"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var point in _shown)
+                    {
+                        <tr>
+                            <td>@InvestmentText.Day(point.Day)</td>
+                            <td>@InvestmentText.Money(point.Value, Currency)</td>
+                            <td>@InvestmentText.Money(point.NetDeposits, Currency)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="pspad-muted pa-2">@T["NotEnoughHistory"]</MudText>
+    }
+</MudPaper>
+
+@code {
+    ChartRange _range = ChartRange.OneYear;
+    IReadOnlyList<ValuePoint> _shown = [];
+    List<ChartSeries<double>> _series = [];
+    string[] _labels = [];
+    LineChartOptions _options = new();
+    (IReadOnlyList<ValuePoint>, DateOnly, ChartRange)? _builtFor;
+
+    [Parameter, EditorRequired] public IReadOnlyList<ValuePoint> Points { get; set; } = [];
+
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+
+    [Parameter] public string Currency { get; set; } = "PLN";
+
+    [Parameter] public string Height { get; set; } = "220px";
+
+    protected override void OnParametersSet() => Build();
+
+    void RangeChanged(ChartRange range)
+    {
+        _range = range;
+        Build();
+    }
+
+    void Build()
+    {
+        if (_builtFor is { } built && ReferenceEquals(built.Item1, Points) && built.Item2 == Today && built.Item3 == _range)
+        {
+            return;
+        }
+
+        _builtFor = (Points, Today, _range);
+        _shown = ChartRanges.Within(Points, point => point.Day, _range, Today);
+        _series =
+        [
+            new() { Name = T["Value"], Data = _shown.Select(point => (double)point.Value).ToArray() },
+            new() { Name = T["NetDeposits"], Data = _shown.Select(point => (double)point.NetDeposits).ToArray() }
+        ];
+        _labels = ChartAxis.Labels(_shown, point => point.Day, _shown.Count < 2 ? null : _shown[^1].Day.DayNumber - _shown[0].Day.DayNumber);
+        _options = new LineChartOptions
+        {
+            YAxisTicks = ChartAxis.Step((double)_shown.Select(point => Math.Max(point.Value, point.NetDeposits)).DefaultIfEmpty(0m).Max()),
+            MaxNumYAxisTicks = ChartAxis.MaxTicks
+        };
+    }
+}

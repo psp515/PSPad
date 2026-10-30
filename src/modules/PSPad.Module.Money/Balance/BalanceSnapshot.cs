@@ -82,13 +82,16 @@ public sealed class BalanceSnapshot : Aggregate
                     throw new DomainRejectedException($"A month can have at most {MaxHoldings} holdings.");
                 }
 
+                adding.RequireAccountFree(add.InvestmentAccountId, add.HoldingId);
                 return [new HoldingAdded(adding.Id, adding.UserId, at,
-                    Valid(add.HoldingId, add.Name, add.Type, add.Money, adding.Month))];
+                    Valid(add.HoldingId, add.Name, add.Type, add.Money, adding.Month, add.InvestmentAccountId))];
 
             case EditHolding edit:
                 var editing = Live(snapshot, Writable(budget, edit.UserId));
                 var current = editing._holdings[RequireHolding(editing, edit.HoldingId)];
-                var edited = Valid(edit.HoldingId, edit.Name, edit.Type, edit.Money, editing.Month);
+                var edited = Valid(edit.HoldingId, edit.Name, edit.Type, edit.Money, editing.Month,
+                    edit.InvestmentAccountId);
+                editing.RequireAccountFree(edit.InvestmentAccountId, edit.HoldingId);
                 return current == edited ? [] : [new HoldingEdited(editing.Id, editing.UserId, at, edited)];
 
             case RemoveHolding remove:
@@ -162,8 +165,18 @@ public sealed class BalanceSnapshot : Aggregate
         return previous is null ? [] : [.. previous._holdings];
     }
 
-    static Holding Valid(Guid holdingId, string name, HoldingType type, Money money, YearMonth month) =>
-        new(holdingId, RequireName(name), RequireType(type), Money.Require(money, month.LastDay));
+    void RequireAccountFree(Guid? accountId, Guid holdingId)
+    {
+        if (accountId is not null
+            && _holdings.Any(other => other.InvestmentAccountId == accountId && other.HoldingId != holdingId))
+        {
+            throw new DomainRejectedException("That account is already in this month.");
+        }
+    }
+
+    static Holding Valid(
+        Guid holdingId, string name, HoldingType type, Money money, YearMonth month, Guid? accountId) =>
+        new(holdingId, RequireName(name), RequireType(type), Money.Require(money, month.LastDay), accountId);
 
     static HoldingType RequireType(HoldingType type) =>
         Enum.IsDefined(type) ? type : throw new DomainRejectedException("That holding type does not exist.");

@@ -72,28 +72,30 @@
             <SectionHeading Title="@T["IncomeVsExpensesByMonth"]" />
             <MudChart ChartType="ChartType.Bar" ChartSeries="@_perMonth" ChartLabels="@_labels"
                       ChartOptions="@_perMonthOptions" Width="100%" Height="260px" />
-            <table class="mud-sr-only">
-                <caption>@T["IncomeVsExpensesByMonth"]</caption>
-                <thead>
-                    <tr>
-                        <th scope="col">@T["Month"]</th>
-                        <th scope="col">@T["Income"]</th>
-                        <th scope="col">@T["Expenses"]</th>
-                        <th scope="col">@T["Net"]</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var figure in Summary.PerMonth)
-                    {
+            <div class="pspad-sr-only">
+                <table>
+                    <caption>@T["IncomeVsExpensesByMonth"]</caption>
+                    <thead>
                         <tr>
-                            <td>@MoneyText.MonthTitle(figure.Month)</td>
-                            <td>@MoneyText.Pln(figure.Income)</td>
-                            <td>@MoneyText.Pln(figure.Expenses)</td>
-                            <td>@MoneyText.SignedPln(figure.Net)</td>
+                            <th scope="col">@T["Month"]</th>
+                            <th scope="col">@T["Income"]</th>
+                            <th scope="col">@T["Expenses"]</th>
+                            <th scope="col">@T["Net"]</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var figure in Summary.PerMonth)
+                        {
+                            <tr>
+                                <td>@MoneyText.MonthTitle(figure.Month)</td>
+                                <td>@MoneyText.Pln(figure.Income)</td>
+                                <td>@MoneyText.Pln(figure.Expenses)</td>
+                                <td>@MoneyText.SignedPln(figure.Net)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </MudPaper>
         <MudPaper Outlined="true" Class="pa-3 pspad-stats-categories">
             <SectionHeading Title="@T["SpendByCategoryPerMonth"]" />
@@ -105,31 +107,33 @@
             {
                 <MudChart ChartType="ChartType.StackedBar" ChartSeries="@_byCategory" ChartLabels="@_labels"
                           ChartOptions="@_byCategoryOptions" Width="100%" Height="260px" />
-                <table class="mud-sr-only">
-                    <caption>@T["SpendByCategoryPerMonth"]</caption>
-                    <thead>
-                        <tr>
-                            <th scope="col">@T["Month"]</th>
-                            @foreach (var series in Summary.ExpensesByMonth)
-                            {
-                                <th scope="col">@series.Category</th>
-                            }
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (var index = 0; index < Summary.Months.Count; index++)
-                        {
-                            var month = index;
+                <div class="pspad-sr-only">
+                    <table>
+                        <caption>@T["SpendByCategoryPerMonth"]</caption>
+                        <thead>
                             <tr>
-                                <td>@MoneyText.MonthTitle(Summary.Months[month])</td>
+                                <th scope="col">@T["Month"]</th>
                                 @foreach (var series in Summary.ExpensesByMonth)
                                 {
-                                    <td>@MoneyText.Pln(series.PerMonth[month])</td>
+                                    <th scope="col">@series.Category</th>
                                 }
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @for (var index = 0; index < Summary.Months.Count; index++)
+                            {
+                                var month = index;
+                                <tr>
+                                    <td>@MoneyText.MonthTitle(Summary.Months[month])</td>
+                                    @foreach (var series in Summary.ExpensesByMonth)
+                                    {
+                                        <td>@MoneyText.Pln(series.PerMonth[month])</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
         </MudPaper>
         </div>

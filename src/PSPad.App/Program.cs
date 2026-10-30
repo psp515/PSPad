@@ -12,6 +12,7 @@ using PSPad.App.Live;
 using PSPad.App.Localization;
 using PSPad.App.State;
 using PSPad.App.State.Dispatch;
+using PSPad.App.State.Investments;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.State.Search;
@@ -79,6 +80,10 @@ builder.Services.AddScoped<IUnitOfWork>(services => services.GetRequiredService<
 builder.Services.AddSingleton<IClock, BrowserClock>();
 builder.Services.AddScoped<CommandSender>();
 builder.Services.AddScoped<ISnapshotCache, SnapshotCache>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IQuoteStore, QuoteStore>();
+builder.Services.AddScoped<IInvestmentQuotes, QuoteBook>();
+builder.Services.AddScoped<InvestmentQuery>();
 builder.Services.AddScoped<ReplicaOwnership>();
 builder.Services.AddTransient<IViewport, BrowserViewport>();
 builder.Services.AddTransient<IBreakpoints, BrowserBreakpoints>();
@@ -127,6 +132,7 @@ builder.Services.AddScoped<ISyncApi>(sp => sp.GetRequiredService<PSPadApiClient>
 builder.Services.AddScoped<ILanguageApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<ISnapshotsApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<INbpRates>(sp => sp.GetRequiredService<PSPadApiClient>());
+builder.Services.AddScoped<IQuoteSource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IListSharingApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IBudgetSharingApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IServerProbe, BrowserServerProbe>();

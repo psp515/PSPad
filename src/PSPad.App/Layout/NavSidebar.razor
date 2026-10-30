@@ -1,5 +1,7 @@
 @using PSPad.App.Components
 @using PSPad.App.State
+@using PSPad.App.State.Investments
+@using PSPad.App.Sync
 @using PSPad.Module.Money.Budgets
 @using PSPad.Module.Tasks.Areas
 @inject SidebarCounts Counts
@@ -7,6 +9,10 @@
 @inject IStringLocalizer<ShellStrings> T
 @inject IStringLocalizer<SharedStrings> S
 @inject IStringLocalizer<ListsStrings> ListText
+@inject IStringLocalizer<InvestmentsStrings> InvestmentStrings
+@inject InvestmentQuery InvestmentData
+@inject SyncCoordinator Coordinator
+@inject AppState State
 @implements IDisposable
 
 <div class="d-flex flex-column pspad-nav" style="height:100%">
@@ -54,6 +60,33 @@
             <MudNavLink Icon="@Icons.Material.Outlined.Add" Class="pspad-new-budget"
                         Disabled="@Disabled" OnClick="@OnNewBudgetClick">
                 @T["NewBudget"]
+            </MudNavLink>
+        }
+    </MudNavMenu>
+
+    <MudDivider Class="my-2" Style="flex-grow:0" />
+
+    <MudNavMenu Class="pspad-nav-investments">
+        @GroupHeader(NavGroupState.Investments, InvestmentStrings["InvestmentsTitle"], InvestmentStrings["CollapseInvestments"],
+            InvestmentStrings["ExpandInvestments"], InvestmentLinks.Index, OpenAccounts.Count)
+        @if (Groups.IsExpanded(NavGroupState.Investments))
+        {
+            @foreach (var account in OpenAccounts)
+            {
+                var share = _investments?.ProfitShare(account.Id);
+                <MudNavLink @key="account.Id" Href="@InvestmentLinks.For(account.Id)" Icon="@Icons.Material.Outlined.ShowChart">
+                    <span class="d-flex align-center gap-2">
+                        <span>@account.Name</span>
+                        @if (share is not null)
+                        {
+                            <span class="@($"pspad-nav-profit {InvestmentText.Tone(share)}")">@InvestmentText.Percent(share)</span>
+                        }
+                    </span>
+                </MudNavLink>
+            }
+
+            <MudNavLink Icon="@Icons.Material.Outlined.Add" Class="pspad-nav-investments-import" Href="@InvestmentLinks.ForImport(null)">
+                @InvestmentStrings["ImportFromXtb"]
             </MudNavLink>
         }
     </MudNavMenu>
@@ -133,6 +166,11 @@
 
     [Inject] NavGroupState Groups { get; set; } = default!;
 
+    int _investmentsRevision = -1;
+    InvestmentOverview? _investments;
+
+    IReadOnlyList<PSPad.Module.Investments.Accounts.InvestmentAccount> OpenAccounts => _investments?.Open ?? [];
+
     IReadOnlyList<Budget> ActiveBudgets =>
         [.. BudgetOrder.For(Budgets, UserId).Where(budget => !budget.IsArchived)];
 
@@ -140,7 +178,31 @@
     {
         Counts.Changed += OnCountsChanged;
         Groups.Changed += OnCountsChanged;
+        InvestmentData.Changed += OnInvestmentsChanged;
+        Coordinator.Changed += OnSynced;
     }
+
+    protected override Task OnParametersSetAsync() => LoadInvestmentsAsync();
+
+    void OnSynced() => InvokeAsync(LoadInvestmentsAsync);
+
+    async Task LoadInvestmentsAsync()
+    {
+        if (Disabled || State.UserId == Guid.Empty || _investmentsRevision == Coordinator.Revision)
+        {
+            return;
+        }
+
+        _investmentsRevision = Coordinator.Revision;
+        _investments = await InvestmentData.FiguresAsync(State.UserId, State.Today, LocalToday.Zone(State.TimeZone), CancellationToken.None);
+        StateHasChanged();
+    }
+
+    void OnInvestmentsChanged() => InvokeAsync(() =>
+    {
+        _investments = InvestmentData.Latest;
+        StateHasChanged();
+    });
 
     protected override Task OnInitializedAsync() => Groups.LoadAsync();
 
@@ -183,5 +245,7 @@
     {
         Counts.Changed -= OnCountsChanged;
         Groups.Changed -= OnCountsChanged;
+        InvestmentData.Changed -= OnInvestmentsChanged;
+        Coordinator.Changed -= OnSynced;
     }
 }

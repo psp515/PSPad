@@ -1,0 +1,32 @@
+@using PSPad.Module.Money.Values
+@using PSPad.Module.Investments.Accounts
+@inject IStringLocalizer<InvestmentImportStrings> T
+
+<MudPaper Outlined="true" Class="pa-4 mb-4 pspad-import-new-account">
+    <MudText Typo="Typo.subtitle1">@T["NewAccountTitle"]</MudText>
+    <MudText Typo="Typo.body2" Class="pspad-muted mb-2">@T["NewAccountHint", AccountNumber]</MudText>
+    <div class="d-flex flex-wrap gap-3">
+        <MudTextField T="string" Label="@T["AccountName"]" Value="@Name" ValueChanged="@NameChanged" MaxLength="@InvestmentAccount.MaxNameLength"
+                      Required="true" Immediate="true" Class="pspad-import-account-name" />
+        <MudSelect T="string" Label="@T["AccountCurrency"]" Value="@Currency" ValueChanged="@CurrencyChanged" Required="true"
+                   Class="pspad-import-account-currency" Style="max-width: 10rem">
+            @foreach (var option in Currencies.All)
+            {
+                <MudSelectItem T="string" Value="@option">@option</MudSelectItem>
+            }
+        </MudSelect>
+    </div>
+    <MudText Typo="Typo.caption" Class="pspad-muted">@T["CurrencyHint"]</MudText>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string AccountNumber { get; set; } = "";
+
+    [Parameter] public string Name { get; set; } = "";
+
+    [Parameter] public EventCallback<string> NameChanged { get; set; }
+
+    [Parameter] public string? Currency { get; set; }
+
+    [Parameter] public EventCallback<string?> CurrencyChanged { get; set; }
+}

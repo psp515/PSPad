@@ -4,6 +4,9 @@ using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Sync;
 using PSPad.Contracts;
+using PSPad.Module.Investments.Accounts;
+using PSPad.Module.Investments.Operations;
+using PSPad.Module.Investments.Portfolio;
 using PSPad.Module.Money;
 using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Budgets;
@@ -309,6 +312,40 @@ public class SyncServiceTests
         Assert.Equal(new Money(12.5m, "EUR", 4.2512m, day), stored!.Money);
         Assert.Equal(53.14m, stored.Money.InPln);
         Assert.Equal("Hobby", stored.Category);
+    }
+
+    [Fact]
+    public async Task PulledInvestmentsLandInTheReplica()
+    {
+        var replica = new InMemoryReplica();
+        var at = new DateTimeOffset(2026, 10, 1, 14, 30, 0, TimeSpan.Zero);
+        var create = new CreateInvestmentAccount(Guid.NewGuid(), User, Guid.NewGuid(), "IKE", "USD", Broker.Xtb, null);
+        var account = new InvestmentAccount();
+        account.ApplyAll(InvestmentAccount.Decide(null, create, at));
+        var portfolio = new InvestmentPortfolio();
+        portfolio.ApplyAll(InvestmentPortfolio.Decide(null, create, at));
+        var operation = new InvestmentOperation();
+        operation.ApplyAll(InvestmentOperation.Decide(null, account, new RecordInvestmentOperation(Guid.NewGuid(), User,
+            Guid.NewGuid(), account.Id, OperationKind.Buy, at, "ABC.US", 2m, 50m,
+            new Money(100m, "USD", 3.7m, new DateOnly(2026, 10, 1)), null, OperationSource.Manual, null, null), at));
+        var wire = new JsonSerializerOptions(JsonSerializerDefaults.Web) { IncludeFields = true };
+        var api = new FakeApi
+        {
+            Pull = new(5, new Dictionary<string, JsonElement[]>
+            {
+                ["investmentportfolios"] = [JsonSerializer.SerializeToElement(portfolio, wire)],
+                ["investmentaccounts"] = [JsonSerializer.SerializeToElement(account, wire)],
+                ["investmentoperations"] = [JsonSerializer.SerializeToElement(operation, wire)]
+            })
+        };
+
+        await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.Equal([account.Id], (await replica.LoadAsync<InvestmentPortfolio>(portfolio.Id))!.AccountIds);
+        Assert.Equal("USD", (await replica.LoadAsync<InvestmentAccount>(account.Id))!.Currency);
+        var stored = await replica.LoadAsync<InvestmentOperation>(operation.Id);
+        Assert.Equal(account.Id, stored!.AccountId);
+        Assert.Equal(-100m, stored.SignedAmount);
     }
 
     [Fact]

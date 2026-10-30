@@ -1,6 +1,6 @@
 # End-to-end tests
 
-36 Playwright scenarios that drive the real application in Chromium against the
+37 Playwright scenarios that drive the real application in Chromium against the
 Docker Compose stack. Design: `specs/e2e-testing-design.md`.
 
 ## Run

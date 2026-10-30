@@ -801,4 +801,67 @@
   <data name="ImportRateMissing" xml:space="preserve">
     <value>No NBP rate for {0} on {1}.</value>
   </data>
+  <data name="AddFromInvestments" xml:space="preserve">
+    <value>Add from investments</value>
+  </data>
+  <data name="RefreshFromInvestments" xml:space="preserve">
+    <value>Refresh from investments</value>
+  </data>
+  <data name="LinkIntro" xml:space="preserve">
+    <value>Each account becomes one Investment holding in {0}, valued at the closing prices of the day you pick.</value>
+  </data>
+  <data name="LinkValueOn" xml:space="preserve">
+    <value>Value on</value>
+  </data>
+  <data name="LinkUpdatingPrices" xml:space="preserve">
+    <value>Updating prices…</value>
+  </data>
+  <data name="LinkNoAccounts" xml:space="preserve">
+    <value>No investment accounts to add.</value>
+  </data>
+  <data name="LinkAdd" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="LinkUpdate" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="LinkNothingToAdd" xml:space="preserve">
+    <value>Nothing to add</value>
+  </data>
+  <data name="LinkNoPrice" xml:space="preserve">
+    <value>No price</value>
+  </data>
+  <data name="LinkPricesFrom" xml:space="preserve">
+    <value>Prices from {0}</value>
+  </data>
+  <data name="LinkTotal" xml:space="preserve">
+    <value>In PLN</value>
+  </data>
+  <data name="LinkHint" xml:space="preserve">
+    <value>Holdings stay linked to their account, so Refresh from investments can value them again on another day. Edited amounts are kept until you refresh.</value>
+  </data>
+  <data name="LinkConfirmAdd" xml:space="preserve">
+    <value>Add holdings</value>
+  </data>
+  <data name="LinkConfirmRefresh" xml:space="preserve">
+    <value>Refresh holdings</value>
+  </data>
+  <data name="LinkFailed" xml:space="preserve">
+    <value>Couldn't update from investments.</value>
+  </data>
+  <data name="LinkedToInvestments" xml:space="preserve">
+    <value>Linked to an investment account</value>
+  </data>
+  <data name="OpenAccount" xml:space="preserve">
+    <value>Open account</value>
+  </data>
+  <data name="Unlink" xml:space="preserve">
+    <value>Unlink</value>
+  </data>
+  <data name="UnlinkFailed" xml:space="preserve">
+    <value>Couldn't unlink the holding.</value>
+  </data>
+  <data name="LinkedAccountOptions" xml:space="preserve">
+    <value>Linked account options</value>
+  </data>
 </root>

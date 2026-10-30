@@ -28,7 +28,7 @@ public sealed class ApiFactory(
                 ["Mongo:Database"] = "pspad_test"
             };
 
-            foreach (var policy in new[] { "Api", "Commands", "Sync", "Statistics" })
+            foreach (var policy in new[] { "Api", "Commands", "Sync", "Statistics", "Quotes" })
             {
                 settings[$"RateLimits:{policy}:TokenLimit"] = "100000";
             }

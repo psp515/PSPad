@@ -9,6 +9,9 @@ using PSPad.Api.Tests.Persistence;
 using PSPad.Api.Tests.Sync;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Investments.Accounts;
+using PSPad.Module.Investments.Instruments;
+using PSPad.Module.Investments.Operations;
 using PSPad.Module.Money;
 using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Budgets;
@@ -92,7 +95,7 @@ public class AccountEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
-    public async Task DeletingTheAccountRemovesItsMoneyDocuments()
+    public async Task DeletingTheAccountRemovesItsMoneyAndInvestmentDocuments()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;
         await using var factory = new ApiFactory(fixture, new FakeKeycloakAdminClient(succeeds: true));
@@ -100,17 +103,27 @@ public class AccountEndpointTests(MongoFixture fixture)
         var userId = await Sharing.SignInAsync(client, ct);
         var budgetId = Guid.NewGuid();
         var day = new DateOnly(2026, 10, 9);
+        var investmentAccountId = Guid.NewGuid();
 
         await Sharing.SendAsync(client, ct,
             new CreateBudget(Guid.NewGuid(), userId, budgetId, "Personal"),
             new SetDefaultCurrency(Guid.NewGuid(), userId, "EUR"),
             new RecordExpense(Guid.NewGuid(), userId, Guid.NewGuid(), budgetId, "Rolls", "Food",
                 new Money(3m, "PLN", 1m, day), day, null),
-            new StartBalanceMonth(Guid.NewGuid(), userId, budgetId, new YearMonth(2026, 10)));
+            new StartBalanceMonth(Guid.NewGuid(), userId, budgetId, new YearMonth(2026, 10)),
+            new CreateInvestmentAccount(Guid.NewGuid(), userId, investmentAccountId, "IKE", "PLN", Broker.Xtb, null),
+            new EnsureInstrument(Guid.NewGuid(), userId, "PQR.PL", "Pqr SA"),
+            new RecordInvestmentOperation(Guid.NewGuid(), userId, Guid.NewGuid(), investmentAccountId,
+                OperationKind.Deposit, new DateTimeOffset(day, TimeOnly.MinValue, TimeSpan.Zero), null, null, null,
+                new Money(500m, "PLN", 1m, day), null, OperationSource.Manual, null, null));
 
         var context = Persistence.TestContext.For(fixture);
         var owned = Builders<BsonDocument>.Filter.Eq("userId", userId);
-        string[] collections = ["budgets", "moneypreferences", "moneyentries", "balancesnapshots"];
+        string[] collections =
+        [
+            "budgets", "moneypreferences", "moneyentries", "balancesnapshots",
+            "investmentportfolios", "investmentaccounts", "investmentoperations", "instruments"
+        ];
         foreach (var name in collections)
         {
             Assert.Equal(1, await context.Collection<BsonDocument>(name).Find(owned).CountDocumentsAsync(ct));

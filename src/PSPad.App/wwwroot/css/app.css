@@ -2314,10 +2314,6 @@ button.pspad-heatmap-cell:focus-visible {
     cursor: pointer;
 }
 
-.pspad-holding-row + .pspad-holding-row {
-    border-top: 1px solid var(--mud-palette-lines-default);
-}
-
 .pspad-holding-row:hover,
 .pspad-holding-row:focus-visible {
     background-color: var(--mud-palette-action-default-hover);
@@ -2752,4 +2748,180 @@ button.pspad-heatmap-cell:focus-visible {
     .pspad-row-ledger > .pspad-day-item:last-child::after {
         display: none;
     }
+}
+
+.pspad-holding-row-wrap {
+    position: relative;
+}
+
+.pspad-holding-row-wrap + .pspad-holding-row-wrap {
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+.pspad-holding-row-wrap > .pspad-holding-link-menu {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+}
+
+.pspad-holding-link {
+    font-size: 0.9rem;
+    vertical-align: text-bottom;
+    margin-inline-end: 2px;
+}
+
+.pspad-link-accounts > .pspad-link-account + .pspad-link-account {
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+.pspad-holding-row-menu {
+    padding-right: 44px;
+}
+
+.pspad-gain {
+    color: var(--mud-palette-success);
+}
+
+.pspad-loss {
+    color: var(--mud-palette-error);
+}
+
+.pspad-stale {
+    color: var(--mud-palette-warning);
+}
+
+.pspad-investment-chip {
+    height: auto;
+    min-height: 40px;
+    padding: 4px 14px;
+    border-radius: 999px;
+}
+
+.pspad-investment-chip-name {
+    font-weight: 500;
+}
+
+.pspad-investment-chip-share {
+    font-size: 0.6875rem;
+    opacity: 0.85;
+}
+
+.pspad-investment-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.pspad-position + .pspad-position {
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+.pspad-position-price,
+.pspad-position-profit {
+    align-items: flex-end;
+}
+
+.pspad-position-share {
+    font-size: 0.75rem;
+}
+
+.pspad-position-open .pspad-position-row {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.pspad-position-lots td,
+.pspad-position-lots th {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.pspad-position-lots {
+    overflow-x: auto;
+    background: transparent;
+}
+
+.pspad-price-chart-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.pspad-price-chart-axis text {
+    font-size: 11px;
+    fill: var(--mud-palette-text-secondary);
+}
+
+.pspad-price-chart-grid {
+    stroke: var(--mud-palette-lines-default);
+    stroke-width: 1;
+}
+
+.pspad-price-chart-line {
+    fill: none;
+    stroke: var(--mud-palette-primary);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+}
+
+.pspad-price-chart-area {
+    fill: var(--mud-palette-primary);
+    opacity: 0.08;
+}
+
+.pspad-price-marker {
+    stroke: var(--mud-palette-surface);
+    stroke-width: 1.5;
+    cursor: help;
+}
+
+.pspad-price-marker-buy {
+    fill: var(--mud-palette-success);
+    background-color: var(--mud-palette-success);
+}
+
+.pspad-price-marker-sell {
+    fill: var(--mud-palette-error);
+    background-color: var(--mud-palette-error);
+}
+
+.pspad-price-marker-dividend {
+    fill: var(--mud-palette-info);
+    background-color: var(--mud-palette-info);
+}
+
+.pspad-price-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.pspad-price-chart-legend {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-operation-deleted .pspad-entry-name,
+.pspad-operation-deleted .pspad-entry-amount {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.pspad-nav-profit {
+    font-size: 0.75rem;
+}
+
+@media (min-width: 960px) {
+    .pspad-investment-views {
+        max-width: 560px;
+    }
+}
+
+.pspad-account-card-text {
+    min-width: 0;
+}
+
+.pspad-import-rows .mud-table-container {
+    max-height: 60vh;
+    overflow-y: auto;
 }

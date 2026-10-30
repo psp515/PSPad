@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="InvestmentsTitle" xml:space="preserve">
+    <value>Investments</value>
+  </data>
+  <data name="CollapseInvestments" xml:space="preserve">
+    <value>Collapse investments</value>
+  </data>
+  <data name="ExpandInvestments" xml:space="preserve">
+    <value>Expand investments</value>
+  </data>
+  <data name="ImportFromXtb" xml:space="preserve">
+    <value>Import from XTB</value>
+  </data>
+  <data name="Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Accounts" xml:space="preserve">
+    <value>Accounts</value>
+  </data>
+  <data name="AccountArchived" xml:space="preserve">
+    <value>This account is archived. Restore it on the Accounts tab to change it.</value>
+  </data>
+  <data name="AccountMissing" xml:space="preserve">
+    <value>This account does not exist.</value>
+  </data>
+  <data name="AccountNumber" xml:space="preserve">
+    <value>Account {0}</value>
+  </data>
+  <data name="AddAccount" xml:space="preserve">
+    <value>Add account</value>
+  </data>
+  <data name="AddOperation" xml:space="preserve">
+    <value>Add operation</value>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="AllAccounts" xml:space="preserve">
+    <value>All accounts</value>
+  </data>
+  <data name="Archive" xml:space="preserve">
+    <value>Archive</value>
+  </data>
+  <data name="Archived" xml:space="preserve">
+    <value>Archived</value>
+  </data>
+  <data name="AverageShort" xml:space="preserve">
+    <value>avg {0}</value>
+  </data>
+  <data name="Broker" xml:space="preserve">
+    <value>Broker</value>
+  </data>
+  <data name="BrokerXtb" xml:space="preserve">
+    <value>XTB</value>
+  </data>
+  <data name="BrokerOther" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="BrokerAccountNumber" xml:space="preserve">
+    <value>Broker account number</value>
+  </data>
+  <data name="Cash" xml:space="preserve">
+    <value>Cash</value>
+  </data>
+  <data name="CashIs" xml:space="preserve">
+    <value>cash {0}</value>
+  </data>
+  <data name="ChangeSymbol" xml:space="preserve">
+    <value>Change symbol</value>
+  </data>
+  <data name="ClosedPositions" xml:space="preserve">
+    <value>Closed positions</value>
+  </data>
+  <data name="Cost" xml:space="preserve">
+    <value>Cost</value>
+  </data>
+  <data name="Currency" xml:space="preserve">
+    <value>Currency</value>
+  </data>
+  <data name="CurrencyDifference" xml:space="preserve">
+    <value>Currency difference</value>
+  </data>
+  <data name="CurrencyFixed" xml:space="preserve">
+    <value>Cannot be changed later</value>
+  </data>
+  <data name="Day" xml:space="preserve">
+    <value>Day</value>
+  </data>
+  <data name="Deleted" xml:space="preserve">
+    <value>deleted</value>
+  </data>
+  <data name="Fees" xml:space="preserve">
+    <value>Fees</value>
+  </data>
+  <data name="FixSymbol" xml:space="preserve">
+    <value>Fix symbol</value>
+  </data>
+  <data name="FixSymbolHint" xml:space="preserve">
+    <value>Prices for {0} come from Yahoo Finance. Enter the symbol Yahoo uses for it.</value>
+  </data>
+  <data name="Imported" xml:space="preserve">
+    <value>imported</value>
+  </data>
+  <data name="Instrument" xml:space="preserve">
+    <value>Instrument</value>
+  </data>
+  <data name="InstrumentName" xml:space="preserve">
+    <value>Instrument name</value>
+  </data>
+  <data name="InstrumentsCount.One" xml:space="preserve">
+    <value>{0} instrument</value>
+  </data>
+  <data name="InstrumentsCount.Few" xml:space="preserve">
+    <value>{0} instruments</value>
+  </data>
+  <data name="InstrumentsCount.Many" xml:space="preserve">
+    <value>{0} instruments</value>
+  </data>
+  <data name="Kind" xml:space="preserve">
+    <value>Kind</value>
+  </data>
+  <data name="KindDeposit" xml:space="preserve">
+    <value>Deposit</value>
+  </data>
+  <data name="KindWithdrawal" xml:space="preserve">
+    <value>Withdrawal</value>
+  </data>
+  <data name="KindBuy" xml:space="preserve">
+    <value>Buy</value>
+  </data>
+  <data name="KindSell" xml:space="preserve">
+    <value>Sell</value>
+  </data>
+  <data name="KindDividend" xml:space="preserve">
+    <value>Dividend</value>
+  </data>
+  <data name="KindTax" xml:space="preserve">
+    <value>Withholding tax</value>
+  </data>
+  <data name="KindInterest" xml:space="preserve">
+    <value>Interest</value>
+  </data>
+  <data name="KindFee" xml:space="preserve">
+    <value>Fee</value>
+  </data>
+  <data name="LotOpened" xml:space="preserve">
+    <value>Lot opened</value>
+  </data>
+  <data name="MissingRates" xml:space="preserve">
+    <value>Accounts without today's NBP rate are left out of these totals.</value>
+  </data>
+  <data name="NetDeposits" xml:space="preserve">
+    <value>Net deposits</value>
+  </data>
+  <data name="NewAccount" xml:space="preserve">
+    <value>New account</value>
+  </data>
+  <data name="NewInstrumentHint" xml:space="preserve">
+    <value>A new ticker; its prices are looked up on Yahoo Finance.</value>
+  </data>
+  <data name="NewOperation" xml:space="preserve">
+    <value>New operation</value>
+  </data>
+  <data name="NoAccountsYet" xml:space="preserve">
+    <value>No investment accounts yet. Add one or import an XTB statement.</value>
+  </data>
+  <data name="NoOpenPositions" xml:space="preserve">
+    <value>No open positions.</value>
+  </data>
+  <data name="NoPrice" xml:space="preserve">
+    <value>No price</value>
+  </data>
+  <data name="NotEnoughHistory" xml:space="preserve">
+    <value>Not enough history to draw a chart yet.</value>
+  </data>
+  <data name="Note" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="OperationDeleted" xml:space="preserve">
+    <value>This operation is deleted. Restore it to change it.</value>
+  </data>
+  <data name="OperationsCount.One" xml:space="preserve">
+    <value>{0} operation</value>
+  </data>
+  <data name="OperationsCount.Few" xml:space="preserve">
+    <value>{0} operations</value>
+  </data>
+  <data name="OperationsCount.Many" xml:space="preserve">
+    <value>{0} operations</value>
+  </data>
+  <data name="OversoldBy" xml:space="preserve">
+    <value>Oversold by {0}</value>
+  </data>
+  <data name="PassiveIncome" xml:space="preserve">
+    <value>Passive income</value>
+  </data>
+  <data name="PositionCaption" xml:space="preserve">
+    <value>Cost {0} · Value {1} · prices in {2}, last close {3}</value>
+  </data>
+  <data name="PositionCaptionNoPrice" xml:space="preserve">
+    <value>Cost {0} · valued at cost until a price is found</value>
+  </data>
+  <data name="Price" xml:space="preserve">
+    <value>Price</value>
+  </data>
+  <data name="PriceChartOf" xml:space="preserve">
+    <value>Price chart of {0}</value>
+  </data>
+  <data name="PriceSymbol" xml:space="preserve">
+    <value>Price symbol: {0} (Yahoo Finance)</value>
+  </data>
+  <data name="PriceToday" xml:space="preserve">
+    <value>Price · today</value>
+  </data>
+  <data name="PricesFrom" xml:space="preserve">
+    <value>Prices from {0}</value>
+  </data>
+  <data name="PricesStale" xml:space="preserve">
+    <value>Prices from {0} · could not refresh</value>
+  </data>
+  <data name="Profit" xml:space="preserve">
+    <value>Profit</value>
+  </data>
+  <data name="Quantity" xml:space="preserve">
+    <value>Quantity</value>
+  </data>
+  <data name="Range1Y" xml:space="preserve">
+    <value>1Y</value>
+  </data>
+  <data name="Range3M" xml:space="preserve">
+    <value>3M</value>
+  </data>
+  <data name="RangeAll" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="RealizedGains" xml:space="preserve">
+    <value>Realized gains</value>
+  </data>
+  <data name="RealizedLosses" xml:space="preserve">
+    <value>Realized losses</value>
+  </data>
+  <data name="Rename" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Restore" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="SaveAccountFailed" xml:space="preserve">
+    <value>Could not save the account.</value>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>Could not save the change.</value>
+  </data>
+  <data name="SaveOperationFailed" xml:space="preserve">
+    <value>Could not save the operation.</value>
+  </data>
+  <data name="SearchOperations" xml:space="preserve">
+    <value>Search ticker, name or note</value>
+  </data>
+  <data name="ShowArchived" xml:space="preserve">
+    <value>Show archived accounts</value>
+  </data>
+  <data name="ShowDeleted" xml:space="preserve">
+    <value>Show deleted</value>
+  </data>
+  <data name="ShowMore" xml:space="preserve">
+    <value>Show more</value>
+  </data>
+  <data name="TabAccounts" xml:space="preserve">
+    <value>Accounts</value>
+  </data>
+  <data name="TabOperations" xml:space="preserve">
+    <value>Operations</value>
+  </data>
+  <data name="TabPositions" xml:space="preserve">
+    <value>Positions</value>
+  </data>
+  <data name="Ticker" xml:space="preserve">
+    <value>Ticker</value>
+  </data>
+  <data name="Time" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="TotalProfit" xml:space="preserve">
+    <value>Total profit</value>
+  </data>
+  <data name="Unrealized" xml:space="preserve">
+    <value>Unrealized</value>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="ValueAllInPln" xml:space="preserve">
+    <value>Value · all accounts · in PLN</value>
+  </data>
+  <data name="ValueOf" xml:space="preserve">
+    <value>Value · {0}</value>
+  </data>
+  <data name="ValueOverTime" xml:space="preserve">
+    <value>Value over time</value>
+  </data>
+  <data name="VsNetDeposits" xml:space="preserve">
+    <value>vs net deposits</value>
+  </data>
+  <data name="YahooSymbol" xml:space="preserve">
+    <value>Yahoo symbol</value>
+  </data>
+</root>

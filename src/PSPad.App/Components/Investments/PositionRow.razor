@@ -1,0 +1,129 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<div class="@($"pspad-position {(_expanded ? "pspad-position-open" : "")}")">
+    <button type="button" class="pspad-holding-row pspad-position-row" aria-expanded="@(_expanded ? "true" : "false")"
+            @onclick="@(() => _expanded = !_expanded)">
+        <span class="d-flex align-center gap-3 pspad-holding-main">
+            <span class="pspad-holding-icon pspad-holding-icon-investment" aria-hidden="true">
+                <MudIcon Icon="@Icons.Material.Outlined.ShowChart" Size="Size.Small" />
+            </span>
+            <span class="d-flex flex-column pspad-holding-text">
+                <span class="pspad-holding-name pspad-position-ticker">@Position.Ticker</span>
+                <span class="pspad-holding-sub">@Name · @T["AverageShort", InvestmentText.Price(Position.AveragePrice)]</span>
+            </span>
+        </span>
+        <span class="pspad-holding-cell pspad-position-quantity">@InvestmentText.Quantity(Position.Quantity)</span>
+        <span class="pspad-holding-cell d-flex flex-column pspad-position-price">
+            <span>@(Position.LastClose is { } close ? $"{InvestmentText.Price(close)} {PriceCurrency}" : "—")</span>
+            @if (Position.PriceDay is { } priced)
+            {
+                <span class="@($"pspad-holding-sub pspad-position-price-day {(Stale ? "pspad-stale" : "")}")">@PriceDayText(priced)</span>
+            }
+        </span>
+        <span class="pspad-holding-values">
+            <span class="pspad-holding-pln pspad-position-value">@InvestmentText.Money(Position.Value, Currency)</span>
+            <span class="@($"pspad-holding-today d-flex flex-column pspad-position-profit {InvestmentText.Tone(Position.Unrealized)}")">
+                <span>@InvestmentText.Signed(Position.Unrealized)</span>
+                <span class="pspad-position-share">@InvestmentText.Percent(_text.UnrealizedShare)</span>
+            </span>
+        </span>
+    </button>
+    @if (_text.Warning is { } warning)
+    {
+        <div class="d-flex align-center flex-wrap gap-2 px-4 pb-2 pspad-position-warning">
+            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Class="ma-0">@warning</MudChip>
+            @if (_text.OffersFixSymbol)
+            {
+                <MudButton Class="pspad-fix-symbol" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                           OnClick="@(() => OnFixSymbol.InvokeAsync(Position.Ticker))">@T["FixSymbol"]</MudButton>
+            }
+        </div>
+    }
+    @if (_expanded)
+    {
+        <div class="px-4 pb-4 d-flex flex-column gap-3 pspad-position-detail">
+            <MudText Typo="Typo.caption" Class="pspad-muted">@Caption</MudText>
+            @if (History is not null)
+            {
+                <PriceChart Ticker="@Position.Ticker" History="@History" Markers="@Markers" AccountCurrency="@Currency" Today="@Today" />
+            }
+            @if (Position.Lots.Count > 0)
+            {
+                <MudSimpleTable Dense="true" Elevation="0" Class="pspad-position-lots">
+                    <thead>
+                        <tr>
+                            <th>@T["LotOpened"]</th>
+                            <th class="text-right">@T["Quantity"]</th>
+                            <th class="text-right">@T["Cost"]</th>
+                            <th class="text-right">@T["Value"]</th>
+                            <th class="text-right">@T["Profit"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var lot in Position.Lots)
+                        {
+                            var value = LotValue(lot);
+                            <tr @key="lot.Key">
+                                <td>@InvestmentText.Day(DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(lot.OpenedAt, Zone).DateTime))</td>
+                                <td class="text-right">@InvestmentText.Quantity(lot.Quantity)</td>
+                                <td class="text-right">@InvestmentText.Money(lot.Cost, Currency)</td>
+                                <td class="text-right">@InvestmentText.Money(value, Currency)</td>
+                                <td class="@($"text-right {InvestmentText.Tone(value - lot.Cost)}")">@InvestmentText.Signed(value - lot.Cost)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+            <div class="d-flex align-center flex-wrap gap-2">
+                <MudText Typo="Typo.caption" Class="pspad-muted flex-grow-1">@T["PriceSymbol", Symbol]</MudText>
+                <MudButton Class="pspad-change-symbol" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                           OnClick="@(() => OnFixSymbol.InvokeAsync(Position.Ticker))">@T["ChangeSymbol"]</MudButton>
+                <MudButton Class="pspad-position-operations" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                           OnClick="@(() => OnShowOperations.InvokeAsync(Position.Ticker))">@T["TabOperations"]</MudButton>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    bool _expanded;
+
+    [Parameter, EditorRequired] public Position Position { get; set; } = default!;
+
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+
+    [Parameter, EditorRequired] public string Symbol { get; set; } = "";
+
+    [Parameter, EditorRequired] public string Currency { get; set; } = "";
+
+    [Parameter] public PriceHistory? History { get; set; }
+
+    [Parameter] public IReadOnlyList<PriceMarker> Markers { get; set; } = [];
+
+    [Parameter] public bool Stale { get; set; }
+
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+
+    [Parameter] public TimeZoneInfo Zone { get; set; } = TimeZoneInfo.Utc;
+
+    [Parameter] public EventCallback<string> OnFixSymbol { get; set; }
+
+    [Parameter] public EventCallback<string> OnShowOperations { get; set; }
+
+    PositionText _text = new(null, false, null);
+
+    protected override void OnParametersSet() => _text = PositionText.For(Position, T);
+
+    string PriceCurrency => History?.Currency ?? "";
+
+    string PriceDayText(DateOnly day) => Stale ? T["PricesStale", InvestmentText.Day(day)] : T["PricesFrom", InvestmentText.Day(day)];
+
+    string Caption => History is null
+        ? T["PositionCaptionNoPrice", InvestmentText.Money(Position.Cost, Currency)]
+        : T["PositionCaption", InvestmentText.Money(Position.Cost, Currency), InvestmentText.Money(Position.Value, Currency),
+            History.Currency, Position.PriceDay is { } day ? InvestmentText.Day(day) : "—"];
+
+    decimal LotValue(Lot lot) => Position.Quantity == 0
+        ? lot.Cost
+        : Math.Round(Position.Value * lot.Quantity / Position.Quantity, 2, MidpointRounding.AwayFromZero);
+}

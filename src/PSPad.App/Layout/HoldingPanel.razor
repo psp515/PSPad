@@ -197,7 +197,7 @@
                 ? await Sender.SendAsync(new AddHolding(Guid.NewGuid(), State.UserId, snapshot.BudgetId, snapshot.Month,
                     Guid.NewGuid(), name, _type, money))
                 : await Sender.SendAsync(new EditHolding(Guid.NewGuid(), State.UserId, snapshot.BudgetId, snapshot.Month,
-                    _holding.HoldingId, name, _type, money));
+                    _holding.HoldingId, name, _type, money, _holding.InvestmentAccountId));
         }
         finally
         {

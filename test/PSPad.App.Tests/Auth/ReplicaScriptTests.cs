@@ -11,7 +11,15 @@ public class ReplicaScriptTests
     [Fact]
     public void ItBumpsTheDatabaseVersionForTheSessionStore()
     {
-        Assert.Contains("const VERSION = 3;", Replica);
+        Assert.Contains("const VERSION = 4;", Replica);
+    }
+
+    [Fact]
+    public void ItCreatesTheQuotesStoreAndKeepsItOutOfTheReplicaClear()
+    {
+        var clear = Replica[Replica.IndexOf("export function clearReplica", StringComparison.Ordinal)..];
+        Assert.Contains("createObjectStore('quotes'", Replica);
+        Assert.DoesNotContain("quotes", clear);
     }
 
     [Fact]

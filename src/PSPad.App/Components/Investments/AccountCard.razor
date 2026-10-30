@@ -1,0 +1,66 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
+
+<MudCard Outlined="true" Class="@($"pspad-budget-card pspad-account-card {(Account.IsArchived ? "pspad-archived" : "")}")" role="group" aria-label="@Account.Name">
+    <MudCardContent>
+        <div class="d-flex align-center gap-3">
+            <span class="pspad-holding-icon pspad-holding-icon-investment" aria-hidden="true">
+                <MudIcon Icon="@Icons.Material.Outlined.ShowChart" Size="Size.Small" />
+            </span>
+            <div class="d-flex flex-column flex-grow-1 pspad-account-card-text">
+                <MudLink Href="@InvestmentLinks.For(Account.Id)" Typo="Typo.h6" Class="pspad-budget-card-name pspad-account-card-name">@Account.Name</MudLink>
+                <MudText Typo="Typo.caption" Class="pspad-muted">@Subtitle</MudText>
+            </div>
+            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" AriaLabel="@Shared["Actions"].Value"
+                     AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="pspad-budget-card-start pspad-account-card-menu">
+                @if (!Account.IsArchived)
+                {
+                    <MudMenuItem Class="pspad-account-rename" OnClick="@OnEdit">@T["Rename"]</MudMenuItem>
+                    <MudMenuItem Class="pspad-account-import" OnClick="@OnImport">@T["ImportFromXtb"]</MudMenuItem>
+                    <MudMenuItem Class="pspad-account-archive" OnClick="@OnArchive">@T["Archive"]</MudMenuItem>
+                }
+                else
+                {
+                    <MudMenuItem Class="pspad-account-restore" OnClick="@OnRestore">@T["Restore"]</MudMenuItem>
+                }
+            </MudMenu>
+        </div>
+        @if (Account.IsArchived)
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ml-0">@T["Archived"]</MudChip>
+        }
+        <div class="d-flex flex-wrap gap-8 mt-3">
+            <MoneyFigure Class="pspad-account-card-value" Label="@T["Value"]" Text="@InvestmentText.Money(Figures?.Value ?? 0m, Account.Currency)" />
+            <MoneyFigure Class="pspad-account-card-profit" Label="@T["Profit"]" Text="@ProfitText" Negative="@(Figures?.TotalProfit < 0)" />
+        </div>
+        <MudText Typo="Typo.caption" Class="pspad-muted d-block mt-2">@Details</MudText>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public InvestmentAccount Account { get; set; } = default!;
+
+    [Parameter] public AccountFigures? Figures { get; set; }
+
+    [Parameter] public int Operations { get; set; }
+
+    [Parameter] public EventCallback OnEdit { get; set; }
+
+    [Parameter] public EventCallback OnImport { get; set; }
+
+    [Parameter] public EventCallback OnArchive { get; set; }
+
+    [Parameter] public EventCallback OnRestore { get; set; }
+
+    string Subtitle => $"{T[$"Broker{Account.Broker}"]} · {Account.Currency}";
+
+    string ProfitText => Figures is null
+        ? "—"
+        : InvestmentOverview.ShareOf(Figures.TotalProfit, Figures.NetDeposits) is { } share
+            ? $"{InvestmentText.Signed(Figures.TotalProfit)} · {InvestmentText.Percent(share)}"
+            : InvestmentText.Signed(Figures.TotalProfit);
+
+    string Details => Account.BrokerAccountNumber is { } number
+        ? $"{T["AccountNumber", number]} · {T.Plural(Operations, "OperationsCount")}"
+        : T.Plural(Operations, "OperationsCount");
+}

@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+    <data name="ImportTitle" xml:space="preserve">
+    <value>Import z XTB</value>
+  </data>
+  <data name="ImportDropHint" xml:space="preserve">
+    <value>Wybierz eksport .xlsx z XTB (do 5 MB). Plik jest czytany na tym urządzeniu.</value>
+  </data>
+  <data name="FileTooLarge" xml:space="preserve">
+    <value>Plik jest większy niż 5 MB.</value>
+  </data>
+  <data name="AccountMissing" xml:space="preserve">
+    <value>Nie znaleziono tego konta inwestycyjnego.</value>
+  </data>
+  <data name="RowNumber" xml:space="preserve">
+    <value>Wiersz {0}</value>
+  </data>
+  <data name="ErrorsTitle" xml:space="preserve">
+    <value>Wiersze z błędami ({0})</value>
+  </data>
+  <data name="ErrorsHint" xml:space="preserve">
+    <value>Te wiersze nie zostaną zaimportowane. Wprowadź je ręcznie lub zaimportuj poprawiony plik później.</value>
+  </data>
+  <data name="ErrorsOnly" xml:space="preserve">
+    <value>Tylko błędy</value>
+  </data>
+  <data name="ColRow" xml:space="preserve">
+    <value>Wiersz</value>
+  </data>
+  <data name="ColType" xml:space="preserve">
+    <value>Typ</value>
+  </data>
+  <data name="ColTime" xml:space="preserve">
+    <value>Czas (UTC)</value>
+  </data>
+  <data name="ColTicker" xml:space="preserve">
+    <value>Symbol</value>
+  </data>
+  <data name="ColAmount" xml:space="preserve">
+    <value>Kwota</value>
+  </data>
+  <data name="ColId" xml:space="preserve">
+    <value>ID</value>
+  </data>
+  <data name="ColComment" xml:space="preserve">
+    <value>Komentarz</value>
+  </data>
+  <data name="ColReason" xml:space="preserve">
+    <value>Powód</value>
+  </data>
+  <data name="ColStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="ColDetail" xml:space="preserve">
+    <value>Szczegóły</value>
+  </data>
+  <data name="StatusToImport" xml:space="preserve">
+    <value>Do importu</value>
+  </data>
+  <data name="StatusAlready" xml:space="preserve">
+    <value>Już zaimportowane</value>
+  </data>
+  <data name="StatusDeleted" xml:space="preserve">
+    <value>Usunięte wcześniej</value>
+  </data>
+  <data name="StatusError" xml:space="preserve">
+    <value>Błąd</value>
+  </data>
+  <data name="StatusWaiting" xml:space="preserve">
+    <value>Czeka na kurs</value>
+  </data>
+  <data name="ChipToImport" xml:space="preserve">
+    <value>Do importu · {0}</value>
+  </data>
+  <data name="ChipAlready" xml:space="preserve">
+    <value>Już zaimportowane · {0}</value>
+  </data>
+  <data name="ChipDeleted" xml:space="preserve">
+    <value>Usunięte wcześniej · {0}</value>
+  </data>
+  <data name="ChipErrors" xml:space="preserve">
+    <value>Błędy · {0}</value>
+  </data>
+  <data name="ChipWaiting" xml:space="preserve">
+    <value>Czeka na kurs · {0}</value>
+  </data>
+  <data name="ChipNewInstruments" xml:space="preserve">
+    <value>Nowe instrumenty · {0}</value>
+  </data>
+  <data name="KindBuy" xml:space="preserve">
+    <value>Zakup</value>
+  </data>
+  <data name="KindSell" xml:space="preserve">
+    <value>Sprzedaż</value>
+  </data>
+  <data name="KindDeposit" xml:space="preserve">
+    <value>Wpłata</value>
+  </data>
+  <data name="KindWithdrawal" xml:space="preserve">
+    <value>Wypłata</value>
+  </data>
+  <data name="KindDividend" xml:space="preserve">
+    <value>Dywidenda</value>
+  </data>
+  <data name="KindTax" xml:space="preserve">
+    <value>Podatek</value>
+  </data>
+  <data name="KindInterest" xml:space="preserve">
+    <value>Odsetki</value>
+  </data>
+  <data name="KindFee" xml:space="preserve">
+    <value>Opłata</value>
+  </data>
+  <data name="TradeDetail" xml:space="preserve">
+    <value>{0} @ {1}</value>
+  </data>
+  <data name="ClosesPosition" xml:space="preserve">
+    <value>zamyka pozycję {0}</value>
+  </data>
+  <data name="TickRow" xml:space="preserve">
+    <value>Importuj wiersz {0}</value>
+  </data>
+  <data name="NewAccountTitle" xml:space="preserve">
+    <value>Nowe konto</value>
+  </data>
+  <data name="NewAccountHint" xml:space="preserve">
+    <value>Żadne konto nie ma jeszcze numeru {0}.</value>
+  </data>
+  <data name="AccountName" xml:space="preserve">
+    <value>Nazwa</value>
+  </data>
+  <data name="AccountCurrency" xml:space="preserve">
+    <value>Waluta</value>
+  </data>
+  <data name="CurrencyHint" xml:space="preserve">
+    <value>Plik nie podaje waluty konta. Wstępnie wybrano Twoją walutę domyślną; zmień ją, jeśli konto jest w innej.</value>
+  </data>
+  <data name="NewInstruments" xml:space="preserve">
+    <value>Nowe instrumenty</value>
+  </data>
+  <data name="OpenPositionsMatch" xml:space="preserve">
+    <value>Otwarte pozycje zgadzają się z plikiem</value>
+  </data>
+  <data name="OpenPositionsDiffer" xml:space="preserve">
+    <value>Otwarte pozycje różnią się od pliku</value>
+  </data>
+  <data name="DifferenceLine" xml:space="preserve">
+    <value>{0} ({1}): plik {2}, zaimportowano {3}</value>
+  </data>
+  <data name="RatesLoading" xml:space="preserve">
+    <value>Pobieranie kursów NBP</value>
+  </data>
+  <data name="NoRateConnection" xml:space="preserve">
+    <value>Brak połączenia dla kursów NBP</value>
+  </data>
+  <data name="RatesMissing" xml:space="preserve">
+    <value>Brakuje kursów NBP dla niektórych dni.</value>
+  </data>
+  <data name="RetryRates" xml:space="preserve">
+    <value>Spróbuj ponownie</value>
+  </data>
+  <data name="ChooseAnother" xml:space="preserve">
+    <value>Wybierz inny plik</value>
+  </data>
+  <data name="FileSummary" xml:space="preserve">
+    <value>Konto {0} · wierszy: {1}</value>
+  </data>
+  <data name="ImportOperations.One" xml:space="preserve">
+    <value>Importuj {0} operację</value>
+  </data>
+  <data name="ImportOperations.Few" xml:space="preserve">
+    <value>Importuj {0} operacje</value>
+  </data>
+  <data name="ImportOperations.Many" xml:space="preserve">
+    <value>Importuj {0} operacji</value>
+  </data>
+  <data name="CreateAndImport.One" xml:space="preserve">
+    <value>Utwórz konto i zaimportuj {0} operację</value>
+  </data>
+  <data name="CreateAndImport.Few" xml:space="preserve">
+    <value>Utwórz konto i zaimportuj {0} operacje</value>
+  </data>
+  <data name="CreateAndImport.Many" xml:space="preserve">
+    <value>Utwórz konto i zaimportuj {0} operacji</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Anuluj</value>
+  </data>
+  <data name="ImportedSummary" xml:space="preserve">
+    <value>Zaimportowano poleceń: {0}.</value>
+  </data>
+  <data name="NotImported" xml:space="preserve">
+    <value>Te nie zostały przyjęte:</value>
+  </data>
+  <data name="OpenAccount" xml:space="preserve">
+    <value>Otwórz konto</value>
+  </data>
+  <data name="LeaveImport" xml:space="preserve">
+    <value>Opuścić import?</value>
+  </data>
+  <data name="LeaveImportMessage" xml:space="preserve">
+    <value>Plik nie został jeszcze zaimportowany.</value>
+  </data>
+  <data name="ImportRunningMessage" xml:space="preserve">
+    <value>Import jeszcze trwa.</value>
+  </data>
+  <data name="Leave" xml:space="preserve">
+    <value>Opuść</value>
+  </data>
+</root>

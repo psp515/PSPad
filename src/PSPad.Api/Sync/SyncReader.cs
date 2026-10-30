@@ -5,6 +5,10 @@ using PSPad.Abstractions;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Identity;
+using PSPad.Module.Investments.Accounts;
+using PSPad.Module.Investments.Instruments;
+using PSPad.Module.Investments.Operations;
+using PSPad.Module.Investments.Portfolio;
 using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Entries;
@@ -119,7 +123,11 @@ public sealed class SyncReader(MongoContext context)
             await Read("balancesnapshots",
                 Owned<BalanceSnapshot>(userId) |
                 Builders<BalanceSnapshot>.Filter.In(snapshot => snapshot.BudgetId, memberBudgetIds),
-                WholeOrNone(Builders<BalanceSnapshot>.Filter.In(snapshot => snapshot.BudgetId, wholeBudgets), wholeBudgets))
+                WholeOrNone(Builders<BalanceSnapshot>.Filter.In(snapshot => snapshot.BudgetId, wholeBudgets), wholeBudgets)),
+            await Read("investmentportfolios", Owned<InvestmentPortfolio>(userId)),
+            await Read("investmentaccounts", Owned<InvestmentAccount>(userId)),
+            await Read("investmentoperations", Owned<InvestmentOperation>(userId)),
+            await Read("instruments", Owned<Instrument>(userId))
         };
 
         // A full source stops at its own last seq; every source is cut there so no row past it is skipped.

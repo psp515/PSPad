@@ -1,0 +1,38 @@
+@using PSPad.App.State
+@using PSPad.App.State.Investments
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<nav class="d-flex flex-wrap gap-1 mb-3 pspad-investment-chips" aria-label="@T["Accounts"].Value">
+    @Chip(null, T["AllAccounts"], Overview.PortfolioProfitShare)
+    @foreach (var account in Overview.Open)
+    {
+        @Chip(account.Id, account.Name, Overview.ProfitShare(account.Id))
+    }
+</nav>
+
+@code {
+    static readonly Dictionary<string, object> CurrentPage = new() { ["aria-current"] = "page" };
+    static readonly Dictionary<string, object> NoAttributes = [];
+
+    [Parameter, EditorRequired] public InvestmentOverview Overview { get; set; } = default!;
+
+    [Parameter] public Guid? Selected { get; set; }
+
+    [Parameter] public int Tab { get; set; }
+
+    RenderFragment Chip(Guid? accountId, string name, decimal? share)
+    {
+        var current = accountId == Selected;
+        return @<MudChip @key="@(accountId ?? Guid.Empty)" T="string" Href="@InvestmentLinks.For(accountId, Tab)"
+                         Color="@(current ? Color.Primary : Color.Default)" Variant="@(current ? Variant.Filled : Variant.Text)"
+                         Class="ma-0 pspad-investment-chip" UserAttributes="@(current ? CurrentPage : NoAttributes)">
+            <span class="d-flex flex-column align-center">
+                <span class="pspad-investment-chip-name">@name</span>
+                <span class="@ShareClass(share, current)">@InvestmentText.Percent(share)</span>
+            </span>
+        </MudChip>;
+    }
+
+    static string ShareClass(decimal? share, bool current) =>
+        "pspad-investment-chip-share" + (current ? "" : " " + InvestmentText.Tone(share));
+}
