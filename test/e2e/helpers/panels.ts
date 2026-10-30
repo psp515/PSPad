@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { escapeRegExp } from './text';
 
 const closeName = /^(Close|Zamknij)$/;
@@ -46,26 +46,43 @@ function fabMenu(page: Page, item?: string) {
   return item ? menus.filter({ has: page.getByRole('menuitem', { name: item, exact: true }) }) : menus;
 }
 
-function clickable(item: import('@playwright/test').Locator) {
-  return item.click({ trial: true, timeout: 200 }).then(() => true, () => false);
+// MudFabMenu keeps shut items in the DOM at opacity 0 (Playwright still calls them visible); only their pointer events say whether the menu is open.
+function menuIsOpen(item: Locator) {
+  return item.evaluate(element => getComputedStyle(element).pointerEvents !== 'none');
+}
+
+function opensWithin(item: Locator, timeout: number) {
+  return expect.poll(() => menuIsOpen(item), { timeout, intervals: [50] }).toBe(true).then(() => true, () => false);
+}
+
+function settled(item: Locator) {
+  return item.evaluate(element => getComputedStyle(element).opacity === '1');
 }
 
 export async function openFabAction(page: Page, name: string) {
-  await openFab(page, name);
   const item = fabMenu(page, name).getByRole('menuitem', { name, exact: true });
+  await openFab(page, name);
+  await expect.poll(() => settled(item), { intervals: [50] }).toBe(true);
+  await item.hover({ force: true });
   await item.click();
-  await expect.poll(() => clickable(item)).toBe(false);
+  await expect.poll(() => menuIsOpen(item), { intervals: [50] }).toBe(false);
 }
 
 export async function openFab(page: Page, item?: string) {
   await awaitNoDrawer(page);
   const fab = fabMenu(page, item);
   const items = fab.getByRole('menuitem');
+  const toggle = fab.getByRole('button');
   await expect(async () => {
-    if (!(await clickable(items.first()))) {
-      await fab.getByRole('button').click({ timeout: 2_000 });
+    if (await menuIsOpen(items.first())) {
+      return;
     }
-    expect(await clickable(items.first())).toBe(true);
+    await toggle.hover({ timeout: 2_000 });
+    if (await opensWithin(items.first(), 2_000)) {
+      return;
+    }
+    await toggle.click({ timeout: 2_000 });
+    expect(await opensWithin(items.first(), 2_000)).toBe(true);
   }).toPass({ timeout: 30_000 });
   return items;
 }

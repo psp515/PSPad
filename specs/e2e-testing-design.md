@@ -716,8 +716,10 @@ UI test-driven work starts with the failing end-to-end step; pages, layout and c
 - **Closing drawers and fading menus.** A panel's overlay lingers while it
   closes and the FAB menu's items are transparent with pointer events off
   while it is shut, so the helpers wait for the panel's Close button to be
-  gone (Playwright's click then waits out the fading overlay) and for a FAB
-  item to take a 200 ms trial click (MudFabMenu exposes no open state to
-  reach), instead of visibility. A MudBlazor select's
+  gone (Playwright's click then waits out the fading overlay). MudFabMenu
+  exposes no open state and opens on hover, so a click (which hovers first)
+  toggles it straight shut; `openFab` reads the items' pointer events (none
+  while shut), hovers the FAB, and clicks it only if the menu stayed shut
+  for two seconds, so an open menu is never toggled closed. A MudBlazor select's
   popover also lingers while it closes, so a helper waits for no `option`
   before opening the next.
