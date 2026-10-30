@@ -917,9 +917,11 @@ Refusals that point at probing are logged at `Warning` through `SecurityLog`
 |----------|-------------|--------|
 | 4001 | `/api/commands` refuses an envelope: unknown type, malformed payload, another user's id, server-only command, no handler | command type (cut to 100 chars), caller's user id, reason |
 | 4002 | JWT bearer rejects a token | path, exception type |
-| 4003 | JWT bearer forbids a request | subject, path |
 | 4004 | `/api/lists/join` or `/api/budgets/join` gets a wrong invite code | caller's user id, `list` or `budget`, its id |
 | 4005 | any rate limiter answers `429` | subject or `anonymous`, path |
+
+Event id 4003 (a forbidden request) is retired: no endpoint authorizes beyond
+"signed in", so nothing can be forbidden.
 
 Payloads, tokens, invite codes and exception messages are never logged.
 
