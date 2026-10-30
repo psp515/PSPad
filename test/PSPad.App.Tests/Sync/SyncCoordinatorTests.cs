@@ -18,6 +18,7 @@ using PSPad.App.Sync;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
+using PSPad.App.Tests.State;
 
 namespace PSPad.App.Tests.Sync;
 

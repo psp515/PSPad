@@ -1,6 +1,7 @@
 using PSPad.Abstractions;
+using PSPad.App.State.Replica;
 
-namespace PSPad.App.State.Replica;
+namespace PSPad.App.Tests.State;
 
 public sealed class InMemoryReplica : IReplica
 {

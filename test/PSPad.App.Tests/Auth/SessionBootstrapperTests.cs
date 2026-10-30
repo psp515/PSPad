@@ -2,6 +2,7 @@ using PSPad.Abstractions;
 using PSPad.App.Auth;
 using PSPad.App.State.Replica;
 using PSPad.TestInfrastructure;
+using PSPad.App.Tests.State;
 
 namespace PSPad.App.Tests.Auth;
 
