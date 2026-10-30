@@ -324,6 +324,18 @@
   <data name="OpenTasks.Many" xml:space="preserve">
     <value>{0} open tasks</value>
   </data>
+  <data name="ItemCount.Zero" xml:space="preserve">
+    <value>no items</value>
+  </data>
+  <data name="ItemCount.One" xml:space="preserve">
+    <value>{0} item</value>
+  </data>
+  <data name="ItemCount.Few" xml:space="preserve">
+    <value>{0} items</value>
+  </data>
+  <data name="ItemCount.Many" xml:space="preserve">
+    <value>{0} items</value>
+  </data>
   <data name="UnitDays.One" xml:space="preserve">
     <value>day</value>
   </data>

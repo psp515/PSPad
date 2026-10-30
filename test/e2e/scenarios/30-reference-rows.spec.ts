@@ -53,7 +53,7 @@ test('reference items show as rows with their labels as chips, on the board and 
     await closePanel(page);
   });
 
-  await test.step.skip('BUG: a reference card counts its items as "open tasks" (reported in PR #225)', async () => {
+  await test.step('a reference card counts its items, not open tasks', async () => {
     await expect(listCard(page, recipes)).toContainText('7 items');
     await expect(listCard(page, recipes)).not.toContainText('open tasks');
   });

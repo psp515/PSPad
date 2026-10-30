@@ -44,7 +44,7 @@
             var done = IsDone(task);
             <div @key="block.Entry.TaskId" class="@BlockClass(block, done)" style="@BlockStyle(block)"
                  title="@($"{task.Name} – {TaskTimeText.Describe(block.Entry.Time!)}")">
-                <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))"
+                <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))" ReadOnly="@(!TaskTick.Toggles(task, Day))"
                              Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
                              UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" aria-label="@task.Name" />
                 <div class="pspad-timeline-task-body" @onclick="@(() => OnOpen.InvokeAsync(task))">
@@ -66,7 +66,7 @@
                     var task = Tasks[entry.TaskId];
                     var done = IsDone(task);
                     <div @key="entry.TaskId" class="pspad-timeline-group-line">
-                        <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))"
+                        <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))" ReadOnly="@(!TaskTick.Toggles(task, Day))"
                                      Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
                                      UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" aria-label="@task.Name" />
                         <div class="pspad-timeline-task-body" @onclick="@(() => OnOpen.InvokeAsync(task))">
