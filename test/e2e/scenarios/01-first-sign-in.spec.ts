@@ -3,7 +3,7 @@ import { expect, test } from '../fixtures/accounts';
 import { anotherDevice, idOf } from '../helpers/api';
 import { createBudgetOn } from '../helpers/budgets';
 import { captureFromAnotherDevice, goToInbox } from '../helpers/inbox';
-import { openInApp } from '../helpers/nav';
+import { goTo, openInApp } from '../helpers/nav';
 import { closePanel, panel } from '../helpers/panels';
 import { answerAccountDeletionOnce, confirmAccountDeletion, deleteAccountDialog, keycloakLogIn } from '../helpers/settings';
 import {
@@ -233,6 +233,15 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     await expect(password).toHaveAttribute('target', '_blank');
   });
 
+  const keptStatistics = () => page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('pspad.statistics.')));
+
+  await test.step('the statistics the account opened stay on this device', async () => {
+    await goTo(page, 'Statistics');
+    await expect.poll(keptStatistics).not.toEqual([]);
+    await goTo(page, 'Settings');
+    await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  });
+
   await test.step('deleting the account asks for the email and a fresh sign-in', async () => {
     const dialog = await deleteAccountDialog(page);
     const remove = dialog.getByRole('button', { name: 'Delete account' });
@@ -279,9 +288,10 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     await expect(page).toHaveURL(/\/welcome/);
   });
 
-  await test.step('after deleting the account Welcome carries no return address', async () => {
+  await test.step('after deleting the account Welcome carries no return address, and none of its statistics stay on this device', async () => {
     await expect(page).toHaveURL(/\/welcome$/);
     await expect(page.getByRole('link', { name: 'Log in' })).not.toHaveAttribute('href', /returnUrl/);
+    expect(await keptStatistics()).toEqual([]);
   });
 
   await test.step('the deleted account can no longer log in', async () => {

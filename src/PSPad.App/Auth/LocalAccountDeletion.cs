@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
+using PSPad.App.Statistics;
 
 namespace PSPad.App.Auth;
 
@@ -8,6 +10,8 @@ public sealed class LocalAccountDeletion(
     ILocalSessionStore sessions,
     IReplica replica,
     IOutbox outbox,
+    StatisticsCache statistics,
+    ISnapshotCache snapshots,
     LocalAuthenticationStateProvider authenticationState,
     ILogger<LocalAccountDeletion> logger)
 {
@@ -37,6 +41,24 @@ public sealed class LocalAccountDeletion(
         catch (Exception exception)
         {
             logger.LogWarning("Outbox clear on account deletion failed: {Reason}", exception.Message);
+        }
+
+        try
+        {
+            await statistics.ClearAsync();
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning("Statistics cache clear on account deletion failed: {Reason}", exception.Message);
+        }
+
+        try
+        {
+            await snapshots.ClearAsync();
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning("Snapshot cache clear on account deletion failed: {Reason}", exception.Message);
         }
 
         try
