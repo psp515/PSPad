@@ -1,6 +1,7 @@
+using PSPad.App.State;
 using PSPad.Contracts;
 
-namespace PSPad.App.State;
+namespace PSPad.App.Tests.State;
 
 public sealed class InMemorySnapshotCache : ISnapshotCache
 {

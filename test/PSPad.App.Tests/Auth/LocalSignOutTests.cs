@@ -7,6 +7,7 @@ using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Statistics;
+using PSPad.App.Tests.State;
 using PSPad.Contracts;
 using PSPad.TestInfrastructure;
 
