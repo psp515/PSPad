@@ -163,17 +163,16 @@ test('a budget is shared, read by its member, removed, left, rejoined and stoppe
   await syncNow(page);
   await membersButton(page).click();
 
-  await test.step('an archived budget cannot invite, and its member reads who archived it with no way to restore', async () => {
+  await test.step('an open members panel follows an archive on another device: it cannot invite, and its member reads who archived it with no way to restore', async () => {
     await expect(panel(page).getByRole('button', { name: `Remove ${memberName}` })).toBeVisible();
     await panel(page).getByRole('button', { name: 'End link now' }).click();
     await expect(panel(page).getByText('Nobody can join with the old link and code. 1 person already in the budget stays.')).toBeVisible();
-    await closePanel(page);
     await owner.send('ArchiveBudget', { budgetId });
-    await expect(page.getByText('This budget is archived. It is read-only.')).toBeVisible(pushedWithin);
-    await membersButton(page).click();
-    await expect(panel(page).getByText('Restore the budget to invite people.')).toBeVisible();
+    await expect(panel(page).getByText('Restore the budget to invite people.')).toBeVisible(pushedWithin);
     await expect(panel(page).getByRole('button', { name: 'Create link · 30 min' })).toBeDisabled();
     await expect(panel(page).getByRole('button', { name: `Remove ${memberName}` })).toBeEnabled();
+    await closePanel(page);
+    await expect(page.getByText('This budget is archived. It is read-only.')).toBeVisible();
 
     await goTo(member, 'Budgets');
     await syncNow(member);
@@ -185,7 +184,6 @@ test('a budget is shared, read by its member, removed, left, rejoined and stoppe
     await expect(member.getByRole('button', { name: 'Restore budget' })).toHaveCount(0);
   });
 
-  await closePanel(page);
   await owner.send('RestoreBudget', { budgetId });
   await expect(page.getByText('This budget is archived. It is read-only.')).toBeHidden(pushedWithin);
   await membersButton(page).click();
