@@ -144,7 +144,7 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
     expect((await dueStep.boundingBox())!.width).toBeGreaterThanOrEqual(Math.min(await visibleWidth(details), 140) - 1);
   });
 
-  await test.step.skip('BUG: in a tight My Day row the time, date and step count push the due-step mark past the clipped details, so only its first letters show', async () => {
+  await test.step('in a tight My Day row the due-step mark keeps its width next to the time, date and step count', async () => {
     const dueStep = page.getByText('Compare the quotes from three different insurers', { exact: true }).locator('..');
     expect(await visibleWidth(dueStep)).toBeGreaterThanOrEqual(Math.min(await visibleWidth(dueStep.locator('..')), 140) - 1);
   });

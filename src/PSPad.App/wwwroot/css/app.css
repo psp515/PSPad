@@ -951,6 +951,14 @@ button.pspad-heatmap-cell:focus-visible {
     min-width: min(100%, 140px);
 }
 
+.pspad-row-meta > .pspad-row-time,
+.pspad-row-meta > .pspad-due,
+.pspad-row-meta > .pspad-steps-progress {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
 .pspad-row-goal-name,
 .pspad-step-due-name {
     overflow: hidden;
