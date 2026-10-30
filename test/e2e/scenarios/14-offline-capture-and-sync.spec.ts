@@ -7,7 +7,7 @@ import { closePanel, openFabAction, panel } from '../helpers/panels';
 import { goToSettings } from '../helpers/settings';
 import { shellMenu } from '../helpers/shell';
 import { signIn } from '../helpers/sign-in';
-import { goOffline, goOnline, syncButton, syncNow, syncStamp } from '../helpers/sync';
+import { goOffline, goOnline, syncButton, syncNow } from '../helpers/sync';
 import { addDays, shortDate, utcToday } from '../helpers/dates';
 import { addTask, completeTaskRow, taskRow } from '../helpers/tasks';
 import { passUtcMidnight } from '../helpers/today';
@@ -31,7 +31,7 @@ test('changes made offline reach the server after the next sync', async ({ page,
   await syncNow(page);
 
   await goOffline(page);
-  await expect(syncStamp(page, /^Offline\b/)).toBeVisible({ timeout: 30_000 });
+  await expect(syncButton(page)).toHaveAccessibleDescription(/^Offline\b/, { timeout: 30_000 });
   await expect(page.getByRole('img', { name: 'Offline', exact: true }).filter({ visible: true })).toHaveCount(1);
   await addTask(page, offline);
   await completeTaskRow(page, before);

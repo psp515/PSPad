@@ -59,12 +59,12 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
   await expect(day).toContainText(new RegExp(`${apple}[\\s\\S]*${zebra}`));
   await day.click();
 
-  const detail = page.getByRole('region', { name: shortDate(tomorrow), exact: true });
+  const detail = page.getByRole('region', { name: new RegExp(`^${shortDate(tomorrow)}\\s*\\d*$`) });
   await expect(detail.getByRole('article')).toHaveCount(2);
   await detail.getByRole('article', { name: apple }).getByRole('checkbox').first().click();
   await expect(detail.getByRole('article')).toHaveCount(1);
 
-  const filter = page.getByRole('button', { name: /^Filter/ }).last();
+  const filter = filterButton(page);
   await test.step('the month counts the undated tasks, and Show them in List lists just those', async () => {
     await page.getByRole('button', { name: 'Clear', exact: true }).click();
     await expect(page.getByText('1 task has no date.')).toBeVisible();

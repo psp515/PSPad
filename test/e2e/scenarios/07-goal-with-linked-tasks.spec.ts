@@ -56,7 +56,7 @@ test('a goal tracks its linked tasks and a star never plans a task', async ({ pa
   await achieved.getByRole('link', { name: goal }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText(goal);
   await expect(pageHeading(page)).toHaveAccessibleDescription('Achieved');
-  await expect(page.getByText('Achieved', { exact: true }).filter({ visible: true })).toHaveCount(2);
+  await expect(page.getByRole('region', { name: 'Progress', exact: true }).getByText('Achieved', { exact: true })).toBeVisible();
   await test.step('an achieved goal still lists its tasks', async () => {
     await expect(page.getByText(open, { exact: true })).toBeVisible();
   });

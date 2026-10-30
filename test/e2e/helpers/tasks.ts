@@ -2,7 +2,9 @@ import { expect, Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { anotherDevice, apiFor, bearerToken, Device, me, sendCommand } from './api';
 import { isoDate, utcToday } from './dates';
+import { menuTrigger } from './lists';
 import { awaitNoDrawer, closePanel, openFabAction, panel, savePanel } from './panels';
+import { escapeRegExp } from './text';
 
 export function taskRow(page: Page, name: string) {
   return page.getByRole('article', { name });
@@ -89,9 +91,9 @@ export function stepRow(page: Page, name: string) {
 
 export async function setStepDeadline(page: Page, step: string, day: 'Today' | 'Tomorrow') {
   await stepRow(page, step).hover();
-  await stepRow(page, step).getByRole('button', { name: `Set a deadline for ${step}`, exact: true }).last().click();
+  await menuTrigger(stepRow(page, step), new RegExp(`^Set a deadline for ${escapeRegExp(step)}$`)).click();
   await page.getByRole('menuitem', { name: day }).first().click();
-  await expect(stepRow(page, step).getByRole('button', { name: day, exact: true }).last()).toBeVisible();
+  await expect(menuTrigger(stepRow(page, step), new RegExp(`^${day}$`))).toBeVisible();
 }
 
 export async function stepDeadlineOnAnotherDevice(page: Page, task: string, step: string): Promise<string | null> {

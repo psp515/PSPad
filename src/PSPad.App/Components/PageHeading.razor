@@ -22,8 +22,8 @@
             }
         </div>
         <MudSpacer />
-        <SyncStamp />
-        <SyncButton />
+        <SyncStamp Id="@_stampId" />
+        <SyncButton DescribedBy="@_stampId" />
         @Actions
     </div>
 }
@@ -46,6 +46,8 @@
     [Parameter] public RenderFragment? Actions { get; set; }
 
     readonly string _subtitleId = $"page-subtitle-{Guid.NewGuid():N}";
+
+    readonly string _stampId = $"sync-stamp-{Guid.NewGuid():N}";
 
     bool HasSubtitle => !string.IsNullOrEmpty(Subtitle);
 

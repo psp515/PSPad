@@ -10,12 +10,14 @@
 @{
     var described = SyncStampText.Describe(Status, Connectivity.IsOnline, Clock.UtcNow, T);
 }
-<MudText Typo="Typo.caption" Class="@(described.Failed ? "pspad-sync-stamp" : "pspad-sync-stamp pspad-muted")" Color="@(Tone(described.Failed))" title="@Exact">
+<MudText Typo="Typo.caption" Class="@(described.Failed ? "pspad-sync-stamp" : "pspad-sync-stamp pspad-muted")" Color="@(Tone(described.Failed))" title="@Exact" id="@Id">
     @described.Text
 </MudText>
 
 @code {
     static readonly TimeSpan Tick = TimeSpan.FromSeconds(30);
+
+    [Parameter] public string? Id { get; set; }
 
     Timer? _timer;
 

@@ -18,8 +18,10 @@ test('a timed task sits on the schedule and is ticked from the timeline', async 
   await signIn(page, account);
   await expect(page.getByText('Schedule empty for today.')).toBeVisible();
   const now = schedule(page).getByRole('img', { name: /^Now, \d\d:\d\d$/ });
-  const nowHour = (await now.getAttribute('aria-label'))!.slice(-5, -3);
-  await expect(schedule(page).getByText(`${nowHour}:00`, { exact: true }).first()).toBeVisible();
+  const nowTime = (await now.getAttribute('aria-label'))!.slice(-5);
+  const nowHour = nowTime.slice(0, 2);
+  const hourLabels = schedule(page).getByText(`${nowHour}:00`, { exact: true }).filter({ visible: true });
+  await expect(hourLabels).toHaveCount(nowTime.endsWith(':00') ? 2 : 1);
   await expect(schedule(page).getByRole('button', { name: /^Show \d\d:\d\d/ }).first()).toBeVisible();
 
   await createArea(page, `Errands ${account.suffix}`);

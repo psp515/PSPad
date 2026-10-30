@@ -1,7 +1,7 @@
 import { APIRequestContext, expect, Locator, Page, request } from '@playwright/test';
 import { env } from '../env';
 import { panel } from './panels';
-import { calendarOpen, pickCalendarDay } from './today';
+import { openCalendar, pickCalendarDay } from './today';
 
 export type PublishedSnapshot = { id: string; token: string };
 
@@ -48,5 +48,5 @@ export async function pickSnapshotDate(page: Page, day: Date) {
   await panel(page).getByRole('checkbox', { name: 'Date…', exact: true }).click();
   await panel(page).getByRole('textbox').click();
   await pickCalendarDay(page, day);
-  await expect(calendarOpen(page)).toHaveCount(0);
+  await expect(openCalendar(page)).toHaveCount(0);
 }

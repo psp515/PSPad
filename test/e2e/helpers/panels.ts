@@ -10,7 +10,7 @@ export function panel(page: Page) {
 const saveName = /^(Save|Add|Add (task|item|goal|list|area|budget)|Convert to task)$/;
 
 export function saveButton(page: Page) {
-  return panel(page).getByRole('button', { name: saveName }).last();
+  return panel(page).getByRole('group', { name: 'Actions', exact: true }).getByRole('button', { name: saveName });
 }
 
 export async function savePanel(page: Page) {
@@ -47,7 +47,7 @@ function fabMenu(page: Page, item?: string) {
 }
 
 function clickable(item: import('@playwright/test').Locator) {
-  return item.click({ trial: true, timeout: 1_000 }).then(() => true, () => false);
+  return item.click({ trial: true, timeout: 200 }).then(() => true, () => false);
 }
 
 export async function openFabAction(page: Page, name: string) {

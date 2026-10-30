@@ -59,9 +59,7 @@
                 }
                 @if (Task.IsRecurring)
                 {
-                    <span class="d-inline-flex" role="img" aria-label="@T["Repeating"].Value">
-                        <MudIcon Class="pspad-recurring" Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" />
-                    </span>
+                    <MudIcon Class="pspad-recurring" Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" Title="@T["Repeating"].Value" />
                 }
                 @if (HasDescription)
                 {

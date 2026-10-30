@@ -50,8 +50,8 @@
     @if (_selected is { } selected)
     {
         var chosen = EntriesOn(selected);
-        <section class="pspad-month-detail" aria-label="@selected.ToString("ddd, d MMM")">
-            <SectionHeading Title="@selected.ToString("ddd, d MMM")" Count="@chosen.Count" />
+        <section class="pspad-month-detail" aria-labelledby="@_detailHeadingId">
+            <SectionHeading Id="@_detailHeadingId" Title="@selected.ToString("ddd, d MMM")" Count="@chosen.Count" />
             @if (chosen.Count > 0)
             {
                 <RowGroup>
@@ -81,6 +81,8 @@
 
 @code {
     const int Shown = 2;
+
+    readonly string _detailHeadingId = $"month-detail-{Guid.NewGuid():N}";
 
     [Parameter, EditorRequired] public IReadOnlyList<TodoTask> Tasks { get; set; } = [];
 

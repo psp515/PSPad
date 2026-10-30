@@ -9,7 +9,7 @@ import {
   dayLabel, daySection, goToMyDay, openNewTaskFromFab, pickCalendarDay, pickWeekDay, setDueDate, setRepeating, swipeWeek, weekDay,
 } from '../helpers/today';
 
-test('an overdue task shows in red and the week strip moves the day', async ({ page, account }) => {
+test('an overdue task is marked overdue and the week strip moves the day', async ({ page, account }) => {
   const today = utcToday();
   const yesterday = addDays(today, -1);
   const task = `Pay the invoice ${account.suffix}`;
@@ -49,7 +49,7 @@ test('an overdue task shows in red and the week strip moves the day', async ({ p
 
   const inTwoDays = addDays(today, 2);
   await page.getByRole('button', { name: 'Pick a date', exact: true }).click();
-  await pickCalendarDay(page.getByRole('dialog'), inTwoDays);
+  await pickCalendarDay(page, inTwoDays);
   await expect(dayLabel(page, shortDate(inTwoDays))).toBeVisible();
   await expect(weekDay(page, inTwoDays)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Today', exact: true })).toBeVisible();

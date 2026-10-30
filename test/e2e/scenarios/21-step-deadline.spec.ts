@@ -31,7 +31,7 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
   await setStepDeadline(page, 'Order boxes', 'Tomorrow');
   await closeTask(page);
 
-  await expect(taskRow(page, task).getByText('Order boxes', { exact: true })).toBeVisible();
+  await expect(taskRow(page, task)).toContainText(new RegExp(`Order boxes\\s*· ${dayMonth(tomorrow)}`));
 
   await addTask(page, carried);
   await openTask(page, carried);

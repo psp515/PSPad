@@ -23,7 +23,8 @@ test('lists keep their order and a task moves between lists', async ({ page, acc
   await openFabAction(page, 'Edit area');
   const row = (name: string) => panel(page).getByRole('group', { name, exact: true });
   await dragRow(row(second).getByLabel(`Drag ${second}`), row(first));
-  await expect.poll(() => panel(page).getByRole('group').evaluateAll(groups => groups.map(group => group.getAttribute('aria-label'))))
+  const listRows = panel(page).getByRole('group').filter({ has: page.getByRole('img', { name: /^Drag / }) });
+  await expect.poll(() => listRows.evaluateAll(groups => groups.map(group => group.getAttribute('aria-label'))))
     .toEqual([second, first]);
   await closePanel(page);
 

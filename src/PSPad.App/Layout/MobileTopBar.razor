@@ -34,7 +34,7 @@
 </MudAppBar>
 
 @code {
-    const string SubtitleId = "top-bar-subtitle";
+    readonly string SubtitleId = $"top-bar-subtitle-{Guid.NewGuid():N}";
 
     [Parameter] public string Email { get; set; } = "";
 

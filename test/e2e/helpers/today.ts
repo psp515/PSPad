@@ -33,15 +33,29 @@ export async function setDueDate(page: Page, day: 'Today' | 'Tomorrow' | Date) {
   const label = (await propertyRow(page, 'Until').count()) > 0 ? 'Until' : 'Due';
   if (day instanceof Date) {
     await chooseProperty(page, label, 'Pick a date…');
-    const dialog = page.getByRole('dialog');
-    await pickCalendarDay(dialog, day);
-    await expect(dialog).toBeHidden();
+    await pickCalendarDay(page, day);
+    await expect(openCalendar(page)).toHaveCount(0);
   } else {
     await chooseProperty(page, label, day);
   }
 }
 
-export async function pickCalendarDay(calendar: Locator | Page, day: Date) {
+function nextMonthButton(scope: Page | Locator) {
+  return scope.getByRole('button', { name: /^Next month \(/ });
+}
+
+export function openCalendar(page: Page) {
+  return page.getByRole('dialog').filter({ has: nextMonthButton(page) }).or(nextMonthButton(page));
+}
+
+async function calendarScope(page: Page): Promise<Page | Locator> {
+  await expect(nextMonthButton(page)).toBeVisible();
+  const dialog = page.getByRole('dialog').filter({ has: nextMonthButton(page) });
+  return (await dialog.count()) > 0 ? dialog : page;
+}
+
+export async function pickCalendarDay(page: Page, day: Date) {
+  const calendar = await calendarScope(page);
   const wanted = day.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
   const shown = calendar.getByRole('button', { name: /^[A-Z][a-z]+ \d{4}$/ });
   const previous = calendar.getByRole('button', { name: /^Previous month \(/ });
@@ -54,10 +68,6 @@ export async function pickCalendarDay(calendar: Locator | Page, day: Date) {
   const date = day.getUTCDate();
   const matching = calendar.getByRole('button', { name: String(date), exact: true });
   await (date < 15 ? matching.first() : matching.last()).click();
-}
-
-export function calendarOpen(page: Page) {
-  return page.getByRole('button', { name: /^Next month \(/ });
 }
 
 export async function setTaskTime(page: Page, start: string, end?: string) {
@@ -138,7 +148,7 @@ export async function setRepeating(page: Page) {
 
 export async function showDay(page: Page, day: Date) {
   await page.getByRole('button', { name: 'Pick a date', exact: true }).click();
-  await pickCalendarDay(page.getByRole('dialog'), day);
+  await pickCalendarDay(page, day);
   await expect(dayShown(page, day)).toBeVisible();
 }
 
@@ -194,7 +204,7 @@ export async function setCustomRepeat(page: Page, repeat: CustomRepeat) {
   if (repeat.start) {
     await dialog.getByLabel('Starts').click({ timeout: 10_000 });
     await pickCalendarDay(page, repeat.start);
-    await expect(calendarOpen(page)).toHaveCount(0);
+    await expect(openCalendar(page)).toHaveCount(0);
   }
   for (const day of repeat.days ?? []) {
     await dialog.getByText(day, { exact: true }).click({ timeout: 10_000 });

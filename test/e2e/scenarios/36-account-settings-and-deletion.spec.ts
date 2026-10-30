@@ -111,6 +111,5 @@ test('the account shows in Settings and deleting it leaves nothing behind', asyn
     await expect(page.getByText('Invalid username or password.')).toBeVisible();
   });
 
-
   await device.dispose();
 });

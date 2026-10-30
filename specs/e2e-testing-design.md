@@ -116,16 +116,26 @@ heading is described by its subtitle (`aria-describedby`); an overdue row
 carries a visually hidden "Overdue"; the timeline's now line is an `img`
 named "Now, HH:mm". Text added this way comes from the feature's `.resx` in
 English and Polish. The panel's primary button is found by its name (Save,
-Add …, Convert to task); popover menus are the unnamed `menu`s (the FAB menu
-is named Actions); select options are `option`s.
+Add …, Convert to task) inside the panel footer's Actions `group`; the list
+toolbar is a `toolbar`; the Sync now button is described by the sync stamp;
+a goal page's summary card is the Progress `region`; a MudMenu trigger is
+the `button` carrying `aria-expanded` (its inner button carries none);
+popover menus are the unnamed `menu`s and FAB menus the named ones; select
+options are `option`s; a date picker is the `dialog` holding its "Next
+month (…)" button.
 
 **Guard.** `EndToEndLocatorGuard` (`test/PSPad.TestInfrastructure`, run by
 `EndToEndLocatorGuardTests` in `PSPad.App.Tests`, so CI's unit job runs it)
 scans `test/e2e/scenarios` and `test/e2e/helpers` and fails on a
-`.pspad-…` or `.mud-…` selector, `toHaveClass` or `classList`. The
+`.pspad-…` or `.mud-…` selector, a quoted `pspad-…`/`mud-…` class name, a
+`[class…=` attribute selector, `getAttribute('class')`, `toHaveClass` or
+`classList`. The
 exceptions live in `test/e2e/locator-allowlist.txt`, one per line as
 `file: line pattern — reason`; an entry that matches nothing fails too.
-Today the list holds only MudTimePicker's clock, which has no role or name.
+An allowed pattern is cut out of its line and the rest is
+scanned again, so a second class locator on an allowed line still fails; a
+missing `scenarios` or `helpers` folder or no `.ts` file fails as well. Today
+the list holds only MudTimePicker's clock, which has no role or name.
 
 Dates: `DueDateRow` quick picks cover Today and Tomorrow; any other day goes
 through the picker dialog (Pick a date…, then the day button of the
@@ -676,9 +686,10 @@ markup or copy a scenario reads fixes the scenario in the same change. The
 Scenario numbers never change; a new one takes the next number. Helpers
 locate by role, label and text (§3.3), so renaming a label, a heading or an
 accessible name is a suite change too. Nav links carry a count once
-the user has items, so `navLink` finds them by `href`; a link found by its
-name alone misses when the count appears and a `goto` fallback reloads the
-page, which is a different flow from clicking.
+the user has items ("Inbox 1"), so `navLink` matches the name with an
+optional trailing count; a link found by its exact name alone misses when the
+count appears and a `goto` fallback reloads the page, which is a different
+flow from clicking.
 
 Since live updates (ADR-0076) every command a device sends echoes back as a
 nudge whose pull re-renders the open panel. A helper may retry locating,
@@ -706,6 +717,7 @@ UI test-driven work starts with the failing end-to-end step; pages, layout and c
   closes and the FAB menu's items are transparent with pointer events off
   while it is shut, so the helpers wait for the panel's Close button to be
   gone (Playwright's click then waits out the fading overlay) and for a FAB
-  item to take a trial click, instead of visibility. A MudBlazor select's
+  item to take a 200 ms trial click (MudFabMenu exposes no open state to
+  reach), instead of visibility. A MudBlazor select's
   popover also lingers while it closes, so a helper waits for no `option`
   before opening the next.

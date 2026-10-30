@@ -40,8 +40,16 @@ export function listRowNames(rows: Locator): Promise<string[]> {
   return rows.evaluateAll(elements => elements.map(element => element.getAttribute('aria-label') ?? ''));
 }
 
+export function menuTrigger(scope: Page | Locator, name: RegExp) {
+  return scope.getByRole('button', { name, expanded: false }).or(scope.getByRole('button', { name, expanded: true }));
+}
+
+function toolbar(page: Page) {
+  return page.getByRole('toolbar');
+}
+
 export function filterButton(page: Page) {
-  return page.getByRole('button', { name: /^Filter/ }).last();
+  return menuTrigger(toolbar(page), /^Filter/);
 }
 
 export async function pickListFilter(page: Page, label: string) {
@@ -57,7 +65,7 @@ export async function pickListFilter(page: Page, label: string) {
 const orders = /^(Date|Priority|Name|Recently added)$/;
 
 export function sortButton(page: Page) {
-  return page.getByRole('button', { name: orders }).last();
+  return menuTrigger(toolbar(page), orders);
 }
 
 export async function sortListBy(page: Page, order: string) {
