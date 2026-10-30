@@ -22,13 +22,13 @@ Fixed in round 3:
 - 01-first-sign-in: deleting the account signed out before it left Settings, so Welcome kept Settings as the return address. Settings now reloads the app on Welcome. Fixed in 5f9a7ca.
 - 15-search-statistics-settings: an old History address landed on an empty Statistics page: both routes shared one page, which Blazor reused after the redirect with its "redirecting" flag still set. `/history` is its own redirect page. Fixed in ecdf443.
 - 01-first-sign-in (follow-up): the first sign-in under load widened its timeout with `test.slow()`; it is now scenario 35 within the normal timeout (de3ec7e).
-
-Noted without a step:
-
-- An open budget members panel does not update when the budget is archived on another device.
-- A removed budget member keeps seeing the budget on the open screen after Sync now, until navigating away.
-- `TaskCompleted` is always raised with `GoalId` null, so a completed feed record never names a goal.
-- `AuthenticationLogging.OnForbidden` is unreachable: there are no authorization policies.
+- 34-budget-sharing: an open budget members panel did not follow an archive on another device. It already did once 8dc1386 put the panel in the shell's `SyncRevision` cascade; the step keeps the panel open through the archive (ff43af3) and fails with the panel taken out of the cascade.
+- 34-budget-sharing: a removed budget member kept seeing the budget on the open screen after Sync now: a membership purge was not counted as pulled, so `SyncRevision` never moved. Fixed in 519d479.
+- 23-task-panel: a remote rename replaced a task name being typed. The panel keeps the name it showed while the field has focus. Fixed in 910c830.
+- 01-first-sign-in: deleting the account left its statistics and opened snapshots in the browser (sign-out cleared them). Fixed in c6f7d4b.
+- `TaskCompleted.GoalId` was always null: by design (ADR-0065: a goal holds its links, statistics attribute completions when read). It leaves the events' constructors and stays only for replaying older events. ac28a2c.
+- `AuthenticationLogging.OnForbidden` was unreachable: removed with `SecurityLog.Forbidden`; event id 4003 retired. d9d94ef.
+- `InMemorySnapshotCache` was test-only code in `src`; moved to `test/PSPad.App.Tests/State`. d50ffc9.
 
 Tests assert what the code does, never how it looks or how it is wired.
 Decision record: ADR-0080. Standing rules after the migration live in
