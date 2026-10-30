@@ -3,14 +3,14 @@ import { anotherDevice } from '../helpers/api';
 import { createBudgetOn, recordOn } from '../helpers/budgets';
 import { isoDate, utcToday } from '../helpers/dates';
 import { shellMenu } from '../helpers/shell';
-import { goToSettings, setLanguage } from '../helpers/settings';
+import { goToSettings, languageSelect, setLanguage } from '../helpers/settings';
 import { signIn } from '../helpers/sign-in';
 
 test('the language is chosen once and follows the user to another device', async ({ page, browser, account }) => {
   await signIn(page, account);
   const api = await anotherDevice(page);
   await goToSettings(page);
-  await expect(page.locator('.pspad-language')).toContainText('English');
+  await expect(languageSelect(page)).toContainText('English');
 
   await test.step('the language picker lists every language by its own name', async () => {
     await page.getByRole('combobox', { name: 'Language' }).click();
@@ -21,15 +21,15 @@ test('the language is chosen once and follows the user to another device', async
 
   await setLanguage(page, 'Polski');
   await expect(page.getByRole('heading', { name: 'Ustawienia', exact: true })).toBeVisible();
-  await expect(page.locator('.pspad-nav').getByRole('link', { name: 'Mój dzień' })).toBeVisible();
-  await expect(page.locator('.pspad-language')).toContainText('Polski');
+  await expect(shellMenu(page).getByRole('link', { name: 'Mój dzień' })).toBeVisible();
+  await expect(languageSelect(page)).toContainText('Polski');
 
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Ustawienia', exact: true })).toBeVisible();
-  await page.locator('.pspad-nav').getByRole('link', { name: 'Mój dzień' }).click();
+  await shellMenu(page).getByRole('link', { name: 'Mój dzień' }).click();
   await expect(page.getByRole('heading', { name: 'Mój dzień' })).toBeVisible();
   await expect(page.getByText('Na dziś nic nie zaplanowano.')).toBeVisible();
-  await page.locator('.pspad-nav').getByRole('link', { name: 'Skrzynka' }).click();
+  await shellMenu(page).getByRole('link', { name: 'Skrzynka' }).click();
   await expect(page.getByRole('heading', { name: 'Skrzynka', exact: true })).toBeVisible();
   await expect(page.getByText('Nic jeszcze nie dodano.')).toBeVisible();
 
@@ -57,12 +57,12 @@ test('the language is chosen once and follows the user to another device', async
   const deviceContext = await browser.newContext();
   const device = await deviceContext.newPage();
   await signIn(device, account, 'Mój dzień');
-  await expect(device.locator('.pspad-nav').getByRole('link', { name: 'Ustawienia' })).toBeVisible();
+  await expect(shellMenu(device).getByRole('link', { name: 'Ustawienia' })).toBeVisible();
   await deviceContext.close();
 
   await goToSettings(page, 'Ustawienia');
   await setLanguage(page, 'English');
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
-  await expect(page.locator('.pspad-nav').getByRole('link', { name: 'My Day' })).toBeVisible();
+  await expect(shellMenu(page).getByRole('link', { name: 'My Day' })).toBeVisible();
   await api.dispose();
 });

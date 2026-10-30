@@ -43,7 +43,7 @@ test('a balance month is started by hand, valued at NBP\'s rate, deleted, and st
   await addHolding(page, { name: 'Wallet', type: 'Cash', amount: '350' });
   await addHolding(page, { name: 'ETF', type: 'Investment', amount: '2500', currency: 'EUR', rate: '4.265' });
   await expect(figure(page, 'Net worth')).toContainText('11,012.50 PLN');
-  await expect(page.locator('.pspad-holding-group-name')).toHaveCount(2);
+  await expect(page.getByRole('region', { name: /^(Cash|Savings|Investment)$/ })).toHaveCount(2);
 
   await test.step('holdings group by type with their amount, rate and PLN value, and a failed NBP lookup is not retried', async () => {
     await expect(region(page, 'Cash').getByRole('button')).toHaveAccessibleName(/^Wallet PLN 350\.00 PLN 1\.0000 350\.00 PLN —$/);
@@ -85,7 +85,7 @@ test('a balance month is started by hand, valued at NBP\'s rate, deleted, and st
     await expect(holding('Broker')).toHaveAccessibleName(/^Broker 10\.00 EUR @ 4\.4000 /);
 
     await holding('Broker').click();
-    await deleteFromPanel(page);
+    await deleteFromPanel(page, 'Remove');
     await expect(holding('Broker')).toHaveCount(0);
   });
 

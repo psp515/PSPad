@@ -8,7 +8,7 @@ import { closePanel, panel, propertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, openTask, taskRow } from '../helpers/tasks';
 import {
-  addTaskAtFirstFreeSlot, backToToday, daySection, goToMyDay, pickTaskTimeFromClock, schedule, setDueDate, setTaskTime, showDay, timelineBlock,
+  addTaskAtFirstFreeSlot, backToToday, daySection, goToMyDay, pickTaskTimeFromClock, schedule, setDueDate, setTaskTime, showDay, timeField, timelineBlock,
 } from '../helpers/today';
 
 test('a timed task sits on the schedule and is ticked from the timeline', async ({ page, account }) => {
@@ -17,9 +17,10 @@ test('a timed task sits on the schedule and is ticked from the timeline', async 
 
   await signIn(page, account);
   await expect(page.getByText('Schedule empty for today.')).toBeVisible();
-  const nowHour = (await page.locator('.pspad-timeline-now-label').innerText()).slice(0, 2);
-  await expect(page.locator('.pspad-timeline-hour-label', { hasText: `${nowHour}:00` })).toBeVisible();
-  await expect(page.locator('.pspad-timeline-fold').first()).toBeVisible();
+  const now = schedule(page).getByRole('img', { name: /^Now, \d\d:\d\d$/ });
+  const nowHour = (await now.getAttribute('aria-label'))!.slice(-5, -3);
+  await expect(schedule(page).getByText(`${nowHour}:00`, { exact: true }).first()).toBeVisible();
+  await expect(schedule(page).getByRole('button', { name: /^Show \d\d:\d\d/ }).first()).toBeVisible();
 
   await createArea(page, `Errands ${account.suffix}`);
   await createList(page, `Town ${account.suffix}`);
@@ -85,10 +86,10 @@ test('a timed task sits on the schedule and is ticked from the timeline', async 
     await backToToday(page);
   });
 
-  const slot = page.locator('.pspad-timeline-slot').first();
-  const time = await slot.getAttribute('data-time');
+  const slot = schedule(page).getByRole('button', { name: /^Add a task at \d\d:\d\d$/ }).first();
+  const time = (await slot.getAttribute('aria-label'))!.slice(-5);
   await slot.click();
-  await expect(page.locator('.pspad-task-time .pspad-time-start input')).toHaveValue(time!);
+  await expect(timeField(page, 'Start')).toHaveValue(time);
   await expect(page).toHaveURL(new RegExp(`task=new&due=\\d{4}-\\d{2}-\\d{2}&time=${time}`));
   await closePanel(page);
 

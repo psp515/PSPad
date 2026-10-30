@@ -41,8 +41,9 @@ export async function awaitNoDrawer(page: Page) {
   await expect(panel(page)).toHaveCount(0);
 }
 
-function fabMenu(page: Page) {
-  return page.getByRole('menu', { name: 'Actions', exact: true });
+function fabMenu(page: Page, item?: string) {
+  const menus = page.getByRole('menu', { name: /./ });
+  return item ? menus.filter({ has: page.getByRole('menuitem', { name: item, exact: true }) }) : menus;
 }
 
 function clickable(item: import('@playwright/test').Locator) {
@@ -50,15 +51,15 @@ function clickable(item: import('@playwright/test').Locator) {
 }
 
 export async function openFabAction(page: Page, name: string) {
-  await openFab(page);
-  const item = fabMenu(page).getByRole('menuitem', { name, exact: true });
+  await openFab(page, name);
+  const item = fabMenu(page, name).getByRole('menuitem', { name, exact: true });
   await item.click();
   await expect.poll(() => clickable(item)).toBe(false);
 }
 
-export async function openFab(page: Page) {
+export async function openFab(page: Page, item?: string) {
   await awaitNoDrawer(page);
-  const fab = fabMenu(page);
+  const fab = fabMenu(page, item);
   const items = fab.getByRole('menuitem');
   await expect(async () => {
     if (!(await clickable(items.first()))) {
@@ -103,10 +104,6 @@ export function openMenu(page: Page) {
 
 export function openMenuItems(page: Page) {
   return openMenu(page).getByRole('menuitem');
-}
-
-export function openOptions(page: Page) {
-  return page.getByRole('option');
 }
 
 export async function dismissMenu(page: Page) {

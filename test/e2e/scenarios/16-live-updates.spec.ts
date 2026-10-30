@@ -3,6 +3,7 @@ import { createArea } from '../helpers/areas';
 import { createList, openList } from '../helpers/lists';
 import { closePanel, confirm, panel } from '../helpers/panels';
 import { createInvite, joinWithCode, openListMembers } from '../helpers/sharing';
+import { shellMenu } from '../helpers/shell';
 import { signIn } from '../helpers/sign-in';
 import { liveStreamOpened, pushedWithin } from '../helpers/sync';
 import { addTask, completeTaskRow, taskRow } from '../helpers/tasks';
@@ -56,6 +57,6 @@ test('open clients pick up changes made elsewhere without a manual sync', async 
   await panel(page).getByRole('button', { name: `Remove ${otherAccount.displayName}` }).click();
   await confirm(page);
   await closePanel(page);
-  await expect(member.locator('.pspad-nav').getByRole('link', { name: 'Shared with me' })).toBeHidden(pushedWithin);
+  await expect(shellMenu(member).getByRole('link', { name: 'Shared with me' })).toBeHidden(pushedWithin);
   await memberContext.close();
 });

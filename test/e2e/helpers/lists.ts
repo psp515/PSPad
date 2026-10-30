@@ -82,7 +82,7 @@ export async function showCalendarMonth(page: Page, day: Date) {
     await sheet.getByRole('button', { name: 'Next year' }).click();
   }
   await expect(sheet.getByText(year, { exact: true })).toBeVisible();
-  await sheet.getByRole('button', { name: day.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }), exact: true }).click();
+  await sheet.getByRole('button', { name: new RegExp(`^${day.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' })}`) }).click();
   await expect(sheet).toBeHidden();
 }
 

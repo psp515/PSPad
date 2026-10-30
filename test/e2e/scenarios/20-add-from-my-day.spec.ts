@@ -1,10 +1,10 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea, openArea } from '../helpers/areas';
 import { createList, listIdFromUrl, openList } from '../helpers/lists';
-import { awaitNoDrawer, panel, pickFromPropertyRow, propertyRow, savePanel } from '../helpers/panels';
+import { awaitNoDrawer, chooseProperty, panel, propertyRow, saveButton, savePanel } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { pushedWithin } from '../helpers/sync';
-import { createTaskDueTodayFromAnotherDevice, stepNameField, taskRow } from '../helpers/tasks';
+import { createTaskDueTodayFromAnotherDevice, newStepField, stepNameField, taskRow } from '../helpers/tasks';
 import { daySection, goToMyDay } from '../helpers/today';
 
 test('a task added from My Day lands on the day and in the picked list, steps included', async ({ page, account }) => {
@@ -19,19 +19,20 @@ test('a task added from My Day lands on the day and in the picked list, steps in
 
   await goToMyDay(page);
   await awaitNoDrawer(page);
-  await page.locator('.pspad-fab').click();
-  await expect(panel(page).locator('.pspad-panel-title')).toHaveText('New task');
-  await expect(panel(page).locator('.pspad-task-due .pspad-property-value')).toContainText('Today');
-  await expect(panel(page).locator('.pspad-panel-save')).toBeDisabled();
+  await page.getByRole('button', { name: 'Add task', exact: true }).click();
+  await expect(panel(page).getByText('New task', { exact: true })).toBeVisible();
+  await expect(propertyRow(page, 'Due')).toContainText('Today');
+  await expect(saveButton(page)).toBeDisabled();
 
   await panel(page).getByPlaceholder('Task name').fill(task);
   for (const step of ['Order boxes', 'Pack the kitchen']) {
-    const input = panel(page).locator('.pspad-step-add input');
+    const input = newStepField(page);
     await input.fill(step);
     await input.press('Enter');
   }
-  await expect(panel(page).locator('.pspad-step')).toHaveCount(3);
-  await expect(panel(page).locator('.pspad-panel-save')).toBeDisabled();
+  await expect(panel(page).getByRole('group', { name: /^(Order boxes|Pack the kitchen)$/ })).toHaveCount(2);
+  await expect(newStepField(page)).toBeVisible();
+  await expect(saveButton(page)).toBeDisabled();
 
   await test.step('without a list Enter adds nothing, and a draft step reverts on Escape', async () => {
     await expect(propertyRow(page, 'List')).toContainText('No list');
@@ -42,13 +43,13 @@ test('a task added from My Day lands on the day and in the picked list, steps in
     await draft.press('Escape');
     await expect(stepNameField(page, 'Order boxes')).toHaveValue('Order boxes');
   });
-  await pickFromPropertyRow(page, 'pspad-task-list', list);
-  await expect(panel(page).locator('.pspad-panel-title')).toContainText(list);
+  await chooseProperty(page, 'List', list);
+  await expect(panel(page).getByText(`New task · ${area} › ${list}`, { exact: true })).toBeVisible();
   await savePanel(page);
 
-  const row = daySection(page, 'anytime').locator('.pspad-row').filter({ hasText: task });
+  const row = daySection(page, 'anytime').getByRole('article').filter({ hasText: task });
   await expect(row).toBeVisible();
-  await expect(row.locator('.pspad-steps-progress')).toContainText('0/2');
+  await expect(row.getByText('0/2', { exact: true })).toBeVisible();
 
   await openArea(page, area);
   await openList(page, list);

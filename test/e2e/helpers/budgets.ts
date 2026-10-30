@@ -30,10 +30,11 @@ export async function openBudgetSettings(page: Page) {
 }
 
 export async function pickOption(page: Page, trigger: Locator, option: string) {
-  await expect(page.getByRole('option')).toHaveCount(0);
+  const choice = page.getByRole('option', { name: option, exact: true });
+  await expect(choice).toHaveCount(0);
   await trigger.click();
-  await page.getByRole('option', { name: option, exact: true }).click();
-  await expect(page.getByRole('option')).toHaveCount(0);
+  await choice.click();
+  await expect(choice).toHaveCount(0);
 }
 
 export async function addEntry(
@@ -46,8 +47,10 @@ export async function addEntry(
   await form.getByRole('textbox', { name: 'Name', exact: true }).fill(entry.name);
   const category = form.getByRole('combobox', { name: 'Category', exact: true });
   await category.fill(entry.category);
-  await page.getByRole('option').filter({ hasText: entry.category }).first().click();
+  const suggestion = page.getByRole('option', { name: entry.category, exact: true });
+  await suggestion.first().click();
   await expect(category).toHaveValue(entry.category);
+  await expect(suggestion).toHaveCount(0);
   await form.getByRole('spinbutton', { name: 'Amount', exact: true }).fill(entry.amount);
   if (entry.currency) {
     await pickOption(page, form.getByRole('combobox', { name: 'Currency', exact: true }), entry.currency);

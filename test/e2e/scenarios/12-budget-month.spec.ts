@@ -42,31 +42,30 @@ test('a budget sums a month in PLN, reads it on the overview and lists its entri
   await addEntry(page, 'Income', { name: 'Salary', category: 'Salary', amount: '100', currency: 'EUR', rate: '4.25' });
 
   await showView(page, 'Entries');
-  const rows = page.locator('.pspad-entry-row');
-  await expect(rows.filter({ hasText: 'Groceries' })).toBeVisible();
-  await expect(rows.filter({ hasText: 'Salary' })).toContainText('EUR');
+  await expect(entryRow(page, 'Groceries')).toBeVisible();
+  await expect(entryRow(page, 'Salary')).toContainText('EUR');
 
   await showView(page, 'Overview');
-  const hero = page.locator('.pspad-overview-hero');
-  await expect.poll(async () => digitsOf(await hero.locator('.pspad-overview-net').innerText())).toBe('34080');
-  await expect(hero).toContainText('Income');
-  await expect(hero).toContainText('Expenses');
-  await expect(hero).toContainText('425.00 PLN');
-  await expect(hero).toContainText('84.20 PLN');
+  const net = figure(page, 'Net so far').getByRole('heading');
+  await expect.poll(async () => digitsOf(await net.innerText())).toBe('34080');
+  await expect(figure(page, 'Income')).toContainText('425.00 PLN');
+  await expect(figure(page, 'Expenses')).toContainText('84.20 PLN');
 
+  const missingBalance = (month: Date) => page.getByText(`${monthTitle(month)} has no balance yet`, { exact: true });
   await showView(page, 'Balance');
-  await expect(page.locator('.pspad-balance-missing')).toContainText(monthTitle(today));
-  await page.locator('.pspad-month-more').click();
-  const sheet = page.locator('.pspad-month-sheet');
-  if ((await sheet.locator('.pspad-month-sheet-year').innerText()).trim() !== String(previous.getUTCFullYear())) {
-    await sheet.locator('.pspad-month-sheet-previous').click();
+  await expect(missingBalance(today)).toBeVisible();
+  await page.getByRole('button', { name: 'Pick another month', exact: true }).click();
+  const sheet = page.getByRole('dialog');
+  if ((await sheet.getByText(String(previous.getUTCFullYear()), { exact: true }).count()) === 0) {
+    await sheet.getByRole('button', { name: 'Previous year', exact: true }).click();
   }
-  await sheet.locator('.pspad-month-sheet-month').nth(previous.getUTCMonth()).click();
-  await expect(page.locator('.pspad-balance-missing')).toContainText(monthTitle(previous));
-  await page.locator('.pspad-month-today').click();
-  await expect(page.locator('.pspad-balance-missing')).toContainText(monthTitle(today));
+  await expect(sheet.getByText(String(previous.getUTCFullYear()), { exact: true })).toBeVisible();
+  await sheet.getByRole('button', { name: new RegExp(`^${previous.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' })}`) }).click();
+  await expect(missingBalance(previous)).toBeVisible();
+  await page.getByRole('button', { name: 'This month', exact: true }).click();
+  await expect(missingBalance(today)).toBeVisible();
   await showView(page, 'Overview');
-  await expect.poll(async () => digitsOf(await hero.locator('.pspad-overview-net').innerText())).toBe('34080');
+  await expect.poll(async () => digitsOf(await net.innerText())).toBe('34080');
 
   const budgetId = budgetIdFromUrl(page);
   const device = await anotherDevice(page);

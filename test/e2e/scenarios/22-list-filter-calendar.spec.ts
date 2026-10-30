@@ -1,12 +1,13 @@
 import { expect, test } from '../fixtures/accounts';
 import { anotherDevice, idOf } from '../helpers/api';
-import { areaSubtitle, createArea } from '../helpers/areas';
+import { pageHeading, createArea } from '../helpers/areas';
 import { createGoalOn, linkTasksOn } from '../helpers/goals';
-import { addDays, isoDate, monthButton, utcToday } from '../helpers/dates';
+import { addDays, monthButton, shortDate, utcToday } from '../helpers/dates';
 import {
-  calendarDay, closeFilterChip, showCalendarMonth, createList, listRowNames, monthDay, openList, pickListFilter, showListAs, sortListBy,
+  calendarDay, closeFilterChip, showCalendarMonth, createList, filterButton, listRowNames, listRows, monthStrip, openList, pickListFilter,
+  showListAs, sortListBy,
 } from '../helpers/lists';
-import { pickFromPropertyRow } from '../helpers/panels';
+import { chooseProperty } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, createTasksOn, openTask, taskRow } from '../helpers/tasks';
 import { setDueDate } from '../helpers/today';
@@ -28,7 +29,7 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
   for (const name of [zebra, apple]) {
     await addTask(page, name);
     await openTask(page, name);
-    await pickFromPropertyRow(page, 'pspad-task-priority', 'High');
+    await chooseProperty(page, 'Priority', 'High');
     await setDueDate(page, 'Tomorrow');
     await closeTask(page);
   }
@@ -43,24 +44,25 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
   await pickListFilter(page, 'High');
   await expect(taskRow(page, plain)).toHaveCount(0);
   await sortListBy(page, 'Name');
-  await expect(listRowNames(page)).toHaveText([apple, zebra]);
+  await expect.poll(() => listRowNames(listRows(page))).toEqual([apple, zebra]);
 
   await page.reload();
-  await expect(page.locator('.pspad-list-filter-badge')).toHaveText('1');
-  await expect(listRowNames(page)).toHaveText([apple, zebra]);
+  await expect(filterButton(page)).toHaveText(/^Filter\s*1$/);
+  await expect.poll(() => listRowNames(listRows(page))).toEqual([apple, zebra]);
 
   await showListAs(page, 'Calendar');
-  const day = monthDay(page, isoDate(tomorrow));
+  const day = calendarDay(page, tomorrow);
   if ((await day.count()) === 0) {
-    await monthButton(page.locator('.pspad-month-strip'), tomorrow).click();
+    await monthButton(monthStrip(page), tomorrow).click();
   }
-  await expect(day.locator('.pspad-month-entry')).toHaveCount(2);
+  await expect(day).toHaveAccessibleName(/, 2 tasks$/);
+  await expect(day).toContainText(new RegExp(`${apple}[\\s\\S]*${zebra}`));
   await day.click();
 
-  const detail = page.locator('.pspad-month-detail');
-  await expect(detail.locator('.pspad-row')).toHaveCount(2);
-  await detail.locator('.pspad-row', { hasText: apple }).getByRole('checkbox').first().click();
-  await expect(detail.locator('.pspad-row')).toHaveCount(1);
+  const detail = page.getByRole('region', { name: shortDate(tomorrow), exact: true });
+  await expect(detail.getByRole('article')).toHaveCount(2);
+  await detail.getByRole('article', { name: apple }).getByRole('checkbox').first().click();
+  await expect(detail.getByRole('article')).toHaveCount(1);
 
   const filter = page.getByRole('button', { name: /^Filter/ }).last();
   await test.step('the month counts the undated tasks, and Show them in List lists just those', async () => {
@@ -91,7 +93,7 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
     await expect(page.getByText(goal, { exact: true })).toBeVisible();
     await expect(page.getByText('No date', { exact: true })).toBeVisible();
     await expect(page.getByText('No tasks match.')).toBeVisible();
-    await expect(areaSubtitle(page)).toHaveText(`${area} · 2 open tasks`);
+    await expect(pageHeading(page)).toHaveAccessibleDescription(`${area} · 2 open tasks`);
 
     await closeFilterChip(page, 'High');
     await expect(filter).toHaveText(/^Filter\s*2$/);
@@ -99,7 +101,7 @@ test('a list filters, sorts, remembers its choice and shows a month', async ({ p
     await page.getByRole('button', { name: 'Clear', exact: true }).first().click();
     await expect(filter).toHaveText('Filter');
     await expect(page.getByRole('button', { name: /^Name/ }).last()).toBeVisible();
-    await expect(listRowNames(page).filter({ visible: true })).toHaveText([plain, zebra]);
+    await expect.poll(() => listRowNames(listRows(page).filter({ visible: true }))).toEqual([plain, zebra]);
   });
   await device.dispose();
 

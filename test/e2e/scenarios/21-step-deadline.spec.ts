@@ -31,7 +31,7 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
   await setStepDeadline(page, 'Order boxes', 'Tomorrow');
   await closeTask(page);
 
-  await expect(taskRow(page, task).locator('.pspad-step-due-mark')).toContainText('Order boxes');
+  await expect(taskRow(page, task).getByText('Order boxes', { exact: true })).toBeVisible();
 
   await addTask(page, carried);
   await openTask(page, carried);
@@ -44,7 +44,7 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
   await closeTask(page);
 
   await goToMyDay(page);
-  await expect(page.locator('.pspad-row-name', { hasText: task })).toHaveCount(0);
+  await expect(taskRow(page, task)).toHaveCount(0);
   await expect(daySection(page, 'anytime')).toContainText(carried);
   await showDay(page, addDays(utcToday(), 1));
   await expect(daySection(page, 'anytime')).toContainText(task);
@@ -56,7 +56,7 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
     await expect(daySection(page, 'overdue')).toContainText(new RegExp(`Get new photos taken\\s*${dayMonth(today)}`));
   });
 
-  await page.locator('.pspad-week-today').click();
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
 
   await test.step('ticking one of two steps due today checks only that step and keeps the task on the day', async () => {
     const photos = page.getByRole('checkbox', { name: 'Get new photos taken' });
@@ -68,12 +68,12 @@ test('a step deadline puts its task on that day, and an overdue task carries to 
   });
 
   await page.getByRole('checkbox', { name: 'Book an appointment' }).click();
-  await expect(page.locator('.mud-snackbar')).toContainText(`"${carried}" moved to Tomorrow`);
-  await expect(page.locator('.pspad-day-anytime .pspad-row-name', { hasText: carried })).toHaveCount(0);
+  await expect(page.getByText(`"${carried}" moved to Tomorrow`)).toBeVisible();
+  await expect(daySection(page, 'anytime').getByRole('article', { name: carried })).toHaveCount(0);
 
   await showDay(page, addDays(utcToday(), 1));
   await expect(daySection(page, 'anytime')).toContainText(carried);
-  await expect(page.locator('.pspad-day-overdue', { hasText: carried })).toHaveCount(0);
+  await expect(daySection(page, 'overdue').filter({ hasText: carried })).toHaveCount(0);
 
   await test.step('ticking the task itself still completes it', async () => {
     await completeTaskRow(page, task);
