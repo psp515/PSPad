@@ -1,11 +1,11 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea, openArea } from '../helpers/areas';
-import { addDays, dayMonth, shortDate, utcToday, weekdayShort, weekdaysInWeekOrder } from '../helpers/dates';
+import { addDays, dayMonth, utcToday, weekdayShort, weekdaysInWeekOrder } from '../helpers/dates';
 import { createList, openList } from '../helpers/lists';
 import { chooseProperty, dismissMenu, menuOptions, panel, propertyRow } from '../helpers/panels';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, completeTaskRow, openTask, taskRow } from '../helpers/tasks';
-import { daySection, goToMyDay, pickWeekDay, setCustomRepeat, setOneTime, setRepeating } from '../helpers/today';
+import { dayShown, daySection, goToMyDay, pickWeekDay, setCustomRepeat, setOneTime, setRepeating } from '../helpers/today';
 
 test('a daily task is never overdue and comes back tomorrow', async ({ page, account }) => {
   const today = utcToday();
@@ -21,7 +21,7 @@ test('a daily task is never overdue and comes back tomorrow', async ({ page, acc
   await openTask(page, task);
   await setRepeating(page);
   await closeTask(page);
-  await expect(taskRow(page, task).locator('.pspad-recurring')).toBeVisible();
+  await expect(taskRow(page, task).getByRole('img', { name: 'Repeating', exact: true })).toBeVisible();
 
   await goToMyDay(page);
   await expect(daySection(page, 'anytime')).toContainText(task);
@@ -29,14 +29,14 @@ test('a daily task is never overdue and comes back tomorrow', async ({ page, acc
 
   await completeTaskRow(page, task);
   await expect(daySection(page, 'completed')).toContainText('Completed · 1');
-  await expect(daySection(page, 'anytime').locator('.pspad-row')).toHaveCount(0);
+  await expect(daySection(page, 'anytime').getByRole('article')).toHaveCount(0);
 
   const tomorrow = addDays(today, 1);
   if (tomorrow.getUTCDay() === 1) {
-    await page.locator('.pspad-week-next').click();
+    await page.getByRole('button', { name: 'Next week', exact: true }).click();
   }
   await pickWeekDay(page, tomorrow);
-  await expect(page.locator('.pspad-week-label')).toContainText(shortDate(tomorrow));
+  await expect(dayShown(page, tomorrow)).toBeVisible();
   await expect(daySection(page, 'anytime')).toContainText(task);
   await expect(daySection(page, 'overdue')).toHaveCount(0);
 

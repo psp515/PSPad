@@ -35,11 +35,11 @@ test('a reference item renders each field kind and keeps its field order', async
   await setFieldKind(page, 'Ports', 'Quantity');
   await reopenReferenceItem(page, item);
 
-  await expect(fieldRow(page, 'Model').locator('.pspad-field-text')).toHaveText('RT-AX88U');
-  await expect(fieldRow(page, 'Admin').locator('a.pspad-field-link')).toHaveAttribute('href', 'https://192.168.1.1/admin');
-  await expect(fieldRow(page, 'Config').locator('code.pspad-field-path')).toHaveText('/etc/router/config.yaml');
-  await expect(fieldRow(page, 'Ports').locator('.pspad-field-quantity')).toHaveText('8');
-  await expect(fieldRow(page, 'Docs').locator('a.pspad-field-link')).toHaveAttribute('href', 'https://example.com/router-docs');
+  await expect(fieldRow(page, 'Model').getByText('RT-AX88U', { exact: true })).toBeVisible();
+  await expect(fieldRow(page, 'Admin').getByRole('link', { name: 'https://192.168.1.1/admin' })).toHaveAttribute('href', 'https://192.168.1.1/admin');
+  await expect(fieldRow(page, 'Config').getByRole('code')).toHaveText('/etc/router/config.yaml');
+  await expect(fieldRow(page, 'Ports').getByText('8', { exact: true })).toBeVisible();
+  await expect(fieldRow(page, 'Docs').getByRole('link', { name: 'https://example.com/router-docs' })).toHaveAttribute('href', 'https://example.com/router-docs');
 
   await test.step('a copy or a link leaves the row closed, an unsafe link stays text, and the editor wants a label, offers Remove and takes a drop', async () => {
     const save = panel(page).getByRole('button', { name: 'Save', exact: true });
@@ -129,10 +129,10 @@ test('a reference item renders each field kind and keeps its field order', async
   await page.reload();
   await expect(panel(page).getByPlaceholder('Item name')).toHaveValue(item);
   await expect.poll(() => fieldLabels(page)).toEqual(['Docs', 'Model', 'Admin', 'Ports']);
-  await expect(fieldRow(page, 'Admin').locator('a.pspad-field-link')).toBeVisible();
-  await expect(fieldRow(page, 'Ports').locator('.pspad-field-quantity')).toHaveText('12');
+  await expect(fieldRow(page, 'Admin').getByRole('link', { name: 'https://192.168.1.1/admin' })).toBeVisible();
+  await expect(fieldRow(page, 'Ports').getByText('12', { exact: true })).toBeVisible();
 
-  await panel(page).locator('.pspad-item-delete').click();
+  await panel(page).getByRole('button', { name: 'Delete item', exact: true }).click();
   await confirm(page, 'Delete');
   await expect(referenceRow(page, item)).toHaveCount(0);
   await expect(page.getByText('No items yet.')).toBeVisible();

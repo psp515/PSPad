@@ -1,7 +1,8 @@
 import { expect, test } from '../fixtures/accounts';
-import { areaSubtitle, deleteCurrentArea, listCard, openArea, openNewArea } from '../helpers/areas';
+import { pageHeading, deleteCurrentArea, listCard, openArea, openNewArea } from '../helpers/areas';
 import { openList } from '../helpers/lists';
 import { closePanel, confirm, openFabAction, panel } from '../helpers/panels';
+import { shellMenu } from '../helpers/shell';
 import { signIn } from '../helpers/sign-in';
 import { addStep, addTask, checkStep, closeTask, completeTaskRow, openTask, taskRow } from '../helpers/tasks';
 
@@ -45,9 +46,9 @@ test('an area, a list and a task live and die', async ({ page, account }) => {
 
   await openList(page, list);
   await expect(page.getByText('No tasks yet.')).toBeVisible();
-  await expect(areaSubtitle(page)).toHaveText(`${area} · no open tasks`);
+  await expect(pageHeading(page)).toHaveAccessibleDescription(`${area} · no open tasks`);
   await addTask(page, task);
-  await expect(areaSubtitle(page)).toHaveText(`${area} · 1 open task`);
+  await expect(pageHeading(page)).toHaveAccessibleDescription(`${area} · 1 open task`);
 
   await test.step('the Add task row under the tasks opens a new task from the keyboard', async () => {
     await page.getByRole('button', { name: 'Add task', exact: true }).focus();
@@ -60,18 +61,18 @@ test('an area, a list and a task live and die', async ({ page, account }) => {
   await addStep(page, 'Prepare soil');
   await checkStep(page, 'Buy seeds');
   await closeTask(page);
-  await expect(taskRow(page, task).locator('.pspad-steps-progress')).toContainText('1/2');
+  await expect(taskRow(page, task).getByText('1/2', { exact: true })).toBeVisible();
 
   await completeTaskRow(page, task);
   await expect(page.getByText('Completed · 1')).toBeVisible();
   await expect(taskRow(page, task)).toBeHidden();
-  await page.locator('.pspad-completed').getByText('Completed · 1').click();
+  await page.getByText('Completed · 1').click();
   await expect(taskRow(page, task)).toBeVisible();
   await expect(taskRow(page, task).getByRole('checkbox').first()).toBeChecked();
 
   await page.getByRole('link', { name: 'Back to area' }).click();
   await expect(page.getByRole('heading', { name: area, exact: true })).toBeVisible();
-  await expect(areaSubtitle(page)).toHaveText('1 list · no open tasks');
+  await expect(pageHeading(page)).toHaveAccessibleDescription('1 list · no open tasks');
 
   await test.step('deleting a list warns how many tasks go with it, lands on its area, and the list is gone', async () => {
     await openList(page, list);
@@ -103,6 +104,6 @@ test('an area, a list and a task live and die', async ({ page, account }) => {
 
   await deleteCurrentArea(page);
   await expect(page.getByRole('heading', { name: 'My Day', exact: true })).toBeVisible();
-  await expect(page.locator('.pspad-nav').getByRole('link', { name: renamed, exact: true })).toBeHidden();
-  await expect(page.locator('.pspad-nav').getByRole('link', { name: 'Personal' })).toBeVisible();
+  await expect(shellMenu(page).getByRole('link', { name: renamed, exact: true })).toBeHidden();
+  await expect(shellMenu(page).getByRole('link', { name: 'Personal' })).toBeVisible();
 });

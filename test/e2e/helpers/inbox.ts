@@ -24,7 +24,7 @@ export async function captureWithEnter(page: Page, text: string) {
 }
 
 export function inboxItem(page: Page, text: string) {
-  return page.locator('.pspad-inbox-item').filter({ hasText: text });
+  return inboxItemRows(page).filter({ hasText: text });
 }
 
 export function inboxItemRows(page: Page) {

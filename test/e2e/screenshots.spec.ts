@@ -38,7 +38,7 @@ async function addStep(page: Page, name: string) {
 async function setTheme(page: Page, theme: 'Light' | 'Dark') {
   await goTo(page, 'Settings');
   await page.getByRole('combobox', { name: 'Theme' }).click();
-  await page.locator('.mud-popover-open').getByText(theme, { exact: true }).click();
+  await page.getByRole('option', { name: theme, exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme.toLowerCase());
 }
 

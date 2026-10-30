@@ -1,11 +1,11 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea } from '../helpers/areas';
-import { addDays, shiftedZone, shortDate, utcToday } from '../helpers/dates';
+import { addDays, shiftedZone, utcToday } from '../helpers/dates';
 import { createList, openList } from '../helpers/lists';
 import { goToSettings, setTimeZone } from '../helpers/settings';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, completeTaskRow, openTask, taskRow } from '../helpers/tasks';
-import { backToToday, dayLabel, daySection, goToMyDay, myDayLink, setDueDate, showDay, weekDay } from '../helpers/today';
+import { backToToday, dayShown, daySection, goToMyDay, myDayLink, setDueDate, showDay, weekDay } from '../helpers/today';
 
 test('My Day follows the Today rule in the stored time zone', async ({ page, account }) => {
   const dueToday = `Call the bank ${account.suffix}`;
@@ -32,7 +32,7 @@ test('My Day follows the Today rule in the stored time zone', async ({ page, acc
   await addTask(page, undated);
 
   await goToMyDay(page);
-  await expect(daySection(page, 'anytime').locator('.pspad-row')).toHaveCount(1);
+  await expect(daySection(page, 'anytime').getByRole('article')).toHaveCount(1);
   await expect(taskRow(page, dueToday)).toBeVisible();
   await expect(page.getByText(dueTomorrow)).toBeHidden();
   await expect(page.getByText(undated)).toBeHidden();
@@ -60,9 +60,9 @@ test('My Day follows the Today rule in the stored time zone', async ({ page, acc
     await expect(daySection(page, 'anytime')).not.toContainText(dueToday);
     await expect(daySection(page, 'overdue')).toContainText(dueToday);
     await openTask(page, dueTomorrow);
-    await expect(dayLabel(page)).toContainText(shortDate(addDays(today, 1)));
+    await expect(dayShown(page, addDays(today, 1))).toBeVisible();
     await closeTask(page);
-    await expect(dayLabel(page)).toContainText(shortDate(addDays(today, 1)));
+    await expect(dayShown(page, addDays(today, 1))).toBeVisible();
     await backToToday(page);
   });
 
@@ -78,7 +78,7 @@ test('My Day follows the Today rule in the stored time zone', async ({ page, acc
   await setTimeZone(page, zone.id);
 
   await goToMyDay(page);
-  await expect(dayLabel(page)).toContainText(shortDate(zone.localDate));
+  await expect(dayShown(page, zone.localDate)).toBeVisible();
   if (zone.id === 'Pacific/Kiritimati') {
     await expect(daySection(page, 'anytime')).toContainText(dueTomorrow);
   } else {

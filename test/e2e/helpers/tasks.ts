@@ -5,7 +5,7 @@ import { isoDate, utcToday } from './dates';
 import { awaitNoDrawer, closePanel, openFabAction, panel, savePanel } from './panels';
 
 export function taskRow(page: Page, name: string) {
-  return page.locator('.pspad-row').filter({ has: page.locator('.pspad-row-name', { hasText: name }) });
+  return page.getByRole('article', { name });
 }
 
 export async function openNewTask(page: Page) {
@@ -26,7 +26,7 @@ export async function addTask(page: Page, name: string) {
 }
 
 export async function openTask(page: Page, name: string) {
-  await taskRow(page, name).locator('.pspad-task-name').click();
+  await taskRow(page, name).getByText(name, { exact: true }).click();
   await expect(panel(page).getByPlaceholder('Task name')).toHaveValue(name);
 }
 
@@ -45,13 +45,17 @@ export async function completeTaskRow(page: Page, name: string) {
   }).toPass();
 }
 
+export function newStepField(page: Page) {
+  return panel(page).getByRole('textbox', { name: /^(Add step|Next step)$/ });
+}
+
 export function stepNameField(page: Page, name: string) {
   return panel(page).getByRole('textbox', { name: `Rename ${name}`, exact: true });
 }
 
 export async function addStep(page: Page, name: string) {
-  const steps = panel(page).locator('.pspad-steps .pspad-step-name');
-  const input = panel(page).locator('.pspad-step-add input');
+  const steps = panel(page).getByRole('textbox', { name: /^Rename / });
+  const input = newStepField(page);
   const before = await steps.count();
   await input.fill(name);
   await input.press('Enter');
@@ -80,17 +84,14 @@ export async function checkStep(page: Page, name: string) {
 }
 
 export function stepRow(page: Page, name: string) {
-  return panel(page)
-    .locator('.pspad-step')
-    .filter({ has: page.getByRole('textbox', { name: `Rename ${name}`, exact: true }) });
+  return panel(page).getByRole('group', { name, exact: true });
 }
 
 export async function setStepDeadline(page: Page, step: string, day: 'Today' | 'Tomorrow') {
-  const due = stepRow(page, step).locator('.pspad-step-due');
   await stepRow(page, step).hover();
-  await due.click();
+  await stepRow(page, step).getByRole('button', { name: `Set a deadline for ${step}`, exact: true }).last().click();
   await page.getByRole('menuitem', { name: day }).first().click();
-  await expect(due).toContainText(day);
+  await expect(stepRow(page, step).getByRole('button', { name: day, exact: true }).last()).toBeVisible();
 }
 
 export async function stepDeadlineOnAnotherDevice(page: Page, task: string, step: string): Promise<string | null> {

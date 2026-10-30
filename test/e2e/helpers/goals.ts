@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Device } from './api';
 import { isoDate } from './dates';
 import { goTo } from './nav';
-import { awaitNoDrawer, closePanel, confirm, panel, pickFromPropertyRow, savePanel } from './panels';
+import { awaitNoDrawer, chooseProperty, closePanel, confirm, panel, propertyRow, savePanel } from './panels';
 
 export async function goToGoals(page: Page) {
   await goTo(page, 'Goals');
@@ -18,17 +18,17 @@ export async function createGoal(page: Page, name: string) {
 }
 
 export function goalCard(page: Page, name: string) {
-  return page.locator('.pspad-goal-list-row').filter({ has: page.locator('.pspad-goal-name', { hasText: name }) });
+  return goalRow(page, name);
 }
 
 export async function openGoal(page: Page, name: string) {
-  await page.locator('.pspad-goal-name', { hasText: name }).click();
+  await goalCard(page, name).getByText(name, { exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText(name);
 }
 
 export async function linkTaskToGoal(page: Page, goalName: string) {
-  await pickFromPropertyRow(page, 'pspad-task-goal', goalName);
-  await expect(panel(page).locator('.pspad-task-goal .pspad-property-value')).toHaveText(goalName);
+  await chooseProperty(page, 'Goal', goalName);
+  await expect(propertyRow(page, 'Goal')).toHaveAccessibleName(`Goal ${goalName}`);
 }
 
 export async function deleteGoal(page: Page, name: string) {

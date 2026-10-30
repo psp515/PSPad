@@ -25,8 +25,8 @@ test('an overdue task shows in red and the week strip moves the day', async ({ p
 
   await goToMyDay(page);
   await expect(daySection(page, 'overdue')).toContainText(task);
-  await expect(taskRow(page, task)).toHaveClass(/pspad-overdue/);
-  await expect(dayLabel(page)).toHaveText(`Today · ${shortDate(today)}`);
+  await expect(taskRow(page, task).getByText('Overdue', { exact: true })).toBeAttached();
+  await expect(dayLabel(page, `Today · ${shortDate(today)}`)).toBeVisible();
   await expect(page.getByText('Nothing planned for today.')).toBeHidden();
 
   await test.step('today is current and picked, there is no Today button on it, the week is named, and a swipe turns the week', async () => {
@@ -36,21 +36,21 @@ test('an overdue task shows in red and the week strip moves the day', async ({ p
     await expect(page.getByRole('button', { name: 'Pick a date' })).toBeVisible();
     await expect(page.getByText(`Week ${isoWeek(today)} · ${monthTitle(today)}`, { exact: true })).toBeVisible();
     await swipeWeek(page, 'left');
-    await expect(dayLabel(page)).toHaveText(shortDate(addDays(today, 7)));
+    await expect(dayLabel(page, shortDate(addDays(today, 7)))).toBeVisible();
     await expect(weekDay(page, today)).toHaveCount(0);
     await swipeWeek(page, 'right');
-    await expect(dayLabel(page)).toHaveText(`Today · ${shortDate(today)}`);
+    await expect(dayLabel(page, `Today · ${shortDate(today)}`)).toBeVisible();
   });
 
-  await page.locator('.pspad-week-prev').click();
-  await expect(dayLabel(page)).toHaveText(shortDate(addDays(today, -7)));
-  await page.locator('.pspad-week-next').click();
-  await expect(dayLabel(page)).toHaveText(`Today · ${shortDate(today)}`);
+  await page.getByRole('button', { name: 'Previous week', exact: true }).click();
+  await expect(dayLabel(page, shortDate(addDays(today, -7)))).toBeVisible();
+  await page.getByRole('button', { name: 'Next week', exact: true }).click();
+  await expect(dayLabel(page, `Today · ${shortDate(today)}`)).toBeVisible();
 
   const inTwoDays = addDays(today, 2);
-  await page.locator('.pspad-week-pick').click();
-  await pickCalendarDay(page.locator('.pspad-day-dialog'), inTwoDays);
-  await expect(dayLabel(page)).toHaveText(shortDate(inTwoDays));
+  await page.getByRole('button', { name: 'Pick a date', exact: true }).click();
+  await pickCalendarDay(page.getByRole('dialog'), inTwoDays);
+  await expect(dayLabel(page, shortDate(inTwoDays))).toBeVisible();
   await expect(weekDay(page, inTwoDays)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Today', exact: true })).toBeVisible();
 
@@ -61,14 +61,14 @@ test('an overdue task shows in red and the week strip moves the day', async ({ p
     await closePanel(page);
   });
 
-  await page.locator('.pspad-week-today').click();
-  await expect(dayLabel(page)).toHaveText(`Today · ${shortDate(today)}`);
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(dayLabel(page, `Today · ${shortDate(today)}`)).toBeVisible();
 
   if (today.getUTCDay() === 1) {
-    await page.locator('.pspad-week-prev').click();
+    await page.getByRole('button', { name: 'Previous week', exact: true }).click();
   }
   await pickWeekDay(page, yesterday);
-  await expect(dayLabel(page)).toHaveText(`Yesterday · ${shortDate(yesterday)}`);
+  await expect(dayLabel(page, `Yesterday · ${shortDate(yesterday)}`)).toBeVisible();
   await expect(daySection(page, 'completed')).toContainText(`Nothing completed on ${shortDate(yesterday)}.`);
 
   await test.step('a past day shows only what was completed, and its FAB adds a task due today', async () => {
@@ -78,8 +78,8 @@ test('an overdue task shows in red and the week strip moves the day', async ({ p
     await closePanel(page);
   });
 
-  await page.locator('.pspad-week-today').click();
-  await expect(dayLabel(page)).toHaveText(`Today · ${shortDate(today)}`);
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(dayLabel(page, `Today · ${shortDate(today)}`)).toBeVisible();
   await expect(daySection(page, 'overdue')).toContainText(task);
 
   await test.step('making the overdue task repeat drops its due date, so it is no longer overdue', async () => {

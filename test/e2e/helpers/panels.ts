@@ -1,27 +1,34 @@
 import { expect, Page } from '@playwright/test';
 import { escapeRegExp } from './text';
 
+const closeName = /^(Close|Zamknij)$/;
+
 export function panel(page: Page) {
-  return page.locator('.pspad-detail-panel');
+  return page.getByRole('complementary').filter({ has: page.getByRole('button', { name: closeName }) });
+}
+
+const saveName = /^(Save|Add|Add (task|item|goal|list|area|budget)|Convert to task)$/;
+
+export function saveButton(page: Page) {
+  return panel(page).getByRole('button', { name: saveName }).last();
 }
 
 export async function savePanel(page: Page) {
-  await panel(page).locator('.pspad-panel-save').click();
+  await saveButton(page).click();
 }
 
 export async function closePanel(page: Page) {
-  const close = panel(page).locator('.pspad-panel-close');
+  const close = panel(page).getByRole('button', { name: closeName });
   await expect(async () => {
     if (await close.isVisible()) {
       await close.click({ timeout: 2_000 });
     }
-    await expect(panel(page).locator('.pspad-panel-title')).toBeHidden({ timeout: 3_000 });
-    await expect(page.locator('.mud-drawer-overlay--open')).toHaveCount(0, { timeout: 3_000 });
+    await expect(panel(page)).toHaveCount(0, { timeout: 3_000 });
   }).toPass({ timeout: 30_000 });
 }
 
-export async function deleteFromPanel(page: Page) {
-  await panel(page).locator('.pspad-panel-delete').click();
+export async function deleteFromPanel(page: Page, label: 'Delete' | 'Discard' | 'Remove' = 'Delete') {
+  await panel(page).getByRole('button', { name: label, exact: true }).click();
 }
 
 export async function confirm(page: Page, text?: string) {
@@ -31,41 +38,35 @@ export async function confirm(page: Page, text?: string) {
 }
 
 export async function awaitNoDrawer(page: Page) {
-  await expect(page.locator('.pspad-detail-panel.mud-drawer--open')).toHaveCount(0);
-  await expect(page.locator('.mud-drawer-overlay--open')).toHaveCount(0);
+  await expect(panel(page)).toHaveCount(0);
+}
+
+function fabMenu(page: Page) {
+  return page.getByRole('menu', { name: 'Actions', exact: true });
+}
+
+function clickable(item: import('@playwright/test').Locator) {
+  return item.click({ trial: true, timeout: 1_000 }).then(() => true, () => false);
 }
 
 export async function openFabAction(page: Page, name: string) {
-  await awaitNoDrawer(page);
-  const menu = page.locator('.pspad-fab .mud-fab-menu');
-  const item = page.getByRole('menuitem', { name, exact: true });
-  await expect(async () => {
-    if (!(await menu.evaluate(element => element.classList.contains('mud-fab-menu-open')))) {
-      await page.locator('.pspad-fab').getByRole('button').click();
-      await expect(menu).toHaveClass(/mud-fab-menu-open/, { timeout: 2_000 });
-    }
-    await item.click({ timeout: 3_000 });
-  }).toPass({ timeout: 30_000 });
-  await expect(menu).not.toHaveClass(/mud-fab-menu-open/);
+  await openFab(page);
+  const item = fabMenu(page).getByRole('menuitem', { name, exact: true });
+  await item.click();
+  await expect.poll(() => clickable(item)).toBe(false);
 }
 
 export async function openFab(page: Page) {
   await awaitNoDrawer(page);
-  const fab = page.getByRole('menu', { name: 'Actions', exact: true });
+  const fab = fabMenu(page);
   const items = fab.getByRole('menuitem');
-  const clickable = () => items.first().click({ trial: true, timeout: 1_000 }).then(() => true, () => false);
   await expect(async () => {
-    if (!(await clickable())) {
+    if (!(await clickable(items.first()))) {
       await fab.getByRole('button').click({ timeout: 2_000 });
     }
-    expect(await clickable()).toBe(true);
+    expect(await clickable(items.first())).toBe(true);
   }).toPass({ timeout: 30_000 });
   return items;
-}
-
-export async function pickFromPropertyRow(page: Page, rowClass: string, option: string) {
-  await panel(page).locator(`.${rowClass} .pspad-property-activator`).click();
-  await page.getByRole('menuitem', { name: option, exact: true }).click();
 }
 
 export function propertyRow(page: Page, label: string) {
@@ -88,14 +89,24 @@ export async function chooseProperty(page: Page, label: string, option: string |
 
 export async function menuOptions(page: Page, label: string) {
   await expect(async () => {
-    await propertyRow(page, label).click({ timeout: 2_000 });
+    if (!(await openMenuItems(page).first().isVisible())) {
+      await propertyRow(page, label).click({ timeout: 2_000 });
+    }
     await expect(openMenuItems(page).first()).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 30_000 });
   return openMenuItems(page);
 }
 
+export function openMenu(page: Page) {
+  return page.getByRole('menu', { name: /^$/ });
+}
+
 export function openMenuItems(page: Page) {
-  return page.locator('.mud-popover-open').getByRole('menuitem');
+  return openMenu(page).getByRole('menuitem');
+}
+
+export function openOptions(page: Page) {
+  return page.getByRole('option');
 }
 
 export async function dismissMenu(page: Page) {

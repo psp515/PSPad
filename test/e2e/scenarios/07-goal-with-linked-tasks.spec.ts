@@ -1,5 +1,5 @@
 import { expect, test } from '../fixtures/accounts';
-import { createArea, openArea } from '../helpers/areas';
+import { createArea, openArea, pageHeading } from '../helpers/areas';
 import { createGoal, deleteGoal, goToGoals, goalCard, linkTaskToGoal, openGoal } from '../helpers/goals';
 import { createList, openList } from '../helpers/lists';
 import { chooseProperty, clearProperty, dismissMenu, menuOptions, propertyRow } from '../helpers/panels';
@@ -27,16 +27,16 @@ test('a goal tracks its linked tasks and a star never plans a task', async ({ pa
     await linkTaskToGoal(page, goal);
     await closeTask(page);
   }
-  await expect(taskRow(page, open).locator('.pspad-row-goal')).toHaveText(goal);
+  await expect(taskRow(page, open).getByText(goal, { exact: true })).toBeVisible();
   await completeTaskRow(page, done);
 
   await openArea(page, area);
-  await expect(taskRow(page, open).locator('.pspad-row-goal')).toHaveText(goal);
+  await expect(taskRow(page, open).getByText(goal, { exact: true })).toBeVisible();
 
   await goToGoals(page);
   await openGoal(page, goal);
   await expect(taskRow(page, open)).toBeVisible();
-  await expect(taskRow(page, open).locator('.pspad-row-goal')).toHaveCount(0);
+  await expect(taskRow(page, open).getByText(goal, { exact: true })).toHaveCount(0);
   await expect(page.getByText('Completed · 1')).toBeVisible();
 
   await taskRow(page, open).getByRole('button', { name: 'Star' }).click();
@@ -49,13 +49,14 @@ test('a goal tracks its linked tasks and a star never plans a task', async ({ pa
   });
 
   await goToGoals(page);
-  await goalCard(page, goal).locator('.pspad-goal-menu').getByRole('button').click();
+  await goalCard(page, goal).getByRole('button', { name: 'Actions', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Mark achieved' }).click();
-  const achieved = page.locator('.pspad-goals-achieved');
+  const achieved = page.getByRole('region', { name: 'Achieved', exact: true });
   await expect(achieved).toContainText('1 of 2 tasks done');
   await achieved.getByRole('link', { name: goal }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText(goal);
-  await expect(page.locator('.pspad-goal-status')).toHaveText('Achieved');
+  await expect(pageHeading(page)).toHaveAccessibleDescription('Achieved');
+  await expect(page.getByText('Achieved', { exact: true }).filter({ visible: true })).toHaveCount(2);
   await test.step('an achieved goal still lists its tasks', async () => {
     await expect(page.getByText(open, { exact: true })).toBeVisible();
   });

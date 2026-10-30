@@ -21,19 +21,19 @@ export function budgetIdFromUrl(page: Page): string {
 }
 
 export async function showView(page: Page, view: BudgetView) {
-  await page.locator('.pspad-budget-views').getByText(view, { exact: true }).click();
+  await viewToggle(page, view).click();
 }
 
 export async function openBudgetSettings(page: Page) {
   await page.getByRole('button', { name: 'Budget settings' }).click();
-  await expect(page.locator('.pspad-budget-card-settings')).toBeVisible();
+  await expect(region(page, 'Budget')).toBeVisible();
 }
 
 export async function pickOption(page: Page, trigger: Locator, option: string) {
-  await expect(page.locator('.mud-popover-open')).toHaveCount(0);
+  await expect(page.getByRole('option')).toHaveCount(0);
   await trigger.click();
-  await page.locator('.mud-popover-open').getByText(option, { exact: true }).click();
-  await expect(page.locator('.mud-popover-open')).toHaveCount(0);
+  await page.getByRole('option', { name: option, exact: true }).click();
+  await expect(page.getByRole('option')).toHaveCount(0);
 }
 
 export async function addEntry(
@@ -41,22 +41,22 @@ export async function addEntry(
   kind: 'Expense' | 'Income',
   entry: { name: string; category: string; amount: string; currency?: string; rate?: string },
 ) {
-  await page.locator(kind === 'Expense' ? '.pspad-budget-quick-expense' : '.pspad-budget-quick-income').click();
+  await page.getByRole('button', { name: kind, exact: true }).click();
   const form = panel(page);
-  await form.locator('.pspad-entry-name-field input').fill(entry.name);
-  const category = form.locator('.pspad-entry-category-field input');
+  await form.getByRole('textbox', { name: 'Name', exact: true }).fill(entry.name);
+  const category = form.getByRole('combobox', { name: 'Category', exact: true });
   await category.fill(entry.category);
-  await page.locator('.mud-popover-open').getByText(entry.category, { exact: false }).first().click();
+  await page.getByRole('option').filter({ hasText: entry.category }).first().click();
   await expect(category).toHaveValue(entry.category);
-  await form.locator('.pspad-entry-amount-field input').fill(entry.amount);
+  await form.getByRole('spinbutton', { name: 'Amount', exact: true }).fill(entry.amount);
   if (entry.currency) {
-    await pickOption(page, form.locator('.pspad-entry-currency-field'), entry.currency);
+    await pickOption(page, form.getByRole('combobox', { name: 'Currency', exact: true }), entry.currency);
   }
   if (entry.rate) {
-    await form.locator('.pspad-entry-rate-field input').fill(entry.rate);
+    await form.getByRole('spinbutton', { name: 'Rate to PLN', exact: true }).fill(entry.rate);
   }
   await savePanel(page);
-  await expect(form.locator('.pspad-panel-title')).toBeHidden();
+  await expect(form).toHaveCount(0);
 }
 
 export async function addHolding(
@@ -65,17 +65,17 @@ export async function addHolding(
 ) {
   await openFabAction(page, 'Add holding');
   const form = panel(page);
-  await form.locator('.pspad-holding-name-field input').fill(holding.name);
-  await form.locator('.pspad-holding-type-field').getByText(holding.type, { exact: true }).click();
-  await form.locator('.pspad-holding-panel-amount-field input').fill(holding.amount);
+  await form.getByRole('textbox', { name: 'Name', exact: true }).fill(holding.name);
+  await form.getByRole('checkbox', { name: holding.type, exact: true }).click();
+  await form.getByRole('spinbutton', { name: 'Amount', exact: true }).fill(holding.amount);
   if (holding.currency) {
-    await pickOption(page, form.locator('.pspad-holding-panel-currency-field'), holding.currency);
+    await pickOption(page, form.getByRole('combobox', { name: 'Currency', exact: true }), holding.currency);
   }
   if (holding.rate) {
-    await form.locator('.pspad-holding-panel-rate-field input').fill(holding.rate);
+    await form.getByRole('spinbutton', { name: 'Rate to PLN', exact: true }).fill(holding.rate);
   }
   await savePanel(page);
-  await expect(form.locator('.pspad-panel-title')).toBeHidden();
+  await expect(form).toHaveCount(0);
 }
 
 export async function confirmIfAsked(page: Page) {

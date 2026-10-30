@@ -18,7 +18,11 @@ export async function syncNow(page: Page) {
   const synced = page.waitForResponse(response => response.url().includes('/api/sync') && response.ok());
   await syncButton(page).click();
   await synced;
-  await expect(page.locator('.pspad-sync-stamp').first()).toContainText(/Updated/);
+  await expect(syncStamp(page, /^Updated\b/)).toBeVisible();
+}
+
+export function syncStamp(page: Page, text: RegExp) {
+  return page.getByText(text).filter({ visible: true }).first();
 }
 
 export const pushedWithin = { timeout: 20_000 };

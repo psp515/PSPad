@@ -95,7 +95,7 @@ test('captured items are organised into a task or discarded', async ({ page, acc
   await test.step('the next item keeps the list picked last; discarding it empties the inbox', async () => {
     await openInboxItem(page, drop);
     await expect(propertyRow(page, 'List')).toContainText(`${area} › ${repairs}`);
-    await deleteFromPanel(page);
+    await deleteFromPanel(page, 'Discard');
     await expect(inboxItem(page, drop)).toBeHidden();
     await expect(page.getByText('Nothing captured.')).toBeVisible();
   });

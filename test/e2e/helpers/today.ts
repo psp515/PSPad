@@ -1,6 +1,6 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { goTo, navLink } from './nav';
-import { awaitNoDrawer, chooseProperty, panel } from './panels';
+import { awaitNoDrawer, chooseProperty, panel, propertyRow } from './panels';
 import { shortDate, utcToday } from './dates';
 import { escapeRegExp } from './text';
 
@@ -8,50 +8,65 @@ export async function goToMyDay(page: Page) {
   await goTo(page, 'My Day');
 }
 
-export function daySection(page: Page, section: 'overdue' | 'scheduled' | 'anytime' | 'starred' | 'completed') {
-  return page.locator(`.pspad-day-${section}`);
+const sections = {
+  overdue: 'Overdue',
+  scheduled: 'Scheduled',
+  anytime: /, any time$/,
+  starred: 'Starred',
+  completed: 'Completed',
+} as const;
+
+export function daySection(page: Page, section: keyof typeof sections) {
+  const name = sections[section];
+  return page.getByRole('region', typeof name === 'string' ? { name, exact: true } : { name });
 }
 
-export function dayLabel(page: Page) {
-  return page.locator('.pspad-week-label');
+export function dayLabel(page: Page, text: string | RegExp) {
+  return page.getByText(text, { exact: true });
+}
+
+export function dayShown(page: Page, day: Date) {
+  return dayLabel(page, new RegExp(`^(\\w+ · )?${escapeRegExp(shortDate(day))}$`));
 }
 
 export async function setDueDate(page: Page, day: 'Today' | 'Tomorrow' | Date) {
-  await panel(page).locator('.pspad-task-due .pspad-property-activator').click();
   if (day instanceof Date) {
-    await page.getByRole('menuitem', { name: 'Pick a date…' }).click();
-    await pickCalendarDay(page.locator('.pspad-due-dialog'), day);
-    await expect(page.locator('.pspad-due-dialog')).toBeHidden();
+    await chooseProperty(page, 'Due', 'Pick a date…');
+    const dialog = page.getByRole('dialog');
+    await pickCalendarDay(dialog, day);
+    await expect(dialog).toBeHidden();
   } else {
-    await page.getByRole('menuitem', { name: day }).click();
+    await chooseProperty(page, 'Due', day);
   }
 }
 
-export async function pickCalendarDay(dialog: import('@playwright/test').Locator, day: Date) {
+export async function pickCalendarDay(calendar: Locator | Page, day: Date) {
   const wanted = day.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-  const shown = dialog.locator('.mud-picker-calendar-header-transition');
-  const arrows = dialog.locator('.mud-picker-calendar-header-switch .mud-icon-button');
+  const shown = calendar.getByRole('button', { name: /^[A-Z][a-z]+ \d{4}$/ });
+  const previous = calendar.getByRole('button', { name: /^Previous month \(/ });
+  const next = calendar.getByRole('button', { name: /^Next month \(/ });
   for (let step = 0; step < 3 && (await shown.innerText()).trim() !== wanted; step++) {
     const showing = new Date(`1 ${(await shown.innerText()).trim()} UTC`);
-    await (showing.getTime() > day.getTime() ? arrows.first() : arrows.last()).click();
+    await (showing.getTime() > day.getTime() ? previous : next).click();
   }
   await expect(shown).toHaveText(wanted);
-  await dialog
-    .locator('.mud-picker-calendar-day:not(.mud-hidden) button, button.mud-picker-calendar-day:not(.mud-hidden)')
-    .filter({ hasText: new RegExp(`^${day.getUTCDate()}$`), visible: true })
-    .first()
-    .click();
+  const date = day.getUTCDate();
+  const matching = calendar.getByRole('button', { name: String(date), exact: true });
+  await (date < 15 ? matching.first() : matching.last()).click();
+}
+
+export function calendarOpen(page: Page) {
+  return page.getByRole('button', { name: /^Next month \(/ });
 }
 
 export async function setTaskTime(page: Page, start: string, end?: string) {
-  const row = panel(page).locator('.pspad-task-time');
-  const startInput = row.locator('.pspad-time-start input');
+  const startInput = timeField(page, 'Start');
   await startInput.fill(start);
   await startInput.press('Tab');
   await expect(startInput).toHaveValue(start);
-  await expect(row.locator('.pspad-time-clear')).toBeVisible();
+  await expect(panel(page).getByRole('button', { name: 'Clear time', exact: true })).toBeVisible();
   if (end) {
-    const endInput = row.locator('.pspad-time-end input');
+    const endInput = timeField(page, 'End');
     await endInput.fill(end);
     await endInput.press('Tab');
     await expect(endInput).toHaveValue(end);
@@ -90,14 +105,13 @@ export async function pickClockHourAndLeave(page: Page, which: 'Start' | 'End', 
 }
 
 export async function pickTaskTimeFromClock(page: Page, which: 'start' | 'end', hour: number, minute: number) {
-  const row = panel(page).locator('.pspad-task-time');
   const clock = await openClock(page, which === 'start' ? 'Start' : 'End');
   await clickClockNumber(page, clock.locator('.mud-time-picker-hour'), hour);
   await expect(clock.locator('.mud-time-picker-minute')).not.toHaveClass(/mud-time-picker-dial-hidden/);
   await clickClockNumber(page, clock.locator('.mud-time-picker-minute'), minute);
   await expect(clock).toBeHidden();
   const text = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-  await expect(row.locator(`.pspad-time-${which} input`)).toHaveValue(text);
+  await expect(timeField(page, which === 'start' ? 'Start' : 'End')).toHaveValue(text);
 }
 
 // The outer-ring hour sticks are zero-width, so Playwright never sees them as visible; a user clicks the number instead.
@@ -109,22 +123,22 @@ async function clickClockNumber(page: Page, dial: import('@playwright/test').Loc
 }
 
 export function schedule(page: Page) {
-  return page.locator('section').filter({ has: page.getByRole('heading', { name: 'Schedule', exact: true }) });
+  return page.getByRole('region', { name: 'Schedule', exact: true });
 }
 
 export function timelineBlock(page: Page, name: string) {
-  return page.locator('.pspad-timeline-task').filter({ has: page.locator('.pspad-timeline-task-name', { hasText: name }) });
+  return schedule(page).getByRole('article', { name });
 }
 
 export async function setRepeating(page: Page) {
-  await panel(page).locator('.pspad-task-kind').getByText('Repeating', { exact: true }).click();
-  await expect(panel(page).locator('.pspad-task-repeat')).toBeVisible();
+  await panel(page).getByRole('checkbox', { name: 'Repeating', exact: true }).click();
+  await expect(propertyRow(page, 'Repeat')).toBeVisible();
 }
 
 export async function showDay(page: Page, day: Date) {
-  await page.locator('.pspad-week-pick').click();
-  await pickCalendarDay(page.locator('.pspad-day-dialog'), day);
-  await expect(dayLabel(page)).toContainText(shortDate(day));
+  await page.getByRole('button', { name: 'Pick a date', exact: true }).click();
+  await pickCalendarDay(page.getByRole('dialog'), day);
+  await expect(dayShown(page, day)).toBeVisible();
 }
 
 export function weekDay(page: Page, day: Date) {
@@ -151,7 +165,7 @@ export async function pickWeekDay(page: Page, day: Date) {
 }
 
 export function myDayLink(page: Page) {
-  return navLink(page, '/');
+  return navLink(page, 'My Day');
 }
 
 export async function openNewTaskFromFab(page: Page) {
@@ -178,8 +192,8 @@ export async function setCustomRepeat(page: Page, repeat: CustomRepeat) {
   }
   if (repeat.start) {
     await dialog.getByLabel('Starts').click({ timeout: 10_000 });
-    await pickCalendarDay(page.locator('.mud-popover-open'), repeat.start);
-    await expect(page.locator('.mud-popover-open .mud-picker-calendar-header-transition')).toHaveCount(0);
+    await pickCalendarDay(page, repeat.start);
+    await expect(calendarOpen(page)).toHaveCount(0);
   }
   for (const day of repeat.days ?? []) {
     await dialog.getByText(day, { exact: true }).click({ timeout: 10_000 });
@@ -223,7 +237,7 @@ export async function setOneTime(page: Page) {
 
 export async function backToToday(page: Page) {
   await page.getByRole('button', { name: 'Today', exact: true }).click();
-  await expect(dayLabel(page)).toContainText('Today');
+  await expect(dayLabel(page, /^Today · /)).toBeVisible();
 }
 
 export async function passUtcMidnight(page: Page) {

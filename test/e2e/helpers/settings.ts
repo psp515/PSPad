@@ -2,13 +2,14 @@ import { expect, Page } from '@playwright/test';
 import { Account } from '../fixtures/keycloak';
 import { env } from '../env';
 import { goTo } from './nav';
+import { shellMenu } from './shell';
 
 export async function goToSettings(page: Page, label = 'Settings') {
   if (label === 'Settings') {
     await goTo(page, 'Settings');
     return;
   }
-  await page.locator('.pspad-nav').getByRole('link', { name: label, exact: true }).click();
+  await shellMenu(page).getByRole('link', { name: label, exact: true }).click();
   await expect(page.getByRole('heading', { name: label, exact: true })).toBeVisible();
 }
 
@@ -18,16 +19,20 @@ export async function setTimeZone(page: Page, id: string) {
   const saved = page.waitForResponse(
     response => response.url().endsWith('/api/me/timezone') && response.request().method() === 'PUT' && response.ok(),
   );
-  await page.locator('.mud-popover-open').getByText(id, { exact: true }).click();
+  await page.getByRole('option', { name: id, exact: true }).click();
   await saved;
   await expect(input).toHaveValue(id);
 }
 
+export function languageSelect(page: Page) {
+  return page.getByRole('combobox', { name: /^(Language|Język)$/ });
+}
+
 export async function setLanguage(page: Page, nativeName: 'English' | 'Polski') {
-  await expect(page.locator('.mud-popover-open')).toHaveCount(0);
-  await page.locator('.pspad-language').getByRole('combobox').click();
+  await expect(page.getByRole('option')).toHaveCount(0);
+  await languageSelect(page).click();
   const reloaded = page.waitForEvent('load');
-  await page.locator('.mud-popover-open').getByText(nativeName, { exact: true }).click();
+  await page.getByRole('option', { name: nativeName, exact: true }).click();
   await reloaded;
 }
 
