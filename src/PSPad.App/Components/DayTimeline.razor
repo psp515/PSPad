@@ -42,7 +42,7 @@
         {
             var task = Tasks[block.Entry.TaskId];
             var done = IsDone(task);
-            <div @key="block.Entry.TaskId" class="@BlockClass(block, done)" style="@BlockStyle(block)" role="article" aria-label="@task.Name"
+            <div @key="block.Entry.TaskId" class="@BlockClass(block, done)" style="@BlockStyle(block)" role="group" aria-label="@task.Name"
                  title="@($"{task.Name} – {TaskTimeText.Describe(block.Entry.Time!)}")">
                 <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))" ReadOnly="@(!TaskTick.Toggles(task, Day))"
                              Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"

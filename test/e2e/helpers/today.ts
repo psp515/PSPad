@@ -127,7 +127,7 @@ export function schedule(page: Page) {
 }
 
 export function timelineBlock(page: Page, name: string) {
-  return schedule(page).getByRole('article', { name });
+  return schedule(page).getByRole('group', { name });
 }
 
 export async function setRepeating(page: Page) {
