@@ -125,7 +125,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
 
             if (me is not null && !fromZero)
             {
-                await OweNewContainersAsync(response, owed);
+                await OweNewContainersAsync(response, owed, me.Value);
             }
 
             pulled += await SaveAsync(response.Documents);
@@ -170,25 +170,30 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         }
     }
 
-    // A joined container's own row arrives by delta while its older children do not, so it is owed a
-    // whole pull from before its row is saved until that pull is saved -- across failures and reloads.
-    async Task OweNewContainersAsync(SyncResponse page, HashSet<Guid> owed)
+    // A joined container's row arrives by delta but its older children do not, so it is owed a whole pull until saved.
+    async Task OweNewContainersAsync(SyncResponse page, HashSet<Guid> owed, Guid me)
     {
         var found = false;
+        var memberLists = page.MemberListIds ?? [];
+        var memberBudgets = page.MemberBudgetIds ?? [];
 
-        foreach (var id in page.MemberListIds ?? [])
+        if (memberLists.Any())
         {
-            if (!owed.Contains(id) && await replica.LoadAsync<Module.Tasks.Lists.TaskList>(id) is null)
+            var held = (await replica.LoadAllAsync<Module.Tasks.Lists.TaskList>(me)).Select(list => list.Id).ToHashSet();
+
+            foreach (var id in memberLists.Where(id => !held.Contains(id)))
             {
-                found = owed.Add(id);
+                found |= owed.Add(id);
             }
         }
 
-        foreach (var id in page.MemberBudgetIds ?? [])
+        if (memberBudgets.Any())
         {
-            if (!owed.Contains(id) && await replica.LoadAsync<Module.Money.Budgets.Budget>(id) is null)
+            var held = (await replica.LoadAllAsync<Module.Money.Budgets.Budget>(me)).Select(budget => budget.Id).ToHashSet();
+
+            foreach (var id in memberBudgets.Where(id => !held.Contains(id)))
             {
-                found = owed.Add(id);
+                found |= owed.Add(id);
             }
         }
 
@@ -252,8 +257,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         return pulled;
     }
 
-    // A failing full pull must not stall the marker -- what it fetched stays owed and the next sync
-    // retries it, instead of every delta pull wedging behind it forever.
+    // A failing full pull must not stall the marker -- what it would fetch stays owed and is retried next sync.
     async Task<SyncResponse?> FullPullAsync(long marker, IReadOnlyCollection<Guid> owed)
     {
         try

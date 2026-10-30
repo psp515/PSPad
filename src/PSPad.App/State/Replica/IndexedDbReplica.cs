@@ -79,7 +79,10 @@ public sealed class IndexedDbReplica(IJSRuntime js) : IReplica, IAsyncDisposable
         var stored = await module.InvokeAsync<OwnerRow?>("getMeta", "owedWhole");
         return stored is null
             ? []
-            : stored.Value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(Guid.Parse).ToArray();
+            : stored.Value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(value => Guid.TryParse(value, out var id) ? id : (Guid?)null)
+                .OfType<Guid>()
+                .ToArray();
     }
 
     public async Task SetOwedWholeAsync(IReadOnlyCollection<Guid> containers)

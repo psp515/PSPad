@@ -16,10 +16,10 @@
     }
     <div class="pspad-top-title">
         <MudText Typo="Typo.h6" Class="pspad-top-heading pspad-ellipsis"
-                 aria-describedby="@(Header.Subtitle is { Length: > 0 } ? SubtitleId : null)">@Header.Title</MudText>
+                 aria-describedby="@(Header.Subtitle is { Length: > 0 } ? _subtitleId : null)">@Header.Title</MudText>
         @if (Header.Subtitle is { Length: > 0 } subtitle)
         {
-            <MudText Typo="Typo.caption" Class="pspad-top-subtitle pspad-ellipsis pspad-muted" id="@SubtitleId">@subtitle</MudText>
+            <MudText Typo="Typo.caption" Class="pspad-top-subtitle pspad-ellipsis pspad-muted" id="@_subtitleId">@subtitle</MudText>
         }
     </div>
     <MudSpacer />
@@ -34,7 +34,7 @@
 </MudAppBar>
 
 @code {
-    readonly string SubtitleId = $"top-bar-subtitle-{Guid.NewGuid():N}";
+    readonly string _subtitleId = $"top-bar-subtitle-{Guid.NewGuid():N}";
 
     [Parameter] public string Email { get; set; } = "";
 
