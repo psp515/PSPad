@@ -512,7 +512,9 @@ and reference items; one rule covers leaving, removal, the owner deleting
 the list, and the owner deleting their account. Budgets reconcile the same
 way against `memberBudgetIds` (purging a budget's entries and snapshots with
 it), and an entry or snapshot the caller does not own whose budget the
-replica does not hold is dropped. A list or budget a pull page names in the
+replica does not hold is dropped. Every document a purge or drop removes
+counts toward the sync's pulled total, so the coordinator bumps
+`SyncRevision` and an open screen redraws without it. A list or budget a pull page names in the
 membership set while the replica does not hold it is **owed a whole pull**:
 the id goes into the replica's `owedWhole` meta before the page is saved —
 the join bumps the container's own `seq`, so its row arrives by delta while

@@ -141,12 +141,15 @@ test('a budget is shared, read by its member, removed, left, rejoined and stoppe
     await expect(panel(page).getByRole('button', { name: 'New link' })).toBeEnabled();
   });
 
-  await test.step('removing the member takes the budget from them, and a code in the link brings them back at once', async () => {
+  await test.step('removing the member takes the budget off their open screen at the next sync, and a code in the link brings them back at once', async () => {
+    await card(member, household).getByRole('link', { name: household }).click();
+    await expect(member.getByRole('heading', { name: household, exact: true })).toBeVisible();
     await panel(page).getByRole('button', { name: `Remove ${memberName}` }).click();
     await confirm(page, 'Remove');
     await expect(panel(page).getByRole('button', { name: `Remove ${memberName}` })).toHaveCount(0);
     await syncNow(member);
-    await goTo(member, 'My Day');
+    await expect(member.getByText('That budget does not exist.')).toBeVisible();
+    await expect(member.getByRole('heading', { name: household, exact: true })).toHaveCount(0);
     await goTo(member, 'Budgets');
     await expect(card(member, household)).toHaveCount(0);
     await expect(card(member, mine)).toBeVisible();

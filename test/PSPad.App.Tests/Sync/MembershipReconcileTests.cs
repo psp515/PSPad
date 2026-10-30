@@ -544,6 +544,34 @@ public class MembershipReconcileTests
     }
 
     [Fact]
+    public async Task ABudgetPurgedOnAPullCountsAsPulledSoOpenScreensRedraw()
+    {
+        var budget = BudgetOwnedBy(Owner);
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        await replica.SaveAsync(budget);
+        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), MemberBudgetIds: []));
+
+        var outcome = await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.True(outcome.Pulled > 0);
+    }
+
+    [Fact]
+    public async Task AListPurgedOnAPullCountsAsPulledSoOpenScreensRedraw()
+    {
+        var listId = Guid.NewGuid();
+        var replica = new InMemoryReplica();
+        await replica.SetOwnerAsync(Me);
+        await replica.SaveAsync(ListOwnedBy(Owner, listId));
+        var api = new ScriptedApi(new SyncResponse(1, new Dictionary<string, JsonElement[]>(), MemberListIds: []));
+
+        var outcome = await new SyncService(api, replica, new InMemoryOutbox()).SyncAsync(CancellationToken.None);
+
+        Assert.True(outcome.Pulled > 0);
+    }
+
+    [Fact]
     public async Task MyOwnBudgetsAreNeverPurged()
     {
         var budget = BudgetOwnedBy(Me);

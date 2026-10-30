@@ -163,7 +163,9 @@ does not own. The client reconciles after writing the delta, under the same
 
 - A budget in the replica, not owned by the caller, not in
   `MemberBudgetIds` → purge it and its entries and snapshots. One rule for
-  leaving, removal and the owner's account deletion.
+  leaving, removal and the owner's account deletion. A purge counts as a
+  pulled change, so an open budget screen redraws at that sync and says the
+  budget does not exist.
 - A budget in `MemberBudgetIds` the replica does not hold when a page names
   it (another device joined, or a join through the API) → it is owed a whole
   pull, recorded in the replica before the page is saved; the same pull asks

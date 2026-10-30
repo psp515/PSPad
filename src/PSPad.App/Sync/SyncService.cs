@@ -144,7 +144,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         // the user's own are never purged.
         if (me is { } owner && (response.MemberListIds is not null || response.MemberBudgetIds is not null))
         {
-            await ReconcileMembershipAsync(owner, response, settledJoins);
+            pulled += await ReconcileMembershipAsync(owner, response, settledJoins);
             pulled += await PullOwedWholeAsync(response, owed, fromZero);
         }
 
@@ -198,24 +198,27 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         }
     }
 
-    async Task ReconcileMembershipAsync(Guid owner, SyncResponse response, IReadOnlyCollection<Guid> settledJoins)
+    async Task<int> ReconcileMembershipAsync(Guid owner, SyncResponse response, IReadOnlyCollection<Guid> settledJoins)
     {
         await _membership.WaitAsync();
         try
         {
             var joinedMidPull = _freshJoins.Except(settledJoins).ToHashSet();
+            var removed = 0;
 
             if (response.MemberListIds is { } memberLists)
             {
-                await ReconcileAsync(owner, memberLists, joinedMidPull);
-                await DropStrandedAsync(owner);
+                removed += await ReconcileAsync(owner, memberLists, joinedMidPull);
+                removed += await DropStrandedAsync(owner);
             }
 
             if (response.MemberBudgetIds is { } memberBudgets)
             {
-                await ReconcileBudgetsAsync(owner, memberBudgets, joinedMidPull);
-                await DropStrandedMoneyAsync(owner);
+                removed += await ReconcileBudgetsAsync(owner, memberBudgets, joinedMidPull);
+                removed += await DropStrandedMoneyAsync(owner);
             }
+
+            return removed;
         }
         finally
         {
@@ -292,91 +295,123 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
     }
 
     // A membership set read before a join landed cannot speak for the joined container.
-    async Task ReconcileAsync(Guid me, IReadOnlyCollection<Guid> memberLists, IReadOnlySet<Guid> joinedMidPull)
+    async Task<int> ReconcileAsync(Guid me, IReadOnlyCollection<Guid> memberLists, IReadOnlySet<Guid> joinedMidPull)
     {
+        var removed = 0;
+
         foreach (var lost in (await replica.LoadAllAsync<Module.Tasks.Lists.TaskList>(me))
                      .Where(list => list.UserId != me && !memberLists.Contains(list.Id) && !joinedMidPull.Contains(list.Id)))
         {
-            await PurgeAsync(lost.Id);
+            removed += await PurgeAsync(lost.Id);
         }
+
+        return removed;
     }
 
-    async Task ReconcileBudgetsAsync(Guid me, IReadOnlyCollection<Guid> memberBudgets, IReadOnlySet<Guid> joinedMidPull)
+    async Task<int> ReconcileBudgetsAsync(Guid me, IReadOnlyCollection<Guid> memberBudgets, IReadOnlySet<Guid> joinedMidPull)
     {
+        var removed = 0;
+
         foreach (var lost in (await replica.LoadAllAsync<Module.Money.Budgets.Budget>(me))
                      .Where(budget => budget.UserId != me && !memberBudgets.Contains(budget.Id) && !joinedMidPull.Contains(budget.Id)))
         {
-            await PurgeBudgetAsync(lost.Id);
+            removed += await PurgeBudgetAsync(lost.Id);
         }
+
+        return removed;
     }
 
-    async Task DropStrandedMoneyAsync(Guid me)
+    async Task<int> DropStrandedMoneyAsync(Guid me)
     {
+        var removed = 0;
         var held = (await replica.LoadAllAsync<Module.Money.Budgets.Budget>(me)).Select(budget => budget.Id).ToHashSet();
 
         foreach (var entry in (await replica.LoadAllAsync<Module.Money.Entries.MoneyEntry>(Guid.Empty))
                      .Where(entry => entry.UserId != me && !held.Contains(entry.BudgetId)))
         {
             await replica.RemoveAsync(entry.Id);
+            removed++;
         }
 
         foreach (var snapshot in (await replica.LoadAllAsync<Module.Money.Balance.BalanceSnapshot>(Guid.Empty))
                      .Where(snapshot => snapshot.UserId != me && !held.Contains(snapshot.BudgetId)))
         {
             await replica.RemoveAsync(snapshot.Id);
+            removed++;
         }
+
+        return removed;
     }
 
-    async Task PurgeBudgetAsync(Guid budgetId)
+    async Task<int> PurgeBudgetAsync(Guid budgetId)
     {
+        var removed = 0;
+
         foreach (var entry in (await replica.LoadAllAsync<Module.Money.Entries.MoneyEntry>(Guid.Empty))
                      .Where(entry => entry.BudgetId == budgetId))
         {
             await replica.RemoveAsync(entry.Id);
+            removed++;
         }
 
         foreach (var snapshot in (await replica.LoadAllAsync<Module.Money.Balance.BalanceSnapshot>(Guid.Empty))
                      .Where(snapshot => snapshot.BudgetId == budgetId))
         {
             await replica.RemoveAsync(snapshot.Id);
+            removed++;
         }
 
         await replica.RemoveAsync(budgetId);
+        removed++;
+
+        return removed;
     }
 
     // A row the owner moved out of a shared list arrives once, naming a list this device never holds.
-    async Task DropStrandedAsync(Guid me)
+    async Task<int> DropStrandedAsync(Guid me)
     {
+        var removed = 0;
         var held = (await replica.LoadAllAsync<Module.Tasks.Lists.TaskList>(me)).Select(list => list.Id).ToHashSet();
 
         foreach (var task in (await replica.LoadAllAsync<Module.Tasks.Tasks.TodoTask>(Guid.Empty))
                      .Where(task => task.UserId != me && !held.Contains(task.ListId)))
         {
             await replica.RemoveAsync(task.Id);
+            removed++;
         }
 
         foreach (var item in (await replica.LoadAllAsync<Module.Tasks.References.ReferenceItem>(Guid.Empty))
                      .Where(item => item.UserId != me && !held.Contains(item.ListId)))
         {
             await replica.RemoveAsync(item.Id);
+            removed++;
         }
+
+        return removed;
     }
 
-    async Task PurgeAsync(Guid listId)
+    async Task<int> PurgeAsync(Guid listId)
     {
+        var removed = 0;
+
         foreach (var task in (await replica.LoadAllAsync<Module.Tasks.Tasks.TodoTask>(Guid.Empty))
                      .Where(task => task.ListId == listId))
         {
             await replica.RemoveAsync(task.Id);
+            removed++;
         }
 
         foreach (var item in (await replica.LoadAllAsync<Module.Tasks.References.ReferenceItem>(Guid.Empty))
                      .Where(item => item.ListId == listId))
         {
             await replica.RemoveAsync(item.Id);
+            removed++;
         }
 
         await replica.RemoveAsync(listId);
+        removed++;
+
+        return removed;
     }
 
     public async Task AdoptJoinAsync(JoinOutcome.Joined joined)
