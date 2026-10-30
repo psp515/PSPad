@@ -50,8 +50,9 @@ public class LocalAccountDeletionTests
             new SnapshotView(Guid.NewGuid(), "List", "Tasks", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(1), [], []),
             DateTimeOffset.UtcNow);
         var deletion = new LocalAccountDeletion(
-            sessions, new InMemoryReplica(), new InMemoryOutbox(), statistics, snapshots,
-            new LocalAuthenticationStateProvider(sessions), NullLogger<LocalAccountDeletion>.Instance);
+            new LocalDeviceData(
+                sessions, new InMemoryReplica(), new InMemoryOutbox(), statistics, snapshots, NullLogger<LocalDeviceData>.Instance),
+            new LocalAuthenticationStateProvider(sessions));
 
         await deletion.ClearAsync();
 
@@ -134,8 +135,10 @@ public class LocalAccountDeletionTests
 
     static LocalAccountDeletion Deletion(
         ILocalSessionStore sessions, IReplica replica, IOutbox outbox, LocalAuthenticationStateProvider authProvider) =>
-        new(sessions, replica, outbox, new StatisticsCache(new FakeStorageJsRuntime()), new InMemorySnapshotCache(),
-            authProvider, NullLogger<LocalAccountDeletion>.Instance);
+        new(new LocalDeviceData(
+                sessions, replica, outbox, new StatisticsCache(new FakeStorageJsRuntime()), new InMemorySnapshotCache(),
+                NullLogger<LocalDeviceData>.Instance),
+            authProvider);
 
     sealed class ThrowingReplica : IReplica
     {

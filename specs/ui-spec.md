@@ -671,7 +671,7 @@ and no list. A malformed `list` or `due` is ignored, as if absent. The
 shell cascades `SyncRevision` to the panel as it does to the page, so an
 open task re-reads on every pull and shows another device's name or
 description without reopening; a description or a name being edited keeps
-its draft (the name from its first keystroke until it is saved or left).
+its draft (the name while the field has focus, until it is saved or left).
 
 **Detail panels share one shell.** `Components/DetailPanel.razor` is the
 only right-anchored detail drawer: 420px from `md` up, full width below it.

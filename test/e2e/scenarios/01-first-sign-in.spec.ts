@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '../fixtures/accounts';
-import { anotherDevice, idOf } from '../helpers/api';
+import { anotherDevice, apiFor, bearerToken, idOf } from '../helpers/api';
 import { createBudgetOn } from '../helpers/budgets';
+import { addDays, utcToday } from '../helpers/dates';
 import { captureFromAnotherDevice, goToInbox } from '../helpers/inbox';
 import { goTo, openInApp } from '../helpers/nav';
 import { closePanel, panel } from '../helpers/panels';
@@ -10,6 +11,8 @@ import {
   bootSplash, bottomNav, collapseGroup, desktopViewport, expandGroup, openAccountDrawer, phoneViewport, pullToRefresh, shellMenu, topBar,
 } from '../helpers/shell';
 import { logInFromWelcome, signInDidNotFinish } from '../helpers/sign-in';
+import { publishSnapshotOn } from '../helpers/snapshots';
+import { goOffline, goOnline } from '../helpers/sync';
 import { goToMyDay } from '../helpers/today';
 
 test.use({ serviceWorkers: 'block' });
@@ -234,8 +237,18 @@ test('a fresh user signs in, finds their way around the shell and can delete the
   });
 
   const keptStatistics = () => page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('pspad.statistics.')));
+  const pantry = `Pantry ${account.suffix}`;
+  let snapshotLink = '';
 
-  await test.step('the statistics the account opened stay on this device', async () => {
+  await test.step('a snapshot the account opened reads offline, and the statistics it opened stay on this device', async () => {
+    const listId = randomUUID();
+    await device.send('CreateTaskList', { listId, areaId: await idOf(device, 'areas', 'Work'), name: pantry, kind: 0 });
+    const api = await apiFor(await bearerToken(page));
+    const { token } = await publishSnapshotOn(api, listId, addDays(utcToday(), 1));
+    await api.dispose();
+    snapshotLink = `/public/snapshot/${token}`;
+    await page.goto(snapshotLink);
+    await expect(page.getByRole('heading', { name: pantry })).toBeVisible();
     await goTo(page, 'Statistics');
     await expect.poll(keptStatistics).not.toEqual([]);
     await goTo(page, 'Settings');
@@ -288,10 +301,19 @@ test('a fresh user signs in, finds their way around the shell and can delete the
     await expect(page).toHaveURL(/\/welcome/);
   });
 
-  await test.step('after deleting the account Welcome carries no return address, and none of its statistics stay on this device', async () => {
+  await test.step('after deleting the account Welcome carries no return address', async () => {
     await expect(page).toHaveURL(/\/welcome$/);
     await expect(page.getByRole('link', { name: 'Log in' })).not.toHaveAttribute('href', /returnUrl/);
+  });
+
+  await test.step('the deleted account leaves nothing behind on this device: its snapshot no longer reads offline, and no statistics stay', async () => {
+    await goOffline(page);
+    await openInApp(page, snapshotLink);
+    await expect(page.getByText('Connect to the internet to open this snapshot.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: pantry })).toHaveCount(0);
+    await goOnline(page);
     expect(await keptStatistics()).toEqual([]);
+    await page.goto('/welcome');
   });
 
   await test.step('the deleted account can no longer log in', async () => {

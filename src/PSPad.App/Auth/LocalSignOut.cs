@@ -1,17 +1,10 @@
 using Microsoft.Extensions.Logging;
-using PSPad.App.State;
-using PSPad.App.State.Outbox;
-using PSPad.App.State.Replica;
-using PSPad.App.Statistics;
 
 namespace PSPad.App.Auth;
 
 public sealed class LocalSignOut(
     ILocalSessionStore sessions,
-    IReplica replica,
-    IOutbox outbox,
-    StatisticsCache statistics,
-    ISnapshotCache snapshots,
+    LocalDeviceData data,
     KeycloakTokenRevoker revoker,
     LocalAuthenticationStateProvider authenticationState,
     ILogger<LocalSignOut> logger)
@@ -57,51 +50,5 @@ public sealed class LocalSignOut(
 
     public void Announce() => authenticationState.SignedOut();
 
-    public async Task ClearStorageAsync()
-    {
-        try
-        {
-            await replica.ClearAsync();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning("Replica clear on sign-out failed: {Reason}", exception.Message);
-        }
-
-        try
-        {
-            await outbox.ClearAsync();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning("Outbox clear on sign-out failed: {Reason}", exception.Message);
-        }
-
-        try
-        {
-            await statistics.ClearAsync();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning("Statistics cache clear on sign-out failed: {Reason}", exception.Message);
-        }
-
-        try
-        {
-            await snapshots.ClearAsync();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning("Snapshot cache clear on sign-out failed: {Reason}", exception.Message);
-        }
-
-        try
-        {
-            await sessions.ClearAsync();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning("Session clear on sign-out failed: {Reason}", exception.Message);
-        }
-    }
+    public Task ClearStorageAsync() => data.ClearAsync("sign-out");
 }

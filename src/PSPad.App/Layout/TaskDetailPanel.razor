@@ -266,6 +266,12 @@
         }
 
         _task = task;
+
+        if (_nameFocused && task is not null && _nameEdit?.TaskId != task.Id)
+        {
+            _nameEdit = (task.Id, task.Name);
+        }
+
         _placement = ListPlacement.For(State.UserId, areas, lists, views, listViews);
         var current = task is null ? null : _placement.All.FirstOrDefault(list => list.Id == task.ListId);
         _lists = [.. _placement.All.Where(list =>
@@ -402,10 +408,17 @@
 
         _renaming = true;
         _nameEdit = (_task.Id, name.Trim());
-        await Sender.SendAsync(new RenameTask(Guid.NewGuid(), State.UserId, _task.Id, name.Trim()));
-        await ReloadAsync();
-        _renaming = false;
-        _nameEdit = _nameFocused && _task is not null ? (_task.Id, _task.Name) : null;
+
+        try
+        {
+            await Sender.SendAsync(new RenameTask(Guid.NewGuid(), State.UserId, _task.Id, name.Trim()));
+            await ReloadAsync();
+        }
+        finally
+        {
+            _renaming = false;
+            _nameEdit = _nameFocused && _task is not null ? (_task.Id, _task.Name) : null;
+        }
     }
 
     async Task<bool> SaveDescriptionAsync(string text)

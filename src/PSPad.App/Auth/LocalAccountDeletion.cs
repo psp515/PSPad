@@ -1,19 +1,6 @@
-using Microsoft.Extensions.Logging;
-using PSPad.App.State;
-using PSPad.App.State.Outbox;
-using PSPad.App.State.Replica;
-using PSPad.App.Statistics;
-
 namespace PSPad.App.Auth;
 
-public sealed class LocalAccountDeletion(
-    ILocalSessionStore sessions,
-    IReplica replica,
-    IOutbox outbox,
-    StatisticsCache statistics,
-    ISnapshotCache snapshots,
-    LocalAuthenticationStateProvider authenticationState,
-    ILogger<LocalAccountDeletion> logger)
+public sealed class LocalAccountDeletion(LocalDeviceData data, LocalAuthenticationStateProvider authenticationState)
 {
     public async Task ClearAsync()
     {
@@ -23,51 +10,5 @@ public sealed class LocalAccountDeletion(
 
     public void Announce() => authenticationState.SignedOut();
 
-    public async Task ClearStorageAsync()
-    {
-        try
-        {
-            await replica.ClearAsync();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning("Replica clear on account deletion failed: {Reason}", exception.Message);
-        }
-
-        try
-        {
-            await outbox.ClearAsync();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning("Outbox clear on account deletion failed: {Reason}", exception.Message);
-        }
-
-        try
-        {
-            await statistics.ClearAsync();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning("Statistics cache clear on account deletion failed: {Reason}", exception.Message);
-        }
-
-        try
-        {
-            await snapshots.ClearAsync();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning("Snapshot cache clear on account deletion failed: {Reason}", exception.Message);
-        }
-
-        try
-        {
-            await sessions.ClearAsync();
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning("Session clear on account deletion failed: {Reason}", exception.Message);
-        }
-    }
+    public Task ClearStorageAsync() => data.ClearAsync("account deletion");
 }

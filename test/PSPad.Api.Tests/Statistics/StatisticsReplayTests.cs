@@ -6,6 +6,7 @@ using PSPad.Abstractions;
 using PSPad.Contracts;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Statistics;
+using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
@@ -37,6 +38,41 @@ public class StatisticsReplayTests(MongoFixture fixture)
         Assert.Equal(completed.Seq, record.Seq);
         Assert.Equal(1, record.CompletionNumber);
         Assert.Equal(1, feed.Count(entry => entry.Kind == "Created"));
+    }
+
+    [Fact]
+    public async Task ACompletionStoredBeforeGoalLinksCountsTowardItsGoalOnlyWhenTheGoalIsTheReaders()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        var subject = Guid.NewGuid().ToString();
+        var context = Persistence.TestContext.For(fixture);
+        var user = Guid.Empty;
+        var listId = Guid.Empty;
+        var goalId = Guid.NewGuid();
+        await using (var factory = new ApiFactory(fixture))
+        {
+            var client = factory.ClientFor(subject);
+            user = await SignInAsync(client, ct);
+            listId = await ListAsync(client, user, ct);
+            await SendAsync(client, ct, new CreateGoal(Guid.NewGuid(), user, goalId, "Read more"));
+            await EventuallyAsync(
+                () => context.Collection<BsonDocument>("statistics_labels")
+                    .Find(Builders<BsonDocument>.Filter.Eq("_id", goalId)).AnyAsync(ct),
+                found => found, ct);
+        }
+
+        await AppendOldCompletionAsync(context, user, listId, "Mine", goalId, ct);
+        await AppendOldCompletionAsync(context, user, listId, "Someone else's", Guid.NewGuid(), ct);
+
+        await using var restarted = new ApiFactory(fixture);
+        var reader = restarted.ClientFor(subject);
+        var feed = await FeedWhereAsync(reader, records => records.Count(record => record.Kind == "Completed") == 2, ct);
+        var overview = await OverviewAsync(reader, ct);
+
+        Assert.Equal("Read more", feed.Single(record => record.TaskName == "Mine").GoalName);
+        Assert.Null(feed.Single(record => record.TaskName == "Someone else's").GoalName);
+        Assert.Contains(overview.ByGoal, bar => bar.GoalId == goalId && bar.Count == 1);
+        Assert.Contains(overview.ByGoal, bar => bar.GoalId is null && bar.Count == 1);
     }
 
     [Fact]
@@ -345,6 +381,33 @@ public class StatisticsReplayTests(MongoFixture fixture)
                 .Find(Builders<BsonDocument>.Filter.Eq("_id", "statistics")).FirstAsync(ct))["lastProcessedSeq"].ToInt64(),
             marker => marker >= head,
             ct);
+    }
+
+    static async Task AppendOldCompletionAsync(
+        MongoContext context, Guid user, Guid listId, string name, Guid goalId, CancellationToken ct)
+    {
+        var counter = await context.Collection<BsonDocument>("counters").FindOneAndUpdateAsync(
+            Builders<BsonDocument>.Filter.Eq("_id", "events"),
+            Builders<BsonDocument>.Update.Inc("value", 1L),
+            new FindOneAndUpdateOptions<BsonDocument> { ReturnDocument = ReturnDocument.After },
+            ct);
+        var taskId = Guid.NewGuid();
+        var at = DateTimeOffset.UtcNow;
+        await context.Collection<StoredEvent>("events").InsertOneAsync(
+            new StoredEvent
+            {
+                Seq = counter["value"].ToInt64(),
+                UserId = user,
+                AggregateType = "TodoTask",
+                AggregateId = taskId,
+                Type = "TaskCompleted",
+                Payload = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    AggregateId = taskId, UserId = user, At = at, Name = name, ListId = listId, GoalId = goalId, DueOn = (DateOnly?)null
+                }),
+                At = at
+            },
+            cancellationToken: ct);
     }
 
     static async Task<long> AppendUnresolvableEventAsync(MongoContext context, Guid user, CancellationToken ct)

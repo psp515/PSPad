@@ -66,6 +66,7 @@ builder.Services.AddSingleton<LocalAuthenticationStateProvider>();
 builder.Services.AddSingleton<AuthenticationStateProvider>(
     services => services.GetRequiredService<LocalAuthenticationStateProvider>());
 builder.Services.AddScoped<SessionAuthorizationHandler>();
+builder.Services.AddScoped<LocalDeviceData>();
 builder.Services.AddScoped<LocalSignOut>();
 builder.Services.AddScoped<LocalAccountDeletion>();
 
