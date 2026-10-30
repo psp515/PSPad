@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Areas;
+using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Inbox;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Tasks;
@@ -33,6 +34,30 @@ public class StatisticsEndpointTests(MongoFixture fixture)
         Assert.Equal("Buy milk", completed.TaskName);
         Assert.Equal("Errands", completed.ListName);
         Assert.Equal(1, completed.CompletionNumber);
+    }
+
+    [Fact]
+    public async Task ACompletionNamesNoGoalInTheFeedAndCountsTowardTheGoalHoldingTheTask()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = await UserId(client, ct);
+        var taskId = await SeedTask(client, user, "Read a chapter", ct);
+        var goalId = Guid.NewGuid();
+        await Post(client, new CreateGoal(Guid.NewGuid(), user, goalId, "Read more"), ct);
+        await Post(client, new AddTaskToGoal(Guid.NewGuid(), user, goalId, taskId), ct);
+        await Post(client, new CompleteTask(Guid.NewGuid(), user, taskId), ct);
+
+        var records = await EventuallyAsync(
+            () => Records(client, "", ct),
+            feed => feed.Any(record => record.Kind == "Completed"),
+            ct);
+        var overview = await Overview(client, "?days=30", ct);
+
+        Assert.Equal("Read more", Assert.Single(records, record => record.Kind == "LinkedToGoal").GoalName);
+        Assert.Null(Assert.Single(records, record => record.Kind == "Completed").GoalName);
+        Assert.Contains(overview.ByGoal, bar => bar.GoalId == goalId && bar.Count == 1);
     }
 
     [Fact]

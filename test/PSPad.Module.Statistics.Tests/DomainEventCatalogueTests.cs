@@ -59,6 +59,39 @@ public class DomainEventCatalogueTests
     }
 
     [Fact]
+    public void ACompletionStoredBeforeGoalLinksStillNamesItsGoalOnReplay()
+    {
+        var taskId = Guid.NewGuid();
+        var goalId = Guid.NewGuid();
+        var oldPayload = JsonSerializer.Serialize(new
+        {
+            AggregateId = taskId, UserId = Guid.NewGuid(), At, Name = "Fix the sink", ListId = Guid.NewGuid(), GoalId = goalId
+        });
+        var recorded = new RecordedEvent(7, "TodoTask", taskId, "TaskCompleted", oldPayload, At);
+
+        var revived = Assert.IsType<TaskCompleted>(DomainEventCatalogue.Deserialize(recorded));
+
+        Assert.Equal(goalId, revived.GoalId);
+    }
+
+    [Fact]
+    public void ATickStoredBeforeGoalLinksStillNamesItsGoalOnReplay()
+    {
+        var taskId = Guid.NewGuid();
+        var goalId = Guid.NewGuid();
+        var oldPayload = JsonSerializer.Serialize(new
+        {
+            AggregateId = taskId, UserId = Guid.NewGuid(), At, Day = new DateOnly(2026, 9, 24), Completed = true,
+            Name = "Water the plants", ListId = Guid.NewGuid(), GoalId = goalId
+        });
+        var recorded = new RecordedEvent(7, "TodoTask", taskId, "OccurrenceCompleted", oldPayload, At);
+
+        var revived = Assert.IsType<OccurrenceCompleted>(DomainEventCatalogue.Deserialize(recorded));
+
+        Assert.Equal(goalId, revived.GoalId);
+    }
+
+    [Fact]
     public void AnOldNarrowTaskDeletedPayloadStillReplays()
     {
         var taskId = Guid.NewGuid();
