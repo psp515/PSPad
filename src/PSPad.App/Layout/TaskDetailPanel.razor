@@ -38,12 +38,14 @@
                 <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync" ReadOnly="@(!TaskTick.Toggles(_task, State.Today))"
                              Color="Color.Primary" Disabled="@Disabled" aria-label="@Shared["Done"].Value" />
             }
-            <MudTextField T="string" Class="@($"pspad-task-name-field flex-grow-1 {(_task is null ? "px-2" : "")}")"
-                          Value="@Name" ValueChanged="@NameChangedAsync" Placeholder="@T["TaskName"]" MaxLength="@ContentLimits.Name"
-                          Typo="Typo.h6" Underline="false" Immediate="@(Mode == PanelMode.Add)"
-                          AutoFocus="@(Mode == PanelMode.Add)" Disabled="@Disabled"
-                          OnKeyDown="@AddOnEnterAsync"
-                          Style="@(Done ? "text-decoration:line-through" : "")" />
+            <div class="flex-grow-1" @onfocusin="@BeginNameEdit" @onfocusout="@EndNameEdit">
+                <MudTextField T="string" Class="@($"pspad-task-name-field {(_task is null ? "px-2" : "")}")"
+                              Value="@Name" ValueChanged="@NameChangedAsync" Placeholder="@T["TaskName"]" MaxLength="@ContentLimits.Name"
+                              Typo="Typo.h6" Underline="false" Immediate="@(Mode == PanelMode.Add)"
+                              AutoFocus="@(Mode == PanelMode.Add)" Disabled="@Disabled"
+                              OnKeyDown="@AddOnEnterAsync"
+                              Style="@(Done ? "text-decoration:line-through" : "")" />
+            </div>
         </div>
 
         @if (_task is not null)
@@ -162,6 +164,9 @@
     enum PanelMode { Closed, Add, Edit, View }
 
     TodoTask? _task;
+    (Guid TaskId, string Name)? _nameEdit;
+    bool _nameFocused;
+    bool _renaming;
 
     int _reload;
     ListPlacement _placement = ListPlacement.Empty;
@@ -192,7 +197,9 @@
         ? EventCallback.Factory.Create(this, CreateAsync)
         : default;
 
-    string Name => _task?.Name ?? _draft.Name;
+    string Name => _task is null
+        ? _draft.Name
+        : _nameEdit is { } edit && edit.TaskId == _task.Id ? edit.Name : _task.Name;
 
     bool Starred => _task?.Starred ?? _draft.Starred;
 
@@ -271,6 +278,26 @@
         if (Mode == PanelMode.Add && args.Key == "Enter")
         {
             await CreateAsync();
+        }
+    }
+
+    void BeginNameEdit()
+    {
+        _nameFocused = true;
+
+        if (_task is not null)
+        {
+            _nameEdit = (_task.Id, _task.Name);
+        }
+    }
+
+    void EndNameEdit()
+    {
+        _nameFocused = false;
+
+        if (!_renaming)
+        {
+            _nameEdit = null;
         }
     }
 
@@ -366,13 +393,19 @@
             return;
         }
 
+        _nameEdit = _nameFocused ? (_task.Id, name) : null;
+
         if (string.IsNullOrWhiteSpace(name) || name.Trim() == _task.Name)
         {
             return;
         }
 
+        _renaming = true;
+        _nameEdit = (_task.Id, name.Trim());
         await Sender.SendAsync(new RenameTask(Guid.NewGuid(), State.UserId, _task.Id, name.Trim()));
         await ReloadAsync();
+        _renaming = false;
+        _nameEdit = _nameFocused && _task is not null ? (_task.Id, _task.Name) : null;
     }
 
     async Task<bool> SaveDescriptionAsync(string text)

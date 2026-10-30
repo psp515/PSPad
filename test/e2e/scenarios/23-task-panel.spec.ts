@@ -226,6 +226,19 @@ test('the task panel edits a task in place, and deleting asks first', async ({ p
     await expect(panel(page).getByPlaceholder('Task name')).toHaveValue(renamed);
   });
 
+  await test.step('keeps a name being edited when another device renames the task, and saves it when done', async () => {
+    const name = panel(page).getByPlaceholder('Task name');
+    const typed = `${renamed} typed`;
+    const taskId = await idOf(device, 'todotasks', renamed);
+    await name.fill(typed);
+    await pulledAfter(page, () => device.send('RenameTask', { taskId, name: `${renamed} from afar` }));
+    await expect(taskRow(page, `${renamed} from afar`)).toBeVisible();
+    await expect(name).toHaveValue(typed);
+    await name.press('Enter');
+    await expect(taskRow(page, typed)).toBeVisible();
+    await renameTask(page, renamed);
+  });
+
   await test.step('the list row offers task lists only and moves the task to another area at once', async () => {
     const lists = await menuOptions(page, 'List');
     await expect(lists.filter({ hasText: desk })).toHaveCount(1);
