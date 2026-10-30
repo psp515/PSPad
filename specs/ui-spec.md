@@ -394,7 +394,8 @@ area alone); the goal screen passes `Flag`; Settings passes `Settings` with the 
 Counts are singular for one, plural otherwise, and zero open tasks reads
 "no open tasks" (`OpenTaskCount`): "1 list · no open tasks", "1 list · 1
 open task", "2 lists · 2 open tasks". Open tasks are the ones a card counts:
-not deleted, not completed, not ended. One component means the two cannot
+not deleted, not completed, not ended. A reference list card counts its items
+("7 items", `ItemCount`). One component means the two cannot
 drift. The area subtitle (`AreaSummary`) depends on the list kinds: task
 lists only, "{n} list(s) · {m} open task(s)" ("· no open tasks" at zero);
 reference lists only, "{n} reference list(s) · {k} item(s)" ("· no items"
@@ -512,7 +513,8 @@ more starting within half an hour become one group block
 tasks inside a long one sit beside it in the right half, grouped where they
 overlap. On today a red line (`pspad-timeline-now`)
 marks the current time in the user's zone. Ticking a block ticks the task
-like a row does. Design: `specs/my-day-schedule-design.md`.
+like a row does, and a recurring task off its day is read-only there as in a row.
+Design: `specs/my-day-schedule-design.md`.
 
 Membership comes from `TodayRule.Plan`, never from the page. The page does
 not show Coming up; the lead-time rule (`adr/0053`) stays in the domain and
@@ -647,8 +649,8 @@ list screen, area board, goals, panel) toggles the occurrence and does
 nothing on a day the task does not occur on (an off-day of "every 2 days",
 or past its Until) unless that day is already ticked. The rule is
 `TaskTick.Toggles`; on such a day the row's and the panel's `MudCheckBox` is
-`ReadOnly`, so a click leaves it as it was instead of showing a tick that was
-never saved.
+`ReadOnly` (the My Day timeline blocks too), so a click leaves it as it was
+instead of showing a tick that was never saved.
 
 **Every repeated row or card carries `@key` on its entity id.** Ticking a
 task moves it between sections, and without a key Blazor hands the vacated

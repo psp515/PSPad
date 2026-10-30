@@ -2,13 +2,11 @@
 
 Status: migration done 2026-10-29; round 2 done 2026-10-29 (R1–R3): 2206 unit, 413 integration, 34 e2e scenarios.
 
-Bugs found during the migration (each a skipped `BUG:` step, reported in PR #225):
-
-- 30-reference-rows: a reference card counts its items as "open tasks".
-- 21-step-deadline (found 2026-10-29, after PR #225): in a tight My Day row the time, date and step count push the due-step mark past the clipped details, so only its first letters show.
-
 Fixed in round 3:
 
+- 30-reference-rows: a reference card counted its items as "open tasks"; `ThingCard` uses the `ItemCount` plural when it is given a row count. Fixed in 8204b79.
+- 21-step-deadline: in a tight My Day row the time, date and step count pushed the due-step mark past the clipped details; they now shrink first. Fixed in f43b718.
+- DayTimeline checkboxes were not read-only on a day a repeat skips (the same flip-own-state mechanism as 25). Fixed in 8204b79.
 - 10-share-join-remove: joining a list could lose the tasks it already had: a sync running at the join purged them, or the list arrived by delta and never counted as missing. Fixed in 1c0c49e (ADR-0081).
 - 10-share-join-remove: a code in the link joined at once, but the shared list's tasks could be lost the same way. Fixed in 1c0c49e (ADR-0081).
 - 02-capture-and-triage: a deadline set on a draft step was lost when an Inbox item was converted: a pull overwrote the task with the server's older copy, so the step was unknown when `SetStepDueDate` ran locally and the command was rejected before the outbox. Fixed in 55358c4 (#220, ADR-0079: a pulled document never replaces a newer local copy); the step now also checks the server copy.
