@@ -6,7 +6,8 @@
 @inject IStringLocalizer<ReferenceStrings> Ref
 @inject IStringLocalizer<TasksStrings> TaskText
 
-<div class="pspad-row pspad-reference-row d-flex align-center gap-2 pr-1 @(Item.Fields.Count > 0 || Item.SnapshotMarks.Count > 0 ? "pspad-row-has-meta" : "")">
+<div class="pspad-row pspad-reference-row d-flex align-center gap-2 pr-1 @(Item.Fields.Count > 0 || Item.SnapshotMarks.Count > 0 ? "pspad-row-has-meta" : "")"
+     role="article" aria-label="@Item.Name">
     <span class="pspad-priority-slot" aria-hidden="true"></span>
     <span class="pspad-row-lead">
         <MudIcon Icon="@Icons.Material.Outlined.BookmarkBorder" Size="Size.Small" Class="pspad-muted" />
@@ -17,10 +18,10 @@
 
         @if (Item.Fields.Count > 0)
         {
-            <div class="pspad-row-meta pspad-row-chips">
+            <div class="pspad-row-meta pspad-row-chips" role="list" aria-label="@Ref["Labels"].Value">
                 @foreach (var field in Item.Fields)
                 {
-                    <span @key="field.Id" class="pspad-row-chip-slot" @onclick:stopPropagation="true">
+                    <span @key="field.Id" class="pspad-row-chip-slot" role="listitem" @onclick:stopPropagation="true">
                         @switch (KindOf(field))
                         {
                             case FieldKind.Link:

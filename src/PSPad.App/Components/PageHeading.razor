@@ -15,10 +15,10 @@
             <PageIcon Icon="@Icon" />
         }
         <div class="pspad-page-heading-text d-flex flex-column" style="min-width:0">
-            <MudText Typo="Typo.h5" HtmlTag="h1" Class="pspad-page-title">@Title@if (IconLabel is not null){<span class="pspad-sr-only"> @IconLabel</span>}</MudText>
-            @if (!string.IsNullOrEmpty(Subtitle))
+            <MudText Typo="Typo.h5" HtmlTag="h1" Class="pspad-page-title" aria-describedby="@(HasSubtitle ? _subtitleId : null)">@Title@if (IconLabel is not null){<span class="pspad-sr-only"> @IconLabel</span>}</MudText>
+            @if (HasSubtitle)
             {
-                <MudText Typo="Typo.body2" Class="pspad-page-subtitle pspad-muted">@Subtitle</MudText>
+                <MudText Typo="Typo.body2" Class="pspad-page-subtitle pspad-muted" id="@_subtitleId">@Subtitle</MudText>
             }
         </div>
         <MudSpacer />
@@ -44,6 +44,10 @@
     [Parameter] public string? IconLabel { get; set; }
 
     [Parameter] public RenderFragment? Actions { get; set; }
+
+    readonly string _subtitleId = $"page-subtitle-{Guid.NewGuid():N}";
+
+    bool HasSubtitle => !string.IsNullOrEmpty(Subtitle);
 
     string EffectiveBackLabel => BackLabel ?? Shared["Back"].Value;
 

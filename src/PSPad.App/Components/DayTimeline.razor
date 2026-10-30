@@ -42,7 +42,7 @@
         {
             var task = Tasks[block.Entry.TaskId];
             var done = IsDone(task);
-            <div @key="block.Entry.TaskId" class="@BlockClass(block, done)" style="@BlockStyle(block)"
+            <div @key="block.Entry.TaskId" class="@BlockClass(block, done)" style="@BlockStyle(block)" role="article" aria-label="@task.Name"
                  title="@($"{task.Name} – {TaskTimeText.Describe(block.Entry.Time!)}")">
                 <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))" ReadOnly="@(!TaskTick.Toggles(task, Day))"
                              Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
@@ -80,7 +80,7 @@
         }
         @if (Now is { } now)
         {
-            <div class="pspad-timeline-now" style="@($"--at:{_axis.At(TimelineSpan.Minutes(now))}")"><span class="pspad-timeline-now-label">@TaskTimeText.Format(now)</span></div>
+            <div class="pspad-timeline-now" style="@($"--at:{_axis.At(TimelineSpan.Minutes(now))}")" role="img" aria-label="@T["NowAt", TaskTimeText.Format(now)].Value"><span class="pspad-timeline-now-label">@TaskTimeText.Format(now)</span></div>
         }
     </div>
 </MudPaper>

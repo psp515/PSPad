@@ -59,7 +59,7 @@ else
             return;
         }
 
-        <section class="@($"{css} {(spaced ? "mt-6" : "")}".Trim())">
+        <section class="@($"{css} {(spaced ? "mt-6" : "")}".Trim())" aria-label="@title">
             @SectionHeader(title, goals.Count)
             <RowGroup Columns="true">
                 @foreach (var goal in goals)

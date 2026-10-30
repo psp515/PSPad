@@ -2,8 +2,10 @@
 @using PSPad.Module.Tasks.Tasks
 @using PSPad.Module.Tasks.Today
 @inject IStringLocalizer<TasksStrings> T
+@inject IStringLocalizer<TodayStrings> DayText
 
-<div class="pspad-row d-flex align-center gap-2 pr-1 @(HasMeta ? "pspad-row-has-meta" : "") @(Overdue ? "pspad-overdue overdue" : "")">
+<div class="pspad-row d-flex align-center gap-2 pr-1 @(HasMeta ? "pspad-row-has-meta" : "") @(Overdue ? "pspad-overdue overdue" : "")"
+     role="article" aria-label="@Task.Name">
     @if (Task.Priority != Priority.None)
     {
         <span class="@($"pspad-priority pspad-priority-{Task.Priority.ToString().ToLowerInvariant()}")" role="img"
@@ -33,6 +35,10 @@
                 {
                     <MudText Typo="Typo.caption" Class="pspad-due" Color="@(Overdue ? Color.Error : Color.Inherit)">
                         @(Task.IsRecurring ? T["UntilDate", due.ToString("d MMM")] : due.ToString("d MMM"))
+                        @if (Overdue)
+                        {
+                            <span class="pspad-sr-only">@DayText["Overdue"]</span>
+                        }
                     </MudText>
                 }
                 @if (ShowDueStep && !Task.IsRecurring && Task.EarliestDueStep is { DueOn: { } stepDue } dueStep)
@@ -53,7 +59,9 @@
                 }
                 @if (Task.IsRecurring)
                 {
-                    <MudIcon Class="pspad-recurring" Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" />
+                    <span class="d-inline-flex" role="img" aria-label="@T["Repeating"].Value">
+                        <MudIcon Class="pspad-recurring" Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" />
+                    </span>
                 }
                 @if (HasDescription)
                 {

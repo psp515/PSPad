@@ -34,7 +34,7 @@
 }
 else if (_day < State.Today)
 {
-    <section class="pspad-day-completed mb-4">
+    <section class="pspad-day-completed mb-4" aria-label="@T["Completed"].Value">
         <SectionHeading Title="@T["Completed"]" Count="@_plan.Completed.Count" />
         @if (_plan.Completed.Count > 0)
         {
@@ -61,7 +61,7 @@ else
         <div class="pspad-day-lists">
             @if (_plan.Overdue.Count > 0)
             {
-                <section class="pspad-day-overdue mb-4">
+                <section class="pspad-day-overdue mb-4" aria-label="@T["Overdue"].Value">
                     <SectionHeading Title="@T["Overdue"]" Color="Color.Error" />
                     @Rows(_plan.Overdue)
                 </section>
@@ -69,7 +69,7 @@ else
 
             @if (_plan.Starred.Count > 0)
             {
-                <section class="pspad-day-starred mb-4">
+                <section class="pspad-day-starred mb-4" aria-label="@T["Starred"].Value">
                     <SectionHeading Title="@T["Starred"]" Hint="@T["StarredHint"]" />
                     @Rows(_plan.Starred)
                 </section>
@@ -77,7 +77,7 @@ else
 
             @if (_plan.Scheduled.Count > 0)
             {
-                <section class="pspad-day-scheduled mb-4">
+                <section class="pspad-day-scheduled mb-4" aria-label="@T["Scheduled"].Value">
                     <SectionHeading Title="@T["Scheduled"]" Count="@_plan.Scheduled.Count" Color="Color.Primary" />
                     @Rows(_plan.Scheduled)
                 </section>
@@ -85,7 +85,7 @@ else
 
             @if (_plan.AnyTime.Count > 0 || (_plan.Scheduled.Count == 0 && _plan.Overdue.Count == 0))
             {
-                <section class="pspad-day-anytime mb-4">
+                <section class="pspad-day-anytime mb-4" aria-label="@T["AnyTime", DueDayText.Describe(_day, State.Today, Shared)].Value">
                     <SectionHeading Title="@T["AnyTime", DueDayText.Describe(_day, State.Today, Shared)]" />
                     @if (_plan.AnyTime.Count > 0)
                     {
@@ -100,7 +100,7 @@ else
 
             @if (_plan.Completed.Count > 0)
             {
-                <MudExpansionPanels Elevation="0" Gutters="false" Class="pspad-completed">
+                <MudExpansionPanels Elevation="0" Gutters="false" Class="pspad-completed" role="region" aria-label="@T["Completed"].Value">
                     <MudExpansionPanel Class="pspad-day-completed" Text="@T["CompletedCount", _plan.Completed.Count]">
                         @Rows(_plan.Completed)
                     </MudExpansionPanel>
@@ -108,7 +108,7 @@ else
             }
         </div>
 
-        <section class="pspad-day-schedule mb-4">
+        <section class="pspad-day-schedule mb-4" aria-label="@T["Schedule"].Value">
             <SectionHeading Title="@T["Schedule"]" Color="Color.Primary" />
             @if (_plan.Scheduled.Count == 0)
             {
