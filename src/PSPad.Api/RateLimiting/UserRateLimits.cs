@@ -11,4 +11,6 @@ public sealed class UserRateLimits
     public TokenBucketLimits Sync { get; set; } = new() { TokenLimit = 30, TokensPerPeriod = 3 };
 
     public TokenBucketLimits Statistics { get; set; } = new() { TokenLimit = 60, TokensPerPeriod = 6 };
+
+    public TokenBucketLimits Quotes { get; set; } = new() { TokenLimit = 100, TokensPerPeriod = 1 };
 }

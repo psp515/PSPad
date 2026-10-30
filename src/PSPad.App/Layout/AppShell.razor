@@ -7,6 +7,7 @@
 @using PSPad.App.Localization
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.App.State.Investments
 @using PSPad.App.State.Viewport
 @using PSPad.App.Sync
 @using PSPad.App.Theme
@@ -107,6 +108,9 @@
                   OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <InboxItemPanel ItemId="@_openInboxItem" IsNew="@_newInboxItem" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <ReferenceItemPanel ItemId="@_openReferenceItem" NewInList="@_newReferenceItemList" OnClose="@ClosePanel" Disabled="@(!_ready)" />
+    <InvestmentOperationPanel OperationId="@_openOperation" IsNew="@_newOperation" DefaultAccountId="@_operationAccount"
+                              OnClose="@ClosePanel" Disabled="@(!_ready)" />
+    <InvestmentAccountPanel AccountId="@_openInvestmentAccount" IsNew="@_newInvestmentAccount" OnClose="@ClosePanel" Disabled="@(!_ready)" />
 </MudLayout>
 
 @code {
@@ -143,6 +147,11 @@
     bool _newInboxItem;
     Guid? _openReferenceItem;
     Guid? _newReferenceItemList;
+    Guid? _openOperation;
+    bool _newOperation;
+    Guid? _operationAccount;
+    Guid? _openInvestmentAccount;
+    bool _newInvestmentAccount;
     readonly PeriodicTimer _dayCheck = new(TimeSpan.FromMinutes(1));
 
     protected override async Task OnInitializedAsync()
@@ -356,6 +365,11 @@
         _newInboxItem = InboxQuery.IsNew(Navigation.Uri);
         _openReferenceItem = ReferenceQuery.From(Navigation.Uri);
         _newReferenceItemList = ReferenceQuery.NewItemListFrom(Navigation.Uri);
+        _openOperation = InvestmentLinks.OperationFrom(Navigation.Uri);
+        _newOperation = InvestmentLinks.IsNewOperation(Navigation.Uri);
+        _operationAccount = InvestmentLinks.AccountInPath(Navigation.Uri);
+        _openInvestmentAccount = InvestmentLinks.AccountFrom(Navigation.Uri);
+        _newInvestmentAccount = InvestmentLinks.IsNewAccount(Navigation.Uri);
     }
 
     void ClosePanel() => Navigation.NavigateTo(TaskQuery.Without(Navigation.Uri));

@@ -1,0 +1,48 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<MudListItem T="InvestmentOperation" Class="@($"pspad-entry-row pspad-operation-row {(Operation.Deleted ? "pspad-operation-deleted" : "")}")"
+             OnClick="@(() => OnOpen.InvokeAsync(Operation))">
+    <div class="d-flex align-center gap-3">
+        <span class="@AvatarClass" aria-hidden="true">@Initial</span>
+        <div class="d-flex flex-column flex-grow-1 pspad-entry-main">
+            <MudText Typo="Typo.body1" Class="pspad-entry-name">@Title</MudText>
+            <MudText Typo="Typo.caption" Class="pspad-entry-sub">@Sub</MudText>
+        </div>
+        <MudText Typo="Typo.body1" Class="@($"pspad-entry-amount {InvestmentText.Tone(Operation.SignedAmount)}")">@AmountText</MudText>
+    </div>
+</MudListItem>
+
+@code {
+    [Parameter, EditorRequired] public InvestmentOperation Operation { get; set; } = default!;
+
+    [Parameter, EditorRequired] public string AccountName { get; set; } = "";
+
+    [Parameter] public string? InstrumentName { get; set; }
+
+    [Parameter] public bool ShowCurrency { get; set; }
+
+    [Parameter] public EventCallback<InvestmentOperation> OnOpen { get; set; }
+
+    string Kind => T[OperationKinds.Key(Operation.Kind)];
+
+    string Initial => Kind[..1].ToUpperInvariant();
+
+    string AvatarClass => $"pspad-entry-avatar {(Operation.SignedAmount > 0 ? "pspad-entry-income" : "pspad-entry-expense")}";
+
+    string Title => Operation.Ticker is { } ticker
+        ? InstrumentName is { } name && name != ticker ? $"{Kind} {ticker} · {name}" : $"{Kind} {ticker}"
+        : Kind;
+
+    string Sub => string.Join(" · ", new[]
+    {
+        Operation is { Quantity: { } quantity, Price: { } price } ? $"{InvestmentText.Quantity(quantity)} @ {InvestmentText.Price(price)}" : null,
+        Operation.Note,
+        AccountName,
+        Operation.Source == OperationSource.Xtb ? T["Imported"].Value : null,
+        Operation.Deleted ? T["Deleted"].Value : null
+    }.Where(part => !string.IsNullOrWhiteSpace(part)));
+
+    string AmountText => ShowCurrency
+        ? InvestmentText.Signed(Operation.SignedAmount, Operation.Money.Currency)
+        : InvestmentText.Signed(Operation.SignedAmount);
+}

@@ -801,4 +801,67 @@
   <data name="ImportRateMissing" xml:space="preserve">
     <value>Brak kursu NBP dla {0} z dnia {1}.</value>
   </data>
+  <data name="AddFromInvestments" xml:space="preserve">
+    <value>Dodaj z inwestycji</value>
+  </data>
+  <data name="RefreshFromInvestments" xml:space="preserve">
+    <value>Odśwież z inwestycji</value>
+  </data>
+  <data name="LinkIntro" xml:space="preserve">
+    <value>Każde konto staje się jedną pozycją typu Inwestycje w miesiącu {0}, wycenioną po cenach zamknięcia z wybranego dnia.</value>
+  </data>
+  <data name="LinkValueOn" xml:space="preserve">
+    <value>Wycena na dzień</value>
+  </data>
+  <data name="LinkUpdatingPrices" xml:space="preserve">
+    <value>Aktualizuję ceny…</value>
+  </data>
+  <data name="LinkNoAccounts" xml:space="preserve">
+    <value>Brak kont inwestycyjnych do dodania.</value>
+  </data>
+  <data name="LinkAdd" xml:space="preserve">
+    <value>Dodaj</value>
+  </data>
+  <data name="LinkUpdate" xml:space="preserve">
+    <value>Aktualizuj</value>
+  </data>
+  <data name="LinkNothingToAdd" xml:space="preserve">
+    <value>Nie ma czego dodać</value>
+  </data>
+  <data name="LinkNoPrice" xml:space="preserve">
+    <value>Brak ceny</value>
+  </data>
+  <data name="LinkPricesFrom" xml:space="preserve">
+    <value>Ceny z {0}</value>
+  </data>
+  <data name="LinkTotal" xml:space="preserve">
+    <value>W PLN</value>
+  </data>
+  <data name="LinkHint" xml:space="preserve">
+    <value>Pozycje pozostają powiązane z kontem, więc „Odśwież z inwestycji” wyceni je ponownie innego dnia. Ręcznie zmienione kwoty zostają do odświeżenia.</value>
+  </data>
+  <data name="LinkConfirmAdd" xml:space="preserve">
+    <value>Dodaj pozycje</value>
+  </data>
+  <data name="LinkConfirmRefresh" xml:space="preserve">
+    <value>Odśwież pozycje</value>
+  </data>
+  <data name="LinkFailed" xml:space="preserve">
+    <value>Nie udało się zaktualizować z inwestycji.</value>
+  </data>
+  <data name="LinkedToInvestments" xml:space="preserve">
+    <value>Powiązane z kontem inwestycyjnym</value>
+  </data>
+  <data name="OpenAccount" xml:space="preserve">
+    <value>Otwórz konto</value>
+  </data>
+  <data name="Unlink" xml:space="preserve">
+    <value>Odłącz</value>
+  </data>
+  <data name="UnlinkFailed" xml:space="preserve">
+    <value>Nie udało się odłączyć pozycji.</value>
+  </data>
+  <data name="LinkedAccountOptions" xml:space="preserve">
+    <value>Opcje powiązanego konta</value>
+  </data>
 </root>

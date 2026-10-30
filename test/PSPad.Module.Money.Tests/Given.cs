@@ -93,7 +93,7 @@ internal static class Given
         {
             snapshot.ApplyAll(BalanceSnapshot.Decide(snapshot, budget,
                 new AddHolding(Guid.NewGuid(), budget.UserId, budget.Id, month, holding.HoldingId, holding.Name,
-                    holding.Type, holding.Money), when));
+                    holding.Type, holding.Money, holding.InvestmentAccountId), when));
         }
 
         return snapshot;

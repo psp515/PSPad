@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="InvestmentsTitle" xml:space="preserve">
+    <value>Inwestycje</value>
+  </data>
+  <data name="CollapseInvestments" xml:space="preserve">
+    <value>Zwiń inwestycje</value>
+  </data>
+  <data name="ExpandInvestments" xml:space="preserve">
+    <value>Rozwiń inwestycje</value>
+  </data>
+  <data name="ImportFromXtb" xml:space="preserve">
+    <value>Import z XTB</value>
+  </data>
+  <data name="Account" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="Accounts" xml:space="preserve">
+    <value>Konta</value>
+  </data>
+  <data name="AccountArchived" xml:space="preserve">
+    <value>To konto jest zarchiwizowane. Przywróć je na karcie Konta, aby je zmienić.</value>
+  </data>
+  <data name="AccountMissing" xml:space="preserve">
+    <value>To konto nie istnieje.</value>
+  </data>
+  <data name="AccountNumber" xml:space="preserve">
+    <value>Konto {0}</value>
+  </data>
+  <data name="AddAccount" xml:space="preserve">
+    <value>Dodaj konto</value>
+  </data>
+  <data name="AddOperation" xml:space="preserve">
+    <value>Dodaj operację</value>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>Wszystkie</value>
+  </data>
+  <data name="AllAccounts" xml:space="preserve">
+    <value>Wszystkie konta</value>
+  </data>
+  <data name="Archive" xml:space="preserve">
+    <value>Archiwizuj</value>
+  </data>
+  <data name="Archived" xml:space="preserve">
+    <value>Zarchiwizowane</value>
+  </data>
+  <data name="AverageShort" xml:space="preserve">
+    <value>śr. {0}</value>
+  </data>
+  <data name="Broker" xml:space="preserve">
+    <value>Broker</value>
+  </data>
+  <data name="BrokerXtb" xml:space="preserve">
+    <value>XTB</value>
+  </data>
+  <data name="BrokerOther" xml:space="preserve">
+    <value>Inny</value>
+  </data>
+  <data name="BrokerAccountNumber" xml:space="preserve">
+    <value>Numer rachunku u brokera</value>
+  </data>
+  <data name="Cash" xml:space="preserve">
+    <value>Gotówka</value>
+  </data>
+  <data name="CashIs" xml:space="preserve">
+    <value>gotówka {0}</value>
+  </data>
+  <data name="ChangeSymbol" xml:space="preserve">
+    <value>Zmień symbol</value>
+  </data>
+  <data name="ClosedPositions" xml:space="preserve">
+    <value>Zamknięte pozycje</value>
+  </data>
+  <data name="Cost" xml:space="preserve">
+    <value>Koszt</value>
+  </data>
+  <data name="Currency" xml:space="preserve">
+    <value>Waluta</value>
+  </data>
+  <data name="CurrencyDifference" xml:space="preserve">
+    <value>Różnica kursowa</value>
+  </data>
+  <data name="CurrencyFixed" xml:space="preserve">
+    <value>Nie można jej później zmienić</value>
+  </data>
+  <data name="Day" xml:space="preserve">
+    <value>Dzień</value>
+  </data>
+  <data name="Deleted" xml:space="preserve">
+    <value>usunięta</value>
+  </data>
+  <data name="Fees" xml:space="preserve">
+    <value>Opłaty</value>
+  </data>
+  <data name="FixSymbol" xml:space="preserve">
+    <value>Popraw symbol</value>
+  </data>
+  <data name="FixSymbolHint" xml:space="preserve">
+    <value>Ceny {0} pochodzą z Yahoo Finance. Wpisz symbol, którego używa Yahoo.</value>
+  </data>
+  <data name="Imported" xml:space="preserve">
+    <value>zaimportowana</value>
+  </data>
+  <data name="Instrument" xml:space="preserve">
+    <value>Instrument</value>
+  </data>
+  <data name="InstrumentName" xml:space="preserve">
+    <value>Nazwa instrumentu</value>
+  </data>
+  <data name="InstrumentsCount.One" xml:space="preserve">
+    <value>{0} instrument</value>
+  </data>
+  <data name="InstrumentsCount.Few" xml:space="preserve">
+    <value>{0} instrumenty</value>
+  </data>
+  <data name="InstrumentsCount.Many" xml:space="preserve">
+    <value>{0} instrumentów</value>
+  </data>
+  <data name="Kind" xml:space="preserve">
+    <value>Rodzaj</value>
+  </data>
+  <data name="KindDeposit" xml:space="preserve">
+    <value>Wpłata</value>
+  </data>
+  <data name="KindWithdrawal" xml:space="preserve">
+    <value>Wypłata</value>
+  </data>
+  <data name="KindBuy" xml:space="preserve">
+    <value>Kupno</value>
+  </data>
+  <data name="KindSell" xml:space="preserve">
+    <value>Sprzedaż</value>
+  </data>
+  <data name="KindDividend" xml:space="preserve">
+    <value>Dywidenda</value>
+  </data>
+  <data name="KindTax" xml:space="preserve">
+    <value>Podatek u źródła</value>
+  </data>
+  <data name="KindInterest" xml:space="preserve">
+    <value>Odsetki</value>
+  </data>
+  <data name="KindFee" xml:space="preserve">
+    <value>Opłata</value>
+  </data>
+  <data name="LotOpened" xml:space="preserve">
+    <value>Otwarcie partii</value>
+  </data>
+  <data name="MissingRates" xml:space="preserve">
+    <value>Konta bez dzisiejszego kursu NBP są pominięte w tych sumach.</value>
+  </data>
+  <data name="NetDeposits" xml:space="preserve">
+    <value>Wpłaty netto</value>
+  </data>
+  <data name="NewAccount" xml:space="preserve">
+    <value>Nowe konto</value>
+  </data>
+  <data name="NewInstrumentHint" xml:space="preserve">
+    <value>Nowy ticker; jego ceny są pobierane z Yahoo Finance.</value>
+  </data>
+  <data name="NewOperation" xml:space="preserve">
+    <value>Nowa operacja</value>
+  </data>
+  <data name="NoAccountsYet" xml:space="preserve">
+    <value>Nie masz jeszcze kont inwestycyjnych. Dodaj konto albo zaimportuj wyciąg z XTB.</value>
+  </data>
+  <data name="NoOpenPositions" xml:space="preserve">
+    <value>Brak otwartych pozycji.</value>
+  </data>
+  <data name="NoPrice" xml:space="preserve">
+    <value>Brak ceny</value>
+  </data>
+  <data name="NotEnoughHistory" xml:space="preserve">
+    <value>Za mało historii, by narysować wykres.</value>
+  </data>
+  <data name="Note" xml:space="preserve">
+    <value>Notatka</value>
+  </data>
+  <data name="OperationDeleted" xml:space="preserve">
+    <value>Ta operacja jest usunięta. Przywróć ją, aby ją zmienić.</value>
+  </data>
+  <data name="OperationsCount.One" xml:space="preserve">
+    <value>{0} operacja</value>
+  </data>
+  <data name="OperationsCount.Few" xml:space="preserve">
+    <value>{0} operacje</value>
+  </data>
+  <data name="OperationsCount.Many" xml:space="preserve">
+    <value>{0} operacji</value>
+  </data>
+  <data name="OversoldBy" xml:space="preserve">
+    <value>Sprzedano o {0} za dużo</value>
+  </data>
+  <data name="PassiveIncome" xml:space="preserve">
+    <value>Dochód pasywny</value>
+  </data>
+  <data name="PositionCaption" xml:space="preserve">
+    <value>Koszt {0} · Wartość {1} · ceny w {2}, ostatnie zamknięcie {3}</value>
+  </data>
+  <data name="PositionCaptionNoPrice" xml:space="preserve">
+    <value>Koszt {0} · wyceniane po koszcie, dopóki nie ma ceny</value>
+  </data>
+  <data name="Price" xml:space="preserve">
+    <value>Cena</value>
+  </data>
+  <data name="PriceChartOf" xml:space="preserve">
+    <value>Wykres ceny {0}</value>
+  </data>
+  <data name="PriceSymbol" xml:space="preserve">
+    <value>Symbol ceny: {0} (Yahoo Finance)</value>
+  </data>
+  <data name="PriceToday" xml:space="preserve">
+    <value>Cena · dziś</value>
+  </data>
+  <data name="PricesFrom" xml:space="preserve">
+    <value>Ceny z {0}</value>
+  </data>
+  <data name="PricesStale" xml:space="preserve">
+    <value>Ceny z {0} · nie udało się odświeżyć</value>
+  </data>
+  <data name="Profit" xml:space="preserve">
+    <value>Zysk</value>
+  </data>
+  <data name="Quantity" xml:space="preserve">
+    <value>Ilość</value>
+  </data>
+  <data name="Range1Y" xml:space="preserve">
+    <value>1R</value>
+  </data>
+  <data name="Range3M" xml:space="preserve">
+    <value>3M</value>
+  </data>
+  <data name="RangeAll" xml:space="preserve">
+    <value>Całość</value>
+  </data>
+  <data name="RealizedGains" xml:space="preserve">
+    <value>Zrealizowane zyski</value>
+  </data>
+  <data name="RealizedLosses" xml:space="preserve">
+    <value>Zrealizowane straty</value>
+  </data>
+  <data name="Rename" xml:space="preserve">
+    <value>Edytuj</value>
+  </data>
+  <data name="Restore" xml:space="preserve">
+    <value>Przywróć</value>
+  </data>
+  <data name="SaveAccountFailed" xml:space="preserve">
+    <value>Nie udało się zapisać konta.</value>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>Nie udało się zapisać zmiany.</value>
+  </data>
+  <data name="SaveOperationFailed" xml:space="preserve">
+    <value>Nie udało się zapisać operacji.</value>
+  </data>
+  <data name="SearchOperations" xml:space="preserve">
+    <value>Szukaj tickera, nazwy lub notatki</value>
+  </data>
+  <data name="ShowArchived" xml:space="preserve">
+    <value>Pokaż zarchiwizowane konta</value>
+  </data>
+  <data name="ShowDeleted" xml:space="preserve">
+    <value>Pokaż usunięte</value>
+  </data>
+  <data name="ShowMore" xml:space="preserve">
+    <value>Pokaż więcej</value>
+  </data>
+  <data name="TabAccounts" xml:space="preserve">
+    <value>Konta</value>
+  </data>
+  <data name="TabOperations" xml:space="preserve">
+    <value>Operacje</value>
+  </data>
+  <data name="TabPositions" xml:space="preserve">
+    <value>Pozycje</value>
+  </data>
+  <data name="Ticker" xml:space="preserve">
+    <value>Ticker</value>
+  </data>
+  <data name="Time" xml:space="preserve">
+    <value>Godzina</value>
+  </data>
+  <data name="TotalProfit" xml:space="preserve">
+    <value>Zysk całkowity</value>
+  </data>
+  <data name="Unrealized" xml:space="preserve">
+    <value>Niezrealizowane</value>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Wartość</value>
+  </data>
+  <data name="ValueAllInPln" xml:space="preserve">
+    <value>Wartość · wszystkie konta · w PLN</value>
+  </data>
+  <data name="ValueOf" xml:space="preserve">
+    <value>Wartość · {0}</value>
+  </data>
+  <data name="ValueOverTime" xml:space="preserve">
+    <value>Wartość w czasie</value>
+  </data>
+  <data name="VsNetDeposits" xml:space="preserve">
+    <value>wobec wpłat netto</value>
+  </data>
+  <data name="YahooSymbol" xml:space="preserve">
+    <value>Symbol Yahoo</value>
+  </data>
+</root>

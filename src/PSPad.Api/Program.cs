@@ -7,6 +7,7 @@ using PSPad.Api.Identity;
 using PSPad.Api.Live;
 using PSPad.Api.Presentation;
 using PSPad.Api.Proxy;
+using PSPad.Api.Quotes;
 using PSPad.Api.Rates;
 using PSPad.Api.RateLimiting;
 using PSPad.Api.Snapshots;
@@ -85,6 +86,19 @@ builder.Services.AddHttpClient<NbpRateClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(5);
 });
 
+builder.Services.AddHttpClient<NbpSeriesClient>(client =>
+{
+    client.BaseAddress = new Uri("https://api.nbp.pl/");
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
+builder.Services.AddHttpClient<YahooQuoteClient>(client =>
+{
+    client.BaseAddress = new Uri("https://query1.finance.yahoo.com/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; PSPad)");
+});
+builder.Services.AddScoped<QuoteCache>();
+
 builder.Services.Configure<LiveOptions>(builder.Configuration.GetSection(LiveOptions.Section));
 builder.Services.AddSingleton<LiveConnections>();
 builder.Services.AddScoped<IContainerMembers, MongoContainerMembers>();
@@ -113,6 +127,7 @@ api.MapAccountEndpoints();
 api.MapStatisticsEndpoints();
 api.MapSnapshotEndpoints();
 api.MapMoneyEndpoints();
+api.MapInvestmentEndpoints();
 
 var open = app.MapGroup("/api/public").AllowAnonymous().RequireRateLimiting("public");
 open.MapPublicSnapshotEndpoints();

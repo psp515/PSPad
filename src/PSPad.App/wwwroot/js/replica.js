@@ -1,5 +1,5 @@
 const DB_NAME = 'pspad';
-const VERSION = 3;
+const VERSION = 4;
 
 let connection;
 
@@ -45,6 +45,9 @@ function openAt(version) {
       }
       if (!db.objectStoreNames.contains('snapshots')) {
         db.createObjectStore('snapshots', { keyPath: 'token' });
+      }
+      if (!db.objectStoreNames.contains('quotes')) {
+        db.createObjectStore('quotes', { keyPath: 'key' });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -167,6 +170,22 @@ export function allSnapshots() {
 
 export function deleteSnapshot(token) {
   return run('snapshots', 'readwrite', snapshots => snapshots.delete(token));
+}
+
+export function putQuote(entry) {
+  return run('quotes', 'readwrite', quotes => quotes.put(entry));
+}
+
+export function getQuote(key) {
+  return run('quotes', 'readonly', quotes => quotes.get(key));
+}
+
+export function allQuotes() {
+  return run('quotes', 'readonly', quotes => quotes.getAll());
+}
+
+export function clearQuotes() {
+  return run('quotes', 'readwrite', quotes => quotes.clear());
 }
 
 export function clearReplica() {

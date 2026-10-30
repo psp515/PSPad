@@ -1,0 +1,117 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<MudGrid Spacing="4" Class="pspad-investment-positions">
+    <MudItem xs="12" lg="4" Class="d-flex flex-column gap-4 pspad-investment-aside">
+        <InvestmentHero Overview="@Overview" AccountId="@AccountId" />
+        <InvestmentStats Overview="@Overview" AccountId="@AccountId" />
+        <ValueChart Points="@_points" Today="@Overview.Today" Currency="@Currency" />
+    </MudItem>
+    <MudItem xs="12" lg="8">
+        <div class="pspad-holdings pspad-positions">
+            <div class="pspad-holdings-head" aria-hidden="true">
+                <span>@T["Instrument"]</span>
+                <span class="pspad-holding-cell">@T["Quantity"]</span>
+                <span class="pspad-holding-cell">@T["PriceToday"]</span>
+                <span>@T["Value"]</span>
+                <span>@T["Profit"]</span>
+            </div>
+            @foreach (var (account, figures, held, closed) in _groups)
+            {
+                <section @key="account.Id" class="pspad-holding-group pspad-position-group" aria-label="@account.Name">
+                    <div class="d-flex align-baseline flex-wrap gap-2 px-1 pt-3 pb-1">
+                        <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-holding-group-name">
+                            @account.Name <span class="pspad-muted">@account.Currency · @T["CashIs", InvestmentText.Money(figures.Cash, account.Currency)]</span>
+                        </MudText>
+                        <MudText Typo="Typo.caption" Class="pspad-muted pspad-holding-group-total">
+                            @InvestmentText.Money(figures.Value, account.Currency) ·
+                            <span class="@InvestmentText.Tone(figures.TotalProfit)">@InvestmentText.Signed(figures.TotalProfit)</span>
+                        </MudText>
+                    </div>
+                    @if (held.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Class="pspad-muted px-1 pspad-positions-empty">@T["NoOpenPositions"]</MudText>
+                    }
+                    else
+                    {
+                        <MudPaper Outlined="true" Class="pspad-holding-list">
+                            @foreach (var (position, markers) in held)
+                            {
+                                var symbol = Overview.SymbolOf(position.Ticker);
+                                <PositionRow @key="position.Ticker" Position="@position" Name="@Overview.NameOf(position.Ticker)" Symbol="@symbol"
+                                             Currency="@account.Currency" History="@Overview.Prices.GetValueOrDefault(position.Ticker)"
+                                             Markers="@markers" Stale="@IsStale(symbol)"
+                                             Today="@Overview.Today" Zone="@Zone" OnFixSymbol="@OnFixSymbol" OnShowOperations="@OnShowOperations" />
+                            }
+                        </MudPaper>
+                    }
+                    @if (closed > 0)
+                    {
+                        <div class="d-flex align-baseline px-1 pt-2 pspad-closed-positions">
+                            <MudText Typo="Typo.body2" Class="flex-grow-1">
+                                <strong>@T["ClosedPositions"]</strong> <span class="pspad-muted">@T.Plural(closed, "InstrumentsCount")</span>
+                            </MudText>
+                            <MudText Typo="Typo.caption">
+                                <span class="pspad-gain">@InvestmentText.Signed(figures.RealizedGains)</span> ·
+                                <span class="pspad-loss">@InvestmentText.Signed(figures.RealizedLosses)</span>
+                            </MudText>
+                        </div>
+                    }
+                </section>
+            }
+        </div>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter, EditorRequired] public InvestmentOverview Overview { get; set; } = default!;
+
+    [Parameter] public Guid? AccountId { get; set; }
+
+    [Parameter, EditorRequired] public Func<string, bool> IsStale { get; set; } = _ => false;
+
+    [Parameter] public TimeZoneInfo Zone { get; set; } = TimeZoneInfo.Utc;
+
+    [Parameter] public EventCallback<string> OnFixSymbol { get; set; }
+
+    [Parameter] public EventCallback<string> OnShowOperations { get; set; }
+
+    IReadOnlyList<(InvestmentAccount Account, AccountFigures Figures, IReadOnlyList<(Position Position, IReadOnlyList<PriceMarker> Markers)> Held, int Closed)> _groups = [];
+    IReadOnlyList<ValuePoint> _points = [];
+    (InvestmentOverview?, Guid?)? _builtFor;
+
+    string Currency => AccountId is { } id ? Overview.Account(id)?.Currency ?? "PLN" : "PLN";
+
+    protected override void OnParametersSet()
+    {
+        if (_builtFor == (Overview, AccountId))
+        {
+            return;
+        }
+
+        _builtFor = (Overview, AccountId);
+        _points = AccountId is { } id ? Overview.ValueOf(id) : Overview.ValueInPln;
+        var shown = AccountId is { } chosen ? Overview.Accounts.Where(account => account.Id == chosen) : Overview.Open;
+        _groups =
+        [
+            .. shown.Where(account => Overview.Figures.ContainsKey(account.Id)).Select(account =>
+            {
+                var figures = Overview.Figures[account.Id];
+                var operations = Overview.OperationsOf(account.Id);
+                IReadOnlyList<(Position, IReadOnlyList<PriceMarker>)> held =
+                [
+                    .. figures.Positions
+                        .Where(position => position.Quantity > 0 || position.Warning != PositionWarning.None)
+                        .Select(position => (position, PriceMarkers.For(position.Ticker, operations, Zone)))
+                ];
+                return (account, figures, held, ClosedCount(operations, figures));
+            })
+        ];
+    }
+
+    static int ClosedCount(IReadOnlyList<InvestmentOperation> operations, AccountFigures figures)
+    {
+        var open = figures.Positions.Where(position => position.Quantity > 0).Select(position => position.Ticker).ToHashSet();
+        return operations.Where(operation => !operation.Deleted && OperationKinds.Traded(operation.Kind) && operation.Ticker is not null)
+            .Select(operation => operation.Ticker!).Distinct().Count(ticker => !open.Contains(ticker));
+    }
+}

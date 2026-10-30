@@ -31,7 +31,11 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         ["budgets"] = typeof(Module.Money.Budgets.Budget),
         ["moneypreferences"] = typeof(Module.Money.Preferences.MoneyPreferences),
         ["moneyentries"] = typeof(Module.Money.Entries.MoneyEntry),
-        ["balancesnapshots"] = typeof(Module.Money.Balance.BalanceSnapshot)
+        ["balancesnapshots"] = typeof(Module.Money.Balance.BalanceSnapshot),
+        ["investmentportfolios"] = typeof(Module.Investments.Portfolio.InvestmentPortfolio),
+        ["investmentaccounts"] = typeof(Module.Investments.Accounts.InvestmentAccount),
+        ["investmentoperations"] = typeof(Module.Investments.Operations.InvestmentOperation),
+        ["instruments"] = typeof(Module.Investments.Instruments.Instrument)
     };
 
     public async Task<SyncOutcome> SyncAsync(CancellationToken ct)

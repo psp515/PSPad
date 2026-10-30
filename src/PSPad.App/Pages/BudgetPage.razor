@@ -5,6 +5,9 @@
 @using PSPad.App.Components
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
+@using PSPad.Module.Investments.Accounts
+@using PSPad.Module.Money
+@using PSPad.App.State.Investments
 @using PSPad.Module.Money.Balance
 @using PSPad.Module.Money.Budgets
 @using PSPad.Module.Money.Entries
@@ -13,6 +16,7 @@
 @inject IDocumentStore<Budget> BudgetStore
 @inject IDocumentStore<MoneyEntry> EntryStore
 @inject IDocumentStore<BalanceSnapshot> SnapshotStore
+@inject IDocumentStore<InvestmentAccount> AccountStore
 @inject AppState State
 @inject CommandSender Sender
 @inject NavigationManager Navigation
@@ -78,6 +82,11 @@ else
     {
         <div class="d-flex align-center gap-2 mb-3 pspad-month-row">
             <MonthStrip Month="@_month" Current="@Current" Marked="@MarkedMonths" OnMonthChanged="@ShowMonth" />
+            @if (TabIndex == BalanceTab && CanLink)
+            {
+                <MudButton Class="pspad-add-from-investments d-none d-md-inline-flex" Variant="Variant.Outlined" Color="Color.Primary"
+                           Size="Size.Small" OnClick="@(() => OpenLink(false))">@T["AddFromInvestments"]</MudButton>
+            }
         </div>
     }
 
@@ -96,7 +105,9 @@ else
             break;
         case BalanceTab:
             <BudgetBalanceTab Month="@_month" Totals="@Balance" Snapshots="@_snapshots" Current="@Current" ReadOnly="@_budget.IsArchived"
-                              OnStart="@StartMonthAsync" OnOpen="@OpenHolding" />
+                              OnStart="@StartMonthAsync" OnOpen="@OpenHolding" OwnAccountIds="@_ownAccountIds" CanRefresh="@CanRefresh"
+                              OnRefreshFromInvestments="@(() => OpenLink(true))"
+                              OnOpenAccount="@(id => Navigation.NavigateTo($"/investments/{id}"))" OnUnlink="@UnlinkAsync" />
             break;
         case StatsTab:
             <BudgetStatsTab Entries="@_entries" Snapshots="@_snapshots" Current="@Current" OnOpenCategory="@ShowCategory" />
@@ -133,12 +144,23 @@ else
                 <MudFabMenuItem Class="pspad-fab-add-holding" OnClick="@NewHolding" StartIcon="@Icons.Material.Filled.Add"
                                 Color="Color.Primary" Size="Size.Small" UserAttributes="@AddHoldingAttributes" />
             </MudTooltip>
+            @if (CanLink)
+            {
+                <MudTooltip Text="@T["AddFromInvestments"]">
+                    <MudFabMenuItem Class="pspad-fab-add-from-investments" OnClick="@(() => OpenLink(false))"
+                                    StartIcon="@Icons.Material.Outlined.TrendingUp" Color="Color.Primary" Size="Size.Small"
+                                    UserAttributes="@AddFromInvestmentsAttributes" />
+                </MudTooltip>
+            }
             <MudTooltip Text="@T["DeleteMonth"]">
                 <MudFabMenuItem Class="pspad-delete-month" OnClick="@DeleteMonthAsync" StartIcon="@Icons.Material.Outlined.Delete"
                                 Color="Color.Error" Size="Size.Small" UserAttributes="@DeleteMonthAttributes" />
             </MudTooltip>
         </MudFabMenu>
     }
+
+    <InvestmentLinkPanel Open="@_linkOpen" Refresh="@_linkRefresh" BudgetId="@BudgetId" Month="@_month"
+                         Disabled="@_budget.IsArchived" OnClose="@(() => _linkOpen = false)" />
 }
 
 @code {
@@ -152,6 +174,7 @@ else
     Dictionary<string, object> AddIncomeAttributes => Labelled("AddIncome");
     Dictionary<string, object> AddHoldingAttributes => Labelled("AddHolding");
     Dictionary<string, object> MonthActionsAttributes => Labelled("MonthActions");
+    Dictionary<string, object> AddFromInvestmentsAttributes => Labelled("AddFromInvestments");
     Dictionary<string, object> DeleteMonthAttributes => Labelled("DeleteMonth");
 
     Dictionary<string, object> Labelled(string key) => new() { ["aria-label"] = T[key].Value };
@@ -168,6 +191,11 @@ else
     [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
 
     bool _loaded;
+    bool _linkOpen;
+    bool _linkRefresh;
+    IReadOnlySet<Guid> _ownAccountIds = new HashSet<Guid>();
+    bool _canLink;
+    IReadOnlyList<InvestmentAccount> _accounts = [];
     int _rendered = -1;
     Guid _renderedId;
     Budget? _budget;
@@ -175,6 +203,12 @@ else
     IReadOnlyList<BalanceSnapshot> _snapshots = [];
     YearMonth _month;
     EntryFilters _filters = EntryFilters.None;
+
+    bool CanLink => _canLink && _budget is { IsArchived: false } && InvestmentLinkDay.Offered(_month, State.Today);
+
+    bool CanRefresh => _budget is { IsArchived: false } && Balance.Snapshot is not null
+        && InvestmentLinkDay.Offered(_month, State.Today)
+        && InvestmentLinkAccounts.CanRefresh(_accounts, State.UserId, InvestmentLinkState.For(_snapshots, _month).Links);
 
     int TabIndex => BudgetTabs.IndexOf(Tab);
 
@@ -221,8 +255,22 @@ else
         _entries = [.. entries.Where(entry => entry.BudgetId == BudgetId && !entry.Deleted)];
         var snapshots = await SnapshotStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _snapshots = [.. snapshots.Where(snapshot => snapshot.BudgetId == BudgetId && !snapshot.Deleted)];
+        _accounts = [.. await AccountStore.LoadAllAsync(State.UserId, CancellationToken.None)];
+        var own = _accounts.Where(account => !account.Deleted && account.UserId == State.UserId).ToList();
+        _ownAccountIds = own.Select(account => account.Id).ToHashSet();
+        _canLink = own.Any(account => !account.IsArchived);
         _loaded = true;
     }
+
+    void OpenLink(bool refresh)
+    {
+        _linkRefresh = refresh;
+        _linkOpen = true;
+    }
+
+    async Task UnlinkAsync(Holding holding) =>
+        Surface(await Sender.SendAsync(new EditHolding(Guid.NewGuid(), State.UserId, BudgetId, _month, holding.HoldingId,
+            holding.Name, holding.Type, holding.Money)), T["UnlinkFailed"]);
 
     void SelectTab(int index)
     {

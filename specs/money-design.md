@@ -86,7 +86,7 @@ one used.
 | `BalanceSnapshot` | `IdFor(budgetId, month)` | `UserId`, `BudgetId`, `Month` (stored as the text `_month`, e.g. `"2026-10"`: the BSON driver can't deserialize a struct), `Holdings[]`, `UpdatedAt` (the last event's time), `Deleted` | `balancesnapshots` |
 | `MoneyPreferences` | `IdFor(userId)` | `UserId`, `DefaultCurrency` (default `PLN`) | `moneypreferences` |
 
-`Holding(Guid HoldingId, string Name, HoldingType Type, Money Money)`, where
+`Holding(Guid HoldingId, string Name, HoldingType Type, Money Money, Guid? InvestmentAccountId = null)` (the optional link to an investment account: `investments-design.md` §8), where
 `Type` is Cash, Savings or Investment and `Name` is trimmed, 1–64 characters.
 A month holds at most 64 holdings (`content-limits-design.md`).
 A holding's money follows the `Money` rules with the month's last day as its
@@ -164,7 +164,8 @@ without rewriting ownership.
   - Starting a month earlier than an existing one is allowed, and copies from
     whatever precedes it.
 - `AddHolding`, `EditHolding` and `RemoveHolding` act on one holding of an
-  existing snapshot.
+  existing snapshot. Two holdings of one month never share an
+  `InvestmentAccountId` (`investments-design.md` §8.1).
 - `DeleteBalanceMonth` soft-deletes the snapshot. Starting the month again
   afterwards revives the same id with fresh holdings.
 - Every balance command carries `BudgetId` and `Month`. Its handler loads

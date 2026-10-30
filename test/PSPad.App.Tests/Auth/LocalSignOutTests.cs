@@ -8,6 +8,7 @@ using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Statistics;
 using PSPad.App.Tests.State;
+using PSPad.App.Tests.State.Investments;
 using PSPad.Contracts;
 using PSPad.TestInfrastructure;
 
@@ -29,6 +30,8 @@ public class LocalSignOutTests
 
     readonly InMemorySnapshotCache _snapshots = new();
 
+    readonly InMemoryQuoteCache _quotes = new();
+
     [Fact]
     public async Task ClearingRemovesTheOutboxWithTheReplicaAndTheSession()
     {
@@ -45,11 +48,13 @@ public class LocalSignOutTests
     public async Task ClearingRemovesTheStatisticsOverviewAndTheOpenedSnapshots()
     {
         await ArrangeStorageAsync();
+        await _quotes.SaveRatesAsync("EUR", [new NbpRateView("EUR", 4m, new DateOnly(2026, 1, 5))], new DateOnly(2026, 1, 5));
 
         await SignOut(HttpStatusCode.OK).ClearAsync();
 
         Assert.Null(await _statistics.ReadAsync(30));
         Assert.Empty(await _snapshots.AllAsync());
+        Assert.Empty((await _quotes.RatesAsync("EUR")).Rates);
     }
 
     [Fact]
@@ -147,7 +152,7 @@ public class LocalSignOutTests
     {
         var store = sessions ?? _sessions;
         return new LocalSignOut(
-            store, new LocalDeviceData(store, _replica, _outbox, _statistics, _snapshots, NullLogger<LocalDeviceData>.Instance),
+            store, new LocalDeviceData(store, _replica, _outbox, _statistics, _snapshots, _quotes, NullLogger<LocalDeviceData>.Instance),
             new KeycloakTokenRevoker(new HttpClient(endpoint), "http://localhost:8080/realms/psplace", "pspad-frontend"),
             new LocalAuthenticationStateProvider(store), NullLogger<LocalSignOut>.Instance);
     }

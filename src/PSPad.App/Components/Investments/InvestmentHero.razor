@@ -1,0 +1,61 @@
+@using PSPad.App.State
+@using PSPad.App.State.Investments
+@using PSPad.Module.Money.Reading
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<MoneyHero Class="pspad-investment-hero" HeadlineClass="pspad-investment-value" Label="@Label" Text="@ValueText" Negative="@(Value < 0)">
+    <ChildContent>
+        <MoneyFigure Class="pspad-investment-profit" Label="@T["TotalProfit"]" Text="@ProfitText" Negative="@(Profit < 0)" />
+        <MoneyFigure Class="pspad-investment-deposits" Label="@T["NetDeposits"]" Text="@InvestmentText.Money(NetDeposits, Currency)" />
+        @if (AccountId is { } id && Overview.Figures.TryGetValue(id, out var figures))
+        {
+            <MoneyFigure Class="pspad-investment-cash" Label="@T["Cash"]" Text="@InvestmentText.Money(figures.Cash, Currency)" />
+        }
+    </ChildContent>
+    <Footer>
+        @if (AccountId is null && Overview.Portfolio.MissingRates)
+        {
+            <MudText Typo="Typo.caption" Class="pspad-muted pspad-investment-missing-rates">@T["MissingRates"]</MudText>
+        }
+        @if (AccountId is null && Split.Count > 1)
+        {
+            <CategoryBar Class="pspad-investment-split" Totals="@Split" />
+        }
+    </Footer>
+</MoneyHero>
+
+@code {
+    [Parameter, EditorRequired] public InvestmentOverview Overview { get; set; } = default!;
+
+    [Parameter] public Guid? AccountId { get; set; }
+
+    string Currency => AccountId is { } id ? Overview.Account(id)?.Currency ?? "PLN" : "PLN";
+
+    decimal Value => AccountId is { } id ? Overview.Figures.GetValueOrDefault(id)?.Value ?? 0m : Overview.Portfolio.ValuePln;
+
+    decimal Profit => AccountId is { } id ? Overview.Figures.GetValueOrDefault(id)?.TotalProfit ?? 0m : Overview.Portfolio.TotalProfitPln;
+
+    decimal NetDeposits => AccountId is { } id ? Overview.Figures.GetValueOrDefault(id)?.NetDeposits ?? 0m : Overview.Portfolio.NetDepositsPln;
+
+    decimal? Share => AccountId is { } id ? Overview.ProfitShare(id) : Overview.PortfolioProfitShare;
+
+    string Label => AccountId is { } id
+        ? T["ValueOf", Overview.Account(id)?.Name ?? ""]
+        : T["ValueAllInPln"];
+
+    string ValueText => InvestmentText.Money(Value, Currency);
+
+    string ProfitText => Share is null
+        ? InvestmentText.Signed(Profit, Currency)
+        : $"{InvestmentText.Signed(Profit, Currency)} · {InvestmentText.Percent(Share)}";
+
+    IReadOnlyList<CategoryTotal> Split =>
+    [
+        .. Overview.Open
+            .Select(account => (account, rate: Overview.Fx.ToPln(account.Currency, Overview.Today)))
+            .Where(entry => entry.rate is not null && Overview.Figures.ContainsKey(entry.account.Id))
+            .Select(entry => new CategoryTotal(entry.account.Name,
+                Math.Round(Overview.Figures[entry.account.Id].Value * entry.rate!.Value, 2, MidpointRounding.AwayFromZero)))
+            .Where(total => total.Pln > 0)
+    ];
+}

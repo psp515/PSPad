@@ -5,30 +5,32 @@
 
 <MudChart Class="@Class" ChartType="ChartType.StackedBar" ChartSeries="@_series" ChartLabels="@Labels"
           ChartOptions="@_options" Width="100%" Height="@Height" />
-<table class="mud-sr-only">
-    <caption>@Caption</caption>
-    <thead>
-        <tr>
-            <th scope="col">@T["Month"]</th>
-            <th scope="col">@T["HoldingCash"]</th>
-            <th scope="col">@T["HoldingSavings"]</th>
-            <th scope="col">@T["HoldingInvestment"]</th>
-            <th scope="col">@T["Total"]</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var month in Months)
-        {
+<div class="pspad-sr-only">
+    <table>
+        <caption>@Caption</caption>
+        <thead>
             <tr>
-                <td>@MoneyText.MonthTitle(month.Month)</td>
-                <td>@PlnOrGap(month.Cash)</td>
-                <td>@PlnOrGap(month.Savings)</td>
-                <td>@PlnOrGap(month.Investment)</td>
-                <td>@PlnOrGap(month.Total)</td>
+                <th scope="col">@T["Month"]</th>
+                <th scope="col">@T["HoldingCash"]</th>
+                <th scope="col">@T["HoldingSavings"]</th>
+                <th scope="col">@T["HoldingInvestment"]</th>
+                <th scope="col">@T["Total"]</th>
             </tr>
-        }
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @foreach (var month in Months)
+            {
+                <tr>
+                    <td>@MoneyText.MonthTitle(month.Month)</td>
+                    <td>@PlnOrGap(month.Cash)</td>
+                    <td>@PlnOrGap(month.Savings)</td>
+                    <td>@PlnOrGap(month.Investment)</td>
+                    <td>@PlnOrGap(month.Total)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
 
 @code {
     List<ChartSeries<double>> _series = [];

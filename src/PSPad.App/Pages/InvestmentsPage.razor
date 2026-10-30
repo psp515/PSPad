@@ -1,0 +1,236 @@
+@page "/investments"
+@page "/investments/{Tab}"
+@page "/investments/{AccountId:guid}"
+@page "/investments/{AccountId:guid}/{Tab}"
+@attribute [Authorize]
+@using PSPad.App.Components
+@using PSPad.App.Components.Investments
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.App.State.Investments
+@using PSPad.App.Sync
+@using PSPad.Module.Investments.Accounts
+@using PSPad.Module.Investments.Instruments
+@using PSPad.Module.Investments.Operations
+@inject InvestmentQuery Query
+@inject IInvestmentQuotes Quotes
+@inject IConnectivity Connectivity
+@inject AppState State
+@inject CommandSender Sender
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDialogService Dialogs
+@inject IStringLocalizer<InvestmentsStrings> T
+@implements IDisposable
+
+<div class="pspad-budget-page pspad-investments-page">
+    <PageHeading Title="@T["InvestmentsTitle"]" Icon="@Icons.Material.Outlined.ShowChart" />
+
+    @if (_overview is null)
+    {
+        <CardSkeleton Count="2" />
+    }
+    else if (_overview.Accounts.Count == 0)
+    {
+        <EmptyState Icon="@Icons.Material.Outlined.ShowChart" Message="@T["NoAccountsYet"]" CreateText="@T["AddAccount"]" OnCreate="@NewAccount" />
+        <div class="d-flex justify-center mt-3">
+            <MudButton Class="pspad-investments-import" Variant="Variant.Text" Color="Color.Primary" Href="@InvestmentLinks.ForImport(null)"
+                       StartIcon="@Icons.Material.Outlined.UploadFile">@T["ImportFromXtb"]</MudButton>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex align-center gap-2 mb-4 pspad-budget-nav">
+            <MudToggleGroup T="int" Class="flex-grow-1 pspad-budget-views pspad-investment-views" Color="Color.Primary" Size="Size.Small"
+                            SelectionMode="SelectionMode.SingleSelection" CheckMark="true" Value="@TabIndex" ValueChanged="@SelectTab">
+                <MudToggleItem Value="@PositionsIndex" Text="@T["TabPositions"]" UnselectedIcon="@Icons.Material.Outlined.ShowChart" SelectedIcon="@Icons.Material.Filled.ShowChart" />
+                <MudToggleItem Value="@OperationsIndex" Text="@T["TabOperations"]" UnselectedIcon="@Icons.Material.Outlined.List" SelectedIcon="@Icons.Material.Filled.List" />
+                <MudToggleItem Value="@AccountsIndex" Text="@T["TabAccounts"]" UnselectedIcon="@Icons.Material.Outlined.AccountBalance" SelectedIcon="@Icons.Material.Filled.AccountBalance" />
+            </MudToggleGroup>
+            <div class="d-none d-md-flex gap-2 pspad-budget-quick">
+                <MudButton Class="pspad-investments-import" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                           Href="@InvestmentLinks.ForImport(SelectedAccount?.Id)" StartIcon="@Icons.Material.Outlined.UploadFile">@T["ImportFromXtb"]</MudButton>
+                @if (TabIndex != AccountsIndex && _overview.Open.Count > 0)
+                {
+                    <MudButton Class="pspad-investments-add-operation" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add" OnClick="@NewOperation">@T["AddOperation"]</MudButton>
+                }
+            </div>
+        </div>
+
+        @if (TabIndex != AccountsIndex)
+        {
+            <InvestmentChips Overview="@_overview" Selected="@AccountId" Tab="@TabIndex" />
+        }
+
+        @if (AccountId is not null && SelectedAccount is null)
+        {
+            <MudAlert Severity="Severity.Warning">@T["AccountMissing"]</MudAlert>
+        }
+        else
+        {
+            @if (SelectedAccount?.IsArchived == true)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4 pspad-archived-banner">@T["AccountArchived"]</MudAlert>
+            }
+
+            @switch (TabIndex)
+            {
+                case PositionsIndex:
+                    <PositionsTab Overview="@_overview" AccountId="@AccountId" IsStale="@Quotes.IsStale" Zone="@Zone"
+                                  OnFixSymbol="@FixSymbolAsync" OnShowOperations="@ShowOperations" />
+                    break;
+                case OperationsIndex:
+                    <OperationsTab Overview="@_overview" AccountId="@AccountId" Kind="@_kind" KindChanged="@(kind => _kind = kind)"
+                                   Search="@_search" SearchChanged="@(text => _search = text ?? "")" Zone="@Zone" OnOpen="@OpenOperation" />
+                    break;
+                default:
+                    <AccountsTab Overview="@_overview" OnEdit="@OpenAccount" OnImport="@(account => Navigation.NavigateTo(InvestmentLinks.ForImport(account.Id)))"
+                                 OnArchive="@ArchiveAsync" OnRestore="@RestoreAsync" />
+                    break;
+            }
+        }
+    }
+</div>
+
+@if (_overview is not null)
+{
+    @if (TabIndex == AccountsIndex)
+    {
+        <MudFab Class="pspad-fab pspad-investments-add-account" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                OnClick="@NewAccount" aria-label="@T["AddAccount"].Value" />
+    }
+    else if (_overview.Open.Count > 0)
+    {
+        <MudFab Class="pspad-fab d-md-none pspad-investments-fab-operation" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                OnClick="@NewOperation" aria-label="@T["AddOperation"].Value" />
+    }
+}
+
+@code {
+    const int PositionsIndex = InvestmentTabs.Positions;
+    const int OperationsIndex = InvestmentTabs.Operations;
+    const int AccountsIndex = InvestmentTabs.Accounts;
+
+    [Parameter] public Guid? AccountId { get; set; }
+
+    [Parameter] public string? Tab { get; set; }
+
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
+    InvestmentOverview? _overview;
+    int _rendered = -1;
+    OperationKind? _kind;
+    string _search = "";
+    bool _disposed;
+
+    int TabIndex => InvestmentTabs.IndexOf(Tab);
+
+    InvestmentAccount? SelectedAccount => AccountId is { } id ? _overview?.Account(id) : null;
+
+    TimeZoneInfo Zone => LocalToday.Zone(State.TimeZone);
+
+    protected override void OnInitialized()
+    {
+        Sender.Sent += OnChanged;
+        Connectivity.CameOnline += OnChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_rendered == SyncRevision)
+        {
+            return;
+        }
+
+        _rendered = SyncRevision;
+        await ReloadAsync();
+    }
+
+    async Task ReloadAsync(bool refresh = false)
+    {
+        var overview = await Query.LoadAsync(State.UserId, State.Today, Zone, Connectivity.IsOnline, refresh, CancellationToken.None);
+        if (!_disposed)
+        {
+            _overview = overview;
+        }
+    }
+
+    void OnChanged() => InvokeAsync(async () =>
+    {
+        await ReloadAsync();
+        if (!_disposed)
+        {
+            StateHasChanged();
+        }
+    });
+
+    void SelectTab(int index)
+    {
+        if (index != TabIndex)
+        {
+            Navigation.NavigateTo(InvestmentLinks.For(AccountId, index));
+        }
+    }
+
+    void ShowOperations(string ticker)
+    {
+        _kind = null;
+        _search = ticker;
+        SelectTab(OperationsIndex);
+    }
+
+    void NewOperation() => Navigation.NavigateTo(InvestmentLinks.ForNewOperation(Navigation.Uri));
+
+    void NewAccount() => Navigation.NavigateTo(InvestmentLinks.ForNewAccount(Navigation.Uri));
+
+    void OpenOperation(InvestmentOperation operation) => Navigation.NavigateTo(InvestmentLinks.ForOperation(Navigation.Uri, operation.Id));
+
+    void OpenAccount(InvestmentAccount account) => Navigation.NavigateTo(InvestmentLinks.ForAccount(Navigation.Uri, account.Id));
+
+    async Task FixSymbolAsync(string ticker)
+    {
+        var parameters = new DialogParameters<QuoteSymbolDialog>
+        {
+            { dialog => dialog.Ticker, ticker },
+            { dialog => dialog.Symbol, _overview?.SymbolOf(ticker) ?? QuoteSymbols.DefaultFor(ticker) }
+        };
+        var dialog = await Dialogs.ShowAsync<QuoteSymbolDialog>(T["FixSymbol"], parameters);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled || result.Data is not string symbol)
+        {
+            return;
+        }
+
+        if (_overview?.Instruments.ContainsKey(ticker) != true &&
+            !Surface(await Sender.SendAsync(new EnsureInstrument(Guid.NewGuid(), State.UserId, ticker, ""))))
+        {
+            return;
+        }
+
+        Surface(await Sender.SendAsync(new SetQuoteSymbol(Guid.NewGuid(), State.UserId, ticker, symbol)));
+    }
+
+    async Task ArchiveAsync(InvestmentAccount account) =>
+        Surface(await Sender.SendAsync(new ArchiveInvestmentAccount(Guid.NewGuid(), State.UserId, account.Id)));
+
+    async Task RestoreAsync(InvestmentAccount account) =>
+        Surface(await Sender.SendAsync(new RestoreInvestmentAccount(Guid.NewGuid(), State.UserId, account.Id)));
+
+    bool Surface(CommandResult result)
+    {
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? T["SaveFailed"].Value, Severity.Warning);
+        }
+
+        return result.Accepted;
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Sender.Sent -= OnChanged;
+        Connectivity.CameOnline -= OnChanged;
+    }
+}

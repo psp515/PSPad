@@ -1,0 +1,23 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
+
+<MudDialog Class="pspad-quote-symbol-dialog">
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="pspad-muted mb-3">@T["FixSymbolHint", Ticker]</MudText>
+        <MudTextField T="string" Class="pspad-quote-symbol-field" Label="@T["YahooSymbol"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      MaxLength="@Instrument.MaxQuoteSymbolLength" @bind-Value="Symbol" Immediate="true" AutoFocus="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => Dialog.Cancel())">@Shared["Cancel"]</MudButton>
+        <MudButton Class="pspad-quote-symbol-save" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(Symbol)"
+                   OnClick="@(() => Dialog.Close(DialogResult.Ok(Symbol.Trim().ToUpperInvariant())))">@Shared["Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance Dialog { get; set; } = null!;
+
+    [Parameter] public string Ticker { get; set; } = "";
+
+    [Parameter] public string Symbol { get; set; } = "";
+}

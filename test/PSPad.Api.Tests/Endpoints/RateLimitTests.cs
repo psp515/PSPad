@@ -78,6 +78,20 @@ public class RateLimitTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task QuoteRequestsBeyondTheUsersBucketAreRefused()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture, configuration: Bucket("Quotes", 1));
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+
+        var served = await client.GetAsync("/api/investments/quotes?symbol=!&from=2026-10-01", ct);
+        var refused = await client.GetAsync("/api/investments/quotes?symbol=!&from=2026-10-01", ct);
+
+        Assert.Equal(HttpStatusCode.NotFound, served.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
+    }
+
+    [Fact]
     public async Task EveryAuthenticatedApiCallDrawsOnTheUsersGeneralBucket()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;

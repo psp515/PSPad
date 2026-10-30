@@ -12,8 +12,8 @@ public static class ActiveTab
             "" => NavTab.MyDay,
             "inbox" => NavTab.Inbox,
             "areas" or "lists" => NavTab.Areas,
-            "goals" => NavTab.Goals,
             "budgets" => NavTab.Budgets,
+            "investments" => NavTab.Portfolio,
             _ => NavTab.None
         };
     }

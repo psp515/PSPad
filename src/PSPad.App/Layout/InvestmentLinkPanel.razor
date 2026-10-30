@@ -1,0 +1,347 @@
+@using System.Globalization
+@using PSPad.Abstractions
+@using PSPad.Contracts
+@using PSPad.App.Api
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.App.State.Investments
+@using PSPad.App.Sync
+@using PSPad.Module.Investments.Accounts
+@using PSPad.Module.Investments.Instruments
+@using PSPad.Module.Investments.Operations
+@using PSPad.Module.Investments.Reading
+@using PSPad.Module.Money
+@using PSPad.Module.Money.Balance
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Reading
+@using PSPad.Module.Money.Values
+@inject IDocumentStore<InvestmentAccount> Accounts
+@inject IDocumentStore<InvestmentOperation> OperationStore
+@inject IDocumentStore<Instrument> InstrumentStore
+@inject IDocumentStore<MoneyEntry> Entries
+@inject IDocumentStore<BalanceSnapshot> SnapshotStore
+@inject IInvestmentQuotes Quotes
+@inject INbpRates Nbp
+@inject IConnectivity Connectivity
+@inject AppState State
+@inject CommandSender Sender
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<BudgetsStrings> T
+
+<DetailPanel Open="@Open" Title="@Title" TitleTypo="Typo.body2" Class="pspad-investment-link-panel" OnClose="@OnClose"
+             OnSave="@ConfirmCallback" CanSave="@CanConfirm" SaveText="@ConfirmText" Disabled="@(Disabled || _saving)">
+    <div class="d-flex flex-column gap-3 pa-4">
+        <MudText Typo="Typo.body2" Class="pspad-link-intro">@T["LinkIntro", MoneyText.MonthTitle(Month)]</MudText>
+        <MudDatePicker Class="pspad-link-day-field" Label="@T["LinkValueOn"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                       Date="@_day.ToDateTime(TimeOnly.MinValue)" DateChanged="@DayChangedAsync"
+                       MinDate="@Month.FirstDay.ToDateTime(TimeOnly.MinValue)" MaxDate="@MaxDay.ToDateTime(TimeOnly.MinValue)" />
+        @if (_loading)
+        {
+            <MudText Typo="Typo.caption" Class="pspad-muted pspad-link-updating">@T["LinkUpdatingPrices"]</MudText>
+        }
+        @if (!_loading && _rows.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="pspad-muted pspad-link-empty">@T["LinkNoAccounts"]</MudText>
+        }
+        <MudPaper Outlined="true" Class="pspad-link-accounts">
+            @foreach (var row in _rows)
+            {
+                <div @key="row.Account.Id" class="pspad-link-account pa-3 d-flex flex-column gap-1">
+                    <div class="d-flex align-center gap-2">
+                        <MudCheckBox T="bool" Class="pspad-link-tick" Value="@row.Ticked" ValueChanged="@(ticked => row.Ticked = ticked)"
+                                     aria-label="@row.Account.Name" Disabled="@(row.Loading)" />
+                        <span class="d-flex flex-column flex-grow-1 pspad-holding-text">
+                            <span class="pspad-holding-name">@row.Account.Name</span>
+                            <span class="pspad-holding-sub">@(row.Existing is null ? T["LinkAdd"] : T["LinkUpdate"]) · @NoteText(row)</span>
+                        </span>
+                        <span class="d-flex flex-column align-end">
+                            @if (!row.Loading && row.Value is { } value)
+                            {
+                                <span class="pspad-link-value">@MoneyText.Amount(value.Value) @row.Account.Currency</span>
+                                @if (value.Value <= 0)
+                                {
+                                    <span class="pspad-holding-sub pspad-link-nothing">@T["LinkNothingToAdd"]</span>
+                                }
+                                else if (row.Account.Currency != Currencies.Pln && row.Rate > 0)
+                                {
+                                    <span class="pspad-holding-sub">@MoneyText.Pln(new Money(value.Value, row.Account.Currency, row.Rate.Value, row.RateDate).InPln)</span>
+                                }
+                            }
+                        </span>
+                    </div>
+                    @if (row.Account.Currency != Currencies.Pln && row.Ticked && row.Value is { Value: > 0 })
+                    {
+                        <MudNumericField T="decimal?" Class="pspad-link-rate-field" Label="@T["RateToPln"]" Variant="Variant.Outlined"
+                                         Margin="Margin.Dense" Value="@row.Rate" ValueChanged="@(rate => RateTyped(row, rate))"
+                                         Immediate="true" HideSpinButtons="true" Max="@Money.MaxRate" />
+                    }
+                </div>
+            }
+        </MudPaper>
+        @if (_rows.Count > 0)
+        {
+            <div class="d-flex align-baseline">
+                <MudText Typo="Typo.subtitle2" Class="flex-grow-1">@T["LinkTotal"]</MudText>
+                <MudText Typo="Typo.subtitle2" Class="pspad-link-total">@MoneyText.Pln(Total)</MudText>
+            </div>
+            <MudText Typo="Typo.caption" Class="pspad-muted">@T["LinkHint"]</MudText>
+        }
+    </div>
+</DetailPanel>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+
+    [Parameter] public bool Refresh { get; set; }
+
+    [Parameter] public Guid BudgetId { get; set; }
+
+    [Parameter] public YearMonth Month { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    readonly List<LinkRow> _rows = [];
+    IReadOnlyList<InvestmentAccount> _accounts = [];
+    IReadOnlyList<InvestmentOperation> _operations = [];
+    IReadOnlyList<Instrument> _instruments = [];
+    IReadOnlyList<MoneyEntry> _budgetEntries = [];
+    IReadOnlyList<BalanceSnapshot> _budgetSnapshots = [];
+    InvestmentLinkState _state = new(false, new Dictionary<Guid, Holding>());
+    DateOnly _day;
+    bool _wasOpen;
+    bool _loading;
+    bool _saving;
+    int _generation;
+
+    TimeZoneInfo Zone => LocalToday.Zone(State.TimeZone);
+
+    string Title => Refresh ? T["RefreshFromInvestments"] : T["AddFromInvestments"];
+
+    string ConfirmText => Refresh ? T["LinkConfirmRefresh"] : T["LinkConfirmAdd"];
+
+    DateOnly MaxDay => Month.LastDay < State.Today ? Month.LastDay : State.Today;
+
+    decimal Total => InvestmentLinkRows.Total(_rows);
+
+    bool CanConfirm => !_loading && InvestmentLinkRows.CanConfirm(_rows, _saving);
+
+    decimal RateOf(LinkRow row) => InvestmentLinkRows.RateOf(row);
+
+    EventCallback ConfirmCallback => EventCallback.Factory.Create(this, ConfirmAsync);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Open && !_wasOpen)
+        {
+            _wasOpen = true;
+            await LoadAsync();
+        }
+        else if (!Open)
+        {
+            _wasOpen = false;
+        }
+    }
+
+    async Task LoadStateAsync()
+    {
+        var snapshots = await SnapshotStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        var entries = await Entries.LoadAllAsync(State.UserId, CancellationToken.None);
+        _budgetSnapshots = [.. snapshots.Where(snapshot => snapshot.BudgetId == BudgetId && !snapshot.Deleted)];
+        _budgetEntries = [.. entries.Where(entry => entry.BudgetId == BudgetId && !entry.Deleted)];
+        _state = InvestmentLinkState.For(_budgetSnapshots, Month);
+    }
+
+    async Task LoadAsync()
+    {
+        var generation = ++_generation;
+        _rows.Clear();
+        _day = InvestmentLinkDay.DefaultFor(Month, State.Today);
+        _loading = true;
+
+        await LoadStateAsync();
+        _accounts = [.. await Accounts.LoadAllAsync(State.UserId, CancellationToken.None)];
+        _rows.AddRange(InvestmentLinkAccounts.Select(_accounts, State.UserId, _state.Links, Refresh));
+
+        _operations = [.. (await OperationStore.LoadAllAsync(State.UserId, CancellationToken.None)).Where(operation => !operation.Deleted)];
+        _instruments = [.. (await InstrumentStore.LoadAllAsync(State.UserId, CancellationToken.None)).Where(instrument => !instrument.Deleted)];
+
+        await ValueAsync(generation, refresh: true);
+    }
+
+    async Task ReloadAfterRejectionAsync()
+    {
+        var unticked = _rows.Where(row => !row.Ticked).Select(row => row.Account.Id).ToHashSet();
+        await LoadStateAsync();
+        _rows.Clear();
+        _rows.AddRange(InvestmentLinkAccounts.Select(_accounts, State.UserId, _state.Links, Refresh));
+        foreach (var row in _rows)
+        {
+            row.Ticked = !unticked.Contains(row.Account.Id);
+        }
+
+        await ValueAsync(++_generation, refresh: false);
+    }
+
+    async Task DayChangedAsync(DateTime? date)
+    {
+        if (date is null || !InvestmentLinkDay.Allowed(Month, DateOnly.FromDateTime(date.Value), State.Today))
+        {
+            return;
+        }
+
+        _day = DateOnly.FromDateTime(date.Value);
+        await ValueAsync(++_generation, refresh: false);
+    }
+
+    async Task ValueAsync(int generation, bool refresh)
+    {
+        _loading = true;
+        foreach (var row in _rows)
+        {
+            row.Loading = true;
+        }
+
+        StateHasChanged();
+
+        var online = Connectivity.IsOnline;
+        var ids = _rows.Select(row => row.Account.Id).ToHashSet();
+        var operations = _operations.Where(operation => ids.Contains(operation.AccountId)).ToList();
+        var tickers = operations.Where(operation => operation.Ticker is not null).Select(operation => operation.Ticker!)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var requested = tickers.Select(ticker => (ticker, SymbolOf(ticker))).ToList();
+        var from = operations.Count == 0 ? _day : DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(operations.Min(operation => operation.At), Zone).DateTime);
+
+        var prices = requested.Count == 0
+            ? new Dictionary<string, PriceHistory>()
+            : new Dictionary<string, PriceHistory>(await Quotes.PricesAsync(requested, from, refresh, online, CancellationToken.None));
+        var currencies = _rows.Select(row => row.Account.Currency)
+            .Concat(prices.Values.Select(history => history.MajorCurrency)).Distinct().ToList();
+        var fx = await Quotes.FxAsync(currencies, from.AddDays(-InvestmentImportRates.LeadDays), _day, online, CancellationToken.None);
+
+        if (generation != _generation)
+        {
+            return;
+        }
+
+        foreach (var row in _rows)
+        {
+            var own = operations.Where(operation => operation.AccountId == row.Account.Id).ToList();
+            row.Value = AccountValueOnDay.For(row.Account, own, prices, fx, _day, Zone);
+            row.Note = InvestmentPriceNote.For(row.Value, SymbolOf, Quotes.IsStale, Quotes.FetchedAt);
+            row.Loading = false;
+        }
+
+        await RatesAsync(generation);
+
+        if (generation != _generation)
+        {
+            return;
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    string SymbolOf(string ticker) =>
+        _instruments.FirstOrDefault(instrument => string.Equals(instrument.Ticker, ticker, StringComparison.OrdinalIgnoreCase))?.QuoteSymbol
+        ?? QuoteSymbols.DefaultFor(ticker);
+
+    static string Short(DateOnly day) => day.ToString("d MMM", CultureInfo.CurrentCulture);
+
+    string NoteText(LinkRow row)
+    {
+        if (row.Loading)
+        {
+            return T["LinkUpdatingPrices"];
+        }
+
+        var note = row.Note;
+        switch (note.Kind)
+        {
+            case PriceNoteKind.NoPrice:
+                return T["LinkNoPrice"];
+            case PriceNoteKind.Stale or PriceNoteKind.Day:
+                return T["LinkPricesFrom", Short(note.Day!.Value)];
+            case PriceNoteKind.Fetched:
+                var local = TimeZoneInfo.ConvertTime(note.At!.Value, Zone);
+                return T["LinkPricesFrom", $"{Short(DateOnly.FromDateTime(local.DateTime))}, {local.ToString("HH:mm", CultureInfo.CurrentCulture)}"];
+            default:
+                return row.Account.Currency;
+        }
+    }
+
+    async Task RatesAsync(int generation)
+    {
+        var currencies = _rows.Select(row => row.Account.Currency).Where(currency => currency != Currencies.Pln).Distinct().ToList();
+        var answers = new Dictionary<string, NbpRateView?>();
+
+        foreach (var currency in currencies)
+        {
+            answers[currency] = Connectivity.IsOnline ? await Nbp.RateAsync(currency, _day) : null;
+        }
+
+        if (generation != _generation)
+        {
+            return;
+        }
+
+        foreach (var row in _rows)
+        {
+            var currency = row.Account.Currency;
+            var chosen = InvestmentLinkRate.Choose(currency, _day, answers.GetValueOrDefault(currency),
+                currency == Currencies.Pln ? null : RateSuggestion.For(currency, _budgetEntries, _budgetSnapshots));
+            row.Rate = chosen.Rate;
+            row.RateDate = chosen.Date;
+        }
+    }
+
+    void RateTyped(LinkRow row, decimal? rate)
+    {
+        var typed = InvestmentLinkRate.Typed(rate, _day);
+        row.Rate = typed.Rate;
+        row.RateDate = typed.Date;
+    }
+
+    async Task ConfirmAsync()
+    {
+        if (!CanConfirm)
+        {
+            return;
+        }
+
+        var choices = InvestmentLinkRows.Ready(_rows)
+            .Select(row => new LinkChoice(row.Account, row.Value!, RateOf(row), row.RateDate, row.Existing)).ToList();
+        var commands = InvestmentLinkPlan.Commands(State.UserId, BudgetId, Month, _state.MonthExists, choices, Guid.NewGuid);
+
+        _saving = true;
+        var rejected = false;
+        try
+        {
+            foreach (var command in commands)
+            {
+                var result = await Sender.SendAsync(command);
+                if (!result.Accepted)
+                {
+                    Snackbar.Add(result.Rejection ?? T["LinkFailed"].Value, Severity.Warning);
+                    rejected = true;
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        if (rejected)
+        {
+            await ReloadAfterRejectionAsync();
+            return;
+        }
+
+        await OnClose.InvokeAsync();
+    }
+}
