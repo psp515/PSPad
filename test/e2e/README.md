@@ -1,6 +1,6 @@
 # End-to-end tests
 
-34 Playwright scenarios that drive the real application in Chromium against the
+36 Playwright scenarios that drive the real application in Chromium against the
 Docker Compose stack. Design: `specs/e2e-testing-design.md`.
 
 ## Run
@@ -52,6 +52,14 @@ running again.
 
 Every test creates its own Keycloak user through the admin API and deletes it
 afterwards, so the realm needs no seeded users.
+
+## Locators
+
+Steps and helpers find elements by role, label or text, never by a `pspad-*`
+or `mud-*` class. `EndToEndLocatorGuardTests` in `PSPad.App.Tests` (the unit
+run) fails on a class locator unless `locator-allowlist.txt` lists it with a
+reason. When nothing a user sees names an element, give the component an
+`aria-label` or `role` (English and Polish in the feature's `.resx`).
 
 ## Without Chromium's system libraries
 

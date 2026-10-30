@@ -1,0 +1,7 @@
+# CSS-class locators the end-to-end guard (EndToEndLocatorGuard) lets through.
+# One per line: file: line pattern — reason. Every other locator uses a role, label or text (ADR-0080).
+helpers/today.ts: page.locator('.mud-picker .mud-overlay .mud-picker-paper') — MudTimePicker's clock dialog has no role or accessible name
+helpers/today.ts: clock.locator('.mud-time-picker-hour') — the clock's hour dial has no role or accessible name
+helpers/today.ts: clock.locator('.mud-time-picker-minute') — the clock's minute dial has no role or accessible name
+helpers/today.ts: not.toHaveClass(/mud-time-picker-dial-hidden/) — the only signal that the clock turned from hours to minutes
+helpers/today.ts: dial.locator('.mud-clock-number' — clock numbers are bare text in an SVG-like dial; the 13–23 sticks are zero-width, so the number's centre is clicked

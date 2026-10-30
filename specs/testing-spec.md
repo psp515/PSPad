@@ -168,3 +168,11 @@ test project, scans the test sources and fails on shape assertions (`ClassList`,
 and `InMemory*Store` in the module and API projects. `PSPad.App.Tests` gets only
 the shape guard, because `InMemoryLocalSessionStore` is a legitimate double at
 the browser-storage boundary.
+
+`EndToEndLocatorGuard` (ADR-0080), called from `EndToEndLocatorGuardTests` in
+`PSPad.App.Tests`, scans `test/e2e/scenarios` and `test/e2e/helpers` and fails
+on a `.pspad-…` or `.mud-…` selector, `toHaveClass` or `classList`: end-to-end
+steps locate by role, label or text. Justified exceptions (MudBlazor internals
+with no accessible handle) are listed with their reason in
+`test/e2e/locator-allowlist.txt`; a stale entry fails the guard
+(`specs/e2e-testing-design.md` §3.3).

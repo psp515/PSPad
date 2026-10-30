@@ -100,14 +100,38 @@ Thin functions, not page-object classes: `openArea`, `createList(kind)`,
 `liveStreamOpened` (resolves when the page's `/api/live` stream answers 200),
 `setTaskTime(start, end)`, `timelineBlock(name)`, `setLanguage(nativeName)`
 (waits for the reload the language change forces).
-Each lives in `test/e2e/helpers/` next to what it drives. Helpers locate by
-`getByRole`, `getByLabel`, `getByText` and the `pspad-*` classes the UI spec
-names; the panel's **Add …** button is `.pspad-panel-save`.
+Each lives in `test/e2e/helpers/` next to what it drives.
+
+**Locators.** Helpers and steps locate by role, label or text
+(`getByRole`, `getByLabel`, `getByText`, `toHaveAccessibleName`,
+`toHaveAccessibleDescription`), never by a `pspad-*` or `mud-*` class
+(ADR-0080). Where nothing a user perceives tells an element apart, the
+component gets an accessibility attribute, never a test id: the open detail
+panel is the `complementary` landmark holding a Close button; task
+and reference rows are `article`s named by the item; step, label and
+area-list rows and the schedule's timeline blocks are `group`s named by
+their text; My Day's sections and
+the goals page's sections are `region`s named by their heading; the page
+heading is described by its subtitle (`aria-describedby`); an overdue row
+carries a visually hidden "Overdue"; the timeline's now line is an `img`
+named "Now, HH:mm". Text added this way comes from the feature's `.resx` in
+English and Polish. The panel's primary button is found by its name (Save,
+Add …, Convert to task); popover menus are the unnamed `menu`s (the FAB menu
+is named Actions); select options are `option`s.
+
+**Guard.** `EndToEndLocatorGuard` (`test/PSPad.TestInfrastructure`, run by
+`EndToEndLocatorGuardTests` in `PSPad.App.Tests`, so CI's unit job runs it)
+scans `test/e2e/scenarios` and `test/e2e/helpers` and fails on a
+`.pspad-…` or `.mud-…` selector, `toHaveClass` or `classList`. The
+exceptions live in `test/e2e/locator-allowlist.txt`, one per line as
+`file: line pattern — reason`; an entry that matches nothing fails too.
+Today the list holds only MudTimePicker's clock, which has no role or name.
 
 Dates: `DueDateRow` quick picks cover Today and Tomorrow; any other day goes
-through the picker dialog (`.pspad-due-pick`, then the day button in the
-static `MudDatePicker`, stepping a month back first when the target month
-differs from the shown one).
+through the picker dialog (Pick a date…, then the day button of the
+`MudDatePicker`, found by its number, stepping months with the picker's
+"Previous month (…)" and "Next month (…)" buttons until the header button
+names the target month).
 
 ### 3.4 API access from a test
 
@@ -187,7 +211,9 @@ tests would be visible, not silent.
    the dialog open on a failure, says an administrator must remove the
    sign-in when the API reports Keycloak was not cleaned up, then lands on
    Welcome with no return address, and the account can no longer log in.
-   The first sign-in under load is scenario 35.
+   The first sign-in under load is scenario 35. Settings and the account's
+   deletion moved to scenario 36 (round 3) so each half fits a minute at
+   two workers.
 2. **Capture and triage.** Inbox: the empty state opens Capture, a blank
    capture adds nothing; capture two items (Enter and Add), newest first with
    their capture time; reword one while no list exists and Convert is off.
@@ -573,6 +599,14 @@ tests would be visible, not silent.
     on My Day, never back on Welcome (`UserProvisioner` retries a write
     conflict).
 
+36. **Account settings and deletion.** The second half of scenario 1: from
+    Settings with the account's time zone and Change password link, a
+    snapshot the account opened reads offline and its statistics stay on
+    the device; deleting the account walks the email check, the fresh
+    sign-in, a failure and Keycloak's leftover, lands on Welcome with no
+    return address, leaves no snapshot or statistics behind, and the
+    account can no longer log in.
+
 ## 5. Timing
 
 - `fullyParallel: true`, four workers locally and in CI, one test per file
@@ -615,7 +649,8 @@ test/e2e/
   fixtures/      keycloak.ts (admin API)  accounts.ts (account fixtures)
   helpers/       sign-in.ts  nav.ts  panels.ts  areas.ts  lists.ts  tasks.ts  inbox.ts  today.ts  dates.ts
                  settings.ts  goals.ts  references.ts  sharing.ts  snapshots.ts  sync.ts  api.ts  budgets.ts
-  scenarios/     01-first-sign-in.spec.ts … 35-first-sign-in-under-load.spec.ts
+  scenarios/     01-first-sign-in.spec.ts … 36-account-settings-and-deletion.spec.ts
+  locator-allowlist.txt  (class locators the guard lets through, with reasons)
 ```
 
 One helper module per screen family, one scenario per file, no shared
@@ -639,16 +674,18 @@ extends the one that already walks that screen; a pull request that changes
 markup or copy a scenario reads fixes the scenario in the same change. The
 `e2e` CI job gates deploy, so a red scenario blocks the merge either way.
 Scenario numbers never change; a new one takes the next number. Helpers
-locate by role, label, text and the `pspad-*` classes the UI spec names, so
-renaming one of those is a suite change too. Nav links carry a count once
+locate by role, label and text (§3.3), so renaming a label, a heading or an
+accessible name is a suite change too. Nav links carry a count once
 the user has items, so `navLink` finds them by `href`; a link found by its
 name alone misses when the count appears and a `goto` fallback reloads the
 page, which is a different flow from clicking.
 
 Since live updates (ADR-0076) every command a device sends echoes back as a
-nudge whose pull re-renders the open panel. Helpers that close a panel or
-edit inside one retry inside `toPass`; a new helper that types into a panel
-should do the same.
+nudge whose pull re-renders the open panel. A helper may retry locating,
+opening or waiting inside `toPass` (closing a panel, opening a menu or an
+editor); it never retries a user's edit or a command: the edit happens once
+and the step then waits for its outcome, so a lost edit fails the step
+instead of being typed again.
 
 UI test-driven work starts with the failing end-to-end step; pages, layout and components have no bUnit tests (ADR-0080).
 
@@ -667,7 +704,8 @@ UI test-driven work starts with the failing end-to-end step; pages, layout and c
   rerun, not patched.
 - **Closing drawers and fading menus.** A panel's overlay lingers while it
   closes and the FAB menu's items are transparent with pointer events off
-  while it is shut, so the helpers wait for the drawer's closed state and
-  the menu's open class instead of visibility. A MudBlazor select's popover
-  also lingers while it closes, so a helper waits for no open popover
+  while it is shut, so the helpers wait for the panel's Close button to be
+  gone (Playwright's click then waits out the fading overlay) and for a FAB
+  item to take a trial click, instead of visibility. A MudBlazor select's
+  popover also lingers while it closes, so a helper waits for no `option`
   before opening the next.

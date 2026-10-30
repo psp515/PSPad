@@ -188,8 +188,9 @@ scenario 21's tight My Day row (#222).
 
 The suite target moves from three minutes to **five minutes per shard** in CI
 with four workers; CI runs two shards (`specs/e2e-testing-design.md` §5). A scenario that would push
-past it splits. Locators stay role, label or text; no CSS-class locators in
-new steps.
+past it splits. Locators stay role, label or text; no CSS-class locators.
+Round 3 replaced the remaining `pspad-*` and MudBlazor-class locators, and
+`EndToEndLocatorGuard` (§5) keeps them out.
 
 ## 5. Enforcement
 
@@ -198,7 +199,9 @@ sources and fails on `ClassList`, `ClassName`, `.Markup`, `MarkupMatches`
 and CSS-class selectors in `Find`/`FindAll`/`QuerySelector`, so shape
 assertions cannot return. A guard in each module test project fails on a
 `Fakes/FakeDocumentStore` or `FakeUnitOfWork` reference. Both land in the
-last slice, once the sources are clean.
+last slice, once the sources are clean. `EndToEndLocatorGuardTests` (also in `PSPad.App.Tests`)
+fails on a CSS-class locator in `test/e2e/scenarios` or `test/e2e/helpers`
+outside `test/e2e/locator-allowlist.txt` (round 3).
 
 ## 6. Migration
 
