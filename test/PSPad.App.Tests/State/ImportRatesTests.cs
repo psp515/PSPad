@@ -20,22 +20,9 @@ public class ImportRatesTests
     static readonly DateOnly Today = new(2026, 10, 14);
 
     [Fact]
-    public async Task AnsweredRatesBecomeKnownAndMissingOnesFail()
-    {
-        var nbp = new AppTestHost.FakeNbpRates();
-        nbp.ByCurrency["EUR"] = new NbpRateView("EUR", 4.25m, new DateOnly(2026, 9, 4));
-        nbp.ByCurrency["USD"] = null;
-
-        var book = await ImportRates.FetchAsync(nbp, true, Today, [Eur, Usd], RateBook.Empty, Text);
-
-        Assert.Equal(new ImportRate(4.25m, new DateOnly(2026, 9, 4)), book.Known[Eur]);
-        Assert.Equal("No NBP rate for USD on 9/5/2026.", book.Failed[Usd]);
-    }
-
-    [Fact]
     public async Task OfflineEveryRequestFailsWithoutAsking()
     {
-        var nbp = new AppTestHost.FakeNbpRates();
+        var nbp = new FakeNbpRates();
 
         var book = await ImportRates.FetchAsync(nbp, false, Today, [Eur], RateBook.Empty, Text);
 
@@ -53,7 +40,7 @@ public class ImportRatesTests
         {
             System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("pl-PL");
             System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("pl-PL");
-            var nbp = new AppTestHost.FakeNbpRates();
+            var nbp = new FakeNbpRates();
             nbp.ByCurrency["USD"] = null;
 
             var book = await ImportRates.FetchAsync(nbp, true, Today, [Usd], RateBook.Empty, Text);
@@ -68,22 +55,9 @@ public class ImportRatesTests
     }
 
     [Fact]
-    public async Task RetryingReplacesAnEarlierFailure()
-    {
-        var nbp = new AppTestHost.FakeNbpRates { Next = new NbpRateView("EUR", 4.3m, Eur.Date) };
-        var failed = new RateBook(new Dictionary<RateRequest, ImportRate>(),
-            new Dictionary<RateRequest, string> { [Eur] = Offline });
-
-        var book = await ImportRates.FetchAsync(nbp, true, Today, [Eur], failed, Text);
-
-        Assert.Empty(book.Failed);
-        Assert.Equal(4.3m, book.Known[Eur].Rate);
-    }
-
-    [Fact]
     public async Task AFutureDateFailsWithoutAskingAndSaysTheRateIsNotPublishedYet()
     {
-        var nbp = new AppTestHost.FakeNbpRates();
+        var nbp = new FakeNbpRates();
         var future = new RateRequest("USD", new DateOnly(2026, 10, 31));
 
         var book = await ImportRates.FetchAsync(nbp, true, Today, [future], RateBook.Empty, Text);

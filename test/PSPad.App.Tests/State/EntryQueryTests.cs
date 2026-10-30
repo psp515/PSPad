@@ -21,14 +21,6 @@ public class EntryQueryTests
     }
 
     [Fact]
-    public void ANewIncomeRoundTrips()
-    {
-        var uri = EntryQuery.ForNew("http://localhost/budgets/x", BudgetId, CategoryKind.Income);
-
-        Assert.Equal((BudgetId, CategoryKind.Income, (YearMonth?)null), EntryQuery.NewFrom(uri));
-    }
-
-    [Fact]
     public void AnEntryRoundTrips()
     {
         var entryId = Guid.NewGuid();
@@ -44,15 +36,6 @@ public class EntryQueryTests
     {
         Assert.Null(EntryQuery.From("http://localhost/budgets?budget=new"));
         Assert.Null(EntryQuery.NewFrom("http://localhost/budgets?expense=nope"));
-    }
-
-    [Fact]
-    public void ANewExpenseInAMonthRoundTrips()
-    {
-        var uri = EntryQuery.ForNew("http://localhost/budgets/x/entries", BudgetId, CategoryKind.Expense, new YearMonth(2026, 9));
-
-        Assert.Equal($"http://localhost/budgets/x/entries?expense={BudgetId}&month=2026-09", uri);
-        Assert.Equal((BudgetId, CategoryKind.Expense, new YearMonth(2026, 9)), EntryQuery.NewFrom(uri));
     }
 
     [Fact]

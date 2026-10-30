@@ -26,7 +26,8 @@ else if (WithStamp)
 else
 {
     <MudIconButton Class="@ButtonClass" Icon="@Icons.Material.Filled.Sync" Color="@Tone" Size="Size.Small"
-                   Disabled="@Blocked" OnClick="@Trigger.SyncNowAsync" aria-label="@T["SyncNow"].Value" />
+                   Disabled="@Blocked" OnClick="@Trigger.SyncNowAsync" aria-label="@T["SyncNow"].Value"
+                   aria-describedby="@DescribedBy" />
 }
 
 @code {
@@ -37,6 +38,8 @@ else
     [Parameter] public bool Labeled { get; set; }
 
     [Parameter] public bool WithStamp { get; set; }
+
+    [Parameter] public string? DescribedBy { get; set; }
 
     string ButtonClass => Status.IsSyncing ? "pspad-sync-button pspad-spin" : "pspad-sync-button";
 

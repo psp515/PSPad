@@ -1,7 +1,8 @@
+@using PSPad.App.State
 @inject IStringLocalizer<TasksStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
 
-@foreach (var pick in DueDateRow.QuickPicks(Today, Shared, T))
+@foreach (var pick in QuickPicks.For(Today, Shared, T))
 {
     <MudMenuItem Class="pspad-due-quick" OnClick="@(() => ChooseAsync(pick.Day))">
         <div class="d-flex align-center gap-4">

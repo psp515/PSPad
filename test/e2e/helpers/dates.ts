@@ -1,3 +1,6 @@
+import type { Locator, Page } from '@playwright/test';
+import { escapeRegExp } from './text';
+
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -27,4 +30,41 @@ export function shiftedZone(): { id: string; localDate: Date } {
   return new Date().getUTCHours() >= 10
     ? { id: 'Pacific/Kiritimati', localDate: addDays(today, 1) }
     : { id: 'Pacific/Pago_Pago', localDate: addDays(today, -1) };
+}
+
+export function dayMonth(day: Date): string {
+  return `${day.getUTCDate()} ${months[day.getUTCMonth()]}`;
+}
+
+export function utcTime(): string {
+  return new Date().toISOString().slice(11, 16);
+}
+
+export function weekdayShort(day: Date): string {
+  return weekdays[day.getUTCDay()];
+}
+
+export function weekdaysInWeekOrder(days: string[]): string[] {
+  const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return [...new Set(days)].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+}
+
+export function shiftTime(time: string, minutes: number): string {
+  const [hours, mins] = time.split(':').map(Number);
+  const total = (((hours * 60 + mins + minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+export function monthTitle(day: Date): string {
+  return day.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+export function monthButton(scope: Page | Locator, day: Date) {
+  return scope.getByRole('button', { name: new RegExp(`^${escapeRegExp(monthTitle(day))}(,|$)`) });
+}
+
+export function isoWeek(day: Date): number {
+  const thursday = addDays(day, 3 - ((day.getUTCDay() + 6) % 7));
+  const firstThursday = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 4));
+  return 1 + Math.round((thursday.getTime() - addDays(firstThursday, 3 - ((firstThursday.getUTCDay() + 6) % 7)).getTime()) / (7 * 86_400_000));
 }

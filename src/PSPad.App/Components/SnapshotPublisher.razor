@@ -14,6 +14,7 @@
 @inject Clipboard Clipboard
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharingStrings> T
+@implements IDisposable
 
 <div class="d-flex flex-column gap-3 pspad-snapshot-publisher">
     <MudPaper Outlined="true" Class="pa-4 d-flex flex-column gap-2">
@@ -158,11 +159,17 @@
 
     (int Days, bool Urgent) DaysLeft(PublishedSnapshotView snapshot)
     {
-        var days = Math.Max(1, (int)Math.Ceiling((snapshot.ExpiresAt - Clock.UtcNow).TotalDays));
+        var days = SnapshotExpiry.DaysLeft(snapshot.ExpiresAt, Clock.UtcNow);
         return (days, days <= 1);
     }
 
     DateTime MaxDate => Clock.UtcNow.AddDays(365).DateTime;
+
+    protected override void OnInitialized() => Connectivity.Changed += OnConnectivityChanged;
+
+    void OnConnectivityChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Connectivity.Changed -= OnConnectivityChanged;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -259,12 +266,7 @@
         }
     }
 
-    DateTimeOffset EndOfLocalDay(DateOnly day)
-    {
-        var zone = LocalToday.Zone(State.TimeZone);
-        var nextLocalMidnight = DateTime.SpecifyKind(day.AddDays(1).ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
-        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(nextLocalMidnight, zone), TimeSpan.Zero);
-    }
+    DateTimeOffset EndOfLocalDay(DateOnly day) => SnapshotExpiry.EndOfLocalDay(day, LocalToday.Zone(State.TimeZone));
 
     async Task CopyAsync(string token)
     {

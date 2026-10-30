@@ -161,6 +161,48 @@ public class LiveEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task ClosingAStreamFreesItsPlaceForAnother()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = Factory(("Live:MaxStreamsPerUser", "1"));
+        var subject = Guid.NewGuid().ToString();
+        var client = factory.ClientFor(subject);
+        await Sharing.SignInAsync(client, ct);
+        var first = await LiveListener.OpenAsync(client, ct);
+        await first.DisposeAsync();
+
+        await using var second = await OpenWhenFreedAsync(factory.ClientFor(subject), ct);
+
+        Assert.Equal("text/event-stream", second.Response.Content.Headers.ContentType?.MediaType);
+    }
+
+    static async Task<LiveListener> OpenWhenFreedAsync(HttpClient client, CancellationToken ct)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        deadline.CancelAfter(TimeSpan.FromSeconds(10));
+
+        try
+        {
+            while (true)
+            {
+                try
+                {
+                    return await LiveListener.OpenAsync(client, deadline.Token);
+                }
+                catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    await Task.Yield();
+                }
+            }
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            Assert.Fail("slot never freed");
+            throw;
+        }
+    }
+
+    [Fact]
     public async Task AnAnonymousCallerIsTurnedAway()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;

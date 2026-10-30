@@ -1,7 +1,7 @@
 import { expect, test } from '../fixtures/accounts';
-import { createArea, openArea } from '../helpers/areas';
+import { createArea, listCard, listCardNames, openArea } from '../helpers/areas';
 import { createList, openList } from '../helpers/lists';
-import { closePanel, openFabAction, panel, pickFromPropertyRow } from '../helpers/panels';
+import { chooseProperty, closePanel, openFabAction, panel, propertyRow } from '../helpers/panels';
 import { dragRow } from '../helpers/references';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, openTask, taskRow } from '../helpers/tasks';
@@ -17,13 +17,15 @@ test('lists keep their order and a task moves between lists', async ({ page, acc
   await createList(page, first);
   await createList(page, second);
 
-  const cardTitles = () => page.locator('.pspad-card-header a').allInnerTexts();
+  const cardTitles = () => listCardNames(page);
   await expect.poll(cardTitles).toEqual([first, second]);
 
   await openFabAction(page, 'Edit area');
-  const rows = panel(page).locator('.pspad-area-list-row');
-  await dragRow(rows.filter({ hasText: second }).getByLabel(`Drag ${second}`), rows.filter({ hasText: first }));
-  await expect.poll(() => panel(page).locator('.pspad-area-list-name').allInnerTexts()).toEqual([second, first]);
+  const row = (name: string) => panel(page).getByRole('group', { name, exact: true });
+  await dragRow(row(second).getByLabel(`Drag ${second}`), row(first));
+  const listRows = panel(page).getByRole('group').filter({ has: page.getByRole('img', { name: /^Drag / }) });
+  await expect.poll(() => listRows.evaluateAll(groups => groups.map(group => group.getAttribute('aria-label'))))
+    .toEqual([second, first]);
   await closePanel(page);
 
   await page.reload();
@@ -33,15 +35,13 @@ test('lists keep their order and a task moves between lists', async ({ page, acc
   await openList(page, first);
   await addTask(page, task);
   await openTask(page, task);
-  await pickFromPropertyRow(page, 'pspad-task-list', second);
-  await expect(panel(page).locator('.pspad-task-list .pspad-property-value')).toContainText(second);
+  await chooseProperty(page, 'List', second);
+  await expect(propertyRow(page, 'List')).toContainText(second);
   await closeTask(page);
   await expect(taskRow(page, task)).toHaveCount(0);
 
   await openArea(page, area);
-  const card = (name: string) =>
-    page.locator('.mud-paper').filter({ has: page.locator('.pspad-card-header a', { hasText: name }) }).first();
-  await expect(card(first).locator('.pspad-open-count')).toContainText('0');
-  await expect(card(second).locator('.pspad-open-count')).toContainText('1');
-  await expect(card(second)).toContainText(task);
+  await expect(listCard(page, first).getByText('no open tasks', { exact: true })).toBeAttached();
+  await expect(listCard(page, second).getByText('1 open task', { exact: true })).toBeAttached();
+  await expect(listCard(page, second)).toContainText(task);
 });

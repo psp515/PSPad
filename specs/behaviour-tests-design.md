@@ -1,0 +1,261 @@
+# Behaviour tests — design
+
+Status: migration done 2026-10-29; round 2 done 2026-10-29 (R1–R3): 2206 unit, 413 integration, 34 e2e scenarios.
+
+Fixed in round 3:
+
+- 30-reference-rows: a reference card counted its items as "open tasks"; `ThingCard` uses the `ItemCount` plural when it is given a row count. Fixed in 8204b79.
+- 21-step-deadline: in a tight My Day row the time, date and step count pushed the due-step mark past the clipped details; they now shrink first. Fixed in f43b718.
+- DayTimeline checkboxes were not read-only on a day a repeat skips (the same flip-own-state mechanism as 25). Fixed in 8204b79.
+- 10-share-join-remove: joining a list could lose the tasks it already had: a sync running at the join purged them, or the list arrived by delta and never counted as missing. Fixed in 1c0c49e (ADR-0081).
+- 10-share-join-remove: a code in the link joined at once, but the shared list's tasks could be lost the same way. Fixed in 1c0c49e (ADR-0081).
+- 02-capture-and-triage: a deadline set on a draft step was lost when an Inbox item was converted: a pull overwrote the task with the server's older copy, so the step was unknown when `SetStepDueDate` ran locally and the command was rejected before the outbox. Fixed in 55358c4 (#220, ADR-0079: a pulled document never replaces a newer local copy); the step now also checks the server copy.
+- 24-new-task-draft: a deadline set on a draft step was lost when the task was added, for the same reason. Fixed in 55358c4; the step now also checks the server copy.
+- 23-task-panel: an open task panel kept the name and description it opened with after another device changed them: panels sat outside the `SyncRevision` cascade. Fixed in 8dc1386.
+- 31-list-panel: going offline with Public snapshots open left Publish enabled until the view redrew: the publisher ignored `Connectivity.Changed`. Fixed in d16b3c0.
+- 08-reference-list-and-field-types: Cancel in a label's editor left it open until something else redrew the list: the cancel callback never re-rendered. Fixed in fade77a.
+- 25-area-board-cards: ticking a repeat on a day it skips showed it ticked until a reload, though nothing was saved: the checkbox flipped its own state. Fixed in ac94b26 (`TaskTick.Toggles`; the checkbox is read-only on such a day).
+- 27-reference-items: labels drafted on a new reference item were missing when it was opened at once. Fixed by 55358c4 (#220, ADR-0079); reverting the guard fails the step 3 of 3. The step now closes the open panel before adding (f1e8f68).
+- 01-first-sign-in: signing in from Welcome ignored the return address: the login route ignores a `returnUrl` query since .NET 7. Welcome starts the login with `NavigateToLogin` and an in-app return address (`ReturnUrlQuery.SafeFrom`). Fixed in 5ffaa20.
+- 01-first-sign-in (follow-up): the Welcome sign-in warning stayed when an in-app navigation reused the open Welcome: the flag was read only on creation. Welcome takes it (`SignInFailure.Take`) on every arrival. Fixed in 5ffaa20.
+- 01-first-sign-in: coming back from the fresh sign-in did not reopen the delete dialog: it opened before the query-stripping navigation landed, and `MudDialogProvider` closes every dialog on a location change. Fixed in d485a9d.
+- 01-first-sign-in: deleting the account signed out before it left Settings, so Welcome kept Settings as the return address. Settings now reloads the app on Welcome. Fixed in 5f9a7ca.
+- 15-search-statistics-settings: an old History address landed on an empty Statistics page: both routes shared one page, which Blazor reused after the redirect with its "redirecting" flag still set. `/history` is its own redirect page. Fixed in ecdf443.
+- 01-first-sign-in (follow-up): the first sign-in under load widened its timeout with `test.slow()`; it is now scenario 35 within the normal timeout (de3ec7e).
+- 34-budget-sharing: an open budget members panel did not follow an archive on another device. It already did once 8dc1386 put the panel in the shell's `SyncRevision` cascade; the step keeps the panel open through the archive (ff43af3) and fails with the panel taken out of the cascade.
+- 34-budget-sharing: a removed budget member kept seeing the budget on the open screen after Sync now: a membership purge was not counted as pulled, so `SyncRevision` never moved. Fixed in 519d479.
+- 23-task-panel: a remote rename replaced a task name being typed. The panel keeps the name it showed while the field has focus. Fixed in 910c830.
+- 01-first-sign-in: deleting the account left its statistics and opened snapshots in the browser (sign-out cleared them). Fixed in c6f7d4b.
+- `TaskCompleted.GoalId` was always null: by design (ADR-0065: a goal holds its links, statistics attribute completions when read). It leaves the events' constructors and stays only for replaying older events. ac28a2c.
+- `AuthenticationLogging.OnForbidden` was unreachable: removed with `SecurityLog.Forbidden`; event id 4003 retired. d9d94ef.
+- `InMemorySnapshotCache` was test-only code in `src`; moved to `test/PSPad.App.Tests/State`. d50ffc9.
+
+Tests assert what the code does, never how it looks or how it is wired.
+Decision record: ADR-0080. Standing rules after the migration live in
+`specs/testing-spec.md`; this file describes the migration.
+
+## 1. Problem
+
+On 2026-10-28 the suite held about 3,000 unit test methods (2,100 in
+`PSPad.App.Tests`, 980 across the module test projects), 380 API tests
+(mostly integration) and 22 Playwright scenarios. Refactors that keep
+behaviour break many tests, because:
+
+- bUnit tests assert CSS classes, DOM structure and markup (about 1,670 such
+  assertions in 91 files);
+- module handler tests run against hand-written `FakeDocumentStore`,
+  `FakeUnitOfWork` and in-memory stores, so they pin the wiring between a
+  handler and its ports rather than the result a user or client sees.
+
+Goal: remove every test bound to shape or wiring, and keep behaviour covered
+at the cheapest tier that can observe it.
+
+Not a goal: raising coverage, changing production behaviour, or replacing
+pure rule tests that already assert behaviour.
+
+## 2. The rule
+
+A test asserts an observable result: a returned value, a decision (events or
+a rejection), a stored document, an HTTP response, a sync delta, or what a
+user sees and can do in the browser. It never asserts a CSS class, a DOM
+shape, a MudBlazor internal, or a call recorded on a fake of one of our own
+ports.
+
+| Tier | Subject | Runs |
+|---|---|---|
+| Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; pure client rules extracted from components (§4.2); architecture, category, resource and localization guards | in process, no Docker |
+| Integration `[IntegrationTest]` | A command or query through HTTP on `ApiFactory` with Testcontainers Mongo, asserting the response, documents, events and sync deltas: every handler, cascade, projection, reader, sharing and auth flow | Testcontainers |
+| End-to-end | A user's flow in Chromium against the compose stack: pages, layout, components, navigation, panels, localization, offline and live updates; new steps locate by role, label or text | compose stack |
+
+A new test starts at the tier its subject names: a rule with edge cases is a
+unit test, a server effect is an integration test, anything a user sees on a
+page is an end-to-end step. TDD is unchanged: the failing test comes first,
+and for UI work it is an end-to-end step.
+
+Stubs in unit tests are allowed only at external boundaries (HTTP to
+Keycloak or NBP, the JS runtime, the clock, connectivity) and only to assert
+the client's resulting behaviour, never the outgoing request's shape.
+
+## 3. Backend
+
+### 3.1 Stays unit
+
+Aggregate decisions (`TodoTask`, `Goal`, `Area`, `Inbox`, `TaskList`,
+`ReferenceItem`, `Budget`, `MoneyEntry`, `User`, access and sharing rules,
+content limits), the Today and day plan rules, recurrence, lead time, list
+view rules (`ListFilter`, `ListSort`, `ListCalendar`), `Positions`,
+`Arranged`, money values and readings (`Money`, `Currencies`, `YearMonth`,
+`MonthTotals`, `BalanceTotals`, `Insights`, `MonthPace`, `RateSuggestion`,
+`UsualMonth`, `MoneySummary`), CSV reading and import plans and previews,
+provisioning plans, snapshot builders that are pure functions, and the
+architecture and category guards.
+
+A test in this group that reaches its subject through a fake store is
+rewritten to call the pure function or `Decide` directly; if it cannot be,
+it moves to integration.
+
+### 3.2 Moves to integration
+
+- Handler tests: `BudgetHandler`, `CategoryHandler`, `MoneyEntryHandler`,
+  `BalanceHandler`, `CategoryCascade`, `ReferenceHandler`, `DeleteCascade`,
+  `ReorderListsHandler`, `PlaceListHandler`, and any other test that drives a
+  handler through `FakeDocumentStore` or `FakeUnitOfWork`. They become
+  `POST /api/commands` followed by assertions on the command result, the
+  stored documents or `/api/sync`.
+- Statistics projections, replay and readers (on `InMemoryStatisticsStore`)
+  become command → `/api/statistics/*` assertions.
+- Sharing snapshot marking and publishing (on in-memory stores) become
+  command → public snapshot endpoint assertions.
+- API plumbing unit tests (`CommandDispatcher*`, `ConflictRetry`,
+  `DomainEventPump`, `ChannelDomainEventDispatcher`, `Live*`) move only where
+  an HTTP or Mongo test can observe the same behaviour; the rest are deleted.
+
+All new integration tests live in `PSPad.Api.Tests`, grouped by the
+aggregate's operation folder as today, and go through `ApiFactory`.
+
+### 3.3 Deleted
+
+Tests whose only subject is a type's shape (`CollectionName`,
+`CommandResult`, SSE framing details, `EnrichedEvent` field lists) after the
+ledger (§6) confirms no behaviour is lost. The module `Fakes/` folders and
+`InMemory*` stores are deleted once nothing uses them.
+
+## 4. Frontend
+
+### 4.1 Client logic stays unit
+
+`State/` queries and text rules, `State/Dispatch`, `State/Outbox`,
+`State/Replica`, `State/Search`, `Sync/`, `Live/` stream reading, `Auth/`
+session and token handling, `Localization/` plural rules and guards,
+`Theme/` preference and accessibility rules, `Updates/`, `Markdown/`
+rendering. Each test is kept when it asserts a result; a test that asserts an
+outgoing request's URL, header or body shape is deleted, unless that request
+is the contract with an external system (Keycloak end-session, NBP).
+
+### 4.2 Components: end-to-end, their pure rules in State
+
+No component is rendered in a unit test. Every component behaviour a user
+sees is an end-to-end step in a scenario that already reaches it (time and
+due rows in 17, 23 and 24, steps in 11, 19, 21 and 24, reference fields in
+08 and 27, the snapshot publisher in 11 and 31, the week strip in 05, the
+month strip in 13, the list month in 22, the import table in 33, the add row
+in 03, the description field in 11 and 23, the repeat menu in 06).
+
+A component's rule worth an edge-case table is extracted verbatim into
+`src/PSPad.App/State/`, the component calls it, and it is unit tested there:
+`TimeText` (typed times), `TaskTimeText`, `DueDayText` and `QuickPicks`,
+`LeadTimeText`, `RecurrenceText`, `WeekDays` and `WeekHeading`,
+`MonthWindow`, `SnapshotExpiry` and `DroppedText`, alongside the earlier
+`TimelineLayout` and `TimelineAxis`. Pure helpers that live next to
+components (`AreaSummary`, `ListIcon`, `GoalStatusText`, `OpenTaskCount`)
+are plain unit tests and stay where they are.
+
+Tests of presentational components (`BrandMark`, `BrandLoader`,
+`EmptyState`, `SectionHeading`, `PageHeading`, skeletons, `MasonryGrid`,
+`ThingCard`, `MoneyHero`, `PanelSection`, `RowGroup`, `QrCode`, charts) are
+deleted; what matters about them is covered by the end-to-end step that
+shows the screen they sit on.
+
+The first round (slice 6) kept a thin bUnit tier for logic-bearing
+components; round 2 removed it (§6).
+
+### 4.3 Pages and layout go to end-to-end
+
+Every bUnit test under `Pages/` and `Layout/` is deleted. The behaviour each
+one asserts is mapped in the ledger to an end-to-end step: an existing
+scenario's step, a step added to an existing scenario, or a new scenario.
+Existing scenarios are extended first; a new scenario is added only for a
+journey none covers. A behaviour that is shape only is dropped.
+
+A page holding a rule worth edge-case testing (a computation, not markup)
+may have that rule extracted into `State/` as a pure function and unit
+tested there. Extraction, and accessibility attributes (aria, role, localized)
+that give a test an accessible locator, are the only production changes the
+migration allows.
+
+### 4.4 CSS fixes
+
+A CSS fix ships with a browser layout assertion in the scenario that shows
+the screen: the step sets the viewport where the bug showed, measures what
+the user sees with bounding boxes (`visibleWidth` in
+`test/e2e/helpers/layout.ts` clips an element's box to its overflow-hiding
+ancestors), and asserts sizes, visibility or which element gave way. No pixel
+baselines: CI's Chromium and the local Playwright container render
+differently. The assertion must fail on the CSS before the fix. Example:
+scenario 21's tight My Day row (#222).
+
+### 4.5 End-to-end budget
+
+The suite target moves from three minutes to **five minutes per shard** in CI
+with four workers; CI runs two shards (`specs/e2e-testing-design.md` §5). A scenario that would push
+past it splits. Locators stay role, label or text; no CSS-class locators.
+Round 3 replaced the remaining `pspad-*` and MudBlazor-class locators, and
+`EndToEndLocatorGuard` (§5) keeps them out.
+
+## 5. Enforcement
+
+A guard test in `PSPad.App.Tests` (`BehaviourGuardTests`) scans the test
+sources and fails on `ClassList`, `ClassName`, `.Markup`, `MarkupMatches`
+and CSS-class selectors in `Find`/`FindAll`/`QuerySelector`, so shape
+assertions cannot return. A guard in each module test project fails on a
+`Fakes/FakeDocumentStore` or `FakeUnitOfWork` reference. Both land in the
+last slice, once the sources are clean. `EndToEndLocatorGuardTests` (also in `PSPad.App.Tests`)
+fails on a CSS-class locator in `test/e2e/scenarios` or `test/e2e/helpers`
+outside `test/e2e/locator-allowlist.txt` (round 3).
+
+## 6. Migration
+
+Incremental by slice. The slices shipped as one pull request (#225) with a
+commit series per slice, not as stacked pull requests. Every slice:
+
+1. Writes a ledger `.superpowers/sdd/behaviour-tests/ledger-<slice>.md`
+   (uncommitted) listing each test method it touches as **kept** (rewritten
+   or untouched, still unit), **moved** (naming the integration test or
+   end-to-end step that now covers it) or **dropped** (shape only, with a
+   one-line reason).
+2. Writes the new integration tests or end-to-end steps and runs them green.
+3. Deletes or rewrites the old tests.
+4. Runs `dotnet test --filter Category=Unit`, the touched integration
+   project, and, for frontend slices, the end-to-end suite.
+
+Round 2 (2026-10-29): the maintainer decided that component bUnit tests go
+too. R1 removed the stylesheet tests and trimmed the theme tests. R2 deleted
+every bUnit test under `Components/` (ledger 22): behaviour moved into the
+scenarios listed in §4.2, pure rules into `State/` (§4.2), and what no user
+path reaches (a disabled panel before the shell is ready, a rejected
+description save, an editor on a new field) was dropped with its reason. The
+`bunit` package is gone: `SyncCoordinatorTests` builds its services on a plain
+`ServiceCollection` with a fake `NavigationManager`.
+
+Slices, in order:
+
+| # | Slice | Scope |
+|---|---|---|
+| 0 | Rules | ADR-0080, `testing-spec.md`, `e2e-testing-design.md` §5 and §9, `AGENTS.md` index row |
+| 1 | Money backend | Money handler and cascade tests → integration; Money fakes removed |
+| 2 | Tasks and Presentation backend | Tasks handler, cascade and fake-store tests; Presentation handlers → integration; fakes removed |
+| 3 | Statistics and Sharing backend | Projections, replay, readers, snapshot publishing → integration; in-memory stores removed |
+| 4 | API plumbing | API unit tests moved, kept or deleted per §3.2 |
+| 5 | Client logic | `State/`, `Sync/`, `Live/`, `Auth/`, `Api/`, `Localization/`, `Theme/`, `Updates/`, `Hosting/` audited per §4.1 |
+| 6 | Components | §4.2 |
+| 7 | My Day and Inbox pages | `Today*`, `Inbox*`, `Welcome`, `SyncRefresh` page tests → end-to-end |
+| 8 | Areas, lists, references, goals | `Area*`, `List*`, `Goal*`, reference panels → end-to-end |
+| 9 | Money pages | `Budget*`, `Balances`, `MoneyEntries`, import, entry and holding panels → end-to-end |
+| 10 | Sharing pages | `Join`, `Snapshot*`, members panels → end-to-end |
+| 11 | Shell | `Layout/` shell, navigation, account, settings, search, statistics, app info, authentication, localization page tests → end-to-end |
+| 12 | Guards | §5 guards; docs sweep |
+
+## 7. Risks
+
+- **Lost coverage between deletion and replacement.** The ledger and the
+  "new tests green before deletion" order guard against it; reviewers read
+  the ledger summary in the pull request body.
+- **End-to-end runtime and flakiness grow.** Extending scenarios before
+  adding new ones and the five-minute budget cap it; flaky steps follow the
+  `toPass` retry pattern already used for panels.
+- **Edge cases that only bUnit reached** (offline banners, error states).
+  They move to a client-logic unit test when the rule can be extracted
+  (§4.3), otherwise to an end-to-end step using the existing offline
+  harness, otherwise the ledger records them as dropped with the reason.
+- **Local end-to-end runs on a two-core box are slow.** CI's `e2e` job is
+  the authority for green.

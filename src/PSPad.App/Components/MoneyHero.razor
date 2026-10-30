@@ -1,6 +1,6 @@
 <MudPaper Outlined="true" Class="@($"pa-4 d-flex flex-column gap-3 pspad-money-hero {Class}")">
     <div class="pspad-money-hero-top">
-    <div class="@($"d-flex flex-column {HeadlineClass}")">
+    <div class="@($"d-flex flex-column {HeadlineClass}")" role="group" aria-label="@Label">
         <MudText Typo="Typo.caption" Color="Color.Secondary">@Label</MudText>
         <MudText Typo="Typo.h4" Color="@(Negative ? Color.Error : Color.Primary)" Class="pspad-money-value pspad-money-hero-value">@Text</MudText>
     </div>

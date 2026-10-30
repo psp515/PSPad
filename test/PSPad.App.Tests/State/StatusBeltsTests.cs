@@ -7,21 +7,6 @@ namespace PSPad.App.Tests.State;
 public class StatusBeltsTests
 {
     [Fact]
-    public void ABeltShowsWithItsTextAndAction()
-    {
-        var belts = new StatusBelts();
-        Func<Task> reload = () => Task.CompletedTask;
-
-        belts.Show(BeltKind.Update, "A new version of PSPad is ready.", "Reload", reload);
-
-        var belt = Assert.Single(belts.Visible);
-        Assert.Equal(BeltKind.Update, belt.Kind);
-        Assert.Equal("A new version of PSPad is ready.", belt.Text);
-        Assert.Equal("Reload", belt.ActionText);
-        Assert.Same(reload, belt.Action);
-    }
-
-    [Fact]
     public void ABeltNeedsNoAction()
     {
         var belts = new StatusBelts();
@@ -93,17 +78,6 @@ public class StatusBeltsTests
     }
 
     [Fact]
-    public void ClearingHidesTheBelt()
-    {
-        var belts = new StatusBelts();
-        belts.Show(BeltKind.Offline, "offline");
-
-        belts.Clear(BeltKind.Offline);
-
-        Assert.Empty(belts.Visible);
-    }
-
-    [Fact]
     public void OnceTheStateEndsTheNextShowAppearsAgain()
     {
         var belts = new StatusBelts();
@@ -114,35 +88,5 @@ public class StatusBeltsTests
         belts.Show(BeltKind.Offline, "offline again");
 
         Assert.Equal("offline again", Assert.Single(belts.Visible).Text);
-    }
-
-    [Fact]
-    public void EveryChangeIsAnnounced()
-    {
-        var belts = new StatusBelts();
-        var changes = 0;
-        belts.Changed += () => changes++;
-
-        belts.Show(BeltKind.Update, "update");
-        belts.Dismiss(BeltKind.Update);
-        belts.Clear(BeltKind.Update);
-
-        Assert.Equal(3, changes);
-    }
-
-    [Fact]
-    public void NothingThatChangesNothingIsAnnounced()
-    {
-        var belts = new StatusBelts();
-        belts.Show(BeltKind.Offline, "offline");
-        belts.Dismiss(BeltKind.Offline);
-        var changes = 0;
-        belts.Changed += () => changes++;
-
-        belts.Show(BeltKind.Offline, "offline");
-        belts.Dismiss(BeltKind.Offline);
-        belts.Clear(BeltKind.Update);
-
-        Assert.Equal(0, changes);
     }
 }

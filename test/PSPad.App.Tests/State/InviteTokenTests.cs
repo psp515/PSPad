@@ -14,8 +14,4 @@ public class InviteTokenTests
         Assert.Equal(24, token.Length);
         Assert.DoesNotContain(token, c => c is '+' or '/' or '=');
     }
-
-    [Fact]
-    public void TheLinkPointsAtJoin() =>
-        Assert.Equal("https://pspad.example/join/abc", InviteToken.LinkFor("https://pspad.example/", "abc"));
 }

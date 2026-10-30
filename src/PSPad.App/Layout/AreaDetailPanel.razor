@@ -44,7 +44,7 @@
                     <MudDropZone T="TaskList" Identifier="lists" AllowReorder="true" Class="d-flex flex-column" />
                 </ChildContent>
                 <ItemRenderer>
-                    <div class="pspad-step pspad-area-list-row d-flex align-center gap-1">
+                    <div class="pspad-step pspad-area-list-row d-flex align-center gap-1" role="group" aria-label="@context.Name">
                         <span class="pspad-step-lead">
                             <MudIcon Icon="@ListIcon.For(context)" Size="Size.Small" Class="pspad-muted" />
                         </span>

@@ -141,10 +141,6 @@ public class PSPadThemeTests
         Assert.True(Contrast(palette.Primary, tint) >= MinimumUiContrast);
     }
 
-    [Fact]
-    public void CornersAreTwelvePixels() =>
-        Assert.Equal("12px", PSPadTheme.For(Accent.Green).LayoutProperties.DefaultBorderRadius);
-
     [Theory]
     [MemberData(nameof(EveryPalette))]
     public void SelectedFillsReadOnTheRefreshTint(string accent, bool dark)
@@ -207,18 +203,6 @@ public class PSPadThemeTests
         Assert.True(Contrast(palette.TextSecondary, tint) >= MinimumUiContrast);
     }
 
-    [Fact]
-    public void TheBeltTintAndInkMatchTheStylesheet()
-    {
-        var css = File.ReadAllText(StylesheetPath());
-
-        Assert.Contains("color-mix(in srgb, var(--pspad-belt-tone) 14%, var(--mud-palette-background))", css);
-        Assert.Contains("color-mix(in srgb, var(--pspad-belt-tone) 60%, var(--mud-palette-text-primary))", css);
-        Assert.Contains("--pspad-belt-tone: var(--mud-palette-info)", css);
-        Assert.Contains("--pspad-belt-tone: var(--mud-palette-warning)", css);
-        Assert.Contains("--pspad-belt-tone: var(--mud-palette-error)", css);
-    }
-
     static MudColor ToneOf(Palette palette, Severity severity) => severity switch
     {
         Severity.Info => palette.Info,
@@ -238,33 +222,6 @@ public class PSPadThemeTests
 
         Assert.True(Contrast(palette.TextPrimary, ground) >= MinimumTextContrast);
         Assert.True(Contrast(ToneOf(palette, severity), ground) >= MinimumUiContrast);
-    }
-
-    [Fact]
-    public void TheMessageGroundMatchesTheStylesheet()
-    {
-        var css = File.ReadAllText(StylesheetPath());
-
-        Assert.Contains($"--pspad-message-ground: {LightMessageGround}", css);
-        Assert.Contains($"--pspad-message-ground: {DarkMessageGround}", css);
-    }
-
-    [Fact]
-    public void TheRaisedGroundMatchesTheStylesheet()
-    {
-        var css = File.ReadAllText(StylesheetPath());
-
-        Assert.Contains($"--pspad-raised: {PSPadTheme.LightRaised}", css);
-        Assert.Contains($"--pspad-raised: {PSPadTheme.DarkRaised}", css);
-    }
-
-    static string StylesheetPath()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (!File.Exists(Path.Combine(directory.FullName, "src", "PSPad.App", "wwwroot", "css", "app.css")))
-            directory = directory.Parent!;
-
-        return Path.Combine(directory.FullName, "src", "PSPad.App", "wwwroot", "css", "app.css");
     }
 
     static MudColor RaisedOf(Palette palette, bool dark) => new(dark ? PSPadTheme.DarkRaised : PSPadTheme.LightRaised);

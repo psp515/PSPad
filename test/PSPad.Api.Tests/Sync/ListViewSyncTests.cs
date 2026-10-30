@@ -5,6 +5,7 @@ using PSPad.Module.Presentation.ListViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.TestInfrastructure;
+using static PSPad.Api.Tests.Commands.Commands;
 
 namespace PSPad.Api.Tests.Sync;
 
@@ -22,7 +23,7 @@ public class ListViewSyncTests(MongoFixture fixture)
         var areaId = Guid.NewGuid();
         var listId = Guid.NewGuid();
 
-        await Send(client, ct,
+        await SendAsync(client, ct,
             new CreateArea(Guid.NewGuid(), user, areaId, "Dom", 0),
             new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Zakupy"),
             new PlaceList(Guid.NewGuid(), user, listId, areaId));
@@ -46,29 +47,54 @@ public class ListViewSyncTests(MongoFixture fixture)
         var ownerArea = Guid.NewGuid();
         var strangerArea = Guid.NewGuid();
         var listId = Guid.NewGuid();
-        await Send(owner, ct,
+        await SendAsync(owner, ct,
             new CreateArea(Guid.NewGuid(), ownerId, ownerArea, "Dom", 0),
             new CreateTaskList(Guid.NewGuid(), ownerId, listId, ownerArea, "Zakupy"));
-        await Send(stranger, ct, new CreateArea(Guid.NewGuid(), strangerId, strangerArea, "Praca", 0));
+        await SendAsync(stranger, ct, new CreateArea(Guid.NewGuid(), strangerId, strangerArea, "Praca", 0));
 
-        var result = Assert.Single(await Results(stranger, ct, new PlaceList(Guid.NewGuid(), strangerId, listId, strangerArea)));
+        var result = Assert.Single(await TrySendAsync(stranger, ct, new PlaceList(Guid.NewGuid(), strangerId, listId, strangerArea)));
 
         Assert.False(result.Accepted);
         var sync = await stranger.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
         Assert.Empty(sync!.Documents["listviews"]);
     }
 
-    static async Task Send(HttpClient client, CancellationToken ct, params object[] commands) =>
-        Assert.All(await Results(client, ct, commands), result => Assert.True(result.Accepted, result.Rejection));
-
-    static async Task<CommandResponse[]> Results(HttpClient client, CancellationToken ct, params object[] commands)
+    [Fact]
+    public async Task APlacedListCanBeUnfiled()
     {
-        var envelopes = commands
-            .Select(command => new CommandEnvelope(
-                command.GetType().Name, JsonSerializer.SerializeToElement(command, command.GetType())))
-            .ToArray();
-        var response = await client.PostAsJsonAsync("/api/commands", envelopes, ct);
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct))!;
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = await SignInAsync(client, ct);
+        var areaId = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        await SendAsync(client, ct,
+            new CreateArea(Guid.NewGuid(), user, areaId, "Dom", 0),
+            new CreateTaskList(Guid.NewGuid(), user, listId, areaId, "Zakupy"),
+            new PlaceList(Guid.NewGuid(), user, listId, areaId));
+
+        await SendAsync(client, ct, new PlaceList(Guid.NewGuid(), user, listId, null));
+
+        var row = Assert.Single(await SyncedAsync(client, "listviews", ct));
+        Assert.Equal(JsonValueKind.Null, row.GetProperty("areaId").ValueKind);
+    }
+
+    [Fact]
+    public async Task AnAreaTheUserDoesNotOwnIsRejectedAndNoPlacementIsStored()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await SignInAsync(owner, ct);
+        var ownerArea = Guid.NewGuid();
+        var listId = Guid.NewGuid();
+        await SendAsync(owner, ct,
+            new CreateArea(Guid.NewGuid(), ownerId, ownerArea, "Dom", 0),
+            new CreateTaskList(Guid.NewGuid(), ownerId, listId, ownerArea, "Zakupy"));
+
+        var result = Assert.Single(await TrySendAsync(owner, ct, new PlaceList(Guid.NewGuid(), ownerId, listId, Guid.NewGuid())));
+
+        Assert.False(result.Accepted);
+        Assert.Empty(await SyncedAsync(owner, "listviews", ct));
     }
 }

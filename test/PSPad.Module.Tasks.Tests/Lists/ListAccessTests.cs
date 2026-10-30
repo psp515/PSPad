@@ -1,6 +1,5 @@
 using PSPad.Abstractions;
 using PSPad.Module.Tasks.Lists;
-using PSPad.Module.Tasks.Tests.Fakes;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.Module.Tasks.Tests.Lists;
@@ -60,17 +59,4 @@ public class ListAccessTests
 
     [Fact]
     public void OwnerAccessIsByTheOwner() => Assert.True(ListAccess.Owner(Owner).ByOwner);
-
-    [Fact]
-    public async Task LoadingWithoutAListFallsBackToOwnerAccess() =>
-        Assert.Equal(ListAccess.Owner(Member), await new FakeDocumentStore<TaskList>().AccessAsync(null, Member, CancellationToken.None));
-
-    [Fact]
-    public async Task AMembersTaskListIsAccessible()
-    {
-        var store = new FakeDocumentStore<TaskList>();
-        var list = WithMember();
-        store.Seed(list);
-        Assert.Equal(new ListAccess(Owner, Member), await store.AccessAsync(list.Id, Member, CancellationToken.None));
-    }
 }

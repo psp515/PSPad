@@ -21,7 +21,13 @@ public sealed class LiveListener : IAsyncDisposable
     {
         var response = await client.SendAsync(
             new HttpRequestMessage(HttpMethod.Get, path), HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var status = response.StatusCode;
+            response.Dispose();
+            throw new HttpRequestException($"Live stream refused: {status}", null, status);
+        }
+
         var listener = new LiveListener(response);
         Assert.Equal("ready", await listener.NextAsync(TimeSpan.FromSeconds(10)));
         return listener;

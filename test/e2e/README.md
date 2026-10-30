@@ -1,6 +1,6 @@
 # End-to-end tests
 
-Playwright scenarios that drive the real application in Chromium against the
+36 Playwright scenarios that drive the real application in Chromium against the
 Docker Compose stack. Design: `specs/e2e-testing-design.md`.
 
 ## Run
@@ -15,6 +15,9 @@ npm ci
 npx playwright install chromium
 npm test
 ```
+
+CI splits the suite into two shards, each on its own stack: `npm test -- --shard=1/2`
+and `npm test -- --shard=2/2`.
 
 `npm run test:ui` opens Playwright's UI mode; `npm run report` opens the last
 HTML report (CI only writes one). `npm run stack:up` and `npm run stack:down`
@@ -49,6 +52,14 @@ running again.
 
 Every test creates its own Keycloak user through the admin API and deletes it
 afterwards, so the realm needs no seeded users.
+
+## Locators
+
+Steps and helpers find elements by role, label or text, never by a `pspad-*`
+or `mud-*` class. `EndToEndLocatorGuardTests` in `PSPad.App.Tests` (the unit
+run) fails on a class locator unless `locator-allowlist.txt` lists it with a
+reason. When nothing a user sees names an element, give the component an
+`aria-label` or `role` (English and Polish in the feature's `.resx`).
 
 ## Without Chromium's system libraries
 

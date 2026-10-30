@@ -1,0 +1,13 @@
+@using PSPad.App.Components
+@inject SignInFailure Failure
+@inject NavigationManager Navigation
+
+<BrandSplash />
+
+@code {
+    protected override void OnInitialized()
+    {
+        Failure.Record();
+        Navigation.NavigateTo("welcome", replace: true);
+    }
+}

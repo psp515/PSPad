@@ -7,6 +7,7 @@ using PSPad.App.State;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Statistics;
+using PSPad.App.Tests.State;
 using PSPad.Contracts;
 using PSPad.TestInfrastructure;
 
@@ -146,7 +147,7 @@ public class LocalSignOutTests
     {
         var store = sessions ?? _sessions;
         return new LocalSignOut(
-            store, _replica, _outbox, _statistics, _snapshots,
+            store, new LocalDeviceData(store, _replica, _outbox, _statistics, _snapshots, NullLogger<LocalDeviceData>.Instance),
             new KeycloakTokenRevoker(new HttpClient(endpoint), "http://localhost:8080/realms/psplace", "pspad-frontend"),
             new LocalAuthenticationStateProvider(store), NullLogger<LocalSignOut>.Instance);
     }

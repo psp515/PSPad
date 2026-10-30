@@ -31,7 +31,7 @@
     <MudItem xs="12" lg="5" Class="pspad-settings-cards">
         <MudGrid Spacing="4">
             <MudItem xs="12" sm="6" lg="12" Class="pspad-settings-card">
-            <MudPaper Outlined="true" Class="pa-4 pspad-budget-card-settings">
+            <MudPaper Outlined="true" Class="pa-4 pspad-budget-card-settings" role="region" aria-label="@T["Budget"].Value">
                 <MudText Typo="Typo.subtitle2" Class="mb-3">@T["Budget"]</MudText>
                 @if (!IsMine)
                 {

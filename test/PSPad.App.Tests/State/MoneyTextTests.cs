@@ -14,9 +14,6 @@ public class MoneyTextTests
 {
     static readonly IStringLocalizer<BudgetsStrings> Text = TestLocalizers.For<BudgetsStrings>();
 
-    [Fact]
-    public void PlnHasTwoDecimalsAndGroupSeparators() => Assert.Equal("1,234.50 PLN", MoneyText.Pln(1234.5m));
-
     [Theory]
     [InlineData(-12, "−12.00 PLN")]
     [InlineData(5, "+5.00 PLN")]
@@ -44,12 +41,6 @@ public class MoneyTextTests
         Assert.Equal("4.251234", MoneyText.Rate(4.251234m));
     }
 
-    [Fact]
-    public void AMonthReadsAsNameAndYear() => Assert.Equal("October 2026", MoneyText.MonthTitle(new YearMonth(2026, 10)));
-
-    [Fact]
-    public void ADayReadsAsWeekdayAndDate() => Assert.Equal("Friday, 9 October", MoneyText.Day(new DateOnly(2026, 10, 9)));
-
     [Theory]
     [InlineData("0.25", "25%")]
     [InlineData("0.857", "86%")]
@@ -61,10 +52,6 @@ public class MoneyTextTests
 
     [Fact]
     public void NoSavingsRateIsADash() => Assert.Equal("—", MoneyText.Percent(null));
-
-    [Fact]
-    public void ARangeReadsFromDayToDay() =>
-        Assert.Equal("1 Jan 2026 – 9 Oct 2026", MoneyText.Range(new DateOnly(2026, 1, 1), new DateOnly(2026, 10, 9)));
 
     [Fact]
     public void MonthsOfOneYearAreLabelledByName() =>

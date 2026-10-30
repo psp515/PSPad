@@ -97,6 +97,178 @@ public class DeleteCascadeEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task DeletingAListDeletesItsTasksAndLeavesOtherListsAlone()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var (_, listIds, taskIds) = await SeedAreaAsync(client, user, ct);
+        var marker = (await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct))!.Marker;
+
+        var results = await PostAsync(client, ct, Envelope(new DeleteTaskList(Guid.NewGuid(), user, listIds[0])));
+
+        Assert.True(Assert.Single(results).Accepted);
+        var sync = (await client.GetFromJsonAsync<SyncResponse>($"/api/sync?since={marker}", ct))!;
+        AssertDeleted(sync.Documents["tasklists"], [listIds[0]]);
+        AssertDeleted(sync.Documents["todotasks"], taskIds[..2]);
+        Assert.DoesNotContain(sync.Documents["todotasks"], row => row.GetProperty("id").GetGuid() == taskIds[2]);
+        var events = await EventsSinceAsync(user, marker, ct);
+        Assert.Single(events, @event => @event.Type == nameof(TaskListDeleted));
+        Assert.Equal(2, events.Count(@event => @event.Type == nameof(TaskDeleted)));
+    }
+
+    [Fact]
+    public async Task DeletingAListDoesNotDeleteAnAlreadyDeletedTaskAgain()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var (_, listIds, taskIds) = await SeedAreaAsync(client, user, ct);
+        await PostAsync(client, ct, Envelope(new DeleteTask(Guid.NewGuid(), user, taskIds[0])));
+        var marker = (await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct))!.Marker;
+
+        await PostAsync(client, ct, Envelope(new DeleteTaskList(Guid.NewGuid(), user, listIds[0])));
+
+        var events = await EventsSinceAsync(user, marker, ct);
+        Assert.Equal([taskIds[1]], events.Where(@event => @event.Type == nameof(TaskDeleted)).Select(@event => @event.AggregateId));
+    }
+
+    [Fact]
+    public async Task DeletingAnAlreadyDeletedListIsRejectedAndAddsNoEvents()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var (_, listIds, _) = await SeedAreaAsync(client, user, ct);
+        await PostAsync(client, ct, Envelope(new DeleteTaskList(Guid.NewGuid(), user, listIds[0])));
+        var marker = (await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct))!.Marker;
+
+        var result = Assert.Single(await PostAsync(client, ct, Envelope(new DeleteTaskList(Guid.NewGuid(), user, listIds[0]))));
+
+        Assert.False(result.Accepted);
+        Assert.Empty(await EventsSinceAsync(user, marker, ct));
+    }
+
+    [Fact]
+    public async Task DeletingAnAreaLeavesOtherAreasListsAndTasksAlone()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var (areaId, _, _) = await SeedAreaAsync(client, user, ct);
+        var otherArea = Guid.NewGuid();
+        var otherList = Guid.NewGuid();
+        var otherTask = Guid.NewGuid();
+        await PostAsync(client, ct,
+            Envelope(new CreateArea(Guid.NewGuid(), user, otherArea, "Other", 100)),
+            Envelope(new CreateTaskList(Guid.NewGuid(), user, otherList, otherArea, "Keep")),
+            Envelope(new CreateTask(Guid.NewGuid(), user, otherTask, otherList, "keep me")));
+        var marker = (await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct))!.Marker;
+
+        await PostAsync(client, ct, Envelope(new DeleteArea(Guid.NewGuid(), user, areaId)));
+
+        var sync = (await client.GetFromJsonAsync<SyncResponse>($"/api/sync?since={marker}", ct))!;
+        Assert.DoesNotContain(sync.Documents["areas"], row => row.GetProperty("id").GetGuid() == otherArea);
+        Assert.DoesNotContain(sync.Documents["tasklists"], row => row.GetProperty("id").GetGuid() == otherList);
+        Assert.DoesNotContain(sync.Documents["todotasks"], row => row.GetProperty("id").GetGuid() == otherTask);
+    }
+
+    [Fact]
+    public async Task DeletingAnAreaSkipsListsAlreadyDeleted()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var (areaId, listIds, _) = await SeedAreaAsync(client, user, ct);
+        await PostAsync(client, ct, Envelope(new DeleteTaskList(Guid.NewGuid(), user, listIds[0])));
+        var marker = (await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct))!.Marker;
+
+        var result = Assert.Single(await PostAsync(client, ct, Envelope(new DeleteArea(Guid.NewGuid(), user, areaId))));
+
+        Assert.True(result.Accepted, result.Rejection);
+        var events = await EventsSinceAsync(user, marker, ct);
+        Assert.Equal([listIds[1]], events.Where(@event => @event.Type == nameof(TaskListDeleted)).Select(@event => @event.AggregateId));
+    }
+
+    [Fact]
+    public async Task DeletingSomebodyElsesAreaIsRejectedAndTouchesNothing()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = (await owner.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var stranger = factory.ClientFor(Guid.NewGuid().ToString());
+        var strangerId = (await stranger.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var (areaId, _, _) = await SeedAreaAsync(owner, ownerId, ct);
+        var marker = (await owner.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct))!.Marker;
+
+        var result = Assert.Single(await PostAsync(stranger, ct, Envelope(new DeleteArea(Guid.NewGuid(), strangerId, areaId))));
+
+        Assert.False(result.Accepted);
+        Assert.Empty(await EventsSinceAsync(ownerId, marker, ct));
+        var sync = (await owner.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct))!;
+        Assert.All(sync.Documents["tasklists"], row => Assert.False(row.GetProperty("deleted").GetBoolean()));
+    }
+
+    [Fact]
+    public async Task MovingATaskIntoADeletedListIsRejectedAndTheTaskStays()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var (_, listIds, taskIds) = await SeedAreaAsync(client, user, ct);
+        await PostAsync(client, ct, Envelope(new DeleteTaskList(Guid.NewGuid(), user, listIds[1])));
+
+        var result = Assert.Single(await PostAsync(client, ct,
+            Envelope(new MoveTaskToList(Guid.NewGuid(), user, taskIds[0], listIds[1]))));
+
+        Assert.False(result.Accepted);
+        Assert.Contains("list", result.Rejection, StringComparison.OrdinalIgnoreCase);
+        var task = Assert.Single(
+            (await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct))!.Documents["todotasks"],
+            row => row.GetProperty("id").GetGuid() == taskIds[0]);
+        Assert.Equal(listIds[0], task.GetProperty("listId").GetGuid());
+    }
+
+    [Fact]
+    public async Task CreatingAListInADeletedAreaIsRejected()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var (areaId, _, _) = await SeedAreaAsync(client, user, ct);
+        await PostAsync(client, ct, Envelope(new DeleteArea(Guid.NewGuid(), user, areaId)));
+
+        var result = Assert.Single(await PostAsync(client, ct,
+            Envelope(new CreateTaskList(Guid.NewGuid(), user, Guid.NewGuid(), areaId, "Errands"))));
+
+        Assert.False(result.Accepted);
+        Assert.Contains("area", result.Rejection, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreatingATaskInAListThatNeverExistedIsRejected()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+
+        var result = Assert.Single(await PostAsync(client, ct,
+            Envelope(new CreateTask(Guid.NewGuid(), user, Guid.NewGuid(), Guid.NewGuid(), "buy milk"))));
+
+        Assert.False(result.Accepted);
+        Assert.Contains("list", result.Rejection, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task DeletingAnAreaTakesItsTasksOffTheOutstandingChartWithOneRecordEach()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;

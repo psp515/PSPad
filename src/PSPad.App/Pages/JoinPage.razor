@@ -96,7 +96,7 @@ else if (_state != JoinState.Joining)
         var outcome = await BudgetSharing.JoinBudgetAsync(Token, code);
         if (outcome is JoinOutcome.Joined joined)
         {
-            await Sync.AdoptAsync(joined.Documents);
+            await Sync.AdoptJoinAsync(joined);
         }
 
         return outcome;

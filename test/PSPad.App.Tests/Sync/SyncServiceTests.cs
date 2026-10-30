@@ -15,6 +15,7 @@ using PSPad.Abstractions;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
+using PSPad.App.Tests.State;
 
 namespace PSPad.App.Tests.Sync;
 
@@ -514,6 +515,10 @@ public class SyncServiceTests
         public Task<string?> CollectionsFingerprintAsync() => _inner.CollectionsFingerprintAsync();
 
         public Task SetCollectionsFingerprintAsync(string fingerprint) => _inner.SetCollectionsFingerprintAsync(fingerprint);
+
+        public Task<IReadOnlyCollection<Guid>> OwedWholeAsync() => _inner.OwedWholeAsync();
+
+        public Task SetOwedWholeAsync(IReadOnlyCollection<Guid> containers) => _inner.SetOwedWholeAsync(containers);
 
         public Task<DateTimeOffset?> LastSyncedAtAsync() => _inner.LastSyncedAtAsync();
 

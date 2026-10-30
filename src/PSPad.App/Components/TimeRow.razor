@@ -1,4 +1,4 @@
-@using System.Globalization
+@using PSPad.App.State
 @using PSPad.Module.Tasks.Tasks
 @inject IStringLocalizer<TasksStrings> T
 
@@ -40,11 +40,11 @@
 </div>
 @if (_error is not null)
 {
-    <MudText Typo="Typo.caption" Color="Color.Error" Class="pspad-time-error pspad-time-note d-block">@_error</MudText>
+    <MudText Typo="Typo.caption" Color="Color.Error" Class="pspad-time-error pspad-time-note d-block" role="alert">@_error</MudText>
 }
 else if (Value is { Overnight: true })
 {
-    <MudText Typo="Typo.caption" Class="pspad-time-hint pspad-time-note pspad-muted d-block">@T["EndsNextDay"]</MudText>
+    <MudText Typo="Typo.caption" Class="pspad-time-hint pspad-time-note pspad-muted d-block" role="status">@T["EndsNextDay"]</MudText>
 }
 
 @* The picker's own dialog commits once, after the minute click or a click outside; a static clock submits on every hour click. *@
@@ -72,9 +72,9 @@ else if (Value is { Overnight: true })
 
     TimeSpan? _pickerTime;
 
-    string StartText => _startDraft ?? (Value is { } time ? Format(time.Start) : "");
+    string StartText => _startDraft ?? (Value is { } time ? TaskTimeText.Format(time.Start) : "");
 
-    string EndText => _endDraft ?? (Value?.End is { } end ? Format(end) : "");
+    string EndText => _endDraft ?? (Value?.End is { } end ? TaskTimeText.Format(end) : "");
 
     protected override void OnParametersSet()
     {
@@ -86,15 +86,6 @@ else if (Value is { Overnight: true })
             _error = null;
         }
     }
-
-    public static string Format(TimeOnly time) => time.ToString("HH:mm", CultureInfo.InvariantCulture);
-
-    public const string NextDay = "(+1)";
-
-    public static string Describe(TaskTime time) =>
-        time.End is { } end
-            ? $"{Format(time.Start)}–{Format(end)}{(time.Overnight ? $" {NextDay}" : "")}"
-            : Format(time.Start);
 
     Task StartTypedAsync(string? text)
     {
@@ -157,7 +148,7 @@ else if (Value is { Overnight: true })
         }
         else if (Value is { } current && current.End != time)
         {
-            await TrySendAsync(current.Start, time, Format(time));
+            await TrySendAsync(current.Start, time, TaskTimeText.Format(time));
         }
     }
 
@@ -165,7 +156,7 @@ else if (Value is { Overnight: true })
     {
         if (end == start)
         {
-            _endDraft = typedEnd ?? Format(start);
+            _endDraft = typedEnd ?? TaskTimeText.Format(start);
             _error = T["EndMustDiffer"];
             return;
         }

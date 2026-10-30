@@ -26,7 +26,7 @@
                     {
                         @foreach (var slot in new[] { new TimeOnly(segment.StartHour, 0), new TimeOnly(segment.StartHour, HalfHour) })
                         {
-                            var label = TimeRow.Format(slot);
+                            var label = TaskTimeText.Format(slot);
                             <button type="button" class="pspad-timeline-slot" data-time="@label"
                                     aria-label="@T["AddTaskAt", label].Value" @onclick="@(() => OnAdd.InvokeAsync(slot))"></button>
                         }
@@ -42,11 +42,11 @@
         {
             var task = Tasks[block.Entry.TaskId];
             var done = IsDone(task);
-            <div @key="block.Entry.TaskId" class="@BlockClass(block, done)" style="@BlockStyle(block)"
-                 title="@($"{task.Name} – {TimeRow.Describe(block.Entry.Time!)}")">
-                <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))"
+            <div @key="block.Entry.TaskId" class="@BlockClass(block, done)" style="@BlockStyle(block)" role="group" aria-label="@task.Name"
+                 title="@($"{task.Name} – {TaskTimeText.Describe(block.Entry.Time!)}")">
+                <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))" ReadOnly="@(!TaskTick.Toggles(task, Day))"
                              Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
-                             UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" />
+                             UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" aria-label="@task.Name" />
                 <div class="pspad-timeline-task-body" @onclick="@(() => OnOpen.InvokeAsync(task))">
                     @Time(block.Entry.Time!)
                     <MudText Typo="Typo.body2" Class="pspad-timeline-task-name pspad-task-name"
@@ -66,9 +66,9 @@
                     var task = Tasks[entry.TaskId];
                     var done = IsDone(task);
                     <div @key="entry.TaskId" class="pspad-timeline-group-line">
-                        <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))"
+                        <MudCheckBox T="bool" Value="@done" ValueChanged="@(_ => OnToggle.InvokeAsync(task))" ReadOnly="@(!TaskTick.Toggles(task, Day))"
                                      Color="Color.Primary" UncheckedColor="Color.Default" Dense="true"
-                                     UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" />
+                                     UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked" CheckedIcon="@Icons.Material.Filled.CheckCircle" aria-label="@task.Name" />
                         <div class="pspad-timeline-task-body" @onclick="@(() => OnOpen.InvokeAsync(task))">
                             @Time(entry.Time!)
                             <MudText Typo="Typo.body2" Class="pspad-timeline-task-name pspad-task-name" title="@task.Name"
@@ -80,23 +80,14 @@
         }
         @if (Now is { } now)
         {
-            <div class="pspad-timeline-now" style="@($"--at:{_axis.At(Minutes(now))}")"><span class="pspad-timeline-now-label">@TimeRow.Format(now)</span></div>
+            <div class="pspad-timeline-now" style="@($"--at:{_axis.At(TimelineSpan.Minutes(now))}")" role="img" aria-label="@T["NowAt", TaskTimeText.Format(now)].Value"><span class="pspad-timeline-now-label">@TaskTimeText.Format(now)</span></div>
         }
     </div>
 </MudPaper>
 
 @code {
     public const int HourLength = 40;
-    const int LaneAtLeast = 48;
-    const int CrossFrame = 54;
-    const int LaneGap = 4;
     const int HalfHour = 30;
-    const int MinutesPerDay = 24 * 60;
-    const int ShortestVisibleSpan = 45;
-    const int LineHeight = 24;
-    const int GroupPadding = 4;
-    const int GroupBorder = 3;
-    const int MaxLanes = 2;
     const int RoomForTwoLines = 90;
     const int RoomForList = 120;
 
@@ -116,18 +107,7 @@
 
     [Parameter] public EventCallback<TimeOnly> OnAdd { get; set; }
 
-    sealed record Span(TodayEntry Entry, int Start, int End, int VisibleEnd);
-
-    sealed record Block(TodayEntry Entry, int Start, int End, int Lane, int Lanes);
-
-    sealed record Group(IReadOnlyList<TodayEntry> Entries, int Start, int End, int Lane, int Lanes)
-    {
-        public int Needs => Entries.Count * LineHeight + (Entries.Count - 1) + GroupPadding + GroupBorder;
-    }
-
-    sealed record Layout(IReadOnlyList<Block> Blocks, IReadOnlyList<Group> Groups);
-
-    Layout _layout = new([], []);
+    TimelineLayout _layout = TimelineLayout.Empty;
     TimelineAxis _axis = TimelineAxis.For([], null, new HashSet<int>());
     readonly HashSet<int> _unfolded = [];
     DateOnly? _shown;
@@ -140,31 +120,21 @@
             _unfolded.Clear();
         }
 
-        _layout = Lay(Entries);
+        _layout = TimelineLayout.Of(Entries);
         Arrange();
     }
 
     void Arrange()
     {
-        var spans = Entries.Where(entry => entry.Time is not null).Select(SpanOf).Select(span => (span.Start, span.End));
+        var spans = Entries.Where(entry => entry.Time is not null).Select(TimelineSpan.Of).Select(span => (span.Start, span.End));
         var needs = _layout.Groups.Select(group => (group.Start, group.End, group.Needs));
-        _axis = TimelineAxis.For(spans, Now is { } now ? Minutes(now) : null, _unfolded, needs);
+        _axis = TimelineAxis.For(spans, Now is { } now ? TimelineSpan.Minutes(now) : null, _unfolded, needs);
     }
 
     string TimelineStyle =>
         $"--pspad-timeline-natural:{_axis.NaturalLength(HourLength)}px;--pspad-timeline-required:{_axis.RequiredLength}px;--pspad-timeline-cross:{CrossLength}px";
 
-    int CrossLength
-    {
-        get
-        {
-            var stacked = _layout.Blocks.Select(block => block.Lanes * (LaneAtLeast + LaneGap))
-                .Concat(_layout.Groups.Select(group => group.Lanes * (Math.Max(LaneAtLeast, group.Needs) + LaneGap)))
-                .DefaultIfEmpty(0)
-                .Max();
-            return CrossFrame + stacked;
-        }
-    }
+    int CrossLength => _layout.CrossLength;
 
     void Unfold(int hour)
     {
@@ -174,129 +144,18 @@
 
     string Place(int from, int to) => $"--at:{_axis.At(from)};--size:{_axis.Stretch(from, to)}";
 
-    static int Minutes(TimeOnly time) => time.Hour * 60 + time.Minute;
-
-    static Span SpanOf(TodayEntry entry)
-    {
-        var time = entry.Time!;
-        var start = Minutes(time.Start);
-        var end = time.Overnight ? MinutesPerDay
-            : time.End is { } finish ? Math.Min(Minutes(finish), MinutesPerDay)
-            : start + HalfHour;
-        return new Span(entry, start, end, Math.Min(MinutesPerDay, Math.Max(end, start + ShortestVisibleSpan)));
-    }
-
-    static Layout Lay(IReadOnlyList<TodayEntry> entries)
-    {
-        var spans = entries
-            .Where(entry => entry.Time is not null)
-            .Select(SpanOf)
-            .OrderBy(span => span.Start).ThenByDescending(span => span.VisibleEnd)
-            .ToList();
-        var blocks = new List<Block>();
-        var groups = new List<Group>();
-        foreach (var cluster in Clusters(spans))
-        {
-            Place(cluster, blocks, groups);
-        }
-
-        return new Layout(blocks, groups);
-    }
-
-    static IEnumerable<List<Span>> Clusters(IEnumerable<Span> spans)
-    {
-        var cluster = new List<Span>();
-        var clusterEnd = -1;
-        foreach (var span in spans)
-        {
-            if (span.Start >= clusterEnd && cluster.Count > 0)
-            {
-                yield return cluster;
-                cluster = [];
-            }
-
-            cluster.Add(span);
-            clusterEnd = cluster.Count == 1 ? span.VisibleEnd : Math.Max(clusterEnd, span.VisibleEnd);
-        }
-
-        if (cluster.Count > 0)
-        {
-            yield return cluster;
-        }
-    }
-
-    static void Place(List<Span> cluster, List<Block> blocks, List<Group> groups)
-    {
-        var lanes = Lanes(cluster);
-        var laneCount = lanes.Max() + 1;
-        if (laneCount <= MaxLanes)
-        {
-            blocks.AddRange(cluster.Select((span, index) => new Block(span.Entry, span.Start, span.End, lanes[index], laneCount)));
-        }
-        else if (cluster.All(span => span.Start - cluster[0].Start < HalfHour))
-        {
-            groups.Add(GroupOf(cluster, 0, 1));
-        }
-        else
-        {
-            var first = cluster.Where((_, index) => lanes[index] == 0);
-            var beside = cluster.Where((_, index) => lanes[index] > 0);
-            blocks.AddRange(first.Select(span => new Block(span.Entry, span.Start, span.End, 0, MaxLanes)));
-            foreach (var inner in Clusters(beside))
-            {
-                if (inner.Count == 1)
-                {
-                    blocks.Add(new Block(inner[0].Entry, inner[0].Start, inner[0].End, 1, MaxLanes));
-                }
-                else
-                {
-                    groups.Add(GroupOf(inner, 1, MaxLanes));
-                }
-            }
-        }
-    }
-
-    static int[] Lanes(List<Span> cluster)
-    {
-        var laneEnds = new List<int>();
-        return [.. cluster.Select(span =>
-        {
-            var lane = laneEnds.FindIndex(laneEnd => laneEnd <= span.Start);
-            if (lane < 0)
-            {
-                lane = laneEnds.Count;
-                laneEnds.Add(span.VisibleEnd);
-            }
-            else
-            {
-                laneEnds[lane] = span.VisibleEnd;
-            }
-
-            return lane;
-        })];
-    }
-
-    static Group GroupOf(List<Span> members, int lane, int lanes)
-    {
-        var ordered = members
-            .OrderBy(span => span.Start)
-            .ThenBy(span => span.Entry.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        return new Group([.. ordered.Select(span => span.Entry)], ordered[0].Start, members.Max(span => span.VisibleEnd), lane, lanes);
-    }
-
     RenderFragment Time(TaskTime time) =>
         @<MudText Typo="Typo.caption" Color="Color.Primary" Class="pspad-schedule-time">
-            <span class="pspad-schedule-start">@TimeRow.Format(time.Start)</span>@if (time.End is { } end){<span class="pspad-schedule-dash">–</span><span class="pspad-schedule-end">@TimeRow.Format(end)</span>}@if (time.Overnight){<span class="pspad-schedule-nextday pspad-muted">@TimeRow.NextDay</span>}
+            <span class="pspad-schedule-start">@TaskTimeText.Format(time.Start)</span>@if (time.End is { } end){<span class="pspad-schedule-dash">–</span><span class="pspad-schedule-end">@TaskTimeText.Format(end)</span>}@if (time.Overnight){<span class="pspad-schedule-nextday pspad-muted">@TaskTimeText.NextDay</span>}
         </MudText>;
 
-    string BlockStyle(Block block) =>
+    string BlockStyle(TimelineBlock block) =>
         $"{Place(block.Start, block.End)};--lane:{block.Lane};--lanes:{block.Lanes}";
 
-    string GroupStyle(Group group) =>
+    string GroupStyle(TimelineGroup group) =>
         $"{Place(group.Start, group.End)};--needs:{group.Needs}px;--lane:{group.Lane};--lanes:{group.Lanes}";
 
-    static string BlockClass(Block block, bool done)
+    static string BlockClass(TimelineBlock block, bool done)
     {
         var oneLine = block.End - block.Start < RoomForTwoLines;
         return "pspad-timeline-task"

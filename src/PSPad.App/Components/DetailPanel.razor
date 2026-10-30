@@ -47,7 +47,7 @@
             {
                 <MudDivider Class="flex-grow-0" />
 
-                <div class="pspad-panel-footer pa-3 d-flex flex-column gap-3">
+                <div class="pspad-panel-footer pa-3 d-flex flex-column gap-3" role="group" aria-label="@Shared["Actions"].Value">
                     @Footer
 
                     @if (OnSave.HasDelegate || OnDelete.HasDelegate)

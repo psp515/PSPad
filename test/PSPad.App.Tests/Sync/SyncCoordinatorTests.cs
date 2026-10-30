@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.JSInterop;
 using Microsoft.Extensions.Localization;
 using MudBlazor;
 using MudBlazor.Services;
@@ -17,11 +18,12 @@ using PSPad.App.Sync;
 using PSPad.Contracts;
 using PSPad.Module.Tasks.Areas;
 using PSPad.TestInfrastructure;
+using PSPad.App.Tests.State;
 
 namespace PSPad.App.Tests.Sync;
 
 [UnitTest]
-public class SyncCoordinatorTests : Bunit.TestContext
+public class SyncCoordinatorTests
 {
     static readonly Guid User = Guid.NewGuid();
 
@@ -34,7 +36,21 @@ public class SyncCoordinatorTests : Bunit.TestContext
     readonly InMemoryLocalSessionStore _sessions = new(
         new LocalSession(User, "Ada", "ada@example.com", "UTC", "en", "refresh-token", DateTimeOffset.UtcNow));
 
-    NavigationManager Navigation => Services.GetRequiredService<NavigationManager>();
+    ServiceProvider? _provider;
+
+    ServiceCollection Services { get; } = Arranged();
+
+    IServiceProvider Provider => _provider ??= Services.BuildServiceProvider();
+
+    NavigationManager Navigation => Provider.GetRequiredService<NavigationManager>();
+
+    static ServiceCollection Arranged()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IJSRuntime, SilentJsRuntime>();
+        services.AddSingleton<NavigationManager, FakeNavigationManager>();
+        return services;
+    }
 
     [Fact]
     public async Task ARejectedChangeRaisesTheRejectedBeltAndKeepsItsMessage()
@@ -139,7 +155,7 @@ public class SyncCoordinatorTests : Bunit.TestContext
 
         await coordinator.SyncNowAsync();
 
-        Assert.Empty(Services.GetRequiredService<ISnackbar>().ShownSnackbars);
+        Assert.Empty(Provider.GetRequiredService<ISnackbar>().ShownSnackbars);
     }
 
     async Task<SyncCoordinator> CoordinatorRejecting(params string[] reasons)

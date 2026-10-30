@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using PSPad.Api.Security;
 
@@ -13,15 +12,6 @@ public static class AuthenticationLogging
             SecurityLog.For(context.HttpContext).AuthenticationFailed(
                 context.Request.Path, context.Exception.GetType().Name);
             return Task.CompletedTask;
-        },
-        OnForbidden = context =>
-        {
-            SecurityLog.For(context.HttpContext).Forbidden(
-                Subject(context.HttpContext.User), context.Request.Path);
-            return Task.CompletedTask;
         }
     };
-
-    static string Subject(ClaimsPrincipal user) =>
-        user.FindFirstValue("sub") ?? user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
 }

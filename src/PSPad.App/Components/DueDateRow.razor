@@ -1,9 +1,9 @@
-@using System.Globalization
+@using PSPad.App.State
 @inject IStringLocalizer<TasksStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
 
 <PropertyRow Class="pspad-task-due" Icon="@Icons.Material.Outlined.Event" Label="@(Label ?? T["Due"])"
-             Value="@(Value is not { } day ? EmptyText ?? T["NoDueDate"] : Describe(day, Today, Shared))"
+             Value="@(Value is not { } day ? EmptyText ?? T["NoDueDate"] : DueDayText.Describe(day, Today, Shared))"
              HasValue="@(Value is not null)" ValueColor="@(FlagsPast && Value < Today ? Color.Error : Color.Default)"
              Disabled="@Disabled" OnClear="@(() => ChooseAsync(null))">
     <DueDateItems Value="@Value" Today="@Today" OnChoose="@ChooseAsync" OnPick="@(() => _picker?.Open())" />
@@ -28,33 +28,6 @@
 
     DueDatePicker? _picker;
 
-
-    public sealed record QuickPick(string Label, DateOnly Day);
-
-    public static IReadOnlyList<QuickPick> QuickPicks(
-        DateOnly today, IStringLocalizer<SharedStrings> shared, IStringLocalizer<TasksStrings> tasks) =>
-    [
-        new(shared["Today"], today),
-        new(shared["Tomorrow"], today.AddDays(1)),
-        new(tasks["QuickInTwoDays"], today.AddDays(2)),
-        new(tasks["QuickNextWeek"], NextWeekStart(today))
-    ];
-
-    public static string Describe(DateOnly day, DateOnly today, IStringLocalizer<SharedStrings> shared) => day switch
-    {
-        var d when d == today => shared["Today"],
-        var d when d == today.AddDays(1) => shared["Tomorrow"],
-        var d when d == today.AddDays(-1) => shared["Yesterday"],
-        var d when d.Year == today.Year => d.ToString("ddd, d MMM"),
-        var d => d.ToString("ddd, d MMM yyyy")
-    };
-
-    static DateOnly NextWeekStart(DateOnly today)
-    {
-        var firstDay = CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
-        var daysAhead = ((int)firstDay - (int)today.DayOfWeek + 7) % 7;
-        return today.AddDays(daysAhead == 0 ? 7 : daysAhead);
-    }
 
     async Task ChooseAsync(DateOnly? day)
     {

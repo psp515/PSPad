@@ -13,7 +13,7 @@
             var position = index;
             var draft = Draft[position];
             var name = draft.Name;
-            <div @key="position" class="pspad-step d-flex align-center gap-1">
+            <div @key="position" class="pspad-step d-flex align-center gap-1" role="group" aria-label="@name">
                 <span class="pspad-step-lead">
                     <MudIcon Icon="@Icons.Material.Outlined.CheckBoxOutlineBlank" Size="Size.Small" Class="pspad-muted" />
                 </span>
@@ -35,7 +35,7 @@
 
     @foreach (var step in Task?.Steps ?? [])
     {
-        <div @key="step.Id" class="pspad-step d-flex align-center gap-1">
+        <div @key="step.Id" class="pspad-step d-flex align-center gap-1" role="group" aria-label="@step.Name">
             <MudCheckBox T="bool" Class="pspad-step-check" Value="@step.Checked"
                          ValueChanged="@(value => CheckAsync(step, value))" Color="Color.Primary"
                          Size="Size.Small" Disabled="@Disabled" aria-label="@step.Name" />
@@ -65,7 +65,8 @@
         </span>
         <MudTextField T="string" Class="pspad-step-add flex-grow-1 mt-0" @bind-Value="_newStep"
                       Placeholder="@(StepCount == 0 ? T["AddStep"] : T["NextStep"])" Underline="false" MaxLength="@ContentLimits.Name"
-                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync" />
+                      Margin="Margin.Dense" Immediate="true" Disabled="@Disabled" OnKeyDown="@AddOnEnterAsync"
+                      UserAttributes="@AddAttributes" />
     </div>
 </div>
 
@@ -121,6 +122,9 @@
         await Changed.InvokeAsync();
     }
 
+    Dictionary<string, object> AddAttributes =>
+        new() { ["aria-label"] = (StepCount == 0 ? T["AddStep"] : T["NextStep"]).Value };
+
     Dictionary<string, object> NameAttributes(string name) =>
         new() { ["aria-label"] = T["RenameStep", name].Value };
 
@@ -167,7 +171,7 @@
                 @if (due is { } shown)
                 {
                     <MudText Typo="Typo.caption" Class="pspad-step-due px-2"
-                             Color="@(shown < Today ? Color.Error : Color.Default)">@DueDateRow.Describe(shown, Today, Shared)</MudText>
+                             Color="@(shown < Today ? Color.Error : Color.Default)">@DueDayText.Describe(shown, Today, Shared)</MudText>
                 }
             }
             else

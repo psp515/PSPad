@@ -394,7 +394,8 @@ area alone); the goal screen passes `Flag`; Settings passes `Settings` with the 
 Counts are singular for one, plural otherwise, and zero open tasks reads
 "no open tasks" (`OpenTaskCount`): "1 list · no open tasks", "1 list · 1
 open task", "2 lists · 2 open tasks". Open tasks are the ones a card counts:
-not deleted, not completed, not ended. One component means the two cannot
+not deleted, not completed, not ended. A reference list card counts its items
+("7 items", `ItemCount`). One component means the two cannot
 drift. The area subtitle (`AreaSummary`) depends on the list kinds: task
 lists only, "{n} list(s) · {m} open task(s)" ("· no open tasks" at zero);
 reference lists only, "{n} reference list(s) · {k} item(s)" ("· no items"
@@ -512,7 +513,8 @@ more starting within half an hour become one group block
 tasks inside a long one sit beside it in the right half, grouped where they
 overlap. On today a red line (`pspad-timeline-now`)
 marks the current time in the user's zone. Ticking a block ticks the task
-like a row does. Design: `specs/my-day-schedule-design.md`.
+like a row does, and a recurring task off its day is read-only there as in a row.
+Design: `specs/my-day-schedule-design.md`.
 
 Membership comes from `TodayRule.Plan`, never from the page. The page does
 not show Coming up; the lead-time rule (`adr/0053`) stays in the domain and
@@ -645,7 +647,10 @@ leave it out of their open tasks, and `GoalListRow` counts it done. My
 Day never shows it — it has no occurrence left. Every tick handler (My Day,
 list screen, area board, goals, panel) toggles the occurrence and does
 nothing on a day the task does not occur on (an off-day of "every 2 days",
-or past its Until) unless that day is already ticked.
+or past its Until) unless that day is already ticked. The rule is
+`TaskTick.Toggles`; on such a day the row's and the panel's `MudCheckBox` is
+`ReadOnly` (the My Day timeline blocks too), so a click leaves it as it was
+instead of showing a tick that was never saved.
 
 **Every repeated row or card carries `@key` on its entity id.** Ticking a
 task moves it between sections, and without a key Blazor hands the vacated
@@ -662,7 +667,11 @@ same panel in its new-task mode, addressed as `?task=new` with an
 optional `&list={listId}` and an optional `&due=yyyy-MM-dd`
 (`TaskQuery.ForNewTask(uri, listId?, due?)`) — never an inline field or a
 dialog. A list page and an area board pass the list; My Day passes the day
-and no list. A malformed `list` or `due` is ignored, as if absent.
+and no list. A malformed `list` or `due` is ignored, as if absent. The
+shell cascades `SyncRevision` to the panel as it does to the page, so an
+open task re-reads on every pull and shows another device's name or
+description without reopening; a description or a name being edited keeps
+its draft (the name while the field has focus, until it is saved or left).
 
 **Detail panels share one shell.** `Components/DetailPanel.razor` is the
 only right-anchored detail drawer: 420px from `md` up, full width below it.
@@ -1609,7 +1618,7 @@ lands on the budget. `InviteLinkCard` is now the list wrapper over
 | `/snapshots` | List snapshots — public snapshots the caller has opened while signed in, newest first |
 | `/public/snapshot/{token}` | a public snapshot, anonymous, outside `AppShell` |
 | `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-captures bar chart, collapsed record feed |
-| `/history` | redirects to `/statistics`, for bookmarks predating the rename (`adr/0038`) |
+| `/history` | redirects to `/statistics` (its own `HistoryRedirect` page, so Statistics loads as usual), for bookmarks predating the rename (`adr/0038`) |
 | `/settings` | Settings (account + change password + sign-out; application settings: language, time zone, theme, accent; sync status; delete account) |
 | `/app-info` | version, license, docs/repo links |
 | `/search` | search results (currently unreachable from the UI) |
@@ -1622,6 +1631,18 @@ lands on the budget. `InviteLinkCard` is now the list wrapper over
 | `?item={itemId}`, `?item=new&list={listId}` | reference item detail overlay, on any of the above |
 
 **Signed-out visitors land on `/welcome`**, not a bare login redirect.
+`RedirectToLogin` puts the address they were going to in `returnUrl`; Welcome
+keeps it only when it lies inside the app and is not Welcome or an
+`authentication/` route (`ReturnUrlQuery.SafeFrom`), shows it on the Log in
+link and starts the login with `NavigateToLogin`, whose `ReturnUrl` is where
+the login lands (the login route ignores a `returnUrl` query since .NET 7).
+A login callback that could not capture a session (token exchange or
+`/api/me` failed), or that Keycloak answered with an error (`login-failed`
+redirects to `/welcome`), leaves `SignInFailure` set; `/welcome` shows a
+warning `MudAlert` that sign-in did not finish above Log in, which retries
+it, and takes the flag (`SignInFailure.Take`) on each arrival at `/welcome`,
+also when an in-app navigation reuses the open Welcome, so the warning shows
+once per failed sign-in.
 Sign-out ends the Keycloak session directly rather than only clearing local
 state. The boot splash is held — no application chrome renders — until the
 first screen is ready to draw: the signed-in shell once its data is loaded,
@@ -1665,11 +1686,14 @@ administrator — and either way the client clears everything local: the
 replica, the outbox too (as sign-out does, but without asking), and the session
 store/tokens — composing the three existing `IReplica`/`IOutbox`/
 `ILocalSessionStore.ClearAsync()` calls rather than adding new storage
-interop — then lands on `/welcome`, same destination as sign-out.
+interop — then reloads the app on `/welcome`, same destination as sign-out,
+with no return address: announcing the sign-out on Settings would send
+the visitor to Welcome with Settings as the return address.
 When the server answers the step-up challenge (sign-in older than five
 minutes, `adr/0072`), the dialog deletes nothing locally and instead says a
 fresh sign-in is needed, with a "Sign in again" button (`pspad-reauthenticate`)
 that starts an interactive Keycloak login with `prompt=login` and `max_age=0`.
 The login returns to `/settings?deleteAccount=confirm`; Settings replaces that
-URL with `/settings` and reopens the delete dialog, empty — the person types
+URL with `/settings` and, once that location change lands (`MudDialogProvider`
+closes every dialog on a location change), reopens the delete dialog, empty — the person types
 their email again to delete.

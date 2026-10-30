@@ -1,5 +1,7 @@
 @page "/welcome"
 @layout PublicLayout
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using PSPad.Abstractions
 @using PSPad.App.Auth
 @using PSPad.App.Components
@@ -7,9 +9,11 @@
 @using PSPad.Module.Tasks.Recurrence
 @using PSPad.Module.Tasks.Tasks
 @inject NavigationManager Navigation
+@inject SignInFailure Failure
 @inject IClock Clock
 @inject IStringLocalizer<AuthStrings> T
 @inject IStringLocalizer<SharedStrings> S
+@implements IDisposable
 
 <div class="pspad-welcome">
     <div class="pspad-welcome-content">
@@ -22,8 +26,15 @@
                target="_blank" rel="noopener noreferrer">
                 @T["WelcomeTagline"]
             </a>
+            @if (_signInFailed)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="pspad-welcome-sign-in-failed">
+                    @T["SignInDidNotFinish"]
+                </MudAlert>
+            }
             <p class="pspad-welcome-actions">
-                <a class="pspad-welcome-button pspad-welcome-login" href="@LoginUrl">@T["LogIn"]</a>
+                <a class="pspad-welcome-button pspad-welcome-login" href="@LoginUrl"
+                   @onclick="LogIn" @onclick:preventDefault="true">@T["LogIn"]</a>
                 <a class="pspad-welcome-button pspad-welcome-docs" href="https://psp515.com/pspad">
                     @T["Docs"]
                 </a>
@@ -47,19 +58,39 @@
 
     IReadOnlyList<TodoTask> DemoTasks = [];
 
-    string LoginUrl
-    {
-        get
-        {
-            var returnUrl = ReturnUrlQuery.From(Navigation.Uri);
+    bool _signInFailed;
 
-            return returnUrl is null
-                ? "authentication/login"
-                : $"authentication/login?returnUrl={Uri.EscapeDataString(returnUrl)}";
-        }
+    string? ReturnUrl => ReturnUrlQuery.SafeFrom(Navigation.Uri, Navigation.BaseUri);
+
+    string LoginUrl => ReturnUrl is { } returnUrl
+        ? $"authentication/login?returnUrl={Uri.EscapeDataString(returnUrl)}"
+        : "authentication/login";
+
+    protected override void OnInitialized()
+    {
+        DemoTasks = BuildDemoTasks();
+        _signInFailed = Failure.Take();
+        Navigation.LocationChanged += OnLocationChanged;
     }
 
-    protected override void OnInitialized() => DemoTasks = BuildDemoTasks();
+    void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        if (Navigation.ToBaseRelativePath(args.Location).Split('?', '#')[0] != "welcome")
+        {
+            return;
+        }
+
+        _signInFailed = Failure.Take();
+        InvokeAsync(StateHasChanged);
+    }
+
+    void LogIn() => Navigation.NavigateToLogin("authentication/login", new InteractiveRequestOptions
+    {
+        Interaction = InteractionType.SignIn,
+        ReturnUrl = ReturnUrl ?? Navigation.BaseUri
+    });
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
 
     IReadOnlyList<TodoTask> BuildDemoTasks()
     {

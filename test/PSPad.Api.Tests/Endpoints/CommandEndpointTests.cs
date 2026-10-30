@@ -30,7 +30,10 @@ public class CommandEndpointTests(MongoFixture fixture)
 
         response.EnsureSuccessStatusCode();
         var results = await response.Content.ReadFromJsonAsync<CommandResponse[]>(ct);
-        Assert.True(Assert.Single(results!).Accepted);
+        var result = Assert.Single(results!);
+        Assert.True(result.Accepted);
+        Assert.False(result.Unrecoverable);
+        Assert.Contains(await Commands.Commands.SyncedAsync(client, "areas", ct), row => row.GetProperty("id").GetGuid() == command.AreaId);
     }
 
     [Fact]

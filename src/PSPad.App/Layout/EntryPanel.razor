@@ -159,14 +159,6 @@
         _note = entry.Note;
     }
 
-    DateOnly DefaultDate() => NewMonth switch
-    {
-        null => State.Today,
-        { } month when month.Contains(State.Today) => State.Today,
-        { } month when month < YearMonth.Of(State.Today) => month.LastDay,
-        { } month => month.FirstDay
-    };
-
     async Task StartNewAsync()
     {
         var preferences = await Preferences.LoadAsync(MoneyPreferences.IdFor(State.UserId), CancellationToken.None);
@@ -174,7 +166,7 @@
         _category = "";
         _amount = null;
         _note = null;
-        _date = DefaultDate().ToDateTime(TimeOnly.MinValue);
+        _date = EntryDefaultDate.For(NewMonth, State.Today).ToDateTime(TimeOnly.MinValue);
         Suggest(preferences?.DefaultCurrency ?? Currencies.Pln);
     }
 

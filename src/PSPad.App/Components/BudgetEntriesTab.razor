@@ -42,9 +42,9 @@
 
     @foreach (var day in Days)
     {
-        <section @key="@((day.Date, Filters.Sort))" class="pspad-entry-day">
+        <section @key="@((day.Date, Filters.Sort))" class="pspad-entry-day" aria-label="@DayTitle(day)">
             <div class="d-flex align-baseline px-1 pt-3 pb-1">
-                <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-entry-day-title">@(Filters.Sort == EntrySort.Recorded ? T["RecordedDay", MoneyText.Day(day.Date)] : MoneyText.Day(day.Date))</MudText>
+                <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-entry-day-title">@DayTitle(day)</MudText>
                 <MudText Typo="Typo.caption" Class="pspad-muted pspad-entry-day-net">@MoneyText.SignedAmount(day.Net)</MudText>
             </div>
             <MudPaper Outlined="true" Class="pspad-entry-day-list">
@@ -111,6 +111,9 @@
             return T.Plural(Shown.Count, "EntriesCaption", MoneyText.Amount(income), MoneyText.Amount(expenses), MoneyText.SignedPln(income - expenses));
         }
     }
+
+    string DayTitle(EntryDay day) =>
+        Filters.Sort == EntrySort.Recorded ? T["RecordedDay", MoneyText.Day(day.Date)] : MoneyText.Day(day.Date);
 
     Task Change(EntryFilters filters) => FiltersChanged.InvokeAsync(filters);
 }

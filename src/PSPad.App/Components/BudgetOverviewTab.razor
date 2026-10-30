@@ -56,7 +56,7 @@
             </MoneyHero>
         </MudItem>
         <MudItem xs="12" md="4">
-            <MudPaper Outlined="true" Class="pa-3 pspad-overview-insights">
+            <MudPaper Outlined="true" Class="pa-3 pspad-overview-insights" role="region" aria-label="@T["WorthALook"].Value">
                 <SectionHeading Title="@T["WorthALook"]" Count="@(Found.Count == 0 ? null : Found.Count)" />
                 @if (Found.Count == 0)
                 {
@@ -94,7 +94,7 @@
             </MudPaper>
         </MudItem>
         <MudItem xs="12" md="5">
-            <MudPaper Outlined="true" Class="pa-3 pspad-overview-categories">
+            <MudPaper Outlined="true" Class="pa-3 pspad-overview-categories" role="region" aria-label="@T["WhereMoneyWent"].Value">
                 <SectionHeading Title="@T["WhereMoneyWent"]" Hint="@T["TapCategoryHint"]" />
                 @if (Spent.Count == 0)
                 {
@@ -124,7 +124,7 @@
             </MudPaper>
         </MudItem>
         <MudItem xs="12" md="4">
-            <MudPaper Outlined="true" Class="pa-3 pspad-overview-recent">
+            <MudPaper Outlined="true" Class="pa-3 pspad-overview-recent" role="region" aria-label="@T["RecentEntries"].Value">
                 <SectionHeading Title="@T["RecentEntries"]" Hint="@T["ByTimeRecorded"]" />
                 @if (Recent.Count == 0)
                 {
@@ -144,7 +144,7 @@
             </MudPaper>
         </MudItem>
         <MudItem xs="12" md="3">
-            <MudPaper Outlined="true" Class="pa-3 pspad-overview-net-worth">
+            <MudPaper Outlined="true" Class="pa-3 pspad-overview-net-worth" role="region" aria-label="@T["NetWorth"].Value">
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pspad-overview-net-worth-label">@(Latest is { } latest ? T["NetWorthMonth", MoneyText.MonthTitle(latest.Month)] : T["NetWorth"])</MudText>
                 <MudText Typo="Typo.h6" Color="Color.Primary" Class="pspad-money-value">@(Latest is { } value ? MoneyText.Pln(BalanceTotals.NetWorthOf(value)) : "—")</MudText>
                 @if (Latest is { } current && BalanceTotals.For(Snapshots, current.Month).Change is { } change)

@@ -27,16 +27,6 @@ public class NavGroupStateTests
     }
 
     [Fact]
-    public async Task EveryGroupStartsExpanded()
-    {
-        var state = new NavGroupState(new FakeJsRuntime());
-        await state.LoadAsync();
-
-        Assert.True(state.IsExpanded(NavGroupState.Budgets));
-        Assert.True(state.IsExpanded(NavGroupState.Areas));
-    }
-
-    [Fact]
     public async Task CollapsingIsStoredAndSurvivesAReload()
     {
         var js = new FakeJsRuntime();

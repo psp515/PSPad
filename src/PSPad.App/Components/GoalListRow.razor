@@ -1,3 +1,4 @@
+@using PSPad.App.State
 @using PSPad.Module.Tasks.Goals
 @using PSPad.Module.Tasks.Tasks
 @inject IStringLocalizer<SharedStrings> Shared
@@ -84,7 +85,7 @@
 
     string DueText(DateOnly due) => Overdue
         ? T["OverdueOn", due.ToString("d MMM")]
-        : T["DueOn", DueDateRow.Describe(due, Today, Shared)];
+        : T["DueOn", DueDayText.Describe(due, Today, Shared)];
 
     string MarkText(GoalStatus status) => status switch
     {

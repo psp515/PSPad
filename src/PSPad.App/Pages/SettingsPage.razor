@@ -1,5 +1,6 @@
 @page "/settings"
 @attribute [Authorize]
+@using Microsoft.AspNetCore.Components.Routing
 @using PSPad.Abstractions
 @using PSPad.App.Api
 @using PSPad.App.Auth
@@ -40,7 +41,7 @@
 
 <MudGrid Spacing="4">
     <MudItem xs="12" sm="6" lg="4" xl="3">
-        <MudPaper Outlined="true" Class="pa-4 pspad-account-card">
+        <MudPaper Outlined="true" Class="pa-4 pspad-account-card" role="region" aria-label="@S["Account"].Value">
             <SectionHeading Title="@S["Account"]" />
             <div class="d-flex align-center gap-3 mb-3">
                 <MudAvatar Style="@($"background:{AvatarColor.For(State.UserId)};color:#FFFFFF")" Size="Size.Large">
@@ -183,13 +184,24 @@
     [SupplyParameterFromQuery(Name = StepUpSignIn.DeleteAccountQuery)]
     public string? DeleteAccount { get; set; }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender && DeleteAccount is not null)
         {
+            Navigation.LocationChanged += ReopenDeleteAccountDialog;
             Navigation.NavigateTo("settings", replace: true);
-            await OpenDeleteAccountDialogAsync();
         }
+    }
+
+    // MudDialogProvider dismisses every dialog on a location change, so the dialog opens only after the query is gone.
+    void ReopenDeleteAccountDialog(object? sender, LocationChangedEventArgs args)
+    {
+        Navigation.LocationChanged -= ReopenDeleteAccountDialog;
+        _ = InvokeAsync(async () =>
+        {
+            await Task.Yield();
+            await OpenDeleteAccountDialogAsync();
+        });
     }
 
     protected override async Task OnInitializedAsync()
@@ -279,6 +291,7 @@
 
     public void Dispose()
     {
+        Navigation.LocationChanged -= ReopenDeleteAccountDialog;
         Sender.Sent -= OnCommandSent;
         SyncStatus.Changed -= OnSyncChanged;
         Connectivity.Changed -= OnConnectivityChanged;
@@ -342,7 +355,6 @@
         // Clearing before the redirect leaves the app is what makes an interrupted deletion
         // still finish signing the browser out of an account that is already gone server-side.
         await AccountDeletion.ClearStorageAsync();
-        Navigation.NavigateTo("welcome");
-        AccountDeletion.Announce();
+        Navigation.NavigateTo("welcome", forceLoad: true);
     }
 }

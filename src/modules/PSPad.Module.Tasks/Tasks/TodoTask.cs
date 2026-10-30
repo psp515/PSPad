@@ -141,7 +141,7 @@ public sealed class TodoTask : Aggregate
                     ? []
                     : [new TaskCompleted(
                         completing.Id, grant.OwnerId, at,
-                        completing.Name, completing.ListId, null, completing.DueOn)];
+                        completing.Name, completing.ListId, completing.DueOn)];
 
             case ReopenTask reopen:
                 var reopening = Require(task, grant);
@@ -254,7 +254,7 @@ public sealed class TodoTask : Aggregate
                     ? []
                     : [new OccurrenceCompleted(
                         ticking.Id, grant.OwnerId, at, occurrence.Day, occurrence.Completed,
-                        ticking.Name, ticking.ListId, null)];
+                        ticking.Name, ticking.ListId)];
 
             case MarkTaskFromSnapshot mark:
                 var marking = Require(task, grant);

@@ -16,7 +16,7 @@
             <MudButton @key="month" Class="@ChipClass(month)" Variant="@(month == Month ? Variant.Filled : Variant.Text)"
                        Color="@(month == Month ? Color.Primary : Color.Default)" Size="Size.Small"
                        aria-pressed="@(month == Month ? "true" : "false")" aria-current="@(month == Current ? "date" : null)"
-                       aria-label="@MoneyText.MonthTitle(month)" OnClick="@(() => OnMonthChanged.InvokeAsync(month))">
+                       aria-label="@ChipLabel(month)" OnClick="@(() => OnMonthChanged.InvokeAsync(month))">
                 <span class="pspad-month-chip-label">@Abbreviation(month.Month)</span>
                 @if (ShowsYear(month))
                 {
@@ -57,11 +57,6 @@
 </MudDialog>
 
 @code {
-    public const int DefaultCount = 12;
-    const int FewestChips = 3;
-    const double ChipWidth = 56;
-    const double ChipGap = 4;
-
     static readonly DialogOptions SheetOptions = new()
     {
         CloseOnEscapeKey = true, BackdropClick = true, NoHeader = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true,
@@ -83,7 +78,7 @@
     IJSObjectReference? _observer;
     DotNetObjectReference<MonthStrip>? _self;
     IReadOnlyList<YearMonth> _chips = [];
-    int _count = DefaultCount;
+    int _count = MonthWindow.DefaultCount;
     bool _picking;
     int _year;
 
@@ -116,7 +111,7 @@
     [JSInvokable]
     public void Resized(double width)
     {
-        var count = Math.Max(FewestChips, (int)Math.Floor((width + ChipGap) / (ChipWidth + ChipGap)));
+        var count = MonthWindow.Fitting(width);
         if (count == _count)
         {
             return;
@@ -127,33 +122,12 @@
         StateHasChanged();
     }
 
-    IReadOnlyList<YearMonth> NewestFirst()
-    {
-        var chips = new List<YearMonth>(_count);
-        var month = Newest();
-        for (var back = 0; back < _count; back++)
-        {
-            chips.Add(month);
-            month = month.Previous();
-        }
-
-        return chips;
-    }
-
-    YearMonth Newest()
-    {
-        if (Month > Current)
-        {
-            return Month;
-        }
-
-        var reach = Shift(Month, _count - 1);
-        return reach < Current ? reach : Current;
-    }
-
-    static YearMonth Shift(YearMonth month, int months) => YearMonth.Of(month.FirstDay.AddMonths(months));
+    IReadOnlyList<YearMonth> NewestFirst() => MonthWindow.NewestFirst(Month, Current, _count);
 
     bool ShowsYear(YearMonth month) => month.Month == 1 || month == _chips[^1];
+
+    string ChipLabel(YearMonth month) =>
+        Marked.Contains(month) ? Shared["MonthHasEntries", MoneyText.MonthTitle(month)].Value : MoneyText.MonthTitle(month);
 
     string ChipClass(YearMonth month) =>
         "pspad-month-chip"

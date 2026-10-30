@@ -1,7 +1,5 @@
-using PSPad.Abstractions;
-using PSPad.Api.Live;
+using PSPad.Api.Tests.Sync;
 using PSPad.Module.Money;
-using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Values;
@@ -13,192 +11,180 @@ using PSPad.TestInfrastructure;
 
 namespace PSPad.Api.Tests.Live;
 
-[UnitTest]
-public class LiveAudienceTests
+[IntegrationTest]
+[Collection(MongoCollection.Name)]
+public class LiveAudienceTests(MongoFixture fixture)
 {
-    static readonly DateTimeOffset At = new(2026, 10, 14, 12, 0, 0, TimeSpan.Zero);
+    static readonly TimeSpan Soon = TimeSpan.FromSeconds(5);
+    static readonly TimeSpan Briefly = TimeSpan.FromMilliseconds(750);
+    static readonly DateOnly Day = new(2026, 10, 9);
 
-    readonly FakeContainerMembers _containers = new();
-    readonly Guid _owner = Guid.NewGuid();
-    readonly Guid _member = Guid.NewGuid();
-    readonly Guid _actor = Guid.NewGuid();
+    sealed record Lists(Guid Owner, Guid Previous, Guid Current, HttpClient OwnerClient, HttpClient PreviousMember, HttpClient CurrentMember);
 
-    LiveAudience Audience => new(_containers);
-
-    static CommittedChange Change<T>(T aggregate, params DomainEvent[] events) where T : Aggregate
+    async Task<Lists> TwoSharedListsAsync(ApiFactory factory, ListKind kind, CancellationToken ct)
     {
-        aggregate.ApplyAll(events);
-        return new CommittedChange(aggregate, events);
-    }
-
-    TaskList SharedList(Guid listId, params Guid[] members)
-    {
-        var list = new TaskList();
-        list.ApplyAll([
-            new TaskListCreated(listId, _owner, At, Guid.NewGuid(), "Books"),
-            new TaskListShared(listId, _owner, At, "token", "Owner", "K7M4PX"),
-            .. members.Select(member => (DomainEvent)new TaskListJoined(listId, member, At, member, "Member"))
-        ]);
-        return list;
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var previousToken = Sharing.FreshToken();
+        var currentToken = Sharing.FreshToken();
+        var previous = await Sharing.SharedListAsync(owner, ownerId, ct, kind, previousToken);
+        var current = await Sharing.SharedListAsync(owner, ownerId, ct, kind, currentToken);
+        var previousMember = factory.ClientFor(Guid.NewGuid().ToString());
+        await Sharing.SignInAsync(previousMember, ct);
+        (await Sharing.JoinAsync(previousMember, ct, previousToken)).EnsureSuccessStatusCode();
+        var currentMember = factory.ClientFor(Guid.NewGuid().ToString());
+        await Sharing.SignInAsync(currentMember, ct);
+        (await Sharing.JoinAsync(currentMember, ct, currentToken)).EnsureSuccessStatusCode();
+        return new Lists(ownerId, previous, current, owner, previousMember, currentMember);
     }
 
     [Fact]
-    public async Task AnOwnedAggregateReachesTheActorAndTheOwner()
+    public async Task AMovedTaskNudgesTheMembersOfTheListItLeft()
     {
-        var area = Change(new Area(), new AreaCreated(Guid.NewGuid(), _owner, At, "Home", 0));
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var lists = await TwoSharedListsAsync(factory, ListKind.Tasks, ct);
+        var taskId = Guid.NewGuid();
+        await Sharing.SendAsync(lists.OwnerClient, ct, new CreateTask(Guid.NewGuid(), lists.Owner, taskId, lists.Previous, "Read"));
+        await using var leftBehind = await LiveListener.OpenAsync(lists.PreviousMember, ct);
+        await using var receiving = await LiveListener.OpenAsync(lists.CurrentMember, ct);
 
-        var audience = await Audience.ForAsync(_actor, [area], CancellationToken.None);
+        await Sharing.SendAsync(lists.OwnerClient, ct, new MoveTaskToList(Guid.NewGuid(), lists.Owner, taskId, lists.Current));
 
-        Assert.Equal(new[] { _actor, _owner }.Order(), audience.Order());
-        Assert.Equal(0, _containers.Lookups);
+        Assert.Equal("sync", await leftBehind.NextAsync(Soon));
+        Assert.Equal("sync", await receiving.NextAsync(Soon));
     }
 
     [Fact]
-    public async Task AListReachesItsMembersAndAnyoneTheCommitRemoved()
+    public async Task ALaterEditOfAMovedTaskDoesNotReachTheListItLeft()
     {
-        var listId = Guid.NewGuid();
-        var removed = Guid.NewGuid();
-        var list = SharedList(listId, _member, removed);
-        var removal = new ListMemberRemoved(listId, _owner, At, removed);
-        list.ApplyAll([removal]);
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var lists = await TwoSharedListsAsync(factory, ListKind.Tasks, ct);
+        var taskId = Guid.NewGuid();
+        await Sharing.SendAsync(lists.OwnerClient, ct,
+            new CreateTask(Guid.NewGuid(), lists.Owner, taskId, lists.Previous, "Read"),
+            new MoveTaskToList(Guid.NewGuid(), lists.Owner, taskId, lists.Current));
+        await using var leftBehind = await LiveListener.OpenAsync(lists.PreviousMember, ct);
+        await using var receiving = await LiveListener.OpenAsync(lists.CurrentMember, ct);
 
-        var audience = await Audience.ForAsync(_owner, [new CommittedChange(list, [removal])], CancellationToken.None);
+        await Sharing.SendAsync(lists.OwnerClient, ct, new RenameTask(Guid.NewGuid(), lists.Owner, taskId, "Read more"));
 
-        Assert.Equal(new[] { _owner, _member, removed }.Order(), audience.Order());
+        Assert.Equal("sync", await receiving.NextAsync(Soon));
+        Assert.True(await leftBehind.StaysQuietAsync(Briefly));
     }
 
     [Fact]
-    public async Task ATaskReachesTheOwnerAndMembersOfItsListAndItsPreviousList()
+    public async Task AMovedReferenceItemNudgesTheMembersOfTheListItLeft()
     {
-        var listId = Guid.NewGuid();
-        var previousId = Guid.NewGuid();
-        var previousMember = Guid.NewGuid();
-        _containers.Lists[listId] = new ContainerMembers(_owner, [_member]);
-        _containers.Lists[previousId] = new ContainerMembers(_owner, [previousMember]);
-        var task = new TodoTask();
-        task.ApplyAll([new TaskCreated(Guid.NewGuid(), _member, At, previousId, "Read")]);
-        var move = Change(task, new TaskMovedToList(task.Id, _member, At, listId, "Read"));
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var lists = await TwoSharedListsAsync(factory, ListKind.Reference, ct);
+        var itemId = Guid.NewGuid();
+        await Sharing.SendAsync(lists.OwnerClient, ct, new CreateReferenceItem(Guid.NewGuid(), lists.Owner, itemId, lists.Previous, "Dune", 0));
+        await using var leftBehind = await LiveListener.OpenAsync(lists.PreviousMember, ct);
+        await using var receiving = await LiveListener.OpenAsync(lists.CurrentMember, ct);
 
-        var audience = await Audience.ForAsync(_member, [move], CancellationToken.None);
+        await Sharing.SendAsync(lists.OwnerClient, ct, new MoveReferenceItemToList(Guid.NewGuid(), lists.Owner, itemId, lists.Current));
 
-        Assert.Equal(new[] { _owner, _member, previousMember }.Order(), audience.Order());
+        Assert.Equal("sync", await leftBehind.NextAsync(Soon));
+        Assert.Equal("sync", await receiving.NextAsync(Soon));
     }
 
     [Fact]
-    public async Task ALaterEditOfAMovedTaskDoesNotReachThePreviousList()
+    public async Task ALaterEditOfAMovedReferenceItemDoesNotReachTheListItLeft()
     {
-        var listId = Guid.NewGuid();
-        var previousId = Guid.NewGuid();
-        var previousMember = Guid.NewGuid();
-        _containers.Lists[listId] = new ContainerMembers(_owner, [_member]);
-        _containers.Lists[previousId] = new ContainerMembers(_owner, [previousMember]);
-        var task = new TodoTask();
-        task.ApplyAll([
-            new TaskCreated(Guid.NewGuid(), _member, At, previousId, "Read"),
-            new TaskMovedToList(Guid.NewGuid(), _member, At, listId, "Read")
-        ]);
-        var rename = Change(task, new TaskRenamed(task.Id, _member, At, "Read more"));
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var lists = await TwoSharedListsAsync(factory, ListKind.Reference, ct);
+        var itemId = Guid.NewGuid();
+        await Sharing.SendAsync(lists.OwnerClient, ct,
+            new CreateReferenceItem(Guid.NewGuid(), lists.Owner, itemId, lists.Previous, "Dune", 0),
+            new MoveReferenceItemToList(Guid.NewGuid(), lists.Owner, itemId, lists.Current));
+        await using var leftBehind = await LiveListener.OpenAsync(lists.PreviousMember, ct);
+        await using var receiving = await LiveListener.OpenAsync(lists.CurrentMember, ct);
 
-        var audience = await Audience.ForAsync(_member, [rename], CancellationToken.None);
+        await Sharing.SendAsync(lists.OwnerClient, ct, new RenameReferenceItem(Guid.NewGuid(), lists.Owner, itemId, "Dune II"));
 
-        Assert.DoesNotContain(previousMember, audience);
-        Assert.Equal(new[] { _owner, _member }.Order(), audience.Order());
+        Assert.Equal("sync", await receiving.NextAsync(Soon));
+        Assert.True(await leftBehind.StaysQuietAsync(Briefly));
     }
 
     [Fact]
-    public async Task AMovedReferenceItemReachesTheMembersOfItsPreviousList()
+    public async Task AMembersReferenceItemNudgesTheOwner()
     {
-        var listId = Guid.NewGuid();
-        var previousId = Guid.NewGuid();
-        var previousMember = Guid.NewGuid();
-        _containers.Lists[listId] = new ContainerMembers(_owner, [_member]);
-        _containers.Lists[previousId] = new ContainerMembers(_owner, [previousMember]);
-        var item = new ReferenceItem();
-        item.ApplyAll([new ReferenceItemCreated(Guid.NewGuid(), _member, At, previousId, "Dune", 0)]);
-        var move = Change(item, new ReferenceItemMovedToList(item.Id, _member, At, listId));
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var token = Sharing.FreshToken();
+        var listId = await Sharing.SharedListAsync(owner, ownerId, ct, ListKind.Reference, token);
+        var member = factory.ClientFor(Guid.NewGuid().ToString());
+        var memberId = await Sharing.SignInAsync(member, ct);
+        (await Sharing.JoinAsync(member, ct, token)).EnsureSuccessStatusCode();
+        await using var live = await LiveListener.OpenAsync(owner, ct);
 
-        var audience = await Audience.ForAsync(_member, [move], CancellationToken.None);
+        await Sharing.SendAsync(member, ct, new CreateReferenceItem(Guid.NewGuid(), memberId, Guid.NewGuid(), listId, "Dune", 0));
 
-        Assert.Equal(new[] { _owner, _member, previousMember }.Order(), audience.Order());
+        Assert.Equal("sync", await live.NextAsync(Soon));
     }
 
     [Fact]
-    public async Task ALaterEditOfAMovedReferenceItemDoesNotReachThePreviousList()
+    public async Task ARemovedBudgetMemberIsNudged()
     {
-        var listId = Guid.NewGuid();
-        var previousId = Guid.NewGuid();
-        var previousMember = Guid.NewGuid();
-        _containers.Lists[listId] = new ContainerMembers(_owner, [_member]);
-        _containers.Lists[previousId] = new ContainerMembers(_owner, [previousMember]);
-        var item = new ReferenceItem();
-        item.ApplyAll([
-            new ReferenceItemCreated(Guid.NewGuid(), _member, At, previousId, "Dune", 0),
-            new ReferenceItemMovedToList(Guid.NewGuid(), _member, At, listId)
-        ]);
-        var rename = Change(item, new ReferenceItemRenamed(item.Id, _member, At, "Dune II"));
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var token = Sharing.FreshToken();
+        var budgetId = await BudgetSharing.SharedBudgetAsync(owner, ownerId, ct, token);
+        var member = factory.ClientFor(Guid.NewGuid().ToString());
+        var memberId = await Sharing.SignInAsync(member, ct);
+        (await BudgetSharing.JoinAsync(member, ct, token)).EnsureSuccessStatusCode();
+        await using var live = await LiveListener.OpenAsync(member, ct);
 
-        var audience = await Audience.ForAsync(_member, [rename], CancellationToken.None);
+        (await BudgetSharing.RemoveMemberAsync(owner, budgetId, memberId, ct)).EnsureSuccessStatusCode();
 
-        Assert.DoesNotContain(previousMember, audience);
-        Assert.Equal(new[] { _owner, _member }.Order(), audience.Order());
+        Assert.Equal("sync", await live.NextAsync(Soon));
     }
 
     [Fact]
-    public async Task AReferenceItemReachesTheOwnerAndMembersOfItsList()
+    public async Task AMembersEntryNudgesTheBudgetOwner()
     {
-        var listId = Guid.NewGuid();
-        _containers.Lists[listId] = new ContainerMembers(_owner, [_member]);
-        var item = Change(new ReferenceItem(), new ReferenceItemCreated(Guid.NewGuid(), _member, At, listId, "Dune", 0));
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var token = Sharing.FreshToken();
+        var budgetId = await BudgetSharing.SharedBudgetAsync(owner, ownerId, ct, token);
+        var member = factory.ClientFor(Guid.NewGuid().ToString());
+        var memberId = await Sharing.SignInAsync(member, ct);
+        (await BudgetSharing.JoinAsync(member, ct, token)).EnsureSuccessStatusCode();
+        await using var live = await LiveListener.OpenAsync(owner, ct);
 
-        var audience = await Audience.ForAsync(_member, [item], CancellationToken.None);
+        await Sharing.SendAsync(member, ct, new RecordExpense(
+            Guid.NewGuid(), memberId, Guid.NewGuid(), budgetId, "Bread", "Food", new Money(10m, "PLN", 1m, Day), Day, null));
 
-        Assert.Equal(new[] { _owner, _member }.Order(), audience.Order());
+        Assert.Equal("sync", await live.NextAsync(Soon));
     }
 
     [Fact]
-    public async Task ABudgetReachesItsMembersAndAnyoneTheCommitRemoved()
+    public async Task AMembersBalanceMonthNudgesTheBudgetOwner()
     {
-        var budgetId = Guid.NewGuid();
-        var removed = Guid.NewGuid();
-        var budget = new Budget();
-        budget.ApplyAll([
-            new BudgetCreated(budgetId, _owner, At, "Home", ["Food"], ["Salary"]),
-            new BudgetShared(budgetId, _owner, At, "token", "K7M4PX", "Owner"),
-            new BudgetJoined(budgetId, _member, At, _member, "Member"),
-            new BudgetJoined(budgetId, removed, At, removed, "Gone")
-        ]);
-        var removal = new BudgetMemberRemoved(budgetId, _owner, At, removed);
-        budget.ApplyAll([removal]);
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var owner = factory.ClientFor(Guid.NewGuid().ToString());
+        var ownerId = await Sharing.SignInAsync(owner, ct);
+        var token = Sharing.FreshToken();
+        var budgetId = await BudgetSharing.SharedBudgetAsync(owner, ownerId, ct, token);
+        var member = factory.ClientFor(Guid.NewGuid().ToString());
+        var memberId = await Sharing.SignInAsync(member, ct);
+        (await BudgetSharing.JoinAsync(member, ct, token)).EnsureSuccessStatusCode();
+        await using var live = await LiveListener.OpenAsync(owner, ct);
 
-        var audience = await Audience.ForAsync(_owner, [new CommittedChange(budget, [removal])], CancellationToken.None);
+        await Sharing.SendAsync(member, ct, new PSPad.Module.Money.Balance.StartBalanceMonth(
+            Guid.NewGuid(), memberId, budgetId, new YearMonth(2026, 10)));
 
-        Assert.Equal(new[] { _owner, _member, removed }.Order(), audience.Order());
-    }
-
-    [Fact]
-    public async Task AnEntryAndABalanceReachTheOwnerAndMembersOfTheirBudget()
-    {
-        var budgetId = Guid.NewGuid();
-        _containers.Budgets[budgetId] = new ContainerMembers(_owner, [_member]);
-        var today = DateOnly.FromDateTime(At.UtcDateTime);
-        var entry = Change(new MoneyEntry(), new ExpenseRecorded(
-            Guid.NewGuid(), _member, At, budgetId, "Bread", "Food", new Money(10m, "PLN", 1m, today), today, null));
-        var balance = Change(new BalanceSnapshot(), new BalanceMonthStarted(
-            Guid.NewGuid(), _member, At, budgetId, new YearMonth(2026, 10), []));
-
-        var audience = await Audience.ForAsync(_member, [entry, balance], CancellationToken.None);
-
-        Assert.Equal(new[] { _owner, _member }.Order(), audience.Order());
-        Assert.Equal(1, _containers.Lookups);
-    }
-
-    [Fact]
-    public async Task AnEmptyIdIsNeverInTheAudience()
-    {
-        var area = Change(new Area(), new AreaCreated(Guid.NewGuid(), _owner, At, "Home", 0));
-
-        var audience = await Audience.ForAsync(Guid.Empty, [area], CancellationToken.None);
-
-        Assert.Equal([_owner], audience.ToArray());
+        Assert.Equal("sync", await live.NextAsync(Soon));
     }
 }

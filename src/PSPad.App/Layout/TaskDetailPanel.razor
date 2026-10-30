@@ -35,15 +35,17 @@
         <div class="d-flex align-center gap-1 px-2 pt-3 pb-1">
             @if (_task is not null)
             {
-                <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync"
+                <MudCheckBox T="bool" Class="pspad-task-done" Value="@Done" ValueChanged="@CompleteAsync" ReadOnly="@(!TaskTick.Toggles(_task, State.Today))"
                              Color="Color.Primary" Disabled="@Disabled" aria-label="@Shared["Done"].Value" />
             }
-            <MudTextField T="string" Class="@($"pspad-task-name-field flex-grow-1 {(_task is null ? "px-2" : "")}")"
-                          Value="@Name" ValueChanged="@NameChangedAsync" Placeholder="@T["TaskName"]" MaxLength="@ContentLimits.Name"
-                          Typo="Typo.h6" Underline="false" Immediate="@(Mode == PanelMode.Add)"
-                          AutoFocus="@(Mode == PanelMode.Add)" Disabled="@Disabled"
-                          OnKeyDown="@AddOnEnterAsync"
-                          Style="@(Done ? "text-decoration:line-through" : "")" />
+            <div class="flex-grow-1" @onfocusin="@BeginNameEdit" @onfocusout="@EndNameEdit">
+                <MudTextField T="string" Class="@($"pspad-task-name-field {(_task is null ? "px-2" : "")}")"
+                              Value="@Name" ValueChanged="@NameChangedAsync" Placeholder="@T["TaskName"]" MaxLength="@ContentLimits.Name"
+                              Typo="Typo.h6" Underline="false" Immediate="@(Mode == PanelMode.Add)"
+                              AutoFocus="@(Mode == PanelMode.Add)" Disabled="@Disabled"
+                              OnKeyDown="@AddOnEnterAsync"
+                              Style="@(Done ? "text-decoration:line-through" : "")" />
+            </div>
         </div>
 
         @if (_task is not null)
@@ -157,9 +159,14 @@
 
     [Parameter] public EventCallback OnClose { get; set; }
 
+    [CascadingParameter(Name = "SyncRevision")] public int SyncRevision { get; set; }
+
     enum PanelMode { Closed, Add, Edit, View }
 
     TodoTask? _task;
+    (Guid TaskId, string Name)? _nameEdit;
+    bool _nameFocused;
+    bool _renaming;
 
     int _reload;
     ListPlacement _placement = ListPlacement.Empty;
@@ -190,7 +197,9 @@
         ? EventCallback.Factory.Create(this, CreateAsync)
         : default;
 
-    string Name => _task?.Name ?? _draft.Name;
+    string Name => _task is null
+        ? _draft.Name
+        : _nameEdit is { } edit && edit.TaskId == _task.Id ? edit.Name : _task.Name;
 
     bool Starred => _task?.Starred ?? _draft.Starred;
 
@@ -257,6 +266,12 @@
         }
 
         _task = task;
+
+        if (_nameFocused && task is not null && _nameEdit?.TaskId != task.Id)
+        {
+            _nameEdit = (task.Id, task.Name);
+        }
+
         _placement = ListPlacement.For(State.UserId, areas, lists, views, listViews);
         var current = task is null ? null : _placement.All.FirstOrDefault(list => list.Id == task.ListId);
         _lists = [.. _placement.All.Where(list =>
@@ -269,6 +284,26 @@
         if (Mode == PanelMode.Add && args.Key == "Enter")
         {
             await CreateAsync();
+        }
+    }
+
+    void BeginNameEdit()
+    {
+        _nameFocused = true;
+
+        if (_task is not null)
+        {
+            _nameEdit = (_task.Id, _task.Name);
+        }
+    }
+
+    void EndNameEdit()
+    {
+        _nameFocused = false;
+
+        if (!_renaming)
+        {
+            _nameEdit = null;
         }
     }
 
@@ -364,13 +399,26 @@
             return;
         }
 
+        _nameEdit = _nameFocused ? (_task.Id, name) : null;
+
         if (string.IsNullOrWhiteSpace(name) || name.Trim() == _task.Name)
         {
             return;
         }
 
-        await Sender.SendAsync(new RenameTask(Guid.NewGuid(), State.UserId, _task.Id, name.Trim()));
-        await ReloadAsync();
+        _renaming = true;
+        _nameEdit = (_task.Id, name.Trim());
+
+        try
+        {
+            await Sender.SendAsync(new RenameTask(Guid.NewGuid(), State.UserId, _task.Id, name.Trim()));
+            await ReloadAsync();
+        }
+        finally
+        {
+            _renaming = false;
+            _nameEdit = _nameFocused && _task is not null ? (_task.Id, _task.Name) : null;
+        }
     }
 
     async Task<bool> SaveDescriptionAsync(string text)
@@ -563,7 +611,7 @@
             return;
         }
 
-        if (_task.IsRecurring && !_task.OccursOn(State.Today) && !_task.CompletedDays.Contains(State.Today))
+        if (!TaskTick.Toggles(_task, State.Today))
         {
             return;
         }

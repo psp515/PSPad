@@ -512,14 +512,28 @@ and reference items; one rule covers leaving, removal, the owner deleting
 the list, and the owner deleting their account. Budgets reconcile the same
 way against `memberBudgetIds` (purging a budget's entries and snapshots with
 it), and an entry or snapshot the caller does not own whose budget the
-replica does not hold is dropped. A list in `memberListIds`
-missing from the replica is pulled in the same pull, by asking again with
-`full=` at the just-saved marker. A device holding nothing yet for this user
-has no recorded owner, so reconciliation is skipped entirely — every list
-would otherwise look foreign. A failed full pull (`HttpRequestException`) is
-swallowed and never written to the marker; the missing list stays missing
-and the next sync retries it, instead of every delta pull wedging behind a
-flaky connection. Last, a task or reference item the caller does not own
+replica does not hold is dropped. Every document a purge or drop removes
+counts toward the sync's pulled total, so the coordinator bumps
+`SyncRevision` and an open screen redraws without it. A list or budget a pull page names in the
+membership set while the replica does not hold it is **owed a whole pull**:
+the id goes into the replica's `owedWhole` meta before the page is saved —
+the join bumps the container's own `seq`, so its row arrives by delta while
+its older children do not (ADR-0081). After reconciling, the pull asks again
+with `full=` at the just-received marker for everything owed, and an id
+leaves `owedWhole` only once that answer is saved or it has left the
+membership set; a pull from zero clears it. A device holding nothing yet for
+this user has no recorded owner, so reconciliation is skipped entirely —
+every list would otherwise look foreign. A failed full pull
+(`HttpRequestException`, a timeout, or a body that does not parse) is
+swallowed and never written to the marker; its ids stay owed and the next
+sync retries them, instead of every delta pull wedging behind a flaky
+connection. A container joined on this device (`SyncService.AdoptJoinAsync`)
+is never purged by a pull that began before the join: that pull's membership
+set was read too early to speak for it. Adopting a join and the purge and
+stranded-row passes share one lock, so a join never lands between their
+reads. Adopting a join puts the container in `owedWhole` before saving the
+join's documents and takes it out only after the last one is saved, so a
+reload partway through still pulls it whole. Last, a task or reference item the caller does not own
 whose `ListId` names a list the replica does not hold is dropped — a row the
 owner moved out of a shared list, delivered through `previousListId` as a
 stub (`id`, `userId`, `listId`, `previousListId`, `version`, `deleted`,
@@ -641,6 +655,23 @@ small seed of areas. Provisioning is idempotent, runs in a transaction.
 the token's name differs from the stored one (`MeEndpoints` issues it on
 every `/api/me` call), so a Keycloak profile change picks up on next
 sign-in with no migration.
+
+`UserProvisioner` writes outside `CommandDispatcher`, so it applies the same
+conflict rule itself (`adr/0063`): provisioning and the time zone, language
+and display-name writes run through `ConflictRetry`, which re-runs the whole
+load-decide-commit on a `ConcurrencyConflictException` with the dispatcher's
+jittered pause, up to five attempts. Every commit bumps the global
+`counters/events` sequence, so any other user's concurrent save can make a
+first sign-in's transaction hit MongoDB's transient write conflict; two tabs
+provisioning the same subject collide on the user's `_id`, and the retry
+reloads, sees `provisionedAt` and returns the existing user. Past the last
+attempt `GET /api/me`, `PUT /api/me/timezone` and `PUT /api/me/language`
+answer `503` with `Retry-After: 1`
+(`RetryLaterOnConflict`), never a bare `500`. The client's login callback
+records a failed session capture, or an identity-provider error on the
+callback (`login-failed`, via `SignInFailedRedirect`), in `SignInFailure`;
+`/welcome` then says once that sign-in did not finish, above its Log in
+button.
 
 **A durable local session, not the live access token, gates whether the
 app opens.** Two different questions were previously conflated: "who is
@@ -806,8 +837,9 @@ directly in `PSPad.Api`:
 | `GET` | `/api/statistics/records?before=&limit=` | The statistics feed, newest first. `limit` clamps to 1..200, default 50 |
 | `GET` | `/api/statistics/overview?days=` | Tiles and the five chart series. `days` is 30, 90 or 365, default 30 |
 | `GET` | `/api/money/nbp-rate?currency=&date=` | NBP table A mid rate for one currency: the last one on or before `date` (7-day lookback). `200 NbpRateView(Currency, Rate, EffectiveDate)`; `404` for an unknown currency, a date before 2002-01-02, no rate or an NBP 4xx; `502` when NBP fails (5xx, network, bad JSON) or takes over 5 s. PLN answers 1 without calling NBP. Successes cached in memory per (code, date): 24 h for past dates, 1 h otherwise. Online-only, not a command (`adr/0059`) |
-| `GET` | `/api/me` | Current user; provisions on first call, heals display name |
-| `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only) |
+| `GET` | `/api/me` | Current user; provisions on first call, heals display name. `503` with `Retry-After` when write conflicts outlast five attempts (§6) |
+| `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only). `503` with `Retry-After` as for `/api/me` |
+| `PUT` | `/api/me/language` | Set the user's language (`en` / `pl`, `adr/0075`); `400` for an unsupported one. Online-only, not a command. `503` with `Retry-After` as for `/api/me` |
 | `DELETE` | `/api/account` | Delete the caller's account: every Mongo document scoped to their `userId`, then their Keycloak user. Needs a sign-in from the last 5 minutes, else `401` step-up challenge (`adr/0072`). Not a command — see §6 |
 | `POST` | `/api/lists/{id}/snapshots` | Owner only. Publish a frozen copy; `{expiresAt}` → `{id, token, expiresAt}`. Online-only, like `/api/me/timezone` (`adr/0056`) |
 | `GET` | `/api/lists/{id}/snapshots` | Owner only. That list's active (unexpired) snapshots |
@@ -885,9 +917,11 @@ Refusals that point at probing are logged at `Warning` through `SecurityLog`
 |----------|-------------|--------|
 | 4001 | `/api/commands` refuses an envelope: unknown type, malformed payload, another user's id, server-only command, no handler | command type (cut to 100 chars), caller's user id, reason |
 | 4002 | JWT bearer rejects a token | path, exception type |
-| 4003 | JWT bearer forbids a request | subject, path |
 | 4004 | `/api/lists/join` or `/api/budgets/join` gets a wrong invite code | caller's user id, `list` or `budget`, its id |
 | 4005 | any rate limiter answers `429` | subject or `anonymous`, path |
+
+Event id 4003 (a forbidden request) is retired: no endpoint authorizes beyond
+"signed in", so nothing can be forbidden.
 
 Payloads, tokens, invite codes and exception messages are never logged.
 

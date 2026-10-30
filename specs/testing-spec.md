@@ -20,11 +20,19 @@ Integration classes also join the shared container:
 public class SomethingTests(MongoFixture fixture);
 ```
 
-**Unit** — pure, in-process, no Docker, no network, no filesystem. Domain rules,
-the Today rule, recurrence derivation, client state folding, bUnit components.
+## What a test asserts
 
-**Integration** — real MongoDB via Testcontainers, real HTTP host. Command
-handlers, transactions, idempotency, Today query, history, sync round trip, auth.
+A test asserts an observable result: a returned value, a decision (events or
+a rejection), a stored document, an HTTP response, a sync delta, or what a
+user sees and can do in the browser. It never asserts a CSS class, a DOM
+shape, a MudBlazor internal, or a call recorded on a fake of one of our own
+ports.
+
+| Tier | Subject | Runs |
+|---|---|---|
+| Unit `[UnitTest]` | Pure rules: domain `Decide` → events or rejection; Today, recurrence, lead time, money values and readings, list view rules, positions; CSV parsing and import planning; client queries and text rules; offline outbox, replica and sync folding; pure client rules extracted from components into `State/` (time parsing, recurrence and due-date text, week and month windows, snapshot expiry); architecture, category, resource and localization guards | in process, no Docker |
+| Integration `[IntegrationTest]` | A command or query through HTTP on `ApiFactory` with Testcontainers Mongo, asserting the response, documents, events and sync deltas: every handler, cascade, projection, reader, sharing and auth flow | Testcontainers |
+| End-to-end | A user's flow in Chromium against the compose stack: pages, layout, components, navigation, panels, localization, offline and live updates; new steps locate by role, label or text | compose stack |
 
 ```bash
 dotnet test --filter Category=Unit
@@ -32,15 +40,32 @@ dotnet test --filter Category=Integration
 dotnet test
 ```
 
-Unit suite must stay under a few seconds. If it needs Docker, it is mislabeled.
+Where a new test goes: a rule with edge cases is a unit test, a server effect
+is an integration test, anything a user sees on a page is an end-to-end step.
+No component is rendered in a unit test: a component's rule worth an edge-case
+table is extracted verbatim into `src/PSPad.App/State/` and tested there.
+TDD is unchanged: the failing test comes first, and for UI work it is an
+end-to-end step. Unit suite must stay under a few seconds. If it needs Docker,
+it is mislabeled.
+
+Stubs in unit tests are allowed only at external boundaries (HTTP to Keycloak
+or NBP, the JS runtime, the clock, connectivity) and only to assert the
+client's resulting behaviour, never the outgoing request's shape.
+
+Integration tests send commands with `PSPad.Api.Tests.Commands.Commands`
+(`SignInAsync`, `TrySendAsync`, `SendAsync`, `SyncedAsync`).
+
+Migration record: `specs/behaviour-tests-design.md`; decision ADR-0080.
 
 **End-to-end** — Playwright in `test/e2e/`, outside the .NET solution, driving
 the real application in Chromium against the compose stack with one Keycloak
-user per test. Whole-scenario journeys only, twenty-two of them, under three
+user per test. Whole-scenario journeys only, thirty-four of them, under five
 minutes. Design, harness and scenario list: `specs/e2e-testing-design.md`.
 `npm test` in that folder runs it; `dotnet test` never sees it. A change to
 what a user can do adds or extends a scenario; a change to markup or copy a
-scenario reads fixes it in the same pull request (design §9).
+scenario reads fixes it in the same pull request (design §9). A CSS fix adds a
+layout assertion to a scenario: bounding boxes at the viewport where the bug
+showed, never pixel snapshots (`specs/behaviour-tests-design.md` §4.4).
 
 ## Testcontainers fixture
 
@@ -135,3 +160,19 @@ integration tests start their own MongoDB. They never touch the compose stack.
 `Abstractions` only), Infrastructure references no module, the two allowed
 module edges (`Statistics` → `Tasks`, `Sharing` → `Tasks`), Presentation
 references `Abstractions` only.
+
+`BehaviourGuard` (ADR-0080), called from a `BehaviourGuardTests` class in every
+test project, scans the test sources and fails on shape assertions (`ClassList`,
+`ClassName`, `.Markup`, `MarkupMatches`, CSS-class selectors in `Find` and
+`QuerySelector`) in all projects, and on `FakeDocumentStore`, `FakeUnitOfWork`
+and `InMemory*Store` in the module and API projects. `PSPad.App.Tests` gets only
+the shape guard, because `InMemoryLocalSessionStore` is a legitimate double at
+the browser-storage boundary.
+
+`EndToEndLocatorGuard` (ADR-0080), called from `EndToEndLocatorGuardTests` in
+`PSPad.App.Tests`, scans `test/e2e/scenarios` and `test/e2e/helpers` and fails
+on a `.pspad-…` or `.mud-…` selector, `toHaveClass` or `classList`: end-to-end
+steps locate by role, label or text. Justified exceptions (MudBlazor internals
+with no accessible handle) are listed with their reason in
+`test/e2e/locator-allowlist.txt`; a stale entry fails the guard
+(`specs/e2e-testing-design.md` §3.3).

@@ -84,7 +84,7 @@
                 {
                     <MudPaper Elevation="1" Class="pa-3 mb-2 pspad-snapshot-task">
                         <div class="d-flex align-center gap-2">
-                            <MudCheckBox T="bool" Value="@task.Marked" Disabled="@_offline"
+                            <MudCheckBox T="bool" Value="@task.Marked" Disabled="@_offline" aria-label="@task.Name"
                                          ValueChanged="@(_ => ToggleTaskAsync(task))" Color="Color.Primary" Dense="true" />
                             <MudText Typo="Typo.body1">@task.Name</MudText>
                             @if (task.Starred)
@@ -119,7 +119,7 @@
                                 }
                                 else
                                 {
-                                    <MudCheckBox T="bool" Value="@step.Marked" Disabled="@_offline"
+                                    <MudCheckBox T="bool" Value="@step.Marked" Disabled="@_offline" aria-label="@step.Name"
                                                  ValueChanged="@(_ => ToggleStepAsync(task, step))" Color="Color.Primary" Dense="true" />
                                     <MudText Typo="Typo.body2">@step.Name</MudText>
                                 }
@@ -152,7 +152,7 @@
                 {
                     <MudPaper Elevation="1" Class="pa-3 mb-2 pspad-snapshot-item">
                         <div class="d-flex align-center gap-2">
-                            <MudCheckBox T="bool" Value="@item.Marked" Disabled="@_offline"
+                            <MudCheckBox T="bool" Value="@item.Marked" Disabled="@_offline" aria-label="@item.Name"
                                          ValueChanged="@(_ => ToggleItemAsync(item))" Color="Color.Primary" Dense="true" />
                             <MudText Typo="Typo.body1">@item.Name</MudText>
                             @if (item.Starred)

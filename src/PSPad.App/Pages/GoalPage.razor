@@ -29,7 +29,8 @@ else if (_goal is not null)
 {
     <PageHeading Title="@_goal.Name" Subtitle="@GoalStatusText.Of(_goal.Status, T)" Icon="@Icons.Material.Outlined.Flag" BackHref="/goals"
                  BackLabel="@T["BackToGoals"]" BackClass="pspad-back-to-goals" />
-    <MudPaper Outlined="true" Elevation="0" Class="pspad-goal-summary-card pa-3 mb-4 d-flex flex-column gap-2">
+    <MudPaper Outlined="true" Elevation="0" Class="pspad-goal-summary-card pa-3 mb-4 d-flex flex-column gap-2"
+              role="region" aria-label="@T["Progress"].Value">
         <div class="d-flex align-center gap-2">
             <MudChip T="string" Class="pspad-goal-status ma-0" Size="Size.Small" Variant="Variant.Outlined"
                      Color="@(_goal.Status == GoalStatus.Achieved ? Color.Success : Color.Default)">@GoalStatusText.Of(_goal.Status, T)</MudChip>
@@ -156,7 +157,7 @@ else
 
     string DueText(DateOnly due)
     {
-        var text = DueDateRow.Describe(due, State.Today, Shared);
+        var text = DueDayText.Describe(due, State.Today, Shared);
         var days = due.DayNumber - State.Today.DayNumber;
 
         return _goal?.Status == GoalStatus.InProgress && days > 0
@@ -244,7 +245,7 @@ else
     {
         if (task.IsRecurring)
         {
-            if (!task.OccursOn(State.Today) && !task.CompletedDays.Contains(State.Today))
+            if (!TaskTick.Toggles(task, State.Today))
             {
                 return;
             }

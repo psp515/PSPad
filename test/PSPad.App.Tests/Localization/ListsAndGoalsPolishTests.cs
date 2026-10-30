@@ -69,6 +69,12 @@ public class ListsAndGoalsPolishTests
         return list;
     }
 
+    [Theory]
+    [InlineData(0, "brak otwartych zadań")]
+    [InlineData(22, "22 otwarte zadania")]
+    public void TheOpenTaskCountAgreesWithTheCountInPolish(int open, string expected) =>
+        InPolish(() => Assert.Equal(expected, OpenTaskCount.Describe(open, TestLocalizers.For<TasksStrings>())));
+
     static void InPolish(Action assertion)
     {
         var before = CultureInfo.CurrentUICulture;

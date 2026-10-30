@@ -32,7 +32,7 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Command pipeline, storage, domain rules, sync, identity, HTTP, containers, statistics | `specs/backend-spec.md` |
 | Client components, layout, pages, theming, navigation | `specs/ui-spec.md` |
 | Adding an aggregate, module boundaries | `specs/modules-spec.md` |
-| Writing or running tests, fixtures, guards | `specs/testing-spec.md` |
+| Writing or running tests, fixtures, guards | `specs/testing-spec.md`; migration `specs/behaviour-tests-design.md`; record `specs/behaviour-tests-ledger.md` |
 | End-to-end scenarios, Playwright harness, e2e CI job | `specs/e2e-testing-design.md` |
 | Sharing, invites, public snapshots | `specs/sharing-spec.md` |
 | Reference lists | `specs/reference-lists-design.md` |
@@ -65,10 +65,10 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 5–6 | LWW conflicts offline, version-checked saves on the server, final rejections dropped, a pull never replaces a newer local copy; delta sync by monotonic `seq`, paged, documents only | 0005, 0006, 0061, 0063, 0067, 0079 |
 | 7 | Recurrence template + occurrences | 0007, 0043, 0053 |
 | 8 | Aggregates: User, Area, TaskList, TodoTask, Goal, Inbox, ReferenceItem; a goal holds its task links | 0008, 0047, 0065 |
-| 9 | Integration tests own a Testcontainers MongoDB 8 replica set | 0009 |
+| 9 | Integration tests own a Testcontainers MongoDB 8 replica set; tests assert behaviour, never shape or wiring | 0009, 0080 |
 | 10 | Events dispatch after commit, replayed from a marker | 0036, 0037 |
 | 11 | Per-user views live in Presentation | 0051 |
-| 12 | Lists and budgets shared by membership | 0054, 0057, 0066 |
+| 12 | Lists and budgets shared by membership; a membership new to the replica is pulled whole | 0054, 0057, 0066, 0081 |
 | 13 | Public snapshots, server-only module | 0056, 0064 |
 | 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount | 0059 |
 | 15 | Containers non-root on exact-version-tagged images; central package versions; Dependabot weekly | 0071 |
@@ -106,11 +106,12 @@ module; `App` never sees `Infrastructure`; `Api` sees all. Only module edges:
   `docs/src/data/features.ts`; a changed screen → `npm run screenshots` in
   `test/e2e`.
 - **TDD.** Failing test first; every test class has `[UnitTest]` or
-  `[IntegrationTest]` (`specs/testing-spec.md`). Never claim green without running.
+  `[IntegrationTest]` (`specs/testing-spec.md`). UI work starts with a failing
+  end-to-end step (`specs/testing-spec.md`). Never claim green without running.
 - **End-to-end ships with the feature.** A new or changed user-facing flow
   adds or extends a scenario in `test/e2e/`; a markup or copy change that a
-  scenario reads fixes that scenario in the same change
-  (`specs/e2e-testing-design.md` §9).
+  scenario reads fixes that scenario in the same change; a CSS fix adds a
+  layout assertion (`specs/e2e-testing-design.md` §9).
 - **No comments in code.** Rename or extract instead; one line only for a
   counter-intuitive *why*. XML docs only on cross-project public API.
 - **One type per file**, filename = type, grouped by operation:
