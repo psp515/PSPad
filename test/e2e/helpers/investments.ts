@@ -52,3 +52,43 @@ export async function openInvestments(page: Page, path = '/investments') {
   await openInApp(page, path);
   await expect(page.getByRole('heading', { name: 'Investments', exact: true })).toBeVisible();
 }
+
+export const tradesAccount = '20000001';
+export const plansAccount = '20000002';
+const dollarAccount = '20000003';
+
+function productRow(type: string, instrument: string | null, ticker: string | null, daysAgo: number, amount: number,
+  id: number, comment: string, positionId: number | null, product: string): Cell[] {
+  const time = excelSerial(addDays(utcToday(), -daysAgo)) + 0.5;
+  return [type, instrument, ticker, instrument ? 'STOCK' : null, time, amount, id, comment, product, positionId];
+}
+
+const trades = 'My Trades';
+const plans = 'Investment Plans';
+const toPlans = `Transfer from ${tradesAccount} to ${plansAccount}`;
+
+export const productStatementRows = {
+  deposit: productRow('Deposit', null, null, 40, 4_000, 910000001, 'Deposit', null, trades),
+  conversion: productRow('Transfer', null, null, 36, -400, 910000002,
+    `Currency conversion, PLN to USD from TA: ${tradesAccount} to: ${dollarAccount}, Exchange rate:0.25`, null, trades),
+  subaccountOut: productRow('Subaccount transfer', null, null, 34, -1_000, 910000003, toPlans, null, trades),
+  subaccountIn: productRow('Subaccount transfer', null, null, 34, 1_000, 910000004, toPlans, null, plans),
+  buyKappa: productRow('Stock purchase', 'Kappa SA', 'KPA.PL', 30, -500, 910000005, 'OPEN BUY KPA.PL 10 @ 50', 810000001, trades),
+  buyZeta: productRow('Stock purchase', 'Zeta SA', 'ZTA.PL', 25, -800, 910000006, 'OPEN BUY ZTA.PL 8 @ 100', 810000002, plans),
+  sellKappa: productRow('Stock sell', 'Kappa SA', 'KPA.PL', 20, 600, 910000007, 'CLOSE BUY KPA.PL 10 @ 60', 810000001, trades),
+};
+
+export function xtbProductStatement(name = `account_${tradesAccount}_en_xlsx.xlsx`) {
+  const cash: Cell[][] = [
+    ['Account number', tradesAccount],
+    ['Cash Operations'],
+    header,
+    ...Object.values(productStatementRows),
+    ['Total', null, null, null, null, 2_900],
+  ];
+  return {
+    name,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: workbook([{ name: 'Cash Operations', rows: cash }]),
+  };
+}
