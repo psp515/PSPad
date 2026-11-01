@@ -12,6 +12,7 @@ public sealed record XtbFile(
         [AccountNumber, .. Rows.Select(AccountNumberOf).Where(number => number != AccountNumber).Distinct(StringComparer.Ordinal)];
 
     public string? ProductOf(string accountNumber) =>
-        Rows.Where(row => AccountNumberOf(row) == accountNumber).Select(row => row.Product).FirstOrDefault(product => product is not null)
-        ?? (accountNumber == AccountNumber ? Product : null);
+        accountNumber == AccountNumber
+            ? Product
+            : Rows.Where(row => AccountNumberOf(row) == accountNumber).Select(row => row.Product).FirstOrDefault(product => product is not null);
 }

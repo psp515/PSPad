@@ -73,17 +73,11 @@ else
                 <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@_running" OnClick="@ChooseAnother">@T["ChooseAnother"]</MudButton>
             </div>
 
-            @if (_preview?.NewAccount is not null)
-            {
-                <ImportNewAccount AccountNumber="@_file.AccountNumber" Name="@_name" NameChanged="@(value => _name = value)"
-                                  Currency="@Currency" CurrencyChanged="@PickCurrencyAsync" />
-            }
-
             @if (_preview is not null)
             {
-                @if (_preview.FileError is not null)
+                @if (_preview.Accounts[0].FileError is { } fileError)
                 {
-                    <MudAlert Severity="Severity.Error" Class="mb-3 pspad-import-file-error">@_preview.FileError</MudAlert>
+                    <MudAlert Severity="Severity.Error" Class="mb-3 pspad-import-file-error">@fileError</MudAlert>
                 }
                 @if (_preview.LimitError is not null)
                 {
@@ -133,7 +127,37 @@ else
 
                 <MudSwitch T="bool" Value="@_errorsOnly" ValueChanged="@(value => _errorsOnly = value)" Color="Color.Primary"
                            Label="@T["ErrorsOnly"]" Class="pspad-import-errors-only" />
-                <ImportRowsTable Rows="@Shown" OnToggle="@Toggle" />
+                @for (var index = 0; index < _preview.Accounts.Count; index++)
+                {
+                    var target = _preview.Accounts[index];
+                    var first = index == 0;
+                    var currencyFixed = !first && (_preview.Accounts[0].Account is not null || _preview.Accounts[0].Rows.Count > 0);
+                    if (target.Rows.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    <div class="pspad-import-section mb-4" @key="target.AccountNumber">
+                        @if (target.NewAccount is { } proposal)
+                        {
+                            <ImportNewAccount AccountNumber="@target.AccountNumber" Name="@NameOf(proposal)"
+                                              NameChanged="@(value => _names[proposal.AccountNumber] = value)"
+                                              Currency="@target.Currency" CurrencyChanged="@PickCurrencyAsync" CurrencyFixed="@currencyFixed" />
+                        }
+                        else if (_preview.Accounts.Count(other => other.Rows.Count > 0) > 1)
+                        {
+                            <MudText Typo="Typo.subtitle1" Class="mb-1 pspad-import-section-title">
+                                @(target.Account is { } account ? T["SectionExisting", account.Name, target.AccountNumber] : T["SectionNew", target.AccountNumber])
+                            </MudText>
+                        }
+                        @if (target.FileError is not null && !first)
+                        {
+                            <MudAlert Severity="Severity.Error" Class="mb-2 pspad-import-file-error">@target.FileError</MudAlert>
+                        }
+                        <MudText Typo="Typo.caption" Class="pspad-muted d-block mb-1">@T["SectionRows", target.Rows.Count]</MudText>
+                        <ImportRowsTable Rows="@Shown(target)" OnToggle="@Toggle" />
+                    </div>
+                }
 
                 @if (_running)
                 {
@@ -143,7 +167,7 @@ else
                 <div class="d-flex justify-end gap-2 mt-3">
                     <MudButton Variant="Variant.Text" Href="@(AccountId is { } id ? $"/investments/{id}" : "/investments")" Disabled="@_running">@T["Cancel"]</MudButton>
                     <MudButton Class="pspad-import-run" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanImport)" OnClick="@ImportAsync">
-                        @T.Plural(Ticked, _preview.NewAccount is not null ? "CreateAndImport" : "ImportOperations")
+                        @T.Plural(Ticked, _preview.NewAccounts.Any() ? "CreateAndImport" : "ImportOperations")
                     </MudButton>
                 </div>
             }
@@ -165,13 +189,13 @@ else
     string? _fileName;
     string? _fileError;
     XtbFile? _file;
-    string _name = "";
+    readonly Dictionary<string, string> _names = new(StringComparer.Ordinal);
+    readonly Dictionary<string, Guid> _newAccountIds = new(StringComparer.Ordinal);
     string? _currency;
     string _defaultCurrency = Currencies.Pln;
     int _version;
     Guid _pickerKey = Guid.NewGuid();
     readonly CancellationTokenSource _disposed = new();
-    Guid _newAccountId = Guid.NewGuid();
     IReadOnlyDictionary<ImportRateKey, (decimal Rate, DateOnly RateDate)> _rates = new Dictionary<ImportRateKey, (decimal, DateOnly)>();
     readonly HashSet<int> _unticked = [];
     readonly HashSet<int> _tickedDeleted = [];
@@ -185,13 +209,11 @@ else
 
     TimeZoneInfo Zone => LocalToday.Zone(State.TimeZone);
 
-    InvestmentAccount? Matching => _file is null ? null : _target ?? _accounts.FirstOrDefault(account => account.BrokerAccountNumber == _file.AccountNumber);
+    string Currency => _currency ?? _defaultCurrency;
 
-    bool NeedsNewAccount => _file is not null && Matching is null;
+    IReadOnlyList<ImportRowPreview> Shown(ImportAccountPreview section) => [.. ImportRowFilter.Visible(section.Rows, _errorsOnly)];
 
-    string? Currency => Matching?.Currency ?? _currency ?? _defaultCurrency;
-
-    IReadOnlyList<ImportRowPreview> Shown => [.. ImportRowFilter.Visible(_preview!.Rows, _errorsOnly)];
+    string NameOf(NewAccountProposal proposal) => _names.GetValueOrDefault(proposal.AccountNumber) ?? proposal.Name;
 
     int Waiting => _preview?.Rows.Count(row => row.Status == ImportRowStatus.WaitingForRate) ?? 0;
 
@@ -205,7 +227,7 @@ else
 
     string RatesMessage => !Connectivity.IsOnline ? T["NoRateConnection"] : _fetching ? T["RatesLoading"] : T["RatesMissing"];
 
-    bool NameValid => _preview?.NewAccount is null || !string.IsNullOrWhiteSpace(_name);
+    bool NameValid => _preview is null || _preview.NewAccounts.All(proposal => !string.IsNullOrWhiteSpace(NameOf(proposal)));
 
     bool CanImport => _preview is { CanImport: true } && NameValid && !_running && !_fetching;
 
@@ -260,7 +282,8 @@ else
         _rates = new Dictionary<ImportRateKey, (decimal, DateOnly)>();
         _unticked.Clear();
         _tickedDeleted.Clear();
-        _newAccountId = Guid.NewGuid();
+        _names.Clear();
+        _newAccountIds.Clear();
     }
 
     protected override void OnParametersSet() =>
@@ -287,13 +310,8 @@ else
             return;
         }
 
-        _name = ProposedName();
         await ReadyToPreviewAsync();
     }
-
-    string ProposedName() => InvestmentImportPreviewer
-        .Preview(_file!, _target, _accounts, _operations, _portfolio, Currencies.Pln, Zone, _rates, _unticked, _tickedDeleted)
-        .NewAccount?.Name ?? "";
 
     async Task PickCurrencyAsync(string? currency)
     {
@@ -311,7 +329,7 @@ else
     async Task FetchRatesAsync()
     {
         var version = ++_version;
-        var needed = InvestmentImportPreviewer.RatesNeeded(_file!, Currency!, Zone);
+        var needed = InvestmentImportPreviewer.RatesNeeded(_preview!);
         _fetching = true;
         StateHasChanged();
         IReadOnlyDictionary<ImportRateKey, (decimal Rate, DateOnly RateDate)> fetched;
@@ -338,7 +356,7 @@ else
     }
 
     void Rebuild() => _preview = InvestmentImportPreviewer.Preview(
-        _file!, _target, _accounts, _operations, _portfolio, Currency!, Zone, _rates, _unticked, _tickedDeleted);
+        _file!, _target, _accounts, _operations, _portfolio, Currency, Zone, _rates, _unticked, _tickedDeleted);
 
     void Toggle(ImportRowPreview row)
     {
@@ -353,8 +371,11 @@ else
 
     async Task ImportAsync()
     {
-        _importedAccountId = _preview!.Account?.Id ?? _newAccountId;
-        var commands = InvestmentImportPlan.Commands(_preview, State.UserId, _newAccountId, _name.Trim(), Currency!, _rates, Guid.NewGuid);
+        var newAccounts = _preview!.NewAccounts.ToDictionary(proposal => proposal.AccountNumber,
+            proposal => new NewAccountChoice(NewAccountIdOf(proposal.AccountNumber), NameOf(proposal).Trim()), StringComparer.Ordinal);
+        var landing = _preview.Accounts.FirstOrDefault(section => section.Rows.Any(row => row.Ticked)) ?? _preview.Accounts[0];
+        _importedAccountId = landing.Account?.Id ?? NewAccountIdOf(landing.AccountNumber);
+        var commands = InvestmentImportPlan.Commands(_preview, State.UserId, newAccounts, _rates, Guid.NewGuid);
         (_running, _done, _total) = (true, 0, commands.Count);
         var progress = new Progress<int>(done =>
         {
@@ -379,6 +400,17 @@ else
         {
             Navigation.NavigateTo(AccountHref);
         }
+    }
+
+    Guid NewAccountIdOf(string number)
+    {
+        if (!_newAccountIds.TryGetValue(number, out var id))
+        {
+            id = Guid.NewGuid();
+            _newAccountIds[number] = id;
+        }
+
+        return id;
     }
 
     async Task ConfirmLeaveAsync(LocationChangingContext context)

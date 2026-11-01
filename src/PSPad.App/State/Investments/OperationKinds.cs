@@ -8,6 +8,8 @@ public static class OperationKinds
 
     public static string Key(OperationKind kind) => $"Kind{kind}";
 
+    public static string TransferKey(TransferType type) => $"TransferType{type}";
+
     public static bool Traded(OperationKind kind) => kind is OperationKind.Buy or OperationKind.Sell;
 
     public static bool HasTicker(OperationKind kind) => Traded(kind) || kind is OperationKind.Dividend or OperationKind.Tax;

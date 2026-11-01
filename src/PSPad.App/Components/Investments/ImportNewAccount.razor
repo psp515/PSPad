@@ -8,7 +8,7 @@
     <div class="d-flex flex-wrap gap-3">
         <MudTextField T="string" Label="@T["AccountName"]" Value="@Name" ValueChanged="@NameChanged" MaxLength="@InvestmentAccount.MaxNameLength"
                       Required="true" Immediate="true" Class="pspad-import-account-name" />
-        <MudSelect T="string" Label="@T["AccountCurrency"]" Value="@Currency" ValueChanged="@CurrencyChanged" Required="true"
+        <MudSelect T="string" Label="@T["AccountCurrency"]" Value="@Currency" ValueChanged="@CurrencyChanged" Required="true" Disabled="@CurrencyFixed"
                    Class="pspad-import-account-currency" Style="max-width: 10rem">
             @foreach (var option in Currencies.All)
             {
@@ -16,7 +16,7 @@
             }
         </MudSelect>
     </div>
-    <MudText Typo="Typo.caption" Class="pspad-muted">@T["CurrencyHint"]</MudText>
+    <MudText Typo="Typo.caption" Class="pspad-muted">@T[CurrencyFixed ? "CurrencyFollowsFile" : "CurrencyHint"]</MudText>
 </MudPaper>
 
 @code {
@@ -29,4 +29,6 @@
     [Parameter] public string? Currency { get; set; }
 
     [Parameter] public EventCallback<string?> CurrencyChanged { get; set; }
+
+    [Parameter] public bool CurrencyFixed { get; set; }
 }

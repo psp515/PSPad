@@ -148,7 +148,7 @@
     <value>Dividend</value>
   </data>
   <data name="KindTax" xml:space="preserve">
-    <value>Withholding tax</value>
+    <value>Tax</value>
   </data>
   <data name="KindInterest" xml:space="preserve">
     <value>Interest</value>
@@ -317,5 +317,23 @@
   </data>
   <data name="YahooSymbol" xml:space="preserve">
     <value>Yahoo symbol</value>
+  </data>
+  <data name="KindTransferIn" xml:space="preserve">
+    <value>Transfer in</value>
+  </data>
+  <data name="KindTransferOut" xml:space="preserve">
+    <value>Transfer out</value>
+  </data>
+  <data name="KindTaxRefund" xml:space="preserve">
+    <value>Tax refund</value>
+  </data>
+  <data name="TransferTypeSubaccount" xml:space="preserve">
+    <value>Subaccount transfer</value>
+  </data>
+  <data name="TransferTypeIke" xml:space="preserve">
+    <value>IKE transfer</value>
+  </data>
+  <data name="TransferTypeCurrencyConversion" xml:space="preserve">
+    <value>Currency conversion</value>
   </data>
 </root>

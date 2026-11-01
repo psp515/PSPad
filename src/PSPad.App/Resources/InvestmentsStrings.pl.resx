@@ -148,7 +148,7 @@
     <value>Dywidenda</value>
   </data>
   <data name="KindTax" xml:space="preserve">
-    <value>Podatek u źródła</value>
+    <value>Podatek</value>
   </data>
   <data name="KindInterest" xml:space="preserve">
     <value>Odsetki</value>
@@ -317,5 +317,23 @@
   </data>
   <data name="YahooSymbol" xml:space="preserve">
     <value>Symbol Yahoo</value>
+  </data>
+  <data name="KindTransferIn" xml:space="preserve">
+    <value>Transfer przychodzący</value>
+  </data>
+  <data name="KindTransferOut" xml:space="preserve">
+    <value>Transfer wychodzący</value>
+  </data>
+  <data name="KindTaxRefund" xml:space="preserve">
+    <value>Zwrot podatku</value>
+  </data>
+  <data name="TransferTypeSubaccount" xml:space="preserve">
+    <value>Transfer między subkontami</value>
+  </data>
+  <data name="TransferTypeIke" xml:space="preserve">
+    <value>Transfer IKE</value>
+  </data>
+  <data name="TransferTypeCurrencyConversion" xml:space="preserve">
+    <value>Przewalutowanie</value>
   </data>
 </root>

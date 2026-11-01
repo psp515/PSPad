@@ -40,7 +40,7 @@ public class InvestmentImportPlanTests
             Commission(8, 900000003, "ACM.PL", 1m),
             Sale(9, 900000004, "ACM.PL", "800000001", 1m, 12m, 12m));
 
-        var commands = Plan(Preview(file), currency: "PLN");
+        var commands = Plan(Preview(file));
 
         var account = new InvestmentAccount();
         var portfolio = new InvestmentPortfolio();
@@ -118,7 +118,7 @@ public class InvestmentImportPlanTests
         };
         var preview = Preview(file, target: AnAccount("USD", number: Number), currency: "USD", rates: rates);
 
-        var record = Assert.Single(Plan(preview, currency: "USD", rates: rates).OfType<RecordInvestmentOperation>());
+        var record = Assert.Single(Plan(preview, rates: rates).OfType<RecordInvestmentOperation>());
 
         Assert.Equal(new MoneyValue(100m, "USD", 3.65m, new DateOnly(2026, 9, 1)), record.Money);
     }

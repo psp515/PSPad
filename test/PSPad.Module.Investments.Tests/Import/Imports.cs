@@ -55,9 +55,32 @@ internal static class Imports
         new Dictionary<ImportRateKey, (decimal Rate, DateOnly RateDate)>();
 
     public static IReadOnlyList<ICommand> Plan(
-        InvestmentImportPreview preview, string name = "IKE 12345678", string currency = "PLN",
-        IReadOnlyDictionary<ImportRateKey, (decimal Rate, DateOnly RateDate)>? rates = null) =>
-        InvestmentImportPlan.Commands(preview, Given.Owner, NewAccountId, name, currency, rates ?? NoRates, Guid.NewGuid);
+        InvestmentImportPreview preview, string name = "IKE 12345678",
+        IReadOnlyDictionary<ImportRateKey, (decimal Rate, DateOnly RateDate)>? rates = null,
+        IReadOnlyDictionary<string, NewAccountChoice>? newAccounts = null) =>
+        InvestmentImportPlan.Commands(preview, Given.Owner,
+            newAccounts ?? new Dictionary<string, NewAccountChoice> { [Number] = new(NewAccountId, name) },
+            rates ?? NoRates, Guid.NewGuid);
+
+    public const string PlansNumber = "87654321";
+
+    public static XtbRow ToPlans(int sheetRow, long id, decimal amount, string product = "IKE") =>
+        new(sheetRow, "Subaccount transfer", XtbRowKind.TransferOut, null, null, Start.AddMinutes(sheetRow), amount, Id(id),
+            $"Transfer from {Number} to {PlansNumber}", product, null, null, null, [], TransferType.Subaccount, PlansNumber);
+
+    public static XtbRow IntoPlans(int sheetRow, long id, decimal amount) =>
+        new(sheetRow, "Subaccount transfer", XtbRowKind.TransferIn, null, null, Start.AddMinutes(sheetRow), amount, Id(id),
+            $"Transfer from {Number} to {PlansNumber}", "Investment Plans", null, null, null, [], TransferType.Subaccount, Number);
+
+    public static XtbRow InPlans(XtbRow row) => row with { Product = "Investment Plans" };
+
+    public static XtbFile SplitFileWith(params XtbRow[] rows) =>
+        FileWith(rows) with { ProductNumbers = new Dictionary<string, string> { ["IKE"] = Number, ["Investment Plans"] = PlansNumber } };
+
+    public static XtbRow Conversion(
+        int sheetRow, long id, XtbRowKind kind, decimal amount, decimal counterAmount, string counterCurrency) =>
+        new(sheetRow, "Transfer", kind, null, null, Start.AddMinutes(sheetRow), amount, Id(id), "Currency conversion",
+            "IKE", null, null, null, [], TransferType.CurrencyConversion, "55553333", counterAmount, counterCurrency);
 
     public static InvestmentAccount Counted(InvestmentAccount account, int operations)
     {

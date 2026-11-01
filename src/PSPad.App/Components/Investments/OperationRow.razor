@@ -36,6 +36,8 @@
     string Sub => string.Join(" · ", new[]
     {
         Operation is { Quantity: { } quantity, Price: { } price } ? $"{InvestmentText.Quantity(quantity)} @ {InvestmentText.Price(price)}" : null,
+        Operation.TransferType is { } transfer ? T[OperationKinds.TransferKey(transfer)].Value : null,
+        Operation.CounterpartyAccountNumber,
         Operation.Note,
         AccountName,
         Operation.Source == OperationSource.Xtb ? T["Imported"].Value : null,

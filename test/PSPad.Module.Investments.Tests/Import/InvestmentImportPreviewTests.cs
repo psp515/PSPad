@@ -209,7 +209,7 @@ public class InvestmentImportPreviewTests
             Deposit(8, 100m, 900000003, at: new DateTimeOffset(2026, 9, 2, 6, 0, 0, TimeSpan.Zero)),
             Broken(9, "Stock split", "Unknown type 'Stock split'."));
 
-        var needed = InvestmentImportPreviewer.RatesNeeded(file, "USD", Warsaw);
+        var needed = InvestmentImportPreviewer.RatesNeeded(Preview(file, currency: "USD"));
 
         Assert.Equal(
             [new ImportRateKey("USD", new DateOnly(2026, 9, 1)), new ImportRateKey("USD", new DateOnly(2026, 9, 2))],
@@ -219,7 +219,7 @@ public class InvestmentImportPreviewTests
     [Fact]
     public void APlnAccountNeedsNoRates()
     {
-        Assert.Empty(InvestmentImportPreviewer.RatesNeeded(FileWith(Deposit(6, 100m, 900000001)), "PLN", Warsaw));
+        Assert.Empty(InvestmentImportPreviewer.RatesNeeded(Preview(FileWith(Deposit(6, 100m, 900000001)))));
     }
 
     [Fact]

@@ -219,4 +219,34 @@
   <data name="Leave" xml:space="preserve">
     <value>Leave</value>
   </data>
+  <data name="KindTransferIn" xml:space="preserve">
+    <value>Transfer in</value>
+  </data>
+  <data name="KindTransferOut" xml:space="preserve">
+    <value>Transfer out</value>
+  </data>
+  <data name="KindTaxRefund" xml:space="preserve">
+    <value>Tax refund</value>
+  </data>
+  <data name="TransferTypeSubaccount" xml:space="preserve">
+    <value>Subaccount transfer</value>
+  </data>
+  <data name="TransferTypeIke" xml:space="preserve">
+    <value>IKE transfer</value>
+  </data>
+  <data name="TransferTypeCurrencyConversion" xml:space="preserve">
+    <value>Currency conversion</value>
+  </data>
+  <data name="SectionExisting" xml:space="preserve">
+    <value>Into {0} · {1}</value>
+  </data>
+  <data name="SectionNew" xml:space="preserve">
+    <value>New account · {0}</value>
+  </data>
+  <data name="SectionRows" xml:space="preserve">
+    <value>Rows: {0}</value>
+  </data>
+  <data name="CurrencyFollowsFile" xml:space="preserve">
+    <value>This account takes the currency of the file's account.</value>
+  </data>
 </root>

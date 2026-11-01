@@ -8,7 +8,9 @@ public static class OpenPositionCheck
     public static IReadOnlyList<OpenPositionDifference> Differences(
         IReadOnlyList<XtbOpenPosition> positions, IEnumerable<InvestmentOperation> operations)
     {
-        var open = Lots.Of(operations).Open.GroupBy(lot => lot.Key, StringComparer.Ordinal)
+        var open = operations.GroupBy(operation => operation.AccountId)
+            .SelectMany(account => Lots.Of(account).Open)
+            .GroupBy(lot => lot.Key, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => (group.First().Ticker, Volume: group.Sum(lot => lot.Quantity)),
                 StringComparer.Ordinal);
         var inFile = positions.GroupBy(position => position.PositionId, StringComparer.Ordinal)

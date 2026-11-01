@@ -41,8 +41,10 @@ public static class XtbParser
                 throw new XtbFileError("This file has more than 20,000 rows. Export a shorter period.");
             rows.Add(ParseRow(i + 1, type, cells, columns));
         }
-        var product = rows.Select(r => r.Product).FirstOrDefault(p => p is not null);
-        return new XtbFile(account, product, rows, FindOpenPositions(book, sheet)) { ProductNumbers = ProductNumbersOf(rows) };
+        var productNumbers = ProductNumbersOf(rows);
+        var product = rows.Select(r => r.Product)
+            .FirstOrDefault(p => p is not null && productNumbers.GetValueOrDefault(p, account) == account);
+        return new XtbFile(account, product, rows, FindOpenPositions(book, sheet)) { ProductNumbers = productNumbers };
     }
 
     static Dictionary<string, string> ProductNumbersOf(IEnumerable<XtbRow> rows)
