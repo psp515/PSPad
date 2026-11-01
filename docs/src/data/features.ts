@@ -43,7 +43,7 @@ export const features: Feature[] = [
     how: 'Every amount keeps the rate to PLN it was entered at, so history never shifts. Categories grow as you type. Charts cover any range.' },
   { id: 'investments', title: 'Investments',
     does: 'Brokerage accounts, positions and profit, per account and in PLN.',
-    how: 'Import an XTB export; a preview lists every wrong row before anything is saved. A price chart marks your buys and sells. Copy an account into a budget’s balance on a day you choose.' },
+    how: 'Import an XTB export; a preview lists every wrong row before anything is saved. A price chart marks your buys and sells. Currency accounts count the PLN you actually paid for the currency, and transfers between your own accounts are not counted twice. Copy an account into a budget’s balance on a day you choose.' },
   { id: 'import', title: 'Spreadsheet import',
     does: 'Bring a budget’s history in from two CSV files.',
     how: 'Comma or semicolon, Polish characters included. A preview shows every row before anything is saved.' },

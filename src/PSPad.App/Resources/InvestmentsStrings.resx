@@ -336,4 +336,40 @@
   <data name="TransferTypeCurrencyConversion" xml:space="preserve">
     <value>Currency conversion</value>
   </data>
+  <data name="PutIn" xml:space="preserve">
+    <value>Put in</value>
+  </data>
+  <data name="TakenOut" xml:space="preserve">
+    <value>Taken out</value>
+  </data>
+  <data name="RealizedResult" xml:space="preserve">
+    <value>Realized result</value>
+  </data>
+  <data name="DividendsNet" xml:space="preserve">
+    <value>Dividends net</value>
+  </data>
+  <data name="AverageRate" xml:space="preserve">
+    <value>Average rate</value>
+  </data>
+  <data name="AverageRateValue" xml:space="preserve">
+    <value>1 {0} = {1} PLN</value>
+  </data>
+  <data name="PlnSpent" xml:space="preserve">
+    <value>PLN spent on {0}</value>
+  </data>
+  <data name="TransferType" xml:space="preserve">
+    <value>Transfer type</value>
+  </data>
+  <data name="CounterpartyAccount" xml:space="preserve">
+    <value>Counterparty account number</value>
+  </data>
+  <data name="CounterAmount" xml:space="preserve">
+    <value>Other side amount</value>
+  </data>
+  <data name="CounterCurrency" xml:space="preserve">
+    <value>Other side currency</value>
+  </data>
+  <data name="CounterHint" xml:space="preserve">
+    <value>What the conversion gave or took on the other account</value>
+  </data>
 </root>

@@ -1,16 +1,10 @@
-@using PSPad.App.State
 @using PSPad.App.State.Investments
 @inject IStringLocalizer<InvestmentsStrings> T
 
 <div class="pspad-investment-stats">
-    @Tile("pspad-investment-gains", T["RealizedGains"], Figures.Gains)
-    @Tile("pspad-investment-losses", T["RealizedLosses"], Figures.Losses)
-    @Tile("pspad-investment-unrealized", T["Unrealized"], Figures.Unrealized)
-    @Tile("pspad-investment-passive", T["PassiveIncome"], Figures.Passive)
-    @Tile("pspad-investment-fees", T["Fees"], -Figures.Fees)
-    @if (AccountId is null)
+    @foreach (var tile in Tiles)
     {
-        @Tile("pspad-investment-currency", T["CurrencyDifference"], Overview.Portfolio.CurrencyDifferencePln)
+        <MoneyTile @key="tile.Class" Class="@tile.Class" Label="@tile.Label" Text="@tile.Text" Negative="@tile.Negative" />
     }
 </div>
 
@@ -19,14 +13,8 @@
 
     [Parameter] public Guid? AccountId { get; set; }
 
-    string Currency => AccountId is { } id ? Overview.Account(id)?.Currency ?? "PLN" : "PLN";
-
-    (decimal Gains, decimal Losses, decimal Unrealized, decimal Passive, decimal Fees) Figures =>
+    IReadOnlyList<StatTile> Tiles =>
         AccountId is { } id && Overview.Figures.TryGetValue(id, out var account)
-            ? (account.RealizedGains, account.RealizedLosses, account.Unrealized, account.PassiveIncome, account.Fees)
-            : (Overview.Portfolio.RealizedGainsPln, Overview.Portfolio.RealizedLossesPln, Overview.Portfolio.UnrealizedPln,
-                Overview.Portfolio.PassiveIncomePln, Overview.Portfolio.FeesPln);
-
-    RenderFragment Tile(string css, string label, decimal amount) =>
-        @<MoneyTile Class="@css" Label="@label" Text="@InvestmentText.Signed(amount, Currency)" Negative="@(amount < 0)" />;
+            ? InvestmentStatTiles.For(account, T)
+            : InvestmentStatTiles.For(Overview.Portfolio, T);
 }

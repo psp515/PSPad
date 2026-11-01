@@ -42,6 +42,38 @@
                 <MudTimePicker Class="pspad-operation-time-field" Label="@T["Time"]" Variant="Variant.Outlined" Margin="Margin.Dense"
                                AmPm="false" Time="@_time" TimeChanged="@(time => _time = time)" Disabled="@ReadOnly" />
             </div>
+            @if (TransferForm.IsTransfer(_kind))
+            {
+                <MudSelect T="TransferType?" Class="pspad-operation-transfer-type-field" Label="@T["TransferType"]" Variant="Variant.Outlined"
+                           Margin="Margin.Dense" Required="true" Value="@_transfer.Type"
+                           ValueChanged="@(type => _transfer = _transfer with { Type = type })" Disabled="@ReadOnly">
+                    @foreach (var type in Enum.GetValues<TransferType>())
+                    {
+                        <MudSelectItem T="TransferType?" Value="@type">@T[OperationKinds.TransferKey(type)]</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudTextField T="string" Class="pspad-operation-counterparty-field" Label="@T["CounterpartyAccount"]" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" MaxLength="@InvestmentOperation.MaxCounterpartyAccountNumberLength"
+                              Value="@_transfer.Counterparty" ValueChanged="@(number => _transfer = _transfer with { Counterparty = number })"
+                              Disabled="@ReadOnly" />
+                @if (_account is not null && _transfer.HasCounter(_kind))
+                {
+                    <div class="d-flex gap-3">
+                        <MudNumericField T="decimal?" Class="pspad-operation-counter-amount-field flex-grow-1" Label="@T["CounterAmount"]"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" HideSpinButtons="true"
+                                         Max="@MoneyValue.MaxAmount" HelperText="@T["CounterHint"]" Value="@_transfer.CounterAmount"
+                                         ValueChanged="@(amount => _transfer = _transfer with { CounterAmount = amount })" Disabled="@ReadOnly" />
+                        <MudSelect T="string" Class="pspad-operation-counter-currency-field" Label="@T["CounterCurrency"]" Variant="Variant.Outlined"
+                                   Margin="Margin.Dense" Value="@_transfer.CounterCurrency"
+                                   ValueChanged="@(currency => _transfer = _transfer with { CounterCurrency = currency })" Disabled="@ReadOnly">
+                            @foreach (var currency in TransferForm.CounterCurrencies(_account.Currency))
+                            {
+                                <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </div>
+                }
+            }
             @if (OperationKinds.HasTicker(_kind))
             {
                 <MudAutocomplete T="string" Class="pspad-operation-ticker-field" Label="@T["Ticker"]" Variant="Variant.Outlined"
@@ -119,6 +151,7 @@
     decimal? _rate;
     DateOnly? _rateDate;
     string? _note;
+    TransferForm _transfer = TransferForm.Empty(Currencies.Pln);
     bool _saving;
 
     bool Open => IsNew ? _open.Count > 0 : _operation is not null && _account is not null;
@@ -137,7 +170,8 @@
 
     bool CanSave => !ReadOnly && _account is not null && _date is not null && _time is not null
         && _amount.GetValueOrDefault() > 0 && Rate > 0
-        && (!OperationKinds.HasTicker(_kind) || _ticker.Length > 0)
+        && (!OperationKinds.NeedsTicker(_kind) || _ticker.Length > 0)
+        && _transfer.Complete(_kind, _account.Currency)
         && (!OperationKinds.Traded(_kind) || (_quantity.GetValueOrDefault() > 0 && _price.GetValueOrDefault() > 0));
 
     EventCallback SaveCallback => ReadOnly ? default : EventCallback.Factory.Create(this, SaveAsync);
@@ -199,6 +233,7 @@
         _rate = operation.Money.RateToPln;
         _rateDate = operation.Money.RateDate;
         _note = operation.Note;
+        _transfer = TransferForm.Of(operation);
     }
 
     async Task StartNewAsync()
@@ -213,12 +248,18 @@
         _price = null;
         _amount = null;
         _note = null;
+        _transfer = TransferForm.Empty(_account?.Currency ?? Currencies.Pln);
         await SuggestRateAsync();
     }
 
     async Task AccountChanged(Guid accountId)
     {
         _account = _open.FirstOrDefault(account => account.Id == accountId);
+        if (_account is not null && (_transfer.CounterCurrency is null || _transfer.CounterCurrency == _account.Currency))
+        {
+            _transfer = _transfer with { CounterCurrency = TransferForm.Empty(_account.Currency).CounterCurrency };
+        }
+
         await SuggestRateAsync();
     }
 
@@ -280,10 +321,11 @@
         var money = new MoneyValue(_amount.GetValueOrDefault(), _account.Currency, Rate, IsPln ? Day!.Value : _rateDate ?? Day!.Value);
         var hasTicker = OperationKinds.HasTicker(_kind);
         var traded = OperationKinds.Traded(_kind);
-        var ticker = hasTicker ? _ticker : null;
+        var ticker = hasTicker && _ticker.Length > 0 ? _ticker : null;
         var quantity = traded ? _quantity : null;
         var price = traded ? _price : null;
         var note = string.IsNullOrWhiteSpace(_note) ? null : _note.Trim();
+        var (transferType, counterparty, counter) = _transfer.Fields(_kind, money, Day!.Value);
 
         _saving = true;
         try
@@ -296,9 +338,9 @@
 
             var result = _operation is not null
                 ? await Sender.SendAsync(new EditInvestmentOperation(Guid.NewGuid(), State.UserId, _operation.Id, _kind, at, ticker,
-                    quantity, price, money, _operation.PositionId, note))
+                    quantity, price, money, _operation.PositionId, note, transferType, counterparty, counter))
                 : await Sender.SendAsync(new RecordInvestmentOperation(Guid.NewGuid(), State.UserId, Guid.NewGuid(), _account.Id, _kind,
-                    at, ticker, quantity, price, money, null, OperationSource.Manual, null, note));
+                    at, ticker, quantity, price, money, null, OperationSource.Manual, null, note, transferType, counterparty, counter));
             if (!Accepted(result))
             {
                 return;

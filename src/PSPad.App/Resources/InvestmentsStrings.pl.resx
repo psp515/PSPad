@@ -336,4 +336,40 @@
   <data name="TransferTypeCurrencyConversion" xml:space="preserve">
     <value>Przewalutowanie</value>
   </data>
+  <data name="PutIn" xml:space="preserve">
+    <value>Wpłacono</value>
+  </data>
+  <data name="TakenOut" xml:space="preserve">
+    <value>Wypłacono</value>
+  </data>
+  <data name="RealizedResult" xml:space="preserve">
+    <value>Zrealizowany wynik</value>
+  </data>
+  <data name="DividendsNet" xml:space="preserve">
+    <value>Dywidendy netto</value>
+  </data>
+  <data name="AverageRate" xml:space="preserve">
+    <value>Średni kurs</value>
+  </data>
+  <data name="AverageRateValue" xml:space="preserve">
+    <value>1 {0} = {1} PLN</value>
+  </data>
+  <data name="PlnSpent" xml:space="preserve">
+    <value>PLN wydane na {0}</value>
+  </data>
+  <data name="TransferType" xml:space="preserve">
+    <value>Rodzaj transferu</value>
+  </data>
+  <data name="CounterpartyAccount" xml:space="preserve">
+    <value>Numer konta drugiej strony</value>
+  </data>
+  <data name="CounterAmount" xml:space="preserve">
+    <value>Kwota drugiej strony</value>
+  </data>
+  <data name="CounterCurrency" xml:space="preserve">
+    <value>Waluta drugiej strony</value>
+  </data>
+  <data name="CounterHint" xml:space="preserve">
+    <value>Ile przewalutowanie dało lub zabrało na drugim koncie</value>
+  </data>
 </root>

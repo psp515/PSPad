@@ -45,10 +45,6 @@ internal static class ImportCommands
             return null;
         }
 
-        var amount = row.CounterAmount.Value;
-        var rate = currency == Currencies.Pln
-            ? 1m
-            : Math.Round(money.Amount * money.RateToPln / amount, 6, MidpointRounding.AwayFromZero);
-        return new MoneyValue(amount, currency, rate, day);
+        return ConversionCounter.Of(money, row.CounterAmount.Value, currency, day);
     }
 }
