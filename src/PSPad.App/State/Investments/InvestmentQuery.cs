@@ -125,9 +125,13 @@ public sealed class InvestmentQuery(IReplica replica, IInvestmentQuotes quotes)
                 account => ValueOverTime.For(account, [.. byAccount[account.Id]], prices, fx, from, today, zone))
             : new Dictionary<Guid, IReadOnlyList<ValuePoint>>();
         var portfolio = PortfolioFigures.For(
-            [.. open.Select(account => (figures[account.Id], (IReadOnlyList<InvestmentOperation>)[.. byAccount[account.Id]]))],
+            [.. open.Select(account => (account, figures[account.Id], (IReadOnlyList<InvestmentOperation>)[.. byAccount[account.Id]]))],
             fx, today);
-        IReadOnlyList<ValuePoint> inPln = withHistory ? ValueOverTime.InPln([.. open.Select(account => (account, values[account.Id]))], fx) : [];
+        IReadOnlyList<ValuePoint> inPln = withHistory
+            ? ValueOverTime.InPln(
+                [.. open.Select(account => (account, (IReadOnlyList<InvestmentOperation>)[.. byAccount[account.Id]], values[account.Id]))],
+                fx, zone)
+            : [];
 
         return new InvestmentOverview(today, from, zone, accounts, operations, instruments, prices, fx, figures, values, portfolio, inPln);
     }

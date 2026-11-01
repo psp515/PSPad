@@ -1,3 +1,4 @@
+using PSPad.Module.Investments.Operations;
 using PSPad.Module.Investments.Reading;
 using PSPad.TestInfrastructure;
 using static PSPad.Module.Investments.Tests.Given;
@@ -176,5 +177,104 @@ public class AccountFiguresTests
         var position = Assert.Single(figures.Positions);
         Assert.Equal(1200m, position.Value);
         Assert.Equal(PositionWarning.NoPrice, position.Warning);
+    }
+
+    [Fact]
+    public void TransfersArePutInAndTakenOutButNeverProfit()
+    {
+        var account = AnAccount();
+        var operations = new[] {
+            Deposit(account, 1000m, Day(1)),
+            TransferIn(account, TransferType.Subaccount, 500m, Day(2), counterparty: "70001"),
+            Withdrawal(account, 100m, Day(3)),
+            TransferOut(account, TransferType.Ike, 200m, Day(4)),
+            Buy(account, "DEF.PL", position: "A", quantity: 10m, price: 20m, amount: 200m, Day(5)),
+        };
+
+        var figures = AccountFigures.For(account, operations, Prices(("DEF.PL", "PLN", (Day(6), 23m))), PlnOnly, Day(6));
+
+        Assert.Equal(1500m, figures.PutIn);
+        Assert.Equal(300m, figures.TakenOut);
+        Assert.Equal(1200m, figures.NetDeposits);
+        Assert.Equal(1230m, figures.Value);
+        Assert.Equal(30m, figures.TotalProfit);
+        IdentityHolds(figures);
+    }
+
+    [Fact]
+    public void DividendsNetTakeOffDividendTaxAndAddRefundsWhileInterestTaxStaysInPassiveIncome()
+    {
+        var account = AnAccount();
+        var operations = new[] {
+            Deposit(account, 1000m, Day(1)),
+            Dividend(account, "ABC.US", 100m, Day(2)),
+            Tax(account, "ABC.US", 15m, Day(2)),
+            TaxRefund(account, "ABC.US", 5m, Day(3)),
+            Interest(account, 10m, Day(4)),
+            TaxNamingNoTicker(account, 2m, Day(4)),
+        };
+
+        var figures = AccountFigures.For(account, operations, Prices(), PlnOnly, Day(6));
+
+        Assert.Equal(90m, figures.DividendsNet);
+        Assert.Equal(98m, figures.PassiveIncome);
+        Assert.Equal(98m, figures.TotalProfit);
+        IdentityHolds(figures);
+    }
+
+    [Fact]
+    public void TheRealizedResultNetsGainsAndLosses()
+    {
+        var account = AnAccount();
+        var operations = new[] {
+            Buy(account, "JKL.PL", position: "B", quantity: 3m, price: 120m, amount: 360m, Day(3)),
+            Sell(account, "JKL.PL", position: "B", quantity: 3m, price: 140m, amount: 420m, Day(10)),
+            Buy(account, "MNO.PL", position: "C", quantity: 1m, price: 400m, amount: 400m, Day(4)),
+            Sell(account, "MNO.PL", position: "C", quantity: 1m, price: 350m, amount: 350m, Day(11)),
+        };
+
+        var figures = AccountFigures.For(account, operations, Prices(), PlnOnly, Day(12));
+
+        Assert.Equal(60m, figures.RealizedGains);
+        Assert.Equal(-50m, figures.RealizedLosses);
+        Assert.Equal(10m, figures.RealizedResult);
+        IdentityHolds(figures);
+    }
+
+    [Fact]
+    public void ACurrencyAccountShowsTheAverageRatePaidAndThePlnStillSpentOnIt()
+    {
+        var account = AnAccount("USD");
+        var operations = new[] {
+            TransferIn(account, TransferType.CurrencyConversion, 100m, Day(1), counter: Pln(400m, Day(1)), rate: 3.9m),
+            TransferIn(account, TransferType.CurrencyConversion, 100m, Day(2), counter: Pln(380m, Day(2)), rate: 3.9m),
+            TransferOut(account, TransferType.CurrencyConversion, 50m, Day(3), counter: Pln(200m, Day(3)), rate: 3.9m),
+            Dividend(account, "ABC.US", 10m, Day(4), rate: 3.9m),
+            TaxRefund(account, "ABC.US", 1m, Day(5), rate: 3.9m),
+        };
+
+        var figures = AccountFigures.For(account, operations, Prices(), PlnOnly, Day(6));
+
+        Assert.Equal(3.9m, figures.AverageRate);
+        Assert.Equal(585m, figures.PlnSpent);
+        Assert.Equal(200m, figures.PutIn);
+        Assert.Equal(50m, figures.TakenOut);
+        Assert.Equal(11m, figures.DividendsNet);
+        IdentityHolds(figures);
+    }
+
+    [Fact]
+    public void APlnAccountOrOneNeverFundedByAConversionHasNoAverageRate()
+    {
+        var pln = AnAccount();
+        var usd = AnAccount("USD");
+
+        var plnFigures = AccountFigures.For(pln, [Deposit(pln, 100m, Day(1))], Prices(), PlnOnly, Day(2));
+        var usdFigures = AccountFigures.For(usd, [Deposit(usd, 100m, Day(1), rate: 3.9m)], Prices(), PlnOnly, Day(2));
+
+        Assert.Null(plnFigures.AverageRate);
+        Assert.Null(plnFigures.PlnSpent);
+        Assert.Null(usdFigures.AverageRate);
+        Assert.Null(usdFigures.PlnSpent);
     }
 }

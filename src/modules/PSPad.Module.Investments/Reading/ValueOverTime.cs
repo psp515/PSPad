@@ -25,12 +25,7 @@ public static class ValueOverTime
                 var operation = live[next];
                 book.Apply(operation);
                 cash += operation.SignedAmount;
-                netDeposits += operation.Kind switch
-                {
-                    OperationKind.Deposit => operation.Money.Amount,
-                    OperationKind.Withdrawal => -operation.Money.Amount,
-                    _ => 0m
-                };
+                netDeposits += CashFlows.NetDepositOf(operation, operation.Money.Amount);
             }
 
             var positions = Valuation.Positions(account.Id, account.Currency, book.Open, book.Oversold, pricesByTicker, fx, day);
@@ -41,20 +36,35 @@ public static class ValueOverTime
     }
 
     public static IReadOnlyList<ValuePoint> InPln(
-        IReadOnlyList<(InvestmentAccount Account, IReadOnlyList<ValuePoint> Points)> accounts, FxBook fx) =>
-        accounts.SelectMany(account => account.Points.Select(point => (account.Account.Currency, Point: point)))
+        IReadOnlyList<(InvestmentAccount Account, IReadOnlyList<InvestmentOperation> Operations, IReadOnlyList<ValuePoint> Points)> accounts,
+        FxBook fx, TimeZoneInfo zone)
+    {
+        var live = accounts.Select(entry => (entry.Account, Live: LiveOperations.Of(entry.Operations))).ToList();
+        var internalIds = InternalTransfers.Among(live);
+        var flowsByAccount = live.ToDictionary(entry => entry.Account.Id, entry =>
+        {
+            var cost = FxCost.Of(entry.Account.Currency, entry.Live);
+            return entry.Live.Where(operation => !internalIds.Contains(operation.Id))
+                .Select(operation => (Day: LiveOperations.DayOf(operation, zone),
+                    Pln: CashFlows.NetDepositOf(operation, cost.PlnOf(operation))))
+                .Where(flow => flow.Pln != 0)
+                .ToList();
+        });
+
+        return accounts.SelectMany(entry => entry.Points.Select(point => (entry.Account, Point: point)))
             .GroupBy(entry => entry.Point.Day)
             .OrderBy(day => day.Key)
             .Select(day =>
             {
-                var priced = day.Select(entry => (entry.Point, Rate: fx.ToPln(entry.Currency, day.Key)))
+                var priced = day.Select(entry => (entry.Account, entry.Point, Rate: fx.ToPln(entry.Account.Currency, day.Key)))
                     .Where(entry => entry.Rate is not null)
                     .ToList();
                 return new ValuePoint(day.Key,
                     priced.Sum(entry => Valuation.Money(entry.Point.Value * entry.Rate!.Value)),
-                    priced.Sum(entry => Valuation.Money(entry.Point.NetDeposits * entry.Rate!.Value)));
+                    priced.Sum(entry => flowsByAccount[entry.Account.Id].Where(flow => flow.Day <= day.Key).Sum(flow => flow.Pln)));
             })
             .ToList();
+    }
 
     static IEnumerable<DateOnly> Days(DateOnly from, DateOnly to)
     {

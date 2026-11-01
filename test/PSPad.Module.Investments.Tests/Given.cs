@@ -125,11 +125,37 @@ internal static class Given
     public static InvestmentOperation Tax(InvestmentAccount account, string ticker, decimal amount, DateOnly day, decimal rate = 4m) =>
         Operation(account, OperationKind.Tax, day, ticker, null, null, amount, null, rate);
 
+    public static InvestmentOperation TaxNamingNoTicker(InvestmentAccount account, decimal amount, DateOnly day, decimal rate = 4m) =>
+        Operation(account, OperationKind.Tax, day, null, null, null, amount, null, rate);
+
     public static InvestmentOperation Interest(InvestmentAccount account, decimal amount, DateOnly day, decimal rate = 4m) =>
         Operation(account, OperationKind.Interest, day, null, null, null, amount, null, rate);
 
     public static InvestmentOperation Fee(InvestmentAccount account, decimal amount, DateOnly day, decimal rate = 4m) =>
         Operation(account, OperationKind.Fee, day, null, null, null, amount, null, rate);
+
+    public static InvestmentOperation TaxRefund(
+        InvestmentAccount account, string? ticker, decimal amount, DateOnly day, decimal rate = 4m) =>
+        Operation(account, OperationKind.TaxRefund, day, ticker, null, null, amount, null, rate);
+
+    public static InvestmentOperation TransferIn(
+        InvestmentAccount account, TransferType type, decimal amount, DateOnly day, string? counterparty = null,
+        MoneyValue? counter = null, decimal rate = 4m) =>
+        Transfer(account, OperationKind.TransferIn, type, amount, At(day), counterparty, counter, rate);
+
+    public static InvestmentOperation TransferOut(
+        InvestmentAccount account, TransferType type, decimal amount, DateOnly day, string? counterparty = null,
+        MoneyValue? counter = null, decimal rate = 4m) =>
+        Transfer(account, OperationKind.TransferOut, type, amount, At(day), counterparty, counter, rate);
+
+    public static InvestmentOperation TransferAt(
+        InvestmentAccount account, OperationKind kind, TransferType type, decimal amount, DateTimeOffset at,
+        string? counterparty = null) =>
+        Transfer(account, kind, type, amount, at, counterparty, null, 4m);
+
+    public static MoneyValue Pln(decimal amount, DateOnly day) => new(amount, "PLN", 1m, day);
+
+    public static MoneyValue Foreign(decimal amount, string currency, decimal rate, DateOnly day) => new(amount, currency, rate, day);
 
     public static InvestmentOperation DepositAt(InvestmentAccount account, decimal amount, DateTimeOffset at) =>
         Operation(account, OperationKind.Deposit, at, null, null, null, amount, null, 4m);
@@ -138,24 +164,31 @@ internal static class Given
         InvestmentAccount account, string ticker, decimal quantity, decimal price, DateTimeOffset at) =>
         Operation(account, OperationKind.Buy, at, ticker, quantity, price, quantity * price, "A", 4m);
 
+    static DateTimeOffset At(DateOnly day) =>
+        new DateTimeOffset(day.ToDateTime(new TimeOnly(10, 0)), TimeSpan.Zero)
+            .AddSeconds(Interlocked.Increment(ref recordedSeconds) % 3600);
+
     static InvestmentOperation Operation(
         InvestmentAccount account, OperationKind kind, DateOnly day, string? ticker, decimal? quantity, decimal? price,
         decimal amount, string? position, decimal rate) =>
-        Operation(account, kind,
-            new DateTimeOffset(day.ToDateTime(new TimeOnly(10, 0)), TimeSpan.Zero)
-                .AddSeconds(Interlocked.Increment(ref recordedSeconds) % 3600),
-            ticker, quantity, price, amount, position, rate);
+        Operation(account, kind, At(day), ticker, quantity, price, amount, position, rate);
+
+    static InvestmentOperation Transfer(
+        InvestmentAccount account, OperationKind kind, TransferType type, decimal amount, DateTimeOffset at,
+        string? counterparty, MoneyValue? counter, decimal rate) =>
+        Operation(account, kind, at, null, null, null, amount, null, rate, type, counterparty, counter);
 
     static InvestmentOperation Operation(
         InvestmentAccount account, OperationKind kind, DateTimeOffset at, string? ticker, decimal? quantity, decimal? price,
-        decimal amount, string? position, decimal rate)
+        decimal amount, string? position, decimal rate, TransferType? type = null, string? counterparty = null,
+        MoneyValue? counter = null)
     {
         var day = DateOnly.FromDateTime(at.UtcDateTime);
         var money = new MoneyValue(amount, account.Currency, account.Currency == "PLN" ? 1m : rate, day);
         var operation = new InvestmentOperation();
         operation.ApplyAll(InvestmentOperation.Decide(null, account,
             new RecordInvestmentOperation(Guid.NewGuid(), Owner, Guid.NewGuid(), account.Id, kind, at, ticker, quantity,
-                price, money, position, OperationSource.Manual, null, null), Now));
+                price, money, position, OperationSource.Manual, null, null, type, counterparty, counter), Now));
         return operation;
     }
 

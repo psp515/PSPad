@@ -486,8 +486,10 @@ and are divided by 100 first.
   converted with the NBP rates on or before that day, and the net deposits
   that day.
 - Before an instrument's first close, its lots count at cost.
-- Range chips: 3M, 1Y, All. "All accounts" sums the accounts in PLN at each
-  day's rate.
+- Range chips: 3M, 1Y, All. "All accounts" sums the accounts' values in PLN
+  at each day's rate; its net deposits line adds each flow's PLN value
+  (§5.3) up to that day, internal transfers left out, so the last point
+  matches the PLN totals.
 
 ### 5.6 Value on a day
 
