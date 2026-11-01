@@ -39,8 +39,9 @@ public static class XtbParser
                 continue;
             if (rows.Count == MaxRows)
                 throw new XtbFileError("This file has more than 20,000 rows. Export a shorter period.");
-            rows.Add(ParseRow(i + 1, type, cells, columns));
+            rows.Add(ParseRow(i + 1, type, cells, columns, account));
         }
+        rows = [.. XtbOrderFills.Merge(rows)];
         var productNumbers = ProductNumbersOf(rows);
         var product = rows.Select(r => r.Product)
             .FirstOrDefault(p => p is not null && productNumbers.GetValueOrDefault(p, account) == account);
@@ -58,7 +59,8 @@ public static class XtbParser
         return numbers;
     }
 
-    static XtbRow ParseRow(int sheetRow, string type, IReadOnlyList<XlsxCell?> cells, Dictionary<string, int> columns)
+    static XtbRow ParseRow(
+        int sheetRow, string type, IReadOnlyList<XlsxCell?> cells, Dictionary<string, int> columns, string account)
     {
         var errors = new List<string>();
         var amount = AmountOf(Cell(cells, columns["Amount"]));
@@ -109,7 +111,10 @@ public static class XtbParser
 
         return new XtbRow(sheetRow, type, kind, TextOf(Cell(cells, columns["Instrument"])), ticker, at, absolute, id, comment,
             TextOf(Cell(cells, columns["Product"])), positionId, quantity, price, errors, transferType,
-            transfer?.CounterpartyOf(outgoing), counter?.Amount, counter?.Currency);
+            transfer?.CounterpartyOf(outgoing) is { } counterparty && (transferType != TransferType.Ike || counterparty != account)
+                ? counterparty
+                : null,
+            counter?.Amount, counter?.Currency);
     }
 
     static bool SignMatches(XtbRowKind kind, decimal amount) => kind switch

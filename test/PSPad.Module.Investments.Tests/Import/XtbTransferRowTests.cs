@@ -43,6 +43,16 @@ public class XtbTransferRowTests
     }
 
     [Fact]
+    public void AnIkeCommentNamingThisAccountLeavesTheCounterpartyOut()
+    {
+        var row = Only(Row("IKE deposit", 500, $"Transfer in operation on account with id {Main}"));
+
+        Assert.Equal(XtbRowKind.TransferIn, row.Kind);
+        Assert.Equal(TransferType.Ike, row.TransferType);
+        Assert.Null(row.Counterparty);
+    }
+
+    [Fact]
     public void ASubaccountTransferNamesTheOtherSide()
     {
         var file = ParseRows(

@@ -61,15 +61,16 @@ Portfolio/      InvestmentPortfolio.cs, PortfolioAccountAdded.cs, PortfolioTicke
 Accounts/       InvestmentAccount.cs, Broker.cs, InvestmentAccountAccess.cs,
                 Create/, Rename/, Archive/, Restore/, SetBrokerAccountNumber/
 Operations/     InvestmentOperation.cs, OperationKind.cs, OperationSource.cs,
-                OperationValues.cs, Record/, Edit/, Delete/, Restore/
+                TransferType.cs, OperationValues.cs, Record/, Edit/, Delete/, Restore/
 Instruments/    Instrument.cs, QuoteSymbols.cs, Ensure/, SetQuoteSymbol/
 Import/         Xlsx/ (XlsxReader, XlsxBook, XlsxSheet, XlsxCell), ExcelTime.cs,
                 XtbParser.cs, XtbFile.cs, XtbFileError.cs, XtbRow.cs, XtbRowKind.cs,
-                XtbComment.cs, XtbTypeMap.cs, XtbOpenPosition.cs, OpenPositionCheck.cs,
-                OpenPositionDifference.cs, ImportProbe.cs, ImportCommands.cs,
-                ImportRateKey.cs, ImportRowPreview.cs, ImportRowStatus.cs,
-                InvestmentImportPreviewer.cs, InvestmentImportPreview.cs,
-                NewAccountProposal.cs, InvestmentImportPlan.cs
+                XtbComment.cs, XtbTransferComment.cs, XtbOrderFills.cs, XtbTypeMap.cs,
+                XtbOpenPosition.cs, OpenPositionCheck.cs, OpenPositionDifference.cs,
+                ImportProbe.cs, ImportCommands.cs, ImportRateKey.cs, ImportRowPreview.cs,
+                ImportRowStatus.cs, InvestmentImportPreviewer.cs, InvestmentImportPreview.cs,
+                ImportAccountPreview.cs, NewAccountProposal.cs, NewAccountChoice.cs,
+                InvestmentImportPlan.cs
 Reading/        LiveOperations.cs, Lots.cs, LotBook.cs, Lot.cs, ClosedResult.cs,
                 Position.cs, PositionWarning.cs, Valuation.cs, AccountFigures.cs,
                 PortfolioFigures.cs, PriceHistory.cs, DailyClose.cs, FxBook.cs,
@@ -284,9 +285,21 @@ both features already use.
   `OPEN BUY 3 @ 75.90`, `OPEN BUY 3/7 @ 75.30`, `OPEN BUY ABC.US 0.5 @
   120.10`, `CLOSE BUY ABC.US 4/15 @ 74.00`. The ticker in the comment is
   ignored. An unparsable comment on a buy or sell is a row error.
+- **Partial fills.** An order filled in parts comes as one purchase row per
+  fill (`q/total`), sometimes each with its own `Position ID`, while the
+  Open Positions sheet and later sells treat the order as one position under
+  the smallest of those ids. The fills of one order are the purchases of
+  one ticker with the same order total, each within 5 minutes of the
+  previous fill, adding up to at most the total. They all take the smallest
+  position id, and a sell naming any of them takes it too, so the order is
+  one lot (§5.1).
 - **Transfer comments** give the counterparty number:
   - `IKE deposit`: `Transfer out operation on account with id 11111111`
-    or `Transfer in operation on account with id 11111111`: the number.
+    or `Transfer in operation on account with id 11111111`. Real exports
+    name the account the row is in, not the other side, so a number equal
+    to the file's account number is left out and the leg has no
+    counterparty. The two legs of an IKE transfer carry the same amount and,
+    in practice, the same time.
   - `Subaccount transfer`: `Transfer from 11111111 to 33333333`: the "to"
     number on the negative leg, the "from" number on the positive one.
   - `Transfer`: `Currency conversion, PLN to USD from TA: 11111111 to:
@@ -295,8 +308,10 @@ both features already use.
     counter amount: the target amount is the source amount × rate, so a
     negative (source) leg's counter amount is |amount| × rate in the target
     currency, and a positive (target) leg's is |amount| ÷ rate in the source
-    currency, both rounded to 2 decimals. A conversion comment that does
-    not parse leaves the counter amount and number out; it is not an error.
+    currency, both rounded to 2 decimals. The rate has 6 decimals, so a
+    positive leg's counter amount can be a few hundredths off the other
+    file's leg. A conversion comment that does not parse leaves the counter
+    amount and number out; it is not an error.
 - **Ticker and name** come from `Ticker` and `Instrument`.
 - **External id** is `ID`; a row without one is a row error.
 - **Position id** is `Position ID`; a buy or sell without one is a row
@@ -452,7 +467,9 @@ across accounts are in §5.3.
   `CounterpartyAccountNumber` is the broker number of another of the user's
   accounts is internal: it is left out of Put in and Taken out, so money
   moved between own accounts is not counted twice. Both legs still net to
-  zero in net deposits.
+  zero in net deposits. An IKE transfer carries no counterparty number
+  (§4.2), so a TransferOut and a TransferIn of type Ike with the same amount
+  within one day, in two of the user's accounts, are internal too.
 
 ### 5.4 Converting prices
 
@@ -683,8 +700,10 @@ Unit tests (`[UnitTest]`), behaviour only (`adr/0080`):
   conversion through PLN, `GBp`.
 - XTB import on synthetic xlsx files built in the test: sheet found by
   header, account number above the header, type map, comment parsing with
-  fractions, Excel serials, sign mismatches, the statuses, re-import, the
-  account-number guard, account creation, the Open Positions check, error
+  fractions, all four trade comment forms, transfer and conversion comments,
+  partial fills, Excel serials, sign mismatches, the statuses, re-import, the
+  account-number guard, account creation, the product split into several
+  accounts, the Open Positions check (both sheet layouts), error
   rows listed with row number, values and reason while the valid rows still
   import, and the cap messages. The
   user's real export never enters the repository.
