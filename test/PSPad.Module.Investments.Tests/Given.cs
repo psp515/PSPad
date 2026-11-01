@@ -60,6 +60,13 @@ internal static class Given
         new(Guid.NewGuid(), Owner, Guid.NewGuid(), account.Id, kind, TradedAt, null, null, null,
             Cash(amount, account.Currency), null, OperationSource.Manual, null, null);
 
+    public static RecordInvestmentOperation ATransferCommand(
+        InvestmentAccount account, OperationKind kind = OperationKind.TransferIn,
+        TransferType? type = TransferType.CurrencyConversion, string? counterparty = "33333333",
+        MoneyValue? counterMoney = null, decimal amount = 100m) =>
+        new(Guid.NewGuid(), Owner, Guid.NewGuid(), account.Id, kind, TradedAt, null, null, null,
+            Cash(amount, account.Currency), null, OperationSource.Manual, null, null, type, counterparty, counterMoney);
+
     public static RecordInvestmentOperation ImportedBuyCommand(InvestmentAccount account, long xtbId) =>
         ABuyCommand(account, InvestmentOperation.IdFor(account.Id, xtbId)) with
         {
@@ -87,7 +94,8 @@ internal static class Given
 
     public static EditInvestmentOperation EditOf(InvestmentOperation operation) =>
         new(Guid.NewGuid(), Owner, operation.Id, operation.Kind, operation.At, operation.Ticker, operation.Quantity,
-            operation.Price, operation.Money, operation.PositionId, operation.Note);
+            operation.Price, operation.Money, operation.PositionId, operation.Note, operation.TransferType,
+            operation.CounterpartyAccountNumber, operation.CounterMoney);
 
     static readonly DateOnly DayZero = new(2026, 8, 31);
     static int recordedSeconds;

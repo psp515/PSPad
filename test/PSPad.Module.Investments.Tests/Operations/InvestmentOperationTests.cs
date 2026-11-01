@@ -140,12 +140,11 @@ public class InvestmentOperationTests
             kind: OperationKind.Sell));
     }
 
-    [Theory]
-    [InlineData(OperationKind.Dividend)]
-    [InlineData(OperationKind.Tax)]
-    public void ADividendOrTaxNeedsATickerAndNoQuantityOrPrice(OperationKind kind)
+    [Fact]
+    public void ADividendNeedsATickerAndNoQuantityOrPrice()
     {
         var account = AnAccount();
+        const OperationKind kind = OperationKind.Dividend;
 
         Assert.Single(InvestmentOperation.Decide(null, account, ABuyCommand(account, quantity: null, price: null, kind: kind), Now));
         Rejected(account, ABuyCommand(account, ticker: null, quantity: null, price: null, kind: kind));
@@ -154,10 +153,23 @@ public class InvestmentOperationTests
     }
 
     [Theory]
+    [InlineData(OperationKind.Tax)]
+    [InlineData(OperationKind.TaxRefund)]
+    [InlineData(OperationKind.Fee)]
+    public void ATaxARefundOrAFeeMayNameATickerButHasNoQuantityOrPrice(OperationKind kind)
+    {
+        var account = AnAccount();
+
+        Assert.Equal("ABC.US", Recorded(account, ABuyCommand(account, quantity: null, price: null, kind: kind)).Ticker);
+        Assert.Null(Recorded(account, ABuyCommand(account, ticker: null, quantity: null, price: null, kind: kind)).Ticker);
+        Rejected(account, ABuyCommand(account, price: null, kind: kind));
+        Rejected(account, ABuyCommand(account, quantity: null, kind: kind));
+    }
+
+    [Theory]
     [InlineData(OperationKind.Deposit)]
     [InlineData(OperationKind.Withdrawal)]
     [InlineData(OperationKind.Interest)]
-    [InlineData(OperationKind.Fee)]
     public void CashOperationsHaveNoTickerQuantityOrPrice(OperationKind kind)
     {
         var account = AnAccount();
@@ -229,6 +241,7 @@ public class InvestmentOperationTests
     [InlineData(OperationKind.Interest, 100)]
     [InlineData(OperationKind.Withdrawal, -100)]
     [InlineData(OperationKind.Fee, -100)]
+    [InlineData(OperationKind.TaxRefund, 100)]
     public void CashSignsFollowTheKind(OperationKind kind, int signed) =>
         Assert.Equal(signed, SignedOf(kind));
 
@@ -236,6 +249,7 @@ public class InvestmentOperationTests
     {
         var account = AnAccount();
         var command = kind is OperationKind.Deposit or OperationKind.Withdrawal or OperationKind.Interest or OperationKind.Fee
+            or OperationKind.TaxRefund
             ? ACashCommand(account, kind)
             : ABuyCommand(account, kind: kind,
                 quantity: kind is OperationKind.Buy or OperationKind.Sell ? 2m : null,

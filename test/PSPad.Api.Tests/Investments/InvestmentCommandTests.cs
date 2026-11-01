@@ -46,6 +46,26 @@ public class InvestmentCommandTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task ATransferKeepsItsTypeCounterpartyAndCounterAmountThroughStorageAndSync()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var (client, user, accountId) = await WithAnAccountAsync(factory, ct);
+        var counter = new MoneyValue(27.5m, "USD", 3.6364m, DateOnly.FromDateTime(TradedAt.UtcDateTime));
+
+        await SendAsync(client, ct, new RecordInvestmentOperation(Guid.NewGuid(), user, Guid.NewGuid(), accountId,
+            OperationKind.TransferOut, TradedAt, null, null, null, Pln(100m), null, OperationSource.Manual, null, null,
+            TransferType.CurrencyConversion, "44445555", counter));
+
+        var operation = Assert.Single(await SyncedAsync(client, "investmentoperations", ct));
+        Assert.Equal((int)OperationKind.TransferOut, operation.GetProperty("kind").GetInt32());
+        Assert.Equal((int)TransferType.CurrencyConversion, operation.GetProperty("transferType").GetInt32());
+        Assert.Equal("44445555", operation.GetProperty("counterpartyAccountNumber").GetString());
+        Assert.Equal(27.5m, operation.GetProperty("counterMoney").GetProperty("amount").GetDecimal());
+        Assert.Equal("USD", operation.GetProperty("counterMoney").GetProperty("currency").GetString());
+    }
+
+    [Fact]
     public async Task AStrangersOperationOnMyAccountIsRejected()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;

@@ -19,6 +19,8 @@ public sealed class InvestmentOperation : Aggregate
 
     public const int MaxPositionIdLength = 32;
 
+    public const int MaxCounterpartyAccountNumberLength = 32;
+
     static readonly byte[] Salt = Guid.Parse("6f706572-6174-696f-6e00-000000000001").ToByteArray();
 
     [JsonInclude]
@@ -46,6 +48,15 @@ public sealed class InvestmentOperation : Aggregate
     public string? PositionId { get; private set; }
 
     [JsonInclude]
+    public TransferType? TransferType { get; private set; }
+
+    [JsonInclude]
+    public string? CounterpartyAccountNumber { get; private set; }
+
+    [JsonInclude]
+    public MoneyValue? CounterMoney { get; private set; }
+
+    [JsonInclude]
     public OperationSource Source { get; private set; }
 
     [JsonInclude]
@@ -60,7 +71,8 @@ public sealed class InvestmentOperation : Aggregate
     [JsonIgnore]
     public decimal SignedAmount => Kind switch
     {
-        OperationKind.Deposit or OperationKind.Sell or OperationKind.Dividend or OperationKind.Interest => Money.Amount,
+        OperationKind.Deposit or OperationKind.TransferIn or OperationKind.Sell or OperationKind.Dividend
+            or OperationKind.TaxRefund or OperationKind.Interest => Money.Amount,
         _ => -Money.Amount
     };
 
@@ -79,20 +91,24 @@ public sealed class InvestmentOperation : Aggregate
                 }
 
                 var recording = InvestmentAccountAccess.Writable(owner);
-                var recorded = Valid(recording, record.Kind, record.At, record.Ticker, record.Quantity, record.Price,
-                    record.Money, record.PositionId, record.Note);
+                var recorded = Valid(recording, new OperationValues(record.Kind, record.At, record.Ticker,
+                    record.Quantity, record.Price, record.Money, record.PositionId, record.Note, record.TransferType,
+                    record.CounterpartyAccountNumber, record.CounterMoney));
                 return [new InvestmentOperationRecorded(record.OperationId, recording.UserId, at, recording.Id,
                     recorded.Kind, recorded.At, recorded.Ticker, recorded.Quantity, recorded.Price, recorded.Money,
-                    recorded.PositionId, RequireSource(record.Source), ExternalIdOf(record), recorded.Note)];
+                    recorded.PositionId, RequireSource(record.Source), ExternalIdOf(record), recorded.Note,
+                    recorded.TransferType, recorded.CounterpartyAccountNumber, recorded.CounterMoney)];
 
             case EditInvestmentOperation edit:
                 var editing = RequireLive(operation);
-                var edited = Valid(Writable(editing, account, edit.UserId), edit.Kind, edit.At, edit.Ticker,
-                    edit.Quantity, edit.Price, edit.Money, edit.PositionId, edit.Note);
+                var edited = Valid(Writable(editing, account, edit.UserId), new OperationValues(edit.Kind, edit.At,
+                    edit.Ticker, edit.Quantity, edit.Price, edit.Money, edit.PositionId, edit.Note, edit.TransferType,
+                    edit.CounterpartyAccountNumber, edit.CounterMoney));
                 return edited == ValuesOf(editing)
                     ? []
                     : [new InvestmentOperationEdited(editing.Id, editing.UserId, at, edited.Kind, edited.At,
-                        edited.Ticker, edited.Quantity, edited.Price, edited.Money, edited.PositionId, edited.Note)];
+                        edited.Ticker, edited.Quantity, edited.Price, edited.Money, edited.PositionId, edited.Note,
+                        edited.TransferType, edited.CounterpartyAccountNumber, edited.CounterMoney)];
 
             case DeleteInvestmentOperation delete:
                 var deleting = operation ?? throw Missing();
@@ -121,11 +137,13 @@ public sealed class InvestmentOperation : Aggregate
                 Source = recorded.Source;
                 ExternalId = recorded.ExternalId;
                 Take(new OperationValues(recorded.Kind, recorded.OperationAt, recorded.Ticker, recorded.Quantity,
-                    recorded.Price, recorded.Money, recorded.PositionId, recorded.Note));
+                    recorded.Price, recorded.Money, recorded.PositionId, recorded.Note, recorded.TransferType,
+                    recorded.CounterpartyAccountNumber, recorded.CounterMoney));
                 break;
             case InvestmentOperationEdited edited:
                 Take(new OperationValues(edited.Kind, edited.OperationAt, edited.Ticker, edited.Quantity, edited.Price,
-                    edited.Money, edited.PositionId, edited.Note));
+                    edited.Money, edited.PositionId, edited.Note, edited.TransferType, edited.CounterpartyAccountNumber,
+                    edited.CounterMoney));
                 break;
             case InvestmentOperationDeleted:
                 Deleted = true;
@@ -146,11 +164,15 @@ public sealed class InvestmentOperation : Aggregate
         Money = values.Money;
         PositionId = values.PositionId;
         Note = values.Note;
+        TransferType = values.TransferType;
+        CounterpartyAccountNumber = values.CounterpartyAccountNumber;
+        CounterMoney = values.CounterMoney;
     }
 
     static OperationValues ValuesOf(InvestmentOperation operation) =>
         new(operation.Kind, operation.At, operation.Ticker, operation.Quantity, operation.Price, operation.Money,
-            operation.PositionId, operation.Note);
+            operation.PositionId, operation.Note, operation.TransferType, operation.CounterpartyAccountNumber,
+            operation.CounterMoney);
 
     static DomainRejectedException Missing() => new("That operation does not exist.", Unrecoverable: true);
 
@@ -165,11 +187,10 @@ public sealed class InvestmentOperation : Aggregate
             : InvestmentAccountAccess.Writable(owner);
     }
 
-    static OperationValues Valid(
-        InvestmentAccount account, OperationKind kind, DateTimeOffset at, string? ticker, decimal? quantity,
-        decimal? price, MoneyValue money, string? positionId, string? note)
+    static OperationValues Valid(InvestmentAccount account, OperationValues requested)
     {
-        var valid = MoneyValue.Require(money, DateOnly.FromDateTime(at.UtcDateTime));
+        var kind = requested.Kind;
+        var valid = MoneyValue.Require(requested.Money, DateOnly.FromDateTime(requested.At.UtcDateTime));
         if (valid.Currency != account.Currency)
         {
             throw new DomainRejectedException("An operation is in the account's currency.");
@@ -179,16 +200,80 @@ public sealed class InvestmentOperation : Aggregate
             ? kind.ToString().ToLowerInvariant()
             : throw new DomainRejectedException("That operation kind does not exist.");
         var traded = kind is OperationKind.Buy or OperationKind.Sell;
-        var held = traded || kind is OperationKind.Dividend or OperationKind.Tax;
+        var held = traded || kind is OperationKind.Dividend;
+        var mayHold = kind is OperationKind.Tax or OperationKind.TaxRefund or OperationKind.Fee;
+        var ticker = requested.Ticker;
+        var transferType = TransferTypeOf(kind, requested.TransferType);
 
-        return new OperationValues(kind, at.ToUniversalTime(),
-            held ? TickerOf(ticker, name) : Absent(ticker, $"A {name} has no ticker."),
-            traded ? Positive(quantity, MaxQuantity, $"A {name} needs a quantity.", "A quantity")
-                : Absent(quantity, $"A {name} has no quantity."),
-            traded ? Positive(price, MaxPrice, $"A {name} needs a price.", "A price")
-                : Absent(price, $"A {name} has no price."),
-            valid, PositionIdOf(positionId), NoteOf(note));
+        return new OperationValues(kind, requested.At.ToUniversalTime(),
+            held ? TickerOf(ticker, name)
+                : mayHold ? OptionalTickerOf(ticker)
+                : Absent(ticker, $"A {name} has no ticker."),
+            traded ? Positive(requested.Quantity, MaxQuantity, $"A {name} needs a quantity.", "A quantity")
+                : Absent(requested.Quantity, $"A {name} has no quantity."),
+            traded ? Positive(requested.Price, MaxPrice, $"A {name} needs a price.", "A price")
+                : Absent(requested.Price, $"A {name} has no price."),
+            valid, PositionIdOf(requested.PositionId), NoteOf(requested.Note), transferType,
+            CounterpartyOf(transferType, requested.CounterpartyAccountNumber),
+            CounterMoneyOf(account, transferType, requested.CounterMoney, valid.RateDate));
     }
+
+    static bool IsTransfer(OperationKind kind) => kind is OperationKind.TransferIn or OperationKind.TransferOut;
+
+    static TransferType? TransferTypeOf(OperationKind kind, TransferType? type)
+    {
+        if (!IsTransfer(kind))
+        {
+            return type is null ? null : throw new DomainRejectedException("Only a transfer has a transfer type.");
+        }
+
+        return type switch
+        {
+            null => throw new DomainRejectedException("A transfer needs a type."),
+            { } given when Enum.IsDefined(given) => given,
+            _ => throw new DomainRejectedException("That transfer type does not exist.")
+        };
+    }
+
+    static string? CounterpartyOf(TransferType? type, string? number)
+    {
+        if (string.IsNullOrWhiteSpace(number))
+        {
+            return null;
+        }
+
+        if (type is null)
+        {
+            throw new DomainRejectedException("Only a transfer has a counterparty account.");
+        }
+
+        var trimmed = number.Trim();
+        return trimmed.Length > MaxCounterpartyAccountNumberLength
+            ? throw new DomainRejectedException(
+                $"A counterparty account number is at most {MaxCounterpartyAccountNumberLength} characters.")
+            : trimmed;
+    }
+
+    static MoneyValue? CounterMoneyOf(InvestmentAccount account, TransferType? type, MoneyValue? counter, DateOnly day)
+    {
+        if (counter is null)
+        {
+            return null;
+        }
+
+        if (type != Operations.TransferType.CurrencyConversion)
+        {
+            throw new DomainRejectedException("Only a currency conversion has a counter amount.");
+        }
+
+        var valid = MoneyValue.Require(counter, day);
+        return valid.Currency == account.Currency
+            ? throw new DomainRejectedException("A currency conversion's other side is in another currency.")
+            : valid;
+    }
+
+    static string? OptionalTickerOf(string? ticker) =>
+        string.IsNullOrWhiteSpace(ticker) ? null : Instrument.RequireTicker(ticker);
 
     static string TickerOf(string? ticker, string kind) =>
         string.IsNullOrWhiteSpace(ticker)

@@ -9,5 +9,8 @@ public enum OperationKind
     Dividend,
     Tax,
     Interest,
-    Fee
+    Fee,
+    TransferIn,
+    TransferOut,
+    TaxRefund
 }

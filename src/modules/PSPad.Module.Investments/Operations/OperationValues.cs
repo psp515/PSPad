@@ -4,4 +4,5 @@ namespace PSPad.Module.Investments.Operations;
 
 internal sealed record OperationValues(
     OperationKind Kind, DateTimeOffset At, string? Ticker, decimal? Quantity, decimal? Price, MoneyValue Money,
-    string? PositionId, string? Note);
+    string? PositionId, string? Note, TransferType? TransferType, string? CounterpartyAccountNumber,
+    MoneyValue? CounterMoney);
