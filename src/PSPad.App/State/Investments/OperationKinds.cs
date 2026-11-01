@@ -13,7 +13,7 @@ public static class OperationKinds
     public static bool Traded(OperationKind kind) => kind is OperationKind.Buy or OperationKind.Sell;
 
     public static bool HasTicker(OperationKind kind) =>
-        NeedsTicker(kind) || kind is OperationKind.Tax or OperationKind.TaxRefund;
+        NeedsTicker(kind) || kind is OperationKind.Tax or OperationKind.TaxRefund or OperationKind.Fee;
 
     public static bool NeedsTicker(OperationKind kind) => Traded(kind) || kind is OperationKind.Dividend;
 }

@@ -1,47 +1,73 @@
 using PSPad.Module.Investments.Accounts;
 using PSPad.Module.Investments.Operations;
+using MoneyValue = PSPad.Module.Money.Money;
 
 namespace PSPad.Module.Investments.Reading;
 
 internal static class InternalTransfers
 {
-    static readonly TimeSpan IkePairingWindow = TimeSpan.FromDays(1);
+    const decimal CounterTolerance = 0.05m;
+
+    static readonly TimeSpan PairingWindow = TimeSpan.FromDays(1);
 
     public static IReadOnlySet<Guid> Among(IEnumerable<(InvestmentAccount Account, IReadOnlyList<InvestmentOperation> Live)> accounts)
     {
         var all = accounts.ToList();
-        var numbers = all.Where(entry => !string.IsNullOrWhiteSpace(entry.Account.BrokerAccountNumber))
-            .Select(entry => (Number: entry.Account.BrokerAccountNumber!.Trim(), entry.Account.Id))
+        var numberOf = all.Where(entry => !string.IsNullOrWhiteSpace(entry.Account.BrokerAccountNumber))
+            .ToDictionary(entry => entry.Account.Id, entry => entry.Account.BrokerAccountNumber!.Trim());
+        var legs = LiveOperations.Of(all.SelectMany(entry => entry.Live))
+            .Where(operation => operation.TransferType is not null
+                && operation.Kind is OperationKind.TransferIn or OperationKind.TransferOut)
             .ToList();
-        var transfers = all.SelectMany(entry => entry.Live)
-            .Where(operation => operation.Kind is OperationKind.TransferIn or OperationKind.TransferOut)
-            .ToList();
+        var ins = legs.Where(operation => operation.Kind == OperationKind.TransferIn).ToList();
+        var paired = new HashSet<Guid>();
 
-        var internalIds = transfers
-            .Where(operation => operation.CounterpartyAccountNumber is { } counterparty
-                && numbers.Any(own => own.Id != operation.AccountId && own.Number == counterparty.Trim()))
-            .Select(operation => operation.Id)
-            .ToHashSet();
-
-        var ike = transfers.Where(operation => operation.TransferType == TransferType.Ike && !internalIds.Contains(operation.Id)).ToList();
-        var ins = ike.Where(operation => operation.Kind == OperationKind.TransferIn).ToList();
-        foreach (var leg in ike.Where(operation => operation.Kind == OperationKind.TransferOut).OrderBy(operation => operation.At)
-                     .ThenBy(operation => operation.Id))
+        foreach (var leg in legs.Where(operation => operation.Kind == OperationKind.TransferOut))
         {
-            var partner = ins.Where(other => other.AccountId != leg.AccountId && !internalIds.Contains(other.Id)
-                    && other.Money.Amount == leg.Money.Amount
-                    && string.Equals(other.Money.Currency, leg.Money.Currency, StringComparison.OrdinalIgnoreCase)
-                    && (other.At - leg.At).Duration() <= IkePairingWindow)
+            var partner = ins.Where(other => !paired.Contains(other.Id) && OneTransfer(leg, other, numberOf))
                 .OrderBy(other => (other.At - leg.At).Duration())
-                .ThenBy(other => other.Id)
                 .FirstOrDefault();
             if (partner is not null)
             {
-                internalIds.Add(leg.Id);
-                internalIds.Add(partner.Id);
+                paired.Add(leg.Id);
+                paired.Add(partner.Id);
             }
         }
 
-        return internalIds;
+        return paired;
     }
+
+    static bool OneTransfer(InvestmentOperation outLeg, InvestmentOperation inLeg, IReadOnlyDictionary<Guid, string> numberOf) =>
+        outLeg.AccountId != inLeg.AccountId
+        && outLeg.TransferType == inLeg.TransferType
+        && (inLeg.At - outLeg.At).Duration() <= PairingWindow
+        && AmountsMatch(outLeg, inLeg)
+        && (outLeg.TransferType == TransferType.Ike
+            || Names(outLeg, inLeg.AccountId, numberOf)
+            || Names(inLeg, outLeg.AccountId, numberOf));
+
+    static bool Names(InvestmentOperation leg, Guid accountId, IReadOnlyDictionary<Guid, string> numberOf) =>
+        leg.CounterpartyAccountNumber is { } counterparty && numberOf.TryGetValue(accountId, out var number)
+        && counterparty.Trim() == number;
+
+    static bool AmountsMatch(InvestmentOperation outLeg, InvestmentOperation inLeg)
+    {
+        if (SameCurrency(outLeg.Money, inLeg.Money))
+        {
+            return outLeg.Money.Amount == inLeg.Money.Amount;
+        }
+
+        if (outLeg.CounterMoney is null && inLeg.CounterMoney is null)
+        {
+            return true;
+        }
+
+        return Close(outLeg.CounterMoney, inLeg.Money) || Close(inLeg.CounterMoney, outLeg.Money);
+    }
+
+    static bool Close(MoneyValue? counter, MoneyValue money) =>
+        counter is not null && SameCurrency(counter, money) && Math.Abs(counter.Amount - money.Amount) <= CounterTolerance;
+
+    static bool SameCurrency(MoneyValue one, MoneyValue other) =>
+        string.Equals(one.Currency, other.Currency, StringComparison.OrdinalIgnoreCase);
 }

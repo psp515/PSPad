@@ -119,17 +119,16 @@ public sealed class InvestmentQuery(IReplica replica, IInvestmentQuotes quotes)
         var byAccount = operations.ToLookup(operation => operation.AccountId);
         var figures = accounts.ToDictionary(account => account.Id,
             account => AccountFigures.For(account, [.. byAccount[account.Id]], prices, fx, today));
-        var open = accounts.Where(account => !account.IsArchived).ToList();
         var values = withHistory
-            ? open.ToDictionary(account => account.Id,
+            ? accounts.ToDictionary(account => account.Id,
                 account => ValueOverTime.For(account, [.. byAccount[account.Id]], prices, fx, from, today, zone))
             : new Dictionary<Guid, IReadOnlyList<ValuePoint>>();
         var portfolio = PortfolioFigures.For(
-            [.. open.Select(account => (account, figures[account.Id], (IReadOnlyList<InvestmentOperation>)[.. byAccount[account.Id]]))],
+            [.. accounts.Select(account => (account, figures[account.Id], (IReadOnlyList<InvestmentOperation>)[.. byAccount[account.Id]]))],
             fx, today);
         IReadOnlyList<ValuePoint> inPln = withHistory
             ? ValueOverTime.InPln(
-                [.. open.Select(account => (account, (IReadOnlyList<InvestmentOperation>)[.. byAccount[account.Id]], values[account.Id]))],
+                [.. accounts.Select(account => (account, (IReadOnlyList<InvestmentOperation>)[.. byAccount[account.Id]], values[account.Id]))],
                 fx, zone)
             : [];
 

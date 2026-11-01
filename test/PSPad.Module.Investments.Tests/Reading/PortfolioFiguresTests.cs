@@ -206,6 +206,8 @@ public class PortfolioFiguresTests
         Assert.Equal(0m, figures.TakenOutPln);
         Assert.Equal(2300m, figures.NetDepositsPln);
         Assert.Equal(0m, figures.TotalProfitPln);
+        PlnIdentityHolds(figures);
+        DepositsAddUp(figures);
     }
 
     [Fact]
@@ -229,5 +231,128 @@ public class PortfolioFiguresTests
         Assert.Equal(2700m, figures.PutInPln);
         Assert.Equal(700m, figures.TakenOutPln);
         Assert.Equal(2000m, figures.NetDepositsPln);
+        Assert.Equal(0m, figures.TotalProfitPln);
+        PlnIdentityHolds(figures);
+        DepositsAddUp(figures);
+    }
+
+    [Fact]
+    public void AnEmptiedPoolFallsBackToTheFrozenRateUntilTheNextConversionRefillsIt()
+    {
+        var account = AnAccount("USD");
+        var usd = Read(account, [
+            TransferIn(account, TransferType.CurrencyConversion, 100m, Day(1), counter: Pln(400m, Day(1)), rate: 3.9m),
+            TransferOut(account, TransferType.CurrencyConversion, 100m, Day(2), counter: Pln(410m, Day(2)), rate: 3.9m),
+            Fee(account, 1m, Day(3), rate: 3.9m),
+            TransferIn(account, TransferType.CurrencyConversion, 100m, Day(4), counter: Pln(380m, Day(4)), rate: 3.9m),
+            Fee(account, 1m, Day(5), rate: 3.9m),
+        ]);
+
+        var figures = PortfolioFigures.For([usd], Today, Day(20));
+
+        Assert.Equal(780m, figures.PutInPln);
+        Assert.Equal(400m, figures.TakenOutPln);
+        Assert.Equal(7.7m, figures.FeesPln);
+        Assert.Equal(3.8m, usd.Item2.AverageRate);
+        Assert.Equal(380m, usd.Item2.PlnSpent);
+        PlnIdentityHolds(figures);
+        DepositsAddUp(figures);
+    }
+
+    [Fact]
+    public void OperationsAtTheSameInstantFollowTheBrokersOrder()
+    {
+        var account = AnAccount("USD", id: Guid.Parse("44444444-4444-4444-4444-444444444444"));
+        var at = new DateTimeOffset(Day(1).ToDateTime(new TimeOnly(10, 0)), TimeSpan.Zero);
+        var conversion = ImportedAt(account, OperationKind.TransferIn, 10, 100m, at, 3.9m, TransferType.CurrencyConversion,
+            Pln(370m, Day(1)));
+        var feeId = Enumerable.Range(11, 1000).First(id =>
+            InvestmentOperation.IdFor(account.Id, id).CompareTo(InvestmentOperation.IdFor(account.Id, 10)) < 0);
+        var fee = ImportedAt(account, OperationKind.Fee, feeId, 10m, at, 3.9m);
+
+        var figures = PortfolioFigures.For([Read(account, [fee, conversion])], Today, Day(20));
+
+        Assert.Equal(37m, figures.FeesPln);
+    }
+
+    [Fact]
+    public void ALegWhoseOtherSideIsNotRecordedYetIsPutInOrTakenOut()
+    {
+        var plnAccount = AnAccount(number: "1001");
+        var usdAccount = AnAccount("USD", number: "1002");
+        var pln = Read(plnAccount, [
+            Deposit(plnAccount, 10000m, Day(1)),
+            TransferOut(plnAccount, TransferType.CurrencyConversion, 3700m, Day(2), counterparty: "1002",
+                counter: Foreign(1000m, "USD", 3.7m, Day(2))),
+        ]);
+        var usd = Read(usdAccount, [Deposit(usdAccount, 10m, Day(1), rate: 3.80m)]);
+
+        var figures = PortfolioFigures.For([pln, usd], Today, Day(20));
+
+        Assert.Equal(10038m, figures.PutInPln);
+        Assert.Equal(3700m, figures.TakenOutPln);
+        PlnIdentityHolds(figures);
+        DepositsAddUp(figures);
+    }
+
+    [Fact]
+    public void LegsOfDifferentAmountsOrMoreThanADayApartAreNotOneTransfer()
+    {
+        var plnAccount = AnAccount(number: "1001");
+        var subAccount = AnAccount(number: "1004");
+        var pln = Read(plnAccount, [
+            Deposit(plnAccount, 2000m, Day(1)),
+            TransferOut(plnAccount, TransferType.Subaccount, 500m, Day(2), counterparty: "1004"),
+            TransferOut(plnAccount, TransferType.Subaccount, 300m, Day(5), counterparty: "1004"),
+        ]);
+        var sub = Read(subAccount, [
+            TransferIn(subAccount, TransferType.Subaccount, 400m, Day(2), counterparty: "1001"),
+            TransferIn(subAccount, TransferType.Subaccount, 300m, Day(8), counterparty: "1001"),
+        ]);
+
+        var figures = PortfolioFigures.For([pln, sub], Today, Day(20));
+
+        Assert.Equal(2700m, figures.PutInPln);
+        Assert.Equal(800m, figures.TakenOutPln);
+    }
+
+    [Fact]
+    public void ALegNamingNoCounterpartyStillPairsWithTheLegThatNamesIt()
+    {
+        var plnAccount = AnAccount(number: "1001");
+        var subAccount = AnAccount(number: "1004");
+        var pln = Read(plnAccount, [
+            Deposit(plnAccount, 2000m, Day(1)),
+            TransferOut(plnAccount, TransferType.Subaccount, 500m, Day(2)),
+        ]);
+        var sub = Read(subAccount, [TransferIn(subAccount, TransferType.Subaccount, 500m, Day(2), counterparty: "1001")]);
+
+        var figures = PortfolioFigures.For([pln, sub], Today, Day(20));
+
+        Assert.Equal(2000m, figures.PutInPln);
+        Assert.Equal(0m, figures.TakenOutPln);
+    }
+
+    [Fact]
+    public void AnArchivedAccountIsStillOneOfTheUsersOwn()
+    {
+        var plnAccount = AnAccount(number: "1001");
+        var ikeAccount = AnAccount(number: "1003");
+        var ikeOperations = new[] {
+            Deposit(ikeAccount, 500m, Day(1)),
+            TransferOut(ikeAccount, TransferType.Subaccount, 500m, Day(2), counterparty: "1001"),
+        };
+        var pln = Read(plnAccount, [
+            Deposit(plnAccount, 1000m, Day(1)),
+            TransferIn(plnAccount, TransferType.Subaccount, 500m, Day(2), counterparty: "1003"),
+        ]);
+        var ike = Read(Archive(ikeAccount), ikeOperations);
+
+        var figures = PortfolioFigures.For([pln, ike], Today, Day(20));
+
+        Assert.Equal(1500m, figures.PutInPln);
+        Assert.Equal(0m, figures.TakenOutPln);
+        Assert.Equal(1500m, figures.ValuePln);
+        Assert.Equal(0m, figures.TotalProfitPln);
     }
 }

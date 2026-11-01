@@ -135,4 +135,28 @@ public class ValueOverTimeTests
         Assert.Equal(portfolio.NetDepositsPln, points[^1].NetDeposits);
         Assert.Equal(portfolio.ValuePln, points[^1].Value);
     }
+
+    [Fact]
+    public void PairedIkeLegsLeaveTheNetDepositsLineOfAllAccountsAlone()
+    {
+        var pln = AnAccount(number: "1001");
+        var ike = AnAccount(number: "1003");
+        var at = new DateTimeOffset(Day(2).ToDateTime(new TimeOnly(10, 0)), TimeSpan.Zero);
+        InvestmentOperation[] plnOperations = [
+            Deposit(pln, 1000m, Day(1)),
+            TransferAt(pln, OperationKind.TransferOut, TransferType.Ike, 400m, at),
+        ];
+        InvestmentOperation[] ikeOperations = [TransferAt(ike, OperationKind.TransferIn, TransferType.Ike, 400m, at.AddHours(2))];
+        Archive(ike);
+        var accounts = new[] {
+            (pln, (IReadOnlyList<InvestmentOperation>)plnOperations,
+                ValueOverTime.For(pln, plnOperations, Prices(), PlnOnly, Day(1), Day(2), Utc)),
+            (ike, (IReadOnlyList<InvestmentOperation>)ikeOperations,
+                ValueOverTime.For(ike, ikeOperations, Prices(), PlnOnly, Day(1), Day(2), Utc)),
+        };
+
+        var points = ValueOverTime.InPln(accounts, PlnOnly, Utc);
+
+        Assert.Equal([new ValuePoint(Day(1), 1000m, 1000m), new ValuePoint(Day(2), 1000m, 1000m)], points);
+    }
 }

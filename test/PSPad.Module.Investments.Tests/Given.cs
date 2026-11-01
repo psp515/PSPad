@@ -153,6 +153,20 @@ internal static class Given
         string? counterparty = null) =>
         Transfer(account, kind, type, amount, at, counterparty, null, 4m);
 
+    public static InvestmentOperation ImportedAt(
+        InvestmentAccount account, OperationKind kind, long xtbId, decimal amount, DateTimeOffset at, decimal rate,
+        TransferType? type = null, MoneyValue? counter = null)
+    {
+        var day = DateOnly.FromDateTime(at.UtcDateTime);
+        var operation = new InvestmentOperation();
+        operation.ApplyAll(InvestmentOperation.Decide(null, account,
+            new RecordInvestmentOperation(Guid.NewGuid(), Owner, InvestmentOperation.IdFor(account.Id, xtbId), account.Id, kind, at,
+                null, null, null, new MoneyValue(amount, account.Currency, account.Currency == "PLN" ? 1m : rate, day), null,
+                OperationSource.Xtb, xtbId.ToString(System.Globalization.CultureInfo.InvariantCulture), null, type, null, counter),
+            Now));
+        return operation;
+    }
+
     public static MoneyValue Pln(decimal amount, DateOnly day) => new(amount, "PLN", 1m, day);
 
     public static MoneyValue Foreign(decimal amount, string currency, decimal rate, DateOnly day) => new(amount, currency, rate, day);

@@ -12,9 +12,10 @@ public class OperationKindsTests
     [InlineData(OperationKind.Dividend, true, true)]
     [InlineData(OperationKind.Tax, true, false)]
     [InlineData(OperationKind.TaxRefund, true, false)]
+    [InlineData(OperationKind.Fee, true, false)]
     [InlineData(OperationKind.TransferIn, false, false)]
     [InlineData(OperationKind.Deposit, false, false)]
-    public void ATaxOrRefundMayNameATickerButOnlyTradesAndDividendsNeedOne(OperationKind kind, bool offered, bool needed)
+    public void ATaxRefundOrFeeMayNameATickerButOnlyTradesAndDividendsNeedOne(OperationKind kind, bool offered, bool needed)
     {
         Assert.Equal(offered, OperationKinds.HasTicker(kind));
         Assert.Equal(needed, OperationKinds.NeedsTicker(kind));

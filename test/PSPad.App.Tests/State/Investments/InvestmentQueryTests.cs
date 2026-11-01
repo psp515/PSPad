@@ -86,18 +86,17 @@ public class InvestmentQueryTests
     }
 
     [Fact]
-    public async Task AnArchivedAccountIsLeftOutOfThePortfolio()
+    public async Task AnArchivedAccountStillCountsInThePortfolio()
     {
         var (_, usd) = await TwoAccountsAsync();
-        var archived = (await _replica.LoadAsync<PSPad.Module.Investments.Accounts.InvestmentAccount>(usd))!;
-        archived.ApplyAll(PSPad.Module.Investments.Accounts.InvestmentAccount.Decide(archived,
-            new PSPad.Module.Investments.Accounts.ArchiveInvestmentAccount(Guid.NewGuid(), Owner, usd), Now));
-        await _replica.SaveAsync(archived);
+        await ArchiveAsync(usd);
 
         var overview = await Query().LoadAsync(Owner, Today, Utc, true, false, TestContext.Current.CancellationToken);
 
-        Assert.Equal(1_200m, overview.Portfolio.ValuePln);
-        Assert.Equal(600m, overview.Figures[usd].Value);
+        Assert.Equal(1_200m + 600m * 4m, overview.Portfolio.ValuePln);
+        Assert.Equal(1_000m + 500m * 4m, overview.Portfolio.NetDepositsPln);
+        Assert.Equal(1_200m + 600m * 4m, overview.ValueInPln[^1].Value);
+        Assert.DoesNotContain(overview.Open, account => account.Id == usd);
     }
 
     [Fact]
@@ -107,18 +106,6 @@ public class InvestmentQueryTests
 
         Assert.Equal(0m, overview.Portfolio.ValuePln);
         Assert.Empty(overview.Accounts);
-    }
-
-    [Fact]
-    public async Task AnArchivedAccountGetsNoValueSeries()
-    {
-        var (pln, usd) = await TwoAccountsAsync();
-        await ArchiveAsync(usd);
-
-        var overview = await Query().LoadAsync(Owner, Today, Utc, true, false, TestContext.Current.CancellationToken);
-
-        Assert.True(overview.ValueByAccount.ContainsKey(pln));
-        Assert.False(overview.ValueByAccount.ContainsKey(usd));
     }
 
     [Fact]

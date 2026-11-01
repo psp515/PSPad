@@ -463,13 +463,28 @@ across accounts are in §5.3.
 - A non-PLN account shows its average rate ("Average rate 1 USD = 3.6512
   PLN") and the PLN spent on its currency (the pool's PLN cost).
 - PLN accounts have no currency difference.
-- **Internal transfers.** In "All accounts", a transfer whose
-  `CounterpartyAccountNumber` is the broker number of another of the user's
-  accounts is internal: it is left out of Put in and Taken out, so money
-  moved between own accounts is not counted twice. Both legs still net to
-  zero in net deposits. An IKE transfer carries no counterparty number
-  (§4.2), so a TransferOut and a TransferIn of type Ike with the same amount
-  within one day, in two of the user's accounts, are internal too.
+- **Operation order.** Operations run by time; operations at the same
+  instant run in the broker's order (numeric XTB id), then manual ones,
+  then by id.
+- **All accounts** covers every account, archived ones included. Archiving
+  hides an account from the chips, the positions and the sidebar, but what
+  it still holds and the money that went through it stay in the PLN totals,
+  so money moved out of it before archiving is neither profit nor a
+  withdrawal.
+- **Internal transfers.** In "All accounts", a transfer out and a transfer
+  in are one internal transfer when both legs are recorded, in two
+  different accounts of the user, of the same transfer type, at most one
+  day apart, with matching amounts, and either leg's
+  `CounterpartyAccountNumber` is the other account's broker number. Amounts
+  match when the legs share a currency and an amount, or when a leg's
+  `CounterMoney` is within 0.05 of the other leg's amount (a conversion
+  with no counter amount on either leg is not checked). An IKE transfer
+  carries no counterparty number (§4.2), so two Ike legs pair without one.
+  Pairing is one-to-one, the nearest leg in time first. Both legs are left
+  out of Put in and Taken out, so money moved between own accounts is not
+  counted twice; any PLN gap between them (spread, rounding) falls into the
+  currency difference. A leg whose other side is not recorded (its file is
+  not imported yet, or it was deleted) counts as Put in or Taken out.
 
 ### 5.4 Converting prices
 
@@ -635,11 +650,12 @@ FAB per page (`adr/0033`).
   one per unarchived account; the route follows the chip.
 - **Tabs:** Positions, Operations, Accounts.
 - **Positions:**
-  - `MoneyHero` with the account value and total profit, then a stat row:
-    put in, taken out, net deposits, realized result (with realized gains
-    and realized losses beside it), unrealized, dividends net, passive
-    income, fees, currency difference (PLN view only), and for a non-PLN
-    account its average rate and the PLN spent on its currency (§5.3).
+  - `MoneyHero` with the account value, total profit and net deposits (and
+    cash for one account), then a stat row: put in, taken out, realized
+    result, realized gains, realized losses, unrealized, dividends net,
+    passive income, fees, currency difference (PLN view only), and for a
+    non-PLN account its average rate and the PLN spent on its currency
+    (§5.3).
   - Value-over-time chart (`MudChart` line): value and net deposits, with
     the range chips.
   - Positions grouped by account, each row in the `pspad-holding-row`
