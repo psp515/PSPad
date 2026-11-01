@@ -3,7 +3,7 @@
 Status: Built. Issue #115. Decisions: `adr/0082` (the module), `adr/0083`
 (`Money` and `Currencies` move to Abstractions), `adr/0084` (Yahoo quotes),
 `adr/0085` (a holding links to an investment account), `adr/0086` (phone
-bottom bar). UI mockups: "PSPad Investments UI"
+bottom bar), `adr/0087` (FX cost from actual conversions). UI mockups: "PSPad Investments UI"
 (https://claude.ai/artifact/4yhrKTbTaLfgYVvepAdqro).
 
 ## 1. Problem and scope
@@ -17,8 +17,9 @@ without retyping it.
 In:
 
 - Investment accounts, each in one currency, private to their owner.
-- Operations: deposits, withdrawals, buys, sells, dividends, withholding tax,
-  interest and fees. Imported from XTB's xlsx export, incrementally and
+- Operations: deposits, withdrawals, transfers in and out (between own
+  accounts, to an IKE, currency conversions), buys, sells, dividends,
+  withholding tax and its refunds, interest and fees. Imported from XTB's xlsx export, incrementally and
   without duplicates, or entered by hand.
 - Creating an account straight from an XTB file.
 - Daily closing prices from Yahoo Finance, fetched by the server at most once
@@ -88,7 +89,7 @@ Grouping operations by the user's day (`OperationDays`) lives in
 |---|---|---|---|
 | `InvestmentPortfolio` | `IdFor(userId)` | `UserId`, `AccountIds[]`, `Tickers[]` | `investmentportfolios` |
 | `InvestmentAccount` | Guid | `UserId`, `Name`, `Currency`, `Broker` (Xtb, Other), `BrokerAccountNumber?`, `OperationCount`, `CreatedAt`, `ArchivedAt?` | `investmentaccounts` |
-| `InvestmentOperation` | Guid (§3.3) | `UserId`, `AccountId`, `Kind`, `At` (UTC instant), `Ticker?`, `Quantity?`, `Price?`, `Money`, `PositionId?`, `Source` (Manual, Xtb), `ExternalId?`, `Note?`, `RecordedAt`, `Deleted` | `investmentoperations` |
+| `InvestmentOperation` | Guid (§3.3) | `UserId`, `AccountId`, `Kind`, `At` (UTC instant), `Ticker?`, `Quantity?`, `Price?`, `Money`, `PositionId?`, `TransferType?`, `CounterpartyAccountNumber?`, `CounterMoney?`, `Source` (Manual, Xtb), `ExternalId?`, `Note?`, `RecordedAt`, `Deleted` | `investmentoperations` |
 | `Instrument` | `IdFor(userId, ticker)` | `UserId`, `Ticker`, `Name`, `QuoteSymbol`, `UpdatedAt` | `instruments` |
 
 - `Money` is the operation's cash effect in the **account's** currency, with
@@ -98,8 +99,23 @@ Grouping operations by the user's day (`OperationDays`) lives in
   are required on Buy and Sell, and absent elsewhere. `Price` is what the
   broker reported. It feeds chart markers only, never a sum: the `Money`
   amount is the truth.
+- `Kind` is one of Deposit, Withdrawal, TransferIn, TransferOut, Buy, Sell,
+  Dividend, Tax, TaxRefund, Interest, Fee. Deposit, TransferIn, Sell,
+  Dividend, TaxRefund and Interest add cash; the rest take it out.
 - `Ticker` is the broker's ticker (`ABC.US`, `DEF.PL`). It is required on
-  Buy, Sell, Dividend and Tax, and absent on the rest.
+  Buy, Sell and Dividend, optional on Tax, TaxRefund and Fee (interest tax
+  and stamp duty name none, a fee may), and absent on the rest.
+- **Transfers.** `TransferIn` and `TransferOut` move cash between accounts.
+  `TransferType` (Subaccount, Ike, CurrencyConversion) is required on them
+  and absent on every other kind. `CounterpartyAccountNumber` is the other
+  account's broker number, optional, transfers only. `CounterMoney` is the
+  other leg of a currency conversion: its amount and currency (never the
+  account's), with a rate to PLN. It is allowed only on a CurrencyConversion
+  transfer, and optional there. Imported, its amount is this leg's amount
+  converted at the rate in the XTB comment, rounded to 2 decimals, and its
+  rate to PLN is implied by the conversion (this leg's PLN value ÷ the
+  counter amount), so no extra NBP rate is fetched. Documents stored before
+  these fields read them as absent.
 - `PositionId` is XTB's position id. Buys sharing one form one lot; a sell
   with one closes that lot (§5.1).
 - An `Instrument` holds the per-user mapping from ticker to Yahoo symbol and
@@ -129,6 +145,7 @@ Grouping operations by the user's day (`OperationDays`) lives in
 | `InvestmentOperation.MaxQuantity` | 1 000 000 000, at most 8 decimals | quantity |
 | `InvestmentOperation.MaxPrice` | 1 000 000 000, at most 8 decimals | price |
 | `InvestmentOperation.MaxPositionIdLength` | 32 | broker position id |
+| `InvestmentOperation.MaxCounterpartyAccountNumberLength` | 32 | counterparty account number |
 | `InvestmentPortfolio.MaxAccounts` | 32, archived included | `CreateInvestmentAccount` |
 | `InvestmentPortfolio.MaxInstruments` | 500 | `EnsureInstrument` |
 | `InvestmentAccount.MaxOperations` | 20,000, deleted included | `RecordInvestmentOperation` |
@@ -161,9 +178,17 @@ cannot pass a cap together.
 **Operations**
 
 - `RecordInvestmentOperation(operationId, accountId, kind, at, ticker?,
-  quantity?, price?, money, positionId?, source, externalId?, note?)`.
+  quantity?, price?, money, positionId?, source, externalId?, note?,
+  transferType?, counterpartyAccountNumber?, counterMoney?)`. The last three
+  are optional parameters, so commands queued before them still read.
   - The money's currency must be the account's ("An operation is in the
     account's currency.").
+  - A transfer needs a type ("A transfer needs a type."); any other kind
+    with a type, a counterparty number or a counter amount is rejected ("Only
+    a transfer has a transfer type.", "Only a transfer has a counterparty
+    account.", "Only a currency conversion has a counter amount."). A
+    counter amount in the account's currency is rejected ("A currency
+    conversion's other side is in another currency.").
   - A manual operation has no external id; an imported one has one.
   - Recording an id that already exists, live or deleted, is a no-op. That
     makes a repeated import harmless, even from two offline devices.
@@ -176,7 +201,7 @@ cannot pass a cap together.
     name-based UUID.) An XTB id must be digits that fit a `long`; anything
     else is a row error. A manual operation's id is random.
 - `EditInvestmentOperation` replaces kind, time, ticker, quantity, price,
-  money, position id and note. `Source` and `ExternalId` never change, so an
+  money, position id, note and the three transfer fields. `Source` and `ExternalId` never change, so an
   edited import row stays recognised on the next import.
 - `DeleteInvestmentOperation` is a soft delete. `RestoreInvestmentOperation`
   undeletes it.
@@ -223,7 +248,8 @@ both features already use.
 - The account number is the `Account number` cell above the header of
   Cash Operations. Other sheets are not used for it: in a real export the
   Open Positions sheet carried a different number.
-- At most 20,000 data rows. The `Total` row and blank rows are skipped.
+- At most 20,000 data rows. The `Total` row and blank rows are skipped
+  silently.
 - A file without a Cash Operations sheet, or without an account number, is
   a file error.
 
@@ -233,21 +259,44 @@ both features already use.
 |---|---|---|
 | `Stock purchase` | Buy | quantity and price from the comment |
 | `Stock sell` | Sell | quantity and price from the comment |
-| `Deposit`, `IKE deposit`, `IKZE deposit` | Deposit | |
+| `Deposit`, `IKZE deposit` | Deposit | |
 | `Withdrawal` | Withdrawal | |
+| `IKE deposit` | TransferIn (+) / TransferOut (−) | type Ike |
+| `Subaccount transfer` | TransferIn (+) / TransferOut (−) | type Subaccount |
+| `Transfer` | TransferIn (+) / TransferOut (−) | type CurrencyConversion |
 | `Dividend` | Dividend | |
-| `Withholding tax` | Tax | |
+| `Withholding tax` | Tax (−) / TaxRefund (+) | a positive one is a refund ("US Dividends Reclassification") |
 | `Free funds interest` | Interest | |
-| `Commission`, `SEC fee` | Fee | |
+| `Free funds interest tax` | Tax | no ticker |
+| `Commission`, `SEC fee`, `Stamp duty`, `Tax IFTT` | Fee | ticker optional |
+| `Total` | — | skipped silently |
 | anything else | — | row error naming the type |
 
 - **Amount.** The absolute value of `Amount`, in the account currency.
   Its sign must match the kind (a purchase is negative, a sell positive);
-  a mismatch is a row error. Zero is a row error.
+  a mismatch is a row error. Transfers and withholding tax take their
+  direction from the sign, so they never mismatch. Zero is a row error.
 - **Time.** `Time` is an Excel serial in UTC: days since 1899-12-30.
-- **Comment.** `OPEN BUY <ticker> <quantity> @ <price>` on a purchase,
-  `CLOSE BUY <ticker> <quantity> @ <price>` on a sell. The quantity may have
-  a fraction (`2.2`). An unparsable comment on a buy or sell is a row error.
+- **Trade comment.** `OPEN BUY` on a purchase, `CLOSE BUY` on a sell, then
+  an optional ticker, the quantity and `@ <price>`. The quantity is either
+  plain (`3`, `0.5`) or `<fill>/<order total>` (`3/7`); the row's quantity is
+  always the first number. Prices have any number of decimals. For example
+  `OPEN BUY 3 @ 75.90`, `OPEN BUY 3/7 @ 75.30`, `OPEN BUY ABC.US 0.5 @
+  120.10`, `CLOSE BUY ABC.US 4/15 @ 74.00`. The ticker in the comment is
+  ignored. An unparsable comment on a buy or sell is a row error.
+- **Transfer comments** give the counterparty number:
+  - `IKE deposit`: `Transfer out operation on account with id 11111111`
+    or `Transfer in operation on account with id 11111111`: the number.
+  - `Subaccount transfer`: `Transfer from 11111111 to 33333333`: the "to"
+    number on the negative leg, the "from" number on the positive one.
+  - `Transfer`: `Currency conversion, PLN to USD from TA: 11111111 to:
+    22222222, Exchange rate:0.252903`: the "to" number on the negative leg,
+    the "from" number on the positive one. The comment also gives the
+    counter amount: the target amount is the source amount × rate, so a
+    negative (source) leg's counter amount is |amount| × rate in the target
+    currency, and a positive (target) leg's is |amount| ÷ rate in the source
+    currency, both rounded to 2 decimals. A conversion comment that does
+    not parse leaves the counter amount and number out; it is not an error.
 - **Ticker and name** come from `Ticker` and `Instrument`.
 - **External id** is `ID`; a row without one is a row error.
 - **Position id** is `Position ID`; a buy or sell without one is a row
@@ -256,22 +305,39 @@ both features already use.
   operation's day, fetched once per currency over the file's date range
   (§7.2). The day is the date of `Time` in the user's stored time zone.
 
-### 4.3 Target account
+### 4.3 Target accounts
 
-- From an account's Import action, the file's number must equal the
-  account's `BrokerAccountNumber`. An account without one takes the file's
-  (`SetBrokerAccountNumber` is part of the import), unless another account
+One XTB login has several accounts, each exported as its own file. A file
+can still feed more than one PSPad account: the PLN file also holds the
+`Investment Plans` product, a separate XTB sub-account with its own number.
+
+- **Product split.** Each `Subaccount transfer` leg tells which number its
+  `Product` belongs to: the negative leg's product is the "from" number, the
+  positive leg's the "to" number. A product with no such leg belongs to the
+  file's account number. When legs disagree, the first one in the file
+  wins. Every row goes to its product's number.
+- From an account's Import action, the account takes the rows of the
+  number it holds. An account without a number takes the file's (and
+  `SetBrokerAccountNumber` is part of the import), unless another account
   already holds that number: then it is a file error, "This file belongs to
-  account {name}.", and no number is set. A different number is a
-  file error: "This file is from account 12345678."
-- From the Investments page's "Import from XTB", the number picks the
-  account. An unknown number offers a new account in the preview: the name
-  defaults to the `Product` value and the number ("IKE 12345678"), and the
-  user picks the currency, which the file does not state. Confirming sends
-  `CreateInvestmentAccount` before the operations.
-- Four XTB accounts are four files and four PSPad accounts.
+  account {name}.", and no number is set. A number that matches none of
+  the file's numbers is a file error: "This file is from account 12345678."
+  The file's other numbers go to their own accounts, as below.
+- Otherwise each number picks the account holding it. An unknown number
+  offers a new account in the preview: the name defaults to the `Product`
+  value and the number ("Investment Plans 33333333"), editable. The file's
+  own number takes the currency the user picks, which the file does not
+  state; every other new account takes the currency of the file's account.
+  Confirming sends `CreateInvestmentAccount` before the operations.
+- The caps apply across all of them: the 32 accounts counts every account
+  the file would create, and the 500 instruments every new ticker. The
+  20,000 operations is per account.
 
 ### 4.4 Preview
+
+The preview is grouped by target account: one section per number, the
+file's own number first, each with its account (or the new account it
+offers), its rows, its file error and its operation-cap error.
 
 | Status | Meaning | Ticked |
 |---|---|---|
@@ -290,26 +356,32 @@ Import sends the ticked rows and the error rows stay out. Fixing them means
 entering the operation by hand or importing a corrected file later; a
 re-import skips what already came in.
 
-**Limits in the preview.** When the ticked rows would take the account past
+**Limits in the preview.** When the ticked rows would take an account past
 20,000 operations, or the new tickers past 500 instruments, the preview says
 so ("This import needs 1,240 more operations than the account can take")
-and Import stays disabled until rows are unticked. A file that would create
-a 33rd account offers no new account.
+and Import stays disabled until rows are unticked. When the file would take
+the user past 32 accounts, the accounts over the cap are not offered and
+Import stays disabled. A file error in any section disables Import too.
 
 The preview also shows the counts per kind, the new instruments, and the
-**check**: the open lots the import would leave (§5.1) are compared with the
-file's Open Positions sheet, when it has one, by position id and volume.
-Matching shows "Open positions match the file". Differences are listed and
-do not block the import: the sheet is a snapshot from the export time, and
-operations entered by hand may explain them.
+**check**: the open lots the import would leave in all the file's accounts
+(§5.1) are compared with the file's Open Positions sheet, when it has one,
+by position id and volume. The sheet is found by a header holding
+`Instrument/Position` (or `Position`), `Ticker` (or `Symbol`) and `Volume`;
+XTB lists a summary row per instrument and then one row per lot, and only
+the rows whose position column is a number are lots. Matching shows "Open
+positions match the file". Differences are listed and do not block the
+import: the sheet is a snapshot from the export time, and operations
+entered by hand may explain them.
 
 ### 4.5 Confirm
 
 Commands in order: `CreateInvestmentAccount` or `SetBrokerAccountNumber`
-when needed, `EnsureInstrument` per new ticker, then
-`RecordInvestmentOperation` per ticked row, oldest first, sent with
-`CommandSender.SendManyAsync`. The outbox ships them like any other commands
-(`adr/0074` consequences apply).
+for every section that needs one, `EnsureInstrument` per new ticker, then
+`RestoreInvestmentOperation` per ticked deleted row and
+`RecordInvestmentOperation` per ticked row, oldest first across the file,
+sent with `CommandSender.SendManyAsync`. The outbox ships them like any
+other commands (`adr/0074` consequences apply).
 
 ## 5. Reading (pure, in the module, shared by client and server)
 
@@ -326,7 +398,8 @@ across accounts are in §5.3.
   takes cost pro rata to quantity.
 - **Realized result** of a sell = its amount − the cost it closed. A
   positive result counts as a realized gain, a negative one as a realized
-  loss; the two are never netted.
+  loss. Gains and losses are kept apart, and their sum is shown beside them
+  as the netted realized result (§5.2).
 - **Oversold.** A sell needing more than the lot or ticker holds closes what
   there is, and the position carries an "Oversold by n" warning. The import
   check (§4.4) shows the same.
@@ -339,26 +412,47 @@ across accounts are in §5.3.
 
 ### 5.2 Account figures
 
-- Net deposits = deposits − withdrawals.
+- Put in = deposits + transfers in. Taken out = withdrawals + transfers out.
+- Net deposits = put in − taken out. Transfers are cash flows like
+  deposits, never profit.
 - Cash = Σ signed amounts of every operation.
 - Positions value = Σ position values. Account value = cash + positions
   value.
 - Total profit = account value − net deposits.
-- Realized gains, realized losses, unrealized (Σ positions), passive income
-  (dividends − tax + interest), fees.
+- Realized gains, realized losses, and the **realized result** = realized
+  gains + realized losses: the clean profit or loss made by selling.
+- Dividends net = dividends − dividend tax + tax refunds. Passive income =
+  dividends net + interest − interest tax (all Tax operations are
+  subtracted, all TaxRefund operations added).
+- Unrealized (Σ positions), fees.
 - **Identity:** total profit = realized gains + realized losses + unrealized
   + passive income − fees. It holds exactly in the account currency, and a
   test asserts it on every fixture.
 
 ### 5.3 Across accounts (PLN)
 
-- Values are converted at today's NBP rate; net deposits, realized,
-  passive income and fees at each operation's frozen rate; unrealized at
+- **FX cost** (`adr/0087`). A non-PLN account keeps a running pool of
+  (currency units, PLN cost), in operation order. A CurrencyConversion
+  TransferIn whose `CounterMoney` is in PLN adds (amount, counter PLN). A
+  CurrencyConversion TransferOut to PLN removes units at the pool's average
+  rate (pool PLN ÷ pool units). Every operation's PLN value is its amount ×
+  the pool's average rate at its time; while the pool is empty (no
+  conversion yet) the operation's frozen NBP rate is used. The frozen rate is
+  still stored on every amount (AD-14).
+- Values today are converted at today's NBP rate; net deposits, realized,
+  passive income and fees at each operation's PLN value above; unrealized at
   today's rate.
 - Currency difference = total profit in PLN − (the components in PLN). It
-  is what exchange rates added or took since the money went in, and it is
-  shown as its own line, so the PLN identity holds too.
+  is what today's NBP rate adds over the average rate actually paid, and it
+  is shown as its own line, so the PLN identity holds too.
+- A non-PLN account shows its average rate ("Average rate 1 USD = 3.6512
+  PLN") and the PLN spent on its currency (the pool's PLN cost).
 - PLN accounts have no currency difference.
+- **Internal transfers.** In "All accounts", a transfer whose
+  `CounterpartyAccountNumber` is the broker number of another of the user's
+  accounts is internal: it is left out of Put in and Taken out, so money
+  moved between own accounts is not counted twice. Both legs still net to
+  zero in net deposits.
 
 ### 5.4 Converting prices
 
@@ -523,8 +617,10 @@ FAB per page (`adr/0033`).
 - **Tabs:** Positions, Operations, Accounts.
 - **Positions:**
   - `MoneyHero` with the account value and total profit, then a stat row:
-    realized gains, realized losses, unrealized, passive income, fees,
-    currency difference (PLN view only).
+    put in, taken out, net deposits, realized result (with realized gains
+    and realized losses beside it), unrealized, dividends net, passive
+    income, fees, currency difference (PLN view only), and for a non-PLN
+    account its average rate and the PLN spent on its currency (§5.3).
   - Value-over-time chart (`MudChart` line): value and net deposits, with
     the range chips.
   - Positions grouped by account, each row in the `pspad-holding-row`
@@ -541,12 +637,16 @@ FAB per page (`adr/0033`).
 
 ### 9.3 Panels
 
-- **Operation panel.** Kind first; the fields follow it (§3.1). Time
+- **Operation panel.** Kind first; the fields follow it (§3.1). Transfer in
+  and Transfer out ask for the transfer type and an optional counterparty
+  account number; Currency conversion also offers the other side's amount
+  and currency. Time
   defaults to now. Money is the amount only; its currency is the account's,
   and its rate is fetched from NBP for the day, editable, as in the entry
   panel.
 - **Account panel.** Name, currency (fixed after creation), broker, number.
-- **Import page.** Pick file → preview (§4.4) → Import. Progress counts the
+- **Import page.** Pick file → preview (§4.4), one section per target
+  account, each new account with its own editable name → Import. Progress counts the
   commands handed to the local outbox; when they are all in, the page goes
   back to Investments. What is still waiting for the server shows on the
   outbox chip, like any other offline write.

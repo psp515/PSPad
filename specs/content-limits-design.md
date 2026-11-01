@@ -69,6 +69,7 @@ instruments, the account for its operations.
 | `InvestmentAccount.MaxBrokerAccountNumberLength` | 32 | broker account number |
 | `InvestmentOperation.MaxNoteLength` | 1,024 (`FieldValue`) | operation note |
 | `InvestmentOperation.MaxPositionIdLength` | 32 | broker position id |
+| `InvestmentOperation.MaxCounterpartyAccountNumberLength` | 32 | counterparty account number of a transfer |
 | `Instrument.MaxTickerLength` | 24 | ticker |
 | `Instrument.MaxQuoteSymbolLength` | 24 | Yahoo symbol |
 | `Instrument.MaxNameLength` | 64 | instrument name |

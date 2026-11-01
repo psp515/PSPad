@@ -101,6 +101,7 @@ the old one's status line to point at the new number.
 | [0084](0084-quotes-come-from-yahoo-through-a-cached-server-proxy.md) | Quotes come from Yahoo Finance through a cached server proxy | Active | 2026-10-30 | architecture, http, storage, deployment, investments |
 | [0085](0085-a-holding-links-to-an-investment-account-by-id.md) | A holding links to an investment account by id, and is a copy refreshed on demand | Active | 2026-10-30 | architecture, contracts, money, investments |
 | [0086](0086-portfolio-takes-the-goals-slot-in-the-phone-bottom-bar.md) | Budgets moves to the fourth slot and Portfolio takes the fifth in the phone bottom bar | Active (amends [0060](0060-budgets-take-the-statistics-slot-and-sidebar-groups-collapse.md)) | 2026-10-30 | ui, navigation, investments |
+| [0087](0087-investment-pln-totals-use-the-actual-fx-cost.md) | Investment PLN totals use the PLN actually spent on a currency; the frozen NBP rate stays as the fallback | Active (narrows [0059](0059-money-is-its-own-wasm-safe-module.md) for investment totals) | 2026-11-01 | domain, money, investments |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
