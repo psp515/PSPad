@@ -145,12 +145,12 @@ public class InvestmentImportPlanTests
     }
 
     [Fact]
-    public void AFeeKeepsNoTicker()
+    public void AFeeKeepsItsTicker()
     {
         var record = Assert.Single(Plan(Preview(FileWith(Commission(8, 900000003, "ACM.PL", 1m)),
             target: AnAccount("PLN", number: Number))).OfType<RecordInvestmentOperation>());
 
-        Assert.Equal((OperationKind.Fee, (string?)null), (record.Kind, record.Ticker));
+        Assert.Equal((OperationKind.Fee, "ACM.PL"), (record.Kind, record.Ticker));
     }
 
     [Fact]

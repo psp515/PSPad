@@ -1,5 +1,6 @@
 using PSPad.TestInfrastructure;
 using PSPad.Module.Investments.Import;
+using PSPad.Module.Investments.Operations;
 using PSPad.Module.Investments.Tests.Import.Xlsx;
 
 namespace PSPad.Module.Investments.Tests.Import;
@@ -84,31 +85,51 @@ public class XtbParserTests
     }
 
     [Theory]
-    [InlineData("Stock purchase", XtbRowKind.Buy)]
-    [InlineData("stock sell", XtbRowKind.Sell)]
-    [InlineData("Deposit", XtbRowKind.Deposit)]
-    [InlineData("IKE deposit", XtbRowKind.Deposit)]
-    [InlineData("IKZE deposit", XtbRowKind.Deposit)]
-    [InlineData("Withdrawal", XtbRowKind.Withdrawal)]
-    [InlineData("Dividend", XtbRowKind.Dividend)]
-    [InlineData("Withholding tax", XtbRowKind.Tax)]
-    [InlineData("Free funds interest", XtbRowKind.Interest)]
-    [InlineData("Commission", XtbRowKind.Fee)]
-    [InlineData("SEC fee", XtbRowKind.Fee)]
-    public void TypesMapToKinds(string type, XtbRowKind kind) =>
-        Assert.Equal(kind, XtbTypeMap.KindOf(type));
+    [InlineData("Stock purchase", -1.0, XtbRowKind.Buy)]
+    [InlineData("stock sell", 1.0, XtbRowKind.Sell)]
+    [InlineData("Deposit", 1.0, XtbRowKind.Deposit)]
+    [InlineData("IKZE deposit", 1.0, XtbRowKind.Deposit)]
+    [InlineData("Withdrawal", -1.0, XtbRowKind.Withdrawal)]
+    [InlineData("IKE deposit", 1.0, XtbRowKind.TransferIn)]
+    [InlineData("IKE deposit", -1.0, XtbRowKind.TransferOut)]
+    [InlineData("Subaccount transfer", 1.0, XtbRowKind.TransferIn)]
+    [InlineData("Subaccount transfer", -1.0, XtbRowKind.TransferOut)]
+    [InlineData("Transfer", 1.0, XtbRowKind.TransferIn)]
+    [InlineData("Transfer", -1.0, XtbRowKind.TransferOut)]
+    [InlineData("Dividend", 1.0, XtbRowKind.Dividend)]
+    [InlineData("Withholding tax", -1.0, XtbRowKind.Tax)]
+    [InlineData("Withholding tax", 1.0, XtbRowKind.TaxRefund)]
+    [InlineData("Free funds interest", 1.0, XtbRowKind.Interest)]
+    [InlineData("Free funds interest tax", -1.0, XtbRowKind.Tax)]
+    [InlineData("Commission", -1.0, XtbRowKind.Fee)]
+    [InlineData("SEC fee", -1.0, XtbRowKind.Fee)]
+    [InlineData("Stamp duty", -1.0, XtbRowKind.Fee)]
+    [InlineData("Tax IFTT", -1.0, XtbRowKind.Fee)]
+    public void TypesMapToKinds(string type, double amount, XtbRowKind kind) =>
+        Assert.Equal(kind, XtbTypeMap.KindOf(type, (decimal)amount));
+
+    [Theory]
+    [InlineData("IKE deposit", TransferType.Ike)]
+    [InlineData("Subaccount transfer", TransferType.Subaccount)]
+    [InlineData("Transfer", TransferType.CurrencyConversion)]
+    public void TransferTypesNameTheirTransfer(string type, TransferType transfer) =>
+        Assert.Equal(transfer, XtbTypeMap.TransferTypeOf(type));
+
+    [Fact]
+    public void OtherTypesAreNoTransfer() =>
+        Assert.Null(XtbTypeMap.TransferTypeOf("Deposit"));
 
     [Fact]
     public void AnUnknownTypeMapsToNothing() =>
-        Assert.Null(XtbTypeMap.KindOf("Stock split"));
+        Assert.Null(XtbTypeMap.KindOf("Stock split", 1m));
 
     [Theory]
     [InlineData("Deposit", -10.0)]
     [InlineData("Dividend", -10.0)]
     [InlineData("Free funds interest", -0.5)]
     [InlineData("Withdrawal", 10.0)]
-    [InlineData("Withholding tax", 3.0)]
     [InlineData("Commission", 1.0)]
+    [InlineData("Free funds interest tax", 1.0)]
     public void AWrongSignIsARowError(string type, double amount)
     {
         var row = Assert.Single(ParseRows(XtbSheets.Row(type, "N", "N.US", Time, amount, "1", null, "IKE", null)).Rows);
@@ -169,15 +190,20 @@ public class XtbParserTests
         Assert.Equal(3, row.Errors.Count);
     }
 
-    [Theory]
-    [InlineData("Dividend", 5.0)]
-    [InlineData("Withholding tax", -5.0)]
-    public void DividendAndTaxNeedATicker(string type, double amount)
+    [Fact]
+    public void ADividendNeedsATicker()
     {
-        var row = Assert.Single(ParseRows(XtbSheets.Row(type, null, null, Time, amount, "1", null, "IKE", null)).Rows);
+        var row = Assert.Single(ParseRows(XtbSheets.Row("Dividend", null, null, Time, 5.0, "1", null, "IKE", null)).Rows);
 
         Assert.Equal(["The row has no ticker."], row.Errors);
     }
+
+    [Theory]
+    [InlineData("Withholding tax", -5.0)]
+    [InlineData("Free funds interest tax", -0.2)]
+    [InlineData("SEC fee", -0.01)]
+    public void TaxesAndFeesNeedNoTicker(string type, double amount) =>
+        Assert.Empty(Assert.Single(ParseRows(XtbSheets.Row(type, null, null, Time, amount, "1", "x", "IKE", null)).Rows).Errors);
 
     [Fact]
     public void AnEmptyPositionIdOnATaxRowIsFine()
@@ -289,6 +315,31 @@ public class XtbParserTests
 
         Assert.Equal(
             [new XtbOpenPosition("800000001", "ACM.PL", 20m), new XtbOpenPosition("77", "Y.PL", 2.5m)],
+            file.OpenPositions);
+    }
+
+    [Fact]
+    public void OpenPositionsListedPerInstrumentThenPerLotKeepOnlyTheLots()
+    {
+        var file = Parse(
+            ("Cash", XtbSheets.CashOperations("12345678", Deposit())),
+            ("Open Positions", [
+                ["Account number", "12345678"],
+                ["Product", "Metric", "Amount", "Currency"],
+                ["My Trades", "Open position value", 100.0, "PLN"],
+                ["Product", "Instrument/Position", "Ticker", "Category", "Type", "Volume", "Value"],
+                ["My Trades", "Acme Works SA", "ACM.PL", "STOCK", null, 7.0, 70.0],
+                ["My Trades", 800000001.0, "ACM.PL", null, "BUY", 3.0, 30.0],
+                ["My Trades", "800000002", "ACM.PL", null, "BUY", 4.0, 40.0],
+                ["Investment Plans", "Bcd Fund", "BCD.DE", "ETF", null, 0.5, 9.0],
+                ["Investment Plans", 800000003.0, "BCD.DE", null, "BUY", 0.5, 9.0],
+            ]));
+
+        Assert.Equal(
+            [
+                new XtbOpenPosition("800000001", "ACM.PL", 3m), new XtbOpenPosition("800000002", "ACM.PL", 4m),
+                new XtbOpenPosition("800000003", "BCD.DE", 0.5m)
+            ],
             file.OpenPositions);
     }
 }

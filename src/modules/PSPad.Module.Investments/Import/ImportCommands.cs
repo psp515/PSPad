@@ -15,10 +15,11 @@ internal static class ImportCommands
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(at, zone).DateTime);
 
     public static bool HoldsTicker(OperationKind kind) =>
-        kind is OperationKind.Buy or OperationKind.Sell or OperationKind.Dividend or OperationKind.Tax;
+        kind is OperationKind.Buy or OperationKind.Sell or OperationKind.Dividend or OperationKind.Tax
+            or OperationKind.TaxRefund or OperationKind.Fee;
 
     public static string? TickerOf(XtbRow row) =>
-        HoldsTicker(KindOf(row)) ? row.Ticker?.Trim().ToUpperInvariant() : null;
+        HoldsTicker(KindOf(row)) && !string.IsNullOrWhiteSpace(row.Ticker) ? row.Ticker.Trim().ToUpperInvariant() : null;
 
     public static RecordInvestmentOperation Record(
         XtbRow row, Guid commandId, Guid userId, Guid accountId, string currency, DateOnly day,
@@ -31,8 +32,23 @@ internal static class ImportCommands
             : new MoneyValue(row.Amount!.Value, currency, rate.Rate, rate.RateDate);
         var xtbId = XtbId(row);
         return new RecordInvestmentOperation(commandId, userId, InvestmentOperation.IdFor(accountId, xtbId), accountId,
-            kind, row.At!.Value, HoldsTicker(kind) ? row.Ticker : null, traded ? row.Quantity : null,
+            kind, row.At!.Value, TickerOf(row), traded ? row.Quantity : null,
             traded ? row.Price : null, money, traded ? row.PositionId : null, OperationSource.Xtb,
-            xtbId.ToString(CultureInfo.InvariantCulture), null);
+            xtbId.ToString(CultureInfo.InvariantCulture), null, row.TransferType, row.Counterparty,
+            CounterMoneyOf(row, money, day));
+    }
+
+    static MoneyValue? CounterMoneyOf(XtbRow row, MoneyValue money, DateOnly day)
+    {
+        if (row is not { TransferType: TransferType.CurrencyConversion, CounterAmount: > 0, CounterCurrency: { } currency })
+        {
+            return null;
+        }
+
+        var amount = row.CounterAmount.Value;
+        var rate = currency == Currencies.Pln
+            ? 1m
+            : Math.Round(money.Amount * money.RateToPln / amount, 6, MidpointRounding.AwayFromZero);
+        return new MoneyValue(amount, currency, rate, day);
     }
 }

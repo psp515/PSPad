@@ -1,10 +1,14 @@
 using System.Globalization;
+using PSPad.Module.Investments.Operations;
 
 namespace PSPad.Module.Investments.Import;
 
 public static class XtbParser
 {
     public const int MaxRows = 20_000;
+
+    static readonly (string Position, string Symbol)[] OpenPositionHeaders =
+        [("Position", "Symbol"), ("Position", "Ticker"), ("Instrument/Position", "Ticker"), ("Instrument/Position", "Symbol")];
 
     static readonly string[] CashHeaders = ["Type", "Instrument", "Ticker", "Time", "Amount", "ID", "Comment", "Product", "Position ID"];
 
@@ -38,13 +42,25 @@ public static class XtbParser
             rows.Add(ParseRow(i + 1, type, cells, columns));
         }
         var product = rows.Select(r => r.Product).FirstOrDefault(p => p is not null);
-        return new XtbFile(account, product, rows, FindOpenPositions(book, sheet));
+        return new XtbFile(account, product, rows, FindOpenPositions(book, sheet)) { ProductNumbers = ProductNumbersOf(rows) };
+    }
+
+    static Dictionary<string, string> ProductNumbersOf(IEnumerable<XtbRow> rows)
+    {
+        var numbers = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var row in rows.Where(r => r.TransferType == TransferType.Subaccount && r.Product is not null && r.Errors.Count == 0))
+        {
+            if (XtbTransferComment.Parse(row.Comment)?.OwnNumberOf(row.Kind == XtbRowKind.TransferOut) is { } own)
+                numbers.TryAdd(row.Product!, own);
+        }
+        return numbers;
     }
 
     static XtbRow ParseRow(int sheetRow, string type, IReadOnlyList<XlsxCell?> cells, Dictionary<string, int> columns)
     {
         var errors = new List<string>();
-        var kind = XtbTypeMap.KindOf(type);
+        var amount = AmountOf(Cell(cells, columns["Amount"]));
+        var kind = XtbTypeMap.KindOf(type, amount);
         if (kind is null)
             errors.Add($"Unknown type '{type}'.");
 
@@ -53,7 +69,6 @@ public static class XtbParser
         var positionId = TextOf(Cell(cells, columns["Position ID"]));
         var id = IdOf(Cell(cells, columns["ID"]));
         var at = TimeOf(Cell(cells, columns["Time"]));
-        var amount = AmountOf(Cell(cells, columns["Amount"]));
 
         if (at is null)
             errors.Add("The row has no usable time.");
@@ -63,7 +78,7 @@ public static class XtbParser
         else
         {
             absolute = Math.Round(Math.Abs(amount.Value), 2, MidpointRounding.AwayFromZero);
-            if (kind is not null && !SignMatches(kind.Value, amount.Value))
+            if (kind is not null && !XtbTypeMap.SignDecidesKind(type) && !SignMatches(kind.Value, amount.Value))
                 errors.Add($"The amount's sign does not match '{type}'.");
         }
         if (id is null)
@@ -80,16 +95,24 @@ public static class XtbParser
             else
                 (quantity, price) = (parsed.Quantity, parsed.Price);
         }
-        if (kind is XtbRowKind.Buy or XtbRowKind.Sell or XtbRowKind.Dividend or XtbRowKind.Tax && ticker is null)
+        if (kind is XtbRowKind.Buy or XtbRowKind.Sell or XtbRowKind.Dividend && ticker is null)
             errors.Add("The row has no ticker.");
 
+        var transferType = XtbTypeMap.TransferTypeOf(type);
+        var outgoing = kind == XtbRowKind.TransferOut;
+        var transfer = transferType is null ? null : XtbTransferComment.Parse(comment);
+        var counter = transferType == TransferType.CurrencyConversion && absolute is { } legAmount
+            ? transfer?.CounterOf(legAmount, outgoing)
+            : null;
+
         return new XtbRow(sheetRow, type, kind, TextOf(Cell(cells, columns["Instrument"])), ticker, at, absolute, id, comment,
-            TextOf(Cell(cells, columns["Product"])), positionId, quantity, price, errors);
+            TextOf(Cell(cells, columns["Product"])), positionId, quantity, price, errors, transferType,
+            transfer?.CounterpartyOf(outgoing), counter?.Amount, counter?.Currency);
     }
 
     static bool SignMatches(XtbRowKind kind, decimal amount) => kind switch
     {
-        XtbRowKind.Buy or XtbRowKind.Withdrawal or XtbRowKind.Tax or XtbRowKind.Fee => amount < 0,
+        XtbRowKind.Buy or XtbRowKind.Withdrawal or XtbRowKind.Tax or XtbRowKind.Fee or XtbRowKind.TransferOut => amount < 0,
         _ => amount > 0,
     };
 
@@ -97,16 +120,16 @@ public static class XtbParser
     {
         foreach (var sheet in book.Sheets.Where(s => !ReferenceEquals(s, cash)))
         {
-            foreach (var symbolHeader in new[] { "Symbol", "Ticker" })
+            foreach (var (positionHeader, symbolHeader) in OpenPositionHeaders)
             {
-                var headerRow = FindHeaderRow(sheet, ["Position", symbolHeader, "Volume"]);
+                var headerRow = FindHeaderRow(sheet, [positionHeader, symbolHeader, "Volume"]);
                 if (headerRow < 0)
                     continue;
                 var columns = Columns(sheet.Rows[headerRow]);
                 var positions = new List<XtbOpenPosition>();
                 foreach (var cells in sheet.Rows.Skip(headerRow + 1))
                 {
-                    var positionId = TextOf(Cell(cells, columns["Position"]));
+                    var positionId = IdOf(Cell(cells, columns[positionHeader]));
                     var volume = AmountOf(Cell(cells, columns["Volume"]));
                     if (positionId is not null && volume is not null)
                         positions.Add(new XtbOpenPosition(positionId, TextOf(Cell(cells, columns[symbolHeader])) ?? "", volume.Value));

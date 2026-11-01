@@ -5,7 +5,7 @@ namespace PSPad.Module.Investments.Import;
 
 public sealed partial record XtbComment(decimal Quantity, decimal Price)
 {
-    [GeneratedRegex(@"^(OPEN|CLOSE)\s+BUY\s+\S+\s+(?<q>\d+(\.\d+)?)\s+@\s+(?<p>\d+(\.\d+)?)$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^(OPEN|CLOSE)\s+BUY\s+(\S+\s+)?(?<q>\d+(\.\d+)?)(/\d+(\.\d+)?)?\s+@\s+(?<p>\d+(\.\d+)?)$", RegexOptions.CultureInvariant)]
     private static partial Regex Pattern();
 
     public static XtbComment? Parse(string? comment)
