@@ -1,5 +1,5 @@
 import { expect, Page } from '@playwright/test';
-import { addDays, utcToday } from './dates';
+import { addDays, isoDate, utcToday } from './dates';
 import { openInApp } from './nav';
 import { Cell, excelSerial, workbook } from './xlsx';
 
@@ -55,7 +55,7 @@ export async function openInvestments(page: Page, path = '/investments') {
 
 export const tradesAccount = '20000001';
 export const plansAccount = '20000002';
-const dollarAccount = '20000003';
+export const dollarAccount = '20000003';
 
 function productRow(type: string, instrument: string | null, ticker: string | null, daysAgo: number, amount: number,
   id: number, comment: string, positionId: number | null, product: string): Cell[] {
@@ -91,4 +91,41 @@ export function xtbProductStatement(name = `account_${tradesAccount}_en_xlsx.xls
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: workbook([{ name: 'Cash Operations', rows: cash }]),
   };
+}
+
+export const dollarStatementRows = {
+  conversion: productRow('Transfer', null, null, 36, 100, 920000001,
+    `Currency conversion, PLN to USD from TA: ${tradesAccount} to: ${dollarAccount}, Exchange rate:0.25`, null, trades),
+};
+
+export function xtbDollarStatement(name = `account_${dollarAccount}_en_xlsx.xlsx`) {
+  const cash: Cell[][] = [
+    ['Account number', dollarAccount],
+    ['Cash Operations'],
+    header,
+    ...Object.values(dollarStatementRows),
+    ['Total', null, null, null, null, 100],
+  ];
+  return {
+    name,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: workbook([{ name: 'Cash Operations', rows: cash }]),
+  };
+}
+
+export async function stubNbpSeries(page: Page, rates: Record<string, number>) {
+  await page.context().unroute('**/api/money/nbp-rates?**');
+  await page.context().route('**/api/money/nbp-rates?**', route => {
+    const query = new URL(route.request().url()).searchParams;
+    const currency = query.get('currency') ?? '';
+    if (!(currency in rates)) {
+      return route.fulfill({ status: 404 });
+    }
+    const to = new Date(`${query.get('to')}T00:00:00Z`);
+    const days: { currency: string; rate: number; effectiveDate: string }[] = [];
+    for (let day = new Date(`${query.get('from')}T00:00:00Z`); day <= to; day = addDays(day, 1)) {
+      days.push({ currency, rate: rates[currency], effectiveDate: isoDate(day) });
+    }
+    return route.fulfill({ json: days });
+  });
 }

@@ -1,11 +1,14 @@
 import { expect, test } from '../fixtures/accounts';
-import { openInvestments, plansAccount, stubQuotes, tradesAccount, xtbProductStatement } from '../helpers/investments';
+import {
+  dollarAccount, openInvestments, plansAccount, stubNbpSeries, stubQuotes, tradesAccount, xtbDollarStatement, xtbProductStatement,
+} from '../helpers/investments';
+import { pickOption } from '../helpers/budgets';
 import { shellMenu } from '../helpers/shell';
 import { signIn } from '../helpers/sign-in';
 
 test.use({ serviceWorkers: 'block' });
 
-test('an XTB file with a second product feeds two new accounts, and the account stats show money put in, moved between own accounts, and the realized result', async ({ page, account }) => {
+test('an XTB file with a second product feeds two new accounts, and the account stats show money put in, moved between own accounts, and the realized result; a USD account adds its value in PLN', async ({ page, account }) => {
   const tradesName = `My Trades ${tradesAccount}`;
   const plansName = `Investment Plans ${plansAccount}`;
 
@@ -47,5 +50,28 @@ test('an XTB file with a second product feeds two new accounts, and the account 
     await expect(page.getByText('Taken out', { exact: true }).locator('..')).toContainText(/(^|\s)400\.00 PLN/);
     await expect(page.getByText('Moved out', { exact: true }).locator('..')).toContainText('1,000.00 PLN');
     await expect(page.getByText('Realized result', { exact: true }).locator('..')).toContainText('100.00 PLN');
+  });
+
+  await test.step('a USD account shows a second line in the default currency under its value, and a PLN account shows none', async () => {
+    await stubNbpSeries(page, { USD: 4 });
+    await openInvestments(page);
+    await shellMenu(page).getByRole('link', { name: 'Import from XTB' }).click();
+    await expect(page.getByRole('heading', { name: 'Import from XTB', exact: true })).toBeVisible();
+    await page.locator('input[type=file]').setInputFiles(xtbDollarStatement());
+    await expect(page.getByText(`Account ${dollarAccount} · 1 rows`)).toBeVisible();
+    await pickOption(page, page.getByRole('combobox', { name: 'Currency' }), 'USD');
+    await expect(page.getByText('Errors · 0')).toBeVisible();
+    await page.getByRole('button', { name: 'Create account and import 1 operation' }).click();
+    await expect(page.getByRole('heading', { name: 'Investments', exact: true })).toBeVisible();
+
+    await page.getByRole('navigation', { name: 'Accounts' }).getByRole('link', { name: new RegExp(`^My Trades ${dollarAccount}`) }).click();
+    const dollarValue = page.getByRole('group', { name: /^Value · / });
+    await expect(dollarValue).toContainText('100.00 USD');
+    await expect(dollarValue.getByText('≈ 400.00 PLN', { exact: true })).toBeVisible();
+
+    await page.getByRole('navigation', { name: 'Accounts' }).getByRole('link', { name: new RegExp(`^${plansName}`) }).click();
+    const plnValue = page.getByRole('group', { name: /^Value · / });
+    await expect(plnValue).toContainText('PLN');
+    await expect(plnValue.getByText(/^≈ /)).toHaveCount(0);
   });
 });
