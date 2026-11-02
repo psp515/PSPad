@@ -737,6 +737,12 @@ FAB per page (`adr/0033`).
   - An expanded row shows the price chart (custom SVG: the close line, green
     buy, red sell and blue dividend markers with a tooltip naming the
     operation) and the open lots.
+  - **Prices.** Every per-unit price shown (last close, average price,
+    "@ price" on operations and chart tooltips, the chart's axis labels, the
+    import preview) goes through `InvestmentText.Price`: 2 decimals when
+    |price| ≥ 1, 4 significant digits below 1, grouped like other amounts.
+    Display only; stored prices keep their 8 decimals. The chart's axis is
+    as wide as its longest label.
 - **Operations:** grouped by day, newest first, filtered by kind; each row
   opens the operation panel. The FAB adds an operation.
 - **Accounts:** a card per account with currency, broker, number, value and

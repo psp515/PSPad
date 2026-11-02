@@ -5,15 +5,18 @@
     @if (_closes.Count > 1)
     {
         var scale = ChartScale.For(_closes, PlotWidth, PlotHeight, Padding);
-        <svg viewBox="@($"0 0 {AxisWidth + PlotWidth} {PlotHeight + DateHeight}")" class="pspad-price-chart-svg" role="img"
+        var high = InvestmentText.Price(scale.High);
+        var low = InvestmentText.Price(scale.Low);
+        var axisWidth = ChartScale.AxisWidthFor(high, low);
+        <svg viewBox="@($"0 0 {axisWidth + PlotWidth} {PlotHeight + DateHeight}")" class="pspad-price-chart-svg" role="img"
              aria-label="@T["PriceChartOf", Ticker].Value">
             <g class="pspad-price-chart-axis">
-                <text x="@(AxisWidth - 6)" y="@ChartScale.Number(scale.Top + 4)" text-anchor="end">@InvestmentText.Price(scale.High)</text>
-                <text x="@(AxisWidth - 6)" y="@ChartScale.Number(scale.Bottom)" text-anchor="end">@InvestmentText.Price(scale.Low)</text>
-                <text x="@AxisWidth" y="@(PlotHeight + DateHeight - 4)" text-anchor="start">@InvestmentText.Day(scale.First)</text>
-                <text x="@(AxisWidth + PlotWidth)" y="@(PlotHeight + DateHeight - 4)" text-anchor="end">@InvestmentText.Day(scale.Last)</text>
+                <text x="@(axisWidth - 6)" y="@ChartScale.Number(scale.Top + 4)" text-anchor="end">@high</text>
+                <text x="@(axisWidth - 6)" y="@ChartScale.Number(scale.Bottom)" text-anchor="end">@low</text>
+                <text x="@axisWidth" y="@(PlotHeight + DateHeight - 4)" text-anchor="start">@InvestmentText.Day(scale.First)</text>
+                <text x="@(axisWidth + PlotWidth)" y="@(PlotHeight + DateHeight - 4)" text-anchor="end">@InvestmentText.Day(scale.Last)</text>
             </g>
-            <g transform="@($"translate({AxisWidth},0)")">
+            <g transform="@($"translate({axisWidth},0)")">
                 <line class="pspad-price-chart-grid" x1="0" x2="@PlotWidth" y1="@ChartScale.Number(scale.Top)" y2="@ChartScale.Number(scale.Top)" />
                 <line class="pspad-price-chart-grid" x1="0" x2="@PlotWidth" y1="@ChartScale.Number(scale.Bottom)" y2="@ChartScale.Number(scale.Bottom)" />
                 <path class="pspad-price-chart-area" d="@scale.Area(_closes)" />
@@ -40,7 +43,6 @@
 </div>
 
 @code {
-    const double AxisWidth = 64;
     const double PlotWidth = 576;
     const double PlotHeight = 200;
     const double DateHeight = 20;

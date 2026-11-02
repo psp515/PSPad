@@ -49,5 +49,12 @@ public sealed record ChartScale(DateOnly First, DateOnly Last, decimal Low, deci
             ? ""
             : $"{Line(closes)} L{Number(X(closes[^1].Date))},{Number(Bottom)} L{Number(X(closes[0].Date))},{Number(Bottom)} Z";
 
+    const double AxisCharWidth = 6.6;
+    const double AxisGap = 10;
+    const double MinAxisWidth = 40;
+
+    public static double AxisWidthFor(params string[] labels) =>
+        Math.Ceiling(Math.Max(MinAxisWidth, labels.Max(label => label.Length) * AxisCharWidth + AxisGap));
+
     public static string Number(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 }

@@ -31,7 +31,14 @@ public static class InvestmentText
 
     public static string Quantity(decimal quantity) => quantity.ToString("#,0.########", CultureInfo.CurrentCulture);
 
-    public static string Price(decimal price) => price.ToString("#,0.00######", CultureInfo.CurrentCulture);
+    public static string Price(decimal price)
+    {
+        var size = Math.Abs(price);
+        var decimals = size >= 1 || size == 0 ? 2 : Math.Min(MaxPriceDecimals, 3 - (int)Math.Floor(Math.Log10((double)size)));
+        return Math.Round(price, decimals, MidpointRounding.AwayFromZero).ToString("#,0.00######", CultureInfo.CurrentCulture);
+    }
+
+    const int MaxPriceDecimals = 8;
 
     public static string Day(DateOnly day) => day.ToString("d MMM yyyy", CultureInfo.CurrentCulture);
 

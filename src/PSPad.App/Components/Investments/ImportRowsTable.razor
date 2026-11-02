@@ -53,7 +53,7 @@
     {
         if (row.Quantity is { } quantity && row.Price is { } price)
         {
-            var trade = T["TradeDetail", quantity.ToString("0.########", CultureInfo.InvariantCulture), price.ToString("0.########", CultureInfo.InvariantCulture)].Value;
+            var trade = T["TradeDetail", quantity.ToString("0.########", CultureInfo.InvariantCulture), InvestmentText.Price(price)].Value;
             return row.PositionId is { } position && row.Kind == XtbRowKind.Sell ? $"{trade} · {T["ClosesPosition", position]}" : trade;
         }
 
