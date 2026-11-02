@@ -33,7 +33,9 @@
 
     [Parameter] public Guid? AccountId { get; set; }
 
-    SecondaryFigures? Secondary => Overview.SecondaryOf(AccountId);
+    SecondaryFigures? Secondary { get; set; }
+
+    protected override void OnParametersSet() => Secondary = Overview.SecondaryOf(AccountId);
 
     string Currency => AccountId is { } id ? Overview.Account(id)?.Currency ?? "PLN" : "PLN";
 

@@ -44,7 +44,7 @@ public class OwnAccountMovesTests
 
     IEnumerable<InvestmentAccount> Accounts => [_plnAccount, _usdAccount, _ikeAccount];
 
-    AccountFigures Figures(InvestmentAccount account, IReadOnlySet<Guid>? moves) =>
+    AccountFigures Figures(InvestmentAccount account, IReadOnlySet<Guid> moves) =>
         AccountFigures.For(account, _operations[account.Id], Prices(), Today, Day(20), moves);
 
     static void IdentityHolds(AccountFigures figures) =>
@@ -89,7 +89,7 @@ public class OwnAccountMovesTests
 
         foreach (var account in Accounts)
         {
-            var plain = Figures(account, null);
+            var plain = Figures(account, NoMoves);
             var split = Figures(account, moves);
             Assert.Equal(plain.NetDeposits, split.NetDeposits);
             Assert.Equal(plain.TotalProfit, split.TotalProfit);
@@ -100,7 +100,7 @@ public class OwnAccountMovesTests
     [Fact]
     public void WithoutTheOwnAccountsEveryTransferIsPutInOrTakenOut()
     {
-        var figures = Figures(_plnAccount, null);
+        var figures = Figures(_plnAccount, NoMoves);
 
         Assert.Equal(10050m, figures.PutIn);
         Assert.Equal(4300m, figures.TakenOut);
@@ -149,9 +149,9 @@ public class OwnAccountMovesTests
             Withdrawal(account, 100m, Day(6), rate: 3.80m),
         };
         var prices = Prices(("ABC.US", "USD", (Day(20), 55m)));
-        var figures = AccountFigures.For(account, operations, prices, Today, Day(20));
+        var figures = AccountFigures.For(account, operations, prices, Today, Day(20), NoMoves);
 
-        var portfolio = PortfolioFigures.For([(account, figures, operations)], Today, Day(20));
+        var portfolio = PortfolioFigures.For([(account, figures, operations)], Today, Day(20), NoMoves);
 
         Assert.Equal(portfolio with { Accounts = portfolio.Accounts }, portfolio.Accounts[account.Id] with { Accounts = portfolio.Accounts });
     }

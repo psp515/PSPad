@@ -16,14 +16,14 @@ public sealed record PortfolioFigures(
 
     public static PortfolioFigures For(
         IReadOnlyList<(InvestmentAccount Account, AccountFigures Figures, IReadOnlyList<InvestmentOperation> Operations)> accounts,
-        FxBook fx, DateOnly today, IReadOnlySet<Guid>? internalTransfers = null)
+        FxBook fx, DateOnly today, IReadOnlySet<Guid> internalTransfers)
     {
         var priced = accounts
             .Select(entry => (entry.Account, entry.Figures, Live: LiveOperations.Of(entry.Operations),
                 Rate: fx.ToPln(entry.Figures.Currency, today)))
             .ToList();
         var included = priced.Where(entry => entry.Rate is not null).ToList();
-        var moves = internalTransfers ?? InternalTransfers.Among(priced.Select(entry => (entry.Account, entry.Live)));
+        var moves = internalTransfers;
         var movesAmongIncluded = priced.Count == included.Count
             ? moves
             : InternalTransfers.Among(included.Select(entry => (entry.Account, entry.Live)));

@@ -498,9 +498,10 @@ across accounts are in §5.3.
   its own (value, cash, put in, taken out, moved in, moved out, total
   profit, realized, unrealized, dividends net, passive income, fees,
   currency difference), computed the same way as the totals, so the
-  accounts' put in, taken out and value add up to "All accounts". An
-  account's PLN net deposits include its moves; "All accounts" has none.
-  An account without today's rate has no PLN figures.
+  accounts' put in, taken out and value add up to "All accounts" when every
+  account has today's rate. An account's PLN net deposits include its
+  moves; "All accounts" has none. An account without today's rate has no
+  PLN figures.
 
 ### 5.4 Converting prices
 

@@ -129,9 +129,10 @@ public class ValueOverTimeTests
             new ValuePoint(Day(2), 1010m, 1000m),
             new ValuePoint(Day(3), 990m, 963m),
         ], points);
+        var moves = InternalTransfers.Among(accounts.Select(entry => (entry.Item1, entry.Item2)));
         var portfolio = PortfolioFigures.For(
-            [.. accounts.Select(entry => (entry.Item1, AccountFigures.For(entry.Item1, entry.Item2, Prices(), fx, Day(3)), entry.Item2))],
-            fx, Day(3));
+            [.. accounts.Select(entry => (entry.Item1, AccountFigures.For(entry.Item1, entry.Item2, Prices(), fx, Day(3), moves), entry.Item2))],
+            fx, Day(3), moves);
         Assert.Equal(portfolio.NetDepositsPln, points[^1].NetDeposits);
         Assert.Equal(portfolio.ValuePln, points[^1].Value);
     }

@@ -14,7 +14,11 @@ public class PortfolioFiguresTests
 
     static (InvestmentAccount, AccountFigures, IReadOnlyList<InvestmentOperation>) Read(
         InvestmentAccount account, InvestmentOperation[] operations, IReadOnlyDictionary<string, PriceHistory>? prices = null) =>
-        (account, AccountFigures.For(account, operations, prices ?? Prices(), Today, Day(20)), operations);
+        (account, AccountFigures.For(account, operations, prices ?? Prices(), Today, Day(20), NoMoves), operations);
+
+    static PortfolioFigures Totals(
+        params (InvestmentAccount Account, AccountFigures Figures, IReadOnlyList<InvestmentOperation> Operations)[] entries) =>
+        PortfolioFigures.For(entries, Today, Day(20), InternalTransfers.Among(entries.Select(entry => (entry.Account, entry.Operations))));
 
     static void PlnIdentityHolds(PortfolioFigures figures) =>
         Assert.Equal(figures.RealizedGainsPln + figures.RealizedLossesPln + figures.UnrealizedPln + figures.PassiveIncomePln
@@ -32,7 +36,7 @@ public class PortfolioFiguresTests
             Buy(account, "AAPL.US", position: "A", quantity: 10m, price: 50m, amount: 500m, Day(2), rate: 3.80m),
         ], Prices(("AAPL.US", "USD", (Day(20), 60m))));
 
-        var figures = PortfolioFigures.For([usd], Today, Day(20));
+        var figures = Totals(usd);
 
         Assert.Equal(4400m, figures.ValuePln);
         Assert.Equal(3800m, figures.NetDepositsPln);
@@ -54,7 +58,7 @@ public class PortfolioFiguresTests
             Fee(account, 2m, Day(6), rate: 3.95m),
         ], Prices(("AAPL.US", "USD", (Day(20), 60m))));
 
-        var figures = PortfolioFigures.For([usd], Today, Day(20));
+        var figures = Totals(usd);
 
         Assert.Equal(195m, figures.RealizedGainsPln);
         Assert.Equal(39.5m, figures.PassiveIncomePln);
@@ -77,7 +81,7 @@ public class PortfolioFiguresTests
             Interest(account, 1m, Day(13)),
         ], Prices(("JKL.PL", "PLN", (Day(20), 130m))));
 
-        var figures = PortfolioFigures.For([pln], Today, Day(20));
+        var figures = Totals(pln);
 
         Assert.Equal(-20m, figures.RealizedLossesPln);
         Assert.Equal(0m, figures.CurrencyDifferencePln);
@@ -92,7 +96,7 @@ public class PortfolioFiguresTests
         var eurAccount = AnAccount("EUR");
         var eur = Read(eurAccount, [Deposit(eurAccount, 100m, Day(1), rate: 4.3m)], Prices());
 
-        var figures = PortfolioFigures.For([pln, eur], Today, Day(20));
+        var figures = Totals(pln, eur);
 
         Assert.True(figures.MissingRates);
         Assert.Equal(500m, figures.ValuePln);
@@ -109,7 +113,7 @@ public class PortfolioFiguresTests
             Buy(account, "AAPL.US", position: "A", quantity: 10m, price: 50m, amount: 500m, Day(2), rate: 3.80m),
         ], Prices(("AAPL.US", "USD", (Day(20), 60m))));
 
-        var figures = PortfolioFigures.For([usd], Today, Day(20));
+        var figures = Totals(usd);
 
         Assert.Equal(4400m, figures.ValuePln);
         Assert.Equal(3700m, figures.PutInPln);
@@ -136,7 +140,7 @@ public class PortfolioFiguresTests
             TransferOut(account, TransferType.CurrencyConversion, 500m, Day(7), counter: Pln(2050m, Day(7)), rate: 4.05m),
         ], Prices(("AAPL.US", "USD", (Day(20), 60m))));
 
-        var figures = PortfolioFigures.For([usd], Today, Day(20));
+        var figures = Totals(usd);
 
         Assert.Equal(7600m, figures.PutInPln);
         Assert.Equal(1900m, figures.TakenOutPln);
@@ -172,7 +176,7 @@ public class PortfolioFiguresTests
                 counter: Pln(3700m, Day(2)), rate: 3.80m),
         ]);
 
-        var figures = PortfolioFigures.For([pln, usd], Today, Day(20));
+        var figures = Totals(pln, usd);
 
         Assert.Equal(3800m, pln.Item2.TakenOut);
         Assert.Equal(10000m, figures.PutInPln);
@@ -200,7 +204,7 @@ public class PortfolioFiguresTests
             TransferAt(ikeAccount, OperationKind.TransferIn, TransferType.Ike, 300m, day.AddDays(3)),
         ]);
 
-        var figures = PortfolioFigures.For([pln, ike], Today, Day(20));
+        var figures = Totals(pln, ike);
 
         Assert.Equal(2300m, figures.PutInPln);
         Assert.Equal(0m, figures.TakenOutPln);
@@ -226,7 +230,7 @@ public class PortfolioFiguresTests
             TransferAt(ikeAccount, OperationKind.TransferIn, TransferType.Ike, 500m, day.AddDays(1).AddMinutes(1)),
         ]);
 
-        var figures = PortfolioFigures.For([pln, ike], Today, Day(20));
+        var figures = Totals(pln, ike);
 
         Assert.Equal(2700m, figures.PutInPln);
         Assert.Equal(700m, figures.TakenOutPln);
@@ -248,7 +252,7 @@ public class PortfolioFiguresTests
             Fee(account, 1m, Day(5), rate: 3.9m),
         ]);
 
-        var figures = PortfolioFigures.For([usd], Today, Day(20));
+        var figures = Totals(usd);
 
         Assert.Equal(780m, figures.PutInPln);
         Assert.Equal(400m, figures.TakenOutPln);
@@ -270,7 +274,7 @@ public class PortfolioFiguresTests
             InvestmentOperation.IdFor(account.Id, id).CompareTo(InvestmentOperation.IdFor(account.Id, 10)) < 0);
         var fee = ImportedAt(account, OperationKind.Fee, feeId, 10m, at, 3.9m);
 
-        var figures = PortfolioFigures.For([Read(account, [fee, conversion])], Today, Day(20));
+        var figures = Totals(Read(account, [fee, conversion]));
 
         Assert.Equal(37m, figures.FeesPln);
     }
@@ -287,7 +291,7 @@ public class PortfolioFiguresTests
         ]);
         var usd = Read(usdAccount, [Deposit(usdAccount, 10m, Day(1), rate: 3.80m)]);
 
-        var figures = PortfolioFigures.For([pln, usd], Today, Day(20));
+        var figures = Totals(pln, usd);
 
         Assert.Equal(10038m, figures.PutInPln);
         Assert.Equal(3700m, figures.TakenOutPln);
@@ -310,7 +314,7 @@ public class PortfolioFiguresTests
             TransferIn(subAccount, TransferType.Subaccount, 300m, Day(8), counterparty: "1001"),
         ]);
 
-        var figures = PortfolioFigures.For([pln, sub], Today, Day(20));
+        var figures = Totals(pln, sub);
 
         Assert.Equal(2700m, figures.PutInPln);
         Assert.Equal(800m, figures.TakenOutPln);
@@ -327,7 +331,7 @@ public class PortfolioFiguresTests
         ]);
         var sub = Read(subAccount, [TransferIn(subAccount, TransferType.Subaccount, 500m, Day(2), counterparty: "1001")]);
 
-        var figures = PortfolioFigures.For([pln, sub], Today, Day(20));
+        var figures = Totals(pln, sub);
 
         Assert.Equal(2000m, figures.PutInPln);
         Assert.Equal(0m, figures.TakenOutPln);
@@ -348,7 +352,7 @@ public class PortfolioFiguresTests
         ]);
         var ike = Read(Archive(ikeAccount), ikeOperations);
 
-        var figures = PortfolioFigures.For([pln, ike], Today, Day(20));
+        var figures = Totals(pln, ike);
 
         Assert.Equal(1500m, figures.PutInPln);
         Assert.Equal(0m, figures.TakenOutPln);

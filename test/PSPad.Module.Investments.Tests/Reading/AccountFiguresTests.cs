@@ -28,7 +28,7 @@ public class AccountFiguresTests
         };
         var prices = Prices(("DEF.PL", "PLN", (Day(20), 1.6m)));
 
-        var figures = AccountFigures.For(account, operations, prices, PlnOnly, Day(20));
+        var figures = AccountFigures.For(account, operations, prices, PlnOnly, Day(20), NoMoves);
 
         Assert.Equal(60m, figures.RealizedGains);
         Assert.Equal(-50m, figures.RealizedLosses);
@@ -50,7 +50,7 @@ public class AccountFiguresTests
             Delete(Deposit(account, 700m, Day(5)), account),
         };
 
-        var figures = AccountFigures.For(account, operations, Prices(("DEF.PL", "PLN", (Day(6), 21.5m))), PlnOnly, Day(6));
+        var figures = AccountFigures.For(account, operations, Prices(("DEF.PL", "PLN", (Day(6), 21.5m))), PlnOnly, Day(6), NoMoves);
 
         Assert.Equal(900m, figures.NetDeposits);
         Assert.Equal(695m, figures.Cash);
@@ -68,7 +68,7 @@ public class AccountFiguresTests
         var operations = new[] { Buy(account, "DEF.PL", position: "A", quantity: 20m, price: 1.5m, amount: 30m, Day(2)) };
 
         var figures = AccountFigures.For(account, operations,
-            History("DEF.PL", "PLN", (Day(25), 1.7m), (Day(18), 1.6m)), PlnOnly, Day(20));
+            History("DEF.PL", "PLN", (Day(25), 1.7m), (Day(18), 1.6m)), PlnOnly, Day(20), NoMoves);
 
         var position = Assert.Single(figures.Positions);
         Assert.Equal(account.Id, position.AccountId);
@@ -90,7 +90,7 @@ public class AccountFiguresTests
             Buy(account, "ABC.US", position: "A", quantity: 2m, price: 50m, amount: 100m, Day(2)),
         };
 
-        var figures = AccountFigures.For(account, operations, Prices(), PlnOnly, Day(20));
+        var figures = AccountFigures.For(account, operations, Prices(), PlnOnly, Day(20), NoMoves);
 
         var position = Assert.Single(figures.Positions);
         Assert.Equal(100m, position.Value);
@@ -109,7 +109,7 @@ public class AccountFiguresTests
             Sell(account, "DEF.PL", position: "A", quantity: 3m, price: 12m, amount: 36m, Day(2)),
         };
 
-        var figures = AccountFigures.For(account, operations, Prices(("DEF.PL", "PLN", (Day(3), 11m))), PlnOnly, Day(3));
+        var figures = AccountFigures.For(account, operations, Prices(("DEF.PL", "PLN", (Day(3), 11m))), PlnOnly, Day(3), NoMoves);
 
         var position = Assert.Single(figures.Positions);
         Assert.Equal(PositionWarning.Oversold, position.Warning);
@@ -128,7 +128,7 @@ public class AccountFiguresTests
         };
         var fx = Rates(("USD", Day(19), 4.10m), ("USD", Day(20), 4.00m), ("EUR", Day(19), 4.25m), ("EUR", Day(20), 4.40m));
 
-        var figures = AccountFigures.For(account, operations, Prices(("AAPL.US", "USD", (Day(19), 165m))), fx, Day(22));
+        var figures = AccountFigures.For(account, operations, Prices(("AAPL.US", "USD", (Day(19), 165m))), fx, Day(22), NoMoves);
 
         Assert.Equal(318.35m, Assert.Single(figures.Positions).Value);
         Assert.Equal(38.35m, figures.Unrealized);
@@ -145,7 +145,7 @@ public class AccountFiguresTests
         };
 
         var figures = AccountFigures.For(account, operations, Prices(("AAPL.US", "USD", (Day(20), 160m))),
-            Rates(("USD", Day(19), 4.10m), ("USD", Day(20), 4.00m)), Day(20));
+            Rates(("USD", Day(19), 4.10m), ("USD", Day(20), 4.00m)), Day(20), NoMoves);
 
         Assert.Equal(1280m, figures.PositionsValue);
         Assert.Equal(80m, figures.Unrealized);
@@ -160,7 +160,7 @@ public class AccountFiguresTests
         var operations = new[] { Buy(account, "TEL.UK", position: "A", quantity: 100m, price: 3.5m, amount: 350m, Day(2)) };
 
         var figures = AccountFigures.For(account, operations, Prices(("TEL.UK", "GBp", (Day(20), 75m))),
-            Rates(("GBP", Day(20), 5m)), Day(20));
+            Rates(("GBP", Day(20), 5m)), Day(20), NoMoves);
 
         Assert.Equal(375m, Assert.Single(figures.Positions).Value);
         Assert.Equal(25m, figures.Unrealized);
@@ -172,7 +172,7 @@ public class AccountFiguresTests
         var account = AnAccount();
         var operations = new[] { Buy(account, "AAPL.US", position: "A", quantity: 2m, price: 150m, amount: 1200m, Day(2)) };
 
-        var figures = AccountFigures.For(account, operations, Prices(("AAPL.US", "USD", (Day(20), 160m))), PlnOnly, Day(20));
+        var figures = AccountFigures.For(account, operations, Prices(("AAPL.US", "USD", (Day(20), 160m))), PlnOnly, Day(20), NoMoves);
 
         var position = Assert.Single(figures.Positions);
         Assert.Equal(1200m, position.Value);
@@ -191,7 +191,7 @@ public class AccountFiguresTests
             Buy(account, "DEF.PL", position: "A", quantity: 10m, price: 20m, amount: 200m, Day(5)),
         };
 
-        var figures = AccountFigures.For(account, operations, Prices(("DEF.PL", "PLN", (Day(6), 23m))), PlnOnly, Day(6));
+        var figures = AccountFigures.For(account, operations, Prices(("DEF.PL", "PLN", (Day(6), 23m))), PlnOnly, Day(6), NoMoves);
 
         Assert.Equal(1500m, figures.PutIn);
         Assert.Equal(300m, figures.TakenOut);
@@ -214,7 +214,7 @@ public class AccountFiguresTests
             TaxNamingNoTicker(account, 2m, Day(4)),
         };
 
-        var figures = AccountFigures.For(account, operations, Prices(), PlnOnly, Day(6));
+        var figures = AccountFigures.For(account, operations, Prices(), PlnOnly, Day(6), NoMoves);
 
         Assert.Equal(90m, figures.DividendsNet);
         Assert.Equal(98m, figures.PassiveIncome);
@@ -233,7 +233,7 @@ public class AccountFiguresTests
             Sell(account, "MNO.PL", position: "C", quantity: 1m, price: 350m, amount: 350m, Day(11)),
         };
 
-        var figures = AccountFigures.For(account, operations, Prices(), PlnOnly, Day(12));
+        var figures = AccountFigures.For(account, operations, Prices(), PlnOnly, Day(12), NoMoves);
 
         Assert.Equal(60m, figures.RealizedGains);
         Assert.Equal(-50m, figures.RealizedLosses);
@@ -253,7 +253,7 @@ public class AccountFiguresTests
             TaxRefund(account, "ABC.US", 1m, Day(5), rate: 3.9m),
         };
 
-        var figures = AccountFigures.For(account, operations, Prices(), PlnOnly, Day(6));
+        var figures = AccountFigures.For(account, operations, Prices(), PlnOnly, Day(6), NoMoves);
 
         Assert.Equal(3.9m, figures.AverageRate);
         Assert.Equal(585m, figures.PlnSpent);
@@ -269,8 +269,8 @@ public class AccountFiguresTests
         var pln = AnAccount();
         var usd = AnAccount("USD");
 
-        var plnFigures = AccountFigures.For(pln, [Deposit(pln, 100m, Day(1))], Prices(), PlnOnly, Day(2));
-        var usdFigures = AccountFigures.For(usd, [Deposit(usd, 100m, Day(1), rate: 3.9m)], Prices(), PlnOnly, Day(2));
+        var plnFigures = AccountFigures.For(pln, [Deposit(pln, 100m, Day(1))], Prices(), PlnOnly, Day(2), NoMoves);
+        var usdFigures = AccountFigures.For(usd, [Deposit(usd, 100m, Day(1), rate: 3.9m)], Prices(), PlnOnly, Day(2), NoMoves);
 
         Assert.Null(plnFigures.AverageRate);
         Assert.Null(plnFigures.PlnSpent);

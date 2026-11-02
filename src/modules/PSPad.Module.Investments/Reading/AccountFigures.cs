@@ -15,9 +15,9 @@ public sealed record AccountFigures(
     public static AccountFigures For(
         InvestmentAccount account, IReadOnlyList<InvestmentOperation> operations,
         IReadOnlyDictionary<string, PriceHistory> pricesByTicker, FxBook fx, DateOnly day,
-        IReadOnlySet<Guid>? internalTransfers = null)
+        IReadOnlySet<Guid> internalTransfers)
     {
-        var moves = internalTransfers ?? new HashSet<Guid>();
+        var moves = internalTransfers;
         var live = LiveOperations.Of(operations);
         var external = CashFlows.External(live, moves);
         var (open, closed, oversold) = Lots.Of(live);

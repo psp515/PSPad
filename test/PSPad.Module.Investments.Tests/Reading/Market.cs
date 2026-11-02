@@ -10,6 +10,8 @@ internal static class Market
     public static readonly DateOnly LastOfOctober = new(2026, 10, 31);
     public static readonly DateOnly FirstOfNovember = new(2026, 11, 1);
 
+    public static readonly IReadOnlySet<Guid> NoMoves = new HashSet<Guid>();
+
     public static readonly FxBook PlnOnly = new(new Dictionary<string, IReadOnlyList<DailyRate>>());
 
     public static IReadOnlyDictionary<string, PriceHistory> Prices(
