@@ -30,8 +30,10 @@
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ml-0">@T["Archived"]</MudChip>
         }
         <div class="d-flex flex-wrap gap-8 mt-3">
-            <MoneyFigure Class="pspad-account-card-value" Label="@T["Value"]" Text="@InvestmentText.Money(Figures?.Value ?? 0m, Account.Currency)" />
-            <MoneyFigure Class="pspad-account-card-profit" Label="@T["Profit"]" Text="@ProfitText" Negative="@(Figures?.TotalProfit < 0)" />
+            <MoneyFigure Class="pspad-account-card-value" Label="@T["Value"]" Text="@InvestmentText.Money(Figures?.Value ?? 0m, Account.Currency)"
+                         Secondary="@Secondary?.Money(Secondary.Pln.ValuePln)" />
+            <MoneyFigure Class="pspad-account-card-profit" Label="@T["Profit"]" Text="@ProfitText" Negative="@(Figures?.TotalProfit < 0)"
+                         Secondary="@Secondary?.Signed(Secondary.Pln.TotalProfitPln)" />
         </div>
         <MudText Typo="Typo.caption" Class="pspad-muted d-block mt-2">@Details</MudText>
     </MudCardContent>
@@ -41,6 +43,8 @@
     [Parameter, EditorRequired] public InvestmentAccount Account { get; set; } = default!;
 
     [Parameter] public AccountFigures? Figures { get; set; }
+
+    [Parameter] public SecondaryFigures? Secondary { get; set; }
 
     [Parameter] public int Operations { get; set; }
 

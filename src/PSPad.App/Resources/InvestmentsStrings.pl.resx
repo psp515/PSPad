@@ -339,6 +339,12 @@
   <data name="PutIn" xml:space="preserve">
     <value>Wpłacono</value>
   </data>
+  <data name="MovedIn" xml:space="preserve">
+    <value>Z własnych kont</value>
+  </data>
+  <data name="MovedOut" xml:space="preserve">
+    <value>Na własne konta</value>
+  </data>
   <data name="TakenOut" xml:space="preserve">
     <value>Wypłacono</value>
   </data>

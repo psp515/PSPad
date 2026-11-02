@@ -427,9 +427,15 @@ across accounts are in §5.3.
 
 ### 5.2 Account figures
 
-- Put in = deposits + transfers in. Taken out = withdrawals + transfers out.
-- Net deposits = put in − taken out. Transfers are cash flows like
-  deposits, never profit.
+- Put in = deposits + transfers in that are not internal transfers (§5.3).
+  Taken out = withdrawals + transfers out that are not internal transfers.
+- Moved in = internal transfers in; moved out = internal transfers out
+  (money moved between the user's own accounts, §5.3). The pairing runs over
+  all the user's accounts, archived ones included, so one account's figures
+  know which of its transfers have their other leg recorded elsewhere.
+- Net deposits = put in − taken out + moved in − moved out. Every transfer
+  stays a cash flow like a deposit, never profit, so splitting moves out of
+  put in and taken out changes neither net deposits nor total profit.
 - Cash = Σ signed amounts of every operation.
 - Positions value = Σ position values. Account value = cash + positions
   value.
@@ -480,11 +486,21 @@ across accounts are in §5.3.
   `CounterMoney` is within 0.05 of the other leg's amount (a conversion
   with no counter amount on either leg is not checked). An IKE transfer
   carries no counterparty number (§4.2), so two Ike legs pair without one.
-  Pairing is one-to-one, the nearest leg in time first. Both legs are left
-  out of Put in and Taken out, so money moved between own accounts is not
-  counted twice; any PLN gap between them (spread, rounding) falls into the
+  Pairing is one-to-one, the nearest leg in time first, and is computed once
+  over all the user's accounts. Both legs are left out of Put in and Taken
+  out, in "All accounts" and on each account alike, so money moved between
+  own accounts is not counted twice and an account never shows a move as a
+  withdrawal; on one account they show as Moved in and Moved out (§5.2). In
+  "All accounts" any PLN gap between them (spread, rounding) falls into the
   currency difference. A leg whose other side is not recorded (its file is
   not imported yet, or it was deleted) counts as Put in or Taken out.
+- **Per account in PLN.** The same PLN figures are kept for each account on
+  its own (value, cash, put in, taken out, moved in, moved out, total
+  profit, realized, unrealized, dividends net, passive income, fees,
+  currency difference), computed the same way as the totals, so the
+  accounts' put in, taken out and value add up to "All accounts". An
+  account's PLN net deposits include its moves; "All accounts" has none.
+  An account without today's rate has no PLN figures.
 
 ### 5.4 Converting prices
 
@@ -651,11 +667,23 @@ FAB per page (`adr/0033`).
 - **Tabs:** Positions, Operations, Accounts.
 - **Positions:**
   - `MoneyHero` with the account value, total profit and net deposits (and
-    cash for one account), then a stat row: put in, taken out, realized
+    cash for one account), then a stat row: put in, taken out, moved in
+    and moved out (one account only, each only when not zero), realized
     result, realized gains, realized losses, unrealized, dividends net,
     passive income, fees, currency difference (PLN view only), and for a
     non-PLN account its average rate and the PLN spent on its currency
     (§5.3).
+  - **Second currency.** The display currency is the user's default
+    currency (Settings, PLN when unset). When the figures shown are in
+    another currency (one account in USD or EUR, or "All accounts" with a
+    non-PLN default), each money figure gets a smaller muted line under it,
+    "≈ 2,400.00 PLN", in the display currency: the hero (value, total
+    profit, net deposits, cash), every money stat tile, the account card
+    (value, profit), and position rows (value, unrealized). It is the
+    account's PLN figure (§5.3), divided by today's NBP rate of the display
+    currency when that is not PLN; a position row takes its value or
+    unrealized × today's NBP rate. Operation rows, percentages, the average
+    rate and the PLN spent get none. A missing rate leaves the line out.
   - Value-over-time chart (`MudChart` line): value and net deposits, with
     the range chips.
   - Positions grouped by account, each row in the `pspad-holding-row`

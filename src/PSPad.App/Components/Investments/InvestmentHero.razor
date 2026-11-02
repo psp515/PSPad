@@ -3,13 +3,17 @@
 @using PSPad.Module.Money.Reading
 @inject IStringLocalizer<InvestmentsStrings> T
 
-<MoneyHero Class="pspad-investment-hero" HeadlineClass="pspad-investment-value" Label="@Label" Text="@ValueText" Negative="@(Value < 0)">
+<MoneyHero Class="pspad-investment-hero" HeadlineClass="pspad-investment-value" Label="@Label" Text="@ValueText" Negative="@(Value < 0)"
+           Secondary="@Secondary?.Money(Secondary.Pln.ValuePln)">
     <ChildContent>
-        <MoneyFigure Class="pspad-investment-profit" Label="@T["TotalProfit"]" Text="@ProfitText" Negative="@(Profit < 0)" />
-        <MoneyFigure Class="pspad-investment-deposits" Label="@T["NetDeposits"]" Text="@InvestmentText.Money(NetDeposits, Currency)" />
+        <MoneyFigure Class="pspad-investment-profit" Label="@T["TotalProfit"]" Text="@ProfitText" Negative="@(Profit < 0)"
+                     Secondary="@Secondary?.Signed(Secondary.Pln.TotalProfitPln)" />
+        <MoneyFigure Class="pspad-investment-deposits" Label="@T["NetDeposits"]" Text="@InvestmentText.Money(NetDeposits, Currency)"
+                     Secondary="@Secondary?.Money(Secondary.Pln.NetDepositsPln)" />
         @if (AccountId is { } id && Overview.Figures.TryGetValue(id, out var figures))
         {
-            <MoneyFigure Class="pspad-investment-cash" Label="@T["Cash"]" Text="@InvestmentText.Money(figures.Cash, Currency)" />
+            <MoneyFigure Class="pspad-investment-cash" Label="@T["Cash"]" Text="@InvestmentText.Money(figures.Cash, Currency)"
+                         Secondary="@Secondary?.Money(Secondary.Pln.CashPln)" />
         }
     </ChildContent>
     <Footer>
@@ -28,6 +32,8 @@
     [Parameter, EditorRequired] public InvestmentOverview Overview { get; set; } = default!;
 
     [Parameter] public Guid? AccountId { get; set; }
+
+    SecondaryFigures? Secondary => Overview.SecondaryOf(AccountId);
 
     string Currency => AccountId is { } id ? Overview.Account(id)?.Currency ?? "PLN" : "PLN";
 

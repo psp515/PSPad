@@ -5,7 +5,7 @@
         @foreach (var account in Shown)
         {
             <MudItem @key="account.Id" xs="12" md="6" lg="4">
-                <AccountCard Account="@account" Figures="@Overview.Figures.GetValueOrDefault(account.Id)"
+                <AccountCard Account="@account" Figures="@Overview.Figures.GetValueOrDefault(account.Id)" Secondary="@Overview.SecondaryOf(account.Id)"
                              Operations="@Overview.OperationsOf(account.Id).Count(operation => !operation.Deleted)"
                              OnEdit="@(() => OnEdit.InvokeAsync(account))" OnImport="@(() => OnImport.InvokeAsync(account))"
                              OnArchive="@(() => OnArchive.InvokeAsync(account))" OnRestore="@(() => OnRestore.InvokeAsync(account))" />

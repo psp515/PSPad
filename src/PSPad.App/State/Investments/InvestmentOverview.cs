@@ -2,6 +2,7 @@ using PSPad.Module.Investments.Accounts;
 using PSPad.Module.Investments.Instruments;
 using PSPad.Module.Investments.Operations;
 using PSPad.Module.Investments.Reading;
+using PSPad.Module.Money.Values;
 
 namespace PSPad.App.State.Investments;
 
@@ -19,6 +20,10 @@ public sealed record InvestmentOverview(
     PortfolioFigures Portfolio,
     IReadOnlyList<ValuePoint> ValueInPln)
 {
+    public string DisplayCurrency { get; init; } = Currencies.Pln;
+
+    public SecondaryFigures? SecondaryOf(Guid? accountId) => SecondaryFigures.For(this, accountId);
+
     public IReadOnlyList<InvestmentAccount> Open => [.. Accounts.Where(account => !account.IsArchived)];
 
     public IReadOnlyList<ValuePoint> ValueOf(Guid accountId) =>

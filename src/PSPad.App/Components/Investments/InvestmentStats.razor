@@ -4,7 +4,7 @@
 <div class="pspad-investment-stats">
     @foreach (var tile in Tiles)
     {
-        <MoneyTile @key="tile.Class" Class="@tile.Class" Label="@tile.Label" Text="@tile.Text" Negative="@tile.Negative" />
+        <MoneyTile @key="tile.Class" Class="@tile.Class" Label="@tile.Label" Text="@tile.Text" Negative="@tile.Negative" Secondary="@tile.Secondary" />
     }
 </div>
 
@@ -15,6 +15,6 @@
 
     IReadOnlyList<StatTile> Tiles =>
         AccountId is { } id && Overview.Figures.TryGetValue(id, out var account)
-            ? InvestmentStatTiles.For(account, T)
-            : InvestmentStatTiles.For(Overview.Portfolio, T);
+            ? InvestmentStatTiles.For(account, T, Overview.SecondaryOf(id))
+            : InvestmentStatTiles.For(Overview.Portfolio, T, Overview.SecondaryOf(null));
 }

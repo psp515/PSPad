@@ -17,6 +17,17 @@ internal static class CashFlows
     public static decimal TakenOut(IEnumerable<InvestmentOperation> live, Func<InvestmentOperation, decimal> amount) =>
         live.Where(operation => IsTakenOut(operation.Kind)).Sum(amount);
 
+    public static decimal MovedIn(
+        IEnumerable<InvestmentOperation> live, IReadOnlySet<Guid> moves, Func<InvestmentOperation, decimal> amount) =>
+        live.Where(operation => operation.Kind == OperationKind.TransferIn && moves.Contains(operation.Id)).Sum(amount);
+
+    public static decimal MovedOut(
+        IEnumerable<InvestmentOperation> live, IReadOnlySet<Guid> moves, Func<InvestmentOperation, decimal> amount) =>
+        live.Where(operation => operation.Kind == OperationKind.TransferOut && moves.Contains(operation.Id)).Sum(amount);
+
+    public static IReadOnlyList<InvestmentOperation> External(IEnumerable<InvestmentOperation> live, IReadOnlySet<Guid> moves) =>
+        [.. live.Where(operation => !moves.Contains(operation.Id))];
+
     public static decimal DividendsNet(IReadOnlyList<InvestmentOperation> live, Func<InvestmentOperation, decimal> amount) =>
         LiveOperations.Sum(live, OperationKind.Dividend, amount)
         - live.Where(operation => operation is { Kind: OperationKind.Tax, Ticker: not null }).Sum(amount)

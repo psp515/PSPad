@@ -4,6 +4,8 @@ using PSPad.Module.Investments.Accounts;
 using PSPad.Module.Investments.Instruments;
 using PSPad.Module.Investments.Operations;
 using PSPad.Module.Investments.Reading;
+using PSPad.Module.Money.Preferences;
+using PSPad.Module.Money.Values;
 
 namespace PSPad.App.State.Investments;
 
@@ -70,14 +72,16 @@ public sealed class InvestmentQuery(IReplica replica, IInvestmentQuotes quotes)
         var instruments = (await replica.LoadAllAsync<Instrument>(userId))
             .Where(instrument => instrument.UserId == userId)
             .ToList();
-        return new Documents(accounts, operations, instruments);
+        var preferences = await replica.LoadAsync<MoneyPreferences>(MoneyPreferences.IdFor(userId));
+        return new Documents(accounts, operations, instruments, preferences);
     }
 
     static int Fingerprint(Documents documents)
     {
         var hash = new HashCode();
+        IEnumerable<Aggregate> preferences = documents.Preferences is { } found ? [found] : [];
         foreach (var document in documents.Accounts.Cast<Aggregate>().Concat(documents.Operations).Concat(documents.Instruments)
-                     .OrderBy(document => document.Id))
+                     .Concat(preferences).OrderBy(document => document.Id))
         {
             hash.Add(document.Id);
             hash.Add(document.Version);
@@ -91,7 +95,8 @@ public sealed class InvestmentQuery(IReplica replica, IInvestmentQuotes quotes)
     async Task<InvestmentOverview> BuildAsync(
         Documents documents, DateOnly today, TimeZoneInfo zone, bool online, bool refresh, bool withHistory, CancellationToken ct)
     {
-        var (accounts, operations, all) = documents;
+        var (accounts, operations, all, preferences) = documents;
+        var displayCurrency = preferences?.DefaultCurrency ?? Currencies.Pln;
         var instruments = all.GroupBy(instrument => instrument.Ticker, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
 
@@ -112,28 +117,35 @@ public sealed class InvestmentQuery(IReplica replica, IInvestmentQuotes quotes)
 
         var currencies = accounts.Select(account => account.Currency)
             .Concat(prices.Values.Select(history => history.MajorCurrency))
+            .Append(displayCurrency)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
         var fx = await quotes.FxAsync(currencies, from.AddDays(-InvestmentImportRates.LeadDays), today, online, ct);
 
         var byAccount = operations.ToLookup(operation => operation.AccountId);
+        var moves = InternalTransfers.Among(
+            accounts.Select(account => (account, (IReadOnlyList<InvestmentOperation>)[.. byAccount[account.Id]])));
         var figures = accounts.ToDictionary(account => account.Id,
-            account => AccountFigures.For(account, [.. byAccount[account.Id]], prices, fx, today));
+            account => AccountFigures.For(account, [.. byAccount[account.Id]], prices, fx, today, moves));
         var values = withHistory
             ? accounts.ToDictionary(account => account.Id,
                 account => ValueOverTime.For(account, [.. byAccount[account.Id]], prices, fx, from, today, zone))
             : new Dictionary<Guid, IReadOnlyList<ValuePoint>>();
         var portfolio = PortfolioFigures.For(
             [.. accounts.Select(account => (account, figures[account.Id], (IReadOnlyList<InvestmentOperation>)[.. byAccount[account.Id]]))],
-            fx, today);
+            fx, today, moves);
         IReadOnlyList<ValuePoint> inPln = withHistory
             ? ValueOverTime.InPln(
                 [.. accounts.Select(account => (account, (IReadOnlyList<InvestmentOperation>)[.. byAccount[account.Id]], values[account.Id]))],
                 fx, zone)
             : [];
 
-        return new InvestmentOverview(today, from, zone, accounts, operations, instruments, prices, fx, figures, values, portfolio, inPln);
+        return new InvestmentOverview(today, from, zone, accounts, operations, instruments, prices, fx, figures, values, portfolio, inPln)
+        {
+            DisplayCurrency = displayCurrency,
+        };
     }
 
-    sealed record Documents(List<InvestmentAccount> Accounts, List<InvestmentOperation> Operations, List<Instrument> Instruments);
+    sealed record Documents(
+        List<InvestmentAccount> Accounts, List<InvestmentOperation> Operations, List<Instrument> Instruments, MoneyPreferences? Preferences);
 }

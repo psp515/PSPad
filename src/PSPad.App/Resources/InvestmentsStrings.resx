@@ -339,6 +339,12 @@
   <data name="PutIn" xml:space="preserve">
     <value>Put in</value>
   </data>
+  <data name="MovedIn" xml:space="preserve">
+    <value>Moved in</value>
+  </data>
+  <data name="MovedOut" xml:space="preserve">
+    <value>Moved out</value>
+  </data>
   <data name="TakenOut" xml:space="preserve">
     <value>Taken out</value>
   </data>

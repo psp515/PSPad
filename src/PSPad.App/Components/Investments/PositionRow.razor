@@ -21,9 +21,13 @@
             }
         </span>
         <span class="pspad-holding-values">
-            <span class="pspad-holding-pln pspad-position-value">@InvestmentText.Money(Position.Value, Currency)</span>
+            <span class="pspad-holding-pln pspad-position-value">
+                <span>@InvestmentText.Money(Position.Value, Currency)</span>
+                <SecondaryAmount Text="@Secondary?.MoneyFromAccount(Position.Value)" />
+            </span>
             <span class="@($"pspad-holding-today d-flex flex-column pspad-position-profit {InvestmentText.Tone(Position.Unrealized)}")">
                 <span>@InvestmentText.Signed(Position.Unrealized)</span>
+                <SecondaryAmount Text="@Secondary?.SignedFromAccount(Position.Unrealized)" />
                 <span class="pspad-position-share">@InvestmentText.Percent(_text.UnrealizedShare)</span>
             </span>
         </span>
@@ -101,6 +105,8 @@
     [Parameter] public IReadOnlyList<PriceMarker> Markers { get; set; } = [];
 
     [Parameter] public bool Stale { get; set; }
+
+    [Parameter] public SecondaryFigures? Secondary { get; set; }
 
     [Parameter, EditorRequired] public DateOnly Today { get; set; }
 

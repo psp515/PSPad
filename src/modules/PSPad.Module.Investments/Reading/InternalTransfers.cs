@@ -4,7 +4,7 @@ using MoneyValue = PSPad.Module.Money.Money;
 
 namespace PSPad.Module.Investments.Reading;
 
-internal static class InternalTransfers
+public static class InternalTransfers
 {
     const decimal CounterTolerance = 0.05m;
 

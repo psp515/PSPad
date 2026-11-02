@@ -17,6 +17,7 @@
             </div>
             @foreach (var (account, figures, held, closed) in _groups)
             {
+                var secondary = Overview.SecondaryOf(account.Id);
                 <section @key="account.Id" class="pspad-holding-group pspad-position-group" aria-label="@account.Name">
                     <div class="d-flex align-baseline flex-wrap gap-2 px-1 pt-3 pb-1">
                         <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-holding-group-name">
@@ -39,7 +40,7 @@
                                 var symbol = Overview.SymbolOf(position.Ticker);
                                 <PositionRow @key="position.Ticker" Position="@position" Name="@Overview.NameOf(position.Ticker)" Symbol="@symbol"
                                              Currency="@account.Currency" History="@Overview.Prices.GetValueOrDefault(position.Ticker)"
-                                             Markers="@markers" Stale="@IsStale(symbol)"
+                                             Markers="@markers" Stale="@IsStale(symbol)" Secondary="@secondary"
                                              Today="@Overview.Today" Zone="@Zone" OnFixSymbol="@OnFixSymbol" OnShowOperations="@OnShowOperations" />
                             }
                         </MudPaper>
