@@ -36,6 +36,9 @@
   <data name="SharedBy" xml:space="preserve">
     <value>Udostępnia {0}</value>
   </data>
+  <data name="AccountDeleted" xml:space="preserve">
+    <value>Konto usunięte</value>
+  </data>
   <data name="Archived" xml:space="preserve">
     <value>Zarchiwizowany</value>
   </data>

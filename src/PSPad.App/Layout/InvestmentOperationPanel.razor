@@ -195,7 +195,7 @@
         }
 
         var accounts = (await Accounts.LoadAllAsync(State.UserId, CancellationToken.None))
-            .Where(account => account.UserId == State.UserId).ToList();
+            .Where(account => account.UserId == State.UserId && !account.Deleted).ToList();
         _open = [.. accounts.Where(account => !account.IsArchived).OrderBy(account => account.Name, StringComparer.CurrentCultureIgnoreCase)];
         _instruments = (await Instruments.LoadAllAsync(State.UserId, CancellationToken.None))
             .Where(instrument => instrument.UserId == State.UserId)

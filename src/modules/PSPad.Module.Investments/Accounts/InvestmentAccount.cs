@@ -62,6 +62,15 @@ public sealed class InvestmentAccount : Aggregate
                 var restoring = InvestmentAccountAccess.Owned(account, restore.UserId);
                 return restoring.IsArchived ? [new InvestmentAccountRestored(restoring.Id, restoring.UserId, at)] : [];
 
+            case DeleteInvestmentAccount delete:
+                if (account is { Deleted: true } && account.UserId == delete.UserId)
+                {
+                    return [];
+                }
+
+                var deleting = InvestmentAccountAccess.Owned(account, delete.UserId);
+                return [new InvestmentAccountDeleted(deleting.Id, deleting.UserId, at)];
+
             case SetBrokerAccountNumber set:
                 var numbering = Writable(account, set.UserId);
                 var number = NumberOf(set.Number);
@@ -114,6 +123,9 @@ public sealed class InvestmentAccount : Aggregate
                 break;
             case InvestmentAccountRestored:
                 ArchivedAt = null;
+                break;
+            case InvestmentAccountDeleted:
+                Deleted = true;
                 break;
             case BrokerAccountNumberSet set:
                 BrokerAccountNumber = set.Number;

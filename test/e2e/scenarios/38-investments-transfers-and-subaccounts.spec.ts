@@ -2,7 +2,7 @@ import { expect, test } from '../fixtures/accounts';
 import {
   dollarAccount, openInvestments, plansAccount, stubNbpSeries, stubQuotes, tradesAccount, xtbDollarStatement, xtbProductStatement,
 } from '../helpers/investments';
-import { pickOption } from '../helpers/budgets';
+import { confirm } from '../helpers/panels';
 import { shellMenu } from '../helpers/shell';
 import { signIn } from '../helpers/sign-in';
 
@@ -59,7 +59,7 @@ test('an XTB file with a second product feeds two new accounts, and the account 
     await expect(page.getByRole('heading', { name: 'Import from XTB', exact: true })).toBeVisible();
     await page.locator('input[type=file]').setInputFiles(xtbDollarStatement());
     await expect(page.getByText(`Account ${dollarAccount} · 1 rows`)).toBeVisible();
-    await pickOption(page, page.getByRole('combobox', { name: 'Currency' }), 'USD');
+    await expect(page.getByText('The file says this account is in this currency.')).toBeVisible();
     await expect(page.getByText('Errors · 0')).toBeVisible();
     await page.getByRole('button', { name: 'Create account and import 1 operation' }).click();
     await expect(page.getByRole('heading', { name: 'Investments', exact: true })).toBeVisible();
@@ -73,5 +73,16 @@ test('an XTB file with a second product feeds two new accounts, and the account 
     const plnValue = page.getByRole('group', { name: /^Value · / });
     await expect(plnValue).toContainText('PLN');
     await expect(plnValue.getByText(/^≈ /)).toHaveCount(0);
+  });
+
+  await test.step('deleting an account asks first with its operation count, lands on All accounts, and the account is gone', async () => {
+    await openInvestments(page, '/investments/accounts');
+    const card = page.getByRole('group', { name: plansName });
+    await card.getByRole('button', { name: 'Actions' }).click();
+    await page.getByRole('menuitem', { name: 'Delete' }).click();
+    await expect(page.getByRole('dialog')).toContainText(`Delete ${plansName}? Its 2 operations will be removed. This can't be undone.`);
+    await confirm(page, 'Delete');
+    await expect(page).toHaveURL(/\/investments$/);
+    await expect(page.getByRole('navigation', { name: 'Accounts' }).getByRole('link', { name: new RegExp(`^${plansName}`) })).toHaveCount(0);
   });
 });

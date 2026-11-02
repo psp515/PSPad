@@ -1,5 +1,6 @@
 using System.Globalization;
 using PSPad.Module.Investments.Operations;
+using PSPad.Module.Money.Values;
 
 namespace PSPad.Module.Investments.Import;
 
@@ -9,6 +10,8 @@ public static class XtbParser
 
     static readonly (string Position, string Symbol)[] OpenPositionHeaders =
         [("Position", "Symbol"), ("Position", "Ticker"), ("Instrument/Position", "Ticker"), ("Instrument/Position", "Symbol")];
+
+    static readonly string[] SummaryHeaders = ["Product", "Metric", "Amount", "Currency"];
 
     static readonly string[] CashHeaders = ["Type", "Instrument", "Ticker", "Time", "Amount", "ID", "Comment", "Product", "Position ID"];
 
@@ -45,7 +48,12 @@ public static class XtbParser
         var productNumbers = ProductNumbersOf(rows);
         var product = rows.Select(r => r.Product)
             .FirstOrDefault(p => p is not null && productNumbers.GetValueOrDefault(p, account) == account);
-        return new XtbFile(account, product, rows, FindOpenPositions(book, sheet)) { ProductNumbers = productNumbers };
+        var file = new XtbFile(account, product, rows, FindOpenPositions(book, sheet))
+        {
+            ProductNumbers = productNumbers,
+            ProductCurrencies = FindProductCurrencies(book, sheet),
+        };
+        return file with { ConversionCurrencies = ConversionCurrenciesOf(file) };
     }
 
     static Dictionary<string, string> ProductNumbersOf(IEnumerable<XtbRow> rows)
@@ -57,6 +65,41 @@ public static class XtbParser
                 numbers.TryAdd(row.Product!, own);
         }
         return numbers;
+    }
+
+    static Dictionary<string, string> ConversionCurrenciesOf(XtbFile file)
+    {
+        var currencies = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var row in file.Rows.Where(r => r.TransferType == TransferType.CurrencyConversion && r.Errors.Count == 0))
+        {
+            var comment = XtbTransferComment.Parse(row.Comment);
+            var own = row.Kind == XtbRowKind.TransferOut ? comment?.SourceCurrency : comment?.TargetCurrency;
+            if (own is not null && Currencies.All.Contains(own))
+                currencies.TryAdd(file.AccountNumberOf(row), own);
+        }
+        return currencies;
+    }
+
+    static Dictionary<string, string> FindProductCurrencies(XlsxBook book, XlsxSheet cash)
+    {
+        var currencies = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var sheet in book.Sheets.Where(s => !ReferenceEquals(s, cash)))
+        {
+            var headerRow = FindHeaderRow(sheet, SummaryHeaders);
+            if (headerRow < 0)
+                continue;
+            var columns = Columns(sheet.Rows[headerRow]);
+            foreach (var cells in sheet.Rows.Skip(headerRow + 1))
+            {
+                var product = TextOf(Cell(cells, columns["Product"]));
+                var currency = TextOf(Cell(cells, columns["Currency"]))?.ToUpperInvariant();
+                if (product is null || currency is null || !Currencies.All.Contains(currency))
+                    break;
+                currencies.TryAdd(product, currency);
+            }
+            return currencies;
+        }
+        return currencies;
     }
 
     static XtbRow ParseRow(

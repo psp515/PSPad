@@ -178,4 +178,36 @@ public class InvestmentCommandTests(MongoFixture fixture)
         Assert.Equal(3m, operation.GetProperty("quantity").GetDecimal());
         Assert.Equal("corrected", operation.GetProperty("note").GetString());
     }
+
+    [Fact]
+    public async Task ADeletedAccountSyncsAsDeletedFreesItsPlaceAndTakesNoMoreOperations()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var (client, user, accountId) = await WithAnAccountAsync(factory, ct);
+        await SendAsync(client, ct, ABuy(user, accountId), new DeleteInvestmentAccount(Guid.NewGuid(), user, accountId));
+
+        var account = Assert.Single(await SyncedAsync(client, "investmentaccounts", ct));
+        Assert.True(account.GetProperty("deleted").GetBoolean());
+        var portfolio = Assert.Single(await SyncedAsync(client, "investmentportfolios", ct));
+        Assert.Empty(portfolio.GetProperty("_accountIds").EnumerateArray());
+        var result = Assert.Single(await TrySendAsync(client, ct, ABuy(user, accountId)));
+        Assert.False(result.Accepted);
+        Assert.Equal("That account does not exist.", result.Rejection);
+    }
+
+    [Fact]
+    public async Task AStrangerCannotDeleteMyAccount()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var (owner, _, accountId) = await WithAnAccountAsync(factory, ct);
+        var stranger = factory.ClientFor(Guid.NewGuid().ToString());
+        var strangerId = await SignInAsync(stranger, ct);
+
+        var result = Assert.Single(await TrySendAsync(stranger, ct, new DeleteInvestmentAccount(Guid.NewGuid(), strangerId, accountId)));
+
+        Assert.False(result.Accepted);
+        Assert.False(Assert.Single(await SyncedAsync(owner, "investmentaccounts", ct)).GetProperty("deleted").GetBoolean());
+    }
 }

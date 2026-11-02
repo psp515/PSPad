@@ -62,7 +62,7 @@ public sealed class InvestmentQuery(IReplica replica, IInvestmentQuotes quotes)
     async Task<Documents> DocumentsAsync(Guid userId)
     {
         var accounts = (await replica.LoadAllAsync<InvestmentAccount>(userId))
-            .Where(account => account.UserId == userId)
+            .Where(account => account.UserId == userId && !account.Deleted)
             .OrderBy(account => account.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
         var known = accounts.Select(account => account.Id).ToHashSet();

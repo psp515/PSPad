@@ -4,7 +4,7 @@ namespace PSPad.Module.Investments.Import;
 
 public sealed record ImportAccountPreview(
     string AccountNumber, string? Product, InvestmentAccount? Account, NewAccountProposal? NewAccount, string Currency,
-    string? FileError, IReadOnlyList<ImportRowPreview> Rows, string? LimitError)
+    string? FileError, IReadOnlyList<ImportRowPreview> Rows, string? LimitError, string? DetectedCurrency = null)
 {
     public bool HasTarget => Account is not null || NewAccount is not null;
 }

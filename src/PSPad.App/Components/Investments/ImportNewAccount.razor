@@ -16,7 +16,7 @@
             }
         </MudSelect>
     </div>
-    <MudText Typo="Typo.caption" Class="pspad-muted">@T[CurrencyFixed ? "CurrencyFollowsFile" : "CurrencyHint"]</MudText>
+    <MudText Typo="Typo.caption" Class="pspad-muted">@T[CurrencyDetected ? "CurrencyFromFile" : CurrencyFixed ? "CurrencyFollowsFile" : "CurrencyHint"]</MudText>
 </MudPaper>
 
 @code {
@@ -31,4 +31,6 @@
     [Parameter] public EventCallback<string?> CurrencyChanged { get; set; }
 
     [Parameter] public bool CurrencyFixed { get; set; }
+
+    [Parameter] public bool CurrencyDetected { get; set; }
 }

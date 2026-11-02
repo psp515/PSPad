@@ -86,7 +86,7 @@
                     break;
                 default:
                     <AccountsTab Overview="@_overview" OnEdit="@OpenAccount" OnImport="@(account => Navigation.NavigateTo(InvestmentLinks.ForImport(account.Id)))"
-                                 OnArchive="@ArchiveAsync" OnRestore="@RestoreAsync" />
+                                 OnArchive="@ArchiveAsync" OnRestore="@RestoreAsync" OnDelete="@DeleteAsync" />
                     break;
             }
         }
@@ -216,6 +216,27 @@
 
     async Task RestoreAsync(InvestmentAccount account) =>
         Surface(await Sender.SendAsync(new RestoreInvestmentAccount(Guid.NewGuid(), State.UserId, account.Id)));
+
+    async Task DeleteAsync(InvestmentAccount account)
+    {
+        var operations = _overview?.OperationsOf(account.Id).Count(operation => !operation.Deleted) ?? 0;
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { dialog => dialog.Message, T.Plural(operations, "DeleteAccountConfirm", account.Name) },
+            { dialog => dialog.ConfirmText, T["Delete"].Value }
+        };
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(T["DeleteAccount"], parameters);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        if (Surface(await Sender.SendAsync(new DeleteInvestmentAccount(Guid.NewGuid(), State.UserId, account.Id))))
+        {
+            Navigation.NavigateTo(InvestmentLinks.For(null));
+        }
+    }
 
     bool Surface(CommandResult result)
     {

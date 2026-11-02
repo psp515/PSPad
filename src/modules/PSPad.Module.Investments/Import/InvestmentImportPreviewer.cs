@@ -22,6 +22,8 @@ public static class InvestmentImportPreviewer
         TimeZoneInfo zone, IReadOnlyDictionary<ImportRateKey, (decimal Rate, DateOnly RateDate)> rates,
         IReadOnlySet<int> untickedRows, IReadOnlySet<int> tickedDeletedRows)
     {
+        accounts = [.. accounts.Where(account => !account.Deleted)];
+        target = target is { Deleted: false } ? target : null;
         var numbers = file.AccountNumbers;
         var targetNumber = target?.BrokerAccountNumber is { } held && numbers.Contains(held) ? held : file.AccountNumber;
         var rowsByNumber = file.Rows.GroupBy(file.AccountNumberOf, StringComparer.Ordinal)
@@ -55,11 +57,12 @@ public static class InvestmentImportPreviewer
                 }
             }
 
-            var currency = account?.Currency ?? mainCurrency ?? accountCurrency;
+            var detected = file.CurrencyOf(number);
+            var currency = account?.Currency ?? detected ?? mainCurrency ?? accountCurrency;
             mainCurrency ??= currency;
-            var fileError = FileErrorOf(file, number, target, account, accounts);
+            var fileError = FileErrorOf(file, number, target, account, accounts) ?? MismatchOf(account, detected);
             var section = SectionOf(file, number, rows, account, proposal, currency, fileError, index, operations, zone,
-                rates, untickedRows, tickedDeletedRows, firstRowOfId, existing, transient);
+                rates, untickedRows, tickedDeletedRows, firstRowOfId, existing, transient) with { DetectedCurrency = detected };
             sections.Add(section);
         }
 
@@ -137,6 +140,11 @@ public static class InvestmentImportPreviewer
 
         return account?.IsArchived == true ? "This account is archived." : null;
     }
+
+    static string? MismatchOf(InvestmentAccount? account, string? detected) =>
+        account is not null && detected is not null && detected != account.Currency
+            ? $"This file is in {detected}, but account {account.Name} is in {account.Currency}."
+            : null;
 
     static List<ImportRowPreview> RowsOf(
         IReadOnlyList<XtbRow> rows, InvestmentAccount? account, IReadOnlyDictionary<Guid, InvestmentOperation> existing,

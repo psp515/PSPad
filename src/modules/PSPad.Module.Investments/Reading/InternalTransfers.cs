@@ -12,7 +12,7 @@ public static class InternalTransfers
 
     public static IReadOnlySet<Guid> Among(IEnumerable<(InvestmentAccount Account, IReadOnlyList<InvestmentOperation> Live)> accounts)
     {
-        var all = accounts.ToList();
+        var all = accounts.Where(entry => !entry.Account.Deleted).ToList();
         var numberOf = all.Where(entry => !string.IsNullOrWhiteSpace(entry.Account.BrokerAccountNumber))
             .ToDictionary(entry => entry.Account.Id, entry => entry.Account.BrokerAccountNumber!.Trim());
         var legs = LiveOperations.Of(all.SelectMany(entry => entry.Live))

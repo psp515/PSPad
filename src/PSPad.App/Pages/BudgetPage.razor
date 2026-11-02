@@ -105,7 +105,7 @@ else
             break;
         case BalanceTab:
             <BudgetBalanceTab Month="@_month" Totals="@Balance" Snapshots="@_snapshots" Current="@Current" ReadOnly="@_budget.IsArchived"
-                              OnStart="@StartMonthAsync" OnOpen="@OpenHolding" OwnAccountIds="@_ownAccountIds" CanRefresh="@CanRefresh"
+                              OnStart="@StartMonthAsync" OnOpen="@OpenHolding" OwnAccountIds="@_ownAccountIds" DeletedAccountIds="@_deletedAccountIds" CanRefresh="@CanRefresh"
                               OnRefreshFromInvestments="@(() => OpenLink(true))"
                               OnOpenAccount="@(id => Navigation.NavigateTo($"/investments/{id}"))" OnUnlink="@UnlinkAsync" />
             break;
@@ -194,6 +194,7 @@ else
     bool _linkOpen;
     bool _linkRefresh;
     IReadOnlySet<Guid> _ownAccountIds = new HashSet<Guid>();
+    IReadOnlySet<Guid> _deletedAccountIds = new HashSet<Guid>();
     bool _canLink;
     IReadOnlyList<InvestmentAccount> _accounts = [];
     int _rendered = -1;
@@ -258,6 +259,7 @@ else
         _accounts = [.. await AccountStore.LoadAllAsync(State.UserId, CancellationToken.None)];
         var own = _accounts.Where(account => !account.Deleted && account.UserId == State.UserId).ToList();
         _ownAccountIds = own.Select(account => account.Id).ToHashSet();
+        _deletedAccountIds = InvestmentLinkAccounts.DeletedOf(_accounts);
         _canLink = own.Any(account => !account.IsArchived);
         _loaded = true;
     }

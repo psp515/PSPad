@@ -59,7 +59,7 @@ changes (`adr/0083`).
 ```
 Portfolio/      InvestmentPortfolio.cs, PortfolioAccountAdded.cs, PortfolioTickerAdded.cs
 Accounts/       InvestmentAccount.cs, Broker.cs, InvestmentAccountAccess.cs,
-                Create/, Rename/, Archive/, Restore/, SetBrokerAccountNumber/
+                Create/, Rename/, Archive/, Restore/, Delete/, SetBrokerAccountNumber/
 Operations/     InvestmentOperation.cs, OperationKind.cs, OperationSource.cs,
                 TransferType.cs, OperationValues.cs, Record/, Edit/, Delete/, Restore/
 Instruments/    Instrument.cs, QuoteSymbols.cs, Ensure/, SetQuoteSymbol/
@@ -130,8 +130,9 @@ Grouping operations by the user's day (`OperationDays`) lives in
   deleted ones included, so the per-account cap (§3.2) is checked inside the
   account.
 - `UserId` is the owner on every document. Accounts are private:
-  `InvestmentAccountAccess.Owned(account, actorId)` grants the owner only,
-  and `Writable` adds the archived check.
+  `InvestmentAccountAccess.Owned(account, actorId)` grants the owner only
+  and treats a deleted account as missing, and `Writable` adds the archived
+  check.
 
 ### 3.2 Values and limits
 
@@ -147,7 +148,7 @@ Grouping operations by the user's day (`OperationDays`) lives in
 | `InvestmentOperation.MaxPrice` | 1 000 000 000, at most 8 decimals | price |
 | `InvestmentOperation.MaxPositionIdLength` | 32 | broker position id |
 | `InvestmentOperation.MaxCounterpartyAccountNumberLength` | 32 | counterparty account number |
-| `InvestmentPortfolio.MaxAccounts` | 32, archived included | `CreateInvestmentAccount` |
+| `InvestmentPortfolio.MaxAccounts` | 32, archived included, deleted not | `CreateInvestmentAccount` |
 | `InvestmentPortfolio.MaxInstruments` | 500 | `EnsureInstrument` |
 | `InvestmentAccount.MaxOperations` | 20,000, deleted included | `RecordInvestmentOperation` |
 
@@ -174,7 +175,17 @@ cannot pass a cap together.
   restore ("This account is archived.").
 - `SetBrokerAccountNumber` sets the number when it is empty. Changing a set
   number is rejected; it guards the import (§4.3).
-- There is no delete.
+- `DeleteInvestmentAccount(accountId)`, owner only, archived or not. It
+  emits `InvestmentAccountDeleted` (the account's `Deleted` flag) and
+  `PortfolioAccountRemoved` on the portfolio, so the account no longer
+  counts toward the 32 and its broker account number is free for a new
+  account. Deleting twice is a no-op. A deleted account is "That account
+  does not exist." to every other command, and so to its operations' writes.
+  The operations are not rewritten (an account can hold 20,000): every read
+  ignores operations whose account is deleted (§5, §9). The account
+  document stays, with the flag, and syncs like any deletion. Re-importing
+  the same file creates a new account; operation ids derive from the
+  account id, so they do not collide with the deleted account's.
 
 **Operations**
 
@@ -225,6 +236,7 @@ cannot pass a cap together.
 `PortfolioAccountAdded`, `PortfolioTickerAdded`,
 `InvestmentAccountCreated`, `InvestmentAccountRenamed`, `AccountOperationCounted`,
 `InvestmentAccountArchived`, `InvestmentAccountRestored`,
+`InvestmentAccountDeleted`, `PortfolioAccountRemoved`,
 `BrokerAccountNumberSet`, `InvestmentOperationRecorded`,
 `InvestmentOperationEdited`, `InvestmentOperationDeleted`,
 `InvestmentOperationRestored`, `InstrumentEnsured`, `QuoteSymbolSet`. Each
@@ -340,9 +352,13 @@ can still feed more than one PSPad account: the PLN file also holds the
   The file's other numbers go to their own accounts, as below.
 - Otherwise each number picks the account holding it. An unknown number
   offers a new account in the preview: the name defaults to the `Product`
-  value and the number ("Investment Plans 33333333"), editable. The file's
-  own number takes the currency the user picks, which the file does not
-  state; every other new account takes the currency of the file's account.
+  value and the number ("Investment Plans 33333333"), editable. A new
+  account takes the currency the file states for it (§4.6), fixed in the
+  preview. When the file states none, the file's own number takes the
+  currency the user picks (Settings → Default currency preselected), and
+  every other new account takes the currency of the file's account.
+- Deleted accounts are not targets: neither picked by number nor counted
+  as holding it.
   Confirming sends `CreateInvestmentAccount` before the operations.
 - The caps apply across all of them: the 32 accounts counts every account
   the file would create, and the 500 instruments every new ticker. The
@@ -397,6 +413,31 @@ for every section that needs one, `EnsureInstrument` per new ticker, then
 `RecordInvestmentOperation` per ticked row, oldest first across the file,
 sent with `CommandSender.SendManyAsync`. The outbox ships them like any
 other commands (`adr/0074` consequences apply).
+
+### 4.6 Currency
+
+The file states its currency in up to three places; per target number the
+first that says something wins, and later ones never raise an error:
+
+1. **Open Positions summary.** A header row `Product | Metric | Amount |
+   Currency` in a sheet other than Cash Operations, then one row per
+   product (`My Trades | Open position value | 1234.5 | EUR`). Reading
+   stops at the first row without a product or a known currency. A number
+   takes the currency of its product. An account with no open positions
+   has the header and no rows.
+2. **Currency conversion comments** ("Currency conversion, PLN to USD from
+   TA: … to: …, Exchange rate:…"). The negative leg's own currency is the
+   "from" currency, the positive leg's the "to" currency; it applies to the
+   number the row belongs to (§4.3).
+3. **File name.** XTB names its exports `EUR_12345678_2006-01-01_2026-11-02.xlsx`;
+   the prefix before the first `_` counts when it is a code in
+   `Currencies.All` (so `IKE_…` says nothing). It applies to the file's own
+   number only.
+
+A new account takes the stated currency and the preview shows it fixed
+("The file says this account is in this currency."). Importing into an
+existing account in another currency is a file error that blocks the
+import: "This file is in EUR, but account IKE is in PLN."
 
 ## 5. Reading (pure, in the module, shared by client and server)
 
@@ -640,6 +681,9 @@ sends `EditHolding` for each. The refreshed prices also update the client's
   Only the account's owner sees it in the panel or can refresh it.
 - A linked holding shows a link icon. For the owner, the row's menu offers
   "Open account" and "Unlink" (`EditHolding` with no id).
+- A holding linked to a deleted account keeps its stored value, shows
+  "Account deleted" beside its currency, has no account menu, and is
+  skipped by "Refresh from investments".
 - Editing a linked holding by hand keeps the link; the next refresh replaces
   the value.
 
@@ -696,8 +740,12 @@ FAB per page (`adr/0033`).
 - **Operations:** grouped by day, newest first, filtered by kind; each row
   opens the operation panel. The FAB adds an operation.
 - **Accounts:** a card per account with currency, broker, number, value and
-  profit, and Rename, Archive, Import actions. Archived accounts are behind
-  a "Show archived" switch.
+  profit, and Rename, Archive, Import and Delete actions (Delete on archived
+  cards too). Delete asks first in a `ConfirmDialog`: "Delete {name}? Its
+  {n} operations will be removed. This can't be undone." with a red Delete
+  button; after it the page goes to All. Archived accounts are behind a
+  "Show archived" switch. Deleted accounts, and their operations, are gone
+  from every chip, tab, total, chart and panel.
 
 ### 9.3 Panels
 

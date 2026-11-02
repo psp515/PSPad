@@ -19,6 +19,7 @@ public sealed record PortfolioFigures(
         FxBook fx, DateOnly today, IReadOnlySet<Guid> internalTransfers)
     {
         var priced = accounts
+            .Where(entry => !entry.Account.Deleted)
             .Select(entry => (entry.Account, entry.Figures, Live: LiveOperations.Of(entry.Operations),
                 Rate: fx.ToPln(entry.Figures.Currency, today)))
             .ToList();

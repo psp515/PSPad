@@ -116,6 +116,10 @@
                                                                      Title="@T["LinkedToInvestments"]" />
                                                         }
                                                         @SubText(holding)
+                                                        @if (holding.InvestmentAccountId is { } linkedId && DeletedAccountIds.Contains(linkedId))
+                                                        {
+                                                            <span class="pspad-holding-account-deleted"> · @T["AccountDeleted"]</span>
+                                                        }
                                                     </span>
                                                 </span>
                                             </span>
@@ -170,6 +174,8 @@
     [Parameter] public bool CanRefresh { get; set; }
 
     [Parameter] public IReadOnlySet<Guid> OwnAccountIds { get; set; } = new HashSet<Guid>();
+
+    [Parameter] public IReadOnlySet<Guid> DeletedAccountIds { get; set; } = new HashSet<Guid>();
 
     [Parameter] public EventCallback OnRefreshFromInvestments { get; set; }
 

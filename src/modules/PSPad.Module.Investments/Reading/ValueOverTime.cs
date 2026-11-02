@@ -39,7 +39,8 @@ public static class ValueOverTime
         IReadOnlyList<(InvestmentAccount Account, IReadOnlyList<InvestmentOperation> Operations, IReadOnlyList<ValuePoint> Points)> accounts,
         FxBook fx, TimeZoneInfo zone)
     {
-        var live = accounts.Select(entry => (entry.Account, Live: LiveOperations.Of(entry.Operations))).ToList();
+        var kept = accounts.Where(entry => !entry.Account.Deleted).ToList();
+        var live = kept.Select(entry => (entry.Account, Live: LiveOperations.Of(entry.Operations))).ToList();
         var internalIds = InternalTransfers.Among(live);
         var flowsByAccount = live.ToDictionary(entry => entry.Account.Id, entry =>
         {
@@ -51,7 +52,7 @@ public static class ValueOverTime
                 .ToList();
         });
 
-        return accounts.SelectMany(entry => entry.Points.Select(point => (entry.Account, Point: point)))
+        return kept.SelectMany(entry => entry.Points.Select(point => (entry.Account, Point: point)))
             .GroupBy(entry => entry.Point.Day)
             .OrderBy(day => day.Key)
             .Select(day =>

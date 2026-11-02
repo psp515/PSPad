@@ -8,7 +8,8 @@
                 <AccountCard Account="@account" Figures="@Overview.Figures.GetValueOrDefault(account.Id)" Secondary="@Overview.SecondaryOf(account.Id)"
                              Operations="@Overview.OperationsOf(account.Id).Count(operation => !operation.Deleted)"
                              OnEdit="@(() => OnEdit.InvokeAsync(account))" OnImport="@(() => OnImport.InvokeAsync(account))"
-                             OnArchive="@(() => OnArchive.InvokeAsync(account))" OnRestore="@(() => OnRestore.InvokeAsync(account))" />
+                             OnArchive="@(() => OnArchive.InvokeAsync(account))" OnRestore="@(() => OnRestore.InvokeAsync(account))"
+                             OnDelete="@(() => OnDelete.InvokeAsync(account))" />
             </MudItem>
         }
     </MudGrid>
@@ -30,6 +31,8 @@
     [Parameter] public EventCallback<InvestmentAccount> OnArchive { get; set; }
 
     [Parameter] public EventCallback<InvestmentAccount> OnRestore { get; set; }
+
+    [Parameter] public EventCallback<InvestmentAccount> OnDelete { get; set; }
 
     IEnumerable<InvestmentAccount> Shown => _showArchived ? Overview.Accounts : Overview.Open;
 }

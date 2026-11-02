@@ -40,6 +40,11 @@ public sealed class InvestmentPortfolio : Aggregate
                     ? throw new DomainRejectedException($"You can have at most {MaxAccounts} investment accounts.")
                     : [new PortfolioAccountAdded(IdFor(create.UserId), create.UserId, at, create.AccountId)];
 
+            case DeleteInvestmentAccount delete:
+                return portfolio is not null && portfolio._accountIds.Contains(delete.AccountId)
+                    ? [new PortfolioAccountRemoved(portfolio.Id, portfolio.UserId, at, delete.AccountId)]
+                    : [];
+
             case EnsureInstrument ensure:
                 var ticker = Instrument.RequireTicker(ensure.Ticker);
                 var tickers = portfolio?._tickers ?? [];
@@ -66,6 +71,9 @@ public sealed class InvestmentPortfolio : Aggregate
         {
             case PortfolioAccountAdded added:
                 _accountIds.Add(added.AccountId);
+                break;
+            case PortfolioAccountRemoved removed:
+                _accountIds.Remove(removed.AccountId);
                 break;
             case PortfolioTickerAdded added:
                 _tickers.Add(added.Ticker);

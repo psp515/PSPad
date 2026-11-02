@@ -100,6 +100,24 @@ public class InvestmentQueryTests
     }
 
     [Fact]
+    public async Task ADeletedAccountAndItsOperationsAreLeftOutEverywhere()
+    {
+        var (pln, usd) = await TwoAccountsAsync();
+        var account = (await _replica.LoadAsync<PSPad.Module.Investments.Accounts.InvestmentAccount>(usd))!;
+        account.ApplyAll(PSPad.Module.Investments.Accounts.InvestmentAccount.Decide(account,
+            new PSPad.Module.Investments.Accounts.DeleteInvestmentAccount(Guid.NewGuid(), Owner, usd), Now));
+        await _replica.SaveAsync(account);
+
+        var overview = await Query().LoadAsync(Owner, Today, Utc, true, false, TestContext.Current.CancellationToken);
+
+        Assert.Equal([pln], overview.Accounts.Select(found => found.Id));
+        Assert.DoesNotContain(overview.Operations, operation => operation.AccountId == usd);
+        Assert.Equal(1_200m, overview.Portfolio.ValuePln);
+        Assert.Equal(1_200m, overview.ValueInPln[^1].Value);
+        Assert.DoesNotContain(("XYZ.US", "XYZ"), _quotes.InstrumentsAsked);
+    }
+
+    [Fact]
     public async Task WithNoAccountsThePortfolioIsEmpty()
     {
         var overview = await Query().LoadAsync(Owner, Today, Utc, true, false, TestContext.Current.CancellationToken);

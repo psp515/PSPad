@@ -246,6 +246,9 @@
   <data name="SectionRows" xml:space="preserve">
     <value>Rows: {0}</value>
   </data>
+  <data name="CurrencyFromFile" xml:space="preserve">
+    <value>The file says this account is in this currency.</value>
+  </data>
   <data name="CurrencyFollowsFile" xml:space="preserve">
     <value>This account takes the currency of the file's account.</value>
   </data>

@@ -5,7 +5,7 @@ namespace PSPad.Module.Investments.Accounts;
 public static class InvestmentAccountAccess
 {
     public static InvestmentAccount Owned(InvestmentAccount? account, Guid actorId) =>
-        account is null || account.UserId != actorId
+        account is null || account.Deleted || account.UserId != actorId
             ? throw new DomainRejectedException("That account does not exist.", Unrecoverable: true)
             : account;
 

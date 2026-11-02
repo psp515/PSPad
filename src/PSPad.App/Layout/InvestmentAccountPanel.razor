@@ -67,7 +67,7 @@
 
         _loaded = (AccountId, IsNew);
         var account = AccountId is { } id ? await Accounts.LoadAsync(id, CancellationToken.None) : null;
-        _account = account?.UserId == State.UserId ? account : null;
+        _account = account is { Deleted: false } && account.UserId == State.UserId ? account : null;
         _name = _account?.Name ?? "";
         _currency = _account?.Currency ?? Currencies.Pln;
         _broker = _account?.Broker ?? Broker.Xtb;

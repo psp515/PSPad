@@ -15,6 +15,9 @@ public static class InvestmentLinkAccounts
     public static bool CanRefresh(IEnumerable<InvestmentAccount> accounts, Guid userId, IReadOnlyDictionary<Guid, Holding> links) =>
         Eligible(accounts, userId).Any(account => links.ContainsKey(account.Id));
 
+    public static IReadOnlySet<Guid> DeletedOf(IEnumerable<InvestmentAccount> accounts) =>
+        accounts.Where(account => account.Deleted).Select(account => account.Id).ToHashSet();
+
     static IEnumerable<InvestmentAccount> Eligible(IEnumerable<InvestmentAccount> accounts, Guid userId) =>
         accounts.Where(account => !account.Deleted && account.UserId == userId && !account.IsArchived);
 }

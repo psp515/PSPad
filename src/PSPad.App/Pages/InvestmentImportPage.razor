@@ -131,7 +131,7 @@ else
                 {
                     var target = _preview.Accounts[index];
                     var first = index == 0;
-                    var currencyFixed = !first && (_preview.Accounts[0].Account is not null || _preview.Accounts[0].Rows.Count > 0);
+                    var currencyFixed = target.DetectedCurrency is not null || !first && (_preview.Accounts[0].Account is not null || _preview.Accounts[0].Rows.Count > 0);
                     if (target.Rows.Count == 0)
                     {
                         continue;
@@ -142,7 +142,8 @@ else
                         {
                             <ImportNewAccount AccountNumber="@target.AccountNumber" Name="@NameOf(proposal)"
                                               NameChanged="@(value => _names[proposal.AccountNumber] = value)"
-                                              Currency="@target.Currency" CurrencyChanged="@PickCurrencyAsync" CurrencyFixed="@currencyFixed" />
+                                              Currency="@target.Currency" CurrencyChanged="@PickCurrencyAsync" CurrencyFixed="@currencyFixed"
+                                              CurrencyDetected="@(target.DetectedCurrency is not null)" />
                         }
                         else if (_preview.Accounts.Count(other => other.Rows.Count > 0) > 1)
                         {
@@ -239,7 +240,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _accounts = await AccountStore.LoadAllAsync(State.UserId, CancellationToken.None);
+        _accounts = [.. (await AccountStore.LoadAllAsync(State.UserId, CancellationToken.None)).Where(account => !account.Deleted)];
         _operations = await OperationStore.LoadAllAsync(State.UserId, CancellationToken.None);
         _portfolio = await PortfolioStore.LoadAsync(InvestmentPortfolio.IdFor(State.UserId), CancellationToken.None);
         var preferences = await PreferencesStore.LoadAsync(MoneyPreferences.IdFor(State.UserId), CancellationToken.None);
@@ -302,7 +303,7 @@ else
         try
         {
             using var stream = new MemoryStream(picked.Bytes);
-            _file = XtbParser.Parse(XlsxReader.Read(stream));
+            _file = XtbParser.Parse(XlsxReader.Read(stream)).NamedAfter(picked.Name);
         }
         catch (XtbFileError error)
         {

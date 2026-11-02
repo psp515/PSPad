@@ -99,6 +99,24 @@
   <data name="Day" xml:space="preserve">
     <value>Dzień</value>
   </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Usuń</value>
+  </data>
+  <data name="DeleteAccount" xml:space="preserve">
+    <value>Usuń konto</value>
+  </data>
+  <data name="DeleteAccountConfirm.Zero" xml:space="preserve">
+    <value>Usunąć {1}? Tego nie można cofnąć.</value>
+  </data>
+  <data name="DeleteAccountConfirm.One" xml:space="preserve">
+    <value>Usunąć {1}? Jego {0} operacja zostanie usunięta. Tego nie można cofnąć.</value>
+  </data>
+  <data name="DeleteAccountConfirm.Few" xml:space="preserve">
+    <value>Usunąć {1}? Jego {0} operacje zostaną usunięte. Tego nie można cofnąć.</value>
+  </data>
+  <data name="DeleteAccountConfirm.Many" xml:space="preserve">
+    <value>Usunąć {1}? Jego {0} operacji zostanie usuniętych. Tego nie można cofnąć.</value>
+  </data>
   <data name="Deleted" xml:space="preserve">
     <value>usunięta</value>
   </data>

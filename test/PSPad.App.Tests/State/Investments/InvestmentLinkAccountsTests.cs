@@ -66,4 +66,29 @@ public class InvestmentLinkAccountsTests
 
         Assert.True(InvestmentLinkAccounts.CanRefresh([account], Given.User, links));
     }
+
+    [Fact]
+    public void AHoldingLinkedToADeletedAccountSaysSo()
+    {
+        var deleted = Given.AnAccount("Gone");
+        deleted.ApplyAll(PSPad.Module.Investments.Accounts.InvestmentAccount.Decide(deleted,
+            new PSPad.Module.Investments.Accounts.DeleteInvestmentAccount(Guid.NewGuid(), Given.User, deleted.Id), DateTimeOffset.UnixEpoch));
+        var kept = Given.AnAccount("Kept");
+
+        var gone = InvestmentLinkAccounts.DeletedOf([deleted, kept]);
+
+        Assert.Equal([deleted.Id], gone);
+    }
+
+    [Fact]
+    public void RefreshSkipsAHoldingWhoseAccountIsDeleted()
+    {
+        var deleted = Given.AnAccount("Gone");
+        var links = new Dictionary<Guid, PSPad.Module.Money.Balance.Holding> { [deleted.Id] = Given.Linked(deleted) };
+        deleted.ApplyAll(PSPad.Module.Investments.Accounts.InvestmentAccount.Decide(deleted,
+            new PSPad.Module.Investments.Accounts.DeleteInvestmentAccount(Guid.NewGuid(), Given.User, deleted.Id), DateTimeOffset.UnixEpoch));
+
+        Assert.Empty(InvestmentLinkAccounts.Select([deleted], Given.User, links, refresh: true));
+        Assert.False(InvestmentLinkAccounts.CanRefresh([deleted], Given.User, links));
+    }
 }

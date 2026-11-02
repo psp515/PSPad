@@ -23,6 +23,7 @@
                 {
                     <MudMenuItem Class="pspad-account-restore" OnClick="@OnRestore">@T["Restore"]</MudMenuItem>
                 }
+                <MudMenuItem Class="pspad-account-delete" OnClick="@OnDelete">@T["Delete"]</MudMenuItem>
             </MudMenu>
         </div>
         @if (Account.IsArchived)
@@ -55,6 +56,8 @@
     [Parameter] public EventCallback OnArchive { get; set; }
 
     [Parameter] public EventCallback OnRestore { get; set; }
+
+    [Parameter] public EventCallback OnDelete { get; set; }
 
     string Subtitle => $"{T[$"Broker{Account.Broker}"]} · {Account.Currency}";
 

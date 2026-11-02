@@ -99,6 +99,24 @@
   <data name="Day" xml:space="preserve">
     <value>Day</value>
   </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="DeleteAccount" xml:space="preserve">
+    <value>Delete account</value>
+  </data>
+  <data name="DeleteAccountConfirm.Zero" xml:space="preserve">
+    <value>Delete {1}? This can't be undone.</value>
+  </data>
+  <data name="DeleteAccountConfirm.One" xml:space="preserve">
+    <value>Delete {1}? Its {0} operation will be removed. This can't be undone.</value>
+  </data>
+  <data name="DeleteAccountConfirm.Few" xml:space="preserve">
+    <value>Delete {1}? Its {0} operations will be removed. This can't be undone.</value>
+  </data>
+  <data name="DeleteAccountConfirm.Many" xml:space="preserve">
+    <value>Delete {1}? Its {0} operations will be removed. This can't be undone.</value>
+  </data>
   <data name="Deleted" xml:space="preserve">
     <value>deleted</value>
   </data>
