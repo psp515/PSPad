@@ -106,16 +106,16 @@
     <value>Delete account</value>
   </data>
   <data name="DeleteAccountConfirm.Zero" xml:space="preserve">
-    <value>Delete {1}? This can't be undone.</value>
+    <value>Delete {1}? This can’t be undone.</value>
   </data>
   <data name="DeleteAccountConfirm.One" xml:space="preserve">
-    <value>Delete {1}? Its {0} operation will be removed. This can't be undone.</value>
+    <value>Delete {1}? Its {0} operation will be removed. This can’t be undone.</value>
   </data>
   <data name="DeleteAccountConfirm.Few" xml:space="preserve">
-    <value>Delete {1}? Its {0} operations will be removed. This can't be undone.</value>
+    <value>Delete {1}? Its {0} operations will be removed. This can’t be undone.</value>
   </data>
   <data name="DeleteAccountConfirm.Many" xml:space="preserve">
-    <value>Delete {1}? Its {0} operations will be removed. This can't be undone.</value>
+    <value>Delete {1}? Its {0} operations will be removed. This can’t be undone.</value>
   </data>
   <data name="Deleted" xml:space="preserve">
     <value>deleted</value>

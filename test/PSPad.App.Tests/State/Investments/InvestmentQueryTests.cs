@@ -1,4 +1,5 @@
 using PSPad.App.State.Investments;
+using PSPad.Module.Investments.Accounts;
 using PSPad.Module.Investments.Reading;
 using PSPad.TestInfrastructure;
 using static PSPad.App.Tests.State.Investments.Investing;
@@ -103,9 +104,9 @@ public class InvestmentQueryTests
     public async Task ADeletedAccountAndItsOperationsAreLeftOutEverywhere()
     {
         var (pln, usd) = await TwoAccountsAsync();
-        var account = (await _replica.LoadAsync<PSPad.Module.Investments.Accounts.InvestmentAccount>(usd))!;
-        account.ApplyAll(PSPad.Module.Investments.Accounts.InvestmentAccount.Decide(account,
-            new PSPad.Module.Investments.Accounts.DeleteInvestmentAccount(Guid.NewGuid(), Owner, usd), Now));
+        var account = (await _replica.LoadAsync<InvestmentAccount>(usd))!;
+        account.ApplyAll(InvestmentAccount.Decide(account,
+            new DeleteInvestmentAccount(Guid.NewGuid(), Owner, usd), Now));
         await _replica.SaveAsync(account);
 
         var overview = await Query().LoadAsync(Owner, Today, Utc, true, false, TestContext.Current.CancellationToken);
@@ -159,7 +160,7 @@ public class InvestmentQueryTests
         var (pln, _) = await TwoAccountsAsync();
         var query = Query();
         await query.LoadAsync(Owner, Today, Utc, true, false, TestContext.Current.CancellationToken);
-        var account = (await _replica.LoadAsync<PSPad.Module.Investments.Accounts.InvestmentAccount>(pln))!;
+        var account = (await _replica.LoadAsync<InvestmentAccount>(pln))!;
         await _replica.SaveAsync(Deposit(account, 100m, Today));
 
         var again = await query.LoadAsync(Owner, Today, Utc, true, false, TestContext.Current.CancellationToken);
@@ -183,9 +184,9 @@ public class InvestmentQueryTests
 
     async Task ArchiveAsync(Guid accountId)
     {
-        var account = (await _replica.LoadAsync<PSPad.Module.Investments.Accounts.InvestmentAccount>(accountId))!;
-        account.ApplyAll(PSPad.Module.Investments.Accounts.InvestmentAccount.Decide(account,
-            new PSPad.Module.Investments.Accounts.ArchiveInvestmentAccount(Guid.NewGuid(), Owner, accountId), Now));
+        var account = (await _replica.LoadAsync<InvestmentAccount>(accountId))!;
+        account.ApplyAll(InvestmentAccount.Decide(account,
+            new ArchiveInvestmentAccount(Guid.NewGuid(), Owner, accountId), Now));
         await _replica.SaveAsync(account);
     }
 

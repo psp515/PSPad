@@ -21,7 +21,7 @@
         <MudTd DataLabel="@T["ColTicker"]">@context.Row.Ticker</MudTd>
         <MudTd DataLabel="@T["ColTime"]">@context.Row.At?.UtcDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</MudTd>
         <MudTd DataLabel="@T["ColDetail"]">@Detail(context.Row)</MudTd>
-        <MudTd DataLabel="@T["ColAmount"]" Style="text-align: right">@context.Row.Amount?.ToString("0.00######", CultureInfo.InvariantCulture)</MudTd>
+        <MudTd DataLabel="@T["ColAmount"]" Style="text-align: right">@(context.Row.Amount is { } amount ? MoneyText.Amount(amount) : "")</MudTd>
     </RowTemplate>
 </MudTable>
 
@@ -53,7 +53,7 @@
     {
         if (row.Quantity is { } quantity && row.Price is { } price)
         {
-            var trade = T["TradeDetail", quantity.ToString("0.########", CultureInfo.InvariantCulture), InvestmentText.Price(price)].Value;
+            var trade = T["TradeDetail", InvestmentText.Quantity(quantity), InvestmentText.Price(price)].Value;
             return row.PositionId is { } position && row.Kind == XtbRowKind.Sell ? $"{trade} · {T["ClosesPosition", position]}" : trade;
         }
 

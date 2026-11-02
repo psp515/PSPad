@@ -1,4 +1,6 @@
 using PSPad.App.State.Investments;
+using PSPad.Module.Investments.Accounts;
+using PSPad.Module.Money.Balance;
 using PSPad.TestInfrastructure;
 
 namespace PSPad.App.Tests.State.Investments;
@@ -6,8 +8,8 @@ namespace PSPad.App.Tests.State.Investments;
 [UnitTest]
 public class InvestmentLinkAccountsTests
 {
-    static readonly IReadOnlyDictionary<Guid, PSPad.Module.Money.Balance.Holding> NoLinks =
-        new Dictionary<Guid, PSPad.Module.Money.Balance.Holding>();
+    static readonly IReadOnlyDictionary<Guid, Holding> NoLinks =
+        new Dictionary<Guid, Holding>();
 
     [Fact]
     public void AddOffersOnlyOwnUnarchivedAccountsInNameOrder()
@@ -28,7 +30,7 @@ public class InvestmentLinkAccountsTests
     {
         var account = Given.AnAccount();
         var holding = Given.Linked(account);
-        var links = new Dictionary<Guid, PSPad.Module.Money.Balance.Holding> { [account.Id] = holding };
+        var links = new Dictionary<Guid, Holding> { [account.Id] = holding };
 
         var row = Assert.Single(InvestmentLinkAccounts.Select([account], Given.User, links, refresh: false));
 
@@ -40,7 +42,7 @@ public class InvestmentLinkAccountsTests
     {
         var linked = Given.AnAccount("Linked");
         var other = Given.AnAccount("Other");
-        var links = new Dictionary<Guid, PSPad.Module.Money.Balance.Holding> { [linked.Id] = Given.Linked(linked) };
+        var links = new Dictionary<Guid, Holding> { [linked.Id] = Given.Linked(linked) };
 
         var rows = InvestmentLinkAccounts.Select([linked, other], Given.User, links, refresh: true);
 
@@ -51,7 +53,7 @@ public class InvestmentLinkAccountsTests
     public void ALinkedArchivedAccountCannotBeRefreshed()
     {
         var archived = Given.AnAccount(archived: true);
-        var links = new Dictionary<Guid, PSPad.Module.Money.Balance.Holding> { [archived.Id] = Given.Linked(archived) };
+        var links = new Dictionary<Guid, Holding> { [archived.Id] = Given.Linked(archived) };
 
         Assert.Empty(InvestmentLinkAccounts.Select([archived], Given.User, links, refresh: true));
         Assert.False(InvestmentLinkAccounts.CanRefresh([archived], Given.User, links));
@@ -61,8 +63,8 @@ public class InvestmentLinkAccountsTests
     public void RefreshIsOfferedForAnOwnUnarchivedLinkedAccountWhateverTheHoldingType()
     {
         var account = Given.AnAccount();
-        var retyped = Given.Linked(account) with { Type = PSPad.Module.Money.Balance.HoldingType.Cash };
-        var links = new Dictionary<Guid, PSPad.Module.Money.Balance.Holding> { [account.Id] = retyped };
+        var retyped = Given.Linked(account) with { Type = HoldingType.Cash };
+        var links = new Dictionary<Guid, Holding> { [account.Id] = retyped };
 
         Assert.True(InvestmentLinkAccounts.CanRefresh([account], Given.User, links));
     }
@@ -71,8 +73,8 @@ public class InvestmentLinkAccountsTests
     public void AHoldingLinkedToADeletedAccountSaysSo()
     {
         var deleted = Given.AnAccount("Gone");
-        deleted.ApplyAll(PSPad.Module.Investments.Accounts.InvestmentAccount.Decide(deleted,
-            new PSPad.Module.Investments.Accounts.DeleteInvestmentAccount(Guid.NewGuid(), Given.User, deleted.Id), DateTimeOffset.UnixEpoch));
+        deleted.ApplyAll(InvestmentAccount.Decide(deleted,
+            new DeleteInvestmentAccount(Guid.NewGuid(), Given.User, deleted.Id), DateTimeOffset.UnixEpoch));
         var kept = Given.AnAccount("Kept");
 
         var gone = InvestmentLinkAccounts.DeletedOf([deleted, kept]);
@@ -84,9 +86,9 @@ public class InvestmentLinkAccountsTests
     public void RefreshSkipsAHoldingWhoseAccountIsDeleted()
     {
         var deleted = Given.AnAccount("Gone");
-        var links = new Dictionary<Guid, PSPad.Module.Money.Balance.Holding> { [deleted.Id] = Given.Linked(deleted) };
-        deleted.ApplyAll(PSPad.Module.Investments.Accounts.InvestmentAccount.Decide(deleted,
-            new PSPad.Module.Investments.Accounts.DeleteInvestmentAccount(Guid.NewGuid(), Given.User, deleted.Id), DateTimeOffset.UnixEpoch));
+        var links = new Dictionary<Guid, Holding> { [deleted.Id] = Given.Linked(deleted) };
+        deleted.ApplyAll(InvestmentAccount.Decide(deleted,
+            new DeleteInvestmentAccount(Guid.NewGuid(), Given.User, deleted.Id), DateTimeOffset.UnixEpoch));
 
         Assert.Empty(InvestmentLinkAccounts.Select([deleted], Given.User, links, refresh: true));
         Assert.False(InvestmentLinkAccounts.CanRefresh([deleted], Given.User, links));

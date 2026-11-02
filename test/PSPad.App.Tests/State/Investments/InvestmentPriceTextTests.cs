@@ -7,10 +7,10 @@ namespace PSPad.App.Tests.State.Investments;
 public class InvestmentPriceTextTests
 {
     [Theory]
-    [InlineData(6.90100002, "6.90")]
-    [InlineData(36.47399902, "36.47")]
-    [InlineData(29.55944055, "29.56")]
-    [InlineData(4.16000366, "4.16")]
+    [InlineData(3.21000004, "3.21")]
+    [InlineData(12.34499998, "12.34")]
+    [InlineData(47.65500003, "47.66")]
+    [InlineData(8.07999992, "8.08")]
     [InlineData(1, "1.00")]
     [InlineData(1234.5, "1,234.50")]
     [InlineData(0.5, "0.50")]
@@ -29,8 +29,8 @@ public class InvestmentPriceTextTests
     public void ThePriceAxisIsWideEnoughForItsLongestLabel()
     {
         Assert.True(ChartScale.AxisWidthFor("1,234,567.00") >= 12 * 7);
-        Assert.True(ChartScale.AxisWidthFor("4.16") >= 40);
-        Assert.True(ChartScale.AxisWidthFor("1,234,567.00") > ChartScale.AxisWidthFor("4.16"));
+        Assert.True(ChartScale.AxisWidthFor("8.08") >= 40);
+        Assert.True(ChartScale.AxisWidthFor("1,234,567.00") > ChartScale.AxisWidthFor("8.08"));
         Assert.Equal(Math.Round(ChartScale.AxisWidthFor("12.34")), ChartScale.AxisWidthFor("12.34"));
     }
 }

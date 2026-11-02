@@ -10,6 +10,7 @@ public class XtbCurrencyDetectionTests
     const double Time = 46300.5;
     const string Main = "12345678";
     const string Conversion = "Currency conversion, PLN to USD from TA: 12345678 to: 55553333, Exchange rate:0.271234";
+    const string IntoThisAccount = "Currency conversion, PLN to USD from TA: 55553333 to: 12345678, Exchange rate:0.271234";
 
     static object?[] Row(string type, double amount, string? comment = null, string product = "My Trades", string id = "1") =>
         XtbSheets.Row(type, null, null, Time, amount, id, comment, product, null);
@@ -41,12 +42,20 @@ public class XtbCurrencyDetectionTests
 
     [Fact]
     public void AnIncomingConversionIsInTheAccountsOwnToCurrency() =>
-        Assert.Equal("USD", Parse(XtbSheets.CashOperations(Main, Row("Transfer", 271.23, Conversion))).CurrencyOf(Main));
+        Assert.Equal("USD", Parse(XtbSheets.CashOperations(Main, Row("Transfer", 271.23, IntoThisAccount))).CurrencyOf(Main));
 
     [Fact]
     public void TheSummaryWinsOverAConversionComment()
     {
-        var file = Parse(XtbSheets.CashOperations(Main, Row("Transfer", 271.23, Conversion)), Summary(("My Trades", "EUR")));
+        var file = Parse(XtbSheets.CashOperations(Main, Row("Transfer", 271.23, IntoThisAccount)), Summary(("My Trades", "EUR")));
+
+        Assert.Equal("EUR", file.CurrencyOf(Main));
+    }
+
+    [Fact]
+    public void ASummaryRowInAnUnknownCurrencyDoesNotHideTheRowsAfterIt()
+    {
+        var file = Parse(XtbSheets.CashOperations(Main, Row("Deposit", 100)), Summary(("Other", "XYZ"), ("My Trades", "EUR")));
 
         Assert.Equal("EUR", file.CurrencyOf(Main));
     }

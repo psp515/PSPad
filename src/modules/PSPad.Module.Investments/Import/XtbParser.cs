@@ -93,9 +93,10 @@ public static class XtbParser
             {
                 var product = TextOf(Cell(cells, columns["Product"]));
                 var currency = TextOf(Cell(cells, columns["Currency"]))?.ToUpperInvariant();
-                if (product is null || currency is null || !Currencies.All.Contains(currency))
+                if (product is null || product == "Product")
                     break;
-                currencies.TryAdd(product, currency);
+                if (currency is not null && Currencies.All.Contains(currency))
+                    currencies.TryAdd(product, currency);
             }
             return currencies;
         }

@@ -80,7 +80,7 @@ test('an XTB file with a second product feeds two new accounts, and the account 
     const card = page.getByRole('group', { name: plansName });
     await card.getByRole('button', { name: 'Actions' }).click();
     await page.getByRole('menuitem', { name: 'Delete' }).click();
-    await expect(page.getByRole('dialog')).toContainText(`Delete ${plansName}? Its 2 operations will be removed. This can't be undone.`);
+    await expect(page.getByRole('dialog')).toContainText(`Delete ${plansName}? Its 2 operations will be removed. This can’t be undone.`);
     await confirm(page, 'Delete');
     await expect(page).toHaveURL(/\/investments$/);
     await expect(page.getByRole('navigation', { name: 'Accounts' }).getByRole('link', { name: new RegExp(`^${plansName}`) })).toHaveCount(0);
