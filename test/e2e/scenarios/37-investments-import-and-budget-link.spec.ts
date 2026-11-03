@@ -44,6 +44,19 @@ test('an XTB export imports into a new account, lists its wrong row, and the acc
     await expect(page.getByText('No price', { exact: true })).toBeVisible();
   });
 
+  await test.step('the value chart opens full screen with its range chips and a profit view, and closes again', async () => {
+    await page.getByRole('button', { name: 'Expand chart' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Value over time');
+    const chartView = dialog.getByRole('group', { name: 'Chart' });
+    await expect(chartView.getByRole('checkbox', { name: 'Value' })).toBeChecked();
+    await chartView.getByRole('checkbox', { name: 'Profit' }).click();
+    await expect(chartView.getByRole('checkbox', { name: 'Profit' })).toBeChecked();
+    await expect(chartView.getByRole('checkbox', { name: 'Value' })).not.toBeChecked();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
   await test.step('Add from investments copies the account into this month\'s balance as a linked Investment holding', async () => {
     await createBudget(page, budget);
     await showView(page, 'Balance');

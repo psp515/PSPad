@@ -8,7 +8,7 @@
             <MudText Typo="Typo.body1" Class="pspad-entry-name">@Title</MudText>
             <MudText Typo="Typo.caption" Class="pspad-entry-sub">@Sub</MudText>
         </div>
-        <MudText Typo="Typo.body1" Class="@($"pspad-entry-amount {InvestmentText.Tone(Operation.SignedAmount)}")">@AmountText</MudText>
+        <MudText Typo="Typo.body1" Class="@($"pspad-entry-amount {InvestmentText.Tone(Shown)}")">@AmountText</MudText>
     </div>
 </MudListItem>
 
@@ -31,9 +31,9 @@
 
     string Initial => Text.Kind[..1].ToUpperInvariant();
 
-    string AvatarClass => $"pspad-entry-avatar {(Operation.SignedAmount > 0 ? "pspad-entry-income" : "pspad-entry-expense")}";
+    decimal Shown => Operation.Kind == OperationKind.SharesReceived ? Operation.Money.Amount : Operation.SignedAmount;
 
-    string AmountText => ShowCurrency
-        ? InvestmentText.Signed(Operation.SignedAmount, Operation.Money.Currency)
-        : InvestmentText.Signed(Operation.SignedAmount);
+    string AvatarClass => $"pspad-entry-avatar {(Shown > 0 || Operation.Kind == OperationKind.SharesReceived ? "pspad-entry-income" : "pspad-entry-expense")}";
+
+    string AmountText => ShowCurrency ? InvestmentText.Signed(Shown, Operation.Money.Currency) : InvestmentText.Signed(Shown);
 }

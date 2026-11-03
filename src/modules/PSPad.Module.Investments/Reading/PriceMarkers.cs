@@ -19,6 +19,7 @@ public static class PriceMarkers
         OperationKind.Buy => MarkerKind.Buy,
         OperationKind.Sell => MarkerKind.Sell,
         OperationKind.Dividend => MarkerKind.Dividend,
+        OperationKind.SharesReceived => MarkerKind.Received,
         _ => null
     };
 }

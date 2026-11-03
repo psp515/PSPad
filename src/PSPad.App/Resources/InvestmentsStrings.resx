@@ -345,6 +345,9 @@
   <data name="KindTaxRefund" xml:space="preserve">
     <value>Tax refund</value>
   </data>
+  <data name="KindSharesReceived" xml:space="preserve">
+    <value>Shares received</value>
+  </data>
   <data name="TransferTypeSubaccount" xml:space="preserve">
     <value>Subaccount transfer</value>
   </data>
@@ -395,5 +398,68 @@
   </data>
   <data name="CounterHint" xml:space="preserve">
     <value>What the conversion gave or took on the other account</value>
+  </data>
+  <data name="SoldQuantity" xml:space="preserve">
+    <value>Sold {0}</value>
+  </data>
+  <data name="Proceeds" xml:space="preserve">
+    <value>Proceeds</value>
+  </data>
+  <data name="ClosedResult" xml:space="preserve">
+    <value>Result</value>
+  </data>
+  <data name="LotClosed" xml:space="preserve">
+    <value>Closed</value>
+  </data>
+  <data name="CurrencyExchange" xml:space="preserve">
+    <value>Currency exchange</value>
+  </data>
+  <data name="ExchangeBought" xml:space="preserve">
+    <value>bought {0} for {1} · avg {2}</value>
+  </data>
+  <data name="ExchangeSold" xml:space="preserve">
+    <value>sold back {0} for {1} · avg {2}</value>
+  </data>
+  <data name="ExchangeHeld" xml:space="preserve">
+    <value>left from conversions {0} · NBP today {1}</value>
+  </data>
+  <data name="ExchangeResult" xml:space="preserve">
+    <value>currency result</value>
+  </data>
+  <data name="ExchangeSpan" xml:space="preserve">
+    <value>{0} · {1} – {2}</value>
+  </data>
+  <data name="ConversionsCount.One" xml:space="preserve">
+    <value>{0} conversion</value>
+  </data>
+  <data name="ConversionsCount.Few" xml:space="preserve">
+    <value>{0} conversions</value>
+  </data>
+  <data name="ConversionsCount.Many" xml:space="preserve">
+    <value>{0} conversions</value>
+  </data>
+  <data name="AxisThousands" xml:space="preserve">
+    <value>{0}k</value>
+  </data>
+  <data name="AxisMillions" xml:space="preserve">
+    <value>{0}M</value>
+  </data>
+  <data name="ExpandChart" xml:space="preserve">
+    <value>Expand chart</value>
+  </data>
+  <data name="ChartValue" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="ChartProfit" xml:space="preserve">
+    <value>Profit</value>
+  </data>
+  <data name="ChartView" xml:space="preserve">
+    <value>Chart</value>
+  </data>
+  <data name="ExchangeBoughtOther" xml:space="preserve">
+    <value>+{0} from another currency</value>
+  </data>
+  <data name="ExchangeSoldOther" xml:space="preserve">
+    <value>{0} to another currency</value>
   </data>
 </root>

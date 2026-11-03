@@ -5,6 +5,8 @@ namespace PSPad.Module.Investments.Import;
 public sealed record XtbFile(
     string AccountNumber, string? Product, IReadOnlyList<XtbRow> Rows, IReadOnlyList<XtbOpenPosition>? OpenPositions)
 {
+    public IReadOnlyList<XtbClosedPosition> ClosedPositions { get; init; } = [];
+
     public IReadOnlyDictionary<string, string> ProductNumbers { get; init; } = new Dictionary<string, string>();
 
     public IReadOnlyDictionary<string, string> ProductCurrencies { get; init; } = new Dictionary<string, string>();

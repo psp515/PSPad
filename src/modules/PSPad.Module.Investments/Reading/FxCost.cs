@@ -16,6 +16,10 @@ internal sealed class FxCost
 
     public decimal? PlnSpent { get; private set; }
 
+    public decimal Units { get; private set; }
+
+    public decimal PoolPln { get; private set; }
+
     public static FxCost Of(string currency, IReadOnlyList<InvestmentOperation> live)
     {
         var cost = new FxCost();
@@ -57,6 +61,8 @@ internal sealed class FxCost
             }
         }
 
+        cost.Units = units;
+        cost.PoolPln = spent;
         if (units > 0)
         {
             cost.AverageRate = spent / units;

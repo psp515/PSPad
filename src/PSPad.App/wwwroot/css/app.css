@@ -2889,6 +2889,11 @@ button.pspad-heatmap-cell:focus-visible {
     background-color: var(--mud-palette-info);
 }
 
+.pspad-price-marker-received {
+    fill: var(--mud-palette-warning);
+    background-color: var(--mud-palette-warning);
+}
+
 .pspad-price-swatch {
     display: inline-block;
     width: 10px;
@@ -2924,4 +2929,49 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-import-rows .mud-table-container {
     max-height: 60vh;
     overflow-y: auto;
+}
+
+.pspad-closed-positions {
+    width: 100%;
+    gap: 6px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pspad-closed-list {
+    margin-top: 8px;
+}
+
+.pspad-value-chart-plot {
+    display: flex;
+    flex-direction: column;
+    height: 352px;
+    max-height: 352px;
+}
+
+.pspad-value-chart-plot > .mud-chart {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.pspad-value-chart-plot-full {
+    height: calc(100vh - 180px);
+    max-height: calc(100vh - 180px);
+    min-height: 260px;
+}
+
+@media (max-width: 599.98px) {
+    .pspad-value-chart-plot {
+        height: 260px;
+        max-height: 260px;
+    }
+
+    .pspad-value-chart-plot-full {
+        height: calc(100vh - 220px);
+        max-height: calc(100vh - 220px);
+    }
 }

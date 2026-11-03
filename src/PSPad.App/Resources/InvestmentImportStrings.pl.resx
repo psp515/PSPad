@@ -228,6 +228,9 @@
   <data name="KindTaxRefund" xml:space="preserve">
     <value>Zwrot podatku</value>
   </data>
+  <data name="KindSharesReceived" xml:space="preserve">
+    <value>Otrzymane akcje</value>
+  </data>
   <data name="TransferTypeSubaccount" xml:space="preserve">
     <value>Transfer między subkontami</value>
   </data>
@@ -251,5 +254,8 @@
   </data>
   <data name="CurrencyFollowsFile" xml:space="preserve">
     <value>To konto przyjmuje walutę konta z pliku.</value>
+  </data>
+  <data name="PositionNumber" xml:space="preserve">
+    <value>Pozycja {0}</value>
   </data>
 </root>

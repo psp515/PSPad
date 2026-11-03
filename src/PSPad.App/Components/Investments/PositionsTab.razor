@@ -4,6 +4,7 @@
     <MudItem xs="12" lg="4" Class="d-flex flex-column gap-4 pspad-investment-aside">
         <InvestmentHero Overview="@Overview" AccountId="@AccountId" />
         <InvestmentStats Overview="@Overview" AccountId="@AccountId" />
+        <CurrencyExchangeCard Exchanges="@_exchanges" />
         <ValueChart Points="@_points" Today="@Overview.Today" Currency="@Currency" />
     </MudItem>
     <MudItem xs="12" lg="8">
@@ -45,17 +46,34 @@
                             }
                         </MudPaper>
                     }
-                    @if (closed > 0)
+                    @if (closed.Count > 0)
                     {
-                        <div class="d-flex align-baseline px-1 pt-2 pspad-closed-positions">
+                        var showing = _closedOpen.Contains(account.Id);
+                        <button type="button" class="d-flex align-baseline px-1 pt-2 pspad-closed-positions" aria-expanded="@(showing ? "true" : "false")"
+                                @onclick="@(() => ToggleClosed(account.Id))">
+                            <MudIcon Icon="@(showing ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small"
+                                     Class="pspad-muted align-self-center" />
                             <MudText Typo="Typo.body2" Class="flex-grow-1">
-                                <strong>@T["ClosedPositions"]</strong> <span class="pspad-muted">@T.Plural(closed, "InstrumentsCount")</span>
+                                <strong>@T["ClosedPositions"]</strong> <span class="pspad-muted">@T.Plural(closed.Count, "InstrumentsCount")</span>
                             </MudText>
                             <MudText Typo="Typo.caption">
-                                <span class="pspad-gain">@InvestmentText.Signed(figures.RealizedGains)</span> ·
-                                <span class="pspad-loss">@InvestmentText.Signed(figures.RealizedLosses)</span>
+                                <span class="@InvestmentText.Tone(figures.RealizedGains)">@InvestmentText.Signed(figures.RealizedGains)</span> ·
+                                <span class="@InvestmentText.Tone(figures.RealizedLosses)">@InvestmentText.Signed(figures.RealizedLosses)</span>
                             </MudText>
-                        </div>
+                        </button>
+                        @if (showing)
+                        {
+                            var operations = Overview.OperationsOf(account.Id);
+                            <MudPaper Outlined="true" Class="pspad-holding-list pspad-closed-list">
+                                @foreach (var position in closed)
+                                {
+                                    <ClosedPositionRow @key="position.Ticker" Closed="@position" Name="@Overview.NameOf(position.Ticker)"
+                                                       Currency="@account.Currency" History="@Overview.Prices.GetValueOrDefault(position.Ticker)"
+                                                       Markers="@PriceMarkers.For(position.Ticker, operations, Zone)" Secondary="@secondary"
+                                                       Today="@Overview.Today" Zone="@Zone" OnShowOperations="@OnShowOperations" />
+                                }
+                            </MudPaper>
+                        }
                     }
                 </section>
             }
@@ -76,8 +94,10 @@
 
     [Parameter] public EventCallback<string> OnShowOperations { get; set; }
 
-    IReadOnlyList<(InvestmentAccount Account, AccountFigures Figures, IReadOnlyList<(Position Position, IReadOnlyList<PriceMarker> Markers)> Held, int Closed)> _groups = [];
+    IReadOnlyList<(InvestmentAccount Account, AccountFigures Figures, IReadOnlyList<(Position Position, IReadOnlyList<PriceMarker> Markers)> Held, IReadOnlyList<ClosedPosition> Closed)> _groups = [];
+    readonly HashSet<Guid> _closedOpen = [];
     IReadOnlyList<ValuePoint> _points = [];
+    IReadOnlyList<CurrencyExchange> _exchanges = [];
     (InvestmentOverview?, Guid?)? _builtFor;
 
     string Currency => AccountId is { } id ? Overview.Account(id)?.Currency ?? "PLN" : "PLN";
@@ -91,6 +111,7 @@
 
         _builtFor = (Overview, AccountId);
         _points = AccountId is { } id ? Overview.ValueOf(id) : Overview.ValueInPln;
+        _exchanges = Overview.ExchangesOf(AccountId);
         var shown = AccountId is { } chosen ? Overview.Accounts.Where(account => account.Id == chosen) : Overview.Open;
         _groups =
         [
@@ -104,15 +125,16 @@
                         .Where(position => position.Quantity > 0 || position.Warning != PositionWarning.None)
                         .Select(position => (position, PriceMarkers.For(position.Ticker, operations, Zone)))
                 ];
-                return (account, figures, held, ClosedCount(operations, figures));
+                return (account, figures, held, ClosedPositions.For(operations));
             })
         ];
     }
 
-    static int ClosedCount(IReadOnlyList<InvestmentOperation> operations, AccountFigures figures)
+    void ToggleClosed(Guid accountId)
     {
-        var open = figures.Positions.Where(position => position.Quantity > 0).Select(position => position.Ticker).ToHashSet();
-        return operations.Where(operation => !operation.Deleted && OperationKinds.Traded(operation.Kind) && operation.Ticker is not null)
-            .Select(operation => operation.Ticker!).Distinct().Count(ticker => !open.Contains(ticker));
+        if (!_closedOpen.Remove(accountId))
+        {
+            _closedOpen.Add(accountId);
+        }
     }
 }

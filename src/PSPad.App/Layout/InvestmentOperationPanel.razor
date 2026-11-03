@@ -104,7 +104,8 @@
             }
             @if (_account is not null)
             {
-                <RateFields @key="@_loaded" CssPrefix="pspad-operation" @bind-Amount="_amount" Currency="@_account.Currency" CurrencyFixed="true"
+                <RateFields @key="@_loaded" CssPrefix="pspad-operation" Amount="@Amount" AmountChanged="@(amount => _amount = amount)"
+                            AmountFixed="@OperationKinds.CostIsComputed(_kind)" Currency="@_account.Currency" CurrencyFixed="true"
                             Rate="@_rate" RateTyped="@RateTyped" NbpDate="@Day" NbpFetched="@ApplyNbpRate" ReadOnly="@ReadOnly" />
             }
             <MudTextField T="string" Class="pspad-operation-note-field" Label="@T["Note"]" Variant="Variant.Outlined" Margin="Margin.Dense"
@@ -162,6 +163,10 @@
 
     bool IsPln => _account?.Currency == Currencies.Pln;
 
+    decimal? Amount => OperationKinds.CostIsComputed(_kind) ? OperationKinds.ReceivedCost(_quantity, _price) : _amount;
+
+    bool AmountValid => OperationKinds.CostIsComputed(_kind) ? Amount is >= 0 : Amount.GetValueOrDefault() > 0;
+
     decimal Rate => IsPln ? 1m : _rate.GetValueOrDefault();
 
     DateOnly? Day => _date is null ? null : DateOnly.FromDateTime(_date.Value);
@@ -169,7 +174,7 @@
     bool IsNewTicker => _ticker.Length > 0 && !_instruments.ContainsKey(_ticker);
 
     bool CanSave => !ReadOnly && _account is not null && _date is not null && _time is not null
-        && _amount.GetValueOrDefault() > 0 && Rate > 0
+        && AmountValid && Rate > 0
         && (!OperationKinds.NeedsTicker(_kind) || _ticker.Length > 0)
         && _transfer.Complete(_kind, _account.Currency)
         && (!OperationKinds.Traded(_kind) || (_quantity.GetValueOrDefault() > 0 && _price.GetValueOrDefault() > 0));
@@ -318,7 +323,7 @@
         var zone = LocalToday.Zone(State.TimeZone);
         var local = _date!.Value.Date + _time!.Value;
         var at = new DateTimeOffset(local, zone.GetUtcOffset(local));
-        var money = new MoneyValue(_amount.GetValueOrDefault(), _account.Currency, Rate, IsPln ? Day!.Value : _rateDate ?? Day!.Value);
+        var money = new MoneyValue(Amount.GetValueOrDefault(), _account.Currency, Rate, IsPln ? Day!.Value : _rateDate ?? Day!.Value);
         var hasTicker = OperationKinds.HasTicker(_kind);
         var traded = OperationKinds.Traded(_kind);
         var ticker = hasTicker && _ticker.Length > 0 ? _ticker : null;

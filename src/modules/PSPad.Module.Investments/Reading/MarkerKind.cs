@@ -4,5 +4,6 @@ public enum MarkerKind
 {
     Buy,
     Sell,
-    Dividend
+    Dividend,
+    Received
 }

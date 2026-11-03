@@ -228,6 +228,9 @@
   <data name="KindTaxRefund" xml:space="preserve">
     <value>Tax refund</value>
   </data>
+  <data name="KindSharesReceived" xml:space="preserve">
+    <value>Shares received</value>
+  </data>
   <data name="TransferTypeSubaccount" xml:space="preserve">
     <value>Subaccount transfer</value>
   </data>
@@ -251,5 +254,8 @@
   </data>
   <data name="CurrencyFollowsFile" xml:space="preserve">
     <value>This account takes the currency of the file's account.</value>
+  </data>
+  <data name="PositionNumber" xml:space="preserve">
+    <value>Position {0}</value>
   </data>
 </root>

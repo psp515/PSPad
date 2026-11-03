@@ -50,4 +50,22 @@ public class OperationTextTests
 
         Assert.Equal("IKE transfer · Main", text.Sub);
     }
+
+    [Fact]
+    public void SharesReceivedNameTheirTickerQuantityPriceAndNote()
+    {
+        using var culture = new CultureScope("en-US");
+        var account = Investing.AnAccount("Main", "PLN");
+        var operation = new InvestmentOperation();
+        operation.ApplyAll(InvestmentOperation.Decide(null, account,
+            new RecordInvestmentOperation(Guid.NewGuid(), Investing.Owner, Guid.NewGuid(), account.Id, OperationKind.SharesReceived,
+                new DateTimeOffset(Day.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero), "NEW.PL", 7m, 0.002m,
+                new MoneyValue(0.01m, "PLN", 1m, Day), null, OperationSource.Manual, null, "spinoff"),
+            Investing.Now));
+
+        var text = OperationText.For(operation, "Main", "Newco SA", TestLocalizers.For<InvestmentsStrings>());
+
+        Assert.Equal("Shares received NEW.PL · Newco SA", text.Title);
+        Assert.Equal("7 @ 0.002 · spinoff · Main", text.Sub);
+    }
 }

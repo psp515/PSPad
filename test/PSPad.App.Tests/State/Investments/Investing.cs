@@ -33,6 +33,18 @@ internal static class Investing
         InvestmentAccount account, string ticker, decimal quantity, decimal price, decimal amount, DateOnly day, decimal rate = 4m) =>
         Record(account, OperationKind.Buy, day, ticker, quantity, price, amount, rate);
 
+    public static InvestmentOperation Conversion(
+        InvestmentAccount account, OperationKind kind, decimal amount, MoneyValue counter, DateOnly day, decimal rate = 4m)
+    {
+        var money = new MoneyValue(amount, account.Currency, account.Currency == "PLN" ? 1m : rate, day);
+        var command = new RecordInvestmentOperation(Guid.NewGuid(), Owner, Guid.NewGuid(), account.Id, kind,
+            new DateTimeOffset(day.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero), null, null, null, money, null,
+            OperationSource.Manual, null, null, TransferType.CurrencyConversion, null, counter);
+        var operation = new InvestmentOperation();
+        operation.ApplyAll(InvestmentOperation.Decide(null, account, command, Now));
+        return operation;
+    }
+
     static InvestmentOperation Record(
         InvestmentAccount account, OperationKind kind, DateOnly day, string? ticker, decimal? quantity, decimal? price,
         decimal amount, decimal rate, TimeOnly? at = null)

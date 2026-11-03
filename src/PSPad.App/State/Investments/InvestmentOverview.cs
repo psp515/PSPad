@@ -31,6 +31,11 @@ public sealed record InvestmentOverview(
         : Account(accountId) is { } account ? ValueOverTime.For(account, OperationsOf(accountId), Prices, Fx, From, Today, Zone)
         : [];
 
+    public IReadOnlyList<CurrencyExchange> ExchangesOf(Guid? accountId) =>
+        accountId is { } id && Account(id)?.Currency != Currencies.Pln
+            ? []
+            : CurrencyExchanges.For(Accounts, Operations, Fx, Today, Zone, accountId);
+
     public InvestmentAccount? Account(Guid accountId) => Accounts.FirstOrDefault(account => account.Id == accountId);
 
     public IReadOnlyList<InvestmentOperation> OperationsOf(Guid accountId) =>

@@ -6,11 +6,14 @@ internal sealed class LotBook
 {
     readonly List<OpenLot> open = [];
     readonly List<ClosedResult> closed = [];
+    readonly List<(string Ticker, ClosedLot Lot)> closedLots = [];
     readonly Dictionary<string, decimal> oversold = new(StringComparer.Ordinal);
 
     public IReadOnlyList<ClosedResult> Closed => closed;
 
     public IReadOnlyDictionary<string, decimal> Oversold => oversold;
+
+    public IReadOnlyList<(string Ticker, ClosedLot Lot)> ClosedLots => closedLots;
 
     public IReadOnlyList<Lot> Open => open.Select(lot => new Lot(lot.Key, lot.Ticker, lot.OpenedAt, lot.Quantity, lot.Cost)).ToList();
 
@@ -23,7 +26,7 @@ internal sealed class LotBook
 
         switch (operation.Kind)
         {
-            case OperationKind.Buy:
+            case OperationKind.Buy or OperationKind.SharesReceived:
                 Buy(operation, ticker, quantity);
                 break;
             case OperationKind.Sell:
@@ -39,10 +42,17 @@ internal sealed class LotBook
         {
             lot.Quantity += quantity;
             lot.Cost += operation.Money.Amount;
+            lot.Priced(quantity, operation.Price);
+            lot.Received &= operation.Kind == OperationKind.SharesReceived;
             return;
         }
 
-        open.Add(new OpenLot(key, ticker, operation.At) { Quantity = quantity, Cost = operation.Money.Amount });
+        var opened = new OpenLot(key, ticker, operation.At)
+        {
+            Quantity = quantity, Cost = operation.Money.Amount, Received = operation.Kind == OperationKind.SharesReceived
+        };
+        opened.Priced(quantity, operation.Price);
+        open.Add(opened);
     }
 
     void Sell(InvestmentOperation operation, string ticker, decimal quantity)
@@ -51,15 +61,23 @@ internal sealed class LotBook
             .ToList();
         var remaining = quantity;
         var closedCost = 0m;
+        var proceedsLeft = operation.Money.Amount;
         foreach (var lot in closing.TakeWhile(_ => remaining > 0))
         {
             var taken = Math.Min(remaining, lot.Quantity);
             var cost = taken == lot.Quantity
                 ? lot.Cost
                 : Math.Round(lot.Cost * taken / lot.Quantity, 2, MidpointRounding.AwayFromZero);
+            var proceeds = taken == remaining
+                ? proceedsLeft
+                : Math.Round(operation.Money.Amount * taken / quantity, 2, MidpointRounding.AwayFromZero);
+            closedLots.Add((ticker, new ClosedLot(lot.Key, lot.OpenedAt, lot.Price, operation.At, operation.Price, taken, cost,
+                proceeds, lot.Received)));
+            lot.Unpriced(taken);
             lot.Quantity -= taken;
             lot.Cost -= cost;
             remaining -= taken;
+            proceedsLeft -= proceeds;
             closedCost += cost;
             if (lot.Quantity == 0)
             {
@@ -70,6 +88,7 @@ internal sealed class LotBook
         if (remaining > 0)
         {
             oversold[ticker] = oversold.GetValueOrDefault(ticker) + remaining;
+            closedLots.Add((ticker, new ClosedLot(null, null, null, operation.At, operation.Price, remaining, 0m, proceedsLeft)));
         }
 
         closed.Add(new ClosedResult(operation.Id, ticker, operation.Money.Amount, closedCost));
@@ -86,5 +105,31 @@ internal sealed class LotBook
         public decimal Quantity { get; set; }
 
         public decimal Cost { get; set; }
+
+        public bool Received { get; set; }
+
+        public decimal? Price => pricedQuantity > 0 ? Math.Round(pricedValue / pricedQuantity, 8, MidpointRounding.AwayFromZero) : null;
+
+        decimal pricedQuantity;
+        decimal pricedValue;
+
+        public void Unpriced(decimal taken)
+        {
+            if (Quantity > 0 && pricedQuantity > 0)
+            {
+                var share = taken / Quantity;
+                pricedValue -= pricedValue * share;
+                pricedQuantity -= pricedQuantity * share;
+            }
+        }
+
+        public void Priced(decimal quantity, decimal? price)
+        {
+            if (price is { } each)
+            {
+                pricedQuantity += quantity;
+                pricedValue += quantity * each;
+            }
+        }
     }
 }

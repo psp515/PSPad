@@ -76,7 +76,15 @@ export const productStatementRows = {
   buyKappa: productRow('Stock purchase', 'Kappa SA', 'KPA.PL', 30, -500, 910000005, 'OPEN BUY KPA.PL 10 @ 50', 810000001, trades),
   buyZeta: productRow('Stock purchase', 'Zeta SA', 'ZTA.PL', 25, -800, 910000006, 'OPEN BUY ZTA.PL 8 @ 100', 810000002, plans),
   sellKappa: productRow('Stock sell', 'Kappa SA', 'KPA.PL', 20, 600, 910000007, 'CLOSE BUY KPA.PL 10 @ 60', 810000001, trades),
+  sellNewco: productRow('Stock sell', 'Newco SA', 'NWC.PL', 18, 175, 910000008, 'CLOSE BUY NWC.PL 7 @ 25', 810000003, trades),
 };
+
+const closedHeader: Cell[] = ['Instrument', 'Ticker', 'Category', 'Type', 'Volume', 'Open Price', 'Open Time (UTC)', 'Close Price',
+  'Close Time (UTC)', 'Product', 'Profit/Loss', 'Gross Profit', 'Purchase Value', 'Sale Value', 'Position ID', 'Comment'];
+
+export const spunOffPosition: Cell[] = ['Newco SA', 'NWC.PL', 'STOCK', 'BUY', 7, 0.002,
+  excelSerial(addDays(utcToday(), -22)) + 0.5, 25, excelSerial(addDays(utcToday(), -18)) + 0.5, trades, 174.99, 174.99, 0.01, 175,
+  810000003, 'KPA.PL spinoff'];
 
 export function xtbProductStatement(name = `account_${tradesAccount}_en_xlsx.xlsx`) {
   const cash: Cell[][] = [
@@ -89,7 +97,10 @@ export function xtbProductStatement(name = `account_${tradesAccount}_en_xlsx.xls
   return {
     name,
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    buffer: workbook([{ name: 'Cash Operations', rows: cash }]),
+    buffer: workbook([
+      { name: 'Cash Operations', rows: cash },
+      { name: 'Closed Positions', rows: [['Closed Positions'], closedHeader, spunOffPosition] },
+    ]),
   };
 }
 

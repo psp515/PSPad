@@ -35,5 +35,6 @@ internal static class CashFlows
 
     public static decimal PassiveIncome(IReadOnlyList<InvestmentOperation> live, Func<InvestmentOperation, decimal> amount) =>
         DividendsNet(live, amount) + LiveOperations.Sum(live, OperationKind.Interest, amount)
+        + LiveOperations.Sum(live, OperationKind.SharesReceived, amount)
         - live.Where(operation => operation is { Kind: OperationKind.Tax, Ticker: null }).Sum(amount);
 }

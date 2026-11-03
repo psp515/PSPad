@@ -23,6 +23,7 @@ public static class InvestmentImportPreviewer
         IReadOnlySet<int> untickedRows, IReadOnlySet<int> tickedDeletedRows)
     {
         accounts = [.. accounts.Where(account => !account.Deleted)];
+        file = file with { Rows = [.. file.Rows, .. XtbReceivedShares.Of(file)] };
         target = target is { Deleted: false } ? target : null;
         var numbers = file.AccountNumbers;
         var targetNumber = target?.BrokerAccountNumber is { } held && numbers.Contains(held) ? held : file.AccountNumber;
@@ -99,6 +100,14 @@ public static class InvestmentImportPreviewer
             ? new Dictionary<Guid, InvestmentOperation>()
             : operations.Where(operation => operation.AccountId == account.Id).ToDictionary(operation => operation.Id);
         existing.AddRange(known.Values);
+        var bought = known.Values.Where(operation => operation.Kind == OperationKind.Buy).Select(operation => operation.PositionId)
+            .OfType<string>().ToHashSet(StringComparer.Ordinal);
+        var received = known.Values.Where(operation => operation is { Kind: OperationKind.SharesReceived, Deleted: false })
+            .Select(operation => operation.PositionId).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        rows = [.. rows.Where(row => row.Kind != XtbRowKind.SharesReceived || !bought.Contains(row.PositionId!))
+            .Select(row => row is { Kind: XtbRowKind.Buy, Errors.Count: 0, PositionId: { } position } && received.Contains(position)
+                ? row with { Errors = [$"Position {position} was recorded as shares received."] }
+                : row)];
         var previews = RowsOf(rows, account, known, probe, zone, rates, untickedRows, tickedDeletedRows, firstRowOfId);
         transient.AddRange(previews.Where(row => row.Ticked).Select(row => probe.Transient(row.Row)));
         return new ImportAccountPreview(number, product, account, proposal, probe.Currency, fileError, previews,
@@ -160,7 +169,7 @@ public static class InvestmentImportPreviewer
                 continue;
             }
 
-            if (!firstRowOfId.TryAdd(row.Id!, row.SheetRow))
+            if (!firstRowOfId.TryAdd(row.Kind == XtbRowKind.SharesReceived ? $"position {row.Id}" : row.Id!, row.SheetRow))
             {
                 previews.Add(Rejected(row, [$"The ID {row.Id} is already on row {firstRowOfId[row.Id!]}."], zone));
                 continue;
@@ -173,7 +182,7 @@ public static class InvestmentImportPreviewer
             }
 
             var day = ImportCommands.DayOf(row.At!.Value, zone);
-            var id = account is null ? (Guid?)null : InvestmentOperation.IdFor(account.Id, ImportCommands.XtbId(row));
+            var id = account is null ? (Guid?)null : ImportCommands.OperationIdOf(account.Id, row);
             previews.Add(id is { } known && existing.TryGetValue(known, out var operation)
                 ? operation.Deleted
                     ? new ImportRowPreview(row, ImportRowStatus.DeletedEarlier, id, day, [], tickedDeletedRows.Contains(row.SheetRow))

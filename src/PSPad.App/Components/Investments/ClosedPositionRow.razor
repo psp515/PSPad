@@ -1,0 +1,100 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<div class="@($"pspad-position pspad-closed-position {(_expanded ? "pspad-position-open" : "")}")">
+    <button type="button" class="pspad-holding-row pspad-position-row" aria-expanded="@(_expanded ? "true" : "false")"
+            @onclick="@(() => _expanded = !_expanded)">
+        <span class="d-flex align-center gap-3 pspad-holding-main">
+            <span class="pspad-holding-icon pspad-holding-icon-investment" aria-hidden="true">
+                <MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Small" />
+            </span>
+            <span class="d-flex flex-column pspad-holding-text">
+                <span class="pspad-holding-name pspad-position-ticker">@Closed.Ticker</span>
+                <span class="pspad-holding-sub">@Name · @_text.Sub</span>
+            </span>
+        </span>
+        <span class="pspad-holding-cell pspad-position-quantity">@InvestmentText.Quantity(Closed.Quantity)</span>
+        <span class="pspad-holding-cell d-flex flex-column pspad-closed-cost">
+            <span>@InvestmentText.Money(Closed.Cost, Currency)</span>
+            <span class="pspad-holding-sub">@T["Cost"]</span>
+        </span>
+        <span class="pspad-holding-values">
+            <span class="pspad-holding-pln pspad-closed-proceeds">
+                <span>@InvestmentText.Money(Closed.Proceeds, Currency)</span>
+                <SecondaryAmount Text="@Secondary?.MoneyFromAccount(Closed.Proceeds)" />
+            </span>
+            <span class="@($"pspad-holding-today d-flex flex-column pspad-closed-result {InvestmentText.Tone(Closed.Result)}")">
+                <span>@InvestmentText.Signed(Closed.Result)</span>
+                <SecondaryAmount Text="@Secondary?.SignedFromAccount(Closed.Result)" />
+                <span class="pspad-position-share">@InvestmentText.Percent(_text.Share)</span>
+            </span>
+        </span>
+    </button>
+    @if (_expanded)
+    {
+        <div class="px-4 pb-4 d-flex flex-column gap-3 pspad-position-detail">
+            @if (History is not null)
+            {
+                <PriceChart Ticker="@Closed.Ticker" History="@History" Markers="@Markers" AccountCurrency="@Currency" Today="@Today" />
+            }
+            <MudSimpleTable Dense="true" Elevation="0" Class="pspad-position-lots pspad-closed-lots">
+                <thead>
+                    <tr>
+                        <th class="text-right">@T["Quantity"]</th>
+                        <th>@T["LotOpened"]</th>
+                        <th>@T["LotClosed"]</th>
+                        <th class="text-right">@T["Cost"]</th>
+                        <th class="text-right">@T["Proceeds"]</th>
+                        <th class="text-right">@T["ClosedResult"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var lot in Closed.Lots)
+                    {
+                        <tr>
+                            <td class="text-right">@InvestmentText.Quantity(lot.Quantity)</td>
+                            <td>@Dated(lot.OpenedAt, lot.OpenPrice)</td>
+                            <td>@Dated(lot.ClosedAt, lot.ClosePrice)</td>
+                            <td class="text-right">@InvestmentText.Money(lot.Cost, Currency)</td>
+                            <td class="text-right">@InvestmentText.Money(lot.Proceeds, Currency)</td>
+                            <td class="@($"text-right {InvestmentText.Tone(lot.Result)}")">@InvestmentText.Signed(lot.Result)</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+            <div class="d-flex justify-end">
+                <MudButton Class="pspad-position-operations" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary"
+                           OnClick="@(() => OnShowOperations.InvokeAsync(Closed.Ticker))">@T["TabOperations"]</MudButton>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    bool _expanded;
+
+    [Parameter, EditorRequired] public ClosedPosition Closed { get; set; } = default!;
+
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+
+    [Parameter, EditorRequired] public string Currency { get; set; } = "";
+
+    [Parameter] public PriceHistory? History { get; set; }
+
+    [Parameter] public IReadOnlyList<PriceMarker> Markers { get; set; } = [];
+
+    [Parameter] public SecondaryFigures? Secondary { get; set; }
+
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+
+    [Parameter] public TimeZoneInfo Zone { get; set; } = TimeZoneInfo.Utc;
+
+    [Parameter] public EventCallback<string> OnShowOperations { get; set; }
+
+    ClosedPositionText _text = new("", null);
+
+    protected override void OnParametersSet() => _text = ClosedPositionText.For(Closed, Zone, T);
+
+    string Dated(DateTimeOffset? at, decimal? price) => at is { } when
+        ? price is { } each ? $"{ClosedPositionText.DayText(when, Zone)} @ {InvestmentText.Price(each)}" : ClosedPositionText.DayText(when, Zone)
+        : "—";
+}

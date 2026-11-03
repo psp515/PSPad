@@ -1,0 +1,96 @@
+@using PSPad.App.Statistics
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<div class="d-flex flex-wrap align-center justify-space-between gap-2">
+    <RangeChips Value="@_range" ValueChanged="@RangeChanged" />
+    <MudToggleGroup T="ValueChartMode" Value="@_mode" ValueChanged="@ModeChanged" SelectionMode="SelectionMode.SingleSelection"
+                    Color="Color.Primary" Size="Size.Small" Class="pspad-value-chart-mode" aria-label="@T["ChartView"].Value">
+        <MudToggleItem Value="ValueChartMode.Value" Text="@T["ChartValue"]" />
+        <MudToggleItem Value="ValueChartMode.Profit" Text="@T["ChartProfit"]" />
+    </MudToggleGroup>
+</div>
+@if (_shown.Count > 1)
+{
+    <div class="@($"pspad-value-chart-plot {PlotClass}")">
+        <MudChart ChartType="ChartType.Line" ChartSeries="@_series" ChartLabels="@_labels" ChartOptions="@_options"
+                  Width="100%" Height="100%" MatchBoundsToSize="true" />
+    </div>
+    <div class="pspad-sr-only">
+        <table>
+            <caption>@T["ValueOverTime"]</caption>
+            <thead>
+                <tr>
+                    <th scope="col">@T["Day"]</th>
+                    <th scope="col">@T["Value"]</th>
+                    <th scope="col">@T["NetDeposits"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var point in _shown)
+                {
+                    <tr>
+                        <td>@InvestmentText.Day(point.Day)</td>
+                        <td>@InvestmentText.Money(point.Value, Currency)</td>
+                        <td>@InvestmentText.Money(point.NetDeposits, Currency)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <MudText Typo="Typo.body2" Class="pspad-muted pa-2">@T["NotEnoughHistory"]</MudText>
+}
+
+@code {
+    ChartRange _range = ChartRange.OneYear;
+    ValueChartMode _mode = ValueChartMode.Value;
+    IReadOnlyList<ValuePoint> _shown = [];
+    List<ChartSeries<double>> _series = [];
+    string[] _labels = [];
+    LineChartOptions _options = new();
+    (IReadOnlyList<ValuePoint>, DateOnly, ChartRange, ValueChartMode)? _builtFor;
+
+    [Parameter, EditorRequired] public IReadOnlyList<ValuePoint> Points { get; set; } = [];
+
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+
+    [Parameter] public string Currency { get; set; } = "PLN";
+
+    [Parameter] public string PlotClass { get; set; } = "";
+
+    protected override void OnParametersSet() => Build();
+
+    void RangeChanged(ChartRange range)
+    {
+        _range = range;
+        Build();
+    }
+
+    void ModeChanged(ValueChartMode mode)
+    {
+        _mode = mode;
+        Build();
+    }
+
+    void Build()
+    {
+        if (_builtFor == (Points, Today, _range, _mode))
+        {
+            return;
+        }
+
+        _builtFor = (Points, Today, _range, _mode);
+        _shown = ChartRanges.Within(Points, point => point.Day, _range, Today);
+        var data = ValueChartData.For(_shown, _mode);
+        _series = [.. data.Series.Select(line => new ChartSeries<double> { Name = T[line.Key], Data = line.Data })];
+        _labels = ChartAxis.Labels(_shown, point => point.Day, _shown.Count < 2 ? null : _shown[^1].Day.DayNumber - _shown[0].Day.DayNumber);
+        _options = new LineChartOptions
+        {
+            YAxisTicks = data.YStep,
+            MaxNumYAxisTicks = ChartAxis.MaxTicks,
+            YAxisToStringFunc = value => ValueChartData.Compact(value, T)
+        };
+    }
+}

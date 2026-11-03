@@ -1,6 +1,7 @@
 using PSPad.App.Resources;
 using PSPad.App.State.Investments;
 using PSPad.App.Tests.Localization;
+using PSPad.App.Tests.State;
 using PSPad.Module.Investments.Import;
 using PSPad.TestInfrastructure;
 
@@ -21,6 +22,19 @@ public class ImportErrorLinesTests
 
     static ImportRowPreview Clean(XtbRow row) =>
         new(row, ImportRowStatus.ToImport, null, new DateOnly(2026, 3, 4), [], true);
+
+    [Theory]
+    [InlineData("en-US", "Position 700000001")]
+    [InlineData("pl-PL", "Pozycja 700000001")]
+    public void AWrongReceivedRowNamesItsPositionNotARow(string culture, string label)
+    {
+        using var scope = new CultureScope(culture);
+        var received = Row(120, "Shares received", id: "700000001") with { Kind = XtbRowKind.SharesReceived, PositionId = "700000001" };
+
+        var line = Assert.Single(ImportErrorLines.Of([Wrong(received, "The position has no open price.")], T));
+
+        Assert.Equal(label, line.RowLabel);
+    }
 
     [Fact]
     public void AWrongRowShowsItsSheetRowTheValuesXtbGaveAndTheReasons()

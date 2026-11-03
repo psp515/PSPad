@@ -34,6 +34,10 @@
             <span class="d-flex align-center gap-1"><span class="pspad-price-swatch pspad-price-marker-buy"></span>@T["KindBuy"]</span>
             <span class="d-flex align-center gap-1"><span class="pspad-price-swatch pspad-price-marker-sell"></span>@T["KindSell"]</span>
             <span class="d-flex align-center gap-1"><span class="pspad-price-swatch pspad-price-marker-dividend"></span>@T["KindDividend"]</span>
+            @if (_shown.Any(marker => marker.Kind == MarkerKind.Received))
+            {
+                <span class="d-flex align-center gap-1"><span class="pspad-price-swatch pspad-price-marker-received"></span>@T["KindSharesReceived"]</span>
+            }
         </div>
     }
     else
@@ -96,6 +100,7 @@
         {
             MarkerKind.Buy => T["KindBuy"].Value,
             MarkerKind.Sell => T["KindSell"].Value,
+            MarkerKind.Received => T["KindSharesReceived"].Value,
             _ => T["KindDividend"].Value
         };
         var traded = marker is { Quantity: { } quantity, Price: { } price }

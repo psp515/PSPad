@@ -12,5 +12,6 @@ public enum OperationKind
     Fee,
     TransferIn,
     TransferOut,
-    TaxRefund
+    TaxRefund,
+    SharesReceived
 }

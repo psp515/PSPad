@@ -54,7 +54,9 @@
         if (row.Quantity is { } quantity && row.Price is { } price)
         {
             var trade = T["TradeDetail", InvestmentText.Quantity(quantity), InvestmentText.Price(price)].Value;
-            return row.PositionId is { } position && row.Kind == XtbRowKind.Sell ? $"{trade} · {T["ClosesPosition", position]}" : trade;
+            return row.PositionId is { } position && row.Kind == XtbRowKind.Sell ? $"{trade} · {T["ClosesPosition", position]}"
+                : row is { Kind: XtbRowKind.SharesReceived, Comment: { } comment } ? $"{trade} · {comment}"
+                : trade;
         }
 
         return row.Comment ?? "";

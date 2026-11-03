@@ -118,6 +118,11 @@ internal static class Given
         DateOnly day, decimal rate = 4m) =>
         Operation(account, OperationKind.Sell, day, ticker, quantity, price, amount, position, rate);
 
+    public static InvestmentOperation Received(
+        InvestmentAccount account, string ticker, string? position, decimal quantity, decimal price, decimal amount,
+        DateOnly day, decimal rate = 4m) =>
+        Operation(account, OperationKind.SharesReceived, day, ticker, quantity, price, amount, position, rate);
+
     public static InvestmentOperation Dividend(
         InvestmentAccount account, string ticker, decimal amount, DateOnly day, decimal rate = 4m) =>
         Operation(account, OperationKind.Dividend, day, ticker, null, null, amount, null, rate);

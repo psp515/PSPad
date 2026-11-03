@@ -16,7 +16,10 @@ internal static class ImportCommands
 
     public static bool HoldsTicker(OperationKind kind) =>
         kind is OperationKind.Buy or OperationKind.Sell or OperationKind.Dividend or OperationKind.Tax
-            or OperationKind.TaxRefund or OperationKind.Fee;
+            or OperationKind.TaxRefund or OperationKind.Fee or OperationKind.SharesReceived;
+
+    public static Guid OperationIdOf(Guid accountId, XtbRow row) =>
+        InvestmentOperation.ImportedIdFor(accountId, KindOf(row), XtbId(row));
 
     public static string? TickerOf(XtbRow row) =>
         HoldsTicker(KindOf(row)) && !string.IsNullOrWhiteSpace(row.Ticker) ? row.Ticker.Trim().ToUpperInvariant() : null;
@@ -26,15 +29,15 @@ internal static class ImportCommands
         (decimal Rate, DateOnly RateDate) rate)
     {
         var kind = KindOf(row);
-        var traded = kind is OperationKind.Buy or OperationKind.Sell;
+        var traded = kind is OperationKind.Buy or OperationKind.Sell or OperationKind.SharesReceived;
         var money = currency == Currencies.Pln
             ? new MoneyValue(row.Amount!.Value, Currencies.Pln, 1m, day)
             : new MoneyValue(row.Amount!.Value, currency, rate.Rate, rate.RateDate);
         var xtbId = XtbId(row);
-        return new RecordInvestmentOperation(commandId, userId, InvestmentOperation.IdFor(accountId, xtbId), accountId,
+        return new RecordInvestmentOperation(commandId, userId, OperationIdOf(accountId, row), accountId,
             kind, row.At!.Value, TickerOf(row), traded ? row.Quantity : null,
             traded ? row.Price : null, money, traded ? row.PositionId : null, OperationSource.Xtb,
-            xtbId.ToString(CultureInfo.InvariantCulture), null, row.TransferType, row.Counterparty,
+            xtbId.ToString(CultureInfo.InvariantCulture), kind == OperationKind.SharesReceived ? row.Comment : null, row.TransferType, row.Counterparty,
             CounterMoneyOf(row, money, day));
     }
 

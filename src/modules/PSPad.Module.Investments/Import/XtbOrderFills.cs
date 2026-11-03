@@ -11,7 +11,7 @@ internal static class XtbOrderFills
             ? rows
             : [.. rows.Select(row => row is { Kind: XtbRowKind.Buy or XtbRowKind.Sell, PositionId: { } position }
                 && merged.TryGetValue(position, out var into)
-                    ? row with { PositionId = into }
+                    ? row with { PositionId = into, FilledPositionId = position }
                     : row)];
     }
 

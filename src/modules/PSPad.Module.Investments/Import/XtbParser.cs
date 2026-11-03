@@ -13,6 +13,8 @@ public static class XtbParser
 
     static readonly string[] SummaryHeaders = ["Product", "Metric", "Amount", "Currency"];
 
+    static readonly string[] ClosedHeaders = ["Ticker", "Volume", "Position ID"];
+
     static readonly string[] CashHeaders = ["Type", "Instrument", "Ticker", "Time", "Amount", "ID", "Comment", "Product", "Position ID"];
 
     public static XtbFile Parse(XlsxBook book)
@@ -52,6 +54,7 @@ public static class XtbParser
         {
             ProductNumbers = productNumbers,
             ProductCurrencies = FindProductCurrencies(book, sheet),
+            ClosedPositions = FindClosedPositions(book, sheet),
         };
         return file with { ConversionCurrencies = ConversionCurrenciesOf(file) };
     }
@@ -178,17 +181,54 @@ public static class XtbParser
                     continue;
                 var columns = Columns(sheet.Rows[headerRow]);
                 var positions = new List<XtbOpenPosition>();
+                var names = new Dictionary<string, string>(StringComparer.Ordinal);
+                var categories = new Dictionary<string, string>(StringComparer.Ordinal);
                 foreach (var cells in sheet.Rows.Skip(headerRow + 1))
                 {
-                    var positionId = IdOf(Cell(cells, columns[positionHeader]));
+                    var position = Cell(cells, columns[positionHeader]);
+                    var ticker = TextOf(Cell(cells, columns[symbolHeader])) ?? "";
+                    var positionId = PositionIdOf(position);
                     var volume = AmountOf(Cell(cells, columns["Volume"]));
+                    var category = TextOf(Cell(cells, columns, "Category"));
+                    if (positionId is null && TextOf(position) is { } name)
+                        names[ticker] = name;
+                    if (positionId is null && category is not null)
+                        categories[ticker] = category;
                     if (positionId is not null && volume is not null)
-                        positions.Add(new XtbOpenPosition(positionId, TextOf(Cell(cells, columns[symbolHeader])) ?? "", volume.Value));
+                        positions.Add(new XtbOpenPosition(positionId, ticker, volume.Value,
+                            AmountOf(Cell(cells, columns, "Open price")), TimeOf(Cell(cells, columns, "Open time (UTC)")),
+                            TextOf(Cell(cells, columns, "Product")), names.GetValueOrDefault(ticker),
+                            TextOf(Cell(cells, columns, "Type")), category ?? categories.GetValueOrDefault(ticker)));
                 }
                 return positions;
             }
         }
         return null;
+    }
+
+    static IReadOnlyList<XtbClosedPosition> FindClosedPositions(XlsxBook book, XlsxSheet cash)
+    {
+        foreach (var sheet in book.Sheets.Where(s => !ReferenceEquals(s, cash)))
+        {
+            var headerRow = FindHeaderRow(sheet, ClosedHeaders);
+            if (headerRow < 0)
+                continue;
+            var columns = Columns(sheet.Rows[headerRow]);
+            var positions = new List<XtbClosedPosition>();
+            foreach (var cells in sheet.Rows.Skip(headerRow + 1))
+            {
+                var positionId = PositionIdOf(Cell(cells, columns["Position ID"]));
+                var volume = AmountOf(Cell(cells, columns["Volume"]));
+                if (positionId is not null && volume is not null)
+                    positions.Add(new XtbClosedPosition(positionId, TextOf(Cell(cells, columns["Ticker"])) ?? "",
+                        TextOf(Cell(cells, columns, "Instrument")), TextOf(Cell(cells, columns, "Product")), volume.Value,
+                        AmountOf(Cell(cells, columns, "Open Price")), TimeOf(Cell(cells, columns, "Open Time (UTC)")),
+                        TextOf(Cell(cells, columns, "Comment")), TextOf(Cell(cells, columns, "Type")),
+                        TextOf(Cell(cells, columns, "Category"))));
+            }
+            return positions;
+        }
+        return [];
     }
 
     static int FindHeaderRow(XlsxSheet sheet, string[] required)
@@ -204,7 +244,7 @@ public static class XtbParser
 
     static Dictionary<string, int> Columns(IReadOnlyList<XlsxCell?> header)
     {
-        var columns = new Dictionary<string, int>();
+        var columns = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         for (var c = 0; c < header.Count; c++)
             if (TextOf(header[c]) is { } name)
                 columns.TryAdd(name, c);
@@ -225,6 +265,14 @@ public static class XtbParser
 
     static XlsxCell? Cell(IReadOnlyList<XlsxCell?> cells, int column) =>
         column < cells.Count ? cells[column] : null;
+
+    static XlsxCell? Cell(IReadOnlyList<XlsxCell?> cells, Dictionary<string, int> columns, string name) =>
+        columns.TryGetValue(name, out var column) ? Cell(cells, column) : null;
+
+    static string? PositionIdOf(XlsxCell? cell) =>
+        IdOf(cell) ?? (NumberOf(cell) is { } number && number is > 0 and < 9e18 && number == Math.Floor(number)
+            ? ((long)number).ToString(CultureInfo.InvariantCulture)
+            : null);
 
     static bool IsBlank(XlsxCell? cell) => cell is null || (string.IsNullOrWhiteSpace(cell.Text) && cell.Number is null);
 

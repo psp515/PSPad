@@ -23,6 +23,8 @@ public sealed class InvestmentOperation : Aggregate
 
     static readonly byte[] Salt = Guid.Parse("6f706572-6174-696f-6e00-000000000001").ToByteArray();
 
+    static readonly byte[] ReceivedSalt = Guid.Parse("72656365-6976-6564-0000-000000000001").ToByteArray();
+
     [JsonInclude]
     public Guid AccountId { get; private set; }
 
@@ -73,10 +75,17 @@ public sealed class InvestmentOperation : Aggregate
     {
         OperationKind.Deposit or OperationKind.TransferIn or OperationKind.Sell or OperationKind.Dividend
             or OperationKind.TaxRefund or OperationKind.Interest => Money.Amount,
+        OperationKind.SharesReceived => 0m,
         _ => -Money.Amount
     };
 
     public static Guid IdFor(Guid accountId, long externalId) => DeterministicId.From(accountId, Salt, (ulong)externalId);
+
+    public static Guid ReceivedIdFor(Guid accountId, long positionId) =>
+        DeterministicId.From(accountId, ReceivedSalt, (ulong)positionId);
+
+    public static Guid ImportedIdFor(Guid accountId, OperationKind kind, long externalId) =>
+        kind == OperationKind.SharesReceived ? ReceivedIdFor(accountId, externalId) : IdFor(accountId, externalId);
 
     public static IReadOnlyList<DomainEvent> Decide(
         InvestmentOperation? operation, InvestmentAccount? account, ICommand command, DateTimeOffset at)
@@ -190,16 +199,16 @@ public sealed class InvestmentOperation : Aggregate
     static OperationValues Valid(InvestmentAccount account, OperationValues requested)
     {
         var kind = requested.Kind;
-        var valid = MoneyValue.Require(requested.Money, DateOnly.FromDateTime(requested.At.UtcDateTime));
+        var valid = MoneyOf(kind, requested.Money, DateOnly.FromDateTime(requested.At.UtcDateTime));
         if (valid.Currency != account.Currency)
         {
             throw new DomainRejectedException("An operation is in the account's currency.");
         }
 
         var name = Enum.IsDefined(kind)
-            ? kind.ToString().ToLowerInvariant()
+            ? kind == OperationKind.SharesReceived ? "received share" : kind.ToString().ToLowerInvariant()
             : throw new DomainRejectedException("That operation kind does not exist.");
-        var traded = kind is OperationKind.Buy or OperationKind.Sell;
+        var traded = kind is OperationKind.Buy or OperationKind.Sell or OperationKind.SharesReceived;
         var held = traded || kind is OperationKind.Dividend;
         var mayHold = kind is OperationKind.Tax or OperationKind.TaxRefund or OperationKind.Fee;
         var ticker = requested.Ticker;
@@ -217,6 +226,11 @@ public sealed class InvestmentOperation : Aggregate
             CounterpartyOf(transferType, requested.CounterpartyAccountNumber),
             CounterMoneyOf(account, transferType, requested.CounterMoney, valid.RateDate));
     }
+
+    static MoneyValue MoneyOf(OperationKind kind, MoneyValue money, DateOnly day) =>
+        kind == OperationKind.SharesReceived && money is { Amount: 0m }
+            ? MoneyValue.Require(money with { Amount = 1m }, day) with { Amount = 0m }
+            : MoneyValue.Require(money, day);
 
     static bool IsTransfer(OperationKind kind) => kind is OperationKind.TransferIn or OperationKind.TransferOut;
 
@@ -317,7 +331,7 @@ public sealed class InvestmentOperation : Aggregate
 
         var external = record.ExternalId?.Trim();
         return long.TryParse(external, NumberStyles.None, CultureInfo.InvariantCulture, out var xtbId)
-               && record.OperationId == IdFor(record.AccountId, xtbId)
+               && record.OperationId == ImportedIdFor(record.AccountId, record.Kind, xtbId)
             ? external
             : throw new DomainRejectedException("An imported operation has the wrong id.");
     }

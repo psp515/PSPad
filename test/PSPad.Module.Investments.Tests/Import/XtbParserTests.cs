@@ -314,7 +314,7 @@ public class XtbParserTests
             ]));
 
         Assert.Equal(
-            [new XtbOpenPosition("800000001", "ACM.PL", 20m), new XtbOpenPosition("77", "Y.PL", 2.5m)],
+            [new XtbOpenPosition("800000001", "ACM.PL", 20m, 1.5m), new XtbOpenPosition("77", "Y.PL", 2.5m)],
             file.OpenPositions);
     }
 
@@ -337,8 +337,12 @@ public class XtbParserTests
 
         Assert.Equal(
             [
-                new XtbOpenPosition("800000001", "ACM.PL", 3m), new XtbOpenPosition("800000002", "ACM.PL", 4m),
-                new XtbOpenPosition("800000003", "BCD.DE", 0.5m)
+                new XtbOpenPosition("800000001", "ACM.PL", 3m, Product: "My Trades", Instrument: "Acme Works SA", Type: "BUY",
+                    Category: "STOCK"),
+                new XtbOpenPosition("800000002", "ACM.PL", 4m, Product: "My Trades", Instrument: "Acme Works SA", Type: "BUY",
+                    Category: "STOCK"),
+                new XtbOpenPosition("800000003", "BCD.DE", 0.5m, Product: "Investment Plans", Instrument: "Bcd Fund", Type: "BUY",
+                    Category: "ETF")
             ],
             file.OpenPositions);
     }

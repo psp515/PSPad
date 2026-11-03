@@ -28,15 +28,16 @@ In:
   accounts in PLN.
 - A summary: total profit, realized gains and realized losses kept apart,
   unrealized profit, passive income, fees, and the currency difference.
-- A price chart per instrument with buy, sell and dividend markers, and a
-  value-over-time chart against net deposits.
+- A price chart per instrument with buy, sell, dividend and shares-received
+  markers, and a value-over-time chart against net deposits.
 - Copying accounts into a budget's balance on a chosen day, as one
   Investment holding per account, with prices refreshed first.
 
 Out:
 
 - Brokers other than XTB for import. Other brokers are entered by hand.
-- Stock splits, spin-offs, ticker changes, options, CFDs, crypto.
+- Stock splits, ticker changes, options, CFDs, crypto. Spin-offs are in, as
+  shares received (§4.2, `adr/0089`).
 - Intraday charts, live prices, alerts.
 - Tax reports (PIT-38).
 - Sharing an account. Accounts are private; only the budget copy is shared.
@@ -95,16 +96,21 @@ Grouping operations by the user's day (`OperationDays`) lives in
 
 - `Money` is the operation's cash effect in the **account's** currency, with
   the NBP rate to PLN of the operation's day frozen in it (AD-14). `Amount`
-  is always more than 0; `Kind` gives the sign.
+  is always more than 0; `Kind` gives the sign. The one exception is
+  SharesReceived: it moves no cash, its `Money` is the cost basis of the
+  received shares (quantity × price, rounded to 2 decimals), and that amount
+  may be 0.
 - `Quantity` and `Price` are in the instrument's units and currency. They
-  are required on Buy and Sell, and absent elsewhere. `Price` is what the
+  are required on Buy, Sell and SharesReceived, and absent elsewhere. `Price` is what the
   broker reported. It feeds chart markers only, never a sum: the `Money`
   amount is the truth.
 - `Kind` is one of Deposit, Withdrawal, TransferIn, TransferOut, Buy, Sell,
-  Dividend, Tax, TaxRefund, Interest, Fee. Deposit, TransferIn, Sell,
-  Dividend, TaxRefund and Interest add cash; the rest take it out.
+  Dividend, Tax, TaxRefund, Interest, Fee, SharesReceived. Deposit,
+  TransferIn, Sell, Dividend, TaxRefund and Interest add cash;
+  SharesReceived leaves it alone (shares that arrived without a purchase,
+  such as a spin-off); the rest take it out.
 - `Ticker` is the broker's ticker (`ABC.US`, `DEF.PL`). It is required on
-  Buy, Sell and Dividend, optional on Tax, TaxRefund and Fee (interest tax
+  Buy, Sell, SharesReceived and Dividend, optional on Tax, TaxRefund and Fee (interest tax
   and stamp duty name none, a fee may), and absent on the rest.
 - **Transfers.** `TransferIn` and `TransferOut` move cash between accounts.
   `TransferType` (Subaccount, Ike, CurrencyConversion) is required on them
@@ -211,7 +217,11 @@ cannot pass a cap together.
     pattern `BalanceSnapshot.IdFor` uses, so every device derives the same
     one. (The module may not use `System.Security.Cryptography`, so no
     name-based UUID.) An XTB id must be digits that fit a `long`; anything
-    else is a row error. A manual operation's id is random.
+    else is a row error. An imported SharesReceived takes its id from the
+    XTB position id instead, with its own salt
+    (`ReceivedIdFor(accountId, positionId)`; its external id is the position
+    id), so it never collides with a cash row's id and a re-import finds it.
+    A manual operation's id is random.
 - `EditInvestmentOperation` replaces kind, time, ticker, quantity, price,
   money, position id, note and the three transfer fields. `Source` and `ExternalId` never change, so an
   edited import row stays recognised on the next import.
@@ -325,6 +335,43 @@ both features already use.
     file's leg. A conversion comment that does not parse leaves the counter
     amount and number out; it is not an error.
 - **Ticker and name** come from `Ticker` and `Instrument`.
+- **Shares received without a purchase.** A corporate action such as a
+  spin-off gives shares without any cash: Cash Operations has no `Stock
+  purchase` row for them, only the later `Stock sell`. The position sheets
+  still list them:
+  - **Closed Positions** is the sheet whose header holds `Ticker`, `Volume`
+    and `Position ID` (in the export: `Instrument | Ticker | Category | Type |
+    Volume | Open Price | Open Time (UTC) | Close Price | … | Product | … |
+    Position ID | Comment`). Each row with a position id and a volume is
+    read: ticker, instrument, product, volume, open price, open time, comment.
+    A missing sheet means none.
+  - **Open Positions** lot rows (§4.4) also give `Open price`,
+    `Open time (UTC)` and `Product`; the instrument name comes from the
+    instrument's summary row above them.
+  - Position ids may be written as floats (`7.00000001E8`); an integral
+    number is read as the integer id.
+  - Only stock lots count: a row whose `Type` is not `BUY`, or whose
+    `Category` (on Open Positions, the instrument's summary row) names a
+    CFD, is never received.
+  - Every position id in either sheet that no `Stock purchase` row of the
+    file names (before or after the fills merge), and that no Buy already in
+    the target account names, becomes one **SharesReceived** row: quantity =
+    the volumes of that id summed over both sheets (a partly sold position
+    is in both), price = open price, time = open time, the sheet comment as
+    the note, and the account picked by `Product` like any row. Its amount
+    is quantity × price, rounded to 2 decimals. A position opened before the
+    first or after the last Cash Operations row is skipped: its purchase is
+    in another export (Open Positions is a snapshot from the export time, so
+    an older file lists lots bought later). One with no open price is a row
+    error.
+  - A `Stock purchase` row naming a position that the target account already
+    holds as shares received is a row error ("Position … was recorded as
+    shares received."), so a file with a wider period cannot count the lot
+    twice.
+  - These rows show in the preview after the cash rows, under the kind
+    "Shares received". They are numbered after the last cash row so they can
+    be ticked; an error line names them by position ("Position 700000001")
+    rather than a row number.
 - **External id** is `ID`; a row without one is a row error.
 - **Position id** is `Position ID`; a buy or sell without one is a row
   error.
@@ -448,7 +495,8 @@ across accounts are in §5.3.
 
 - **Lots.** Buys with the same `PositionId` form one lot: quantity and cost
   (the buys' amounts) add up. A manual buy without a position id is its own
-  lot.
+  lot. SharesReceived opens a lot like a buy, its cost being its `Money`
+  amount (the received cost basis), without touching cash.
 - **Closing.** A sell with a `PositionId` closes that lot. A sell without
   one (manual) closes the ticker's lots oldest first (FIFO). A partial close
   takes cost pro rata to quantity.
@@ -484,8 +532,15 @@ across accounts are in §5.3.
 - Realized gains, realized losses, and the **realized result** = realized
   gains + realized losses: the clean profit or loss made by selling.
 - Dividends net = dividends − dividend tax + tax refunds. Passive income =
-  dividends net + interest − interest tax (all Tax operations are
-  subtracted, all TaxRefund operations added).
+  dividends net + interest − interest tax + shares received (all Tax
+  operations are subtracted, all TaxRefund operations added). Shares
+  received count at their cost basis: it is value that came in without
+  cash, so it is income, and selling them later realizes proceeds − that
+  cost. Shares received at 0.01 and sold for 175.00 show 174.99 realized
+  and 0.01 passive income, together the 175.00 of cash profit
+  (`adr/0089`). The parent's cost basis is not reduced: enter a spin-off
+  at the broker's near-zero price, as XTB does; splitting the parent's
+  basis is out of scope.
 - Unrealized (Σ positions), fees.
 - **Identity:** total profit = realized gains + realized losses + unrealized
   + passive income − fees. It holds exactly in the account currency, and a
@@ -510,6 +565,29 @@ across accounts are in §5.3.
 - A non-PLN account shows its average rate ("Average rate 1 USD = 3.6512
   PLN") and the PLN spent on its currency (the pool's PLN cost).
 - PLN accounts have no currency difference.
+- **Currency exchange** (`CurrencyExchanges.For`). One row per non-PLN
+  currency the user converted into or out of, over the user's non-deleted
+  accounts. Each CurrencyConversion leg with a counter amount counts once:
+  a leg in a foreign account counts in that account's currency (TransferIn
+  bought, TransferOut sold back; its PLN is the counter amount when that is
+  PLN); a leg in a PLN account counts in its counter currency (TransferOut
+  bought, TransferIn sold back; its PLN is its own amount), unless it is
+  paired with the other leg (§5.3 internal transfers), which then counts
+  instead. So a conversion counts once whether one file or both are
+  imported. Bought and sold back each give units, PLN and the average rate
+  (PLN ÷ units). A conversion between two foreign currencies adds its units
+  to the account currency's row but no PLN, and is left out of the averages.
+  "Left from conversions" is the FX cost pool above summed over the
+  accounts in that currency: the units bought minus those sold back, at
+  their PLN cost, with today's NBP rate, and what today's rate would make
+  of them (units × today's rate − the pool's PLN cost). It is not the cash
+  held: buying shares or receiving dividends does not touch the pool, and
+  the account's currency difference (§5.3) also covers what the money
+  earned in the currency. A currency with no account of its own, or whose
+  pool is empty (only the PLN side imported), has no such line. A PLN
+  account's own view keeps only the legs recorded in it; the conversions
+  line stays the user's whole pool. Also the count of conversions and the
+  first and last day.
 - **Operation order.** Operations run by time; operations at the same
   instant run in the broker's order (numeric XTB id), then manual ones,
   then by id.
@@ -559,6 +637,8 @@ and are divided by 100 first.
   converted with the NBP rates on or before that day, and the net deposits
   that day.
 - Before an instrument's first close, its lots count at cost.
+- Profit on a day is that point's value − its net deposits
+  (`ValueChartData`, the chart's Profit view).
 - Range chips: 3M, 1Y, All. "All accounts" sums the accounts' values in PLN
   at each day's rate; its net deposits line adds each flow's PLN value
   (§5.3) up to that day, internal transfers left out, so the last point
@@ -729,14 +809,45 @@ FAB per page (`adr/0033`).
     currency when that is not PLN; a position row takes its value or
     unrealized × today's NBP rate. Operation rows, percentages, the average
     rate and the PLN spent get none. A missing rate leaves the line out.
+  - **Currency exchange card** after the stat tiles, on All accounts and on
+    a PLN account (only the currencies it converted into), hidden when there
+    are no conversions (§5.3): per currency "USD · bought 2,500.00 for
+    9,800.00 PLN · avg 3.9200", "sold back 100.00 for 400.00 PLN · avg
+    4.0000", "left from conversions 2,400.00 · NBP today 3.6500 · currency
+    result −648.00 PLN" (green or red), then the count and date range,
+    muted. Units converted from another foreign currency are shown apart
+    ("+110.00 from another currency") and are not in the PLN sentence.
+    Rates show 4 decimals.
   - Value-over-time chart (`MudChart` line): value and net deposits, with
-    the range chips.
+    the range chips, 352 px tall on a wide screen and 260 px on a phone. A
+    Value / Profit toggle (`MudToggleGroup`) switches to one line of profit
+    (value − net deposits per day, §5.5) on its own scale. The Y axis labels
+    are compact ("40k", "1.5M"; "40 tys.", "1,5 mln"). An expand button
+    ("Expand chart", `OpenInFull`) in the card header opens the same chart,
+    with its chips and toggle, in a full-screen `MudDialog` with a close
+    button. The chart sets `MatchBoundsToSize` inside a fixed-height box,
+    so its plot fills that height rather than the default 2:1 view box.
   - Positions grouped by account, each row in the `pspad-holding-row`
     layout: ticker and name, quantity × average price, value, unrealized in
     amount and percent, price date, warnings.
   - An expanded row shows the price chart (custom SVG: the close line, green
     buy, red sell and blue dividend markers with a tooltip naming the
-    operation) and the open lots.
+    operation, and an amber marker for shares received) and the open lots.
+  - **Closed positions.** Each account group ends with a "Closed positions ·
+    n instruments  +gains · −losses" line. It is a toggle, collapsed by
+    default and remembered while the page is open, that lists the account's
+    closed instruments: tickers sold with no open quantity left
+    (`ClosedPositions.For(operations)`, built from the lot book's closed
+    pieces). One `pspad-holding-row` per ticker, newest last sale first:
+    ticker and name, "Sold n · first bought → last sold", quantity sold, the
+    cost of what was sold (shares received count at their cost basis), the
+    proceeds, and the realized result in amount and percent of the cost,
+    green or red; proceeds and result get the second-currency line. A
+    click expands it like an open position: the price chart with its
+    markers, and its closed lots, one per lot a sell took from (quantity,
+    opened day @ average buy price, closed day @ sell price, cost, proceeds,
+    result). A sell's proceeds split over the lots it took from pro rata to
+    quantity; an oversold part is a lot with no opening and no cost.
   - **Prices.** Every per-unit price shown (last close, average price,
     "@ price" on operations and chart tooltips, the chart's axis labels, the
     import preview) goes through `InvestmentText.Price`: 2 decimals when
@@ -761,7 +872,9 @@ FAB per page (`adr/0033`).
   and currency. Time
   defaults to now. Money is the amount only; its currency is the account's,
   and its rate is fetched from NBP for the day, editable, as in the entry
-  panel.
+  panel. Shares received ask for ticker, quantity, price per share, time
+  and note; the amount is quantity × price, shown and not editable. On the
+  price chart they are their own marker, "Shares received".
 - **Account panel.** Name, currency (fixed after creation), broker, number.
 - **Import page.** Pick file → preview (§4.4), one section per target
   account, each new account with its own editable name → Import. Progress counts the
