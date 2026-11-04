@@ -137,3 +137,30 @@ test('a timed task sits on the schedule and is ticked from the timeline', async 
     await expect(timeline.getByRole('button', { name: `Add a task at ${String(firstHour + 1).padStart(2, '0')}:30` })).toBeVisible();
   });
 });
+
+test('a group that shrinks to two tasks leaves its first task at its time', async ({ page, account }) => {
+  const [first, ticked, last] = ['Plan', 'Reply', 'Stretch'].map(name => `${name} ${account.suffix}`);
+
+  await signIn(page, account);
+  await createArea(page, `Errands ${account.suffix}`);
+  await createList(page, `Town ${account.suffix}`);
+  const device = await anotherDevice(page);
+  const listId = await idOf(device, 'tasklists', `Town ${account.suffix}`);
+  const timed: Array<[string, string, string | null]> = [[first, '09:00', '09:20'], [ticked, '09:10', null], [last, '09:25', null]];
+  for (const [name, start, end] of timed) {
+    const taskId = randomUUID();
+    await device.send('CreateTask', { taskId, listId, name });
+    await device.send('SetTaskDueDate', { taskId, dueOn: isoDate(utcToday()) });
+    await device.send('SetTaskTime', { taskId, time: { start: `${start}:00`, end: end && `${end}:00` } });
+  }
+  await device.dispose();
+  await goToMyDay(page);
+
+  const timeline = schedule(page);
+  await timeline.getByRole('checkbox', { name: ticked }).click();
+  await expect(timeline.getByRole('checkbox', { name: ticked })).toHaveCount(0);
+
+  const block = await timelineBlock(page, first).boundingBox();
+  const nineOClock = await timeline.getByRole('button', { name: 'Add a task at 09:00' }).boundingBox();
+  expect(Math.abs(block!.y - nineOClock!.y)).toBeLessThan(3);
+});
