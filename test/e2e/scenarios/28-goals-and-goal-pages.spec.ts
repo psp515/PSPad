@@ -120,7 +120,7 @@ test('goals are listed by status and due date, the goal panel edits a goal, and 
     await expect(page.getByText('Recurring tasks not counted')).toBeVisible();
     await expect(page.getByText('Pace', { exact: true })).toBeVisible();
     await expect(page.getByText('2 days left', { exact: true })).toBeVisible();
-    await expect(page.getByText('50%', { exact: true })).toBeVisible();
+    await expect(page.getByText(/^Work done · /).locator('..').getByText('50%', { exact: true })).toBeVisible();
 
     await expect(taskRow(page, 'Knead the dough')).toContainText(list);
     await expect(taskRow(page, 'Knead the dough')).not.toContainText(bake);
