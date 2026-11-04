@@ -153,4 +153,7 @@
   <data name="SyncOffline" xml:space="preserve">
     <value>Offline</value>
   </data>
+  <data name="NavPortfolio" xml:space="preserve">
+    <value>Portfel</value>
+  </data>
 </root>

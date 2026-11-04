@@ -5,10 +5,11 @@ using System.Text.Json;
 using PSPad.App.Statistics;
 using PSPad.App.Sync;
 using PSPad.Contracts;
+using PSPad.Module.Money.Values;
 
 namespace PSPad.App.Api;
 
-public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ILanguageApi, ISnapshotsApi, INbpRates, IListSharingApi,
+public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ILanguageApi, ISnapshotsApi, INbpRates, IQuoteSource, IListSharingApi,
     IBudgetSharingApi
 {
     static readonly TimeSpan DefaultRetryAfter = TimeSpan.FromSeconds(5);
@@ -237,6 +238,41 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
                 $"api/money/nbp-rate?currency={Uri.EscapeDataString(currency)}&date={date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
 
             return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<NbpRateView>() : null;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return null;
+        }
+    }
+
+    public async Task<QuoteSeriesView?> QuotesAsync(string symbol, DateOnly from, bool refresh, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await http.GetAsync(
+                $"api/investments/quotes?symbol={Uri.EscapeDataString(symbol)}&from={from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}&refresh={(refresh ? "true" : "false")}", ct);
+
+            return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<QuoteSeriesView>(ct) : null;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<NbpRateView>?> RatesAsync(string currency, DateOnly from, DateOnly to, CancellationToken ct = default)
+    {
+        if (string.Equals(currency.Trim(), Currencies.Pln, StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        try
+        {
+            var response = await http.GetAsync(
+                $"api/money/nbp-rates?currency={Uri.EscapeDataString(currency)}&from={from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}&to={to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}", ct);
+
+            return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<NbpRateView[]>(ct) : null;
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {

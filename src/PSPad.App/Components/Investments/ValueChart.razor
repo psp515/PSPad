@@ -1,0 +1,31 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+@inject IDialogService Dialogs
+
+<MudPaper Outlined="true" Class="pa-3 pspad-value-chart">
+    <div class="d-flex align-start gap-2">
+        <SectionHeading Title="@T["ValueOverTime"]" Hint="@T["VsNetDeposits"]" Class="flex-grow-1" />
+        <MudIconButton Icon="@Icons.Material.Filled.OpenInFull" Size="Size.Small" Class="pspad-value-chart-expand"
+                       aria-label="@T["ExpandChart"].Value" OnClick="@ExpandAsync" />
+    </div>
+    <ValueChartPlot Points="@Points" Today="@Today" Currency="@Currency" />
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ValuePoint> Points { get; set; } = [];
+
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+
+    [Parameter] public string Currency { get; set; } = "PLN";
+
+    async Task ExpandAsync()
+    {
+        var parameters = new DialogParameters<ValueChartDialog>
+        {
+            { dialog => dialog.Points, Points },
+            { dialog => dialog.Today, Today },
+            { dialog => dialog.Currency, Currency },
+        };
+        await Dialogs.ShowAsync<ValueChartDialog>(T["ValueOverTime"], parameters,
+            new DialogOptions { FullScreen = true, CloseButton = true, CloseOnEscapeKey = true });
+    }
+}

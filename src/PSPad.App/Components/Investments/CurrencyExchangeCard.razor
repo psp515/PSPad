@@ -1,0 +1,35 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+
+@if (Exchanges.Count > 0)
+{
+    <MudPaper Outlined="true" Class="pa-3 pspad-currency-exchange" aria-label="@T["CurrencyExchange"].Value" role="region">
+        <SectionHeading Title="@T["CurrencyExchange"]" />
+        <div class="d-flex flex-column gap-3">
+            @foreach (var exchange in Exchanges)
+            {
+                var text = CurrencyExchangeText.For(exchange, T);
+                <div @key="exchange.Currency" class="d-flex flex-column pspad-currency-exchange-row">
+                    <MudText Typo="Typo.body2"><strong>@exchange.Currency</strong>@(text.Bought is { } bought ? $" · {bought}" : "")</MudText>
+                    @if (text.Sold is { } sold)
+                    {
+                        <MudText Typo="Typo.body2">@sold</MudText>
+                    }
+                    @if (text.Held is { } held)
+                    {
+                        <MudText Typo="Typo.body2">
+                            @held@if (text.Result is { } result)
+                            {
+                                <span> · @T["ExchangeResult"] <span class="@InvestmentText.Tone(exchange.CurrencyResult)">@result</span></span>
+                            }
+                        </MudText>
+                    }
+                    <MudText Typo="Typo.caption" Class="pspad-muted">@text.Span</MudText>
+                </div>
+            }
+        </div>
+    </MudPaper>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<CurrencyExchange> Exchanges { get; set; } = [];
+}

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using PSPad.App.State;
+using PSPad.App.State.Investments;
 using PSPad.App.State.Outbox;
 using PSPad.App.State.Replica;
 using PSPad.App.Statistics;
@@ -12,6 +13,7 @@ public sealed class LocalDeviceData(
     IOutbox outbox,
     StatisticsCache statistics,
     ISnapshotCache snapshots,
+    IQuoteStore quotes,
     ILogger<LocalDeviceData> logger)
 {
     public async Task ClearAsync(string occasion)
@@ -20,6 +22,7 @@ public sealed class LocalDeviceData(
         await ClearOneAsync("Outbox", outbox.ClearAsync, occasion);
         await ClearOneAsync("Statistics cache", statistics.ClearAsync, occasion);
         await ClearOneAsync("Snapshot cache", snapshots.ClearAsync, occasion);
+        await ClearOneAsync("Quote cache", quotes.ClearAsync, occasion);
         await ClearOneAsync("Session", sessions.ClearAsync, occasion);
     }
 

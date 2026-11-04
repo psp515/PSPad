@@ -35,6 +35,7 @@ public static class RateLimiterRegistration
             options.AddPolicy("commands", context => PerUser(context, Limits(context).Commands));
             options.AddPolicy("sync", context => PerUser(context, Limits(context).Sync));
             options.AddPolicy("statistics", context => PerUser(context, Limits(context).Statistics));
+            options.AddPolicy("quotes", context => PerUser(context, Limits(context).Quotes));
 
             options.AddPolicy("public", context => RateLimitPartition.GetFixedWindowLimiter(
                 ClientAddress(context),

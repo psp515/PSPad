@@ -1,0 +1,313 @@
+using System.Globalization;
+using PSPad.Module.Investments.Operations;
+using PSPad.Module.Money.Values;
+
+namespace PSPad.Module.Investments.Import;
+
+public static class XtbParser
+{
+    public const int MaxRows = 20_000;
+
+    static readonly (string Position, string Symbol)[] OpenPositionHeaders =
+        [("Position", "Symbol"), ("Position", "Ticker"), ("Instrument/Position", "Ticker"), ("Instrument/Position", "Symbol")];
+
+    static readonly string[] SummaryHeaders = ["Product", "Metric", "Amount", "Currency"];
+
+    static readonly string[] ClosedHeaders = ["Ticker", "Volume", "Position ID"];
+
+    static readonly string[] CashHeaders = ["Type", "Instrument", "Ticker", "Time", "Amount", "ID", "Comment", "Product", "Position ID"];
+
+    public static XtbFile Parse(XlsxBook book)
+    {
+        foreach (var sheet in book.Sheets)
+        {
+            var headerRow = FindHeaderRow(sheet, CashHeaders);
+            if (headerRow >= 0)
+                return ParseCash(book, sheet, headerRow);
+        }
+        throw new XtbFileError("This file has no Cash Operations sheet.");
+    }
+
+    static XtbFile ParseCash(XlsxBook book, XlsxSheet sheet, int headerRow)
+    {
+        var account = FindAccountNumber(sheet, headerRow)
+            ?? throw new XtbFileError("This file has no account number.");
+        var columns = Columns(sheet.Rows[headerRow]);
+        var rows = new List<XtbRow>();
+        for (var i = headerRow + 1; i < sheet.Rows.Count; i++)
+        {
+            var cells = sheet.Rows[i];
+            if (cells.All(IsBlank))
+                continue;
+            var type = TextOf(Cell(cells, columns["Type"])) ?? "";
+            if (type == "Total")
+                continue;
+            if (rows.Count == MaxRows)
+                throw new XtbFileError("This file has more than 20,000 rows. Export a shorter period.");
+            rows.Add(ParseRow(i + 1, type, cells, columns, account));
+        }
+        rows = [.. XtbOrderFills.Merge(rows)];
+        var productNumbers = ProductNumbersOf(rows);
+        var product = rows.Select(r => r.Product)
+            .FirstOrDefault(p => p is not null && productNumbers.GetValueOrDefault(p, account) == account);
+        var file = new XtbFile(account, product, rows, FindOpenPositions(book, sheet))
+        {
+            ProductNumbers = productNumbers,
+            ProductCurrencies = FindProductCurrencies(book, sheet),
+            ClosedPositions = FindClosedPositions(book, sheet),
+        };
+        return file with { ConversionCurrencies = ConversionCurrenciesOf(file) };
+    }
+
+    static Dictionary<string, string> ProductNumbersOf(IEnumerable<XtbRow> rows)
+    {
+        var numbers = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var row in rows.Where(r => r.TransferType == TransferType.Subaccount && r.Product is not null && r.Errors.Count == 0))
+        {
+            if (XtbTransferComment.Parse(row.Comment)?.OwnNumberOf(row.Kind == XtbRowKind.TransferOut) is { } own)
+                numbers.TryAdd(row.Product!, own);
+        }
+        return numbers;
+    }
+
+    static Dictionary<string, string> ConversionCurrenciesOf(XtbFile file)
+    {
+        var currencies = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var row in file.Rows.Where(r => r.TransferType == TransferType.CurrencyConversion && r.Errors.Count == 0))
+        {
+            var comment = XtbTransferComment.Parse(row.Comment);
+            var own = row.Kind == XtbRowKind.TransferOut ? comment?.SourceCurrency : comment?.TargetCurrency;
+            if (own is not null && Currencies.All.Contains(own))
+                currencies.TryAdd(file.AccountNumberOf(row), own);
+        }
+        return currencies;
+    }
+
+    static Dictionary<string, string> FindProductCurrencies(XlsxBook book, XlsxSheet cash)
+    {
+        var currencies = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var sheet in book.Sheets.Where(s => !ReferenceEquals(s, cash)))
+        {
+            var headerRow = FindHeaderRow(sheet, SummaryHeaders);
+            if (headerRow < 0)
+                continue;
+            var columns = Columns(sheet.Rows[headerRow]);
+            foreach (var cells in sheet.Rows.Skip(headerRow + 1))
+            {
+                var product = TextOf(Cell(cells, columns["Product"]));
+                var currency = TextOf(Cell(cells, columns["Currency"]))?.ToUpperInvariant();
+                if (product is null || product == "Product")
+                    break;
+                if (currency is not null && Currencies.All.Contains(currency))
+                    currencies.TryAdd(product, currency);
+            }
+            return currencies;
+        }
+        return currencies;
+    }
+
+    static XtbRow ParseRow(
+        int sheetRow, string type, IReadOnlyList<XlsxCell?> cells, Dictionary<string, int> columns, string account)
+    {
+        var errors = new List<string>();
+        var amount = AmountOf(Cell(cells, columns["Amount"]));
+        var kind = XtbTypeMap.KindOf(type, amount);
+        if (kind is null)
+            errors.Add($"Unknown type '{type}'.");
+
+        var ticker = TextOf(Cell(cells, columns["Ticker"]));
+        var comment = TextOf(Cell(cells, columns["Comment"]));
+        var positionId = TextOf(Cell(cells, columns["Position ID"]));
+        var id = IdOf(Cell(cells, columns["ID"]));
+        var at = TimeOf(Cell(cells, columns["Time"]));
+
+        if (at is null)
+            errors.Add("The row has no usable time.");
+        decimal? absolute = null;
+        if (amount is null or 0)
+            errors.Add("The row has no usable amount.");
+        else
+        {
+            absolute = Math.Round(Math.Abs(amount.Value), 2, MidpointRounding.AwayFromZero);
+            if (kind is not null && !XtbTypeMap.SignDecidesKind(type) && !SignMatches(kind.Value, amount.Value))
+                errors.Add($"The amount's sign does not match '{type}'.");
+        }
+        if (id is null)
+            errors.Add("The row has no usable ID.");
+
+        decimal? quantity = null, price = null;
+        if (kind is XtbRowKind.Buy or XtbRowKind.Sell)
+        {
+            if (positionId is null)
+                errors.Add("The row has no position ID.");
+            var parsed = XtbComment.Parse(comment);
+            if (parsed is null)
+                errors.Add("The comment does not say how many shares.");
+            else
+                (quantity, price) = (parsed.Quantity, parsed.Price);
+        }
+        if (kind is XtbRowKind.Buy or XtbRowKind.Sell or XtbRowKind.Dividend && ticker is null)
+            errors.Add("The row has no ticker.");
+
+        var transferType = XtbTypeMap.TransferTypeOf(type);
+        var outgoing = kind == XtbRowKind.TransferOut;
+        var transfer = transferType is null ? null : XtbTransferComment.Parse(comment);
+        var counter = transferType == TransferType.CurrencyConversion && absolute is { } legAmount
+            ? transfer?.CounterOf(legAmount, outgoing)
+            : null;
+
+        return new XtbRow(sheetRow, type, kind, TextOf(Cell(cells, columns["Instrument"])), ticker, at, absolute, id, comment,
+            TextOf(Cell(cells, columns["Product"])), positionId, quantity, price, errors, transferType,
+            transfer?.CounterpartyOf(outgoing) is { } counterparty && (transferType != TransferType.Ike || counterparty != account)
+                ? counterparty
+                : null,
+            counter?.Amount, counter?.Currency);
+    }
+
+    static bool SignMatches(XtbRowKind kind, decimal amount) => kind switch
+    {
+        XtbRowKind.Buy or XtbRowKind.Withdrawal or XtbRowKind.Tax or XtbRowKind.Fee or XtbRowKind.TransferOut => amount < 0,
+        _ => amount > 0,
+    };
+
+    static IReadOnlyList<XtbOpenPosition>? FindOpenPositions(XlsxBook book, XlsxSheet cash)
+    {
+        foreach (var sheet in book.Sheets.Where(s => !ReferenceEquals(s, cash)))
+        {
+            foreach (var (positionHeader, symbolHeader) in OpenPositionHeaders)
+            {
+                var headerRow = FindHeaderRow(sheet, [positionHeader, symbolHeader, "Volume"]);
+                if (headerRow < 0)
+                    continue;
+                var columns = Columns(sheet.Rows[headerRow]);
+                var positions = new List<XtbOpenPosition>();
+                var names = new Dictionary<string, string>(StringComparer.Ordinal);
+                var categories = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (var cells in sheet.Rows.Skip(headerRow + 1))
+                {
+                    var position = Cell(cells, columns[positionHeader]);
+                    var ticker = TextOf(Cell(cells, columns[symbolHeader])) ?? "";
+                    var positionId = PositionIdOf(position);
+                    var volume = AmountOf(Cell(cells, columns["Volume"]));
+                    var category = TextOf(Cell(cells, columns, "Category"));
+                    if (positionId is null && TextOf(position) is { } name)
+                        names[ticker] = name;
+                    if (positionId is null && category is not null)
+                        categories[ticker] = category;
+                    if (positionId is not null && volume is not null)
+                        positions.Add(new XtbOpenPosition(positionId, ticker, volume.Value,
+                            AmountOf(Cell(cells, columns, "Open price")), TimeOf(Cell(cells, columns, "Open time (UTC)")),
+                            TextOf(Cell(cells, columns, "Product")), names.GetValueOrDefault(ticker),
+                            TextOf(Cell(cells, columns, "Type")), category ?? categories.GetValueOrDefault(ticker)));
+                }
+                return positions;
+            }
+        }
+        return null;
+    }
+
+    static IReadOnlyList<XtbClosedPosition> FindClosedPositions(XlsxBook book, XlsxSheet cash)
+    {
+        foreach (var sheet in book.Sheets.Where(s => !ReferenceEquals(s, cash)))
+        {
+            var headerRow = FindHeaderRow(sheet, ClosedHeaders);
+            if (headerRow < 0)
+                continue;
+            var columns = Columns(sheet.Rows[headerRow]);
+            var positions = new List<XtbClosedPosition>();
+            foreach (var cells in sheet.Rows.Skip(headerRow + 1))
+            {
+                var positionId = PositionIdOf(Cell(cells, columns["Position ID"]));
+                var volume = AmountOf(Cell(cells, columns["Volume"]));
+                if (positionId is not null && volume is not null)
+                    positions.Add(new XtbClosedPosition(positionId, TextOf(Cell(cells, columns["Ticker"])) ?? "",
+                        TextOf(Cell(cells, columns, "Instrument")), TextOf(Cell(cells, columns, "Product")), volume.Value,
+                        AmountOf(Cell(cells, columns, "Open Price")), TimeOf(Cell(cells, columns, "Open Time (UTC)")),
+                        TextOf(Cell(cells, columns, "Comment")), TextOf(Cell(cells, columns, "Type")),
+                        TextOf(Cell(cells, columns, "Category"))));
+            }
+            return positions;
+        }
+        return [];
+    }
+
+    static int FindHeaderRow(XlsxSheet sheet, string[] required)
+    {
+        for (var i = 0; i < sheet.Rows.Count; i++)
+        {
+            var headers = sheet.Rows[i].Select(TextOf).Where(t => t is not null).ToHashSet();
+            if (required.All(headers.Contains))
+                return i;
+        }
+        return -1;
+    }
+
+    static Dictionary<string, int> Columns(IReadOnlyList<XlsxCell?> header)
+    {
+        var columns = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (var c = 0; c < header.Count; c++)
+            if (TextOf(header[c]) is { } name)
+                columns.TryAdd(name, c);
+        return columns;
+    }
+
+    static string? FindAccountNumber(XlsxSheet sheet, int headerRow)
+    {
+        for (var i = 0; i < headerRow; i++)
+        {
+            var cells = sheet.Rows[i];
+            for (var c = 0; c < cells.Count - 1; c++)
+                if (TextOf(cells[c]) == "Account number" && TextOf(cells[c + 1]) is { } number)
+                    return number;
+        }
+        return null;
+    }
+
+    static XlsxCell? Cell(IReadOnlyList<XlsxCell?> cells, int column) =>
+        column < cells.Count ? cells[column] : null;
+
+    static XlsxCell? Cell(IReadOnlyList<XlsxCell?> cells, Dictionary<string, int> columns, string name) =>
+        columns.TryGetValue(name, out var column) ? Cell(cells, column) : null;
+
+    static string? PositionIdOf(XlsxCell? cell) =>
+        IdOf(cell) ?? (NumberOf(cell) is { } number && number is > 0 and < 9e18 && number == Math.Floor(number)
+            ? ((long)number).ToString(CultureInfo.InvariantCulture)
+            : null);
+
+    static bool IsBlank(XlsxCell? cell) => cell is null || (string.IsNullOrWhiteSpace(cell.Text) && cell.Number is null);
+
+    static string? TextOf(XlsxCell? cell)
+    {
+        if (cell is null)
+            return null;
+        if (cell.Text is not null)
+            return string.IsNullOrWhiteSpace(cell.Text) ? null : cell.Text.Trim();
+        return cell.Number is { } n ? n.ToString("0.############", CultureInfo.InvariantCulture) : null;
+    }
+
+    static string? IdOf(XlsxCell? cell) =>
+        TextOf(cell) is { } text && long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var id)
+            ? id.ToString(CultureInfo.InvariantCulture)
+            : null;
+
+    static DateTimeOffset? TimeOf(XlsxCell? cell)
+    {
+        var serial = NumberOf(cell);
+        return serial is > 0 and < 2_958_465 ? ExcelTime.ToUtc(serial.Value) : null;
+    }
+
+    static decimal? AmountOf(XlsxCell? cell)
+    {
+        var number = NumberOf(cell);
+        return number is { } n && double.IsFinite(n) && Math.Abs(n) < 1e15 ? (decimal)n : null;
+    }
+
+    static double? NumberOf(XlsxCell? cell)
+    {
+        if (cell is null)
+            return null;
+        if (cell.Number is not null)
+            return cell.Number;
+        return double.TryParse(cell.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var n) ? n : null;
+    }
+}

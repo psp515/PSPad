@@ -80,6 +80,28 @@ public class BalanceCommandTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task ALinkedHoldingSurvivesStorageAndAnAccountCannotBeAddedTwice()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var (client, user, budgetId) = await WithABudgetAsync(factory, ct);
+        var accountId = Guid.NewGuid();
+        await SendAsync(client, ct,
+            new StartBalanceMonth(Guid.NewGuid(), user, budgetId, October),
+            new AddHolding(Guid.NewGuid(), user, budgetId, October, Guid.NewGuid(), "Broker", HoldingType.Investment,
+                Pln(100m), accountId));
+
+        var results = await TrySendAsync(client, ct,
+            new AddHolding(Guid.NewGuid(), user, budgetId, October, Guid.NewGuid(), "Again", HoldingType.Investment,
+                Pln(5m), accountId));
+
+        Assert.Equal("That account is already in this month.", Assert.Single(results).Rejection);
+        var holding = Assert.Single((await SyncedAsync(client, "balancesnapshots", ct)).Single()
+            .GetProperty("_holdings").EnumerateArray());
+        Assert.Equal(accountId, holding.GetProperty("investmentAccountId").GetGuid());
+    }
+
+    [Fact]
     public async Task HoldingChangesInAMonthWithoutABalanceAreRejected()
     {
         var ct = global::Xunit.TestContext.Current.CancellationToken;

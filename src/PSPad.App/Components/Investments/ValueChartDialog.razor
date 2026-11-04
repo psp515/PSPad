@@ -1,0 +1,13 @@
+<MudDialog Class="pspad-value-chart-dialog">
+    <DialogContent>
+        <ValueChartPlot Points="@Points" Today="@Today" Currency="@Currency" PlotClass="pspad-value-chart-plot-full" />
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ValuePoint> Points { get; set; } = [];
+
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+
+    [Parameter] public string Currency { get; set; } = "PLN";
+}

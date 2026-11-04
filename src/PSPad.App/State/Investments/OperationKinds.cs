@@ -1,0 +1,25 @@
+using PSPad.Module.Investments.Operations;
+
+namespace PSPad.App.State.Investments;
+
+public static class OperationKinds
+{
+    public static IReadOnlyList<OperationKind> All { get; } = Enum.GetValues<OperationKind>();
+
+    public static string Key(OperationKind kind) => $"Kind{kind}";
+
+    public static string TransferKey(TransferType type) => $"TransferType{type}";
+
+    public static bool Traded(OperationKind kind) =>
+        kind is OperationKind.Buy or OperationKind.Sell or OperationKind.SharesReceived;
+
+    public static bool CostIsComputed(OperationKind kind) => kind == OperationKind.SharesReceived;
+
+    public static decimal? ReceivedCost(decimal? quantity, decimal? price) =>
+        quantity is { } shares && price is { } each ? Math.Round(shares * each, 2, MidpointRounding.AwayFromZero) : null;
+
+    public static bool HasTicker(OperationKind kind) =>
+        NeedsTicker(kind) || kind is OperationKind.Tax or OperationKind.TaxRefund or OperationKind.Fee;
+
+    public static bool NeedsTicker(OperationKind kind) => Traded(kind) || kind is OperationKind.Dividend;
+}

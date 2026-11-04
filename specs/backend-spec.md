@@ -859,8 +859,8 @@ malformed-payload response with `Unrecoverable: true` and the rest of the
 batch carries on.
 
 Every authenticated request draws on a per-user token bucket keyed by the
-JWT subject (`adr/0062`); `/api/commands`, `/api/sync` and
-`/api/statistics/*` additionally draw on their own bucket. Defaults, from
+JWT subject (`adr/0062`); `/api/commands`, `/api/sync`,
+`/api/statistics/*` and `/api/investments/quotes` additionally draw on their own bucket. Defaults, from
 the `RateLimits` configuration section (code defaults for tests, not a
 documented self-hoster setting):
 
@@ -870,6 +870,7 @@ documented self-hoster setting):
 | `Commands` | `POST /api/commands` | 30 | 3/s |
 | `Sync` | `GET /api/sync` | 30 | 3/s |
 | `Statistics` | `GET /api/statistics/*` | 60 | 6/s |
+| `Quotes` | `GET /api/investments/quotes` | 100 | 1/s |
 
 An empty bucket answers `429` with `Retry-After` in whole seconds.
 Anonymous requests skip these buckets. The client turns a `429` from

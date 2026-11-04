@@ -136,24 +136,26 @@ else
                     <MudChart ChartType="ChartType.Bar" ChartSeries="@capturesSeries"
                               ChartLabels="@capturesLabels" ChartOptions="@capturesOptions"
                               Width="100%" Height="260px" />
-                    <table class="mud-sr-only">
-                        <caption>@T["CapturedEachWeek"]</caption>
-                        <thead>
-                            <tr>
-                                <th scope="col">@T["WeekOf"]</th>
-                                <th scope="col">@T["Captured"]</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var week in overview.InboxCaptures)
-                            {
+                    <div class="pspad-sr-only">
+                        <table>
+                            <caption>@T["CapturedEachWeek"]</caption>
+                            <thead>
                                 <tr>
-                                    <td>@week.WeekStart.ToString("yyyy-MM-dd")</td>
-                                    <td>@week.Count</td>
+                                    <th scope="col">@T["WeekOf"]</th>
+                                    <th scope="col">@T["Captured"]</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var week in overview.InboxCaptures)
+                                {
+                                    <tr>
+                                        <td>@week.WeekStart.ToString("yyyy-MM-dd")</td>
+                                        <td>@week.Count</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </MudPaper>
             </MudItem>
         </MudGrid>

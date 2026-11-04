@@ -72,7 +72,7 @@ internal static class BalancePreviewer
                 if (match is not null)
                 {
                     matched.Add(match.HoldingId);
-                    var edited = new Holding(match.HoldingId, row.Name, row.Type, money);
+                    var edited = new Holding(match.HoldingId, row.Name, row.Type, money, match.InvestmentAccountId);
 
                     if (edited == match)
                     {

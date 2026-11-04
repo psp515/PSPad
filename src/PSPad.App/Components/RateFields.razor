@@ -14,9 +14,9 @@
 <div class="d-flex gap-3">
     <MudNumericField T="decimal?" Class="@($"{CssPrefix}-amount-field flex-grow-1")" Label="@T["Amount"]" Variant="Variant.Outlined"
                      Margin="Margin.Dense" Value="@Amount" ValueChanged="@AmountChanged" Immediate="true" HideSpinButtons="true"
-                     Max="@Money.MaxAmount" Disabled="@ReadOnly" />
+                     Max="@Money.MaxAmount" Disabled="@(ReadOnly || AmountFixed)" />
     <MudSelect T="string" Class="@($"{CssPrefix}-currency-field")" Label="@T["Currency"]" Variant="Variant.Outlined"
-               Margin="Margin.Dense" Value="@Currency" ValueChanged="@CurrencyChanged" Disabled="@ReadOnly">
+               Margin="Margin.Dense" Value="@Currency" ValueChanged="@CurrencyChanged" Disabled="@(ReadOnly || CurrencyFixed)">
         @foreach (var currency in Currencies.All)
         {
             <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
@@ -54,6 +54,10 @@
     [Parameter] public EventCallback<NbpRateView> NbpFetched { get; set; }
 
     [Parameter] public bool ReadOnly { get; set; }
+
+    [Parameter] public bool CurrencyFixed { get; set; }
+
+    [Parameter] public bool AmountFixed { get; set; }
 
     [Parameter, EditorRequired] public string CssPrefix { get; set; } = "";
 

@@ -8,7 +8,8 @@ public static class MongoIndexes
     static readonly string[] AggregateCollections =
     [
         "areas", "tasklists", "todotasks", "goals", "inboxes", "users", "referenceitems", "areaviews", "listviews",
-        "budgets", "moneypreferences", "moneyentries", "balancesnapshots"
+        "budgets", "moneypreferences", "moneyentries", "balancesnapshots",
+        "investmentportfolios", "investmentaccounts", "investmentoperations", "instruments"
     ];
 
     public static async Task EnsureAsync(MongoContext context, CancellationToken ct)
@@ -60,6 +61,11 @@ public static class MongoIndexes
                     Builders<BsonDocument>.IndexKeys.Ascending("budgetId").Ascending("seq")),
                 cancellationToken: ct);
         }
+
+        await context.Collection<BsonDocument>("investmentoperations").Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("userId").Ascending("accountId")),
+            cancellationToken: ct);
 
         await context.Collection<BsonDocument>("referenceitems").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(

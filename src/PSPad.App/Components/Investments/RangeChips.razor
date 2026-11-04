@@ -1,0 +1,17 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<MudChipSet T="ChartRange" SelectedValue="@Value" SelectedValueChanged="@ValueChanged" Class="pspad-stats-presets pspad-range-chips"
+            SelectionMode="SelectionMode.SingleSelection" CheckMark="false" Color="Color.Primary" Variant="Variant.Text"
+            SelectedColor="Color.Primary" Size="Size.Small">
+    <MudChip Value="ChartRange.ThreeMonths" aria-pressed="@Pressed(ChartRange.ThreeMonths)" Text="@T["Range3M"]" />
+    <MudChip Value="ChartRange.OneYear" aria-pressed="@Pressed(ChartRange.OneYear)" Text="@T["Range1Y"]" />
+    <MudChip Value="ChartRange.All" aria-pressed="@Pressed(ChartRange.All)" Text="@T["RangeAll"]" />
+</MudChipSet>
+
+@code {
+    [Parameter] public ChartRange Value { get; set; }
+
+    [Parameter] public EventCallback<ChartRange> ValueChanged { get; set; }
+
+    string Pressed(ChartRange range) => range == Value ? "true" : "false";
+}

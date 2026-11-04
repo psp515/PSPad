@@ -96,6 +96,14 @@ the old one's status line to point at the new number.
 | [0079](0079-pulled-documents-never-replace-a-newer-local-copy.md) | Pulled documents never replace a newer local copy | Active (amends [0005](0005-offline-conflicts-last-write-wins.md)) | 2026-10-25 | architecture, offline, sync |
 | [0080](0080-tests-assert-behaviour-not-shape-or-wiring.md) | Tests assert behaviour, not shape or wiring | Active | 2026-10-28 | testing |
 | [0081](0081-a-membership-new-to-the-replica-is-pulled-whole.md) | A membership new to the replica is pulled whole, and a pull older than a join cannot purge it | Active (amends [0054](0054-lists-are-shared-by-membership.md), [0066](0066-budgets-are-shared-by-membership.md)) | 2026-10-29 | architecture, offline, sync, sharing |
+| [0082](0082-investments-is-its-own-wasm-safe-module.md) | Investments is its own WASM-safe module | Active | 2026-10-30 | architecture, modules, offline, money, investments |
+| [0083](0083-money-and-currencies-move-to-abstractions.md) | `Money` and `Currencies` move to Abstractions, keeping their namespaces | Active (amends [0059](0059-money-is-its-own-wasm-safe-module.md)) | 2026-10-30 | architecture, modules, money, investments |
+| [0084](0084-quotes-come-from-yahoo-through-a-cached-server-proxy.md) | Quotes come from Yahoo Finance through a cached server proxy | Active | 2026-10-30 | architecture, http, storage, deployment, investments |
+| [0085](0085-a-holding-links-to-an-investment-account-by-id.md) | A holding links to an investment account by id, and is a copy refreshed on demand | Active | 2026-10-30 | architecture, contracts, money, investments |
+| [0086](0086-portfolio-takes-the-goals-slot-in-the-phone-bottom-bar.md) | Budgets moves to the fourth slot and Portfolio takes the fifth in the phone bottom bar | Active (amends [0060](0060-budgets-take-the-statistics-slot-and-sidebar-groups-collapse.md)) | 2026-10-30 | ui, navigation, investments |
+| [0087](0087-investment-pln-totals-use-the-actual-fx-cost.md) | Investment PLN totals use the PLN actually spent on a currency; the frozen NBP rate stays as the fallback | Active (narrows [0059](0059-money-is-its-own-wasm-safe-module.md) for investment totals) | 2026-11-01 | domain, money, investments |
+| [0088](0088-a-deleted-investment-account-hides-its-operations-without-rewriting-them.md) | A deleted investment account hides its operations without rewriting them | Active | 2026-11-02 | domain, storage, sync, investments |
+| [0089](0089-shares-received-carry-their-cost-basis-and-move-no-cash.md) | Shares received carry their cost basis as Money, move no cash, and count it as passive income | Active (narrows [0059](0059-money-is-its-own-wasm-safe-module.md) and [0087](0087-investment-pln-totals-use-the-actual-fx-cost.md) for one kind) | 2026-11-03 | domain, money, investments, import |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.

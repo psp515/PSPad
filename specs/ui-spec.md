@@ -293,7 +293,7 @@ top of the page, with no panel, dialog or drawer open, runs the same sync;
 offline it does nothing. Both call `ISyncTrigger.SyncNowAsync`.
 
 Below `md`, `Layout/BottomNav.razor` is a `MudAppBar Bottom="true"` with
-five equal slots — Inbox, Areas, My Day, Goals, Budgets (`/budgets`) — My Day raised
+five equal slots — Inbox, Areas, My Day, Budgets (`/budgets`), Portfolio (`/investments`; Goals lives in the account drawer, `adr/0086`) — My Day raised
 as the centre `MudFab`, always filled `Color.Primary`; the other four are
 `MudButton`s (icon over label, the sidebar's own icons) whose active slot
 gets a primary icon, a bold label and a tonal pill. The active slot is a
@@ -302,7 +302,7 @@ it.
 
 Below `md`, the avatar in `MobileTopBar` opens `Layout/AccountDrawer.razor`
 — a `MudDrawer`, `Anchor.End`, `DrawerVariant.Temporary`, 300px — holding
-`AccountBadge`, Statistics, List snapshots, Settings and App info as `MudNavLink`s, then
+`AccountBadge`, Goals, Statistics, List snapshots, Settings and App info as `MudNavLink`s, then
 `Components/SidebarFooter.razor` (connection status, clock, "PSPad · GPL
 v3"), the same footer component the permanent sidebar uses. Navigating
 closes the drawer.

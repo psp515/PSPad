@@ -5,6 +5,7 @@ namespace PSPad.App.State;
 public sealed class NavGroupState(IJSRuntime js)
 {
     public const string Budgets = "budgets";
+    public const string Investments = "investments";
     public const string Areas = "areas";
 
     const string StorageKey = "pspad.navgroups";

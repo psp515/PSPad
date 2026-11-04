@@ -1,6 +1,7 @@
 <div class="@($"d-flex flex-column pspad-money-figure {Class}")" role="group" aria-label="@Label">
     <MudText Typo="Typo.caption" Color="Color.Secondary">@Label</MudText>
     <MudText Typo="Typo.subtitle1" Color="@(Negative ? Color.Error : Color.Default)" Class="pspad-money-value">@Text</MudText>
+    <SecondaryAmount Text="@Secondary" />
 </div>
 
 @code {
@@ -9,6 +10,8 @@
     [Parameter, EditorRequired] public string Text { get; set; } = "";
 
     [Parameter] public bool Negative { get; set; }
+
+    [Parameter] public string? Secondary { get; set; }
 
     [Parameter] public string Class { get; set; } = "";
 }

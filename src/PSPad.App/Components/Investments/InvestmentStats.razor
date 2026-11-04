@@ -1,0 +1,20 @@
+@using PSPad.App.State.Investments
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<div class="pspad-investment-stats">
+    @foreach (var tile in Tiles)
+    {
+        <MoneyTile @key="tile.Class" Class="@tile.Class" Label="@tile.Label" Text="@tile.Text" Negative="@tile.Negative" Secondary="@tile.Secondary" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public InvestmentOverview Overview { get; set; } = default!;
+
+    [Parameter] public Guid? AccountId { get; set; }
+
+    IReadOnlyList<StatTile> Tiles =>
+        AccountId is { } id && Overview.Figures.TryGetValue(id, out var account)
+            ? InvestmentStatTiles.For(account, T, Overview.SecondaryOf(id))
+            : InvestmentStatTiles.For(Overview.Portfolio, T, Overview.SecondaryOf(null));
+}

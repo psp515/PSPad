@@ -1,4 +1,8 @@
 using PSPad.Infrastructure.Mongo;
+using PSPad.Module.Investments.Accounts;
+using PSPad.Module.Investments.Instruments;
+using PSPad.Module.Investments.Operations;
+using PSPad.Module.Investments.Portfolio;
 using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Entries;
@@ -28,6 +32,15 @@ public class CollectionNameTests
         Assert.Equal("moneypreferences", MongoContext.NameOf(typeof(MoneyPreferences)));
         Assert.Equal("moneyentries", MongoContext.NameOf(typeof(MoneyEntry)));
         Assert.Equal("balancesnapshots", MongoContext.NameOf(typeof(BalanceSnapshot)));
+    }
+
+    [Fact]
+    public void InvestmentAggregatesGetPlainEnglishPlurals()
+    {
+        Assert.Equal("investmentportfolios", MongoContext.NameOf(typeof(InvestmentPortfolio)));
+        Assert.Equal("investmentaccounts", MongoContext.NameOf(typeof(InvestmentAccount)));
+        Assert.Equal("investmentoperations", MongoContext.NameOf(typeof(InvestmentOperation)));
+        Assert.Equal("instruments", MongoContext.NameOf(typeof(Instrument)));
     }
 
     [Theory]

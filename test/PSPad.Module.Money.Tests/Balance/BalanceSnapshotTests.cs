@@ -21,13 +21,14 @@ public class BalanceSnapshotTests
         new(Guid.NewGuid(), actor ?? Owner, budget.Id, month);
 
     static AddHolding Add(Budget budget, YearMonth month, string name = "Wallet", HoldingType type = HoldingType.Cash,
-        Money? money = null, Guid? holdingId = null, Guid? actor = null) =>
-        new(Guid.NewGuid(), actor ?? Owner, budget.Id, month, holdingId ?? Guid.NewGuid(), name, type, money ?? Pln(100m));
+        Money? money = null, Guid? holdingId = null, Guid? actor = null, Guid? accountId = null) =>
+        new(Guid.NewGuid(), actor ?? Owner, budget.Id, month, holdingId ?? Guid.NewGuid(), name, type, money ?? Pln(100m),
+            accountId);
 
     static EditHolding Edit(Budget budget, YearMonth month, Holding holding, string? name = null,
-        HoldingType? type = null, Money? money = null) =>
+        HoldingType? type = null, Money? money = null, Guid? accountId = null) =>
         new(Guid.NewGuid(), Owner, budget.Id, month, holding.HoldingId, name ?? holding.Name, type ?? holding.Type,
-            money ?? holding.Money);
+            money ?? holding.Money, accountId);
 
     static string Rejection(BalanceSnapshot? snapshot, Budget? budget, ICommand command) =>
         Assert.Throws<DomainRejectedException>(() => BalanceSnapshot.Decide(snapshot, budget, command, Now)).Message;
@@ -151,6 +152,89 @@ public class BalanceSnapshotTests
             new Holding(holdingId, "Konto", HoldingType.Savings, new Money(10m, "EUR", 4.25m, new DateOnly(2026, 10, 30))),
             Assert.Single(snapshot.Holdings));
         Assert.Equal(Now.AddHours(1), snapshot.UpdatedAt);
+    }
+
+    [Fact]
+    public void AddingALinkedHoldingFoldsTheAccountId()
+    {
+        var budget = ABudget();
+        var snapshot = ASnapshot(budget, October);
+        var accountId = Guid.NewGuid();
+
+        snapshot.ApplyAll(BalanceSnapshot.Decide(snapshot, budget, Add(budget, October, accountId: accountId), Now));
+
+        Assert.Equal(accountId, Assert.Single(snapshot.Holdings).InvestmentAccountId);
+    }
+
+    [Fact]
+    public void ASecondHoldingOfTheSameAccountInAMonthIsRejected()
+    {
+        var budget = ABudget();
+        var accountId = Guid.NewGuid();
+        var linked = AHolding("Broker") with { InvestmentAccountId = accountId };
+        var snapshot = ASnapshot(budget, October, [linked, AHolding("Other")]);
+
+        Assert.Equal("That account is already in this month.",
+            Rejection(snapshot, budget, Add(budget, October, accountId: accountId)));
+        Assert.Equal("That account is already in this month.",
+            Rejection(snapshot, budget, Edit(budget, October, snapshot.Holdings[1], accountId: accountId)));
+    }
+
+    [Fact]
+    public void UnlinkedHoldingsMayRepeatAndALinkedHoldingMayBeEditedInPlace()
+    {
+        var budget = ABudget();
+        var accountId = Guid.NewGuid();
+        var linked = AHolding("Broker") with { InvestmentAccountId = accountId };
+        var snapshot = ASnapshot(budget, October, [linked, AHolding("A")]);
+
+        snapshot.ApplyAll(BalanceSnapshot.Decide(snapshot, budget, Add(budget, October, "B"), Now));
+        snapshot.ApplyAll(BalanceSnapshot.Decide(snapshot, budget,
+            Edit(budget, October, linked, name: "Broker 2", accountId: accountId), Now));
+
+        Assert.Equal("Broker 2", snapshot.Holdings[0].Name);
+        Assert.Equal(accountId, snapshot.Holdings[0].InvestmentAccountId);
+    }
+
+    [Fact]
+    public void EditingWithoutAnAccountUnlinksAndEmitsAnEvent()
+    {
+        var budget = ABudget();
+        var linked = AHolding("Broker") with { InvestmentAccountId = Guid.NewGuid() };
+        var snapshot = ASnapshot(budget, October, [linked]);
+
+        var events = BalanceSnapshot.Decide(snapshot, budget, Edit(budget, October, linked), Now);
+        snapshot.ApplyAll(events);
+
+        Assert.IsType<HoldingEdited>(Assert.Single(events));
+        Assert.Null(Assert.Single(snapshot.Holdings).InvestmentAccountId);
+    }
+
+    [Fact]
+    public void StartingCarriesTheAccountLinkForward()
+    {
+        var budget = ABudget();
+        var accountId = Guid.NewGuid();
+        var august = ASnapshot(budget, August, [AHolding("Broker") with { InvestmentAccountId = accountId }]);
+
+        var started = Assert.IsType<BalanceMonthStarted>(Assert.Single(
+            BalanceSnapshot.Decide(null, budget, [august], Start(budget, September), Now)));
+
+        Assert.Equal(accountId, Assert.Single(started.Holdings).InvestmentAccountId);
+    }
+
+    [Fact]
+    public void ASnapshotStoredBeforeAccountLinksReadsBackUnlinked()
+    {
+        var id = Guid.NewGuid();
+        var json = "{\"_holdings\":[{\"holdingId\":\"" + id + "\",\"name\":\"Wallet\",\"type\":0,"
+            + "\"money\":{\"amount\":1,\"currency\":\"PLN\",\"rateToPln\":1,\"rateDate\":\"2026-10-30\"}}]}";
+
+        var snapshot = JsonSerializer.Deserialize<BalanceSnapshot>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+
+        var holding = Assert.Single(snapshot.Holdings);
+        Assert.Equal(id, holding.HoldingId);
+        Assert.Null(holding.InvestmentAccountId);
     }
 
     [Fact]

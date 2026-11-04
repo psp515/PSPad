@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using PSPad.Module.Money.Values;
 using PSPad.App.Api;
 using PSPad.App.Sync;
 using PSPad.Contracts;
@@ -190,6 +191,87 @@ public class PSPadApiClientTests
         var busy = await Assert.ThrowsAsync<ServerBusyException>(() => client.SendAsync([]));
 
         Assert.True(busy.RetryAfter > TimeSpan.Zero);
+    }
+
+    [Fact]
+    public async Task QuotesAskForTheSymbolFromTheDateAndReadTheSeries()
+    {
+        var handler = new RecordingHandler(HttpStatusCode.OK, """
+            {"symbol":"ABC","currency":"USD","closes":[{"date":"2026-10-26","close":10.5}],"latest":null,
+            "fetchedAt":"2026-10-30T10:00:00+00:00","stale":false}
+            """);
+        var client = new PSPadApiClient(new HttpClient(handler) { BaseAddress = new Uri("https://localhost/") });
+
+        var series = await client.QuotesAsync("N V", new DateOnly(2026, 10, 1), refresh: true, ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(10.5m, Assert.Single(series!.Closes).Close);
+        Assert.Equal("/api/investments/quotes?symbol=N%20V&from=2026-10-01&refresh=true", handler.LastRequest!.PathAndQuery);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.BadGateway)]
+    public async Task QuotesAreNullWhenTheServerFails(HttpStatusCode status)
+    {
+        var client = new PSPadApiClient(new HttpClient(new RecordingHandler(status, "")) { BaseAddress = new Uri("https://localhost/") });
+
+        Assert.Null(await client.QuotesAsync("ABC", new DateOnly(2026, 10, 1), refresh: false, ct: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task QuotesAreNullWhenOffline()
+    {
+        var client = new PSPadApiClient(new HttpClient(new ThrowingHandler()) { BaseAddress = new Uri("https://localhost/") });
+
+        Assert.Null(await client.QuotesAsync("ABC", new DateOnly(2026, 10, 1), refresh: false, ct: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task RatesAskForTheRangeAndReadTheSeries()
+    {
+        var handler = new RecordingHandler(HttpStatusCode.OK,
+            """[{"currency":"USD","rate":4.0,"effectiveDate":"2026-10-02"}]""");
+        var client = new PSPadApiClient(new HttpClient(handler) { BaseAddress = new Uri("https://localhost/") });
+
+        var rates = await client.RatesAsync("USD", new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 30), TestContext.Current.CancellationToken);
+
+        Assert.Equal(4.0m, Assert.Single(rates!).Rate);
+        Assert.Equal("/api/money/nbp-rates?currency=USD&from=2026-10-01&to=2026-10-30", handler.LastRequest!.PathAndQuery);
+    }
+
+    [Fact]
+    public async Task RatesForPlnAreEmptyWithoutAskingTheServer()
+    {
+        var handler = new RecordingHandler(HttpStatusCode.OK, "[]");
+        var client = new PSPadApiClient(new HttpClient(handler) { BaseAddress = new Uri("https://localhost/") });
+
+        var rates = await client.RatesAsync(Currencies.Pln, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 30), TestContext.Current.CancellationToken);
+
+        Assert.Empty(rates!);
+        Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task RatesAreNullWhenTheServerFails()
+    {
+        var client = new PSPadApiClient(new HttpClient(new RecordingHandler(HttpStatusCode.BadGateway, "")) { BaseAddress = new Uri("https://localhost/") });
+
+        Assert.Null(await client.RatesAsync("USD", new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 30), TestContext.Current.CancellationToken));
+    }
+
+    sealed class RecordingHandler(HttpStatusCode status, string body) : HttpMessageHandler
+    {
+        public Uri? LastRequest { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            LastRequest = request.RequestUri;
+            return Task.FromResult(new HttpResponseMessage(status)
+            {
+                Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
     }
 
     sealed class BusyHandler(TimeSpan? retryAfter) : HttpMessageHandler

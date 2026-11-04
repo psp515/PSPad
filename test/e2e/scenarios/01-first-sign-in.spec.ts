@@ -119,7 +119,8 @@ test('a fresh user signs in and finds their way around the shell', async ({ page
     await expect(menu).toContainText(account.displayName);
     await expect(menu).toContainText(account.email);
     await expect(menu.getByRole('link')).toHaveText([
-      'My Day', 'Inbox', 'Goals', 'Statistics', 'List snapshots', 'Budgets', 'Personal', 'Work', 'Home', 'Settings', 'App info',
+      'My Day', 'Inbox', 'Goals', 'Statistics', 'List snapshots', 'Budgets', 'Investments', 'Import from XTB',
+      'Personal', 'Work', 'Home', 'Settings', 'App info',
     ]);
     await expect(menu.getByRole('searchbox')).toHaveCount(0);
     await expect(menu.getByText(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)).toBeVisible();
@@ -174,7 +175,7 @@ test('a fresh user signs in and finds their way around the shell', async ({ page
     await page.setViewportSize(phoneViewport);
 
     const tabs = bottomNav(page).getByRole('link');
-    await expect(tabs).toHaveText([/Inbox/, 'Areas', 'My Day', 'Goals', 'Budgets']);
+    await expect(tabs).toHaveText([/Inbox/, 'Areas', 'My Day', 'Budgets', 'Portfolio']);
     await expect(tabs.filter({ hasText: 'Inbox' }).getByRole('status')).toHaveText('1');
     await expect(bottomNav(page).getByRole('link', { name: 'My Day' })).toHaveAttribute('aria-current', 'page');
     await expect(topBar(page).getByRole('heading', { name: 'My Day' })).toBeVisible();
@@ -198,15 +199,11 @@ test('a fresh user signs in and finds their way around the shell', async ({ page
     await expect(page.getByText('This list is not there anymore.')).toBeVisible();
     await expect(topBar(page).getByRole('heading', { name: groceries })).toHaveCount(0);
 
-    await bottomNav(page).getByRole('link', { name: 'Goals' }).click();
-    await expect(topBar(page).getByRole('heading', { name: 'Goals' })).toBeVisible();
-    await expect(bottomNav(page).getByRole('link', { name: 'Goals' })).toHaveAttribute('aria-current', 'page');
-
     await openAccountDrawer(page);
     const drawer = shellMenu(page);
     await expect(drawer).toContainText(account.displayName);
     await expect(drawer).toContainText(account.email);
-    await expect(drawer.getByRole('link')).toHaveText(['Statistics', 'List snapshots', 'Settings', 'App info']);
+    await expect(drawer.getByRole('link')).toHaveText(['Goals', 'Statistics', 'List snapshots', 'Settings', 'App info']);
     await expect(drawer.getByText('PSPad · GPL v3')).toBeVisible();
     await drawer.getByRole('link', { name: 'Settings', exact: true }).click();
     await expect(topBar(page).getByRole('heading', { name: 'Settings' })).toBeVisible();

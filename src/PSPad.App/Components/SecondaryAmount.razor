@@ -1,0 +1,10 @@
+@if (!string.IsNullOrEmpty(Text))
+{
+    <MudText Typo="Typo.caption" HtmlTag="span" Class="@($"d-block pspad-muted pspad-money-secondary {Class}")">@Text</MudText>
+}
+
+@code {
+    [Parameter] public string? Text { get; set; }
+
+    [Parameter] public string Class { get; set; } = "";
+}

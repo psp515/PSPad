@@ -1,0 +1,138 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<div class="pspad-entries pspad-operations">
+    <div class="d-flex align-center flex-wrap gap-2 mb-2 pspad-entries-toolbar">
+        <MudSelect T="int" Class="pspad-entry-filter pspad-operation-filter" Value="@(Kind is { } chosen ? (int)chosen : AllKinds)"
+                   ValueChanged="@(value => KindChanged.InvokeAsync(value == AllKinds ? null : (OperationKind)value))"
+                   Label="@T["Kind"]" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+            <MudSelectItem T="int" Value="@AllKinds">@T["All"]</MudSelectItem>
+            @foreach (var kind in OperationKinds.All)
+            {
+                <MudSelectItem T="int" Value="@((int)kind)">@T[OperationKinds.Key(kind)]</MudSelectItem>
+            }
+        </MudSelect>
+        <MudTextField T="string" Class="pspad-entries-search pspad-operation-search flex-grow-1" Value="@Search" ValueChanged="@SearchChanged"
+                      Immediate="true" Clearable="true" Placeholder="@T["SearchOperations"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+        <MudSwitch T="bool" Class="pspad-operation-deleted-switch" Value="@_showDeleted" ValueChanged="@ShowDeletedChanged"
+                   Color="Color.Primary" Label="@T["ShowDeleted"]" />
+    </div>
+
+    <MudText Typo="Typo.caption" Class="d-block mb-1 pspad-muted pspad-entries-caption">@T.Plural(_filtered.Count, "OperationsCount")</MudText>
+
+    @foreach (var day in _days)
+    {
+        <section @key="day.Day" class="pspad-entry-day pspad-operation-day" aria-label="@MoneyText.Day(day.Day)">
+            <div class="d-flex align-baseline px-1 pt-3 pb-1">
+                <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="flex-grow-1 pspad-entry-day-title">@MoneyText.Day(day.Day)</MudText>
+                <MudText Typo="Typo.caption" Class="pspad-muted pspad-entry-day-net">@DayNet(day)</MudText>
+            </div>
+            <MudPaper Outlined="true" Class="pspad-entry-day-list">
+                <MudList T="InvestmentOperation" Dense="true" Class="py-0">
+                    @foreach (var operation in day.Operations)
+                    {
+                        var account = Overview.Account(operation.AccountId);
+                        <OperationRow @key="operation.Id" Operation="@operation" AccountName="@(account?.Name ?? "")"
+                                      InstrumentName="@(operation.Ticker is { } ticker ? Overview.NameOf(ticker) : null)"
+                                      ShowCurrency="@_mixedCurrencies" OnOpen="@OnOpen" />
+                    }
+                </MudList>
+            </MudPaper>
+        </section>
+    }
+
+    @if (_filtered.Count > _limit)
+    {
+        <div class="d-flex justify-center mt-3">
+            <MudButton Class="pspad-operations-more" Variant="Variant.Text" Color="Color.Primary"
+                       OnClick="@ShowMore">@T["ShowMore"]</MudButton>
+        </div>
+    }
+</div>
+
+@code {
+    const int PageSize = 200;
+    const int AllKinds = -1;
+
+    int _limit = PageSize;
+    bool _showDeleted;
+
+    [Parameter, EditorRequired] public InvestmentOverview Overview { get; set; } = default!;
+
+    [Parameter] public Guid? AccountId { get; set; }
+
+    [Parameter] public OperationKind? Kind { get; set; }
+
+    [Parameter] public EventCallback<OperationKind?> KindChanged { get; set; }
+
+    [Parameter] public string Search { get; set; } = "";
+
+    [Parameter] public EventCallback<string> SearchChanged { get; set; }
+
+    [Parameter, EditorRequired] public TimeZoneInfo Zone { get; set; } = TimeZoneInfo.Utc;
+
+    [Parameter] public EventCallback<InvestmentOperation> OnOpen { get; set; }
+
+    IReadOnlyList<InvestmentOperation> _filtered = [];
+    IReadOnlyList<OperationDay> _days = [];
+    bool _mixedCurrencies;
+    InvestmentOverview? _filteredOverview;
+    (Guid?, OperationKind?, string, TimeZoneInfo?, bool)? _filteredFor;
+
+    protected override void OnParametersSet() => Refilter();
+
+    void ShowDeletedChanged(bool show)
+    {
+        _showDeleted = show;
+        Refilter();
+    }
+
+    void ShowMore()
+    {
+        _limit += PageSize;
+        _days = OperationDays.Of(_filtered.Take(_limit), Zone);
+    }
+
+    void Refilter()
+    {
+        var filter = (AccountId, Kind, Search, Zone, _showDeleted);
+        if (ReferenceEquals(_filteredOverview, Overview) && _filteredFor == filter)
+        {
+            return;
+        }
+
+        if (_filteredFor != filter)
+        {
+            _limit = PageSize;
+        }
+
+        _filteredOverview = Overview;
+        _filteredFor = filter;
+        var accounts = (AccountId is { } id ? Overview.Accounts.Where(account => account.Id == id) : Overview.Open).ToList();
+        var ids = accounts.Select(account => account.Id).ToHashSet();
+        var text = Search.Trim();
+        _mixedCurrencies = accounts.Select(account => account.Currency).Distinct().Count() > 1;
+        _filtered =
+        [
+            .. Overview.Operations
+                .Where(operation => ids.Contains(operation.AccountId) && (_showDeleted || !operation.Deleted))
+                .Where(operation => Kind is null || operation.Kind == Kind)
+                .Where(operation => text.Length == 0 || Matches(operation, text))
+                .OrderByDescending(operation => operation.At)
+                .ThenByDescending(operation => operation.Id)
+        ];
+        _days = OperationDays.Of(_filtered.Take(_limit), Zone);
+    }
+
+    bool Matches(InvestmentOperation operation, string text) =>
+        (operation.Ticker?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false)
+        || (operation.Ticker is { } ticker && Overview.NameOf(ticker).Contains(text, StringComparison.CurrentCultureIgnoreCase))
+        || (operation.Note?.Contains(text, StringComparison.CurrentCultureIgnoreCase) ?? false);
+
+    static string DayNet(OperationDay day)
+    {
+        var live = day.Operations.Where(operation => !operation.Deleted).ToList();
+        var currencies = live.Select(operation => operation.Money.Currency).Distinct().ToList();
+        return currencies.Count == 1 ? InvestmentText.Signed(live.Sum(operation => operation.SignedAmount), currencies[0]) : "";
+    }
+}

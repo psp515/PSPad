@@ -6,6 +6,6 @@ public enum NavTab
     Inbox,
     Areas,
     MyDay,
-    Goals,
-    Budgets
+    Budgets,
+    Portfolio
 }

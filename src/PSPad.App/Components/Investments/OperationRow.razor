@@ -1,0 +1,39 @@
+@inject IStringLocalizer<InvestmentsStrings> T
+
+<MudListItem T="InvestmentOperation" Class="@($"pspad-entry-row pspad-operation-row {(Operation.Deleted ? "pspad-operation-deleted" : "")}")"
+             OnClick="@(() => OnOpen.InvokeAsync(Operation))">
+    <div class="d-flex align-center gap-3">
+        <span class="@AvatarClass" aria-hidden="true">@Initial</span>
+        <div class="d-flex flex-column flex-grow-1 pspad-entry-main">
+            <MudText Typo="Typo.body1" Class="pspad-entry-name">@Title</MudText>
+            <MudText Typo="Typo.caption" Class="pspad-entry-sub">@Sub</MudText>
+        </div>
+        <MudText Typo="Typo.body1" Class="@($"pspad-entry-amount {InvestmentText.Tone(Shown)}")">@AmountText</MudText>
+    </div>
+</MudListItem>
+
+@code {
+    [Parameter, EditorRequired] public InvestmentOperation Operation { get; set; } = default!;
+
+    [Parameter, EditorRequired] public string AccountName { get; set; } = "";
+
+    [Parameter] public string? InstrumentName { get; set; }
+
+    [Parameter] public bool ShowCurrency { get; set; }
+
+    [Parameter] public EventCallback<InvestmentOperation> OnOpen { get; set; }
+
+    OperationText Text => OperationText.For(Operation, AccountName, InstrumentName, T);
+
+    string Title => Text.Title;
+
+    string Sub => Text.Sub;
+
+    string Initial => Text.Kind[..1].ToUpperInvariant();
+
+    decimal Shown => Operation.Kind == OperationKind.SharesReceived ? Operation.Money.Amount : Operation.SignedAmount;
+
+    string AvatarClass => $"pspad-entry-avatar {(Shown > 0 || Operation.Kind == OperationKind.SharesReceived ? "pspad-entry-income" : "pspad-entry-expense")}";
+
+    string AmountText => ShowCurrency ? InvestmentText.Signed(Shown, Operation.Money.Currency) : InvestmentText.Signed(Shown);
+}

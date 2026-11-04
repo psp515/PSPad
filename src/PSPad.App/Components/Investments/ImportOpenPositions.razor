@@ -1,0 +1,26 @@
+@using PSPad.Module.Investments.Import
+@inject IStringLocalizer<InvestmentImportStrings> T
+
+@if (Differences is not null)
+{
+    <MudPaper Outlined="true" Class="pa-3 mb-4 pspad-import-open-positions">
+        @if (Differences.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Success">@T["OpenPositionsMatch"]</MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Warning">@T["OpenPositionsDiffer"]</MudText>
+            <MudList T="string" Dense="true">
+                @foreach (var difference in Differences)
+                {
+                    <MudListItem T="string" Text="@T["DifferenceLine", difference.PositionId, difference.Ticker, difference.FileVolume, difference.ImportedVolume].Value" />
+                }
+            </MudList>
+        }
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<OpenPositionDifference>? Differences { get; set; }
+}

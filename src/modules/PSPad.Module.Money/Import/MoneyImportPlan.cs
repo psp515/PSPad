@@ -37,7 +37,7 @@ public static class MoneyImportPlan
                 plan.Add(new PlannedCommand(change.Kind switch
                 {
                     HoldingChangeKind.Edit => new EditHolding(newId(), userId, budgetId, month.Month, holding.HoldingId,
-                        holding.Name, holding.Type, holding.Money),
+                        holding.Name, holding.Type, holding.Money, holding.InvestmentAccountId),
                     HoldingChangeKind.Remove => new RemoveHolding(newId(), userId, budgetId, month.Month, holding.HoldingId),
                     _ => new AddHolding(newId(), userId, budgetId, month.Month, holding.HoldingId, holding.Name,
                         holding.Type, holding.Money)

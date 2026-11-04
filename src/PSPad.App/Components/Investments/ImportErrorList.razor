@@ -1,0 +1,33 @@
+@using PSPad.App.State.Investments
+@using PSPad.Module.Investments.Import
+@inject IStringLocalizer<InvestmentImportStrings> T
+
+@if (Lines.Count > 0)
+{
+    <MudPaper Outlined="true" Class="pa-3 mb-4 pspad-import-errors">
+        <MudText Typo="Typo.subtitle1" Color="Color.Error">@T["ErrorsTitle", Lines.Count]</MudText>
+        <MudText Typo="Typo.body2" Class="pspad-muted mb-2">@T["ErrorsHint"]</MudText>
+        <MudTable T="ImportErrorLine" Items="@Lines" Dense="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>@T["ColRow"]</MudTh><MudTh>@T["ColType"]</MudTh><MudTh>@T["ColTime"]</MudTh><MudTh>@T["ColTicker"]</MudTh>
+                <MudTh>@T["ColAmount"]</MudTh><MudTh>@T["ColId"]</MudTh><MudTh>@T["ColComment"]</MudTh><MudTh>@T["ColReason"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@T["ColRow"]">@context.RowLabel</MudTd>
+                <MudTd DataLabel="@T["ColType"]">@context.Type</MudTd>
+                <MudTd DataLabel="@T["ColTime"]">@context.Time</MudTd>
+                <MudTd DataLabel="@T["ColTicker"]">@context.Ticker</MudTd>
+                <MudTd DataLabel="@T["ColAmount"]">@context.Amount</MudTd>
+                <MudTd DataLabel="@T["ColId"]">@context.Id</MudTd>
+                <MudTd DataLabel="@T["ColComment"]">@context.Comment</MudTd>
+                <MudTd DataLabel="@T["ColReason"]" Class="pspad-import-error-reason">@string.Join(" ", context.Reasons)</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<ImportRowPreview> Rows { get; set; } = [];
+
+    IReadOnlyList<ImportErrorLine> Lines => ImportErrorLines.Of(Rows, T);
+}

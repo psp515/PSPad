@@ -7,6 +7,7 @@ using PSPad.App.State.Replica;
 using PSPad.App.Statistics;
 using PSPad.App.Tests.Localization;
 using PSPad.App.Tests.State;
+using PSPad.App.Tests.State.Investments;
 using PSPad.Contracts;
 using PSPad.TestInfrastructure;
 using System.Text.Json;
@@ -51,7 +52,7 @@ public class LocalAccountDeletionTests
             DateTimeOffset.UtcNow);
         var deletion = new LocalAccountDeletion(
             new LocalDeviceData(
-                sessions, new InMemoryReplica(), new InMemoryOutbox(), statistics, snapshots, NullLogger<LocalDeviceData>.Instance),
+                sessions, new InMemoryReplica(), new InMemoryOutbox(), statistics, snapshots, new InMemoryQuoteCache(), NullLogger<LocalDeviceData>.Instance),
             new LocalAuthenticationStateProvider(sessions));
 
         await deletion.ClearAsync();
@@ -136,7 +137,7 @@ public class LocalAccountDeletionTests
     static LocalAccountDeletion Deletion(
         ILocalSessionStore sessions, IReplica replica, IOutbox outbox, LocalAuthenticationStateProvider authProvider) =>
         new(new LocalDeviceData(
-                sessions, replica, outbox, new StatisticsCache(new FakeStorageJsRuntime()), new InMemorySnapshotCache(),
+                sessions, replica, outbox, new StatisticsCache(new FakeStorageJsRuntime()), new InMemorySnapshotCache(), new InMemoryQuoteCache(),
                 NullLogger<LocalDeviceData>.Instance),
             authProvider);
 
