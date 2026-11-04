@@ -60,7 +60,7 @@
         }
         @foreach (var group in _layout.Groups)
         {
-            <div @key="group.Entries[0].TaskId" class="@(group.Lanes > 1 ? "pspad-timeline-group pspad-timeline-task-narrow" : "pspad-timeline-group")" style="@GroupStyle(group)">
+            <div @key="GroupKey(group)" class="@(group.Lanes > 1 ? "pspad-timeline-group pspad-timeline-task-narrow" : "pspad-timeline-group")" style="@GroupStyle(group)">
                 @foreach (var entry in group.Entries)
                 {
                     var task = Tasks[entry.TaskId];
@@ -151,6 +151,9 @@
 
     string BlockStyle(TimelineBlock block) =>
         $"{Place(block.Start, block.End)};--lane:{block.Lane};--lanes:{block.Lanes}";
+
+    // Sharing a key with the first task's block makes Blazor reuse the element when the group dissolves, and it loses its class and style.
+    static string GroupKey(TimelineGroup group) => $"group-{group.Entries[0].TaskId}";
 
     string GroupStyle(TimelineGroup group) =>
         $"{Place(group.Start, group.End)};--needs:{group.Needs}px;--lane:{group.Lane};--lanes:{group.Lanes}";
