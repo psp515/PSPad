@@ -5,7 +5,7 @@ using PSPad.Module.Money.Values;
 namespace PSPad.Module.Money.Reading;
 
 public sealed record MonthTotals(
-    decimal Income, decimal Expenses, IReadOnlyList<CategoryTotal> ExpensesByCategory, IReadOnlyList<EntryDay> Days)
+    decimal Income, decimal Expenses, IReadOnlyList<CategoryTotal> ExpensesByCategory, IReadOnlyList<EntryDay> Days, decimal Returned)
 {
     public decimal Net => Income - Expenses;
 
@@ -24,8 +24,9 @@ public sealed record MonthTotals(
 
         return new MonthTotals(
             inMonth.Where(entry => entry.Kind == CategoryKind.Income).Sum(entry => entry.Money.InPln),
-            expenses.Sum(entry => entry.Money.InPln),
+            expenses.Sum(entry => entry.SignedPln),
             byCategory,
-            days);
+            days,
+            inMonth.Where(entry => entry.IsReturn).Sum(entry => entry.Money.InPln));
     }
 }

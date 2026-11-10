@@ -55,7 +55,7 @@ public sealed record MoneySummary(
 
         return new MoneySummary(
             incomes.Sum(entry => entry.Money.InPln),
-            expenses.Sum(entry => entry.Money.InPln),
+            expenses.Sum(entry => entry.SignedPln),
             months,
             figures,
             ByMonth(months, expenses, ranking),
@@ -93,7 +93,7 @@ public sealed record MoneySummary(
         foreach (var entry in expenses)
         {
             var slot = topSlots.TryGetValue(entry.Category, out var found) ? found : otherSlot;
-            totals[slot][MonthIndex(months[0], entry.Date)] += entry.Money.InPln;
+            totals[slot][MonthIndex(months[0], entry.Date)] += entry.SignedPln;
         }
 
         return [.. names.Select((name, slot) => new CategorySeries(name, totals[slot]))];
@@ -104,7 +104,7 @@ public sealed record MoneySummary(
         var totals = new decimal[months.Count];
         foreach (var entry in entries)
         {
-            totals[MonthIndex(months[0], entry.Date)] += entry.Money.InPln;
+            totals[MonthIndex(months[0], entry.Date)] += entry.SignedPln;
         }
 
         return totals;
