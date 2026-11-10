@@ -1405,6 +1405,16 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-timeline-task-done {
     border-left-color: var(--mud-palette-text-secondary);
     background-color: var(--pspad-hover);
+    opacity: 0.55;
+}
+
+.pspad-timeline-group-line-done {
+    opacity: 0.55;
+}
+
+.pspad-timeline-task-done:hover,
+.pspad-timeline-group-line-done:hover {
+    opacity: 1;
 }
 
 .pspad-timeline-task .mud-checkbox {
