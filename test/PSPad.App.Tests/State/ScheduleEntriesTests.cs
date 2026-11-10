@@ -30,6 +30,15 @@ public class ScheduleEntriesTests
         Assert.Equal([A], ScheduleEntries.For(Plan([A], [C]), true));
     }
 
+    [Fact]
+    public void EqualStartTimesKeepThePendingTaskBeforeTheFinishedOne()
+    {
+        var pending = Entry("Pending", new TimeOnly(9, 0));
+        var finished = Entry("Finished", new TimeOnly(9, 0));
+
+        Assert.Equal([pending, finished], ScheduleEntries.For(Plan([pending], [finished]), true));
+    }
+
     static DayPlan Plan(TodayEntry[] scheduled, TodayEntry[] completed) =>
         new([], scheduled, [], [], [], completed);
 

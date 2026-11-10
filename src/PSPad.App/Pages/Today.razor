@@ -112,11 +112,11 @@ else
 
         <section class="pspad-day-schedule mb-4" aria-label="@T["Schedule"].Value">
             <SectionHeading Title="@T["Schedule"]" Color="Color.Primary" />
-            @if (_plan.Scheduled.Count == 0)
+            @if (ScheduleDrawn.Count == 0)
             {
                 <MudText Typo="Typo.body2" Class="pspad-timeline-empty pspad-muted mb-2">@ScheduleEmpty</MudText>
             }
-            <DayTimeline Entries="@ScheduleEntries.For(_plan, _showFinished)" Tasks="@_byId" Day="@_day" Now="@NowOnTheDay"
+            <DayTimeline Entries="@ScheduleDrawn" Tasks="@_byId" Day="@_day" Now="@NowOnTheDay"
                          ListNameOf="@(task => NameOf(task.ListId))"
                          OnToggle="@(toggled => ToggleAsync(toggled, _day))" OnOpen="@Open" OnAdd="@AddTaskAt" />
         </section>
@@ -153,6 +153,7 @@ else
 
     string DayClass => $"pspad-day {(_tab == DayTab.Schedule ? "pspad-day-tab-schedule" : "pspad-day-tab-tasks")}";
 
+    IReadOnlyList<TodayEntry> ScheduleDrawn => ScheduleEntries.For(_plan, _showFinished);
     int PendingScheduled => _plan.Scheduled.Count(entry => !IsDone(_byId[entry.TaskId], DayOf(entry)));
 
     TimeOnly? NowOnTheDay => _day == State.Today
