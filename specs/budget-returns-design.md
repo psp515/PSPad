@@ -57,12 +57,14 @@ The handler loads the purchase, its budget and the owner's entries
 (`LoadAllAsync(budget.UserId)`, as `RenameCategoryHandler` does).
 `MoneyEntry.Decide` rejects, in order:
 
-1. Missing or deleted purchase, or a purchase in a budget the actor can't
-   reach: "That entry does not exist." (unrecoverable).
+1. Missing or deleted purchase: "That entry does not exist." (unrecoverable);
+   a budget the actor can't reach: `BudgetAccess.To`'s "That budget does
+   not exist." (unrecoverable), as for every other entry command.
 2. Archived budget: "This budget is archived."
 3. An entry id already taken (`RequireNew`).
 4. Purchase is income or itself a return: "Only an expense can be returned."
-5. `Amount <= 0`: "Enter an amount."
+5. The amount fails `Money.Require` (`<= 0`, over the maximum): its
+   existing message, e.g. "An amount has to be more than zero."
 6. `Date < purchase.Date`: "A return can't be dated before its purchase."
 7. `Amount > Left`: "That is more than is left to return."
 8. Note longer than `MaxNoteLength` (the existing note rule).
@@ -194,6 +196,8 @@ A `DetailPanel` like `EntryPanel`.
   match them by name and note.
 - Overview and Entries totals: "Expenses" shows the net figure and, when
   `Returned > 0`, a caption "after {Returned} returned".
+- `CategoryBar` draws only categories above 0; a negative category still
+  appears in its legend with its signed value.
 - Strings go to `BudgetsStrings` (English and Polish).
 
 ## 5. Docs
@@ -211,8 +215,10 @@ A `DetailPanel` like `EntryPanel`.
 - Integration (`PSPad.Api.Tests`): `RecordReturn`, `EditReturn` and
   `DeleteEntry` cascade through the real pipeline against MongoDB; the
   over-return rejection.
-- App (`PSPad.App.Tests`, bUnit): `EntryRow` return and chip states;
-  `EntryPanel` Returns section; `ReturnPanel` prefill, cap and save;
-  `EntryQuery` routes; `EntryFilters` with returns.
-- E2E: record a purchase, a partial return, check the Expenses total and
-  the chip; delete the purchase and see the return gone.
+- App unit (`PSPad.App.Tests/State`): `EntryQuery` return routes;
+  `EntryFilters` with returns. No component is rendered in a unit test
+  (`specs/testing-spec.md`).
+- E2E (`test/e2e/scenarios/39-budget-returns.spec.ts`): record a purchase,
+  a partial return from its panel, check the row chip, the return row, the
+  Expenses figure and its "returned" caption; the over-return cap; a full
+  return; delete the purchase and see its returns gone.
