@@ -1412,8 +1412,8 @@ button.pspad-heatmap-cell:focus-visible {
     opacity: 0.55;
 }
 
-.pspad-timeline-task-done:focus-within,
-.pspad-timeline-group-line-done:focus-within {
+.pspad-timeline-task-done:has(:focus-visible),
+.pspad-timeline-group-line-done:has(:focus-visible) {
     opacity: 1;
 }
 
