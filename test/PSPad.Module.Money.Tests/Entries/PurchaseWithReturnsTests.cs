@@ -41,6 +41,55 @@ public class PurchaseWithReturnsTests
         Assert.Equal("Edit the return instead.", message);
     }
 
+    static EditEntry EditBy(Guid by, MoneyEntry entry) =>
+        new(Guid.NewGuid(), by, entry.Id, "Other", entry.Category, entry.Money, entry.Date, null);
+
+    [Fact]
+    public void AStrangerEditingAPurchaseWithReturnsSeesNoBudget()
+    {
+        var (budget, purchase, returned) = Purchased();
+
+        var message = Rejection(() =>
+            Write(purchase, budget, [purchase, returned], EditBy(Stranger, purchase) with { Money = new Money(100m, "PLN", 1m, purchase.Date) }));
+
+        Assert.Equal("That budget does not exist.", message);
+    }
+
+    [Fact]
+    public void AStrangerEditingAReturnSeesNoBudget()
+    {
+        var (budget, purchase, returned) = Purchased();
+
+        var message = Rejection(() =>
+            Write(returned, budget, [purchase, returned], EditBy(Stranger, returned)));
+
+        Assert.Equal("That budget does not exist.", message);
+    }
+
+    [Fact]
+    public void EditingAReturnInAnArchivedBudgetSaysArchived()
+    {
+        var (budget, purchase, returned) = Purchased();
+        Archive(budget);
+
+        var message = Rejection(() =>
+            Write(returned, budget, [purchase, returned], EditBy(Owner, returned)));
+
+        Assert.Equal("This budget is archived.", message);
+    }
+
+    [Fact]
+    public void EditingAPurchaseWithReturnsInAnArchivedBudgetSaysArchived()
+    {
+        var (budget, purchase, returned) = Purchased();
+        Archive(budget);
+
+        var message = Rejection(() =>
+            Write(purchase, budget, [purchase, returned], EditBy(Owner, purchase) with { Money = new Money(100m, "PLN", 1m, purchase.Date) }));
+
+        Assert.Equal("This budget is archived.", message);
+    }
+
     [Fact]
     public void ThePurchaseCantDropBelowWhatWasReturned()
     {

@@ -28,7 +28,7 @@ test('a purchase takes partial and full returns from its panel, nets them in the
     await expect(panel(page)).toContainText('Clothes');
     await expect(figure(panel(page), 'Left to return')).toContainText('420.00');
     await expect(panel(page).getByRole('spinbutton', { name: 'Amount returned', exact: true })).toHaveValue(/^420(\.00)?$/);
-    await expect(panel(page).getByText("Uses the purchase's rate, so a full return cancels it exactly.")).toBeVisible();
+    await expect(panel(page).getByText("Uses the purchase's rate, so returning the whole amount in one return cancels it exactly.")).toBeVisible();
     await expect(panel(page).getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0);
   });
 

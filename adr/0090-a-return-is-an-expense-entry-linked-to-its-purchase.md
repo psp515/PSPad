@@ -50,5 +50,10 @@ returns keeps its currency and rate.
   later one is rejected on the server and surfaced (AD-5).
 - A category's monthly total can be negative when a return lands after its
   purchase's month. Readers and charts must tolerate it.
+- Several partial returns of a foreign-currency purchase can leave a rounding
+  remainder of up to 0.01 PLN per return, because each part is rounded alone.
+- Two requests for the same purchase landing on the server at the same moment
+  can both pass the cap, because only the return documents are version-checked;
+  accepted for a single-user budget.
 - Editing and deleting an entry now load all of the owner's entries, as
   category commands already do.

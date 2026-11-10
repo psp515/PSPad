@@ -867,9 +867,6 @@
   <data name="LinkedAccountOptions" xml:space="preserve">
     <value>Opcje powiązanego konta</value>
   </data>
-  <data name="ReturnLabel" xml:space="preserve">
-    <value>Zwrot</value>
-  </data>
   <data name="ReturnCaption" xml:space="preserve">
     <value>Zwrot · {0}</value>
   </data>
@@ -928,7 +925,7 @@
     <value>Kwota zwrotu</value>
   </data>
   <data name="ReturnRateHelp" xml:space="preserve">
-    <value>Używa kursu zakupu, więc pełny zwrot dokładnie go znosi.</value>
+    <value>Używa kursu zakupu, więc zwrot całej kwoty jednym zwrotem dokładnie go znosi.</value>
   </data>
   <data name="CountsIn" xml:space="preserve">
     <value>Liczy się w {0}.</value>

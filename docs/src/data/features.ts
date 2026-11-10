@@ -43,7 +43,7 @@ export const features: Feature[] = [
     how: 'Every amount keeps the rate to PLN it was entered at, so history never shifts. Categories grow as you type. Charts cover any range.' },
   { id: 'returns', title: 'Returns',
     does: 'Record a full or partial return against a purchase, as many times as it takes to reach its amount.',
-    how: 'The return lowers expenses in the month it happens, in the purchase’s category, at the purchase’s rate, so a full return cancels it exactly. The purchase keeps its record and shows what came back.' },
+    how: 'The return lowers expenses in the month it happens, in the purchase’s category, at the purchase’s rate, so returning the whole amount in one return cancels it exactly. The purchase keeps its record and shows what came back.' },
   { id: 'investments', title: 'Investments',
     does: 'Brokerage accounts, positions and profit, per account and in PLN.',
     how: 'Import an XTB export; a preview lists every wrong row before anything is saved. A price chart marks your buys and sells. Currency accounts count the PLN you actually paid for the currency, and transfers between your own accounts are not counted twice. Copy an account into a budget’s balance on a day you choose.' },

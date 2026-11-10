@@ -71,12 +71,13 @@ public sealed class MoneyEntry : Aggregate
             case EditEntry edit:
                 var editing = RequireLive(entry);
 
+                var editBudget = BudgetAccess.Writable(BudgetAccess.To(budget, edit.UserId));
+
                 if (editing.IsReturn)
                 {
                     throw new DomainRejectedException("Edit the return instead.");
                 }
 
-                var editBudget = BudgetAccess.Writable(BudgetAccess.To(budget, edit.UserId));
                 var name = RequireName(edit.Name);
                 var category = CategoryName.Resolve(editBudget.CategoriesOf(editing.Kind), edit.Category);
                 var money = Money.Require(edit.Money, edit.Date);

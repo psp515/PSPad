@@ -12,6 +12,7 @@ public static class MoneyEntryCascade
 
         if (command is EditEntry edit && entry is { Deleted: false, IsReturn: false } && returns is not null)
         {
+            BudgetAccess.Writable(BudgetAccess.To(budget, command.UserId));
             MoneyEntry.GuardPurchase(entry, edit, returns);
         }
 

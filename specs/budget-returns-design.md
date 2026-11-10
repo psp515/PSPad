@@ -176,7 +176,7 @@ A `DetailPanel` like `EntryPanel`.
   purchase" link to `?entry={purchaseId}`.
 - Amount (`MudNumericField`, adornment = the purchase's currency),
   pre-filled with `Left` for a new return; a read-only "In PLN".
-- Helper: "Uses the purchase's rate, so a full return cancels it exactly."
+- Helper: "Uses the purchase's rate, so returning the whole amount in one return cancels it exactly."
 - Date (`MudDatePicker`), default today in the user's time zone,
   `MinDate` = purchase date; helper "Counts in {Month yyyy}."
 - Note.

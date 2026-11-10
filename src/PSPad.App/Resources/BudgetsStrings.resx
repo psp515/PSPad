@@ -867,9 +867,6 @@
   <data name="LinkedAccountOptions" xml:space="preserve">
     <value>Linked account options</value>
   </data>
-  <data name="ReturnLabel" xml:space="preserve">
-    <value>Return</value>
-  </data>
   <data name="ReturnCaption" xml:space="preserve">
     <value>Return · {0}</value>
   </data>
@@ -928,7 +925,7 @@
     <value>Amount returned</value>
   </data>
   <data name="ReturnRateHelp" xml:space="preserve">
-    <value>Uses the purchase's rate, so a full return cancels it exactly.</value>
+    <value>Uses the purchase's rate, so returning the whole amount in one return cancels it exactly.</value>
   </data>
   <data name="CountsIn" xml:space="preserve">
     <value>Counts in {0}.</value>

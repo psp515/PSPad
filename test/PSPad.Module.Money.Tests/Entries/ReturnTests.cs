@@ -236,6 +236,18 @@ public class ReturnTests
     }
 
     [Fact]
+    public void EditingAReturnAboveWhatIsLeftIsRejected()
+    {
+        var budget = ABudget();
+        var purchase = AnExpense(budget, amount: 100m, date: Bought);
+        var first = AReturn(purchase, budget, 60m);
+        var second = AReturn(purchase, budget, 40m, others: [first]);
+
+        Assert.Equal("That is more than is left to return.",
+            Rejection(() => Change(first, purchase, budget, Edit(first, 61m), second)));
+    }
+
+    [Fact]
     public void AReturnOfExactlyWhatIsLeftIsAccepted()
     {
         var budget = ABudget();
