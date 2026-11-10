@@ -1,0 +1,219 @@
+@using PSPad.Abstractions
+@using PSPad.Contracts
+@using PSPad.App.Components
+@using PSPad.App.State
+@using PSPad.App.State.Dispatch
+@using PSPad.Module.Money
+@using PSPad.Module.Money.Budgets
+@using PSPad.Module.Money.Entries
+@using PSPad.Module.Money.Values
+@inject IDocumentStore<Budget> Budgets
+@inject IDocumentStore<MoneyEntry> Entries
+@inject AppState State
+@inject CommandSender Sender
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IStringLocalizer<BudgetsStrings> T
+
+<DetailPanel Open="@(_purchase is not null)" Title="@Title" TitleTypo="Typo.body2" Class="pspad-return-panel"
+             OnClose="@OnClose" OnSave="@SaveCallback" CanSave="@CanSave" OnDelete="@DeleteCallback" Disabled="@(Disabled || _saving)">
+    @if (_purchase is { } purchase && _state is { } state)
+    {
+        <div class="d-flex flex-column gap-3 pa-4">
+            <MudPaper Outlined="true" Class="pa-3 d-flex flex-column gap-1 pspad-return-purchase">
+                <div class="d-flex align-center gap-2">
+                    <MudText Typo="Typo.body1" Class="flex-grow-1 pspad-entry-name">@purchase.Name</MudText>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="pspad-return-category">@purchase.Category</MudChip>
+                </div>
+                <MudText Typo="Typo.caption" Class="pspad-muted">@T["Bought", MoneyText.Day(purchase.Date)]</MudText>
+                <MudText Typo="Typo.caption" Class="pspad-muted">@T["Paid", PaidText(purchase.Money)]</MudText>
+                <div class="d-flex gap-4 mt-1">
+                    <MoneyFigure Label="@T["ReturnedSoFar"]" Text="@InCurrency(state.Returned)" />
+                    <MoneyFigure Label="@T["LeftToReturnLabel"]" Text="@InCurrency(state.Left)" />
+                </div>
+                <MudLink Class="pspad-return-purchase-link" Typo="Typo.body2" Href="@EntryQuery.For(Navigation.Uri, purchase.Id)">@T["GoToPurchase"]</MudLink>
+            </MudPaper>
+            <MudNumericField T="decimal?" Class="pspad-return-amount-field" Label="@T["AmountReturned"]" Variant="Variant.Outlined"
+                             Margin="Margin.Dense" @bind-Value="_amount" Immediate="true" HideSpinButtons="true" Max="@Money.MaxAmount"
+                             Adornment="Adornment.End" AdornmentText="@purchase.Money.Currency" Disabled="@ReadOnly" />
+            <MudTextField T="string" Class="pspad-return-pln" Label="@T["InPln"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Value="@InPlnText" ReadOnly="true" HelperText="@T["ReturnRateHelp"].Value" />
+            <MudDatePicker Class="pspad-return-date-field" Label="@T["Date"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           @bind-Date="_date" MinDate="@purchase.Date.ToDateTime(TimeOnly.MinValue)" Disabled="@ReadOnly"
+                           HelperText="@CountsInText" />
+            <MudTextField T="string" Class="pspad-return-note-field" Label="@T["Note"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Lines="3" MaxLength="@MoneyEntry.MaxNoteLength" Counter="@MoneyEntry.MaxNoteLength" @bind-Value="_note" Disabled="@ReadOnly" />
+        </div>
+    }
+</DetailPanel>
+
+@code {
+    [Parameter] public Guid? ReturnId { get; set; }
+
+    [Parameter] public Guid? PurchaseId { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    Budget? _budget;
+    MoneyEntry? _purchase;
+    MoneyEntry? _return;
+    ReturnState? _state;
+    Guid? _loadedReturn;
+    Guid? _loadedPurchase;
+    bool _loadedOnce;
+    decimal? _amount;
+    DateTime? _date;
+    string? _note;
+    bool _saving;
+
+    bool IsNew => _return is null;
+
+    bool ReadOnly => _budget?.IsArchived == true;
+
+    string Title => IsNew ? T["RecordReturn"] : T["ReturnTitle"];
+
+    decimal Returnable => (_state?.Left ?? 0) + (_return?.Money.Amount ?? 0);
+
+    bool CanSave => !ReadOnly && _purchase is not null && _amount is > 0 && _amount <= Returnable
+        && _date is not null && DateOnly.FromDateTime(_date.Value) >= _purchase.Date;
+
+    string InPlnText => _purchase is not null && _amount is > 0
+        ? MoneyText.Pln(Math.Round(_amount.Value * _purchase.Money.RateToPln, 2, MidpointRounding.AwayFromZero))
+        : "";
+
+    string? CountsInText => _date is null ? null : T["CountsIn", MoneyText.MonthTitle(YearMonth.Of(DateOnly.FromDateTime(_date.Value)))].Value;
+
+    EventCallback SaveCallback => ReadOnly ? default : EventCallback.Factory.Create(this, SaveAsync);
+
+    EventCallback DeleteCallback => ReadOnly || IsNew ? default : EventCallback.Factory.Create(this, DeleteAsync);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedOnce && _loadedReturn == ReturnId && _loadedPurchase == PurchaseId)
+        {
+            return;
+        }
+
+        _loadedOnce = true;
+        _loadedReturn = ReturnId;
+        _loadedPurchase = PurchaseId;
+        await LoadAsync();
+    }
+
+    async Task LoadAsync()
+    {
+        _budget = null;
+        _purchase = null;
+        _state = null;
+        var returned = ReturnId is null ? null : await Entries.LoadAsync(ReturnId.Value, CancellationToken.None);
+        _return = returned is { Deleted: false, IsReturn: true } ? returned : null;
+        var purchaseId = _return?.ReturnOf ?? (ReturnId is null ? PurchaseId : null);
+        var purchase = purchaseId is null ? null : await Entries.LoadAsync(purchaseId.Value, CancellationToken.None);
+
+        if (purchase is not { Deleted: false, IsReturn: false, Kind: CategoryKind.Expense })
+        {
+            return;
+        }
+
+        var budget = await Budgets.LoadAsync(purchase.BudgetId, CancellationToken.None);
+        _budget = budget is null || !budget.Admits(State.UserId) ? null : budget;
+
+        if (_budget is null)
+        {
+            return;
+        }
+
+        var all = await Entries.LoadAllAsync(State.UserId, CancellationToken.None);
+        _state = ReturnState.Of(purchase, all);
+        _purchase = purchase;
+
+        if (_return is not null)
+        {
+            _amount = _return.Money.Amount;
+            _date = _return.Date.ToDateTime(TimeOnly.MinValue);
+            _note = _return.Note;
+        }
+        else
+        {
+            _amount = _state.Left > 0 ? _state.Left : null;
+            _date = (State.Today < purchase.Date ? purchase.Date : State.Today).ToDateTime(TimeOnly.MinValue);
+            _note = null;
+        }
+    }
+
+    string InCurrency(decimal amount) => _purchase!.Money.Currency == Currencies.Pln
+        ? MoneyText.Pln(amount)
+        : $"{MoneyText.Amount(amount)} {_purchase.Money.Currency}";
+
+    static string PaidText(Money money) => money.Currency == Currencies.Pln
+        ? MoneyText.Pln(money.Amount)
+        : $"{MoneyText.Amount(money.Amount)} {money.Currency} · {MoneyText.Pln(money.InPln)} @ {MoneyText.Rate(money.RateToPln)}";
+
+    async Task SaveAsync()
+    {
+        if (Disabled || _saving || !CanSave || _purchase is null)
+        {
+            return;
+        }
+
+        var purchase = _purchase;
+        var amount = _amount.GetValueOrDefault();
+        var date = DateOnly.FromDateTime(_date!.Value);
+        var note = string.IsNullOrWhiteSpace(_note) ? null : _note.Trim();
+
+        _saving = true;
+        CommandResult result;
+
+        try
+        {
+            result = _return is not null
+                ? await Sender.SendAsync(new EditReturn(Guid.NewGuid(), State.UserId, _return.Id, amount, date, note))
+                : await Sender.SendAsync(new RecordReturn(Guid.NewGuid(), State.UserId, Guid.NewGuid(), purchase.Id, amount, date, note));
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? T["SaveReturnFailed"].Value, Severity.Warning);
+            return;
+        }
+
+        BackToPurchase(purchase);
+    }
+
+    async Task DeleteAsync()
+    {
+        if (Disabled || _saving || _return is null || _purchase is null)
+        {
+            return;
+        }
+
+        var purchase = _purchase;
+        _saving = true;
+        CommandResult result;
+
+        try
+        {
+            result = await Sender.SendAsync(new DeleteEntry(Guid.NewGuid(), State.UserId, _return.Id));
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        if (!result.Accepted)
+        {
+            Snackbar.Add(result.Rejection ?? T["DeleteEntryFailed"].Value, Severity.Warning);
+            return;
+        }
+
+        BackToPurchase(purchase);
+    }
+
+    void BackToPurchase(MoneyEntry purchase) => Navigation.NavigateTo(EntryQuery.For(Navigation.Uri, purchase.Id));
+}

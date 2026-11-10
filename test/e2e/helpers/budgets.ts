@@ -212,3 +212,24 @@ export function entryRow(scope: Page | Locator, name: string): Locator {
 export function viewToggle(page: Page, view: BudgetView): Locator {
   return page.getByRole('checkbox', { name: view, exact: true });
 }
+
+const returnCaption = 'Return · ';
+
+export function purchaseRow(scope: Page | Locator, name: string): Locator {
+  return entryRow(scope, name).filter({ hasNotText: returnCaption });
+}
+
+export function returnRows(scope: Page | Locator, name: string): Locator {
+  return entryRow(scope, name).filter({ hasText: returnCaption });
+}
+
+export async function recordReturn(page: Page, amount: string) {
+  const form = panel(page);
+  const field = form.getByRole('spinbutton', { name: 'Amount returned', exact: true });
+  await expect(async () => {
+    await field.fill(amount, { timeout: 2_000 });
+    await expect(field).toHaveValue(amount, { timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+  await savePanel(page);
+  await expect(form.getByRole('heading', { name: 'Returns', exact: true })).toBeVisible();
+}
