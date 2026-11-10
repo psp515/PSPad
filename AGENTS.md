@@ -72,7 +72,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 11 | Per-user views live in Presentation | 0051, 0090 |
 | 12 | Lists and budgets shared by membership; a membership new to the replica is pulled whole | 0054, 0057, 0066, 0081 |
 | 13 | Public snapshots, server-only module | 0056, 0064 |
-| 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount; `Money` and `Currencies` live in Abstractions; investment PLN totals use the PLN actually spent on a currency; a return is an expense entry linked to its purchase | 0059, 0083, 0087, 0090 |
+| 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount; `Money` and `Currencies` live in Abstractions; investment PLN totals use the PLN actually spent on a currency; a return is an expense entry linked to its purchase | 0059, 0083, 0087, 0091 |
 | 15 | Containers non-root on exact-version-tagged images; central package versions; Dependabot weekly | 0071 |
 | 16 | Language on `User`, `.resx` per feature, culture-driven formats; Keycloak untouched | 0075 |
 | 17 | Open clients get a data-free sync nudge over SSE, fanned out from commit | 0076 |

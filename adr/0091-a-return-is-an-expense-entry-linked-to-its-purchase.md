@@ -5,7 +5,7 @@ date: 2026-11-10
 status: Active
 ---
 
-# ADR-0090: A return is an expense entry linked to its purchase, at the purchase's frozen rate
+# ADR-0091: A return is an expense entry linked to its purchase, at the purchase's frozen rate
 
 > Status: Active (narrows `adr/0059` for one entry shape)
 

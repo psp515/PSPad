@@ -2,7 +2,7 @@
 
 A purchase that goes back to the shop. The expense stays on record as spent;
 a separate return entry, linked to it, gives money back on the day it
-happens. Decision: `adr/0090`. Mockups: the "Returns" row of the "PSPad
+happens. Decision: `adr/0091`. Mockups: the "Returns" row of the "PSPad
 Budgets" design canvas (https://claude.ai/artifact/Qfud3qPJCZfVLjbCqgJk42;
 layout only, styling follows the app, `specs/ui-spec.md`). Builds on
 `specs/money-design.md` and `specs/budget-overview-design.md`.
