@@ -82,7 +82,7 @@ one used.
 | Aggregate | Id | Fields | Collection |
 |---|---|---|---|
 | `Budget` | Guid | `UserId` (owner), `Name`, `ExpenseCategories[]`, `IncomeCategories[]`, `CreatedAt`, `ArchivedAt?` | `budgets` |
-| `MoneyEntry` | Guid | `UserId`, `BudgetId`, `Kind` (`CategoryKind`: Expense, Income), `Name`, `Category`, `Money`, `Date`, `Note?`, `RecordedAt`, `Deleted` | `moneyentries` |
+| `MoneyEntry` | Guid | `UserId`, `BudgetId`, `Kind` (`CategoryKind`: Expense, Income), `Name`, `Category`, `Money`, `Date`, `Note?`, `ReturnOf?`, `RecordedAt`, `Deleted` | `moneyentries` |
 | `BalanceSnapshot` | `IdFor(budgetId, month)` | `UserId`, `BudgetId`, `Month` (stored as the text `_month`, e.g. `"2026-10"`: the BSON driver can't deserialize a struct), `Holdings[]`, `UpdatedAt` (the last event's time), `Deleted` | `balancesnapshots` |
 | `MoneyPreferences` | `IdFor(userId)` | `UserId`, `DefaultCurrency` (default `PLN`) | `moneypreferences` |
 
@@ -149,6 +149,7 @@ without rewriting ownership.
 - `DeleteEntry` is a soft delete, like other aggregates.
 - The rate on an entry is whatever the command carries. Nothing on the server
   recomputes it later.
+- Returns: `specs/budget-returns-design.md`.
 
 **Balance**
 
@@ -199,7 +200,7 @@ in the first device's snapshot.
 `ExpenseRecorded`, `IncomeRecorded`, `MoneyEntryEdited`,
 `MoneyEntryRecategorised`, `MoneyEntryDeleted`, `BalanceMonthStarted`,
 `HoldingAdded`, `HoldingEdited`, `HoldingRemoved`, `BalanceMonthDeleted`,
-`DefaultCurrencySet`.
+`DefaultCurrencySet`, `ReturnRecorded`, `ReturnEdited`, `MoneyEntryRelabelled`.
 
 Each event carries the full values the aggregate needs to fold, the way
 `adr/0037` asks, so a future consumer can read the log without loading
