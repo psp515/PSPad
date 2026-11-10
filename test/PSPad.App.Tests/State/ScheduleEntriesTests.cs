@@ -8,6 +8,7 @@ namespace PSPad.App.Tests.State;
 [UnitTest]
 public class ScheduleEntriesTests
 {
+    static readonly DateOnly Day = new(2026, 11, 10);
     static readonly TodayEntry A = Entry("A", new TimeOnly(9, 0));
     static readonly TodayEntry B = Entry("B", new TimeOnly(8, 0));
     static readonly TodayEntry C = Entry("C", null);
@@ -15,34 +16,67 @@ public class ScheduleEntriesTests
     [Fact]
     public void WithTheSettingOffOnlyPendingTimedTasksAreDrawn()
     {
-        Assert.Equal([A], ScheduleEntries.For(Plan([A], [B, C]), false));
+        Assert.Equal([A], ScheduleEntries.For(Plan([A], [B, C]), Day, false));
     }
 
     [Fact]
     public void WithTheSettingOnFinishedTimedTasksStayInStartOrder()
     {
-        Assert.Equal([B, A], ScheduleEntries.For(Plan([A], [B, C]), true));
+        Assert.Equal([B, A], ScheduleEntries.For(Plan([A], [B, C]), Day, true));
     }
 
     [Fact]
     public void FinishedTasksWithoutATimeNeverReachTheTimeline()
     {
-        Assert.Equal([A], ScheduleEntries.For(Plan([A], [C]), true));
+        Assert.Equal([A], ScheduleEntries.For(Plan([A], [C]), Day, true));
     }
 
     [Fact]
-    public void EqualStartTimesKeepThePendingTaskBeforeTheFinishedOne()
+    public void TickingATaskWithAnIdenticalSpanLeavesTheOrderUnchanged()
     {
-        var pending = Entry("Pending", new TimeOnly(9, 0));
-        var finished = Entry("Finished", new TimeOnly(9, 0));
+        var first = Entry("A", new TimeOnly(9, 0));
+        var second = Entry("B", new TimeOnly(9, 0));
 
-        Assert.Equal([pending, finished], ScheduleEntries.For(Plan([pending], [finished]), true));
+        var before = ScheduleEntries.For(Plan([first, second], []), Day, true);
+        var after = ScheduleEntries.For(Plan([second], [first]), Day, true);
+
+        Assert.Equal([first, second], before);
+        Assert.Equal(before, after);
+    }
+
+    [Fact]
+    public void TickingARecurringTaskWithAnIdenticalSpanLeavesTheOrderUnchanged()
+    {
+        var first = Entry("A", new TimeOnly(9, 0), recurring: true);
+        var second = Entry("B", new TimeOnly(9, 0), recurring: true);
+
+        var before = ScheduleEntries.For(Plan([first, second], []), Day, true);
+        var after = ScheduleEntries.For(Plan([second], [first]), Day, true);
+
+        Assert.Equal([first, second], before);
+        Assert.Equal(before, after);
+    }
+
+    [Fact]
+    public void AnOverdueTaskFinishedTodayIsNotDrawn()
+    {
+        var overdue = Entry("Overdue", new TimeOnly(9, 0), Day.AddDays(-3));
+
+        Assert.Empty(ScheduleEntries.For(Plan([], [overdue]), Day, true));
+    }
+
+    [Fact]
+    public void ATaskDueAnotherDayFinishedEarlyIsNotDrawn()
+    {
+        var early = Entry("Early", new TimeOnly(9, 0), Day.AddDays(2));
+
+        Assert.Empty(ScheduleEntries.For(Plan([], [early]), Day, true));
     }
 
     static DayPlan Plan(TodayEntry[] scheduled, TodayEntry[] completed) =>
         new([], scheduled, [], [], [], completed);
 
-    static TodayEntry Entry(string name, TimeOnly? start) =>
-        new(Guid.NewGuid(), Guid.NewGuid(), name, false, null, false, false, 0,
+    static TodayEntry Entry(string name, TimeOnly? start, DateOnly? dueOn = null, bool recurring = false) =>
+        new(Guid.NewGuid(), Guid.NewGuid(), name, false, dueOn ?? Day, recurring, false, 0,
             start is { } s ? TaskTime.Of(s, null) : null);
 }

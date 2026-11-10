@@ -112,11 +112,11 @@ else
 
         <section class="pspad-day-schedule mb-4" aria-label="@T["Schedule"].Value">
             <SectionHeading Title="@T["Schedule"]" Color="Color.Primary" />
-            @if (ScheduleDrawn.Count == 0)
+            @if (_scheduleDrawn.Count == 0)
             {
                 <MudText Typo="Typo.body2" Class="pspad-timeline-empty pspad-muted mb-2">@ScheduleEmpty</MudText>
             }
-            <DayTimeline Entries="@ScheduleDrawn" Tasks="@_byId" Day="@_day" Now="@NowOnTheDay"
+            <DayTimeline Entries="@_scheduleDrawn" Tasks="@_byId" Day="@_day" Now="@NowOnTheDay"
                          ListNameOf="@(task => NameOf(task.ListId))"
                          OnToggle="@(toggled => ToggleAsync(toggled, _day))" OnOpen="@Open" OnAdd="@AddTaskAt" />
         </section>
@@ -137,6 +137,7 @@ else
 
     bool _loaded;
     bool _showFinished;
+    IReadOnlyList<TodayEntry> _scheduleDrawn = [];
     DayPlan _plan = new([], [], [], [], [], []);
     DateOnly _day;
     IReadOnlySet<DateOnly> _busy = new HashSet<DateOnly>();
@@ -153,7 +154,6 @@ else
 
     string DayClass => $"pspad-day {(_tab == DayTab.Schedule ? "pspad-day-tab-schedule" : "pspad-day-tab-tasks")}";
 
-    IReadOnlyList<TodayEntry> ScheduleDrawn => ScheduleEntries.For(_plan, _showFinished);
     int PendingScheduled => _plan.Scheduled.Count(entry => !IsDone(_byId[entry.TaskId], DayOf(entry)));
 
     TimeOnly? NowOnTheDay => _day == State.Today
@@ -199,6 +199,7 @@ else
             .ToHashSet();
 
         _showFinished = (await UserViewStore.LoadAsync(UserView.IdFor(State.UserId), CancellationToken.None))?.ShowFinishedOnSchedule ?? false;
+        _scheduleDrawn = ScheduleEntries.For(_plan, _day, _showFinished);
         _loaded = true;
     }
 
