@@ -121,6 +121,26 @@ ledger stays.
 `Gutters="false"`, so the completed group lines up with the groups above it.
 No new CSS.
 
+### Finished tasks can stay on the schedule
+
+A setting, **Keep finished tasks on the schedule** (`pspad-keep-finished`,
+`MudSwitch` under Application settings, caption "Ticked tasks stay at their
+time, faded and struck through."), off by default. It is synced: a field on
+the user's `UserView` in Presentation (`adr/0090`), set by
+`ShowFinishedOnSchedule`, so it works offline like any command.
+
+- On, the timeline on today and later days gets `DayPlan.Scheduled` plus the
+  timed entries of `DayPlan.Completed`, ordered by start. A finished task
+  keeps its time and lane, so ticking moves nothing. Past days keep their
+  Completed list and no timeline.
+- A finished block (`pspad-timeline-task-done`) and a finished group line
+  (`pspad-timeline-group-line-done`) are at 55% opacity, full on hover, with
+  the filled check, the struck-through name and the grey left edge they have
+  today.
+- The Scheduled section, the "Schedule · N" tab count and the Completed list
+  are unchanged: the count is still pending tasks only.
+- Off, finished tasks leave the timeline as before.
+
 ## Out of scope
 
 Drag to reschedule, a week view, changing `TodayRule`.
