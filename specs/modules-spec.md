@@ -70,8 +70,8 @@ creation order.
 - `ListView` fields beyond `AreaId`: the list's colour and icon (list
   theming), and the order of its steps or reference items once those
   positions leave Tasks. Add fields here, not on `TaskList`. Not built.
-- The sidebar's area order — a user-level view, replacing `Area.Position`.
-  Not built.
+- The sidebar's area order — a field on `UserView` (Presentation), replacing
+  `Area.Position`. Not built.
 - A new view follows `AreaView`'s shape: deterministic id from user +
   subject, created by its first command, `Arranged.Sort`-style fallback so a
   missing view is never an error, and its collection added to sync
