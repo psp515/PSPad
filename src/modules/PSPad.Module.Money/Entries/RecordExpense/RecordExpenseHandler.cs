@@ -14,7 +14,7 @@ public sealed class RecordExpenseHandler(
 
         try
         {
-            foreach (var (aggregate, events) in MoneyEntryCascade.Write(entry, budget, command, clock.UtcNow))
+            foreach (var (aggregate, events) in MoneyEntryCascade.Write(entry, budget, [], command, clock.UtcNow))
             {
                 work.Stage(aggregate, events);
             }

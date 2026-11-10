@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using PSPad.Abstractions;
 using PSPad.Module.Money.Budgets;
+using PSPad.Module.Money.Values;
 
 namespace PSPad.Module.Money.Entries;
 
@@ -69,6 +70,12 @@ public sealed class MoneyEntry : Aggregate
 
             case EditEntry edit:
                 var editing = RequireLive(entry);
+
+                if (editing.IsReturn)
+                {
+                    throw new DomainRejectedException("Edit the return instead.");
+                }
+
                 var editBudget = BudgetAccess.Writable(BudgetAccess.To(budget, edit.UserId));
                 var name = RequireName(edit.Name);
                 var category = CategoryName.Resolve(editBudget.CategoriesOf(editing.Kind), edit.Category);
@@ -86,6 +93,30 @@ public sealed class MoneyEntry : Aggregate
 
             default:
                 throw new DomainRejectedException($"A money entry cannot handle {command.GetType().Name}.");
+        }
+    }
+
+    public static void GuardPurchase(MoneyEntry purchase, EditEntry edit, ReturnState returns)
+    {
+        if (returns.Returns.Count == 0)
+        {
+            return;
+        }
+
+        if (edit.Money.Currency.Trim().ToUpperInvariant() != purchase.Money.Currency ||
+            edit.Money.RateToPln != purchase.Money.RateToPln && purchase.Money.Currency != Currencies.Pln)
+        {
+            throw new DomainRejectedException("A purchase with returns keeps its currency and rate.");
+        }
+
+        if (edit.Money.Amount < returns.Returned)
+        {
+            throw new DomainRejectedException("The amount can't be less than what was returned.");
+        }
+
+        if (edit.Date > returns.Returns.Min(returned => returned.Date))
+        {
+            throw new DomainRejectedException("A purchase can't be dated after its returns.");
         }
     }
 
@@ -151,6 +182,10 @@ public sealed class MoneyEntry : Aggregate
                 Money = edited.Money;
                 Date = edited.Date;
                 Note = edited.Note;
+                break;
+            case MoneyEntryRelabelled relabelled:
+                Name = relabelled.Name;
+                Category = relabelled.Category;
                 break;
             case MoneyEntryRecategorised recategorised:
                 Category = recategorised.Category;
