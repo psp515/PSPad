@@ -105,6 +105,7 @@ the old one's status line to point at the new number.
 | [0088](0088-a-deleted-investment-account-hides-its-operations-without-rewriting-them.md) | A deleted investment account hides its operations without rewriting them | Active | 2026-11-02 | domain, storage, sync, investments |
 | [0089](0089-shares-received-carry-their-cost-basis-and-move-no-cash.md) | Shares received carry their cost basis as Money, move no cash, and count it as passive income | Active (narrows [0059](0059-money-is-its-own-wasm-safe-module.md) and [0087](0087-investment-pln-totals-use-the-actual-fx-cost.md) for one kind) | 2026-11-03 | domain, money, investments, import |
 | [0090](0090-user-level-display-settings-live-on-a-user-view.md) | User-level display settings live on a synced UserView in Presentation | Active (extends [0051](0051-presentation-module-per-user-views.md)) | 2026-11-10 | architecture, modularity, ui, sync |
+| [0090](0090-a-return-is-an-expense-entry-linked-to-its-purchase.md) | A return is an expense entry linked to its purchase, at the purchase's frozen rate | Active (narrows [0059](0059-money-is-its-own-wasm-safe-module.md) for one entry shape) | 2026-11-10 | domain, money, storage, sync |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
