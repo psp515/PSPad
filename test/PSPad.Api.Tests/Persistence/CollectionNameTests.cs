@@ -7,6 +7,7 @@ using PSPad.Module.Money.Balance;
 using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Preferences;
+using PSPad.Module.Presentation.UserViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.References;
 using PSPad.TestInfrastructure;
@@ -23,6 +24,12 @@ public class CollectionNameTests
         Assert.Equal("areas", MongoContext.NameOf(typeof(Area)));
         Assert.Equal("inboxes", MongoContext.NameOf(typeof(InboxAggregate)));
         Assert.Equal("referenceitems", MongoContext.NameOf(typeof(ReferenceItem)));
+    }
+
+    [Fact]
+    public void UserViewsGetTheirOwnCollection()
+    {
+        Assert.Equal("userviews", MongoContext.NameOf(typeof(UserView)));
     }
 
     [Fact]

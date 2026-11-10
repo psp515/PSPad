@@ -28,6 +28,7 @@ public sealed class SyncService(ISyncApi api, IReplica replica, IOutbox outbox)
         ["referenceitems"] = typeof(Module.Tasks.References.ReferenceItem),
         ["areaviews"] = typeof(Module.Presentation.AreaViews.AreaView),
         ["listviews"] = typeof(Module.Presentation.ListViews.ListView),
+        ["userviews"] = typeof(Module.Presentation.UserViews.UserView),
         ["budgets"] = typeof(Module.Money.Budgets.Budget),
         ["moneypreferences"] = typeof(Module.Money.Preferences.MoneyPreferences),
         ["moneyentries"] = typeof(Module.Money.Entries.MoneyEntry),

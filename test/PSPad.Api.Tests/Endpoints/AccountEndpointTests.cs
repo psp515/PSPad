@@ -18,6 +18,7 @@ using PSPad.Module.Money.Budgets;
 using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Preferences;
 using PSPad.Module.Money.Values;
+using PSPad.Module.Presentation.UserViews;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
@@ -82,16 +83,22 @@ public class AccountEndpointTests(MongoFixture fixture)
         await client.PostAsJsonAsync("/api/commands", new[]
         {
             new CommandEnvelope(nameof(CreateArea), JsonSerializer.SerializeToElement(area)),
-            new CommandEnvelope(nameof(ReorderLists), JsonSerializer.SerializeToElement(reorder))
+            new CommandEnvelope(nameof(ReorderLists), JsonSerializer.SerializeToElement(reorder)),
+            new CommandEnvelope(nameof(ShowFinishedOnSchedule),
+                JsonSerializer.SerializeToElement(new ShowFinishedOnSchedule(Guid.NewGuid(), userId, true)))
         }, ct);
 
         var context = Persistence.TestContext.For(fixture);
-        var views = context.Collection<BsonDocument>("areaviews");
-        Assert.Equal(1, await views.Find(Builders<BsonDocument>.Filter.Eq("userId", userId)).CountDocumentsAsync(ct));
+        var userFilter = Builders<BsonDocument>.Filter.Eq("userId", userId);
+        var areaViews = context.Collection<BsonDocument>("areaviews");
+        var userViews = context.Collection<BsonDocument>("userviews");
+        Assert.Equal(1, await areaViews.Find(userFilter).CountDocumentsAsync(ct));
+        Assert.Equal(1, await userViews.Find(userFilter).CountDocumentsAsync(ct));
 
         (await client.DeleteAsync("/api/account", ct)).EnsureSuccessStatusCode();
 
-        Assert.Equal(0, await views.Find(Builders<BsonDocument>.Filter.Eq("userId", userId)).CountDocumentsAsync(ct));
+        Assert.Equal(0, await areaViews.Find(userFilter).CountDocumentsAsync(ct));
+        Assert.Equal(0, await userViews.Find(userFilter).CountDocumentsAsync(ct));
     }
 
     [Fact]
