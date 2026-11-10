@@ -7,7 +7,7 @@ public static class MongoIndexes
 {
     static readonly string[] AggregateCollections =
     [
-        "areas", "tasklists", "todotasks", "goals", "inboxes", "users", "referenceitems", "areaviews", "listviews",
+        "areas", "tasklists", "todotasks", "goals", "inboxes", "users", "referenceitems", "areaviews", "listviews", "userviews",
         "budgets", "moneypreferences", "moneyentries", "balancesnapshots",
         "investmentportfolios", "investmentaccounts", "investmentoperations", "instruments"
     ];

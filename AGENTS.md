@@ -68,7 +68,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 8 | Aggregates: User, Area, TaskList, TodoTask, Goal, Inbox, ReferenceItem; a goal holds its task links | 0008, 0047, 0065 |
 | 9 | Integration tests own a Testcontainers MongoDB 8 replica set; tests assert behaviour, never shape or wiring | 0009, 0080 |
 | 10 | Events dispatch after commit, replayed from a marker | 0036, 0037 |
-| 11 | Per-user views live in Presentation | 0051 |
+| 11 | Per-user views live in Presentation | 0051, 0090 |
 | 12 | Lists and budgets shared by membership; a membership new to the replica is pulled whole | 0054, 0057, 0066, 0081 |
 | 13 | Public snapshots, server-only module | 0056, 0064 |
 | 14 | Money: WASM-safe module, budgets as containers, rate frozen per amount; `Money` and `Currencies` live in Abstractions; investment PLN totals use the PLN actually spent on a currency | 0059, 0083, 0087 |

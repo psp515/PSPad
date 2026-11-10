@@ -1457,7 +1457,9 @@ Theme mode (**System / Light / Dark**) and accent are per device, held in
 `ThemePreference` — never on the `User` aggregate. A custom colour is kept
 after switching back to a preset, so the edit swatch reopens on it.
 
-**Application settings card.** Time zone, theme mode and accent share one
+**Application settings card.** Time zone, theme mode, accent, the default
+currency select and the "Keep finished tasks on the schedule" `MudSwitch`
+(`pspad-keep-finished`) share one
 `SettingsPage` card titled "Application settings", not the account badge or
 any menu (a control nested in a menu item is not reliably
 keyboard-reachable). Time zone and theme mode are labelled outlined fields:
@@ -1619,7 +1621,7 @@ lands on the budget. `InviteLinkCard` is now the list wrapper over
 | `/public/snapshot/{token}` | a public snapshot, anonymous, outside `AppShell` |
 | `/statistics` | Statistics — tiles, charts, Consistency heatmap and Inbox-captures bar chart, collapsed record feed |
 | `/history` | redirects to `/statistics` (its own `HistoryRedirect` page, so Statistics loads as usual), for bookmarks predating the rename (`adr/0038`) |
-| `/settings` | Settings (account + change password + sign-out; application settings: language, time zone, theme, accent; sync status; delete account) |
+| `/settings` | Settings (account + change password + sign-out; application settings: language, time zone, theme, accent, default currency, keep finished tasks on the schedule; sync status; delete account) |
 | `/app-info` | version, license, docs/repo links |
 | `/search` | search results (currently unreachable from the UI) |
 | `/welcome` | public, signed-out landing screen |

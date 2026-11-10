@@ -44,7 +44,10 @@ holding `AreaId?`: where that user files a shared list they are a member
 of; `PlaceList` sets it, `null` returns the list to "Shared with me". A
 missing view, or one naming a deleted or unknown area, falls back to
 "Shared with me" the same way a missing `AreaView` falls back to creation
-order. Collections `areaviews`, `listviews`.
+order. `UserView` — one per user, id `UserView.IdFor(userId)`, holding
+user-level display settings that follow the user across devices:
+`ShowFinishedOnSchedule`, set by `ShowFinishedOnSchedule` (`adr/0090`).
+Collections `areaviews`, `listviews`, `userviews`.
 
 **Access.** View ids are derived from `(user, key)`, so a view must never be
 saved for a key the user cannot see, or a crafted key could land on another
@@ -67,8 +70,8 @@ creation order.
 - `ListView` fields beyond `AreaId`: the list's colour and icon (list
   theming), and the order of its steps or reference items once those
   positions leave Tasks. Add fields here, not on `TaskList`. Not built.
-- The sidebar's area order — a user-level view, replacing `Area.Position`.
-  Not built.
+- The sidebar's area order — a field on `UserView` (Presentation), replacing
+  `Area.Position`. Not built.
 - A new view follows `AreaView`'s shape: deterministic id from user +
   subject, created by its first command, `Arranged.Sort`-style fallback so a
   missing view is never an error, and its collection added to sync

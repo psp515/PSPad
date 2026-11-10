@@ -14,9 +14,11 @@
 @using PSPad.App.Theme
 @using PSPad.Module.Money.Preferences
 @using PSPad.Module.Money.Values
+@using PSPad.Module.Presentation.UserViews
 @using PSPad.Module.Tasks.Today
 @inject IConfiguration Configuration
 @inject IDocumentStore<MoneyPreferences> PreferencesStore
+@inject IDocumentStore<UserView> UserViewStore
 @inject IConnectivity Connectivity
 @inject ILocalSessionStore Sessions
 @inject PSPadApiClient Api
@@ -98,6 +100,9 @@
                     <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
                 }
             </MudSelect>
+            <MudSwitch T="bool" Class="pspad-keep-finished mt-3" Color="Color.Primary"
+                       Value="@_showFinished" ValueChanged="@ApplyShowFinishedAsync">@T["KeepFinishedOnSchedule"]</MudSwitch>
+            <MudText Typo="Typo.caption" Class="d-block">@T["KeepFinishedOnScheduleHint"]</MudText>
             <MudSelect T="ThemeMode" Value="@Preference.Mode" ValueChanged="@SelectThemeAsync" Label="@T["Theme"]"
                        Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-4">
                 @foreach (var mode in Enum.GetValues<ThemeMode>())
@@ -159,6 +164,7 @@
 @code {
     bool _rejected;
     string _defaultCurrency = Currencies.Pln;
+    bool _showFinished;
     int _pendingCommands;
     bool _signingOut;
 
@@ -212,6 +218,23 @@
         _timer = new Timer(_ => InvokeAsync(StateHasChanged), null, Tick, Tick);
         await RefreshPendingAsync();
         await LoadDefaultCurrencyAsync();
+        await LoadShowFinishedAsync();
+    }
+
+    async Task LoadShowFinishedAsync()
+    {
+        var view = await UserViewStore.LoadAsync(UserView.IdFor(State.UserId), CancellationToken.None);
+        _showFinished = view?.ShowFinishedOnSchedule ?? false;
+    }
+
+    async Task ApplyShowFinishedAsync(bool show)
+    {
+        _showFinished = show;
+        var result = await Sender.SendAsync(new ShowFinishedOnSchedule(Guid.NewGuid(), State.UserId, show));
+        if (!result.Accepted)
+        {
+            _showFinished = !show;
+        }
     }
 
     async Task LoadDefaultCurrencyAsync()

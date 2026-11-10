@@ -51,6 +51,12 @@
   <data name="TimeZoneNeedsConnection" xml:space="preserve">
     <value>The time zone is saved on the server, so it needs a connection.</value>
   </data>
+  <data name="KeepFinishedOnSchedule" xml:space="preserve">
+    <value>Keep finished tasks on the schedule</value>
+  </data>
+  <data name="KeepFinishedOnScheduleHint" xml:space="preserve">
+    <value>Ticked tasks stay at their time, faded and struck through.</value>
+  </data>
   <data name="DefaultCurrency" xml:space="preserve">
     <value>Default currency</value>
   </data>

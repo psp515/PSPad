@@ -15,6 +15,7 @@ using PSPad.Module.Money.Entries;
 using PSPad.Module.Money.Preferences;
 using PSPad.Module.Presentation.AreaViews;
 using PSPad.Module.Presentation.ListViews;
+using PSPad.Module.Presentation.UserViews;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Goals;
 using PSPad.Module.Tasks.Inbox;
@@ -112,6 +113,7 @@ public sealed class SyncReader(MongoContext context)
                     : Stub(item, item.ListId, item.PreviousListId)),
             await Read("areaviews", Owned<AreaView>(userId)),
             await Read("listviews", Owned<ListView>(userId)),
+            await Read("userviews", Owned<UserView>(userId)),
             await Read("budgets",
                 Owned<Budget>(userId) | Builders<Budget>.Filter.Eq("_members.userId", userId),
                 WholeOrNone(Builders<Budget>.Filter.In(budget => budget.Id, wholeBudgets), wholeBudgets),

@@ -280,6 +280,12 @@ public class SyncServiceTests
     }
 
     [Fact]
+    public void TheFingerprintNamesTheUserViews()
+    {
+        Assert.Contains("userviews", SyncService.CollectionsFingerprint);
+    }
+
+    [Fact]
     public void TheFingerprintNamesTheMoneyCollections()
     {
         Assert.Contains("budgets", SyncService.CollectionsFingerprint);

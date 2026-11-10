@@ -51,6 +51,12 @@
   <data name="TimeZoneNeedsConnection" xml:space="preserve">
     <value>Strefa czasowa jest zapisywana na serwerze, więc wymaga połączenia.</value>
   </data>
+  <data name="KeepFinishedOnSchedule" xml:space="preserve">
+    <value>Zostaw ukończone zadania w harmonogramie</value>
+  </data>
+  <data name="KeepFinishedOnScheduleHint" xml:space="preserve">
+    <value>Odhaczone zadania zostają o swojej godzinie, wyblakłe i przekreślone.</value>
+  </data>
   <data name="DefaultCurrency" xml:space="preserve">
     <value>Domyślna waluta</value>
   </data>
