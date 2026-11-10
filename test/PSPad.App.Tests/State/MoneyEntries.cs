@@ -25,6 +25,16 @@ internal static class MoneyEntries
         Recorded(budget, new RecordIncome(Guid.NewGuid(), budget.UserId, Guid.NewGuid(), budget.Id, name, category,
             new Money(amount, currency, rate, date), date, null), at ?? DateTimeOffset.UnixEpoch);
 
+    public static MoneyEntry Return(Budget budget, MoneyEntry purchase, decimal amount, DateOnly date,
+        string? note = null, DateTimeOffset? at = null)
+    {
+        var entry = new MoneyEntry();
+        entry.ApplyAll(MoneyEntry.DecideReturn(null, purchase, budget, [purchase],
+            new RecordReturn(Guid.NewGuid(), budget.UserId, Guid.NewGuid(), purchase.Id, amount, date, note),
+            at ?? DateTimeOffset.UnixEpoch));
+        return entry;
+    }
+
     static MoneyEntry Recorded(Budget budget, ICommand command, DateTimeOffset at)
     {
         var entry = new MoneyEntry();

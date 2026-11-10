@@ -39,6 +39,46 @@ public class EntryQueryTests
     }
 
     [Fact]
+    public void AReturnRoundTrips()
+    {
+        var returnId = Guid.NewGuid();
+        var uri = EntryQuery.ForReturn("http://localhost/budgets/x?budget=new", returnId);
+
+        Assert.Equal($"http://localhost/budgets/x?return={returnId}", uri);
+        Assert.Equal(returnId, EntryQuery.ReturnFrom(uri));
+        Assert.Null(EntryQuery.From(uri));
+        Assert.Null(EntryQuery.NewReturnFrom(uri));
+    }
+
+    [Fact]
+    public void ANewReturnRoundTrips()
+    {
+        var purchaseId = Guid.NewGuid();
+        var uri = EntryQuery.ForNewReturn("http://localhost/budgets/x?entry=old", purchaseId);
+
+        Assert.Equal($"http://localhost/budgets/x?returnof={purchaseId}", uri);
+        Assert.Equal(purchaseId, EntryQuery.NewReturnFrom(uri));
+        Assert.Null(EntryQuery.ReturnFrom(uri));
+        Assert.Null(EntryQuery.From(uri));
+    }
+
+    [Fact]
+    public void AnEntryUriOpensNoReturn()
+    {
+        var uri = EntryQuery.For("http://localhost/budgets/x", Guid.NewGuid());
+
+        Assert.Null(EntryQuery.ReturnFrom(uri));
+        Assert.Null(EntryQuery.NewReturnFrom(uri));
+    }
+
+    [Fact]
+    public void AMalformedReturnIdOpensNothing()
+    {
+        Assert.Null(EntryQuery.ReturnFrom("http://localhost/budgets/x?return=nope"));
+        Assert.Null(EntryQuery.NewReturnFrom("http://localhost/budgets/x?returnof=nope"));
+    }
+
+    [Fact]
     public void ABadMonthIsIgnored() =>
         Assert.Equal((BudgetId, CategoryKind.Income, (YearMonth?)null),
             EntryQuery.NewFrom($"http://localhost/budgets/x?income={BudgetId}&month=nope"));
