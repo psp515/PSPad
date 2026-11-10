@@ -34,6 +34,15 @@ public sealed class MoneyEntry : Aggregate
     [JsonInclude]
     public DateTimeOffset RecordedAt { get; private set; }
 
+    [JsonInclude]
+    public Guid? ReturnOf { get; private set; }
+
+    [JsonIgnore]
+    public bool IsReturn => ReturnOf is not null;
+
+    [JsonIgnore]
+    public decimal SignedPln => IsReturn ? -Money.InPln : Money.InPln;
+
     public bool Uses(CategoryKind kind, string category) =>
         !Deleted && Kind == kind && string.Equals(Category, category.Trim(), StringComparison.OrdinalIgnoreCase);
 
@@ -80,6 +89,40 @@ public sealed class MoneyEntry : Aggregate
         }
     }
 
+    public static IReadOnlyList<DomainEvent> DecideReturn(
+        MoneyEntry? entry, MoneyEntry? purchase, Budget? budget, IReadOnlyList<MoneyEntry> entries, ICommand command,
+        DateTimeOffset at)
+    {
+        switch (command)
+        {
+            case RecordReturn record:
+            {
+                var bought = RequireLive(purchase);
+                var owner = BudgetAccess.Writable(BudgetAccess.To(budget, record.UserId));
+                RequireNew(entry);
+                RequirePurchase(bought);
+                var money = ReturnMoney(bought, record.Amount, record.Date);
+                RequireWithin(ReturnState.Of(bought, entries), money.Amount);
+                return [new ReturnRecorded(record.EntryId, owner.UserId, at, owner.Id, bought.Id, bought.Name,
+                    bought.Category, money, record.Date, NoteOf(record.Note))];
+            }
+            case EditReturn edit:
+            {
+                var editing = RequireLive(entry);
+                var bought = editing.IsReturn ? RequireLive(purchase) : throw Missing();
+                BudgetAccess.Writable(BudgetAccess.To(budget, edit.UserId));
+                var money = ReturnMoney(bought, edit.Amount, edit.Date);
+                RequireWithin(ReturnState.Of(bought, entries.Where(other => other.Id != editing.Id)), money.Amount);
+                var note = NoteOf(edit.Note);
+                return editing.Money == money && editing.Date == edit.Date && editing.Note == note
+                    ? []
+                    : [new ReturnEdited(editing.Id, editing.UserId, at, money, edit.Date, note)];
+            }
+            default:
+                throw new DomainRejectedException($"A money entry cannot handle {command.GetType().Name} as a return.");
+        }
+    }
+
     protected override void When(DomainEvent @event)
     {
         switch (@event)
@@ -91,6 +134,16 @@ public sealed class MoneyEntry : Aggregate
             case IncomeRecorded income:
                 Recorded(income.AggregateId, income.UserId, income.At, CategoryKind.Income, income.BudgetId,
                     income.Name, income.Category, income.Money, income.Date, income.Note);
+                break;
+            case ReturnRecorded returned:
+                Recorded(returned.AggregateId, returned.UserId, returned.At, CategoryKind.Expense, returned.BudgetId,
+                    returned.Name, returned.Category, returned.Money, returned.Date, returned.Note);
+                ReturnOf = returned.PurchaseId;
+                break;
+            case ReturnEdited returnEdited:
+                Money = returnEdited.Money;
+                Date = returnEdited.Date;
+                Note = returnEdited.Note;
                 break;
             case MoneyEntryEdited edited:
                 Name = edited.Name;
@@ -131,8 +184,33 @@ public sealed class MoneyEntry : Aggregate
         }
     }
 
-    static MoneyEntry RequireLive(MoneyEntry? entry) =>
-        entry is null || entry.Deleted ? throw new DomainRejectedException("That entry does not exist.", Unrecoverable: true) : entry;
+    static MoneyEntry RequireLive(MoneyEntry? entry) => entry is null || entry.Deleted ? throw Missing() : entry;
+
+    static DomainRejectedException Missing() => new("That entry does not exist.", Unrecoverable: true);
+
+    static void RequirePurchase(MoneyEntry purchase)
+    {
+        if (purchase.Kind != CategoryKind.Expense || purchase.IsReturn)
+        {
+            throw new DomainRejectedException("Only an expense can be returned.");
+        }
+    }
+
+    static Money ReturnMoney(MoneyEntry purchase, decimal amount, DateOnly date)
+    {
+        var money = Money.Require(purchase.Money with { Amount = amount }, date);
+        return date < purchase.Date
+            ? throw new DomainRejectedException("A return can't be dated before its purchase.")
+            : money;
+    }
+
+    static void RequireWithin(ReturnState state, decimal amount)
+    {
+        if (amount > state.Left)
+        {
+            throw new DomainRejectedException("That is more than is left to return.");
+        }
+    }
 
     internal static string RequireName(string name)
     {
