@@ -1,3 +1,4 @@
+using MongoDB.Driver;
 using PSPad.Module.Presentation.UserViews;
 using PSPad.TestInfrastructure;
 using static PSPad.Api.Tests.Commands.Commands;
@@ -36,5 +37,21 @@ public class UserViewSyncTests(MongoFixture fixture)
         await SendAsync(owner, ct, new ShowFinishedOnSchedule(Guid.NewGuid(), ownerId, true));
 
         Assert.Empty(await SyncedAsync(other, "userviews", ct));
+    }
+
+    [Fact]
+    public async Task HidingFinishedTasksWithNoViewStoresAndSyncsNothing()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = await SignInAsync(client, ct);
+
+        await SendAsync(client, ct, new ShowFinishedOnSchedule(Guid.NewGuid(), user, false));
+
+        Assert.Empty(await SyncedAsync(client, "userviews", ct));
+        var stored = await Persistence.TestContext.For(fixture).Collection<UserView>()
+            .CountDocumentsAsync(Builders<UserView>.Filter.Eq(view => view.Id, UserView.IdFor(user)), cancellationToken: ct);
+        Assert.Equal(0, stored);
     }
 }
