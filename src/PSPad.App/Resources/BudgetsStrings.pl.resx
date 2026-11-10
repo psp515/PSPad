@@ -867,4 +867,73 @@
   <data name="LinkedAccountOptions" xml:space="preserve">
     <value>Opcje powiązanego konta</value>
   </data>
+  <data name="ReturnLabel" xml:space="preserve">
+    <value>Zwrot</value>
+  </data>
+  <data name="ReturnCaption" xml:space="preserve">
+    <value>Zwrot · {0}</value>
+  </data>
+  <data name="ReturnedChip" xml:space="preserve">
+    <value>Zwrócono {0}</value>
+  </data>
+  <data name="ReturnedFullChip" xml:space="preserve">
+    <value>Zwrócono</value>
+  </data>
+  <data name="AfterReturned" xml:space="preserve">
+    <value>po zwrotach {0}</value>
+  </data>
+  <data name="Returns" xml:space="preserve">
+    <value>Zwroty</value>
+  </data>
+  <data name="RecordReturn" xml:space="preserve">
+    <value>Zapisz zwrot</value>
+  </data>
+  <data name="ReturnTitle" xml:space="preserve">
+    <value>Zwrot</value>
+  </data>
+  <data name="ReturnedOf" xml:space="preserve">
+    <value>Zwrócono {0} z {1}</value>
+  </data>
+  <data name="LeftToReturn" xml:space="preserve">
+    <value>Do zwrotu zostało {0}</value>
+  </data>
+  <data name="ReturnsLockCurrency" xml:space="preserve">
+    <value>Ma zwroty: waluta jest zablokowana, a kwota nie może spaść poniżej {0}.</value>
+  </data>
+  <data name="DeleteAlsoReturns.One" xml:space="preserve">
+    <value>Usunięcie tego wydatku usunie też jego zwrot.</value>
+  </data>
+  <data name="DeleteAlsoReturns.Few" xml:space="preserve">
+    <value>Usunięcie tego wydatku usunie też jego zwroty ({0}).</value>
+  </data>
+  <data name="DeleteAlsoReturns.Many" xml:space="preserve">
+    <value>Usunięcie tego wydatku usunie też jego zwroty ({0}).</value>
+  </data>
+  <data name="Bought" xml:space="preserve">
+    <value>Kupiono {0}</value>
+  </data>
+  <data name="Paid" xml:space="preserve">
+    <value>Zapłacono {0}</value>
+  </data>
+  <data name="ReturnedSoFar" xml:space="preserve">
+    <value>Zwrócono dotąd</value>
+  </data>
+  <data name="LeftToReturnLabel" xml:space="preserve">
+    <value>Zostało do zwrotu</value>
+  </data>
+  <data name="GoToPurchase" xml:space="preserve">
+    <value>Przejdź do zakupu</value>
+  </data>
+  <data name="AmountReturned" xml:space="preserve">
+    <value>Kwota zwrotu</value>
+  </data>
+  <data name="ReturnRateHelp" xml:space="preserve">
+    <value>Używa kursu zakupu, więc pełny zwrot dokładnie go znosi.</value>
+  </data>
+  <data name="CountsIn" xml:space="preserve">
+    <value>Liczy się w {0}.</value>
+  </data>
+  <data name="SaveReturnFailed" xml:space="preserve">
+    <value>Nie udało się zapisać zwrotu.</value>
+  </data>
 </root>

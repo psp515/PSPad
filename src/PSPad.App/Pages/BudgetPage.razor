@@ -296,7 +296,9 @@ else
 
     void OpenMembers() => Navigation.NavigateTo(BudgetMembersQuery.For(Navigation.Uri, BudgetId));
 
-    void OpenEntry(MoneyEntry entry) => Navigation.NavigateTo(EntryQuery.For(Navigation.Uri, entry.Id));
+    void OpenEntry(MoneyEntry entry) => Navigation.NavigateTo(entry.IsReturn
+        ? EntryQuery.ForReturn(Navigation.Uri, entry.Id)
+        : EntryQuery.For(Navigation.Uri, entry.Id));
 
     void AddEntry(CategoryKind kind) =>
         Navigation.NavigateTo(EntryQuery.ForNew(Navigation.Uri, BudgetId, kind, TabIndex == EntriesTab ? _month : null));

@@ -7,8 +7,11 @@
         @for (var index = 0; index < Totals.Count; index++)
         {
             var total = Totals[index];
-            <div @key="total.Category" class="pspad-category-bar-segment"
-                 style="@($"width:{Share(total)}%;background:{Swatch(index)}")"></div>
+            if (total.Pln > 0)
+            {
+                <div @key="total.Category" class="pspad-category-bar-segment"
+                     style="@($"width:{Share(total)}%;background:{Swatch(index)}")"></div>
+            }
         }
     </div>
     <div class="d-flex flex-wrap gap-3 mt-2">
@@ -17,7 +20,7 @@
             var total = Totals[index];
             <div @key="total.Category" class="d-flex align-center gap-1 pspad-category-legend">
                 <span class="pspad-category-swatch" style="@($"background:{Swatch(index)}")"></span>
-                <MudText Typo="Typo.caption">@total.Category · @MoneyText.Pln(total.Pln)</MudText>
+                <MudText Typo="Typo.caption">@total.Category · @Amount(total)</MudText>
             </div>
         }
     </div>
@@ -35,9 +38,11 @@
 
     [Parameter] public string Class { get; set; } = "";
 
-    decimal Sum => Totals.Sum(total => total.Pln);
+    decimal Sum => Totals.Where(total => total.Pln > 0).Sum(total => total.Pln);
 
-    string Description => string.Join(", ", Totals.Select(total => $"{total.Category} {MoneyText.Pln(total.Pln)}"));
+    string Description => string.Join(", ", Totals.Select(total => $"{total.Category} {Amount(total)}"));
+
+    static string Amount(CategoryTotal total) => total.Pln < 0 ? MoneyText.SignedPln(total.Pln) : MoneyText.Pln(total.Pln);
 
     string Share(CategoryTotal total) =>
         (Sum == 0 ? 0 : total.Pln / Sum * 100).ToString("0.##", CultureInfo.InvariantCulture);

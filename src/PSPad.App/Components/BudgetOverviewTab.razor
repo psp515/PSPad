@@ -20,6 +20,10 @@
                     </div>
                     <div class="d-flex flex-column pspad-overview-expenses">
                         <MoneyFigure Label="@T["Expenses"]" Text="@MoneyText.Pln(Pace.Totals.Expenses)" />
+                        @if (Pace.Totals.Returned > 0)
+                        {
+                            <MudText Typo="Typo.caption" Class="pspad-muted pspad-overview-expenses-returned">@T["AfterReturned", MoneyText.Pln(Pace.Totals.Returned)]</MudText>
+                        }
                         @if (Pace.ExpectedExpensesByNow is { } expensesByNow)
                         {
                             var delta = Pace.Totals.Expenses - expensesByNow;
@@ -135,7 +139,7 @@
                     <MudList T="MoneyEntry" Dense="true" Class="py-0">
                         @foreach (var entry in Recent)
                         {
-                            <EntryRow @key="entry.Id" Entry="@entry" Recorded="@MoneyText.Recorded(entry.RecordedAt, Zone, Today, T)" OnOpen="@OnOpenEntry" />
+                            <EntryRow @key="entry.Id" Entry="@entry" Recorded="@MoneyText.Recorded(entry.RecordedAt, Zone, Today, T)" Returns="@_returns.Of(entry)" OnOpen="@OnOpenEntry" />
                         }
                     </MudList>
                 }
@@ -190,6 +194,8 @@
 
     [Parameter] public EventCallback OnStartMonth { get; set; }
 
+    PurchaseReturns _returns = new([]);
+
     IReadOnlyList<Insight> Found => Insights.For(Pace);
 
     IReadOnlyList<CategoryPace> Spent => [.. Pace.Categories.Where(category => category.Spent > 0)];
@@ -201,6 +207,8 @@
     BalanceTotals Balance => BalanceTotals.For(Snapshots, Pace.Month);
 
     BalanceSnapshot? Latest => BalanceTotals.Latest(Snapshots, Pace.Month);
+
+    protected override void OnParametersSet() => _returns = new PurchaseReturns(Entries);
 
     static string Kind(InsightKind kind) => kind switch
     {
