@@ -24,6 +24,10 @@ export async function setTimeZone(page: Page, id: string) {
   await expect(input).toHaveValue(id);
 }
 
+export function keepFinishedSwitch(page: Page) {
+  return page.getByRole('switch', { name: 'Keep finished tasks on the schedule' });
+}
+
 export function languageSelect(page: Page) {
   return page.getByRole('combobox', { name: /^(Language|Język)$/ });
 }

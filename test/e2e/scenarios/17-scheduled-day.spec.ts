@@ -5,6 +5,7 @@ import { createArea } from '../helpers/areas';
 import { addDays, isoDate, shiftTime, shortDate, utcToday } from '../helpers/dates';
 import { createList, openList } from '../helpers/lists';
 import { closePanel, panel, propertyRow } from '../helpers/panels';
+import { keepFinishedSwitch, goToSettings } from '../helpers/settings';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, openTask, taskRow } from '../helpers/tasks';
 import {
@@ -163,4 +164,46 @@ test('a group that shrinks to two tasks leaves its first task at its time', asyn
   const block = await timelineBlock(page, first).boundingBox();
   const nineOClock = await timeline.getByRole('button', { name: 'Add a task at 09:00' }).boundingBox();
   expect(Math.abs(block!.y - nineOClock!.y)).toBeLessThan(3);
+});
+
+test('with the setting on, a ticked task stays on the schedule at its time, faded', async ({ page, account }) => {
+  const first = `Standup ${account.suffix}`;
+  const second = `Review ${account.suffix}`;
+  await signIn(page, account);
+  await createArea(page, `Work ${account.suffix}`);
+  await createList(page, `Day ${account.suffix}`);
+  await openList(page, `Day ${account.suffix}`);
+  for (const [name, start, end] of [[first, '09:00', '09:30'], [second, '10:00', '11:00']]) {
+    await addTask(page, name);
+    await openTask(page, name);
+    await setDueDate(page, 'Today');
+    await setTaskTime(page, start, end);
+    await closeTask(page);
+  }
+
+  await goToSettings(page);
+  await keepFinishedSwitch(page).check();
+  await expect(keepFinishedSwitch(page)).toBeChecked();
+
+  await goToMyDay(page);
+  const block = timelineBlock(page, first);
+  const before = await block.boundingBox();
+  await block.getByRole('checkbox').first().check();
+  await page.mouse.move(0, 0);
+
+  await expect(block.getByRole('checkbox').first()).toBeChecked();
+  await expect(block).toHaveCSS('opacity', '0.55');
+  const after = await block.boundingBox();
+  expect(Math.abs(after!.y - before!.y)).toBeLessThan(2);
+  await expect(timelineBlock(page, second)).toHaveCSS('opacity', '1');
+
+  await block.getByRole('checkbox').first().uncheck();
+  await page.mouse.move(0, 0);
+  await expect(block).toHaveCSS('opacity', '1');
+
+  await goToSettings(page);
+  await keepFinishedSwitch(page).uncheck();
+  await goToMyDay(page);
+  await timelineBlock(page, first).getByRole('checkbox').first().check();
+  await expect(timelineBlock(page, first)).toBeHidden();
 });

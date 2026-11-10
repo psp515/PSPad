@@ -218,6 +218,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `referenceitems` | items in a `Reference` list | `listId`, `previousListId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`), `snapshotMarks[]` (`snapshotId`, `markedAt` — `adr/0056`) |
 | `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
 | `listviews` | one per (user, list): that user's placement of a shared list | `_id` = `ListView.IdFor(userId, listId)`, `listId`, `areaId?` (null = "Shared with me") |
+| `userviews` | one per user: that user's display settings that follow them across devices | `_id` = `UserView.IdFor(userId)`, `showFinishedOnSchedule` |
 | `events` | the domain event log (not part of sync, `adr/0061`) | `seq`, `userId`, `aggregateType`, `aggregateId`, `type`, `payload`, `at` |
 | `processed_commands` | idempotency keys | `_id` = command id, `at` |
 | `counters` | the global sequence | `_id: "events"`, `value` |
