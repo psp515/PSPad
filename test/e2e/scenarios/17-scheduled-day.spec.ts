@@ -182,28 +182,31 @@ test('with the setting on, a ticked task stays on the schedule at its time, fade
   }
 
   await goToSettings(page);
-  await keepFinishedSwitch(page).check();
+  await keepFinishedSwitch(page).click();
   await expect(keepFinishedSwitch(page)).toBeChecked();
 
   await goToMyDay(page);
   const block = timelineBlock(page, first);
+  const box = schedule(page).getByRole('checkbox', { name: first });
   const before = await block.boundingBox();
-  await block.getByRole('checkbox').first().check();
+  await box.click();
   await page.mouse.move(0, 0);
 
-  await expect(block.getByRole('checkbox').first()).toBeChecked();
+  await expect(box).toBeChecked();
   await expect(block).toHaveCSS('opacity', '0.55');
   const after = await block.boundingBox();
   expect(Math.abs(after!.y - before!.y)).toBeLessThan(2);
   await expect(timelineBlock(page, second)).toHaveCSS('opacity', '1');
 
-  await block.getByRole('checkbox').first().uncheck();
+  await box.click();
   await page.mouse.move(0, 0);
+  await expect(box).not.toBeChecked();
   await expect(block).toHaveCSS('opacity', '1');
 
   await goToSettings(page);
-  await keepFinishedSwitch(page).uncheck();
+  await keepFinishedSwitch(page).click();
+  await expect(keepFinishedSwitch(page)).not.toBeChecked();
   await goToMyDay(page);
-  await timelineBlock(page, first).getByRole('checkbox').first().check();
+  await schedule(page).getByRole('checkbox', { name: first }).click();
   await expect(timelineBlock(page, first)).toBeHidden();
 });
