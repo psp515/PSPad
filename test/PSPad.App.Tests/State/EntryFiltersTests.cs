@@ -33,4 +33,24 @@ public class EntryFiltersTests
         Assert.True((EntryFilters.None with { Search = " ROLL " }).Shows(rolls));
         Assert.False((EntryFilters.None with { Search = "pay" }).Shows(rolls));
     }
+
+    [Fact]
+    public void ReturnsAreExpensesWithThePurchasesNameAndCategory()
+    {
+        var budget = MoneyEntries.ABudget("Personal");
+        var rolls = MoneyEntries.Expense(budget, "Rolls", "Food", 3m, Today);
+        var refund = MoneyEntries.Return(budget, rolls, 1m, Today, "Stale");
+        var pay = MoneyEntries.Income(budget, "Pay", "Salary", 3000m, Today);
+
+        var expenses = EntryFilters.None with { Kind = EntryFilter.Expenses };
+        var income = EntryFilters.None with { Kind = EntryFilter.Income };
+
+        Assert.True(expenses.Shows(refund));
+        Assert.False(income.Shows(refund));
+        Assert.True((EntryFilters.None with { Category = "food" }).Shows(refund));
+        Assert.False((EntryFilters.None with { Category = "food" }).Shows(pay));
+        Assert.True((EntryFilters.None with { Search = "rolls" }).Shows(refund));
+        Assert.True((EntryFilters.None with { Search = "stale" }).Shows(refund));
+        Assert.False((EntryFilters.None with { Search = "pay" }).Shows(refund));
+    }
 }

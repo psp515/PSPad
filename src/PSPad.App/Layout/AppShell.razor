@@ -104,6 +104,7 @@
     <BudgetPanel BudgetId="@_openBudget" IsNew="@_newBudget" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <EntryPanel EntryId="@_openEntry" NewInBudget="@_newEntry?.BudgetId" NewKind="@(_newEntry?.Kind ?? CategoryKind.Expense)" NewMonth="@_newEntry?.Month"
                 OnClose="@ClosePanel" Disabled="@(!_ready)" />
+    <ReturnPanel ReturnId="@_openReturn" PurchaseId="@_newReturn" OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <HoldingPanel SnapshotId="@_openHolding?.SnapshotId" HoldingId="@_openHolding?.HoldingId"
                   OnClose="@ClosePanel" Disabled="@(!_ready)" />
     <InboxItemPanel ItemId="@_openInboxItem" IsNew="@_newInboxItem" OnClose="@ClosePanel" Disabled="@(!_ready)" />
@@ -141,6 +142,8 @@
     Guid? _budgetMembers;
     Guid? _openEntry;
     (Guid BudgetId, CategoryKind Kind, YearMonth? Month)? _newEntry;
+    Guid? _openReturn;
+    Guid? _newReturn;
     (Guid SnapshotId, Guid? HoldingId)? _openHolding;
     bool _newGoal;
     Guid? _openInboxItem;
@@ -360,6 +363,8 @@
         _budgetMembers = BudgetMembersQuery.From(Navigation.Uri);
         _openEntry = EntryQuery.From(Navigation.Uri);
         _newEntry = EntryQuery.NewFrom(Navigation.Uri);
+        _openReturn = EntryQuery.ReturnFrom(Navigation.Uri);
+        _newReturn = EntryQuery.NewReturnFrom(Navigation.Uri);
         _openHolding = HoldingQuery.From(Navigation.Uri);
         _openInboxItem = InboxQuery.From(Navigation.Uri);
         _newInboxItem = InboxQuery.IsNew(Navigation.Uri);

@@ -12,7 +12,7 @@ public sealed record RateSuggestion(decimal RateToPln, DateOnly? RateDate)
     public static RateSuggestion? For(
         string currency, IEnumerable<MoneyEntry> entries, IEnumerable<BalanceSnapshot> snapshots) =>
         Latest(currency, entries
-            .Where(entry => !entry.Deleted)
+            .Where(entry => !entry.Deleted && !entry.IsReturn)
             .Select(entry => (entry.Money, entry.RecordedAt))
             .Concat(snapshots
                 .Where(snapshot => !snapshot.Deleted)

@@ -60,6 +60,16 @@ internal static class Given
             category, money ?? new Money(amount, "PLN", 1m, on), on, null), at ?? Now);
     }
 
+    public static MoneyEntry AReturn(MoneyEntry purchase, Budget budget, decimal amount, DateOnly? date = null,
+        IReadOnlyList<MoneyEntry>? others = null, DateTimeOffset? at = null)
+    {
+        var entry = new MoneyEntry();
+        entry.ApplyAll(MoneyEntry.DecideReturn(null, purchase, budget, [purchase, .. others ?? []],
+            new RecordReturn(Guid.NewGuid(), budget.UserId, Guid.NewGuid(), purchase.Id, amount, date ?? purchase.Date, null),
+            at ?? Now));
+        return entry;
+    }
+
     public static MoneyEntry Delete(MoneyEntry entry, Budget budget)
     {
         entry.ApplyAll(MoneyEntry.Decide(entry, budget, new DeleteEntry(Guid.NewGuid(), Owner, entry.Id), Now));

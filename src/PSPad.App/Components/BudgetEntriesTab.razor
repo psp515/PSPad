@@ -38,7 +38,13 @@
         </div>
     }
 
-    <MudText Typo="Typo.caption" Class="d-block mb-1 pspad-muted pspad-entries-caption">@Caption</MudText>
+    <MudText Typo="Typo.caption" Class="d-block mb-1 pspad-muted pspad-entries-caption">
+        @Caption
+        @if (ShownReturned > 0)
+        {
+            <span class="pspad-entries-returned"> · @T["AfterReturned", MoneyText.Pln(ShownReturned)]</span>
+        }
+    </MudText>
 
     @foreach (var day in Days)
     {
@@ -52,7 +58,7 @@
                     @foreach (var entry in day.Entries)
                     {
                         <EntryRow @key="entry.Id" Entry="@entry" Recorded="@MoneyText.Recorded(entry.RecordedAt, Zone, Today, T)"
-                                  OnOpen="@OnOpen" OnOpenCategory="@OnOpenCategory" />
+                                  Returns="@_returns.Of(entry)" OnOpen="@OnOpen" OnOpenCategory="@OnOpenCategory" />
                     }
                 </MudList>
             </MudPaper>
@@ -79,9 +85,13 @@
 
     [Parameter] public string Class { get; set; } = "";
 
+    PurchaseReturns _returns = new([]);
+
     IReadOnlyList<MoneyEntry> InMonth => [.. Entries.Where(entry => !entry.Deleted && Month.Contains(entry.Date))];
 
     IReadOnlyList<MoneyEntry> Shown => [.. InMonth.Where(Filters.Shows)];
+
+    decimal ShownReturned => Shown.Where(entry => entry.IsReturn).Sum(entry => entry.Money.InPln);
 
     IReadOnlyList<EntryDay> Days => Filters.Sort == EntrySort.Recorded
         ?
@@ -107,13 +117,15 @@
             }
 
             var income = Shown.Where(entry => entry.Kind == CategoryKind.Income).Sum(entry => entry.Money.InPln);
-            var expenses = Shown.Where(entry => entry.Kind == CategoryKind.Expense).Sum(entry => entry.Money.InPln);
+            var expenses = Shown.Where(entry => entry.Kind == CategoryKind.Expense).Sum(entry => entry.SignedPln);
             return T.Plural(Shown.Count, "EntriesCaption", MoneyText.Amount(income), MoneyText.Amount(expenses), MoneyText.SignedPln(income - expenses));
         }
     }
 
     string DayTitle(EntryDay day) =>
         Filters.Sort == EntrySort.Recorded ? T["RecordedDay", MoneyText.Day(day.Date)] : MoneyText.Day(day.Date);
+
+    protected override void OnParametersSet() => _returns = new PurchaseReturns(Entries);
 
     Task Change(EntryFilters filters) => FiltersChanged.InvokeAsync(filters);
 }

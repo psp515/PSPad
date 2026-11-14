@@ -5,5 +5,5 @@ namespace PSPad.Module.Money.Reading;
 
 public sealed record EntryDay(DateOnly Date, IReadOnlyList<MoneyEntry> Entries)
 {
-    public decimal Net => Entries.Sum(entry => entry.Kind == CategoryKind.Income ? entry.Money.InPln : -entry.Money.InPln);
+    public decimal Net => Entries.Sum(entry => entry.Kind == CategoryKind.Income ? entry.Money.InPln : -entry.SignedPln);
 }

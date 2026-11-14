@@ -2308,6 +2308,16 @@ button.pspad-heatmap-cell:focus-visible {
     font-variant-numeric: tabular-nums;
 }
 
+.pspad-entry-amount.pspad-entry-amount-returned {
+    text-decoration: line-through;
+    color: var(--mud-palette-text-secondary);
+}
+
+.pspad-entry-returned {
+    flex-shrink: 0;
+    margin: 0;
+}
+
 .pspad-holdings-head {
     display: none;
 }

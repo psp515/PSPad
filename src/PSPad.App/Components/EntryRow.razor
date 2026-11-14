@@ -7,30 +7,49 @@
 
 <MudListItem T="MoneyEntry" Class="pspad-entry-row" OnClick="@(() => OnOpen.InvokeAsync(Entry))">
     <div class="d-flex align-center gap-3">
-        <span class="@AvatarClass" aria-hidden="true">@Initial</span>
+        <span class="@AvatarClass" aria-hidden="true">
+            @if (Entry.IsReturn)
+            {
+                <MudIcon Icon="@Icons.Material.Outlined.Undo" Size="Size.Small" />
+            }
+            else
+            {
+                @Initial
+            }
+        </span>
         <div class="d-flex flex-column flex-grow-1 pspad-entry-main">
             <MudText Typo="Typo.body1" Class="pspad-entry-name">@Entry.Name</MudText>
-            <MudText Typo="Typo.caption" Class="pspad-entry-sub">
-                @if (OnOpenCategory.HasDelegate)
+            <div class="d-flex align-center gap-2 pspad-entry-main">
+                <MudText Typo="Typo.caption" Class="pspad-entry-sub">
+                    @if (Entry.IsReturn)
+                    {
+                        <span class="pspad-entry-category">@T["ReturnCaption", Entry.Category]</span>
+                    }
+                    else if (OnOpenCategory.HasDelegate)
+                    {
+                        <button type="button" class="pspad-entry-category pspad-entry-category-open" @onclick="@(() => OnOpenCategory.InvokeAsync(Entry.Category))" @onclick:stopPropagation="true">@Entry.Category</button>
+                    }
+                    else
+                    {
+                        <span class="pspad-entry-category">@Entry.Category</span>
+                    }
+                    @if (Entry.Money.Currency != Currencies.Pln)
+                    {
+                        <span> · </span><span class="pspad-entry-foreign">@MoneyText.Amount(Entry.Money.Amount) @Entry.Money.Currency @@ @MoneyText.Rate(Entry.Money.RateToPln)</span>
+                    }
+                    @if (Recorded is not null)
+                    {
+                        <span> · </span><span class="pspad-entry-recorded">@T["RecordedAt", Recorded]</span>
+                    }
+                </MudText>
+                @if (Returns is { Returns.Count: > 0 } returns)
                 {
-                    <button type="button" class="pspad-entry-category pspad-entry-category-open" @onclick="@(() => OnOpenCategory.InvokeAsync(Entry.Category))" @onclick:stopPropagation="true">@Entry.Category</button>
+                    <MudChip T="string" Class="pspad-entry-returned" Size="Size.Small" Variant="Variant.Outlined">@ReturnedText(returns)</MudChip>
                 }
-                else
-                {
-                    <span class="pspad-entry-category">@Entry.Category</span>
-                }
-                @if (Entry.Money.Currency != Currencies.Pln)
-                {
-                    <span> · </span><span class="pspad-entry-foreign">@MoneyText.Amount(Entry.Money.Amount) @Entry.Money.Currency @@ @MoneyText.Rate(Entry.Money.RateToPln)</span>
-                }
-                @if (Recorded is not null)
-                {
-                    <span> · </span><span class="pspad-entry-recorded">@T["RecordedAt", Recorded]</span>
-                }
-            </MudText>
+            </div>
         </div>
-        <MudText Typo="Typo.body1" Class="pspad-entry-amount"
-                 Color="@(IsIncome ? Color.Success : Color.Default)">@MoneyText.SignedAmount(IsIncome ? Entry.Money.InPln : -Entry.Money.InPln)</MudText>
+        <MudText Typo="Typo.body1" Class="@AmountClass"
+                 Color="@(IsIncome ? Color.Success : Color.Default)">@MoneyText.SignedAmount(IsIncome ? Entry.Money.InPln : -Entry.SignedPln)</MudText>
     </div>
 </MudListItem>
 
@@ -43,9 +62,19 @@
 
     [Parameter] public EventCallback<string> OnOpenCategory { get; set; }
 
+    [Parameter] public ReturnState? Returns { get; set; }
+
     bool IsIncome => Entry.Kind == CategoryKind.Income;
 
     string Initial => Entry.Category.Length == 0 ? "?" : Entry.Category[..1].ToUpperInvariant();
+
+    string AmountClass => Returns is { IsFull: true, Returns.Count: > 0 } ? "pspad-entry-amount pspad-entry-amount-returned" : "pspad-entry-amount";
+
+    string ReturnedText(ReturnState returns) => returns.IsFull
+        ? T["ReturnedFullChip"]
+        : T["ReturnedChip", Entry.Money.Currency == Currencies.Pln
+            ? MoneyText.Amount(returns.Returned)
+            : $"{MoneyText.Amount(returns.Returned)} {Entry.Money.Currency}"];
 
     string AvatarClass => $"pspad-entry-avatar {(IsIncome ? "pspad-entry-income" : "pspad-entry-expense")}";
 }

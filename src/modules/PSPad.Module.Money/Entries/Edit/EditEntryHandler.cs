@@ -11,10 +11,11 @@ public sealed class EditEntryHandler(
     {
         var entry = await entries.LoadAsync(command.EntryId, ct);
         var budget = entry is null ? null : await budgets.LoadAsync(entry.BudgetId, ct);
+        IReadOnlyList<MoneyEntry> owned = budget is null ? [] : await entries.LoadAllAsync(budget.UserId, ct);
 
         try
         {
-            foreach (var (aggregate, events) in MoneyEntryCascade.Write(entry, budget, command, clock.UtcNow))
+            foreach (var (aggregate, events) in MoneyEntryCascade.Write(entry, budget, owned, command, clock.UtcNow))
             {
                 work.Stage(aggregate, events);
             }

@@ -8,7 +8,7 @@ public sealed record CategoryTotal(string Category, decimal Pln)
     [
         .. expenses
             .GroupBy(entry => entry.Category, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new CategoryTotal(group.First().Category, group.Sum(entry => entry.Money.InPln)))
+            .Select(group => new CategoryTotal(group.First().Category, group.Sum(entry => entry.SignedPln)))
             .OrderByDescending(total => total.Pln)
             .ThenBy(total => total.Category, StringComparer.OrdinalIgnoreCase)
     ];

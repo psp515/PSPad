@@ -867,4 +867,70 @@
   <data name="LinkedAccountOptions" xml:space="preserve">
     <value>Linked account options</value>
   </data>
+  <data name="ReturnCaption" xml:space="preserve">
+    <value>Return · {0}</value>
+  </data>
+  <data name="ReturnedChip" xml:space="preserve">
+    <value>Returned {0}</value>
+  </data>
+  <data name="ReturnedFullChip" xml:space="preserve">
+    <value>Returned</value>
+  </data>
+  <data name="AfterReturned" xml:space="preserve">
+    <value>after {0} returned</value>
+  </data>
+  <data name="Returns" xml:space="preserve">
+    <value>Returns</value>
+  </data>
+  <data name="RecordReturn" xml:space="preserve">
+    <value>Record return</value>
+  </data>
+  <data name="ReturnTitle" xml:space="preserve">
+    <value>Return</value>
+  </data>
+  <data name="ReturnedOf" xml:space="preserve">
+    <value>Returned {0} of {1}</value>
+  </data>
+  <data name="LeftToReturn" xml:space="preserve">
+    <value>{0} left to return</value>
+  </data>
+  <data name="ReturnsLockCurrency" xml:space="preserve">
+    <value>Has returns: currency is locked and the amount can't go below {0}.</value>
+  </data>
+  <data name="DeleteAlsoReturns.One" xml:space="preserve">
+    <value>Deleting this expense also deletes its return.</value>
+  </data>
+  <data name="DeleteAlsoReturns.Few" xml:space="preserve">
+    <value>Deleting this expense also deletes its {0} returns.</value>
+  </data>
+  <data name="DeleteAlsoReturns.Many" xml:space="preserve">
+    <value>Deleting this expense also deletes its {0} returns.</value>
+  </data>
+  <data name="Bought" xml:space="preserve">
+    <value>Bought {0}</value>
+  </data>
+  <data name="Paid" xml:space="preserve">
+    <value>Paid {0}</value>
+  </data>
+  <data name="ReturnedSoFar" xml:space="preserve">
+    <value>Returned so far</value>
+  </data>
+  <data name="LeftToReturnLabel" xml:space="preserve">
+    <value>Left to return</value>
+  </data>
+  <data name="GoToPurchase" xml:space="preserve">
+    <value>Go to purchase</value>
+  </data>
+  <data name="AmountReturned" xml:space="preserve">
+    <value>Amount returned</value>
+  </data>
+  <data name="ReturnRateHelp" xml:space="preserve">
+    <value>Uses the purchase's rate, so returning the whole amount in one return cancels it exactly.</value>
+  </data>
+  <data name="CountsIn" xml:space="preserve">
+    <value>Counts in {0}.</value>
+  </data>
+  <data name="SaveReturnFailed" xml:space="preserve">
+    <value>Couldn't save the return.</value>
+  </data>
 </root>

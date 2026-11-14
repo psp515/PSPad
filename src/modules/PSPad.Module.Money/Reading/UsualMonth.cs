@@ -42,7 +42,7 @@ public sealed record UsualMonth(
         return new UsualMonth(
             from, to, sampled,
             Average(incomes.Sum(entry => entry.Money.InPln), sampled),
-            Average(expenses.Sum(entry => entry.Money.InPln), sampled),
+            Average(expenses.Sum(entry => entry.SignedPln), sampled),
             Categories(expenses, sampled),
             Categories(incomes, sampled));
     }
@@ -53,7 +53,7 @@ public sealed record UsualMonth(
             .GroupBy(entry => entry.Category, StringComparer.OrdinalIgnoreCase)
             .Select(group => new CategoryUsual(
                 group.First().Category,
-                Average(group.Sum(entry => entry.Money.InPln), sampled),
+                Average(group.Sum(entry => entry.SignedPln), sampled),
                 group.Select(entry => YearMonth.Of(entry.Date)).Distinct().Count(),
                 LowerMedian(group.Select(entry => entry.Date.Day))))
             .OrderByDescending(usual => usual.Average)
