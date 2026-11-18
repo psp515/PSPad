@@ -1,0 +1,112 @@
+@using PSPad.App.State
+@using PSPad.Module.Tasks.Tasks
+@inject IStringLocalizer<TasksStrings> T
+@inject IStringLocalizer<SharedStrings> Shared
+
+<PropertyRow Class="@(Dormant ? "pspad-task-reminder pspad-reminder-dormant" : "pspad-task-reminder")"
+             Icon="@Icons.Material.Outlined.NotificationsNone" Label="@T["RemindMe"]"
+             Value="@ReminderText.Describe(Value, T)" HasValue="@(Value is not null)"
+             ValueColor="@(Dormant ? Color.Default : Color.Inherit)" Disabled="@Disabled"
+             OnClear="@(() => ChooseAsync(null))">
+    <MudText Typo="Typo.caption" Class="pspad-reminder-hint pspad-muted d-block px-4 pt-2 pb-1" Style="max-width:260px">
+        @T["ReminderHint"]
+    </MudText>
+    @foreach (var preset in ReminderText.Presets(Time))
+    {
+        <MudMenuItem Class="pspad-reminder-option" OnClick="@(() => ChooseAsync(preset))">@ReminderText.Describe(preset, T)</MudMenuItem>
+    }
+    <MudDivider />
+    <MudMenuItem Class="pspad-reminder-custom" Icon="@Icons.Material.Outlined.Tune" OnClick="@OpenCustom">@T["CustomEllipsis"]</MudMenuItem>
+</PropertyRow>
+
+@if (Dormant)
+{
+    <MudText Typo="Typo.caption" Class="pspad-reminder-note pspad-muted d-block" role="status">@T["ReminderNeedsDueDate"]</MudText>
+}
+
+@if (Repeats)
+{
+    <MudText Typo="Typo.caption" Class="pspad-reminder-note pspad-muted d-block">@T["ReminderEachOccurrence"]</MudText>
+}
+
+@if (DeviceOff && Value is not null)
+{
+    <MudLink Href="settings#notifications" Typo="Typo.caption" Class="pspad-reminder-device-off d-block">@T["ReminderDeviceOff"]</MudLink>
+}
+
+<MudDialog @bind-Visible="_customising" Class="pspad-reminder-dialog" Options="@CustomOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@T["RemindMe"]</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.caption" Class="pspad-reminder-hint pspad-muted d-block mb-3">@T["ReminderHint"]</MudText>
+        <MudStack Spacing="3">
+            <MudNumericField T="int" Class="pspad-reminder-days" @bind-Value="_days" Min="0" Max="99"
+                             Label="@T["ReminderDaysLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <MudTimePicker Class="pspad-reminder-time" AmPm="false" @bind-Time="_at"
+                           Label="@T["ReminderTimeLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Class="pspad-reminder-cancel" OnClick="@(() => _customising = false)">@Shared["Cancel"]</MudButton>
+        <MudButton Class="pspad-reminder-save" Color="Color.Primary" Disabled="@(!CanSave)"
+                   OnClick="@SaveCustomAsync">@Shared["Save"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public TaskReminder? Value { get; set; }
+
+    [Parameter] public EventCallback<TaskReminder?> ValueChanged { get; set; }
+
+    [Parameter] public TaskTime? Time { get; set; }
+
+    [Parameter] public bool Repeats { get; set; }
+
+    [Parameter] public bool Dormant { get; set; }
+
+    [Parameter] public bool DeviceOff { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    bool _customising;
+    int _days = 1;
+    TimeSpan? _at = ReminderText.DefaultAt.ToTimeSpan();
+
+    static readonly DialogOptions CustomOptions = new() { CloseOnEscapeKey = true, BackdropClick = true };
+
+    bool CanSave => _days is >= 0 and <= TaskReminder.MostDaysBefore && _at is not null;
+
+    void OpenCustom()
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        _days = Value?.DaysBefore ?? 1;
+        _at = (Value?.At ?? ReminderText.DefaultAt).ToTimeSpan();
+        _customising = true;
+    }
+
+    async Task SaveCustomAsync()
+    {
+        if (!CanSave)
+        {
+            return;
+        }
+
+        _customising = false;
+        await ChooseAsync(TaskReminder.Of(_days, TimeOnly.FromTimeSpan(_at!.Value)));
+    }
+
+    async Task ChooseAsync(TaskReminder? reminder)
+    {
+        if (Disabled || reminder == Value)
+        {
+            return;
+        }
+
+        await ValueChanged.InvokeAsync(reminder);
+    }
+}

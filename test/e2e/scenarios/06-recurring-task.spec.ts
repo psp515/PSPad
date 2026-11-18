@@ -46,7 +46,7 @@ test('a daily task is never overdue and comes back tomorrow', async ({ page, acc
     await openTask(page, task);
     await expect(propertyRow(page, 'Repeat')).toContainText('Daily');
     await expect(propertyRow(page, 'Until')).toContainText('No end date');
-    await expect(propertyRow(page, 'Remind me')).toContainText('1 week before');
+    await expect(propertyRow(page, 'Show ahead')).toContainText('1 week before');
     await expect(panel(page).getByText('Done 1 time · 1 in a row')).toBeVisible();
     await expect(panel(page).getByRole('checkbox', { name: 'Done' })).toBeChecked();
     await closeTask(page);
@@ -60,7 +60,7 @@ test('a daily task is never overdue and comes back tomorrow', async ({ page, acc
   await test.step('a repeat that started yesterday shows the missed day as skipped, never overdue', async () => {
     await addTask(page, rent);
     await openTask(page, rent);
-    await expect(propertyRow(page, 'Remind me')).toHaveCount(0);
+    await expect(propertyRow(page, 'Show ahead')).toHaveCount(0);
     await setRepeating(page);
     await setCustomRepeat(page, { start: yesterday });
     await expect(propertyRow(page, 'Repeat')).toContainText('Daily');

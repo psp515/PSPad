@@ -9,6 +9,7 @@
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Recurrence
 @using PSPad.Module.Tasks.Tasks
+@using PSPad.Module.Tasks.Today
 @inject IDocumentStore<TodoTask> Store
 @inject IDocumentStore<Area> Areas
 @inject IDocumentStore<TaskList> Lists
@@ -81,9 +82,11 @@
                         Label="@(Repeats ? T["Until"] : T["Due"])" EmptyText="@(Repeats ? T["NoEndDate"] : T["NoDueDate"])"
                         FlagsPast="@(!Repeats)" />
 
-            @if (Repeats || DueOn is not null)
+            @if (Repeats || DueOn is not null || Reminder is not null)
             {
                 <TimeRow Value="@Time" ValueChanged="@TimeAsync" Disabled="@Disabled" />
+                <ReminderRow Value="@Reminder" ValueChanged="@ReminderAsync" Time="@Time" Repeats="@Repeats"
+                             Dormant="@ReminderDormant" DeviceOff="false" Disabled="@Disabled" />
                 <LeadTimeRow Value="@LeadTime" ValueChanged="@LeadTimeAsync" Disabled="@Disabled" />
             }
 
@@ -215,6 +218,12 @@
     TaskTime? Time => _task is null ? _draft.Time : _task.Time;
 
     LeadTime? LeadTime => _task is null ? _draft.LeadTime : _task.LeadTime;
+
+    TaskReminder? Reminder => _task is null ? _draft.Reminder : _task.Reminder;
+
+    bool ReminderDormant => _task is null
+        ? Reminder is not null && !Repeats && DueOn is null
+        : ReminderRule.IsDormant(_task);
 
     bool Repeats => Recurrence is not null;
 
@@ -365,6 +374,11 @@
         if (_draft.LeadTime is { } lead)
         {
             await Sender.SendAsync(new SetTaskLeadTime(Guid.NewGuid(), State.UserId, taskId, lead));
+        }
+
+        if (_draft.Reminder is { } reminder)
+        {
+            await Sender.SendAsync(new SetTaskReminder(Guid.NewGuid(), State.UserId, taskId, reminder));
         }
 
         if (_draft.Priority != Priority.None)
@@ -562,6 +576,23 @@
         await ReloadAsync();
     }
 
+    async Task ReminderAsync(TaskReminder? reminder)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (_task is null)
+        {
+            _draft.Reminder = reminder;
+            return;
+        }
+
+        await Sender.SendAsync(new SetTaskReminder(Guid.NewGuid(), State.UserId, _task.Id, reminder));
+        await ReloadAsync();
+    }
+
     async Task PriorityAsync(Priority priority)
     {
         if (Disabled || priority == Priority)
@@ -705,6 +736,8 @@
         public TaskTime? Time { get; set; }
 
         public LeadTime? LeadTime { get; set; }
+
+        public TaskReminder? Reminder { get; set; }
 
         public Priority Priority { get; set; } = Priority.None;
 

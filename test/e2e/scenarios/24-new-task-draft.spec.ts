@@ -32,7 +32,7 @@ test('a new task keeps everything its draft panel set', async ({ page, account }
     await expect(propertyRow(page, 'List')).toHaveCount(0);
     await expect(panel(page).getByRole('button', { name: 'Delete task' })).toHaveCount(0);
     await expect(panel(page).getByLabel('Description')).toHaveCount(0);
-    await expect(propertyRow(page, 'Remind me')).toHaveCount(0);
+    await expect(propertyRow(page, 'Show ahead')).toHaveCount(0);
   });
 
   await test.step('closing the draft forgets its steps', async () => {
@@ -57,7 +57,7 @@ test('a new task keeps everything its draft panel set', async ({ page, account }
     await expect(panel(page).getByRole('textbox', { name: /^Rename / })).toHaveCount(2);
     await panel(page).getByRole('button', { name: 'Star', exact: true }).click();
     await chooseProperty(page, 'Due', /^In 2 days/);
-    await chooseProperty(page, 'Remind me', '3 days before');
+    await chooseProperty(page, 'Show ahead', '3 days before');
     await chooseProperty(page, 'Priority', 'Medium');
     await setTaskTime(page, '09:30');
     await panel(page).getByPlaceholder('Task name').press('Enter');
@@ -72,7 +72,7 @@ test('a new task keeps everything its draft panel set', async ({ page, account }
 
     await openTask(page, task);
     await expect(propertyRow(page, 'Due')).toContainText(shortDate(inTwoDays));
-    await expect(propertyRow(page, 'Remind me')).toContainText('3 days before');
+    await expect(propertyRow(page, 'Show ahead')).toContainText('3 days before');
     await expect(propertyRow(page, 'Priority')).toContainText('Medium');
     await expect(panel(page).getByRole('textbox', { name: 'Start' })).toHaveValue('09:30');
     const steps = panel(page).getByRole('textbox', { name: /^Rename / });
@@ -103,7 +103,7 @@ test('a new task keeps everything its draft panel set', async ({ page, account }
     await expect(propertyRow(page, 'Until')).toContainText('No end date');
     await setDueDate(page, inTenDays);
     await expect(propertyRow(page, 'Until')).toContainText(shortDate(inTenDays));
-    await chooseProperty(page, 'Remind me', '1 month before');
+    await chooseProperty(page, 'Show ahead', '1 month before');
     await savePanel(page);
 
     await syncNow(page);
@@ -111,7 +111,7 @@ test('a new task keeps everything its draft panel set', async ({ page, account }
     await openTask(page, repeating);
     await expect(propertyRow(page, 'Repeat')).toContainText('Every 2 days');
     await expect(propertyRow(page, 'Until')).toContainText(shortDate(inTenDays));
-    await expect(propertyRow(page, 'Remind me')).toContainText('1 month before');
+    await expect(propertyRow(page, 'Show ahead')).toContainText('1 month before');
     await closeTask(page);
   });
 

@@ -3,7 +3,7 @@
 @inject IStringLocalizer<TasksStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
 
-<PropertyRow Class="pspad-task-lead" Icon="@Icons.Material.Outlined.NotificationsNone" Label="@T["RemindMe"]"
+<PropertyRow Class="pspad-task-lead" Icon="@Icons.Material.Outlined.Visibility" Label="@T["ShowAhead"]"
              Value="@LeadTimeText.Describe(Value, T)" HasValue="@(Value is not null)" Disabled="@Disabled"
              OnClear="@(() => ChooseAsync(null))">
     <MudText Typo="Typo.caption" Class="pspad-lead-hint pspad-muted d-block px-4 pt-2 pb-1" Style="max-width:260px">
@@ -19,7 +19,7 @@
 
 <MudDialog @bind-Visible="_customising" Class="pspad-lead-dialog" Options="@CustomOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">@T["RemindMe"]</MudText>
+        <MudText Typo="Typo.h6">@T["ShowAhead"]</MudText>
     </TitleContent>
     <DialogContent>
         <MudText Typo="Typo.caption" Class="pspad-lead-hint pspad-muted d-block mb-3">@T["LeadHint"]</MudText>

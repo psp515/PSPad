@@ -378,4 +378,40 @@
   <data name="SetStepDeadline" xml:space="preserve">
     <value>Ustaw termin dla {0}</value>
   </data>
+  <data name="ShowAhead" xml:space="preserve">
+    <value>Pokaż wcześniej</value>
+  </data>
+  <data name="ReminderOff" xml:space="preserve">
+    <value>Wyłączone</value>
+  </data>
+  <data name="ReminderOnTheDay" xml:space="preserve">
+    <value>W dniu terminu o {0}</value>
+  </data>
+  <data name="ReminderDaysBefore.One" xml:space="preserve">
+    <value>{0} dzień wcześniej o {1}</value>
+  </data>
+  <data name="ReminderDaysBefore.Few" xml:space="preserve">
+    <value>{0} dni wcześniej o {1}</value>
+  </data>
+  <data name="ReminderDaysBefore.Many" xml:space="preserve">
+    <value>{0} dni wcześniej o {1}</value>
+  </data>
+  <data name="ReminderHint" xml:space="preserve">
+    <value>Powiadomienie na urządzeniach z włączonymi powiadomieniami.</value>
+  </data>
+  <data name="ReminderDaysLabel" xml:space="preserve">
+    <value>Dni wcześniej</value>
+  </data>
+  <data name="ReminderTimeLabel" xml:space="preserve">
+    <value>Godzina</value>
+  </data>
+  <data name="ReminderNeedsDueDate" xml:space="preserve">
+    <value>Wymaga terminu</value>
+  </data>
+  <data name="ReminderEachOccurrence" xml:space="preserve">
+    <value>Przed każdym wystąpieniem</value>
+  </data>
+  <data name="ReminderDeviceOff" xml:space="preserve">
+    <value>Powiadomienia są wyłączone na tym urządzeniu · Włącz</value>
+  </data>
 </root>

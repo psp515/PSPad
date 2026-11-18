@@ -227,8 +227,8 @@ export async function addTaskAtFirstFreeSlot(page: Page): Promise<string> {
 }
 
 export async function setCustomLeadTime(page: Page, amount: number, unit: string) {
-  await chooseProperty(page, 'Remind me', 'Custom…');
-  const dialog = page.getByRole('dialog').filter({ hasText: 'Remind me' });
+  await chooseProperty(page, 'Show ahead', 'Custom…');
+  const dialog = page.getByRole('dialog').filter({ hasText: 'Show ahead' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText(/^How early the task shows in Coming up/)).toBeVisible();
   const field = dialog.getByRole('spinbutton').first();
