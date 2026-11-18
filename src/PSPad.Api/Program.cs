@@ -141,6 +141,7 @@ api.MapMeEndpoints();
 api.MapAccountEndpoints();
 api.MapStatisticsEndpoints();
 api.MapSnapshotEndpoints();
+api.MapPushEndpoints();
 api.MapMoneyEndpoints();
 api.MapInvestmentEndpoints();
 
