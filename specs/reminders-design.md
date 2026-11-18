@@ -99,6 +99,14 @@ New module `src/modules/PSPad.Module.Reminders`, referenced by `Api` only.
 It references `Abstractions`, `Tasks` (tasks, lists, `ReminderRule`) and
 `Identity` (`User.TimeZone`, `User.Language`). `App` never sees it.
 
+Like Sharing and Statistics, the module is pure (no MongoDB, ASP.NET Core,
+`System.Net.Http`, Hosting or Infrastructure; an architecture test guards
+it): it holds the tick's logic, the documents, the texts and its ports
+(`IReminderSource`, `IReminderClaims`, `IPushSubscriptionStore`,
+`IPushSender`, `IVapidKeyStore`). `src/PSPad.Api/Reminders/` holds the
+adapters: the `BackgroundService`, the Mongo stores, the Web Push sender and
+the endpoints; indexes go in `MongoIndexes`.
+
 ### 3.2 Collections
 
 | Collection | Document | Indexes |
@@ -112,14 +120,16 @@ collection gains a sparse index on `Reminder`.
 
 ### 3.3 The tick
 
-`ReminderScheduler`, a hosted service on a 60-second `PeriodicTimer`, using
-an injected `TimeProvider`.
+`ReminderScheduler` (Api), a `BackgroundService` on a 60-second
+`PeriodicTimer`, runs `ReminderTick.RunAsync(from, now)` (module) in a
+scope, with `now` from `IClock`. An exception in a tick is logged and the
+loop goes on; it never stops the host.
 
 1. Window `(from, now]`: `from` is the previous tick's `now`; on the first
    tick after start, `now − 1 h`.
 2. Load live tasks with `Reminder != null` and their lists.
-3. Recipients: a task in a list → the list's owner and members; an inbox
-   task → its owner. Load each recipient `User` once per tick.
+3. Recipients: the task's list owner (`TaskList.UserId`) and its members;
+   every task belongs to a list. Load each recipient `User` once per tick.
 4. `ReminderRule.MomentsBetween` per task and recipient.
 5. Claim: insert `{TaskId, Occurrence, UserId, State = Sent, Attempts = 1}`
    into `sentreminders`. A duplicate key means another tick or API instance
@@ -136,21 +146,27 @@ Nothing is held in memory between ticks except the VAPID key pair.
 
 - Payload (JSON, encrypted per device, RFC 8291): `title` = the task name;
   `body` = "Due today" / "Due tomorrow" / "Due in {N} days" in the
-  recipient's language (`adr/0075`, resx in the Reminders module); `url` =
-  `{APP_BASE_ADDRESS}/?task={TaskId}`; `tag` = the task id.
+  recipient's language (`adr/0075`; a resx in the Reminders module read
+  through `ResourceManager` for `User.Language`, the first server-side
+  text that is localized); `url` = `{Reminders:AppBaseAddress}/?task={TaskId}`;
+  `tag` = the task id.
 - VAPID JWT (RFC 8292) signed with the stored private key; `sub` =
-  `REMINDERS_CONTACT`, or `APP_BASE_ADDRESS` when empty.
+  `Reminders:Contact`, or `Reminders:AppBaseAddress` when empty.
+- Configuration (`ReminderOptions`, section `Reminders`): `AppBaseAddress`
+  (compose passes `${APP_BASE_ADDRESS}`) and `Contact` (compose passes
+  `${REMINDERS_CONTACT:-}`).
 - Headers: `TTL` = seconds until the end of the occurrence day in the
   recipient's zone, at most 86400, at least 60; `Topic` = the task id
   without dashes; `Urgency: normal`.
 - Push service answers:
   - `2xx`: done; the subscription's `LastSuccessAt` is set.
   - `404`, `410`: the subscription is deleted.
-  - `429`, `5xx`, timeout: the claim becomes `Retry` (§3.3 step 7).
+  - `429`, `5xx`, timeout: the claim becomes `Retry` (§3.3 step 7); a
+    retry sends only to the user's subscriptions with no `LastSuccessAt` at
+    or after the claim's `ClaimedAt`.
   - other `4xx`: `Failed`, logged with the status code.
-- Library: an MIT- or MPL-licensed Web Push package for .NET
-  (`Lib.Net.Http.WebPush` or `WebPush`); the plan fixes the package and
-  exact version.
+- Library: `Lib.Net.Http.WebPush` 3.3.1 (MIT), used only by the Api
+  adapter.
 
 ### 3.5 VAPID keys
 
@@ -290,5 +306,7 @@ Reminders module's resx (notification texts).
 - E2E (`test/e2e/scenarios/40-reminders.spec.ts`): set a reminder by preset
   and by Custom and see it after reload; clear it; dormant after removing
   the due date; the "Show ahead" label; the Settings card when permission is
-  denied. Subscribing for real is not covered: headless Chromium in the
+  denied. The rename changes the existing scenarios 06, 23 and 24 and
+  `helpers/today.ts` (`setCustomLeadTime`) from "Remind me" to "Show
+  ahead". Subscribing for real is not covered: headless Chromium in the
   container can't reach FCM; the integration tests cover the send path.
