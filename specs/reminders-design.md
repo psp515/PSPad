@@ -213,7 +213,11 @@ Account deletion removes the user's `pushsubscriptions` and `sentreminders`.
 
 `service-worker.js` and `service-worker.published.js`:
 
-- `push`: `showNotification(title, { body, tag, data: { url }, icon })`.
+- `push`: `showNotification(title, { body, tag, data: { url }, icon })`. A
+  payload that isn't JSON shows its text as the body under the title "PSPad".
+- `pushsubscriptionchange`: subscribe again with the old subscription's
+  `options.applicationServerKey` when it has one. The worker can't call the
+  API, so the app's next start sends the new subscription (§4.3).
 - `notificationclick`: close; focus an open PSPad window and navigate it to
   `url`, or open a new window at `url`.
 
@@ -239,7 +243,8 @@ A `PropertyRow` (`pspad-task-reminder`, icon `NotificationsNone`, label
   date, as the lead time is.
 - When this device has notifications off, the row shows the caption
   "Notifications are off on this device · Turn on", linking to the Settings
-  card. The reminder still reaches the user's other devices.
+  card. The reminder still reaches the user's other devices. The caption is
+  checked each time a task panel opens; a browser failure shows no caption.
 
 ### 4.2 Show ahead row
 
@@ -265,6 +270,13 @@ Sync. A small JS module (`wwwroot/js/push.js`) wraps `PushManager` and
   `PUT /api/push/subscriptions`.
 - Turn off: `unsubscribe`, then `DELETE /api/push/subscriptions`.
 - Sign-out on a device turns it off first when online.
+- The card shows no state until the browser has answered, so it never
+  flashes "Unsupported".
+- Refresh: when the app starts signed in and online, and when the card finds
+  the device On and online, the browser's current subscription is sent again
+  with `PUT /api/push/subscriptions` (`push.js` `current()`). The upsert keeps
+  the server's keys current after a browser rotates them and moves the
+  endpoint to whoever is signed in.
 
 ### 4.4 Opening from a notification
 

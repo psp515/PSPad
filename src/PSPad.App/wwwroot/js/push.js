@@ -18,12 +18,23 @@ export async function support() {
   return { supported: true, needsHomeScreen, permission: Notification.permission, endpoint: subscription?.endpoint ?? null, label };
 }
 
+function keysOf(subscription) {
+  return { endpoint: subscription.endpoint, p256dh: bytesToBase64Url(subscription.getKey('p256dh')), auth: bytesToBase64Url(subscription.getKey('auth')) };
+}
+
+export async function current() {
+  if (!('serviceWorker' in navigator)) { return null; }
+  const registration = await navigator.serviceWorker.getRegistration();
+  const subscription = registration ? await registration.pushManager.getSubscription() : null;
+  return subscription ? keysOf(subscription) : null;
+}
+
 export async function subscribe(publicKey) {
   if (await Notification.requestPermission() !== 'granted') { return null; }
   if (!await navigator.serviceWorker.getRegistration()) { return null; }
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(publicKey) });
-  return { endpoint: subscription.endpoint, p256dh: bytesToBase64Url(subscription.getKey('p256dh')), auth: bytesToBase64Url(subscription.getKey('auth')) };
+  return keysOf(subscription);
 }
 
 export async function unsubscribe() {

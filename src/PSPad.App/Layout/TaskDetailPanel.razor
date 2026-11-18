@@ -238,18 +238,7 @@
     string? PathOf(Guid listId) => ListRow.PathOf(listId, _placement, _lists, ListText["SharedWithMe"]);
 
     bool _deviceOff;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            _deviceOff = PushState.Of(await Push.SupportAsync()) is not PushCardState.On;
-        }
-        catch (JSException)
-        {
-            _deviceOff = false;
-        }
-    }
+    (Guid?, bool) _openedFor;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -257,6 +246,15 @@
         {
             _draftFor = (NewTask, NewInList, NewDue, NewTime);
             _draft = NewDraft();
+        }
+
+        if ((TaskId, Adding) != _openedFor)
+        {
+            _openedFor = (TaskId, Adding);
+            if (TaskId is not null || Adding)
+            {
+                _deviceOff = await PushState.DeviceOffAsync(Push);
+            }
         }
 
         await ReloadAsync();

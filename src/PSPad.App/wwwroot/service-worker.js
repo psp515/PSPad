@@ -3,11 +3,25 @@
 // be reflected on the first load after each change).
 self.addEventListener('fetch', () => { });
 
+function pushData(message) {
+  if (!message) { return {}; }
+  try {
+    const data = message.json();
+    return data && typeof data === 'object' ? data : { body: String(data) };
+  } catch {
+    return { title: 'PSPad', body: message.text() };
+  }
+}
 self.addEventListener('push', event => {
-  const data = event.data ? event.data.json() : {};
+  const data = pushData(event.data);
   event.waitUntil(self.registration.showNotification(data.title ?? 'PSPad', {
     body: data.body ?? '', tag: data.tag, data: { url: data.url ?? '/' }, icon: 'icon-192.png',
   }));
+});
+self.addEventListener('pushsubscriptionchange', event => {
+  const applicationServerKey = event.oldSubscription?.options?.applicationServerKey;
+  if (!applicationServerKey) { return; }
+  event.waitUntil(self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey }).catch(() => { }));
 });
 self.addEventListener('notificationclick', event => {
   event.notification.close();

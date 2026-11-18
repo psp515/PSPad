@@ -12,6 +12,12 @@ public sealed class BrowserPushDevice(IJSRuntime js) : IPushDevice, IAsyncDispos
         return await module.InvokeAsync<PushSupport>("support");
     }
 
+    public async Task<PushDeviceSubscription?> CurrentAsync()
+    {
+        var module = await ModuleAsync();
+        return await module.InvokeAsync<PushDeviceSubscription?>("current");
+    }
+
     public async Task<PushDeviceSubscription?> SubscribeAsync(string publicKey)
     {
         var module = await ModuleAsync();

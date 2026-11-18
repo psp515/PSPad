@@ -141,6 +141,7 @@ builder.Services.AddScoped<IServerProbe, BrowserServerProbe>();
 builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();
 builder.Services.AddScoped<IAppUpdates, BrowserAppUpdates>();
 builder.Services.AddScoped<IPushDevice, BrowserPushDevice>();
+builder.Services.AddScoped<PushRefresh>();
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<SyncCoordinator>();
 builder.Services.AddScoped<ISyncTrigger>(sp => sp.GetRequiredService<SyncCoordinator>());
