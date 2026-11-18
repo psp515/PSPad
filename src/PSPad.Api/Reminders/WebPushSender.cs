@@ -39,7 +39,13 @@ public sealed class WebPushSender(
         }
         catch (PushServiceClientException e)
         {
-            return (int)e.StatusCode;
+            var status = (int)e.StatusCode;
+            if (PushAnswer.Of(status) == PushOutcome.Failed)
+            {
+                logger.LogWarning("Push service refused a reminder with status {Status}", status);
+            }
+
+            return status;
         }
         catch (HttpRequestException e)
         {
@@ -63,16 +69,27 @@ public sealed class WebPushSender(
     VapidAuthentication Authentication(VapidKeys keys)
     {
         var authentication = new VapidAuthentication(keys.PublicKey, keys.PrivateKey);
-        var subject = string.IsNullOrWhiteSpace(options.Value.Contact)
-            ? options.Value.AppBaseAddress
-            : options.Value.Contact;
-        // The library refuses a subject that is neither mailto: nor https:, as a localhost http address is.
-        if (subject.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ||
-            subject.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
+        if (Subject() is { } subject)
         {
             authentication.Subject = subject;
         }
 
         return authentication;
+    }
+
+    // The library refuses a subject that is neither mailto: nor https:, as a localhost http address is.
+    string? Subject()
+    {
+        var contact = options.Value.Contact.Trim();
+        if (contact.Length > 0 && !contact.Contains(':'))
+        {
+            return $"mailto:{contact}";
+        }
+
+        var subject = contact.Length > 0 ? contact : options.Value.AppBaseAddress;
+        return subject.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ||
+               subject.StartsWith("https:", StringComparison.OrdinalIgnoreCase)
+            ? subject
+            : null;
     }
 }

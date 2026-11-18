@@ -5,10 +5,12 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Microsoft.Extensions.Logging;
 using PSPad.Abstractions;
 using PSPad.Api.Identity;
 using PSPad.Api.Reminders;
 using PSPad.Api.Tests.Identity;
+using PSPad.Api.Tests.Logging;
 using PSPad.Api.Tests.Sync;
 using PSPad.Contracts;
 using PSPad.Module.Reminders;
@@ -35,15 +37,16 @@ public class ReminderDeliveryTests(MongoFixture fixture)
 
     static CancellationToken Ct => global::Xunit.TestContext.Current.CancellationToken;
 
-    ApiFactory FactoryWith(FakePushService push, IKeycloakAdminClient? keycloak = null) =>
+    ApiFactory FactoryWith(FakePushService push, IKeycloakAdminClient? keycloak = null, string contact = Contact) =>
         new(fixture, keycloak,
             new Dictionary<string, string?>
             {
                 ["Reminders:AppBaseAddress"] = AppBase,
-                ["Reminders:Contact"] = Contact,
+                ["Reminders:Contact"] = contact,
             },
             services =>
             {
+                services.AddRecordedLogs();
                 services.AddHttpClient<IPushSender, WebPushSender>().ConfigurePrimaryHttpMessageHandler(() => push);
                 services.AddSingleton<IClock>(new TestClock(SeededAt));
             });
@@ -323,5 +326,63 @@ public class ReminderDeliveryTests(MongoFixture fixture)
 
         Assert.Equal(0, await Collection("pushsubscriptions").CountDocumentsAsync(byUser, cancellationToken: Ct));
         Assert.Equal(0, await Collection("sentreminders").CountDocumentsAsync(byUser, cancellationToken: Ct));
+    }
+
+    [Fact]
+    public async Task AContactWithoutASchemeIsSentAsMailto()
+    {
+        var push = new FakePushService();
+        await using var factory = FactoryWith(push, contact: "you@example.com");
+        var (client, userId) = await UserAsync(factory);
+        var listId = await ListAsync(client, userId);
+        var day = new DateOnly(2031, 2, 10);
+        await TaskAsync(client, userId, listId, "Book dentist", day, 0, Nine);
+        using var device = await DeviceAsync(factory, userId);
+
+        var moment = At(day, Nine);
+        await TickAsync(factory, moment.AddMinutes(-1), moment);
+
+        var request = Assert.Single(push.To(device));
+        var keys = await factory.Services.GetRequiredService<VapidKeyring>().GetAsync(Ct);
+        var claims = Vapid.Verify(request.Headers["Authorization"], keys.PublicKey);
+        Assert.Equal("mailto:you@example.com", claims.GetProperty("sub").GetString());
+    }
+
+    [Fact]
+    public async Task ARefusedPushIsLoggedWithItsStatusOnly()
+    {
+        var push = new FakePushService();
+        push.Answer(HttpStatusCode.Forbidden);
+        await using var factory = FactoryWith(push);
+        var (client, userId) = await UserAsync(factory);
+        var listId = await ListAsync(client, userId);
+        var day = new DateOnly(2031, 2, 11);
+        await TaskAsync(client, userId, listId, "Secret errand", day, 0, Nine);
+        using var device = await DeviceAsync(factory, userId);
+
+        var moment = At(day, Nine);
+        await TickAsync(factory, moment.AddMinutes(-1), moment);
+
+        var refused = Assert.Single(
+            factory.Services.GetRequiredService<RecordedLogs>().Entries,
+            entry => entry.Level == LogLevel.Warning && entry.Message.StartsWith("Push service refused a reminder"));
+        Assert.Contains("403", refused.Message);
+        Assert.DoesNotContain(device.Endpoint, refused.Message);
+        Assert.DoesNotContain("Secret errand", refused.Message);
+    }
+
+    [Fact]
+    public async Task TheReminderIndexCoversOnlySetReminders()
+    {
+        await using var factory = FactoryWith(new FakePushService());
+        _ = factory.Services;
+
+        var indexes = await (await Collection("todotasks").Indexes.ListAsync(Ct)).ToListAsync(Ct);
+
+        var index = Assert.Single(indexes, candidate => candidate["name"] == "reminder_set");
+        Assert.False(index.Contains("sparse"));
+        Assert.Equal(
+            new BsonDocument("reminder", new BsonDocument("$type", (int)BsonType.Document)),
+            index["partialFilterExpression"].AsBsonDocument);
     }
 }

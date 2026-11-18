@@ -13,7 +13,7 @@ public sealed class MongoReminderSource(MongoContext context) : IReminderSource
     public async Task<IReadOnlyList<ReminderCandidate>> CandidatesAsync(CancellationToken ct)
     {
         var tasks = await context.Collection<TodoTask>()
-            .Find(Builders<TodoTask>.Filter.Ne("reminder", BsonNull.Value) &
+            .Find(Builders<TodoTask>.Filter.Type("reminder", BsonType.Document) &
                   Builders<TodoTask>.Filter.Eq(task => task.Deleted, false))
             .ToListAsync(ct);
         if (tasks.Count == 0)

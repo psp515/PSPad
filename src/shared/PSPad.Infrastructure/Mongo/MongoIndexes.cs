@@ -129,6 +129,8 @@ public static class MongoIndexes
 
     public const string InviteTokenIndex = "inviteToken_unique";
 
+    public const string ReminderSetIndex = "reminder_set";
+
     static async Task EnsureUniqueInviteTokenAsync(MongoContext context, CancellationToken ct)
     {
         var lists = context.Collection<BsonDocument>("tasklists");
@@ -167,7 +169,11 @@ public static class MongoIndexes
 
         await context.Collection<BsonDocument>("todotasks").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("reminder"),
-                new CreateIndexOptions { Sparse = true }),
+                new CreateIndexOptions<BsonDocument>
+                {
+                    Name = ReminderSetIndex,
+                    PartialFilterExpression = Builders<BsonDocument>.Filter.Type("reminder", BsonType.Document)
+                }),
             cancellationToken: ct);
     }
 
