@@ -11,11 +11,15 @@ self.addEventListener('push', event => {
 });
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const url = event.notification.data?.url ?? '/';
+  let target;
+  try { target = new URL(event.notification.data?.url ?? '/', self.location.origin); } catch { target = null; }
+  const url = target && target.origin === self.location.origin ? target.href : self.location.origin + '/';
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const open = windows.find(client => new URL(client.url).origin === self.location.origin);
-    if (open) { await open.focus(); return open.navigate(url); }
+    if (open) {
+      try { await open.focus(); return await open.navigate(url); } catch { }
+    }
     return self.clients.openWindow(url);
   })());
 });

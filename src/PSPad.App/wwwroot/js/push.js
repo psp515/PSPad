@@ -20,6 +20,7 @@ export async function support() {
 
 export async function subscribe(publicKey) {
   if (await Notification.requestPermission() !== 'granted') { return null; }
+  if (!await navigator.serviceWorker.getRegistration()) { return null; }
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(publicKey) });
   return { endpoint: subscription.endpoint, p256dh: bytesToBase64Url(subscription.getKey('p256dh')), auth: bytesToBase64Url(subscription.getKey('auth')) };

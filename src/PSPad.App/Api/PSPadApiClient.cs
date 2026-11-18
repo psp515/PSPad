@@ -286,7 +286,7 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
         {
             return (await GetAsync<PushKeyResponse>("api/push/key"))?.PublicKey;
         }
-        catch (HttpRequestException)
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             return null;
         }
@@ -311,7 +311,7 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
             using var response = await send();
             return response.IsSuccessStatusCode;
         }
-        catch (HttpRequestException)
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             return false;
         }
