@@ -299,7 +299,11 @@ Reminders module's resx (notification texts).
 - `docs/src/pages/install.astro`, a "Reminders" section: HTTPS on the client
   origin (except localhost); iPhone needs the Home Screen app, iOS 16.4+;
   keys live in Mongo, so a restored backup keeps devices subscribed and a new
-  database needs notifications turned on again; delivery is best effort.
+  database needs notifications turned on again; delivery is best effort (up
+  to 3 attempts about a minute apart within the hour); an `HTTPS_PROXY` or
+  `ALL_PROXY` on the api container routes push through the proxy, and the
+  public-address guard then checks the proxy, so a private-network proxy
+  blocks every push.
 - `docs/src/data/features.ts`: the Reminders card becomes built ("Push
   reminders for tasks, a set number of days before, at your hour"); the
   landing page mentions it.
