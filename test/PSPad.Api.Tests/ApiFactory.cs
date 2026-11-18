@@ -25,7 +25,8 @@ public sealed class ApiFactory(
             var settings = new Dictionary<string, string?>
             {
                 ["Mongo:ConnectionString"] = fixture.ConnectionString,
-                ["Mongo:Database"] = "pspad_test"
+                ["Mongo:Database"] = "pspad_test",
+                ["Reminders:Enabled"] = "false"
             };
 
             foreach (var policy in new[] { "Api", "Commands", "Sync", "Statistics", "Quotes" })

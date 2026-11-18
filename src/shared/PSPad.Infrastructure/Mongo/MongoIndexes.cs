@@ -97,6 +97,8 @@ public static class MongoIndexes
 
         await EnsureStatisticsAsync(context, ct);
 
+        await EnsureRemindersAsync(context, ct);
+
         await context.Collection<BsonDocument>("processed_commands").Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("at"),
@@ -145,6 +147,27 @@ public static class MongoIndexes
                     Unique = true,
                     PartialFilterExpression = Builders<BsonDocument>.Filter.Type("inviteToken", BsonType.String)
                 }),
+            cancellationToken: ct);
+    }
+
+    static async Task EnsureRemindersAsync(MongoContext context, CancellationToken ct)
+    {
+        await context.Collection<BsonDocument>("pushsubscriptions").Indexes.CreateManyAsync(
+        [
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("endpoint"),
+                new CreateIndexOptions { Unique = true }),
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("userId"))
+        ], ct);
+
+        await context.Collection<BsonDocument>("sentreminders").Indexes.CreateManyAsync(
+        [
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("claimedAt")),
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("state").Ascending("claimedAt"))
+        ], ct);
+
+        await context.Collection<BsonDocument>("todotasks").Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("reminder"),
+                new CreateIndexOptions { Sparse = true }),
             cancellationToken: ct);
     }
 

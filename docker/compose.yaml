@@ -15,6 +15,8 @@ services:
       Keycloak__AdminUser: ${KEYCLOAK_ADMIN_USER}
       Keycloak__AdminPassword: ${KEYCLOAK_ADMIN_PASSWORD}
       Cors__AllowedOrigins__0: ${APP_BASE_ADDRESS}
+      Reminders__AppBaseAddress: ${APP_BASE_ADDRESS}
+      Reminders__Contact: ${REMINDERS_CONTACT:-}
       Proxy__KnownNetworks__0: ${API_TRUSTED_PROXY_NETWORK:-}
       Proxy__ClientIpHeader: ${API_CLIENT_IP_HEADER:-X-Forwarded-For}
     ports:
