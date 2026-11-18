@@ -116,7 +116,7 @@ the endpoints; indexes go in `MongoIndexes`.
 | `vapidkeys` | one document, fixed id: `{PublicKey, PrivateKey, CreatedAt}` | — |
 
 None of them syncs to the client or appears in the replica. The `todotasks`
-collection gains a sparse index on `Reminder`.
+collection gains a partial index on `reminder` (filter `$type: object`; tasks store `reminder: null`, so a sparse index would narrow nothing).
 
 ### 3.3 The tick
 
@@ -151,7 +151,9 @@ Nothing is held in memory between ticks except the VAPID key pair.
   text that is localized); `url` = `{Reminders:AppBaseAddress}/?task={TaskId}`;
   `tag` = the task id.
 - VAPID JWT (RFC 8292) signed with the stored private key; `sub` =
-  `Reminders:Contact`, or `Reminders:AppBaseAddress` when empty.
+  `Reminders:Contact`, or `Reminders:AppBaseAddress` when empty and it is
+  `https`; otherwise the JWT has no `sub` (Apple may refuse such pushes, so
+  the install guide asks for `REMINDERS_CONTACT`).
 - Configuration (`ReminderOptions`, section `Reminders`): `AppBaseAddress`
   (compose passes `${APP_BASE_ADDRESS}`) and `Contact` (compose passes
   `${REMINDERS_CONTACT:-}`).
