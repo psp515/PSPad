@@ -147,6 +147,12 @@ public class PushEndpointTests(MongoFixture fixture)
     [InlineData("https://push.test/a", "", "BAUG")]
     [InlineData("https://push.test/a", "AQID", "")]
     [InlineData("LONG", "AQID", "BAUG")]
+    [InlineData("http://push.example/x", "AQID", "BAUG")]
+    [InlineData("http://localhost/x", "AQID", "BAUG")]
+    [InlineData("https://10.0.0.1/x", "AQID", "BAUG")]
+    [InlineData("https://[::1]/x", "AQID", "BAUG")]
+    [InlineData("https://push.test/a", "AQ+D", "BAUG")]
+    [InlineData("https://push.test/a", "AQID", "BA/G")]
     public async Task ABadSubscriptionIsRefused(string endpoint, string p256dh, string auth)
     {
         await using var factory = FactoryWith(new FakePushService());
@@ -156,6 +162,51 @@ public class PushEndpointTests(MongoFixture fixture)
         var response = await Subscribe(client, value, p256dh, auth);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ALongLabelIsTrimmed()
+    {
+        await using var factory = FactoryWith(new FakePushService());
+        var client = await UserAsync(factory);
+        var endpoint = $"https://push.test/{Guid.NewGuid()}";
+
+        await client.PutAsJsonAsync("/api/push/subscriptions",
+            new PushSubscriptionRequest(endpoint, "AQID", "BAUG", "  " + new string('x', 150)), Ct);
+
+        Assert.Equal(100, (await Stored(factory, endpoint))!.DeviceLabel.Length);
+    }
+
+    [Fact]
+    public async Task AMovedEndpointStartsFresh()
+    {
+        await using var factory = FactoryWith(new FakePushService());
+        var a = await UserAsync(factory);
+        var b = await UserAsync(factory);
+        var endpoint = $"https://push.test/{Guid.NewGuid()}";
+        await Subscribe(a, endpoint);
+        using (var scope = factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IPushSubscriptionStore>()
+                .MarkDeliveredAsync(endpoint, DateTimeOffset.UtcNow, Ct);
+        }
+
+        Assert.NotNull((await Stored(factory, endpoint))!.LastSuccessAt);
+        await Task.Delay(20, Ct);
+        await Subscribe(b, endpoint);
+
+        Assert.Null((await Stored(factory, endpoint))!.LastSuccessAt);
+    }
+
+    [Fact]
+    public async Task AMissingEndpointIsRefused()
+    {
+        await using var factory = FactoryWith(new FakePushService());
+        var client = await UserAsync(factory);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await Delete(client, "")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await client.PostAsJsonAsync("/api/push/test", new PushEndpointRequest(""), Ct)).StatusCode);
     }
 
     [Fact]

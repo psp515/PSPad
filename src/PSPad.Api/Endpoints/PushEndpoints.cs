@@ -34,6 +34,11 @@ public static class PushEndpoints
             }
 
             var existing = await store.FindAsync(request.Endpoint, ct);
+            if (existing is not null && existing.UserId != current.UserId)
+            {
+                existing = null;
+            }
+
             var label = (request.DeviceLabel ?? "").Trim();
             await store.SaveAsync(new PushSubscriptionRecord(
                 PushSubscriptionRecord.IdFor(request.Endpoint),
@@ -53,6 +58,11 @@ public static class PushEndpoints
             ICurrentUser current,
             CancellationToken ct) =>
         {
+            if (string.IsNullOrEmpty(request.Endpoint))
+            {
+                return Results.BadRequest();
+            }
+
             var existing = await store.FindAsync(request.Endpoint, ct);
             if (existing is null)
             {
@@ -77,6 +87,11 @@ public static class PushEndpoints
             ICurrentUser current,
             CancellationToken ct) =>
         {
+            if (string.IsNullOrEmpty(request.Endpoint))
+            {
+                return Results.BadRequest();
+            }
+
             var subscription = await store.FindAsync(request.Endpoint, ct);
             if (subscription is null || subscription.UserId != current.UserId)
             {
@@ -101,7 +116,8 @@ public static class PushEndpoints
     static bool IsAcceptableEndpoint(string? endpoint) =>
         endpoint is { Length: > 0 and <= MaxEndpointLength }
         && Uri.TryCreate(endpoint, UriKind.Absolute, out var uri)
-        && (uri.Scheme == Uri.UriSchemeHttps || (uri.Scheme == Uri.UriSchemeHttp && uri.Host == "localhost"));
+        && uri.Scheme == Uri.UriSchemeHttps
+        && uri.HostNameType == UriHostNameType.Dns;
 
     static bool IsKey(string? value) =>
         value is { Length: > 0 and <= MaxKeyLength }
