@@ -11,6 +11,7 @@
     <ProjectReference Include="..\modules\PSPad.Module.Money\PSPad.Module.Money.csproj" />
     <ProjectReference Include="..\modules\PSPad.Module.Investments\PSPad.Module.Investments.csproj" />
     <ProjectReference Include="..\modules\PSPad.Module.Sharing\PSPad.Module.Sharing.csproj" />
+    <ProjectReference Include="..\modules\PSPad.Module.Reminders\PSPad.Module.Reminders.csproj" />
   </ItemGroup>
 
   <ItemGroup>

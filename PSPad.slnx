@@ -16,6 +16,7 @@
     <Project Path="src/modules/PSPad.Module.Money/PSPad.Module.Money.csproj" />
     <Project Path="src/modules/PSPad.Module.Investments/PSPad.Module.Investments.csproj" />
     <Project Path="src/modules/PSPad.Module.Sharing/PSPad.Module.Sharing.csproj" />
+    <Project Path="src/modules/PSPad.Module.Reminders/PSPad.Module.Reminders.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/PSPad.TestInfrastructure/PSPad.TestInfrastructure.csproj" />
@@ -26,6 +27,7 @@
     <Project Path="test/PSPad.Module.Money.Tests/PSPad.Module.Money.Tests.csproj" />
     <Project Path="test/PSPad.Module.Investments.Tests/PSPad.Module.Investments.Tests.csproj" />
     <Project Path="test/PSPad.Module.Sharing.Tests/PSPad.Module.Sharing.Tests.csproj" />
+    <Project Path="test/PSPad.Module.Reminders.Tests/PSPad.Module.Reminders.Tests.csproj" />
     <Project Path="test/PSPad.Api.Tests/PSPad.Api.Tests.csproj" />
     <Project Path="test/PSPad.App.Tests/PSPad.App.Tests.csproj" />
   </Folder>
