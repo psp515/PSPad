@@ -82,12 +82,14 @@ Enforced by architecture guard tests, not just this document: no
 `PSPad.Module.Statistics`/`PSPad.Module.Presentation` reference inside
 `PSPad.Module.Sharing`.
 
-Module-to-module edges: `Statistics` → `Tasks`, `Sharing` → `Tasks` and
-`Reminders` → `Tasks` and `Identity` (Money has none), all one way and both for the same reason —
-each pattern-matches on Tasks' own event or aggregate types, so a rename
-breaks the build rather than a mismatch surfacing at render time
-(`adr/0037`, `adr/0056`). `ArchitectureTests` guards both directions failing
-the build if `Tasks` ever references either back.
+Module-to-module edges: `Statistics` → `Tasks`, `Sharing` → `Tasks`,
+`Reminders` → `Tasks` and `Reminders` → `Identity` (Money has none), all one
+way. Statistics and Sharing pattern-match on Tasks' own event or aggregate
+types, so a rename breaks the build rather than a mismatch surfacing at
+render time (`adr/0037`, `adr/0056`). Reminders reads tasks and lists from
+Tasks and each user's time zone and language from Identity, because the tick
+needs them (`adr/0092`). `ArchitectureTests` guards both directions failing
+the build if `Tasks` ever references Statistics or Sharing back.
 
 Commands are discovered by reflection over `CommandModules.Names`
 (`PSPad.Contracts`) — `PSPad.Module.Tasks`, `PSPad.Module.Presentation` and `PSPad.Module.Money` —
@@ -230,8 +232,8 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq`, `projectionVersion` (`adr/0055`) |
 | `list_snapshots` | a frozen, owner-published copy of one list (`adr/0056`) | `_id` (GUID), `token` (unique, server-generated, distinct from `_id`), `userId` (owner), `listId`, `kind`, `name`, `createdAt`, `expiresAt`, `tasks[]` or `items[]` — each entry its own `id`/`name`/`done`/`marked`/`markedAt`, steps or fields nested the same way. Content is frozen at publish; only `marked`/`markedAt` change afterwards |
 | `snapshot_visits` | a signed-in visitor's own record of opening a snapshot | `_id` = `"{userId}:{snapshotId}"`, `userId`, `snapshotId`, `token`, `name`, `expiresAt`, `visitedAt` |
-| `pushsubscriptions` | one Web Push subscription per device (`adr/0092`); not synced | `userId`, `endpoint` (unique), `p256dh`, `auth`, `deviceLabel`, `createdAt`, `lastSuccessAt?` |
-| `sentreminders` | the claim that a reminder went out, one per (task, occurrence, recipient); pruned after 7 days | `taskId`, `occurrence`, `userId`, `claimedAt`, `attempts`, `state` (`Sent`, `Retry`, `Failed`) |
+| `pushsubscriptions` | one Web Push subscription per device (`adr/0092`); not synced | `_id` = lowercase SHA-256 hex of the endpoint (`PushSubscriptionRecord.IdFor`), `userId`, `endpoint` (unique), `p256dh`, `auth`, `deviceLabel`, `createdAt`, `lastSuccessAt?` |
+| `sentreminders` | the claim that a reminder went out, one per (task, occurrence, recipient); pruned after 7 days | `_id`, `taskId`, `occurrence`, `userId`, `claimedAt`, `attempts`, `state` (`Sent`, `Retry`, `Failed`), `note`, `expiresAt` |
 | `vapidkeys` | the one VAPID key pair, fixed id, generated on first start | `publicKey`, `privateKey`, `createdAt` |
 | `snapshot_mark_budgets` | anonymous mark changes spent per list and UTC day (`adr/0064`) | `_id` = `"{listId}:{yyyy-MM-dd}"`, `spent`, `expiresAt` (two days after the day) |
 
@@ -251,7 +253,7 @@ transaction; the returned value stamps both the event and the aggregate's
   `seq` alone and so cannot use either compound index
 - every aggregate collection: `{userId: 1, seq: 1}` (delta sync)
 - `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`, `{listId: 1, seq: 1}` and `{previousListId: 1, seq: 1}` (a member's delta sync), and a partial `{reminder: 1}` named `reminder_set` (`$type: object`; the scheduler's scan)
-- `pushsubscriptions`: unique `{endpoint: 1}`, `{userId: 1}`; `sentreminders`: unique `{taskId: 1, occurrence: 1, userId: 1}`, `{claimedAt: 1}`
+- `pushsubscriptions`: unique `{endpoint: 1}`, `{userId: 1}`; `sentreminders`: `_id` = `{taskId:N}:{occurrence:yyyy-MM-dd}:{userId:N}` (`ReminderClaim.IdFor`; the claim is a duplicate-key insert on `_id`), `{claimedAt: 1}`, `{state: 1, claimedAt: 1}`
 - `tasklists`: `{userId: 1, areaId: 1}`, `{_members.userId: 1, seq: 1}` (a
   member's delta sync), unique partial `{inviteToken: 1}` named
   `inviteToken_unique` (`partialFilterExpression: {inviteToken: {$type:
