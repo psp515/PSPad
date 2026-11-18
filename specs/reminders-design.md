@@ -127,7 +127,8 @@ loop goes on; it never stops the host.
 
 1. Window `(from, now]`: `from` is the previous tick's `now`; on the first
    tick after start, `now − 1 h`.
-2. Load live tasks with `Reminder != null` and their lists.
+2. Load live tasks with `Reminder != null`, except completed one-time tasks
+   (`CompletedAt` set and no `Recurrence`), and their lists.
 3. Recipients: the task's list owner (`TaskList.UserId`) and its members;
    every task belongs to a list. Load each recipient `User` once per tick.
 4. `ReminderRule.MomentsBetween` per task and recipient.

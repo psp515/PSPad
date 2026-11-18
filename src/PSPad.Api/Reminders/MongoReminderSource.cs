@@ -14,7 +14,9 @@ public sealed class MongoReminderSource(MongoContext context) : IReminderSource
     {
         var tasks = await context.Collection<TodoTask>()
             .Find(Builders<TodoTask>.Filter.Type("reminder", BsonType.Document) &
-                  Builders<TodoTask>.Filter.Eq(task => task.Deleted, false))
+                  Builders<TodoTask>.Filter.Eq(task => task.Deleted, false) &
+                  (Builders<TodoTask>.Filter.Eq(task => task.CompletedAt, null) |
+                   Builders<TodoTask>.Filter.Type("recurrence", BsonType.Document)))
             .ToListAsync(ct);
         if (tasks.Count == 0)
         {

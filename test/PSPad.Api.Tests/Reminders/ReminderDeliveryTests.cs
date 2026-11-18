@@ -16,6 +16,7 @@ using PSPad.Contracts;
 using PSPad.Module.Reminders;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
+using PSPad.Module.Tasks.Recurrence;
 using PSPad.Module.Tasks.Tasks;
 using PSPad.TestInfrastructure;
 
@@ -239,6 +240,29 @@ public class ReminderDeliveryTests(MongoFixture fixture)
         await TickAsync(factory, moment.AddMinutes(-1), moment);
 
         Assert.Empty(push.To(device));
+    }
+
+    [Fact]
+    public async Task ACompletedOneTimeTaskIsNoCandidateButARecurringOneStays()
+    {
+        await using var factory = FactoryWith(new FakePushService());
+        var (client, userId) = await UserAsync(factory);
+        var listId = await ListAsync(client, userId);
+        var day = new DateOnly(2031, 2, 9);
+        var done = await TaskAsync(client, userId, listId, "Done once", day, 0, Nine);
+        var open = await TaskAsync(client, userId, listId, "Still open", day, 0, Nine);
+        var recurring = await TaskAsync(client, userId, listId, "Every day", day, 0, Nine);
+        await Sharing.SendAsync(client, Ct,
+            new CompleteTask(Guid.NewGuid(), userId, done),
+            new SetTaskRecurrence(Guid.NewGuid(), userId, recurring, RecurrenceRule.Daily(day)));
+
+        using var scope = factory.Services.CreateScope();
+        var candidates = (await scope.ServiceProvider.GetRequiredService<IReminderSource>().CandidatesAsync(Ct))
+            .Where(c => c.Task.ListId == listId)
+            .Select(c => c.Task.Id)
+            .ToList();
+
+        Assert.Equal(new[] { open, recurring }.Order(), candidates.Order());
     }
 
     [Fact]
