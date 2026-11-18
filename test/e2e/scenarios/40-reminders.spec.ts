@@ -107,11 +107,11 @@ test('the device caption is checked each time a task opens', async ({ page, acco
   await openTask(page, task);
   await setDueDate(page, 'Tomorrow');
   await chooseProperty(page, 'Remind me', 'On the day at 09:00');
-  await expect(panel(page).locator('.pspad-reminder-device-off')).toBeVisible();
+  await expect(panel(page).getByRole('link', { name: 'Notifications are off on this device · Turn on' })).toBeVisible();
   await closeTask(page);
 
   await page.evaluate(() => (window as any).__pushOn());
   await openTask(page, task);
   await expect(propertyRow(page, 'Remind me')).toContainText('On the day at 09:00');
-  await expect(panel(page).locator('.pspad-reminder-device-off')).toHaveCount(0);
+  await expect(panel(page).getByRole('link', { name: 'Notifications are off on this device · Turn on' })).toHaveCount(0);
 });
