@@ -1,13 +1,12 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea } from '../helpers/areas';
 import { createList, openList } from '../helpers/lists';
-import { chooseProperty, clearProperty, propertyRow } from '../helpers/panels';
+import { chooseProperty, clearProperty, panel, propertyRow } from '../helpers/panels';
 import { setCustomReminder } from '../helpers/reminders';
 import { goToSettings, notificationsCard } from '../helpers/settings';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, openTask } from '../helpers/tasks';
 import { setDueDate, setRepeating } from '../helpers/today';
-import { panel } from '../helpers/panels';
 
 test('a task reminder is set, customised, cleared and waits for a due date', async ({ page, account }) => {
   const task = `Call the bank ${account.suffix}`;
@@ -38,6 +37,10 @@ test('a task reminder is set, customised, cleared and waits for a due date', asy
 
   await test.step('a custom reminder reads its days and time', async () => {
     await setCustomReminder(page, 3, 18, 30);
+    await expect(propertyRow(page, 'Remind me')).toContainText('3 days before at 18:30');
+    await closeTask(page);
+    await page.reload();
+    await openTask(page, task);
     await expect(propertyRow(page, 'Remind me')).toContainText('3 days before at 18:30');
   });
 
