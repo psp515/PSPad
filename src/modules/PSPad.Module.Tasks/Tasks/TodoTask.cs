@@ -42,6 +42,12 @@ public sealed class TodoTask : Aggregate
     public TaskTime? Time { get; private set; }
 
     [JsonInclude]
+    public TaskReminder? Reminder { get; private set; }
+
+    [JsonInclude]
+    public DateTimeOffset? ReminderSetAt { get; private set; }
+
+    [JsonInclude]
     public string Description { get; private set; } = "";
 
     [JsonInclude]
@@ -223,6 +229,13 @@ public sealed class TodoTask : Aggregate
                     ? []
                     : [new TaskLeadTimeSet(leading.Id, grant.OwnerId, at, lead.LeadTime)];
 
+            case SetTaskReminder remind:
+                var reminding = Require(task, grant);
+                remind.Reminder?.Validate();
+                return reminding.Reminder == remind.Reminder
+                    ? []
+                    : [new TaskReminderSet(reminding.Id, grant.OwnerId, at, remind.Reminder)];
+
             case SetTaskTime time:
                 var timing = Require(task, grant);
                 time.Time?.Validate();
@@ -360,6 +373,10 @@ public sealed class TodoTask : Aggregate
                 break;
             case TaskLeadTimeSet lead:
                 LeadTime = lead.LeadTime;
+                break;
+            case TaskReminderSet reminderSet:
+                Reminder = reminderSet.Reminder;
+                ReminderSetAt = reminderSet.At;
                 break;
             case TaskTimeSet timeSet:
                 Time = timeSet.Time;

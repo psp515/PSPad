@@ -47,6 +47,14 @@ public class SharedTaskTests
     }
 
     [Fact]
+    public void AMemberSetsTheReminderOfTheOwnersTask()
+    {
+        var set = Assert.Single(TodoTask.Decide(
+            OwnedTask(), new SetTaskReminder(Guid.NewGuid(), Member, TaskId, TaskReminder.Of(1, new TimeOnly(9, 0))), Now, Access));
+        Assert.Equal(Owner, set.UserId);
+    }
+
+    [Fact]
     public void AMemberSetsTheTimeOfTheOwnersTask()
     {
         var events = TodoTask.Decide(
