@@ -189,6 +189,12 @@ All require the signed-in user.
 | `DELETE /api/push/subscriptions` | body `{Endpoint}`; deletes it if the caller owns it |
 | `POST /api/push/test` | body `{Endpoint}`; pushes "PSPad notifications work" to that subscription of the caller only |
 
+A subscription's endpoint must be an absolute `https` URL with a DNS host
+name (no IP literal), at most 2048 characters. When sending, the push
+client refuses to connect to loopback, private, link-local, unique-local or
+unspecified addresses after DNS resolution, so a stored endpoint can't make
+the server call an internal service.
+
 Account deletion removes the user's `pushsubscriptions` and `sentreminders`.
 
 ### 3.7 Service worker
