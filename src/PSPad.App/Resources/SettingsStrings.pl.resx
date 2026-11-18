@@ -171,4 +171,37 @@
   <data name="NotSyncedYet" xml:space="preserve">
     <value>Jeszcze nie zsynchronizowano</value>
   </data>
+  <data name="Notifications" xml:space="preserve">
+    <value>Powiadomienia</value>
+  </data>
+  <data name="NotificationsExplain" xml:space="preserve">
+    <value>Przypomnienia trafiają na urządzenia, które tu włączysz.</value>
+  </data>
+  <data name="NotificationsTurnOn" xml:space="preserve">
+    <value>Włącz na tym urządzeniu</value>
+  </data>
+  <data name="NotificationsOn" xml:space="preserve">
+    <value>Włączone na tym urządzeniu.</value>
+  </data>
+  <data name="NotificationsTurnOff" xml:space="preserve">
+    <value>Wyłącz</value>
+  </data>
+  <data name="NotificationsSendTest" xml:space="preserve">
+    <value>Wyślij test</value>
+  </data>
+  <data name="NotificationsTestSent" xml:space="preserve">
+    <value>Wysłano powiadomienie testowe.</value>
+  </data>
+  <data name="NotificationsBlocked" xml:space="preserve">
+    <value>Powiadomienia PSPad są zablokowane w ustawieniach przeglądarki.</value>
+  </data>
+  <data name="NotificationsUnsupported" xml:space="preserve">
+    <value>Ta przeglądarka nie wyświetla powiadomień.</value>
+  </data>
+  <data name="NotificationsHomeScreen" xml:space="preserve">
+    <value>Dodaj PSPad do ekranu początkowego, aby dostawać przypomnienia.</value>
+  </data>
+  <data name="NotificationsFailed" xml:space="preserve">
+    <value>Nie udało się. Spróbuj ponownie.</value>
+  </data>
 </root>

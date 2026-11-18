@@ -1,0 +1,166 @@
+@using PSPad.App.Api
+@using PSPad.App.Push
+@using PSPad.App.Resources
+@using PSPad.App.State
+@using PSPad.App.Sync
+@using PSPad.Contracts
+@inject IPushDevice Device
+@inject IPushApi PushApi
+@inject IConnectivity Connectivity
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SettingsStrings> T
+@implements IDisposable
+
+<MudItem xs="12" sm="6" lg="4" xl="3">
+    <MudPaper Outlined="true" Class="pa-4 pspad-notifications" id="notifications" role="region" aria-label="@T["Notifications"].Value">
+        <SectionHeading Title="@T["Notifications"]" />
+        @switch (_state)
+        {
+            case PushCardState.Unsupported:
+                <MudText Typo="Typo.body2">@T["NotificationsUnsupported"]</MudText>
+                break;
+            case PushCardState.NeedsHomeScreen:
+                <MudText Typo="Typo.body2">@T["NotificationsHomeScreen"]</MudText>
+                break;
+            case PushCardState.Denied:
+                <MudText Typo="Typo.body2">@T["NotificationsBlocked"]</MudText>
+                break;
+            case PushCardState.Off:
+                <MudText Typo="Typo.body2" Class="mb-3">@T["NotificationsExplain"]</MudText>
+                <MudButton Class="pspad-notifications-on" Variant="Variant.Outlined" Color="Color.Primary"
+                           Disabled="@Blocked" OnClick="@TurnOnAsync">@T["NotificationsTurnOn"]</MudButton>
+                break;
+            case PushCardState.On:
+                <MudText Typo="Typo.body2" Class="mb-3">@T["NotificationsOn"]</MudText>
+                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
+                    <MudButton Class="pspad-notifications-test" Variant="Variant.Outlined" Color="Color.Primary"
+                               Disabled="@Blocked" OnClick="@SendTestAsync">@T["NotificationsSendTest"]</MudButton>
+                    <MudButton Class="pspad-notifications-off" Variant="Variant.Outlined"
+                               Disabled="@Blocked" OnClick="@TurnOffAsync">@T["NotificationsTurnOff"]</MudButton>
+                </MudStack>
+                break;
+        }
+        @if (!Connectivity.IsOnline && _state is (PushCardState.Off or PushCardState.On))
+        {
+            <MudText Typo="Typo.caption" Class="d-block mt-2">@T["RequiresConnection"]</MudText>
+        }
+    </MudPaper>
+</MudItem>
+
+@code {
+    PushCardState _state = PushCardState.Unsupported;
+    PushSupport? _support;
+    string? _key;
+    bool _busy;
+
+    bool Blocked => _busy || !Connectivity.IsOnline;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Connectivity.Changed += OnConnectivityChanged;
+        await ReloadAsync();
+        _key = await PushApi.PushKeyAsync();
+    }
+
+    async Task ReloadAsync()
+    {
+        try
+        {
+            _support = await Device.SupportAsync();
+            _state = PushState.Of(_support);
+        }
+        catch (JSException)
+        {
+            _state = PushCardState.Unsupported;
+        }
+    }
+
+    async Task TurnOnAsync()
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _key ??= await PushApi.PushKeyAsync();
+        if (_key is null)
+        {
+            Snackbar.Add(T["NotificationsFailed"], Severity.Error);
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var subscription = await Device.SubscribeAsync(_key);
+            if (subscription is null)
+            {
+                await ReloadAsync();
+                return;
+            }
+
+            var request = new PushSubscriptionRequest(subscription.Endpoint, subscription.P256dh, subscription.Auth, _support?.Label ?? "Browser");
+            if (!await PushApi.SubscribeAsync(request))
+            {
+                Snackbar.Add(T["NotificationsFailed"], Severity.Error);
+                await Device.UnsubscribeAsync();
+            }
+
+            await ReloadAsync();
+        }
+        catch (JSException)
+        {
+            Snackbar.Add(T["NotificationsFailed"], Severity.Error);
+            await ReloadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    async Task TurnOffAsync()
+    {
+        _busy = true;
+        try
+        {
+            if (await Device.UnsubscribeAsync() is { } endpoint)
+            {
+                await PushApi.UnsubscribeAsync(endpoint);
+            }
+        }
+        catch (JSException)
+        {
+            Snackbar.Add(T["NotificationsFailed"], Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+
+        await ReloadAsync();
+    }
+
+    async Task SendTestAsync()
+    {
+        if (_support?.Endpoint is not { } endpoint)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var sent = await PushApi.SendTestAsync(endpoint);
+            Snackbar.Add(sent ? T["NotificationsTestSent"] : T["NotificationsFailed"], sent ? Severity.Success : Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    void OnConnectivityChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Connectivity.Changed -= OnConnectivityChanged;
+}
