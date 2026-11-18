@@ -83,8 +83,19 @@ public sealed class ReminderTick(
             var missed = (await subscriptions.ForUserAsync(claim.UserId, ct))
                 .Where(s => s.LastSuccessAt is null || s.LastSuccessAt < claim.ClaimedAt)
                 .ToList();
-            await DeliverAsync(claim, missed, claim.Attempts + 1, now, ct);
+            var attempts = claim.Attempts + 1;
+            var state = await DeliverAsync(claim, missed, attempts, now, ct);
             retried++;
+
+            if (state == ClaimState.Retry && attempts >= MostAttempts)
+            {
+                await claims.UpdateAsync(claim.Id, ClaimState.Failed, attempts, ct);
+                failed++;
+            }
+            else if (state == ClaimState.Failed)
+            {
+                failed++;
+            }
         }
 
         await claims.PruneBeforeAsync(now - KeepClaims, ct);

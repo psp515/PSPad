@@ -109,12 +109,29 @@ public class ReminderTickTests
 
         await tick.RunAsync(From, Moment, TestContext.Current.CancellationToken);
         await tick.RunAsync(Moment, Moment.AddMinutes(1), TestContext.Current.CancellationToken);
-        await tick.RunAsync(Moment, Moment.AddMinutes(2), TestContext.Current.CancellationToken);
-        var last = await tick.RunAsync(Moment, Moment.AddMinutes(3), TestContext.Current.CancellationToken);
+        var third = await tick.RunAsync(Moment, Moment.AddMinutes(2), TestContext.Current.CancellationToken);
+        await tick.RunAsync(Moment, Moment.AddMinutes(3), TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, last.Failed);
+        Assert.Equal(1, third.Failed);
         Assert.Equal(3, sender.Endpoints.Count);
-        Assert.Equal(ClaimState.Failed, Assert.Single(claims.Claims.Values).State);
+        var claim = Assert.Single(claims.Claims.Values);
+        Assert.Equal(ClaimState.Failed, claim.State);
+        Assert.Equal(3, claim.Attempts);
+    }
+
+    [Fact]
+    public async Task ARetryThatSucceedsIsSent()
+    {
+        subscriptions.Add(Owner, "https://push/b");
+        sender.Queue(503, 201);
+        var tick = TickFor(NineOClockTask(), Warsaw(Owner));
+
+        await tick.RunAsync(From, Moment, TestContext.Current.CancellationToken);
+        await tick.RunAsync(Moment, Moment.AddMinutes(1), TestContext.Current.CancellationToken);
+
+        var claim = Assert.Single(claims.Claims.Values);
+        Assert.Equal(ClaimState.Sent, claim.State);
+        Assert.Equal(2, claim.Attempts);
     }
 
     [Fact]
