@@ -35,6 +35,7 @@ src/
     PSPad.Module.Presentation/  per-user views of shared data (AreaView: list order) — pure, WASM-safe
     PSPad.Module.Money/         budgets, categories, entries, balance snapshots, money preferences, rate suggestion, month, balance and range summaries — pure, WASM-safe (adr/0059)
     PSPad.Module.Sharing/       public snapshots — frozen list copies, server-side only (adr/0056)
+    PSPad.Module.Reminders/     the reminder tick, notification texts and ports — pure, server-side only (adr/0092)
 test/
   PSPad.Module.Tasks.Tests/       unit only
   PSPad.Module.Statistics.Tests/  unit only
@@ -60,6 +61,7 @@ References run one way only:
 | `PSPad.Module.Presentation` | `PSPad.Abstractions` — and nothing else; no module references it back (`adr/0051`) |
 | `PSPad.Module.Money` | `PSPad.Abstractions` — and nothing else; only `Api` and `App` reference it (`adr/0059`) |
 | `PSPad.Module.Sharing` | `PSPad.Abstractions`, `PSPad.Module.Tasks` (aggregate shapes only, to build a snapshot — `adr/0056`) |
+| `PSPad.Module.Reminders` | `PSPad.Abstractions`, `PSPad.Module.Tasks`, `PSPad.Module.Identity` — no MongoDB, ASP.NET Core, `System.Net.Http`, Hosting or `PSPad.Infrastructure` (`adr/0092`) |
 | `PSPad.Infrastructure` | `PSPad.Abstractions`, `PSPad.Contracts` — never a module |
 | `PSPad.Api` | everything |
 | `PSPad.App` | `PSPad.Module.Tasks`, `PSPad.Module.Presentation`, `PSPad.Module.Money`, `PSPad.Abstractions`, `PSPad.Contracts` — never `PSPad.Infrastructure` |
@@ -80,8 +82,8 @@ Enforced by architecture guard tests, not just this document: no
 `PSPad.Module.Statistics`/`PSPad.Module.Presentation` reference inside
 `PSPad.Module.Sharing`.
 
-Two module-to-module edges exist, and only these two (Money has none): `Statistics` →
-`Tasks` and `Sharing` → `Tasks`, both one way and both for the same reason —
+Module-to-module edges: `Statistics` → `Tasks`, `Sharing` → `Tasks` and
+`Reminders` → `Tasks` and `Identity` (Money has none), all one way and both for the same reason —
 each pattern-matches on Tasks' own event or aggregate types, so a rename
 breaks the build rather than a mismatch surfacing at render time
 (`adr/0037`, `adr/0056`). `ArchitectureTests` guards both directions failing
@@ -213,7 +215,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `areas` | user-defined areas | `name`, `position` |
 | `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation), `inviteToken` (`adr/0054`, null = not shared), `inviteCode`, `inviteExpiresAt` (`adr/0057`; 30 minutes from the share), `wrongCodes`, `ownerName`, `_members[]` (`userId`, `displayName`, `joinedAt`; the leading underscore keeps the BSON field name stable, like `_steps`). Documents written before `adr/0051` still carry a `position` nobody reads |
 | `inboxes` | one per user | `items[]` |
-| `todotasks` | tasks with steps inline | `listId`, `previousListId` (the list it last left, null until moved), `dueOn`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0056`) |
+| `todotasks` | tasks with steps inline | `listId`, `previousListId` (the list it last left, null until moved), `dueOn`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0056`), `reminder` (`daysBefore`, `at`; null = off), `reminderSetAt` (`specs/reminders-design.md`) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn`, `_taskIds[]` (the tasks this user counts toward the goal — `adr/0065`) |
 | `referenceitems` | items in a `Reference` list | `listId`, `previousListId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`), `snapshotMarks[]` (`snapshotId`, `markedAt` — `adr/0056`) |
 | `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
@@ -228,6 +230,9 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `statistics_state` | the projection's resume marker | `_id: "statistics"`, `lastProcessedSeq`, `projectionVersion` (`adr/0055`) |
 | `list_snapshots` | a frozen, owner-published copy of one list (`adr/0056`) | `_id` (GUID), `token` (unique, server-generated, distinct from `_id`), `userId` (owner), `listId`, `kind`, `name`, `createdAt`, `expiresAt`, `tasks[]` or `items[]` — each entry its own `id`/`name`/`done`/`marked`/`markedAt`, steps or fields nested the same way. Content is frozen at publish; only `marked`/`markedAt` change afterwards |
 | `snapshot_visits` | a signed-in visitor's own record of opening a snapshot | `_id` = `"{userId}:{snapshotId}"`, `userId`, `snapshotId`, `token`, `name`, `expiresAt`, `visitedAt` |
+| `pushsubscriptions` | one Web Push subscription per device (`adr/0092`); not synced | `userId`, `endpoint` (unique), `p256dh`, `auth`, `deviceLabel`, `createdAt`, `lastSuccessAt?` |
+| `sentreminders` | the claim that a reminder went out, one per (task, occurrence, recipient); pruned after 7 days | `taskId`, `occurrence`, `userId`, `claimedAt`, `attempts`, `state` (`Sent`, `Retry`, `Failed`) |
+| `vapidkeys` | the one VAPID key pair, fixed id, generated on first start | `publicKey`, `privateKey`, `createdAt` |
 | `snapshot_mark_budgets` | anonymous mark changes spent per list and UTC day (`adr/0064`) | `_id` = `"{listId}:{yyyy-MM-dd}"`, `spent`, `expiresAt` (two days after the day) |
 
 Every aggregate document carries `_id` (GUID), `userId`, `version`
@@ -245,7 +250,8 @@ transaction; the returned value stamps both the event and the aggregate's
   one serves startup replay, which reads forward across every user ordered by
   `seq` alone and so cannot use either compound index
 - every aggregate collection: `{userId: 1, seq: 1}` (delta sync)
-- `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`, `{listId: 1, seq: 1}` and `{previousListId: 1, seq: 1}` (a member's delta sync)
+- `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`, `{listId: 1, seq: 1}` and `{previousListId: 1, seq: 1}` (a member's delta sync), and a partial `{reminder: 1}` named `reminder_set` (`$type: object`; the scheduler's scan)
+- `pushsubscriptions`: unique `{endpoint: 1}`, `{userId: 1}`; `sentreminders`: unique `{taskId: 1, occurrence: 1, userId: 1}`, `{claimedAt: 1}`
 - `tasklists`: `{userId: 1, areaId: 1}`, `{_members.userId: 1, seq: 1}` (a
   member's delta sync), unique partial `{inviteToken: 1}` named
   `inviteToken_unique` (`partialFilterExpression: {inviteToken: {$type:
@@ -838,6 +844,10 @@ directly in `PSPad.Api`:
 | `GET` | `/api/statistics/records?before=&limit=` | The statistics feed, newest first. `limit` clamps to 1..200, default 50 |
 | `GET` | `/api/statistics/overview?days=` | Tiles and the five chart series. `days` is 30, 90 or 365, default 30 |
 | `GET` | `/api/money/nbp-rate?currency=&date=` | NBP table A mid rate for one currency: the last one on or before `date` (7-day lookback). `200 NbpRateView(Currency, Rate, EffectiveDate)`; `404` for an unknown currency, a date before 2002-01-02, no rate or an NBP 4xx; `502` when NBP fails (5xx, network, bad JSON) or takes over 5 s. PLN answers 1 without calling NBP. Successes cached in memory per (code, date): 24 h for past dates, 1 h otherwise. Online-only, not a command (`adr/0059`) |
+| `GET` | `/api/push/key` | The VAPID public key, base64url. Signed-in |
+| `PUT` | `/api/push/subscriptions` | Upsert the caller's device subscription by endpoint; an endpoint must be absolute `https` with a DNS host name, at most 2048 characters |
+| `DELETE` | `/api/push/subscriptions` | `{endpoint}`; removes it if the caller owns it |
+| `POST` | `/api/push/test` | `{endpoint}`; pushes a test notification to that subscription of the caller. Online-only, none of these are commands |
 | `GET` | `/api/me` | Current user; provisions on first call, heals display name. `503` with `Retry-After` when write conflicts outlast five attempts (§6) |
 | `PUT` | `/api/me/timezone` | Set the user's IANA time zone (not through the offline command path — rare, server-owned, online-only). `503` with `Retry-After` as for `/api/me` |
 | `PUT` | `/api/me/language` | Set the user's language (`en` / `pl`, `adr/0075`); `400` for an unsupported one. Online-only, not a command. `503` with `Retry-After` as for `/api/me` |
@@ -1150,9 +1160,11 @@ column comes through a port Statistics declares and `PSPad.Api` implements:
 Name)`, one batched call per feed page, never per row. Statistics never
 touches `IDocumentStore<TodoTask>` directly.
 
+**Reminders.** `ReminderScheduler : BackgroundService` (`PSPad.Api/Reminders`, off when `Reminders:Enabled` is false) runs `ReminderTick` every 60 seconds over the window since the last tick, or the last hour after a start; it claims each (task, occurrence, recipient) in `sentreminders` and pushes through Web Push, signed with the key in `vapidkeys`. Push endpoints may reach public hosts only. The wipe on account deletion clears `pushsubscriptions` and `sentreminders` like every `userId` collection. See `specs/reminders-design.md`.
+
 ## 10. Out of scope
 
-Habits, annual plans, integrations, the print domain, push reminders, the
+Habits, annual plans, integrations, the print domain, the
 thought of the day — unchanged from AGENTS.md §3. Reference lists and task
 descriptions have shipped (`adr/0047`, `adr/0048`); a per-list typed field
 schema and other list kinds beyond `Tasks`/`Reference` remain out. Retention

@@ -2,6 +2,8 @@
 
 Status: Built. Decision of record:
 [ADR-0053](../adr/0053-yearly-repeats-and-lead-time.md). Issue #100.
+Its row is now labelled **Show ahead**; the **Remind me** row and push
+reminders are `specs/reminders-design.md`.
 Since #112 Tomorrow and Upcoming are one **Coming up** section on today's
 My Day (`ui-spec.md`).
 
@@ -27,9 +29,8 @@ In:
 
 Out:
 
-- Push notifications, e-mail, anything that fires while the app is closed.
-  That is the Reminders subsystem (AGENTS.md §2, #8); the stored lead time is
-  what it will read later.
+- Push notifications, e-mail, anything that fires while the app is closed:
+  `specs/reminders-design.md`.
 - A lead time that puts a task on **Today** or **Overdue** early. The lead
   time only widens (or narrows) what Tomorrow and Upcoming show.
 - A separate aggregate for repeating tasks. Both kinds stay `TodoTask`

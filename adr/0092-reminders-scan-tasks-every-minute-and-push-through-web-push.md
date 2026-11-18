@@ -2,12 +2,12 @@
 title: Reminders scan tasks every minute and push through Web Push, keys in Mongo
 tags: [architecture, modularity, notifications, storage]
 date: 2026-11-18
-status: Proposed
+status: Active
 ---
 
 # ADR-0092: Reminders scan tasks every minute and push through Web Push, keys in Mongo
 
-> Status: Proposed
+> Status: Active
 
 ## Context
 

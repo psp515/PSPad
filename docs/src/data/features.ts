@@ -32,6 +32,9 @@ export const features: Feature[] = [
   { id: 'repeats', title: 'Repeats',
     does: 'Daily, weekly, monthly, yearly or every third Monday, with an optional end.',
     how: 'Only today’s occurrence shows and a missed day stays missed, so a repeat is never overdue. A lead time shows it as far ahead as you choose.' },
+  { id: 'reminders', title: 'Reminders',
+    does: 'Push reminders for tasks, a set number of days before, at your hour.',
+    how: 'Turn notifications on per device in Settings; every member of a shared list is told. Needs HTTPS, and on an iPhone the app on the Home Screen.' },
   { id: 'goals', title: 'Goals',
     does: 'One goal, with tasks from any area pointed at it.',
     how: 'Every task row shows the goal it belongs to. A due date and a status: in progress, achieved or not achieved. Goals are private to you, even on shared lists.' },
@@ -76,7 +79,6 @@ export const features: Feature[] = [
 export const planned: Planned[] = [
   { title: 'Habits', body: 'Streaks for daily habits.' },
   { title: 'Annual plans', body: 'Yearly goals, year-end summary.' },
-  { title: 'Reminders', body: 'Push notifications, daily motivation.' },
   { title: 'GitHub issues', body: 'GitHub issues as tasks.' },
   { title: 'Cloud storage', body: 'OneDrive and Google Drive.' },
   { title: '3D printing', body: 'Materials, parts, Thingiverse links.' },
