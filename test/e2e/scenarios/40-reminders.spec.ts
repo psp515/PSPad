@@ -83,3 +83,35 @@ test('the notifications card explains a browser without push', async ({ page, ac
   await goToSettings(page);
   await expect(notificationsCard(page)).toContainText("This browser can't show notifications.");
 });
+
+test('the device caption is checked each time a task opens', async ({ page, account }) => {
+  const task = `Water the plants ${account.suffix}`;
+  await page.addInitScript(() => {
+    let on = false;
+    (window as any).__pushOn = () => { on = true; };
+    Object.defineProperty(Notification, 'permission', { get: () => (on ? 'granted' : 'default') });
+    const subscription = { endpoint: 'https://push.example/e2e', getKey: () => new Uint8Array(16).buffer };
+    const realRegistration = ServiceWorkerContainer.prototype.getRegistration;
+    ServiceWorkerContainer.prototype.getRegistration = async function (...args: any[]) {
+      const registration = await realRegistration.apply(this, args as any);
+      if (!on) { return registration; }
+      return { pushManager: { getSubscription: async () => subscription } } as any;
+    };
+  });
+
+  await signIn(page, account);
+  await createArea(page, `Garden ${account.suffix}`);
+  await createList(page, `Chores ${account.suffix}`);
+  await openList(page, `Chores ${account.suffix}`);
+  await addTask(page, task);
+  await openTask(page, task);
+  await setDueDate(page, 'Tomorrow');
+  await chooseProperty(page, 'Remind me', 'On the day at 09:00');
+  await expect(panel(page).locator('.pspad-reminder-device-off')).toBeVisible();
+  await closeTask(page);
+
+  await page.evaluate(() => (window as any).__pushOn());
+  await openTask(page, task);
+  await expect(propertyRow(page, 'Remind me')).toContainText('On the day at 09:00');
+  await expect(panel(page).locator('.pspad-reminder-device-off')).toHaveCount(0);
+});
