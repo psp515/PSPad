@@ -106,6 +106,7 @@ the old one's status line to point at the new number.
 | [0089](0089-shares-received-carry-their-cost-basis-and-move-no-cash.md) | Shares received carry their cost basis as Money, move no cash, and count it as passive income | Active (narrows [0059](0059-money-is-its-own-wasm-safe-module.md) and [0087](0087-investment-pln-totals-use-the-actual-fx-cost.md) for one kind) | 2026-11-03 | domain, money, investments, import |
 | [0090](0090-user-level-display-settings-live-on-a-user-view.md) | User-level display settings live on a synced UserView in Presentation | Active (extends [0051](0051-presentation-module-per-user-views.md)) | 2026-11-10 | architecture, modularity, ui, sync |
 | [0091](0091-a-return-is-an-expense-entry-linked-to-its-purchase.md) | A return is an expense entry linked to its purchase, at the purchase's frozen rate | Active (narrows [0059](0059-money-is-its-own-wasm-safe-module.md) for one entry shape) | 2026-11-10 | domain, money, storage, sync |
+| [0092](0092-reminders-scan-tasks-every-minute-and-push-through-web-push.md) | Reminders scan tasks every minute and push through Web Push, keys in Mongo | Proposed | 2026-11-18 | architecture, modularity, notifications, storage |
 
 Sourced from AGENTS.md §5 ("Architecture decisions") and the two design
 specs in `specs/` that established and then revised them.
