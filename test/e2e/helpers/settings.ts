@@ -74,3 +74,7 @@ export async function answerAccountDeletionOnce(page: Page, status: number, chal
     },
   }), { times: 1 });
 }
+
+export function notificationsCard(page: Page) {
+  return page.locator('#notifications');
+}

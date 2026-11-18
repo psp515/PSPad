@@ -126,7 +126,7 @@ export async function pickTaskTimeFromClock(page: Page, which: 'start' | 'end', 
 }
 
 // The outer-ring hour sticks are zero-width, so Playwright never sees them as visible; a user clicks the number instead.
-async function clickClockNumber(page: Page, dial: import('@playwright/test').Locator, value: number) {
+export async function clickClockNumber(page: Page, dial: import('@playwright/test').Locator, value: number) {
   const label = dial.locator('.mud-clock-number', { hasText: new RegExp(`^${String(value).padStart(2, '0')}$`) });
   await expect(label).toBeVisible();
   const box = (await label.boundingBox())!;
