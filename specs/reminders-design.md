@@ -140,6 +140,14 @@ loop goes on; it never stops the host.
 8. Delete `sentreminders` older than 7 days.
 9. Log one line: sent, skipped, retried, failed. Never log a payload.
 
+One device can't spoil the rest: an exception from sending to a device
+counts as `Failed` for that device (logged by exception type only) and the
+other devices and claims go on. A store fault while handling one moment or
+one retry is set aside, the rest of the tick (other moments, retries, prune,
+the log line) still runs, and then the tick throws, so the scheduler logs it
+and re-runs the same window next minute; claims already taken are skipped.
+A cancelled tick stops; cancellation is never counted as a failure.
+
 Nothing is held in memory between ticks except the VAPID key pair.
 
 ### 3.4 Sending
@@ -190,7 +198,10 @@ All require the signed-in user.
 | `POST /api/push/test` | body `{Endpoint}`; pushes "PSPad notifications work" to that subscription of the caller only |
 
 A subscription's endpoint must be an absolute `https` URL with a DNS host
-name (no IP literal), at most 2048 characters. When sending, the push
+name (no IP literal), at most 2048 characters. `p256dh` must base64url-decode
+to 65 bytes starting `0x04` (an uncompressed P-256 point) and `auth` to 16
+bytes; anything else is `400`. A test push the push service refuses, or
+whose send throws, is `502`; a gone subscription is `410` and deleted. When sending, the push
 client refuses to connect to loopback, private, link-local, unique-local or
 unspecified addresses after DNS resolution, so a stored endpoint can't make
 the server call an internal service.

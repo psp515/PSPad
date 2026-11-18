@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using PSPad.Module.Tasks.Tasks;
 using PSPad.Module.Tasks.Today;
 
 namespace PSPad.Module.Reminders;
@@ -17,13 +18,13 @@ public sealed class ReminderTick(
 
     public async Task<TickResult> RunAsync(DateTimeOffset from, DateTimeOffset now, CancellationToken ct)
     {
-        int sent = 0, skipped = 0, retried = 0, failed = 0;
+        var tally = new Tally();
+        var faults = new List<Exception>();
 
         foreach (var candidate in await source.CandidatesAsync(ct))
         {
             var task = candidate.Task;
-            var reminder = task.Reminder;
-            if (reminder is null)
+            if (task.Reminder is null)
             {
                 continue;
             }
@@ -34,76 +35,106 @@ public sealed class ReminderTick(
 
                 foreach (var moment in ReminderRule.MomentsBetween(task, zone, from, now))
                 {
-                    var devices = await subscriptions.ForUserAsync(recipient.UserId, ct);
-                    if (devices.Count == 0)
-                    {
-                        skipped++;
-                        continue;
-                    }
-
-                    var note = ReminderTexts.For(task, reminder.DaysBefore, recipient.Language, settings.AppBaseAddress);
-                    var ttl = ReminderTtl.For(moment.Occurrence, zone, now);
-                    var claim = new ReminderClaim(
-                        ReminderClaim.IdFor(task.Id, moment.Occurrence, recipient.UserId), task.Id, moment.Occurrence,
-                        recipient.UserId, now, 1, ClaimState.Sent, note, now + ttl);
-
-                    if (!await claims.TryClaimAsync(claim, ct))
-                    {
-                        skipped++;
-                        continue;
-                    }
-
-                    var state = await DeliverAsync(claim, devices, 1, now, ct);
-                    if (state == ClaimState.Failed)
-                    {
-                        failed++;
-                    }
-                    else if (state == ClaimState.Sent)
-                    {
-                        sent++;
-                    }
+                    await IsolatedAsync(() => RemindAsync(task, recipient, zone, moment.Occurrence, now, tally, ct), faults, ct);
                 }
             }
         }
 
         foreach (var claim in await claims.RetriesSinceAsync(now - CatchUp, ct))
         {
-            if (claim.ClaimedAt >= now)
-            {
-                continue;
-            }
-
-            if (claim.ExpiresAt <= now || claim.Attempts >= MostAttempts)
-            {
-                await claims.UpdateAsync(claim.Id, ClaimState.Failed, claim.Attempts, ct);
-                failed++;
-                continue;
-            }
-
-            var missed = (await subscriptions.ForUserAsync(claim.UserId, ct))
-                .Where(s => s.LastSuccessAt is null || s.LastSuccessAt < claim.ClaimedAt)
-                .ToList();
-            var attempts = claim.Attempts + 1;
-            var state = await DeliverAsync(claim, missed, attempts, now, ct);
-            retried++;
-
-            if (state == ClaimState.Retry && attempts >= MostAttempts)
-            {
-                await claims.UpdateAsync(claim.Id, ClaimState.Failed, attempts, ct);
-                failed++;
-            }
-            else if (state == ClaimState.Failed)
-            {
-                failed++;
-            }
+            await IsolatedAsync(() => RetryAsync(claim, now, tally, ct), faults, ct);
         }
 
         await claims.PruneBeforeAsync(now - KeepClaims, ct);
 
         logger.LogInformation(
             "Reminders tick: sent {Sent}, skipped {Skipped}, retried {Retried}, failed {Failed}",
-            sent, skipped, retried, failed);
-        return new TickResult(sent, skipped, retried, failed);
+            tally.Sent, tally.Skipped, tally.Retried, tally.Failed);
+
+        if (faults.Count > 0)
+        {
+            throw new AggregateException(faults);
+        }
+
+        return new TickResult(tally.Sent, tally.Skipped, tally.Retried, tally.Failed);
+    }
+
+    private static async Task IsolatedAsync(Func<Task> work, List<Exception> faults, CancellationToken ct)
+    {
+        try
+        {
+            await work();
+        }
+        catch (Exception e) when (!ct.IsCancellationRequested)
+        {
+            faults.Add(e);
+        }
+    }
+
+    private async Task RemindAsync(
+        TodoTask task, Recipient recipient, TimeZoneInfo zone, DateOnly occurrence, DateTimeOffset now, Tally tally,
+        CancellationToken ct)
+    {
+        var devices = await subscriptions.ForUserAsync(recipient.UserId, ct);
+        if (devices.Count == 0)
+        {
+            tally.Skipped++;
+            return;
+        }
+
+        var note = ReminderTexts.For(task, task.Reminder!.DaysBefore, recipient.Language, settings.AppBaseAddress);
+        var ttl = ReminderTtl.For(occurrence, zone, now);
+        var claim = new ReminderClaim(
+            ReminderClaim.IdFor(task.Id, occurrence, recipient.UserId), task.Id, occurrence,
+            recipient.UserId, now, 1, ClaimState.Sent, note, now + ttl);
+
+        if (!await claims.TryClaimAsync(claim, ct))
+        {
+            tally.Skipped++;
+            return;
+        }
+
+        var state = await DeliverAsync(claim, devices, 1, now, ct);
+        if (state == ClaimState.Failed)
+        {
+            tally.Failed++;
+        }
+        else if (state == ClaimState.Sent)
+        {
+            tally.Sent++;
+        }
+    }
+
+    private async Task RetryAsync(ReminderClaim claim, DateTimeOffset now, Tally tally, CancellationToken ct)
+    {
+        if (claim.ClaimedAt >= now)
+        {
+            return;
+        }
+
+        if (claim.ExpiresAt <= now || claim.Attempts >= MostAttempts)
+        {
+            await claims.UpdateAsync(claim.Id, ClaimState.Failed, claim.Attempts, ct);
+            tally.Failed++;
+            return;
+        }
+
+        var missed = (await subscriptions.ForUserAsync(claim.UserId, ct))
+            .Where(s => s.LastSuccessAt is null || s.LastSuccessAt < claim.ClaimedAt)
+            .ToList();
+        var attempts = claim.Attempts + 1;
+        var state = await DeliverAsync(claim, missed, attempts, now, ct);
+        tally.Retried++;
+
+        if (state == ClaimState.Retry && attempts >= MostAttempts)
+        {
+            await claims.UpdateAsync(claim.Id, ClaimState.Failed, attempts, ct);
+            tally.Failed++;
+        }
+        else if (state == ClaimState.Failed)
+        {
+            tally.Failed++;
+        }
     }
 
     private async Task<ClaimState> DeliverAsync(
@@ -115,7 +146,7 @@ public sealed class ReminderTick(
 
         foreach (var device in devices)
         {
-            var outcome = PushAnswer.Of(await sender.SendAsync(device, claim.Note, ttl, ct));
+            var outcome = await SendAsync(device, claim.Note, ttl, ct);
             switch (outcome)
             {
                 case PushOutcome.Delivered:
@@ -152,6 +183,20 @@ public sealed class ReminderTick(
         }
 
         return ClaimState.Sent;
+    }
+
+    private async Task<PushOutcome> SendAsync(
+        PushSubscriptionRecord device, PushNote note, TimeSpan ttl, CancellationToken ct)
+    {
+        try
+        {
+            return PushAnswer.Of(await sender.SendAsync(device, note, ttl, ct));
+        }
+        catch (Exception e) when (!ct.IsCancellationRequested)
+        {
+            logger.LogWarning("Sending a reminder to a device threw {ExceptionType}", e.GetType().Name);
+            return PushOutcome.Failed;
+        }
     }
 
     private static TimeZoneInfo ZoneOf(string id)

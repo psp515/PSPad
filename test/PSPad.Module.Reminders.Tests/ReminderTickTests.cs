@@ -32,6 +32,10 @@ public class ReminderTickTests
         new(new FakeReminderSource(new ReminderCandidate(task, recipients)), claims, subscriptions, sender,
             new ReminderSettings("https://pspad.test"), NullLogger<ReminderTick>.Instance);
 
+    private ReminderTick TickFor(params ReminderCandidate[] candidates) =>
+        new(new FakeReminderSource(candidates), claims, subscriptions, sender,
+            new ReminderSettings("https://pspad.test"), NullLogger<ReminderTick>.Instance);
+
     private static Recipient Warsaw(Guid user) => new(user, "Europe/Warsaw", "en");
 
     [Fact]
@@ -194,5 +198,85 @@ public class ReminderTickTests
         await TickFor(NineOClockTask(), Warsaw(Owner)).RunAsync(From, Moment, TestContext.Current.CancellationToken);
 
         Assert.Equal(Moment - TimeSpan.FromDays(7), claims.PrunedBefore);
+    }
+
+    [Fact]
+    public async Task AThrowingDeviceDoesNotStopTheOthers()
+    {
+        subscriptions.Add(Owner, "https://push/a");
+        subscriptions.Add(Owner, "https://push/b");
+        subscriptions.Add(Member, "https://push/m");
+        sender.Throwing.Add("https://push/a");
+
+        var result = await TickFor(
+                new ReminderCandidate(NineOClockTask(), [Warsaw(Owner)]),
+                new ReminderCandidate(NineOClockTask(), [Warsaw(Member)]))
+            .RunAsync(From, Moment, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["https://push/a", "https://push/b", "https://push/m"], sender.Endpoints);
+        Assert.Equal(2, result.Sent);
+        Assert.All(claims.Claims.Values, c => Assert.Equal(ClaimState.Sent, c.State));
+    }
+
+    [Fact]
+    public async Task AThrowingOnlyDeviceFailsTheClaim()
+    {
+        subscriptions.Add(Owner, "https://push/a");
+        subscriptions.Add(Member, "https://push/m");
+        sender.Throwing.Add("https://push/a");
+
+        var result = await TickFor(NineOClockTask(), Warsaw(Owner), Warsaw(Member))
+            .RunAsync(From, Moment, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.Failed);
+        Assert.Equal(1, result.Sent);
+        Assert.Contains(claims.Claims.Values, c => c.UserId == Owner && c.State == ClaimState.Failed);
+    }
+
+    [Fact]
+    public async Task ACancelledTickStopsInsteadOfFailingTheDevice()
+    {
+        subscriptions.Add(Owner, "https://push/a");
+        sender.Throwing.Add("https://push/a");
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+        sender.Fault = new OperationCanceledException(cancelled.Token);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => TickFor(NineOClockTask(), Warsaw(Owner)).RunAsync(From, Moment, cancelled.Token));
+    }
+
+    [Fact]
+    public async Task AStoreFaultForOneCandidateLetsTheRestRunThenSurfaces()
+    {
+        subscriptions.Add(Owner, "https://push/a");
+        subscriptions.Add(Member, "https://push/m");
+        subscriptions.Failing.Add(Owner);
+        var tick = TickFor(
+            new ReminderCandidate(NineOClockTask(), [Warsaw(Owner)]),
+            new ReminderCandidate(NineOClockTask(), [Warsaw(Member)]));
+
+        await Assert.ThrowsAsync<AggregateException>(
+            () => tick.RunAsync(From, Moment, TestContext.Current.CancellationToken));
+
+        Assert.Equal(["https://push/m"], sender.Endpoints);
+        Assert.Equal(Moment - TimeSpan.FromDays(7), claims.PrunedBefore);
+    }
+
+    [Fact]
+    public async Task AStoreFaultInARetryLetsTheOtherRetriesRun()
+    {
+        subscriptions.Add(Owner, "https://push/a");
+        subscriptions.Add(Member, "https://push/m");
+        sender.Queue(503, 503);
+        var tick = TickFor(NineOClockTask(), Warsaw(Owner), Warsaw(Member));
+        await tick.RunAsync(From, Moment, TestContext.Current.CancellationToken);
+        subscriptions.Failing.Add(Owner);
+
+        await Assert.ThrowsAsync<AggregateException>(
+            () => tick.RunAsync(Moment, Moment.AddMinutes(1), TestContext.Current.CancellationToken));
+
+        Assert.Equal(["https://push/a", "https://push/m", "https://push/m"], sender.Endpoints);
+        Assert.Equal(ClaimState.Sent, claims.Claims.Values.Single(c => c.UserId == Member).State);
     }
 }

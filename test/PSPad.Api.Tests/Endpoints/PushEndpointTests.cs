@@ -15,6 +15,14 @@ namespace PSPad.Api.Tests.Endpoints;
 [Collection(MongoCollection.Name)]
 public class PushEndpointTests(MongoFixture fixture)
 {
+    const string P256dh = "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A";
+    const string OtherP256dh = "BEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl9gYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1-f4A";
+    const string Auth = "AQIDBAUGBwgJCgsMDQ4PEA";
+    const string OtherAuth = "ERITFBUWFxgZGhscHR4fIA";
+    const string WrongPrefixP256dh = "BQECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A";
+    const string ShortP256dh = "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-Pw";
+    const string ShortAuth = "AQIDBAUGBwgJCgsMDQ4P";
+
     static CancellationToken Ct => global::Xunit.TestContext.Current.CancellationToken;
 
     ApiFactory FactoryWith(FakePushService push) =>
@@ -30,7 +38,7 @@ public class PushEndpointTests(MongoFixture fixture)
         return client;
     }
 
-    static Task<HttpResponseMessage> Subscribe(HttpClient client, string endpoint, string p256dh = "AQID", string auth = "BAUG") =>
+    static Task<HttpResponseMessage> Subscribe(HttpClient client, string endpoint, string p256dh = P256dh, string auth = Auth) =>
         client.PutAsJsonAsync("/api/push/subscriptions", new PushSubscriptionRequest(endpoint, p256dh, auth, "Phone"), Ct);
 
     static async Task<PushSubscriptionRecord?> Stored(ApiFactory factory, string endpoint)
@@ -69,11 +77,11 @@ public class PushEndpointTests(MongoFixture fixture)
         Assert.Equal(HttpStatusCode.NoContent, (await Subscribe(client, endpoint)).StatusCode);
         var first = await Stored(factory, endpoint);
         await Task.Delay(20, Ct);
-        Assert.Equal(HttpStatusCode.NoContent, (await Subscribe(client, endpoint, "CQoL", "DA0O")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Subscribe(client, endpoint, OtherP256dh, OtherAuth)).StatusCode);
         var second = await Stored(factory, endpoint);
 
-        Assert.Equal("CQoL", second!.P256dh);
-        Assert.Equal("DA0O", second.Auth);
+        Assert.Equal(OtherP256dh, second!.P256dh);
+        Assert.Equal(OtherAuth, second.Auth);
         Assert.Equal(first!.CreatedAt, second.CreatedAt);
     }
 
@@ -143,16 +151,22 @@ public class PushEndpointTests(MongoFixture fixture)
     }
 
     [Theory]
-    [InlineData("ftp://x", "AQID", "BAUG")]
-    [InlineData("https://push.test/a", "", "BAUG")]
-    [InlineData("https://push.test/a", "AQID", "")]
-    [InlineData("LONG", "AQID", "BAUG")]
-    [InlineData("http://push.example/x", "AQID", "BAUG")]
-    [InlineData("http://localhost/x", "AQID", "BAUG")]
-    [InlineData("https://10.0.0.1/x", "AQID", "BAUG")]
-    [InlineData("https://[::1]/x", "AQID", "BAUG")]
-    [InlineData("https://push.test/a", "AQ+D", "BAUG")]
-    [InlineData("https://push.test/a", "AQID", "BA/G")]
+    [InlineData("ftp://x", P256dh, Auth)]
+    [InlineData("https://push.test/a", "", Auth)]
+    [InlineData("https://push.test/a", P256dh, "")]
+    [InlineData("LONG", P256dh, Auth)]
+    [InlineData("http://push.example/x", P256dh, Auth)]
+    [InlineData("http://localhost/x", P256dh, Auth)]
+    [InlineData("https://10.0.0.1/x", P256dh, Auth)]
+    [InlineData("https://[::1]/x", P256dh, Auth)]
+    [InlineData("https://push.test/a", "AQ+D", Auth)]
+    [InlineData("https://push.test/a", P256dh, "BA/G")]
+    [InlineData("https://push.test/a", "AQID", Auth)]
+    [InlineData("https://push.test/a", P256dh, "BAUG")]
+    [InlineData("https://push.test/a", WrongPrefixP256dh, Auth)]
+    [InlineData("https://push.test/a", ShortP256dh, Auth)]
+    [InlineData("https://push.test/a", P256dh, ShortAuth)]
+    [InlineData("https://push.test/a", P256dh + "A", Auth)]
     public async Task ABadSubscriptionIsRefused(string endpoint, string p256dh, string auth)
     {
         await using var factory = FactoryWith(new FakePushService());
@@ -165,6 +179,25 @@ public class PushEndpointTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task ATestPushToADeviceWhoseSendThrowsIsABadGateway()
+    {
+        await using var factory = FactoryWith(new FakePushService());
+        var client = await UserAsync(factory);
+        var userId = (await client.GetFromJsonAsync<MeResponse>("/api/me", Ct))!.UserId;
+        var endpoint = $"https://push.test/{Guid.NewGuid()}";
+        using (var scope = factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IPushSubscriptionStore>().SaveAsync(
+                new PushSubscriptionRecord(PushSubscriptionRecord.IdFor(endpoint), userId, endpoint, "AQID", "BAUG",
+                    "Phone", DateTimeOffset.UtcNow, null), Ct);
+        }
+
+        var response = await client.PostAsJsonAsync("/api/push/test", new PushEndpointRequest(endpoint), Ct);
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+    }
+
+    [Fact]
     public async Task ALongLabelIsTrimmed()
     {
         await using var factory = FactoryWith(new FakePushService());
@@ -172,7 +205,7 @@ public class PushEndpointTests(MongoFixture fixture)
         var endpoint = $"https://push.test/{Guid.NewGuid()}";
 
         await client.PutAsJsonAsync("/api/push/subscriptions",
-            new PushSubscriptionRequest(endpoint, "AQID", "BAUG", "  " + new string('x', 150)), Ct);
+            new PushSubscriptionRequest(endpoint, P256dh, Auth, "  " + new string('x', 150)), Ct);
 
         Assert.Equal(100, (await Stored(factory, endpoint))!.DeviceLabel.Length);
     }

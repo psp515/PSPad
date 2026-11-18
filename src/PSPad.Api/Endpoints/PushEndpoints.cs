@@ -1,3 +1,4 @@
+using System.Buffers.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using PSPad.Abstractions;
@@ -13,6 +14,9 @@ public static class PushEndpoints
 {
     const int MaxEndpointLength = 2048;
     const int MaxKeyLength = 200;
+    const int PublicKeyLength = 65;
+    const byte UncompressedPoint = 0x04;
+    const int AuthLength = 16;
     const int MaxLabelLength = 100;
     static readonly TimeSpan TestTimeToLive = TimeSpan.FromSeconds(60);
 
@@ -28,7 +32,7 @@ public static class PushEndpoints
             IClock clock,
             CancellationToken ct) =>
         {
-            if (!IsAcceptableEndpoint(request.Endpoint) || !IsKey(request.P256dh) || !IsKey(request.Auth))
+            if (!IsAcceptableEndpoint(request.Endpoint) || !IsPublicKey(request.P256dh) || !IsAuth(request.Auth))
             {
                 return Results.BadRequest();
             }
@@ -100,7 +104,7 @@ public static class PushEndpoints
 
             var user = await users.LoadAsync(current.UserId, ct);
             var note = ReminderTexts.Test(user?.Language ?? SupportedLanguages.Default, options.Value.AppBaseAddress);
-            switch (PushAnswer.Of(await sender.SendAsync(subscription, note, TestTimeToLive, ct)))
+            switch (await TestOutcomeAsync(sender, subscription, note, ct))
             {
                 case PushOutcome.Delivered:
                     return Results.NoContent();
@@ -119,7 +123,39 @@ public static class PushEndpoints
         && uri.Scheme == Uri.UriSchemeHttps
         && uri.HostNameType == UriHostNameType.Dns;
 
-    static bool IsKey(string? value) =>
-        value is { Length: > 0 and <= MaxKeyLength }
-        && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
+    static async Task<PushOutcome> TestOutcomeAsync(
+        IPushSender sender, PushSubscriptionRecord subscription, PushNote note, CancellationToken ct)
+    {
+        try
+        {
+            return PushAnswer.Of(await sender.SendAsync(subscription, note, TestTimeToLive, ct));
+        }
+        catch (Exception) when (!ct.IsCancellationRequested)
+        {
+            return PushOutcome.Failed;
+        }
+    }
+
+    static bool IsPublicKey(string? value) =>
+        Decoded(value) is { Length: PublicKeyLength } bytes && bytes[0] == UncompressedPoint;
+
+    static bool IsAuth(string? value) => Decoded(value) is { Length: AuthLength };
+
+    static byte[]? Decoded(string? value)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length > MaxKeyLength
+            || !value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'))
+        {
+            return null;
+        }
+
+        try
+        {
+            return Base64Url.DecodeFromChars(value);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+    }
 }

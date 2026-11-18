@@ -4,14 +4,18 @@ public sealed class FakePushSubscriptions : IPushSubscriptionStore
 {
     public Dictionary<string, PushSubscriptionRecord> Records { get; } = [];
 
+    public HashSet<Guid> Failing { get; } = [];
+
     public void Add(Guid userId, string endpoint) =>
         Records[endpoint] = new PushSubscriptionRecord(
             PushSubscriptionRecord.IdFor(endpoint), userId, endpoint, "p", "a", "device",
             DateTimeOffset.UnixEpoch, null);
 
     public Task<IReadOnlyList<PushSubscriptionRecord>> ForUserAsync(Guid userId, CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<PushSubscriptionRecord>>(
-            Records.Values.Where(r => r.UserId == userId).ToList());
+        Failing.Contains(userId)
+            ? throw new TimeoutException("store unavailable")
+            : Task.FromResult<IReadOnlyList<PushSubscriptionRecord>>(
+                Records.Values.Where(r => r.UserId == userId).ToList());
 
     public Task<PushSubscriptionRecord?> FindAsync(string endpoint, CancellationToken ct) =>
         Task.FromResult(Records.GetValueOrDefault(endpoint));
