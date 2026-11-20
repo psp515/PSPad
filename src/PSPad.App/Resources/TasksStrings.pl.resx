@@ -360,14 +360,11 @@
   <data name="ReminderDaysBefore.Many" xml:space="preserve">
     <value>{0} dni wcześniej o {1}</value>
   </data>
-  <data name="ReminderHint" xml:space="preserve">
-    <value>Powiadomienie na urządzeniach z włączonymi powiadomieniami.</value>
-  </data>
   <data name="ReminderDaysLabel" xml:space="preserve">
     <value>Dni wcześniej</value>
   </data>
   <data name="ReminderTimeLabel" xml:space="preserve">
-    <value>Godzina</value>
+    <value>Godzina przypomnienia</value>
   </data>
   <data name="ReminderNeedsDueDate" xml:space="preserve">
     <value>Wymaga terminu</value>
@@ -377,5 +374,32 @@
   </data>
   <data name="ReminderDeviceOff" xml:space="preserve">
     <value>Powiadomienia są wyłączone na tym urządzeniu · Włącz</value>
+  </data>
+  <data name="ReminderQuickSameDay" xml:space="preserve">
+    <value>W dniu terminu</value>
+  </data>
+  <data name="ReminderQuickDays.One" xml:space="preserve">
+    <value>{0} dzień</value>
+  </data>
+  <data name="ReminderQuickDays.Few" xml:space="preserve">
+    <value>{0} dni</value>
+  </data>
+  <data name="ReminderQuickDays.Many" xml:space="preserve">
+    <value>{0} dni</value>
+  </data>
+  <data name="ReminderQuickWeek" xml:space="preserve">
+    <value>1 tydzień</value>
+  </data>
+  <data name="ReminderDaysUnit" xml:space="preserve">
+    <value>dni wcześniej</value>
+  </data>
+  <data name="ReminderAt" xml:space="preserve">
+    <value>o</value>
+  </data>
+  <data name="PickReminderTime" xml:space="preserve">
+    <value>Wybierz godzinę przypomnienia</value>
+  </data>
+  <data name="ReminderDaysHint" xml:space="preserve">
+    <value>Wpisz od 0 do 99 dni</value>
   </data>
 </root>

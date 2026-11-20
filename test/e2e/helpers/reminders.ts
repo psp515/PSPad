@@ -1,26 +1,42 @@
 import { expect, Page } from '@playwright/test';
-import { chooseProperty } from './panels';
-import { clickClockNumber } from './today';
+import { panel } from './panels';
+import { pickClockTime } from './today';
 
-export async function setCustomReminder(page: Page, days: number, hour: number, minute: number) {
-  await chooseProperty(page, 'Remind me', 'Custom…');
-  const dialog = page.getByRole('dialog').filter({ hasText: 'Remind me' });
-  await expect(dialog).toBeVisible();
-  const field = dialog.getByRole('spinbutton', { name: 'Days before' });
-  const clock = page.getByRole('dialog', { name: 'Time', exact: true });
+export function reminderChoice(page: Page, label: string) {
+  return panel(page).getByRole('checkbox', { name: label, exact: true });
+}
+
+export function reminderDays(page: Page) {
+  return panel(page).getByRole('textbox', { name: 'Days before', exact: true });
+}
+
+export function reminderTime(page: Page) {
+  return panel(page).getByRole('textbox', { name: 'Reminder time', exact: true });
+}
+
+export async function chooseReminder(page: Page, label: string) {
   await expect(async () => {
-    await field.fill(String(days), { timeout: 2_000 });
-    await field.press('Tab', { timeout: 2_000 });
-    await expect(field).toHaveValue(String(days), { timeout: 2_000 });
-    if (!(await clock.isVisible())) {
-      await dialog.getByRole('textbox', { name: 'Time' }).click({ timeout: 2_000 });
-    }
-    await expect(clock).toBeVisible({ timeout: 2_000 });
+    await reminderChoice(page, label).click({ timeout: 2_000 });
+    await expect(reminderChoice(page, label)).toBeChecked({ timeout: 2_000 });
   }).toPass({ timeout: 30_000 });
-  await clickClockNumber(page, clock.locator('.mud-time-picker-hour'), hour);
-  await expect(clock.locator('.mud-time-picker-minute')).not.toHaveClass(/mud-time-picker-dial-hidden/);
-  await clickClockNumber(page, clock.locator('.mud-time-picker-minute'), minute);
-  await expect(clock).toBeHidden();
-  await dialog.getByRole('button', { name: 'Save' }).click();
-  await expect(dialog).toBeHidden();
+}
+
+export async function typeReminder(page: Page, days: string, time: string) {
+  await expect(async () => {
+    await reminderDays(page).fill(days, { timeout: 2_000 });
+    await reminderDays(page).press('Enter', { timeout: 2_000 });
+    await reminderTime(page).fill(time, { timeout: 2_000 });
+    await reminderTime(page).press('Enter', { timeout: 2_000 });
+    await expect(reminderDays(page)).toHaveValue(days, { timeout: 2_000 });
+    await expect(reminderTime(page)).toHaveValue(time, { timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
+export async function pickReminderTime(page: Page, hour: number, minute: number) {
+  await pickClockTime(page, 'Reminder', hour, minute);
+}
+
+export async function expectReminder(page: Page, days: string, time: string) {
+  await expect(reminderDays(page)).toHaveValue(days);
+  await expect(reminderTime(page)).toHaveValue(time);
 }

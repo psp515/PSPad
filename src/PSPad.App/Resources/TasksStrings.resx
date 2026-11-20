@@ -360,14 +360,11 @@
   <data name="ReminderDaysBefore.Many" xml:space="preserve">
     <value>{0} days before at {1}</value>
   </data>
-  <data name="ReminderHint" xml:space="preserve">
-    <value>A notification on your devices that have notifications on.</value>
-  </data>
   <data name="ReminderDaysLabel" xml:space="preserve">
     <value>Days before</value>
   </data>
   <data name="ReminderTimeLabel" xml:space="preserve">
-    <value>Time</value>
+    <value>Reminder time</value>
   </data>
   <data name="ReminderNeedsDueDate" xml:space="preserve">
     <value>Needs a due date</value>
@@ -377,5 +374,32 @@
   </data>
   <data name="ReminderDeviceOff" xml:space="preserve">
     <value>Notifications are off on this device · Turn on</value>
+  </data>
+  <data name="ReminderQuickSameDay" xml:space="preserve">
+    <value>On the day</value>
+  </data>
+  <data name="ReminderQuickDays.One" xml:space="preserve">
+    <value>{0} day</value>
+  </data>
+  <data name="ReminderQuickDays.Few" xml:space="preserve">
+    <value>{0} days</value>
+  </data>
+  <data name="ReminderQuickDays.Many" xml:space="preserve">
+    <value>{0} days</value>
+  </data>
+  <data name="ReminderQuickWeek" xml:space="preserve">
+    <value>1 week</value>
+  </data>
+  <data name="ReminderDaysUnit" xml:space="preserve">
+    <value>days before</value>
+  </data>
+  <data name="ReminderAt" xml:space="preserve">
+    <value>at</value>
+  </data>
+  <data name="PickReminderTime" xml:space="preserve">
+    <value>Pick reminder time</value>
+  </data>
+  <data name="ReminderDaysHint" xml:space="preserve">
+    <value>Enter 0 to 99 days</value>
   </data>
 </root>

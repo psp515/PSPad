@@ -94,7 +94,7 @@ export async function typeTaskTime(page: Page, which: 'Start' | 'End', text: str
   await field.press('Enter');
 }
 
-async function openClock(page: Page, which: 'Start' | 'End') {
+async function openClock(page: Page, which: 'Start' | 'End' | 'Reminder') {
   await panel(page).getByRole('button', { name: `Pick ${which.toLowerCase()} time` }).click();
   const clock = page.locator('.mud-picker .mud-overlay .mud-picker-paper');
   await expect(clock).toBeVisible();
@@ -115,12 +115,16 @@ export async function pickClockHourAndLeave(page: Page, which: 'Start' | 'End', 
   await expect(clock).toBeHidden();
 }
 
-export async function pickTaskTimeFromClock(page: Page, which: 'start' | 'end', hour: number, minute: number) {
-  const clock = await openClock(page, which === 'start' ? 'Start' : 'End');
+export async function pickClockTime(page: Page, which: 'Start' | 'End' | 'Reminder', hour: number, minute: number) {
+  const clock = await openClock(page, which);
   await clickClockNumber(page, clock.locator('.mud-time-picker-hour'), hour);
   await expect(clock.locator('.mud-time-picker-minute')).not.toHaveClass(/mud-time-picker-dial-hidden/);
   await clickClockNumber(page, clock.locator('.mud-time-picker-minute'), minute);
   await expect(clock).toBeHidden();
+}
+
+export async function pickTaskTimeFromClock(page: Page, which: 'start' | 'end', hour: number, minute: number) {
+  await pickClockTime(page, which === 'start' ? 'Start' : 'End', hour, minute);
   const text = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
   await expect(timeField(page, which === 'start' ? 'Start' : 'End')).toHaveValue(text);
 }
@@ -224,21 +228,6 @@ export async function addTaskAtFirstFreeSlot(page: Page): Promise<string> {
   const time = (await slot.getAttribute('aria-label'))!.slice(-5);
   await slot.click();
   return time;
-}
-
-export async function setCustomLeadTime(page: Page, amount: number, unit: string) {
-  await chooseProperty(page, 'Show ahead', 'Custom…');
-  const dialog = page.getByRole('dialog').filter({ hasText: 'Show ahead' });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByText(/^How early the task shows in Coming up/)).toBeVisible();
-  const field = dialog.getByRole('spinbutton').first();
-  await field.fill(String(amount), { timeout: 10_000 });
-  await field.press('Tab', { timeout: 10_000 });
-  await dialog.getByRole('combobox').first().click({ timeout: 10_000 });
-  await page.getByRole('option', { name: unit, exact: true }).click({ timeout: 10_000 });
-  await expect(page.getByRole('option')).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'Save' }).click({ timeout: 10_000 });
-  await expect(dialog).toBeHidden();
 }
 
 export async function setOneTime(page: Page) {

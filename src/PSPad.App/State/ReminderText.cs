@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Localization;
 using PSPad.App.Localization;
 using PSPad.App.Resources;
@@ -9,7 +10,7 @@ public static class ReminderText
 {
     public static readonly TimeOnly DefaultAt = new(9, 0);
 
-    static readonly TimeSpan SameDayLead = TimeSpan.FromHours(1);
+    public static readonly IReadOnlyList<int> QuickDays = [0, 1, 2, 7];
 
     public static string Describe(TaskReminder? reminder, IStringLocalizer<TasksStrings> localizer)
     {
@@ -24,14 +25,20 @@ public static class ReminderText
             : localizer.Plural(reminder.DaysBefore, "ReminderDaysBefore", at);
     }
 
-    public static IReadOnlyList<TaskReminder> Presets(TaskTime? time)
+    public static string Quick(int days, IStringLocalizer<TasksStrings> localizer) => days switch
     {
-        var sameDay = time is null
-            ? DefaultAt
-            : time.Start.ToTimeSpan() < SameDayLead ? TimeOnly.MinValue : time.Start.Add(-SameDayLead);
-        return
-        [
-            new(0, sameDay), new(1, DefaultAt), new(2, DefaultAt), new(7, DefaultAt)
-        ];
-    }
+        0 => localizer["ReminderQuickSameDay"],
+        7 => localizer["ReminderQuickWeek"],
+        _ => localizer.Plural(days, "ReminderQuickDays")
+    };
+
+    public static TaskReminder WithDays(TaskReminder? current, int days, TaskTime? time) =>
+        new(days, current?.At ?? time?.Start ?? DefaultAt);
+
+    public static TaskReminder WithAt(TaskReminder? current, TimeOnly at) =>
+        new(current?.DaysBefore ?? 1, at);
+
+    public static bool TryParseDays(string? text, out int days) =>
+        int.TryParse(text?.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out days)
+        && days <= TaskReminder.MostDaysBefore;
 }

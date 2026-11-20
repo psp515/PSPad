@@ -1,8 +1,10 @@
 import { expect, test } from '../fixtures/accounts';
 import { createArea } from '../helpers/areas';
 import { createList, openList } from '../helpers/lists';
-import { chooseProperty, clearProperty, panel, propertyRow } from '../helpers/panels';
-import { setCustomReminder } from '../helpers/reminders';
+import { clearProperty, panel } from '../helpers/panels';
+import {
+  chooseReminder, expectReminder, pickReminderTime, reminderChoice, reminderDays, typeReminder,
+} from '../helpers/reminders';
 import { goToSettings, notificationsCard } from '../helpers/settings';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, openTask } from '../helpers/tasks';
@@ -20,40 +22,57 @@ test('a task reminder is set, customised, cleared and waits for a due date', asy
   await addTask(page, task);
   await openTask(page, task);
 
-  await test.step('a task with a due date offers a reminder that starts off', async () => {
+  await test.step('a task with a due date offers quick reminder choices and starts off', async () => {
     await setDueDate(page, 'Tomorrow');
-    await expect(propertyRow(page, 'Remind me')).toContainText('Off');
-    await expect(propertyRow(page, 'Show ahead')).toContainText('1 week before');
+    await expect(reminderChoice(page, '1 day')).not.toBeChecked();
+    await expect(reminderDays(page)).toHaveCount(0);
   });
 
-  await test.step('a preset reminder survives a reload', async () => {
-    await chooseProperty(page, 'Remind me', '1 day before at 09:00');
-    await expect(propertyRow(page, 'Remind me')).toContainText('1 day before at 09:00');
+  await test.step('one tap on a quick choice turns the reminder on and survives a reload', async () => {
+    await chooseReminder(page, '1 day');
+    await expectReminder(page, '1', '09:00');
     await closeTask(page);
     await page.reload();
     await openTask(page, task);
-    await expect(propertyRow(page, 'Remind me')).toContainText('1 day before at 09:00');
+    await expectReminder(page, '1', '09:00');
+    await expect(reminderChoice(page, '1 day')).toBeChecked();
   });
 
-  await test.step('a custom reminder reads its days and time', async () => {
-    await setCustomReminder(page, 3, 18, 30);
-    await expect(propertyRow(page, 'Remind me')).toContainText('3 days before at 18:30');
+  await test.step('typed days and time change the reminder in place', async () => {
+    await typeReminder(page, '3', '18:30');
+    await expect(reminderChoice(page, '1 day')).not.toBeChecked();
     await closeTask(page);
     await page.reload();
     await openTask(page, task);
-    await expect(propertyRow(page, 'Remind me')).toContainText('3 days before at 18:30');
+    await expectReminder(page, '3', '18:30');
+  });
+
+  await test.step('a wrong number of days says what is allowed and keeps the reminder', async () => {
+    await reminderDays(page).fill('120');
+    await reminderDays(page).press('Enter');
+    await expect(panel(page).getByRole('alert')).toHaveText('Enter 0 to 99 days');
+    await reminderDays(page).fill('2');
+    await reminderDays(page).press('Enter');
+    await expect(panel(page).getByRole('alert')).toHaveCount(0);
+    await expectReminder(page, '2', '18:30');
+  });
+
+  await test.step('the reminder time uses the task time clock and keeps the days', async () => {
+    await pickReminderTime(page, 7, 15);
+    await expectReminder(page, '2', '07:15');
   });
 
   await test.step('clearing the reminder turns it off', async () => {
     await clearProperty(page, 'Remind me');
-    await expect(propertyRow(page, 'Remind me')).toContainText('Off');
+    await expect(reminderDays(page)).toHaveCount(0);
+    await expect(reminderChoice(page, '2 days')).not.toBeChecked();
   });
 
   await test.step('a reminder without a due date is shown as waiting for one', async () => {
-    await chooseProperty(page, 'Remind me', 'On the day at 09:00');
-    await expect(propertyRow(page, 'Remind me')).toContainText('On the day at 09:00');
+    await chooseReminder(page, 'On the day');
+    await expectReminder(page, '0', '09:00');
     await clearProperty(page, 'Due');
-    await expect(propertyRow(page, 'Remind me')).toContainText('On the day at 09:00');
+    await expectReminder(page, '0', '09:00');
     await expect(panel(page).getByText('Needs a due date', { exact: true })).toBeVisible();
     await closeTask(page);
   });
@@ -106,12 +125,12 @@ test('the device caption is checked each time a task opens', async ({ page, acco
   await addTask(page, task);
   await openTask(page, task);
   await setDueDate(page, 'Tomorrow');
-  await chooseProperty(page, 'Remind me', 'On the day at 09:00');
+  await chooseReminder(page, 'On the day');
   await expect(panel(page).getByRole('link', { name: 'Notifications are off on this device · Turn on' })).toBeVisible();
   await closeTask(page);
 
   await page.evaluate(() => (window as any).__pushOn());
   await openTask(page, task);
-  await expect(propertyRow(page, 'Remind me')).toContainText('On the day at 09:00');
+  await expectReminder(page, '0', '09:00');
   await expect(panel(page).getByRole('link', { name: 'Notifications are off on this device · Turn on' })).toHaveCount(0);
 });

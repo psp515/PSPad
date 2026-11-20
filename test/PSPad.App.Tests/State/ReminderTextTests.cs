@@ -39,19 +39,63 @@ public class ReminderTextTests : IDisposable
     }
 
     [Fact]
-    public void PresetsWithoutATimeAreAtNine()
-    {
-        var presets = ReminderText.Presets(null);
+    public void TheQuickChoicesAreTheDayOfOneTwoAndSevenDaysBefore() =>
+        Assert.Equal([0, 1, 2, 7], ReminderText.QuickDays);
 
-        Assert.Equal([0, 1, 2, 7], presets.Select(p => p.DaysBefore));
-        Assert.All(presets, p => Assert.Equal(new TimeOnly(9, 0), p.At));
+    [Theory]
+    [InlineData(0, "On the day")]
+    [InlineData(1, "1 day")]
+    [InlineData(2, "2 days")]
+    [InlineData(7, "1 week")]
+    public void AQuickChoiceReadsShort(int days, string expected) =>
+        Assert.Equal(expected, ReminderText.Quick(days, Strings));
+
+    [Theory]
+    [InlineData(1, "1 dzień")]
+    [InlineData(2, "2 dni")]
+    [InlineData(7, "1 tydzień")]
+    public void AQuickChoiceReadsShortInPolish(int days, string expected)
+    {
+        CultureScope.Use("pl-PL");
+
+        Assert.Equal(expected, ReminderText.Quick(days, Strings));
     }
 
     [Fact]
-    public void TheSameDayPresetIsAnHourBeforeTheTask() =>
-        Assert.Equal(new TimeOnly(13, 30), ReminderText.Presets(TaskTime.Of(new TimeOnly(14, 30), null))[0].At);
+    public void ChoosingDaysWithNoReminderStartsAtNine() =>
+        Assert.Equal(new TaskReminder(2, new TimeOnly(9, 0)), ReminderText.WithDays(null, 2, null));
 
     [Fact]
-    public void TheSameDayPresetStopsAtMidnight() =>
-        Assert.Equal(new TimeOnly(0, 0), ReminderText.Presets(TaskTime.Of(new TimeOnly(0, 30), null))[0].At);
+    public void ChoosingDaysWithNoReminderStartsAtTheTasksTime() =>
+        Assert.Equal(new TaskReminder(1, new TimeOnly(14, 30)),
+            ReminderText.WithDays(null, 1, TaskTime.Of(new TimeOnly(14, 30), null)));
+
+    [Fact]
+    public void ChoosingDaysKeepsTheReminderTime() =>
+        Assert.Equal(new TaskReminder(7, new TimeOnly(18, 0)),
+            ReminderText.WithDays(new TaskReminder(1, new TimeOnly(18, 0)), 7, TaskTime.Of(new TimeOnly(9, 0), null)));
+
+    [Fact]
+    public void ChoosingATimeKeepsTheDays() =>
+        Assert.Equal(new TaskReminder(3, new TimeOnly(7, 15)),
+            ReminderText.WithAt(new TaskReminder(3, new TimeOnly(9, 0)), new TimeOnly(7, 15)));
+
+    [Theory]
+    [InlineData("0", 0)]
+    [InlineData(" 12 ", 12)]
+    [InlineData("99", 99)]
+    public void TypedDaysAreRead(string text, int expected)
+    {
+        Assert.True(ReminderText.TryParseDays(text, out var days));
+        Assert.Equal(expected, days);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("-1")]
+    [InlineData("100")]
+    [InlineData("two")]
+    [InlineData("1.5")]
+    public void TypedDaysOutsideTheRangeAreRefused(string text) =>
+        Assert.False(ReminderText.TryParseDays(text, out _));
 }
