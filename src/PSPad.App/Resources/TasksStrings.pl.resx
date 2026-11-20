@@ -93,41 +93,8 @@
   <data name="RemindMe" xml:space="preserve">
     <value>Przypomnij mi</value>
   </data>
-  <data name="LeadHint" xml:space="preserve">
-    <value>Na ile wcześniej zadanie pokaże się w sekcji Nadchodzące w widoku Mój dzień. W dniu terminu trafi na Dziś, jak zawsze.</value>
-  </data>
   <data name="CustomEllipsis" xml:space="preserve">
     <value>Własne…</value>
-  </data>
-  <data name="LeadBefore" xml:space="preserve">
-    <value>przed</value>
-  </data>
-  <data name="LeadDays.One" xml:space="preserve">
-    <value>{0} dzień przed</value>
-  </data>
-  <data name="LeadDays.Few" xml:space="preserve">
-    <value>{0} dni przed</value>
-  </data>
-  <data name="LeadDays.Many" xml:space="preserve">
-    <value>{0} dni przed</value>
-  </data>
-  <data name="LeadWeeks.One" xml:space="preserve">
-    <value>{0} tydzień przed</value>
-  </data>
-  <data name="LeadWeeks.Few" xml:space="preserve">
-    <value>{0} tygodnie przed</value>
-  </data>
-  <data name="LeadWeeks.Many" xml:space="preserve">
-    <value>{0} tygodni przed</value>
-  </data>
-  <data name="LeadMonths.One" xml:space="preserve">
-    <value>{0} miesiąc przed</value>
-  </data>
-  <data name="LeadMonths.Few" xml:space="preserve">
-    <value>{0} miesiące przed</value>
-  </data>
-  <data name="LeadMonths.Many" xml:space="preserve">
-    <value>{0} miesięcy przed</value>
   </data>
   <data name="Priority" xml:space="preserve">
     <value>Priorytet</value>
@@ -377,9 +344,6 @@
   </data>
   <data name="SetStepDeadline" xml:space="preserve">
     <value>Ustaw termin dla {0}</value>
-  </data>
-  <data name="ShowAhead" xml:space="preserve">
-    <value>Pokaż wcześniej</value>
   </data>
   <data name="ReminderOff" xml:space="preserve">
     <value>Wyłączone</value>

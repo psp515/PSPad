@@ -39,14 +39,6 @@ public class SharedTaskTests
     }
 
     [Fact]
-    public void AMemberSetsTheLeadTimeOfTheOwnersTask()
-    {
-        var set = Assert.Single(TodoTask.Decide(
-            OwnedTask(), new SetTaskLeadTime(Guid.NewGuid(), Member, TaskId, LeadTime.Of(2, LeadUnit.Weeks)), Now, Access));
-        Assert.Equal(Owner, set.UserId);
-    }
-
-    [Fact]
     public void AMemberSetsTheReminderOfTheOwnersTask()
     {
         var set = Assert.Single(TodoTask.Decide(

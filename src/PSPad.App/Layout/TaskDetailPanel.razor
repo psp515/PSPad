@@ -89,7 +89,6 @@
                 <TimeRow Value="@Time" ValueChanged="@TimeAsync" Disabled="@Disabled" />
                 <ReminderRow Value="@Reminder" ValueChanged="@ReminderAsync" Time="@Time" Repeats="@Repeats"
                              Dormant="@ReminderDormant" DeviceOff="@_deviceOff" Disabled="@Disabled" />
-                <LeadTimeRow Value="@LeadTime" ValueChanged="@LeadTimeAsync" Disabled="@Disabled" />
             }
 
             <PriorityRow Value="@Priority" ValueChanged="@PriorityAsync" Disabled="@Disabled" />
@@ -218,8 +217,6 @@
     RecurrenceRule? Recurrence => _task is null ? _draft.Recurrence : _task.Recurrence;
 
     TaskTime? Time => _task is null ? _draft.Time : _task.Time;
-
-    LeadTime? LeadTime => _task is null ? _draft.LeadTime : _task.LeadTime;
 
     TaskReminder? Reminder => _task is null ? _draft.Reminder : _task.Reminder;
 
@@ -383,11 +380,6 @@
         if (_draft.Time is { } time)
         {
             await Sender.SendAsync(new SetTaskTime(Guid.NewGuid(), State.UserId, taskId, time));
-        }
-
-        if (_draft.LeadTime is { } lead)
-        {
-            await Sender.SendAsync(new SetTaskLeadTime(Guid.NewGuid(), State.UserId, taskId, lead));
         }
 
         if (_draft.Reminder is { } reminder)
@@ -573,23 +565,6 @@
         await ReloadAsync();
     }
 
-    async Task LeadTimeAsync(LeadTime? lead)
-    {
-        if (Disabled)
-        {
-            return;
-        }
-
-        if (_task is null)
-        {
-            _draft.LeadTime = lead;
-            return;
-        }
-
-        await Sender.SendAsync(new SetTaskLeadTime(Guid.NewGuid(), State.UserId, _task.Id, lead));
-        await ReloadAsync();
-    }
-
     async Task ReminderAsync(TaskReminder? reminder)
     {
         if (Disabled)
@@ -748,8 +723,6 @@
         public RecurrenceRule? Recurrence { get; set; }
 
         public TaskTime? Time { get; set; }
-
-        public LeadTime? LeadTime { get; set; }
 
         public TaskReminder? Reminder { get; set; }
 
