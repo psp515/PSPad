@@ -2,7 +2,10 @@
 
 Status: Built. Decision of record:
 [ADR-0053](../adr/0053-yearly-repeats-and-lead-time.md). Issue #100.
-Its row is now labelled **Show ahead**; the **Remind me** row and push
+**The lead time (§2.2, §2.3, §3 Show ahead row) was removed by
+[ADR-0093](../adr/0093-coming-up-looks-one-week-ahead-and-lead-time-is-removed.md)**:
+Coming up looks seven days ahead for every task. Yearly repeats and the
+One-time | Repeating toggle stand. The **Remind me** row and push
 reminders are `specs/reminders-design.md`.
 Since #112 Tomorrow and Upcoming are one **Coming up** section on today's
 My Day (`ui-spec.md`).

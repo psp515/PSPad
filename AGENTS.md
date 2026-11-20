@@ -39,7 +39,7 @@ Later: habits, annual plans, integrations, print domain (`adr/README.md`).
 | Reference lists | `specs/reference-lists-design.md` |
 | List ordering | `specs/list-ordering-design.md` |
 | List filter, sort, month calendar | `specs/list-filter-and-calendar-design.md` |
-| Recurrence lead time, yearly repeats | `specs/recurrence-lead-time-design.md` |
+| Yearly repeats, one-time vs repeating | `specs/recurrence-lead-time-design.md` |
 | Phone navigation | `specs/mobile-navigation-design.md` |
 | Budgets, expenses, balances, NBP rates | `specs/money-design.md` |
 | Budget CSV import | `specs/budget-import-design.md` |
@@ -66,7 +66,7 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 | 2 | Documents are truth, events are the log; snapshot marks are state-only | 0011, 0064 |
 | 3–4 | Commands shared; Tasks compiles to WASM | 0003, 0004 |
 | 5–6 | LWW conflicts offline, version-checked saves on the server, final rejections dropped, a pull never replaces a newer local copy; delta sync by monotonic `seq`, paged, documents only | 0005, 0006, 0061, 0063, 0067, 0079 |
-| 7 | Recurrence template + occurrences | 0007, 0043, 0053 |
+| 7 | Recurrence template + occurrences | 0007, 0043, 0053, 0093 |
 | 8 | Aggregates: User, Area, TaskList, TodoTask, Goal, Inbox, ReferenceItem; a goal holds its task links | 0008, 0047, 0065 |
 | 9 | Integration tests own a Testcontainers MongoDB 8 replica set; tests assert behaviour, never shape or wiring | 0009, 0080 |
 | 10 | Events dispatch after commit, replayed from a marker | 0036, 0037 |

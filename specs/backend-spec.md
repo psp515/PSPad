@@ -217,7 +217,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `areas` | user-defined areas | `name`, `position` |
 | `tasklists` | task lists, each inside one area | `areaId`, `name`, `createdAt`, `kind` (`Tasks` or `Reference`, fixed at creation), `inviteToken` (`adr/0054`, null = not shared), `inviteCode`, `inviteExpiresAt` (`adr/0057`; 30 minutes from the share), `wrongCodes`, `ownerName`, `_members[]` (`userId`, `displayName`, `joinedAt`; the leading underscore keeps the BSON field name stable, like `_steps`). Documents written before `adr/0051` still carry a `position` nobody reads |
 | `inboxes` | one per user | `items[]` |
-| `todotasks` | tasks with steps inline | `listId`, `previousListId` (the list it last left, null until moved), `dueOn`, `priority`, `starred`, `steps[]`, `recurrence`, `leadTime`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0056`), `reminder` (`daysBefore`, `at`; null = off), `reminderSetAt` (`specs/reminders-design.md`) |
+| `todotasks` | tasks with steps inline | `listId`, `previousListId` (the list it last left, null until moved), `dueOn`, `priority`, `starred`, `steps[]`, `recurrence`, `completedDays[]`, `createdAt`, `description` (Markdown), `snapshotMarks[]` (`snapshotId`, `stepId?`, `markedAt` — `adr/0056`), `reminder` (`daysBefore`, `at`; null = off), `reminderSetAt` (`specs/reminders-design.md`) |
 | `goals` | global goals | `name`, `achieved`, `notAchieved`, `dueOn`, `_taskIds[]` (the tasks this user counts toward the goal — `adr/0065`) |
 | `referenceitems` | items in a `Reference` list | `listId`, `previousListId`, `name`, `description` (Markdown), `starred`, `position`, `fields[]` (`label`, `value`, `display?`, `position`), `snapshotMarks[]` (`snapshotId`, `markedAt` — `adr/0056`) |
 | `areaviews` | one per (user, area): that user's order of the area's lists | `_id` = `AreaView.IdFor(userId, areaId)`, `areaId`, `order[]` (list ids) |
@@ -321,7 +321,7 @@ not stated there:
 - `RepeatTally.Of(task, today)` derives the done count (`completedDays`)
   and the streak: done occurrences walking back from today, today's pending
   occurrence not breaking it.
-- `TodoTask.LeadTime` (optional; 1–99 days, weeks or months; `SetTaskLeadTime`) is the task's look-ahead for Coming up on My Day; with none it is 7 days. `LeadTime.Shows(day, today)` — `day > today` and `FirstShownFor(day) <= today`. It never moves a task into Today or Overdue (`adr/0053`).
+- Coming up on My Day looks `TodayRule.UpcomingDays` (7) days ahead for every task; nothing moves a task into Today or Overdue early. The per-task lead time is gone (`adr/0093`): a stored `leadTime` field is ignored, and `SetTaskLeadTime` is refused as an unknown command.
 - `TodoTask.Time` (`TaskTime(Start, End?)`; `SetTaskTime`, `TaskTimeSet`) is an
   optional expected start and end, a wall clock in the user's stored zone
   like `DueOn`. `End` must differ from `Start` (`TaskTime.Of` and `Decide`
@@ -329,7 +329,7 @@ not stated there:
   before `Start` runs overnight into the next day (`TaskTime.Overnight`,
   derived, not serialized). The task stays on its start day and Schedule
   orders by `Start` only. `null` clears; no
-  event when unchanged; same `ListAccess` grant as `SetTaskLeadTime`. A
+  event when unchanged; same `ListAccess` grant as `SetTaskDueDate`. A
   repeating task's time is every occurrence's time. Removing a one-time
   task's due date keeps the time, but an undated task is on no day, so it
   is ignored until a date returns. Documents without the field read `null`.
@@ -348,10 +348,10 @@ not stated there:
   occurrence) is filled. On today, Overdue and the due entries are exactly
   `Select`'s, so the Today rule does not move; Starred and ComingUp
   (each one-time task at its trigger, each recurring task at its next
-  unticked occurrence, only while `LeadTime.Shows`) fill too. On a future day
+  unticked occurrence, when it falls within the next 7 days) fill too. On a future day
   Overdue holds every open one-time task whose trigger is before that day —
   what will still be overdue then (`adr/0078`) — and a task in it is not
-  also due; ComingUp is empty and lead time is ignored — the user asked
+  also due; ComingUp is empty — the user asked
   for that day — while Scheduled, AnyTime, Starred and Completed (ticked occurrences) are
   filled. A
   recurring task is never overdue. Overdue entries keep their `Time`.
@@ -366,8 +366,7 @@ not stated there:
   recurring task's next unticked occurrence on or after `today`) are public,
   and every other reader of "the task's date" calls them: the list screen's
   sort, When filter and month calendar (`ListSort`, `ListFilter`,
-  `ListCalendar`, `specs/list-filter-and-calendar-design.md`). They never
-  apply lead time, and they don't change what `Plan` or `Select` return.
+  `ListCalendar`, `specs/list-filter-and-calendar-design.md`). They don't change what `Plan` or `Select` return.
 - Ordering (lists, steps, inbox items) uses a dense `position` integer.
   Reordering rewrites the affected range rather than using fractional
   keys — ranges are short, and the rewrite touches one document.

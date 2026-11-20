@@ -2,8 +2,8 @@
 
 A task can notify its people on a phone or desktop, a set number of days
 before its due day, at a chosen time, through Web Push, even when the app is
-closed. Decision: `adr/0092`. Builds on `specs/recurrence-lead-time-design.md`
-(the existing look-ahead row, renamed here) and `specs/sharing-spec.md`.
+closed. Decision: `adr/0092`. Builds on `specs/sharing-spec.md`. The look-ahead row this design first
+renamed "Show ahead" was removed afterwards (`adr/0093`).
 
 ## 1. Scope
 
@@ -38,7 +38,7 @@ public sealed record TaskReminder(int DaysBefore, TimeOnly At)
 
 - `DaysBefore` 0–99; otherwise "A reminder must be between 0 and 99 days
   before." `At` is a wall-clock time without a zone.
-- `TaskReminder.Of(daysBefore, at)` validates, as `LeadTime.Of` does.
+- `TaskReminder.Of(daysBefore, at)` validates.
 
 ### 2.2 Fields
 
@@ -85,11 +85,10 @@ is `(D − DaysBefore) at At` in `Z`, converted to UTC.
   pure) returns `(DateOnly Occurrence, DateTimeOffset Moment)` pairs with
   `from < Moment <= to`. It is the only place the rule lives.
 
-### 2.5 The existing look-ahead row
+### 2.5 The look-ahead row
 
-`LeadTime` and `SetTaskLeadTime` are unchanged. Its row's label changes from
-"Remind me" to **"Show ahead"** (icon `Visibility`); "Remind me" is the new
-reminder row (§4.1).
+Removed (`adr/0093`): Coming up looks seven days ahead for every task, and
+"Remind me" is the only row about time before the due date.
 
 ## 3. Scheduler and delivery (`PSPad.Module.Reminders`, server only)
 
@@ -225,31 +224,40 @@ Account deletion removes the user's `pushsubscriptions` and `sentreminders`.
 
 ### 4.1 Remind me row (`Components/ReminderRow.razor`)
 
-A `PropertyRow` (`pspad-task-reminder`, icon `NotificationsNone`, label
-"Remind me") after Due/Until, in the Add and Edit task panels.
+Edited in place, with no menu or dialog. Laid out like the Time row
+(`pspad-task-time pspad-task-reminder`, icon `NotificationsNone`, label
+"Remind me"), under Time, in the Add and Edit task panels.
 
-- Off: "Off" in the muted colour, no ✕.
-- Set: "On the day at 09:00", "1 day before at 18:00", "{N} days before at
-  {HH:mm}"; a ✕ sends `SetTaskReminder(null)`.
-- Dormant: the value struck through and "Needs a due date".
-- Repeating task: caption "Before each occurrence".
-- Tap opens a `MudMenu`: On the day, 1 day before, 2 days before, 1 week
-  before (7 days), each at 09:00, then Custom…. A task with a `Time` uses one
-  hour before its start for the "On the day" preset (clamped at 00:00).
-- Custom… opens a `MudDialog`: `MudNumericField` 0–99 ("days before", 0
-  reads "On the day") and `MudTimePicker` (24-hour by culture); Save disabled
-  until valid.
+- Off: "Off" in the muted colour.
+- Set: a **Days before** line — an outlined numeric field (0–99,
+  `aria-label` "Days before") and a ✕ that sends `SetTaskReminder(null)` —
+  and an **At** line with `TimeField`, the Time row's own field: type
+  `HH:mm` (read by `TimeText.TryParse`) or open the clock from its
+  `Schedule` adornment ("Pick reminder time").
+- Quick choices under both, a `MudToggleGroup`: On the day, 1 day, 2 days,
+  1 week (7 days). One tap sets the days and keeps the time; from Off it
+  starts at the task's start time, or 09:00 when it has none
+  (`ReminderText.WithDays`).
+- Typed days outside 0–99 keep the text and show "Enter 0 to 99 days"; an
+  unreadable time shows "Enter a time like 14:30". Nothing is sent until
+  valid.
+- Dormant: caption "Needs a due date". Repeating task: caption "Before each
+  occurrence".
+- The row builds each change on the reminder it last sent, so typing the
+  days and then the time quickly sends both.
 - Add panel: the draft's reminder is sent as `SetTaskReminder` after the due
-  date, as the lead time is.
+  date and time.
 - When this device has notifications off, the row shows the caption
   "Notifications are off on this device · Turn on", linking to the Settings
   card. The reminder still reaches the user's other devices. The caption is
   checked each time a task panel opens; a browser failure shows no caption.
 
-### 4.2 Show ahead row
+### 4.2 Shared time field
 
-`LeadTimeRow`: label "Show ahead", icon `Visibility`; presets, dialog and
-texts otherwise unchanged.
+`Components/TimeField.razor` is the typed time box with its hidden
+`MudTimePicker` dialog, used by Time's From and To and by Remind me's At. It
+keeps unreadable text as a draft and reports it through `InvalidChanged`;
+the row shows the message.
 
 ### 4.3 Settings: Notifications card
 
@@ -312,8 +320,7 @@ Reminders module's resx (notification texts).
   module and its edges `Reminders`→`Tasks`, `Reminders`→`Identity`.
 - `specs/backend-spec.md` (the `todotasks` fields, the new collections, the
   hosted service), `specs/modules-spec.md` (the edges), `specs/ui-spec.md`
-  (the two rows, the Settings card), `specs/recurrence-lead-time-design.md`
-  (a note that its row is now "Show ahead").
+  (the Remind me row, the Settings card).
 
 ## 6. Testing
 
@@ -339,10 +346,8 @@ Reminders module's resx (notification texts).
   a shared list sends to owner and member; the key generated once with two
   instances starting together; the subscription endpoints, including that a
   user can't delete another user's subscription.
-- E2E (`test/e2e/scenarios/40-reminders.spec.ts`): set a reminder by preset
-  and by Custom and see it after reload; clear it; dormant after removing
-  the due date; the "Show ahead" label; the Settings card when permission is
-  denied. The rename changes the existing scenarios 06, 23 and 24 and
-  `helpers/today.ts` (`setCustomLeadTime`) from "Remind me" to "Show
-  ahead". Subscribing for real is not covered: headless Chromium in the
+- E2E (`test/e2e/scenarios/40-reminders.spec.ts`): turn a reminder on with
+  a quick choice and see it after reload; type days and a time; refuse 120
+  days; pick the time on the clock; clear it; dormant after removing the
+  due date; the Settings card when permission is denied. Subscribing for real is not covered: headless Chromium in the
   container can't reach FCM; the integration tests cover the send path.

@@ -517,7 +517,7 @@ like a row does, and a recurring task off its day is read-only there as in a row
 Design: `specs/my-day-schedule-design.md`.
 
 Membership comes from `TodayRule.Plan`, never from the page. The page does
-not show Coming up; the lead-time rule (`adr/0053`) stays in the domain and
+not show Coming up; that rule (`adr/0093`) stays in the domain and
 still feeds the sidebar count and the rule's tests. The goals summary is not
 on the page.
 
@@ -765,7 +765,7 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      tally caption: "Not done yet", "Done N times", or "Done N times · M in
      a row" (`RepeatTally`).
    - **Time** (`TimeRow`, `pspad-task-time`, under Due/Until; shown when
-     Due/Until is set or the task repeats, like Show ahead) — the clock icon
+     Due/Until is set, the task repeats or it has a reminder) — the clock icon
      and "Time" label on the left (`pspad-time-head`), and on the right two
      stacked rows (`pspad-time-line`): **From** and **To** labels (12.5px,
      `TextSecondary`, 40px wide) each followed by an outlined, dense
@@ -795,17 +795,26 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      the row. Edit
      mode sends `SetTaskTime` on each valid change; Add keeps it in
      `TaskDraft.Time`, sent after `SetTaskDueDate`.
-   - **Remind me** (`ReminderRow`, `pspad-task-reminder`, icon `NotificationsNone`, after Due/Until) — Off, On the day, 1 day before, 2 days before, 1 week before (each at 09:00), Custom… (a `MudDialog`: days before 0–99 and a time). A set value carries a ✕; with no due date or repeat it reads struck through with "Needs a due date"; on a repeating task the caption is "Before each occurrence". When this device has notifications off, a caption "Notifications are off on this device · Turn on" links to Settings. In Add the draft's reminder is sent as `SetTaskReminder` after the due date. `specs/reminders-design.md` §4.1.
-   - **Show ahead** (`LeadTimeRow`, `pspad-task-lead`, icon `Visibility`, after Due/Until;
-     on a one-time task only once it has a due date, since it counts back
-     from one) —
-     1 day, 3 days, 1 week, 2 weeks, 1 month, Custom… (a `MudDialog`: [1–99]
-     [days | weeks | months]). Empty reads "1 week before" in the muted
-     colour; a set value ("3 days before") carries a ✕. In Add the draft's
-     lead time is sent as `SetTaskLeadTime` after the due date. The menu and
-     the Custom dialog both open with a muted caption (`pspad-lead-hint`)
-     reading "How early the task shows in Coming up on My Day. On its due date
-     it moves to Today as usual."
+   - **Remind me** (`ReminderRow`, `pspad-task-reminder`, icon
+     `NotificationsNone`, under Time; shown with Time) — laid out like Time:
+     the bell and label on the left, lines on the right. Off reads "Off" in
+     the muted colour. Set, it shows a **Days before** line (an outlined
+     numeric `MudTextField`, `aria-label` "Days before", 0–99, a ✕ that
+     clears the reminder) and an **At** line holding the same `TimeField` as
+     Time's From (`aria-label` "Reminder time", typed `HH:mm` or the clock
+     behind the `Schedule` adornment, "Pick reminder time"). Under both, a
+     `MudToggleGroup` of quick choices — On the day, 1 day, 2 days, 1 week —
+     sets the days in one tap and turns an Off reminder on at the task's
+     start time, or 09:00 with none; the chosen one is checked. Days outside
+     0–99 keep the typed text and show "Enter 0 to 99 days". Captions under
+     the row: "Needs a due date" (no due date or repeat), "Before each
+     occurrence" (repeating), and, when this device has notifications off,
+     "Notifications are off on this device · Turn on" linking to Settings.
+     Edit sends `SetTaskReminder` on each change; Add keeps it in
+     `TaskDraft.Reminder`, sent after `SetTaskTime`. Both the Time and
+     Remind me rows build each change on the value they last sent, so a
+     quick second edit never undoes the first. `specs/reminders-design.md`
+     §4.1.
    - **Priority** — the four fixed levels with coloured dots.
    - **Goal** — the user's goals.
    - **List** — lists grouped under area headings; picking
@@ -828,7 +837,7 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
 **Add sends the draft in a fixed order**, each command through the outbox,
 so adding works offline: `CreateTask`, then one `AddStep` per draft step
 in the draft's order (each with a fresh step id), then
-`SetTaskRecurrence`, `SetTaskDueDate`, `SetTaskTime`, `SetTaskLeadTime`,
+`SetTaskRecurrence`, `SetTaskDueDate`, `SetTaskTime`, `SetTaskReminder`,
 `SetTaskPriority`, `AddTaskToGoal` and `StarTask` for whichever the draft
 sets. Steps go first so the task's first sync already carries them.
 

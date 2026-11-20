@@ -31,7 +31,7 @@ export const features: Feature[] = [
     how: 'Rendered the same online and offline.' },
   { id: 'repeats', title: 'Repeats',
     does: 'Daily, weekly, monthly, yearly or every third Monday, with an optional end.',
-    how: 'Only today’s occurrence shows and a missed day stays missed, so a repeat is never overdue. A lead time shows it as far ahead as you choose.' },
+    how: 'Only today’s occurrence shows and a missed day stays missed, so a repeat is never overdue.' },
   { id: 'reminders', title: 'Reminders',
     does: 'Push reminders for tasks, a set number of days before, at your hour.',
     how: 'Turn notifications on per device in Settings; every member of a shared list is told. Needs HTTPS, and on an iPhone the app on the Home Screen.' },
