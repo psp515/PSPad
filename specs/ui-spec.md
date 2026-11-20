@@ -195,7 +195,7 @@ shows the order top to bottom. This is the one exception to row-flow: DOM
 order is column by column (`adr/0051`). The empty state stays a single
 card in a plain `MudGrid`.
 
-Applied on: `SettingsPage` (Account, Application settings, Sync, Danger zone each their
+Applied on: `SettingsPage` (Account, Application settings, Notifications, Sync, Danger zone each their
 own card), `AreaBoard` (list cards, masonry) and `CardSkeleton`.
 
 **Row groups.** `GoalsPage`, `Today`, `InboxPage`, `ListPage` and `GoalPage`
@@ -517,7 +517,7 @@ like a row does, and a recurring task off its day is read-only there as in a row
 Design: `specs/my-day-schedule-design.md`.
 
 Membership comes from `TodayRule.Plan`, never from the page. The page does
-not show Coming up; the lead-time rule (`adr/0053`) stays in the domain and
+not show Coming up; that rule (`adr/0093`) stays in the domain and
 still feeds the sidebar count and the rule's tests. The goals summary is not
 on the page.
 
@@ -765,7 +765,7 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      tally caption: "Not done yet", "Done N times", or "Done N times · M in
      a row" (`RepeatTally`).
    - **Time** (`TimeRow`, `pspad-task-time`, under Due/Until; shown when
-     Due/Until is set or the task repeats, like Remind me) — the clock icon
+     Due/Until is set, the task repeats or it has a reminder) — the clock icon
      and "Time" label on the left (`pspad-time-head`), and on the right two
      stacked rows (`pspad-time-line`): **From** and **To** labels (12.5px,
      `TextSecondary`, 40px wide) each followed by an outlined, dense
@@ -795,16 +795,28 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      the row. Edit
      mode sends `SetTaskTime` on each valid change; Add keeps it in
      `TaskDraft.Time`, sent after `SetTaskDueDate`.
-   - **Remind me** (`LeadTimeRow`, `pspad-task-lead`, after Due/Until;
-     on a one-time task only once it has a due date, since it counts back
-     from one) —
-     1 day, 3 days, 1 week, 2 weeks, 1 month, Custom… (a `MudDialog`: [1–99]
-     [days | weeks | months]). Empty reads "1 week before" in the muted
-     colour; a set value ("3 days before") carries a ✕. In Add the draft's
-     lead time is sent as `SetTaskLeadTime` after the due date. The menu and
-     the Custom dialog both open with a muted caption (`pspad-lead-hint`)
-     reading "How early the task shows in Coming up on My Day. On its due date
-     it moves to Today as usual."
+   - **Remind me** (`ReminderRow`, `pspad-task-reminder`, icon
+     `NotificationsNone`, under Time; shown with Time) — laid out like Time:
+     the bell and label on the left, lines on the right. Off reads "Off" in
+     the muted colour. Set, it shows a **Days** line (an outlined numeric
+     `MudTextField` ending in the text "before", `aria-label` "Days before",
+     0–99, a ✕ that clears the reminder) and an **At** line, both labels in
+     Time's 40px From/To column, holding the same `TimeField` as
+     Time's From (`aria-label` "Reminder time", typed `HH:mm` or the clock
+     behind the `Schedule` adornment, "Pick reminder time"). Under both, a
+     `MudToggleGroup` of quick choices — On the day, 1 day, 2 days, 1 week, in
+     sentence case, each as wide as its text —
+     sets the days in one tap and turns an Off reminder on at the task's
+     start time, or 09:00 with none; the chosen one is checked. Days outside
+     0–99 keep the typed text and show "Enter 0 to 99 days". Captions under
+     the row: "Needs a due date" (no due date or repeat), "Before each
+     occurrence" (repeating), and, when this device has notifications off,
+     "Notifications are off on this device · Turn on" linking to Settings.
+     Edit sends `SetTaskReminder` on each change; Add keeps it in
+     `TaskDraft.Reminder`, sent after `SetTaskTime`. Both the Time and
+     Remind me rows build each change on the value they last sent, so a
+     quick second edit never undoes the first. `specs/reminders-design.md`
+     §4.1.
    - **Priority** — the four fixed levels with coloured dots.
    - **Goal** — the user's goals.
    - **List** — lists grouped under area headings; picking
@@ -827,7 +839,7 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
 **Add sends the draft in a fixed order**, each command through the outbox,
 so adding works offline: `CreateTask`, then one `AddStep` per draft step
 in the draft's order (each with a fresh step id), then
-`SetTaskRecurrence`, `SetTaskDueDate`, `SetTaskTime`, `SetTaskLeadTime`,
+`SetTaskRecurrence`, `SetTaskDueDate`, `SetTaskTime`, `SetTaskReminder`,
 `SetTaskPriority`, `AddTaskToGoal` and `StarTask` for whichever the draft
 sets. Steps go first so the task's first sync already carries them.
 
@@ -1456,6 +1468,8 @@ Theme mode (**System / Light / Dark**) and accent are per device, held in
 `localStorage` (`pspad.theme`, `pspad.accent`, `pspad.accent.custom`) via
 `ThemePreference` — never on the `User` aggregate. A custom colour is kept
 after switching back to a preset, so the edit swatch reopens on it.
+
+**Notifications card.** A `MudPaper` (`pspad-notifications`) between Application settings and Sync, driven by `PushState`: unsupported (on iOS outside the Home Screen: add PSPad to it), off (**Turn on for this device**), blocked, on (**Send test**, **Turn off**), offline (buttons disabled, "Needs a connection"). `specs/reminders-design.md` §4.3.
 
 **Application settings card.** Time zone, theme mode, accent, the default
 currency select and the "Keep finished tasks on the schedule" `MudSwitch`

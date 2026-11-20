@@ -36,10 +36,13 @@ public sealed class TodoTask : Aggregate
     public RecurrenceRule? Recurrence { get; private set; }
 
     [JsonInclude]
-    public LeadTime? LeadTime { get; private set; }
+    public TaskTime? Time { get; private set; }
 
     [JsonInclude]
-    public TaskTime? Time { get; private set; }
+    public TaskReminder? Reminder { get; private set; }
+
+    [JsonInclude]
+    public DateTimeOffset? ReminderSetAt { get; private set; }
 
     [JsonInclude]
     public string Description { get; private set; } = "";
@@ -216,12 +219,12 @@ public sealed class TodoTask : Aggregate
                     ? []
                     : [new TaskRecurrenceSet(repeating.Id, grant.OwnerId, at, recurrence.Rule)];
 
-            case SetTaskLeadTime lead:
-                var leading = Require(task, grant);
-                lead.LeadTime?.Validate();
-                return leading.LeadTime == lead.LeadTime
+            case SetTaskReminder remind:
+                var reminding = Require(task, grant);
+                remind.Reminder?.Validate();
+                return reminding.Reminder == remind.Reminder
                     ? []
-                    : [new TaskLeadTimeSet(leading.Id, grant.OwnerId, at, lead.LeadTime)];
+                    : [new TaskReminderSet(reminding.Id, grant.OwnerId, at, remind.Reminder)];
 
             case SetTaskTime time:
                 var timing = Require(task, grant);
@@ -358,8 +361,9 @@ public sealed class TodoTask : Aggregate
                 }
 
                 break;
-            case TaskLeadTimeSet lead:
-                LeadTime = lead.LeadTime;
+            case TaskReminderSet reminderSet:
+                Reminder = reminderSet.Reminder;
+                ReminderSetAt = reminderSet.At;
                 break;
             case TaskTimeSet timeSet:
                 Time = timeSet.Time;

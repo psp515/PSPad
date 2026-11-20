@@ -2,6 +2,11 @@
 
 Status: Built. Decision of record:
 [ADR-0053](../adr/0053-yearly-repeats-and-lead-time.md). Issue #100.
+**The lead time (§2.2, §2.3, §3 Show ahead row) was removed by
+[ADR-0093](../adr/0093-coming-up-looks-one-week-ahead-and-lead-time-is-removed.md)**:
+Coming up looks seven days ahead for every task. Yearly repeats and the
+One-time | Repeating toggle stand. The **Remind me** row and push
+reminders are `specs/reminders-design.md`.
 Since #112 Tomorrow and Upcoming are one **Coming up** section on today's
 My Day (`ui-spec.md`).
 
@@ -27,9 +32,8 @@ In:
 
 Out:
 
-- Push notifications, e-mail, anything that fires while the app is closed.
-  That is the Reminders subsystem (AGENTS.md §2, #8); the stored lead time is
-  what it will read later.
+- Push notifications, e-mail, anything that fires while the app is closed:
+  `specs/reminders-design.md`.
 - A lead time that puts a task on **Today** or **Overdue** early. The lead
   time only widens (or narrows) what Tomorrow and Upcoming show.
 - A separate aggregate for repeating tasks. Both kinds stay `TodoTask`

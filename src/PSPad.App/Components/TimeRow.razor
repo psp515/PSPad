@@ -10,12 +10,10 @@
     <div class="pspad-time-lines d-flex flex-column flex-grow-1">
         <div class="pspad-time-line d-flex align-center">
             <span class="pspad-time-line-label">@T["TimeFrom"]</span>
-            <MudTextField T="string" Class="pspad-time-start pspad-time-input" Placeholder="@T["TimeStart"]" aria-label="@T["TimeStart"].Value"
-                          InputMode="InputMode.numeric" Value="@StartText" ValueChanged="@StartTypedAsync" Error="@(_startDraft is not null)"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled"
-                          Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="@T["PickStartTime"]"
-                          OnAdornmentClick="@(() => OpenClockAsync(false))" />
-            @if (Value is not null && !Disabled)
+            <TimeField Class="pspad-time-start" Label="@T["TimeStart"]" Placeholder="@T["TimeStart"]" ClockLabel="@T["PickStartTime"]"
+                       Value="@_current?.Start" ValueChanged="@StartChangedAsync" InvalidChanged="@InvalidChanged"
+                       Shown="@_current" Disabled="@Disabled" />
+            @if (_current is not null && !Disabled)
             {
                 <MudIconButton Class="pspad-property-clear pspad-time-clear" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
                                aria-label="@T["ClearTime"].Value" OnClick="@(() => SendAsync(null))" />
@@ -25,15 +23,13 @@
                 <span class="pspad-time-clear-placeholder" aria-hidden="true"></span>
             }
         </div>
-        @if (Value is not null)
+        @if (_current is not null)
         {
             <div class="pspad-time-line pspad-time-line-end d-flex align-center">
                 <span class="pspad-time-line-label">@T["TimeTo"]</span>
-                <MudTextField T="string" Class="pspad-time-end pspad-time-input" Placeholder="@T["TimeEnd"]" aria-label="@T["TimeEnd"].Value"
-                              InputMode="InputMode.numeric" Value="@EndText" ValueChanged="@EndTypedAsync" Error="@(_endDraft is not null)"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled"
-                              Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="@T["PickEndTime"]"
-                              OnAdornmentClick="@(() => OpenClockAsync(true))" />
+                <TimeField Class="pspad-time-end" Label="@T["TimeEnd"]" Placeholder="@T["TimeEnd"]" ClockLabel="@T["PickEndTime"]"
+                           Value="@_current?.End" ValueChanged="@EndChangedAsync" InvalidChanged="@InvalidChanged"
+                           Shown="@_current" Error="@_endClash" Disabled="@Disabled" />
             </div>
         }
     </div>
@@ -42,14 +38,10 @@
 {
     <MudText Typo="Typo.caption" Color="Color.Error" Class="pspad-time-error pspad-time-note d-block" role="alert">@_error</MudText>
 }
-else if (Value is { Overnight: true })
+else if (_current is { Overnight: true })
 {
     <MudText Typo="Typo.caption" Class="pspad-time-hint pspad-time-note pspad-muted d-block" role="status">@T["EndsNextDay"]</MudText>
 }
-
-@* The picker's own dialog commits once, after the minute click or a click outside; a static clock submits on every hour click. *@
-<MudTimePicker @ref="_clock" PickerVariant="PickerVariant.Dialog" Elevation="0" Class="pspad-time-clock" AmPm="false"
-               @bind-Time="_pickerTime" PickerClosed="@ClockClosedAsync" />
 
 @code {
     [Parameter] public TaskTime? Value { get; set; }
@@ -60,104 +52,41 @@ else if (Value is { Overnight: true })
 
     TaskTime? _shown;
 
-    string? _startDraft;
-
-    string? _endDraft;
+    TaskTime? _current;
 
     string? _error;
 
-    MudTimePicker? _clock;
-
-    bool _pickingEnd;
-
-    TimeSpan? _pickerTime;
-
-    string StartText => _startDraft ?? (Value is { } time ? TaskTimeText.Format(time.Start) : "");
-
-    string EndText => _endDraft ?? (Value?.End is { } end ? TaskTimeText.Format(end) : "");
+    bool _endClash;
 
     protected override void OnParametersSet()
     {
         if (_shown != Value)
         {
             _shown = Value;
-            _startDraft = null;
-            _endDraft = null;
+            _current = Value;
             _error = null;
+            _endClash = false;
         }
     }
 
-    Task StartTypedAsync(string? text)
+    void InvalidChanged(bool invalid)
     {
-        if (!TimeText.TryParse(text, out var start))
-        {
-            _startDraft = text;
-            _error = T["TimeFormatHint"];
-            return Task.CompletedTask;
-        }
-
-        _startDraft = null;
-        return start is { } typed ? TrySendAsync(typed, Value?.End) : SendAsync(null);
+        _endClash = false;
+        _error = invalid ? T["TimeFormatHint"].Value : null;
     }
 
-    Task EndTypedAsync(string? text)
-    {
-        if (Value is not { } current)
-        {
-            return Task.CompletedTask;
-        }
+    Task StartChangedAsync(TimeOnly? start) =>
+        start is { } typed ? TrySendAsync(typed, _current?.End) : SendAsync(null);
 
-        if (!TimeText.TryParse(text, out var end))
-        {
-            _endDraft = text;
-            _error = T["TimeFormatHint"];
-            return Task.CompletedTask;
-        }
+    Task EndChangedAsync(TimeOnly? end) =>
+        _current is { } current ? TrySendAsync(current.Start, end) : Task.CompletedTask;
 
-        _endDraft = null;
-        return TrySendAsync(current.Start, end, text);
-    }
-
-    Task OpenClockAsync(bool end)
-    {
-        if (Disabled || _clock is null)
-        {
-            return Task.CompletedTask;
-        }
-
-        _pickingEnd = end;
-        _pickerTime = end ? Value?.End?.ToTimeSpan() : Value?.Start.ToTimeSpan();
-        return _clock.OpenAsync();
-    }
-
-    async Task ClockClosedAsync()
-    {
-        if (_pickerTime is not { } span)
-        {
-            return;
-        }
-
-        var time = TimeOnly.FromTimeSpan(span);
-
-        if (!_pickingEnd)
-        {
-            if (Value?.Start != time)
-            {
-                await TrySendAsync(time, Value?.End);
-            }
-        }
-        else if (Value is { } current && current.End != time)
-        {
-            await TrySendAsync(current.Start, time, TaskTimeText.Format(time));
-        }
-    }
-
-    async Task TrySendAsync(TimeOnly start, TimeOnly? end, string? typedEnd = null)
+    async Task TrySendAsync(TimeOnly start, TimeOnly? end)
     {
         if (end == start)
         {
-            _endDraft = typedEnd ?? TaskTimeText.Format(start);
-            _error = T["EndMustDiffer"];
+            _endClash = true;
+            _error = T["EndMustDiffer"].Value;
             return;
         }
 
@@ -166,9 +95,9 @@ else if (Value is { Overnight: true })
 
     async Task SendAsync(TaskTime? time)
     {
-        _startDraft = null;
-        _endDraft = null;
         _error = null;
+        _endClash = false;
+        _current = time;
         await ValueChanged.InvokeAsync(time);
     }
 }

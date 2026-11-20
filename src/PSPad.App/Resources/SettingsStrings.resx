@@ -171,4 +171,37 @@
   <data name="NotSyncedYet" xml:space="preserve">
     <value>Not synced yet</value>
   </data>
+  <data name="Notifications" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="NotificationsExplain" xml:space="preserve">
+    <value>Reminders are sent to the devices you turn on here.</value>
+  </data>
+  <data name="NotificationsTurnOn" xml:space="preserve">
+    <value>Turn on for this device</value>
+  </data>
+  <data name="NotificationsOn" xml:space="preserve">
+    <value>On for this device.</value>
+  </data>
+  <data name="NotificationsTurnOff" xml:space="preserve">
+    <value>Turn off</value>
+  </data>
+  <data name="NotificationsSendTest" xml:space="preserve">
+    <value>Send test</value>
+  </data>
+  <data name="NotificationsTestSent" xml:space="preserve">
+    <value>Test notification sent.</value>
+  </data>
+  <data name="NotificationsBlocked" xml:space="preserve">
+    <value>Notifications are blocked for PSPad in your browser settings.</value>
+  </data>
+  <data name="NotificationsUnsupported" xml:space="preserve">
+    <value>This browser can't show notifications.</value>
+  </data>
+  <data name="NotificationsHomeScreen" xml:space="preserve">
+    <value>Add PSPad to your Home Screen to get reminders.</value>
+  </data>
+  <data name="NotificationsFailed" xml:space="preserve">
+    <value>That didn't work. Try again.</value>
+  </data>
 </root>

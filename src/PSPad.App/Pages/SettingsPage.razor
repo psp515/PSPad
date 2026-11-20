@@ -6,6 +6,7 @@
 @using PSPad.App.Auth
 @using PSPad.App.Components
 @using PSPad.App.Localization
+@using PSPad.App.Push
 @using PSPad.App.Resources
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
@@ -37,6 +38,8 @@
 @inject IDialogService Dialogs
 @inject LocalAccountDeletion AccountDeletion
 @inject ISnackbar Snackbar
+@inject IPushDevice Push
+@inject IPushApi PushApi
 @implements IDisposable
 
 <PageHeading Title="@S["Settings"]" Subtitle="@T["SettingsSubtitle"]" Icon="@Icons.Material.Outlined.Settings" />
@@ -114,6 +117,7 @@
             <AccentPicker />
         </MudPaper>
     </MudItem>
+    <NotificationsCard />
     <MudItem xs="12" sm="6" lg="4" xl="3">
         <MudPaper Outlined="true" Class="pa-4" id="sync">
             <SectionHeading Title="@T["Sync"]" />
@@ -275,6 +279,8 @@
 
         _signingOut = true;
 
+        await TurnDeviceOffAsync();
+
         // Storage is cleared before the redirect leaves the app, so an interrupted round trip still signs out.
         if (await SignOut.SignOutAsync() is not SignOutOutcome.Cleared cleared)
         {
@@ -290,6 +296,20 @@
                 Navigation.ToAbsoluteUri("welcome").ToString(),
                 cleared.IdTokenHint),
             forceLoad: true);
+    }
+
+    async Task TurnDeviceOffAsync()
+    {
+        try
+        {
+            if (await Push.UnsubscribeAsync() is { } endpoint)
+            {
+                await PushApi.UnsubscribeAsync(endpoint);
+            }
+        }
+        catch (Exception)
+        {
+        }
     }
 
     async Task<bool> ConfirmLosingUnsyncedChangesAsync()

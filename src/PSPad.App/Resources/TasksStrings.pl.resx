@@ -93,41 +93,8 @@
   <data name="RemindMe" xml:space="preserve">
     <value>Przypomnij mi</value>
   </data>
-  <data name="LeadHint" xml:space="preserve">
-    <value>Na ile wcześniej zadanie pokaże się w sekcji Nadchodzące w widoku Mój dzień. W dniu terminu trafi na Dziś, jak zawsze.</value>
-  </data>
   <data name="CustomEllipsis" xml:space="preserve">
     <value>Własne…</value>
-  </data>
-  <data name="LeadBefore" xml:space="preserve">
-    <value>przed</value>
-  </data>
-  <data name="LeadDays.One" xml:space="preserve">
-    <value>{0} dzień przed</value>
-  </data>
-  <data name="LeadDays.Few" xml:space="preserve">
-    <value>{0} dni przed</value>
-  </data>
-  <data name="LeadDays.Many" xml:space="preserve">
-    <value>{0} dni przed</value>
-  </data>
-  <data name="LeadWeeks.One" xml:space="preserve">
-    <value>{0} tydzień przed</value>
-  </data>
-  <data name="LeadWeeks.Few" xml:space="preserve">
-    <value>{0} tygodnie przed</value>
-  </data>
-  <data name="LeadWeeks.Many" xml:space="preserve">
-    <value>{0} tygodni przed</value>
-  </data>
-  <data name="LeadMonths.One" xml:space="preserve">
-    <value>{0} miesiąc przed</value>
-  </data>
-  <data name="LeadMonths.Few" xml:space="preserve">
-    <value>{0} miesiące przed</value>
-  </data>
-  <data name="LeadMonths.Many" xml:space="preserve">
-    <value>{0} miesięcy przed</value>
   </data>
   <data name="Priority" xml:space="preserve">
     <value>Priorytet</value>
@@ -377,5 +344,65 @@
   </data>
   <data name="SetStepDeadline" xml:space="preserve">
     <value>Ustaw termin dla {0}</value>
+  </data>
+  <data name="ReminderOff" xml:space="preserve">
+    <value>Wyłączone</value>
+  </data>
+  <data name="ReminderOnTheDay" xml:space="preserve">
+    <value>W dniu terminu o {0}</value>
+  </data>
+  <data name="ReminderDaysBefore.One" xml:space="preserve">
+    <value>{0} dzień wcześniej o {1}</value>
+  </data>
+  <data name="ReminderDaysBefore.Few" xml:space="preserve">
+    <value>{0} dni wcześniej o {1}</value>
+  </data>
+  <data name="ReminderDaysBefore.Many" xml:space="preserve">
+    <value>{0} dni wcześniej o {1}</value>
+  </data>
+  <data name="ReminderDaysLabel" xml:space="preserve">
+    <value>Dni wcześniej</value>
+  </data>
+  <data name="ReminderTimeLabel" xml:space="preserve">
+    <value>Godzina przypomnienia</value>
+  </data>
+  <data name="ReminderNeedsDueDate" xml:space="preserve">
+    <value>Wymaga terminu</value>
+  </data>
+  <data name="ReminderEachOccurrence" xml:space="preserve">
+    <value>Przed każdym wystąpieniem</value>
+  </data>
+  <data name="ReminderDeviceOff" xml:space="preserve">
+    <value>Powiadomienia są wyłączone na tym urządzeniu · Włącz</value>
+  </data>
+  <data name="ReminderQuickSameDay" xml:space="preserve">
+    <value>W dniu terminu</value>
+  </data>
+  <data name="ReminderQuickDays.One" xml:space="preserve">
+    <value>{0} dzień</value>
+  </data>
+  <data name="ReminderQuickDays.Few" xml:space="preserve">
+    <value>{0} dni</value>
+  </data>
+  <data name="ReminderQuickDays.Many" xml:space="preserve">
+    <value>{0} dni</value>
+  </data>
+  <data name="ReminderQuickWeek" xml:space="preserve">
+    <value>1 tydzień</value>
+  </data>
+  <data name="ReminderDaysUnit" xml:space="preserve">
+    <value>Dni</value>
+  </data>
+  <data name="ReminderAt" xml:space="preserve">
+    <value>O</value>
+  </data>
+  <data name="PickReminderTime" xml:space="preserve">
+    <value>Wybierz godzinę przypomnienia</value>
+  </data>
+  <data name="ReminderDaysHint" xml:space="preserve">
+    <value>Wpisz od 0 do 99 dni</value>
+  </data>
+  <data name="ReminderBefore" xml:space="preserve">
+    <value>wcześniej</value>
   </data>
 </root>

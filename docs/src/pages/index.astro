@@ -9,6 +9,7 @@ import { join } from '../lib/repo'
 const base = import.meta.env.BASE_URL
 const offline = feature('offline')
 const investments = feature('investments')
+const reminders = feature('reminders')
 
 const highlights = [
   { item: feature('today'), shot: 'my-day', alt: 'My Day with timed and overdue tasks' },
@@ -72,6 +73,19 @@ const highlights = [
             <h3>{investments.title}</h3>
             <p>{investments.does}</p>
             <p class="how">{investments.how}</p>
+          </div>
+        </div>
+      </Reveal>
+      <Reveal>
+        <div class="band">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          <div>
+            <h3>{reminders.title}</h3>
+            <p>{reminders.does}</p>
+            <p class="how">{reminders.how}</p>
           </div>
         </div>
       </Reveal>

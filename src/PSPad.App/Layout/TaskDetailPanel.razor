@@ -1,5 +1,6 @@
 @using PSPad.Abstractions
 @using PSPad.App.Components
+@using PSPad.App.Push
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.Module.Presentation.AreaViews
@@ -9,6 +10,7 @@
 @using PSPad.Module.Tasks.Lists
 @using PSPad.Module.Tasks.Recurrence
 @using PSPad.Module.Tasks.Tasks
+@using PSPad.Module.Tasks.Today
 @inject IDocumentStore<TodoTask> Store
 @inject IDocumentStore<Area> Areas
 @inject IDocumentStore<TaskList> Lists
@@ -19,6 +21,7 @@
 @inject CommandSender Sender
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
+@inject IPushDevice Push
 @inject IStringLocalizer<TasksStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
 @inject IStringLocalizer<ListsStrings> ListText
@@ -81,10 +84,11 @@
                         Label="@(Repeats ? T["Until"] : T["Due"])" EmptyText="@(Repeats ? T["NoEndDate"] : T["NoDueDate"])"
                         FlagsPast="@(!Repeats)" />
 
-            @if (Repeats || DueOn is not null)
+            @if (Repeats || DueOn is not null || Reminder is not null)
             {
                 <TimeRow Value="@Time" ValueChanged="@TimeAsync" Disabled="@Disabled" />
-                <LeadTimeRow Value="@LeadTime" ValueChanged="@LeadTimeAsync" Disabled="@Disabled" />
+                <ReminderRow Value="@Reminder" ValueChanged="@ReminderAsync" Time="@Time" Repeats="@Repeats"
+                             Dormant="@ReminderDormant" DeviceOff="@_deviceOff" Disabled="@Disabled" />
             }
 
             <PriorityRow Value="@Priority" ValueChanged="@PriorityAsync" Disabled="@Disabled" />
@@ -214,7 +218,11 @@
 
     TaskTime? Time => _task is null ? _draft.Time : _task.Time;
 
-    LeadTime? LeadTime => _task is null ? _draft.LeadTime : _task.LeadTime;
+    TaskReminder? Reminder => _task is null ? _draft.Reminder : _task.Reminder;
+
+    bool ReminderDormant => _task is null
+        ? Reminder is not null && !Repeats && DueOn is null
+        : ReminderRule.IsDormant(_task);
 
     bool Repeats => Recurrence is not null;
 
@@ -226,12 +234,24 @@
 
     string? PathOf(Guid listId) => ListRow.PathOf(listId, _placement, _lists, ListText["SharedWithMe"]);
 
+    bool _deviceOff;
+    (Guid?, bool) _openedFor;
+
     protected override async Task OnParametersSetAsync()
     {
         if ((NewTask, NewInList, NewDue, NewTime) != _draftFor)
         {
             _draftFor = (NewTask, NewInList, NewDue, NewTime);
             _draft = NewDraft();
+        }
+
+        if ((TaskId, Adding) != _openedFor)
+        {
+            _openedFor = (TaskId, Adding);
+            if (TaskId is not null || Adding)
+            {
+                _deviceOff = await PushState.DeviceOffAsync(Push);
+            }
         }
 
         await ReloadAsync();
@@ -362,9 +382,9 @@
             await Sender.SendAsync(new SetTaskTime(Guid.NewGuid(), State.UserId, taskId, time));
         }
 
-        if (_draft.LeadTime is { } lead)
+        if (_draft.Reminder is { } reminder)
         {
-            await Sender.SendAsync(new SetTaskLeadTime(Guid.NewGuid(), State.UserId, taskId, lead));
+            await Sender.SendAsync(new SetTaskReminder(Guid.NewGuid(), State.UserId, taskId, reminder));
         }
 
         if (_draft.Priority != Priority.None)
@@ -545,7 +565,7 @@
         await ReloadAsync();
     }
 
-    async Task LeadTimeAsync(LeadTime? lead)
+    async Task ReminderAsync(TaskReminder? reminder)
     {
         if (Disabled)
         {
@@ -554,11 +574,11 @@
 
         if (_task is null)
         {
-            _draft.LeadTime = lead;
+            _draft.Reminder = reminder;
             return;
         }
 
-        await Sender.SendAsync(new SetTaskLeadTime(Guid.NewGuid(), State.UserId, _task.Id, lead));
+        await Sender.SendAsync(new SetTaskReminder(Guid.NewGuid(), State.UserId, _task.Id, reminder));
         await ReloadAsync();
     }
 
@@ -704,7 +724,7 @@
 
         public TaskTime? Time { get; set; }
 
-        public LeadTime? LeadTime { get; set; }
+        public TaskReminder? Reminder { get; set; }
 
         public Priority Priority { get; set; } = Priority.None;
 
