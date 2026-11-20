@@ -391,15 +391,18 @@
     <value>1 tydzień</value>
   </data>
   <data name="ReminderDaysUnit" xml:space="preserve">
-    <value>dni wcześniej</value>
+    <value>Dni</value>
   </data>
   <data name="ReminderAt" xml:space="preserve">
-    <value>o</value>
+    <value>O</value>
   </data>
   <data name="PickReminderTime" xml:space="preserve">
     <value>Wybierz godzinę przypomnienia</value>
   </data>
   <data name="ReminderDaysHint" xml:space="preserve">
     <value>Wpisz od 0 do 99 dni</value>
+  </data>
+  <data name="ReminderBefore" xml:space="preserve">
+    <value>wcześniej</value>
   </data>
 </root>

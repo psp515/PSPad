@@ -772,8 +772,8 @@ button.pspad-heatmap-cell:focus-visible {
 .pspad-time-note { padding: 0 38px 4px 192px; }
 .pspad-reminder-note { padding: 0 38px 4px 192px; }
 .pspad-reminder-device-off { padding: 0 38px 4px 192px; }
-.pspad-reminder-line-label { flex-basis: 84px; }
-.pspad-reminder-quick { flex-wrap: wrap; }
+.pspad-reminder-quick { display: flex !important; }
+.pspad-reminder-quick .mud-toggle-item { flex: 1 1 auto; min-width: 0; text-transform: none; white-space: nowrap; padding-inline: 4px; }
 .pspad-reminder-off-line { min-height: 40px; }
 /* The clock's own input is never shown; the Schedule adornment on each time field opens it. MudTimePicker puts Class on its toolbar too, so the rules match the wrapper only. */
 .mud-picker.pspad-time-clock { display: contents; }

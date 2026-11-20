@@ -229,8 +229,8 @@ Edited in place, with no menu or dialog. Laid out like the Time row
 "Remind me"), under Time, in the Add and Edit task panels.
 
 - Off: "Off" in the muted colour.
-- Set: a **Days before** line — an outlined numeric field (0–99,
-  `aria-label` "Days before") and a ✕ that sends `SetTaskReminder(null)` —
+- Set: a **Days** line — an outlined numeric field ending in "before"
+  (0–99, `aria-label` "Days before") and a ✕ that sends `SetTaskReminder(null)` —
   and an **At** line with `TimeField`, the Time row's own field: type
   `HH:mm` (read by `TimeText.TryParse`) or open the clock from its
   `Schedule` adornment ("Pick reminder time").

@@ -798,12 +798,14 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
    - **Remind me** (`ReminderRow`, `pspad-task-reminder`, icon
      `NotificationsNone`, under Time; shown with Time) — laid out like Time:
      the bell and label on the left, lines on the right. Off reads "Off" in
-     the muted colour. Set, it shows a **Days before** line (an outlined
-     numeric `MudTextField`, `aria-label` "Days before", 0–99, a ✕ that
-     clears the reminder) and an **At** line holding the same `TimeField` as
+     the muted colour. Set, it shows a **Days** line (an outlined numeric
+     `MudTextField` ending in the text "before", `aria-label` "Days before",
+     0–99, a ✕ that clears the reminder) and an **At** line, both labels in
+     Time's 40px From/To column, holding the same `TimeField` as
      Time's From (`aria-label` "Reminder time", typed `HH:mm` or the clock
      behind the `Schedule` adornment, "Pick reminder time"). Under both, a
-     `MudToggleGroup` of quick choices — On the day, 1 day, 2 days, 1 week —
+     `MudToggleGroup` of quick choices — On the day, 1 day, 2 days, 1 week, in
+     sentence case, each as wide as its text —
      sets the days in one tap and turns an Off reminder on at the task's
      start time, or 09:00 with none; the chosen one is checked. Days outside
      0–99 keep the typed text and show "Enter 0 to 99 days". Captions under

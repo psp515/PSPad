@@ -17,10 +17,11 @@
         else
         {
             <div class="pspad-time-line d-flex align-center">
-                <span class="pspad-time-line-label pspad-reminder-line-label">@T["ReminderDaysUnit"]</span>
+                <span class="pspad-time-line-label">@T["ReminderDaysUnit"]</span>
                 <MudTextField T="string" Class="pspad-reminder-days pspad-time-input" aria-label="@T["ReminderDaysLabel"].Value"
                               InputMode="InputMode.numeric" Value="@DaysText" ValueChanged="@DaysTypedAsync"
-                              Error="@(_daysDraft is not null)" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled" />
+                              Error="@(_daysDraft is not null)" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled"
+                              Adornment="Adornment.End" AdornmentText="@T["ReminderBefore"]" />
                 @if (!Disabled)
                 {
                     <MudIconButton Class="pspad-property-clear pspad-reminder-clear" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
@@ -32,7 +33,7 @@
                 }
             </div>
             <div class="pspad-time-line pspad-time-line-end d-flex align-center">
-                <span class="pspad-time-line-label pspad-reminder-line-label">@T["ReminderAt"]</span>
+                <span class="pspad-time-line-label">@T["ReminderAt"]</span>
                 <TimeField Class="pspad-reminder-time" Label="@T["ReminderTimeLabel"]" ClockLabel="@T["PickReminderTime"]"
                            Value="@_current.At" ValueChanged="@AtChangedAsync" InvalidChanged="@(invalid => _timeInvalid = invalid)"
                            Disabled="@Disabled" />
