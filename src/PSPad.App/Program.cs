@@ -97,7 +97,7 @@ builder.Services.AddSingleton<ServerReachability>();
 builder.Services.AddScoped<ServerReachabilityHandler>();
 
 // The browser's runtime reads its zone from Intl, so Local is the user's zone here.
-builder.Services.AddSingleton(new BrowserTimeZone(TimeZoneInfo.Local.Id));
+builder.Services.AddSingleton(_ => new BrowserTimeZone(TimeZoneInfo.Local.Id));
 builder.Services.AddTransient<TimeZoneHintHandler>();
 
 builder.Services.AddHttpClient<PSPadApiClient>(client => client.BaseAddress = new Uri(apiBaseAddress))
