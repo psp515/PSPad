@@ -233,7 +233,7 @@ transactions require one. Dev, prod and tests all run the same shape.
 | `list_snapshots` | a frozen, owner-published copy of one list (`adr/0056`) | `_id` (GUID), `token` (unique, server-generated, distinct from `_id`), `userId` (owner), `listId`, `kind`, `name`, `createdAt`, `expiresAt`, `tasks[]` or `items[]` — each entry its own `id`/`name`/`done`/`marked`/`markedAt`, steps or fields nested the same way. Content is frozen at publish; only `marked`/`markedAt` change afterwards |
 | `snapshot_visits` | a signed-in visitor's own record of opening a snapshot | `_id` = `"{userId}:{snapshotId}"`, `userId`, `snapshotId`, `token`, `name`, `expiresAt`, `visitedAt` |
 | `pushsubscriptions` | one Web Push subscription per device (`adr/0092`); not synced | `_id` = lowercase SHA-256 hex of the endpoint (`PushSubscriptionRecord.IdFor`), `userId`, `endpoint` (unique), `p256dh`, `auth`, `deviceLabel`, `createdAt`, `lastSuccessAt?` |
-| `sentreminders` | the claim that a reminder went out, one per (task, occurrence, recipient); pruned after 7 days | `_id`, `taskId`, `occurrence`, `userId`, `claimedAt`, `attempts`, `state` (`Sent`, `Retry`, `Failed`), `note`, `expiresAt` |
+| `sentreminders` | the claim that a reminder went out, one per (task, occurrence, recipient, moment); pruned after 7 days | `_id`, `taskId`, `occurrence`, `userId`, `claimedAt`, `attempts`, `state` (`Sent`, `Retry`, `Failed`), `note`, `expiresAt` |
 | `vapidkeys` | the one VAPID key pair, fixed id, generated on first start | `publicKey`, `privateKey`, `createdAt` |
 | `snapshot_mark_budgets` | anonymous mark changes spent per list and UTC day (`adr/0064`) | `_id` = `"{listId}:{yyyy-MM-dd}"`, `spent`, `expiresAt` (two days after the day) |
 
@@ -253,7 +253,7 @@ transaction; the returned value stamps both the event and the aggregate's
   `seq` alone and so cannot use either compound index
 - every aggregate collection: `{userId: 1, seq: 1}` (delta sync)
 - `todotasks`: `{userId: 1, listId: 1}`, `{userId: 1, dueOn: 1}`, `{listId: 1, seq: 1}` and `{previousListId: 1, seq: 1}` (a member's delta sync), and a partial `{reminder: 1}` named `reminder_set` (`$type: object`; the scheduler's scan)
-- `pushsubscriptions`: unique `{endpoint: 1}`, `{userId: 1}`; `sentreminders`: `_id` = `{taskId:N}:{occurrence:yyyy-MM-dd}:{userId:N}` (`ReminderClaim.IdFor`; the claim is a duplicate-key insert on `_id`), `{claimedAt: 1}`, `{state: 1, claimedAt: 1}`
+- `pushsubscriptions`: unique `{endpoint: 1}`, `{userId: 1}`; `sentreminders`: `_id` = `{taskId:N}:{occurrence:yyyy-MM-dd}:{userId:N}:{moment:yyyyMMddTHHmm}Z` (`ReminderClaim.IdFor`; a reminder moved to a new time is a new claim, so it fires again; the claim is a duplicate-key insert on `_id`), `{claimedAt: 1}`, `{state: 1, claimedAt: 1}`
 - `tasklists`: `{userId: 1, areaId: 1}`, `{_members.userId: 1, seq: 1}` (a
   member's delta sync), unique partial `{inviteToken: 1}` named
   `inviteToken_unique` (`partialFilterExpression: {inviteToken: {$type:
@@ -657,7 +657,10 @@ keys off `userId`. `Program.cs` sets `MapInboundClaims = false` so claim
 names read as Keycloak sends them (`name`, not `ClaimTypes.Name`).
 
 On first sign-in the API provisions the user: a `User` with the time zone
-the client reports (browser IANA zone, editable later), one Inbox, and a
+from the token's `zoneinfo` claim, else the browser's IANA zone the client
+sends on every API call in `X-Time-Zone` (`TimeZoneHint.Header`; UTC aliases
+such as `UTC` and `Etc/GMT` become `Etc/UTC`, an unknown zone is ignored),
+else `Etc/UTC`. It is read only then; later the user changes it in Settings, one Inbox, and a
 small seed of areas. Provisioning is idempotent, runs in a transaction.
 `SetUserDisplayName` heals an already-provisioned user's display name when
 the token's name differs from the stored one (`MeEndpoints` issues it on

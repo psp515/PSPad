@@ -35,7 +35,7 @@ public sealed class ReminderTick(
 
                 foreach (var moment in ReminderRule.MomentsBetween(task, zone, from, now))
                 {
-                    await IsolatedAsync(() => RemindAsync(task, recipient, zone, moment.Occurrence, now, tally, ct), faults, ct);
+                    await IsolatedAsync(() => RemindAsync(task, recipient, zone, moment, now, tally, ct), faults, ct);
                 }
             }
         }
@@ -72,9 +72,10 @@ public sealed class ReminderTick(
     }
 
     private async Task RemindAsync(
-        TodoTask task, Recipient recipient, TimeZoneInfo zone, DateOnly occurrence, DateTimeOffset now, Tally tally,
+        TodoTask task, Recipient recipient, TimeZoneInfo zone, ReminderMoment moment, DateTimeOffset now, Tally tally,
         CancellationToken ct)
     {
+        var occurrence = moment.Occurrence;
         var devices = await subscriptions.ForUserAsync(recipient.UserId, ct);
         if (devices.Count == 0)
         {
@@ -85,7 +86,7 @@ public sealed class ReminderTick(
         var note = ReminderTexts.For(task, task.Reminder!.DaysBefore, recipient.Language, settings.AppBaseAddress);
         var ttl = ReminderTtl.For(occurrence, zone, now);
         var claim = new ReminderClaim(
-            ReminderClaim.IdFor(task.Id, occurrence, recipient.UserId), task.Id, occurrence,
+            ReminderClaim.IdFor(task.Id, occurrence, recipient.UserId, moment.Moment), task.Id, occurrence,
             recipient.UserId, now, 1, ClaimState.Sent, note, now + ttl);
 
         if (!await claims.TryClaimAsync(claim, ct))

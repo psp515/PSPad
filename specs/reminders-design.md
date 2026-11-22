@@ -111,7 +111,7 @@ the endpoints; indexes go in `MongoIndexes`.
 | Collection | Document | Indexes |
 |------------|----------|---------|
 | `pushsubscriptions` | `{Id, UserId, Endpoint, P256dh, Auth, DeviceLabel, CreatedAt, LastSuccessAt?}` | unique `Endpoint`; `UserId` |
-| `sentreminders` | `{TaskId, Occurrence, UserId, ClaimedAt, Attempts, State}` (`State`: `Sent`, `Retry`, `Failed`) | unique `(TaskId, Occurrence, UserId)`; `ClaimedAt` |
+| `sentreminders` | `{TaskId, Occurrence, UserId, ClaimedAt, Attempts, State}` (`State`: `Sent`, `Retry`, `Failed`) | unique `(TaskId, Occurrence, UserId, Moment)` as `_id`; `ClaimedAt` |
 | `vapidkeys` | one document, fixed id: `{PublicKey, PrivateKey, CreatedAt}` | — |
 
 None of them syncs to the client or appears in the replica. The `todotasks`
@@ -132,8 +132,10 @@ loop goes on; it never stops the host.
    every task belongs to a list. Load each recipient `User` once per tick.
 4. `ReminderRule.MomentsBetween` per task and recipient.
 5. Claim: insert `{TaskId, Occurrence, UserId, State = Sent, Attempts = 1}`
-   into `sentreminders`. A duplicate key means another tick or API instance
-   owns it: skip. No lease or lock.
+   into `sentreminders`, its `_id` naming the moment too. A duplicate key
+   means another tick or API instance owns it: skip. A reminder moved to a
+   later time after it fired has a new moment, so it fires once more;
+   moved back to a moment that fired, it does not repeat. No lease or lock.
 6. Send to each of the recipient's subscriptions (§3.4).
 7. Retries: claims in `Retry` with `ClaimedAt` within the last hour are sent
    again, `Attempts + 1`; after 3 attempts the state becomes `Failed`.
@@ -247,6 +249,11 @@ Edited in place, with no menu or dialog. Laid out like the Time row
   days and then the time quickly sends both.
 - Add panel: the draft's reminder is sent as `SetTaskReminder` after the due
   date and time.
+- When the account's time zone keeps a different clock from the browser's
+  (offsets compared now and in six months, `ReminderZone.Notice`), the row
+  shows "Reminders go by {zone} time · Change", linking to Settings. The
+  zone is never changed for the user. A new account starts in the browser's
+  zone (`specs/backend-spec.md`, provisioning).
 - When this device has notifications off, the row shows the caption
   "Notifications are off on this device · Turn on", linking to the Settings
   card. The reminder still reaches the user's other devices. The caption is

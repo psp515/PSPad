@@ -28,7 +28,9 @@ public sealed class ClaimsCurrentUser(IHttpContextAccessor accessor) : ICurrentU
     public Guid UserId => Module.Identity.User.IdFor(Subject);
 
     public string TimeZoneHint =>
-        accessor.HttpContext?.User.FindFirstValue("zoneinfo") ?? "Etc/UTC";
+        accessor.HttpContext?.User.FindFirstValue("zoneinfo")
+        ?? KnownZone(accessor.HttpContext?.Request.Headers[Contracts.TimeZoneHint.Header].ToString())
+        ?? "Etc/UTC";
 
     public string LanguageHint =>
         SupportedLanguages.FromBrowser(accessor.HttpContext?.Request.Headers.AcceptLanguage.ToString());
@@ -41,4 +43,16 @@ public sealed class ClaimsCurrentUser(IHttpContextAccessor accessor) : ICurrentU
 
     public string Email =>
         accessor.HttpContext?.User.FindFirstValue("email") ?? "";
+
+    static readonly HashSet<string> UtcAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "UTC", "UCT", "Etc/UTC", "Etc/UCT", "Universal", "Etc/Universal", "Zulu", "Etc/Zulu",
+        "GMT", "Etc/GMT", "Etc/GMT0", "Etc/GMT+0", "Etc/GMT-0", "Greenwich", "Etc/Greenwich",
+    };
+
+    static string? KnownZone(string? id) =>
+        string.IsNullOrWhiteSpace(id) ? null
+        : UtcAliases.Contains(id) ? "Etc/UTC"
+        : TimeZoneInfo.TryFindSystemTimeZoneById(id, out _) ? id
+        : null;
 }

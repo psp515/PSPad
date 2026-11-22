@@ -405,4 +405,7 @@
   <data name="ReminderBefore" xml:space="preserve">
     <value>wcześniej</value>
   </data>
+  <data name="ReminderZone" xml:space="preserve">
+    <value>Przypomnienia według strefy {0} · Zmień</value>
+  </data>
 </root>

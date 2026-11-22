@@ -199,7 +199,7 @@ public class ReminderDeliveryTests(MongoFixture fixture)
 
         Assert.Equal(3, push.To(device).Count);
         var claim = await Collection("sentreminders")
-            .Find(Builders<BsonDocument>.Filter.Eq("_id", ReminderClaim.IdFor(taskId, day, userId)))
+            .Find(Builders<BsonDocument>.Filter.Eq("_id", ReminderClaim.IdFor(taskId, day, userId, At(day, Nine))))
             .SingleAsync(Ct);
         Assert.Equal((int)ClaimState.Failed, claim["state"].AsInt32);
         Assert.Equal(3, claim["attempts"].AsInt32);

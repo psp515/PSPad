@@ -810,7 +810,9 @@ one-line rows under it, nothing boxed in a form. Top to bottom:
      start time, or 09:00 with none; the chosen one is checked. Days outside
      0–99 keep the typed text and show "Enter 0 to 99 days". Captions under
      the row: "Needs a due date" (no due date or repeat), "Before each
-     occurrence" (repeating), and, when this device has notifications off,
+     occurrence" (repeating), "Reminders go by {zone} time · Change" linking
+     to Settings when the account's zone keeps a different clock from the
+     browser's, and, when this device has notifications off,
      "Notifications are off on this device · Turn on" linking to Settings.
      Edit sends `SetTaskReminder` on each change; Add keeps it in
      `TaskDraft.Reminder`, sent after `SetTaskTime`. Both the Time and

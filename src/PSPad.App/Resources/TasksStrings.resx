@@ -405,4 +405,7 @@
   <data name="ReminderBefore" xml:space="preserve">
     <value>before</value>
   </data>
+  <data name="ReminderZone" xml:space="preserve">
+    <value>Reminders go by {0} time · Change</value>
+  </data>
 </root>

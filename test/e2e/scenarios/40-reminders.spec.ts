@@ -1,11 +1,11 @@
 import { expect, test } from '../fixtures/accounts';
-import { createArea } from '../helpers/areas';
+import { createArea, openArea } from '../helpers/areas';
 import { createList, openList } from '../helpers/lists';
 import { clearProperty, panel } from '../helpers/panels';
 import {
   chooseReminder, expectReminder, pickReminderTime, reminderChoice, reminderDays, typeReminder,
 } from '../helpers/reminders';
-import { goToSettings, notificationsCard } from '../helpers/settings';
+import { goToSettings, notificationsCard, setTimeZone } from '../helpers/settings';
 import { signIn } from '../helpers/sign-in';
 import { addTask, closeTask, openTask } from '../helpers/tasks';
 import { setDueDate, setRepeating } from '../helpers/today';
@@ -133,4 +133,33 @@ test('the device caption is checked each time a task opens', async ({ page, acco
   await openTask(page, task);
   await expectReminder(page, '0', '09:00');
   await expect(panel(page).getByRole('link', { name: 'Notifications are off on this device · Turn on' })).toHaveCount(0);
+});
+
+test.describe('in a Warsaw browser', () => {
+  test.use({ timezoneId: 'Europe/Warsaw' });
+
+  test('a new account takes the browser zone, and a reminder names a zone that differs', async ({ page, account }) => {
+    const task = `Book the dentist ${account.suffix}`;
+    await signIn(page, account);
+    await goToSettings(page);
+    await expect(page.getByLabel('Time zone')).toHaveValue('Europe/Warsaw');
+
+    await createArea(page, `Health ${account.suffix}`);
+    await createList(page, `Visits ${account.suffix}`);
+    await openList(page, `Visits ${account.suffix}`);
+    await addTask(page, task);
+    await openTask(page, task);
+    await setDueDate(page, 'Tomorrow');
+    await chooseReminder(page, '1 day');
+    const notice = panel(page).getByRole('link', { name: /^Reminders go by / });
+    await expect(notice).toHaveCount(0);
+    await closeTask(page);
+
+    await goToSettings(page);
+    await setTimeZone(page, 'Asia/Tokyo');
+    await openArea(page, `Health ${account.suffix}`);
+    await openList(page, `Visits ${account.suffix}`);
+    await openTask(page, task);
+    await expect(notice).toHaveText('Reminders go by Asia/Tokyo time · Change');
+  });
 });

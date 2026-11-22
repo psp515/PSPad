@@ -11,6 +11,6 @@ public sealed record ReminderClaim(
     PushNote Note,
     DateTimeOffset ExpiresAt)
 {
-    public static string IdFor(Guid taskId, DateOnly occurrence, Guid userId) =>
-        $"{taskId:N}:{occurrence:yyyy-MM-dd}:{userId:N}";
+    public static string IdFor(Guid taskId, DateOnly occurrence, Guid userId, DateTimeOffset moment) =>
+        $"{taskId:N}:{occurrence:yyyy-MM-dd}:{userId:N}:{moment.UtcDateTime:yyyyMMddTHHmm}Z";
 }

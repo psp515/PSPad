@@ -66,6 +66,38 @@ public class ReminderTickTests
     }
 
     [Fact]
+    public async Task AReminderMovedLaterAfterItFiredFiresAgainAtTheNewTime()
+    {
+        subscriptions.Add(Owner, "https://push/a");
+        var task = NineOClockTask();
+        var tick = TickFor(task, Warsaw(Owner));
+        await tick.RunAsync(From, Moment, TestContext.Current.CancellationToken);
+
+        task.Apply(new TaskReminderSet(task.Id, Owner, Moment.AddMinutes(1), TaskReminder.Of(0, new TimeOnly(9, 5))));
+        var later = Moment.AddMinutes(5);
+        var result = await tick.RunAsync(later.AddMinutes(-1), later, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.Sent);
+        Assert.Equal(2, sender.Endpoints.Count);
+        Assert.Equal(2, claims.Claims.Count);
+    }
+
+    [Fact]
+    public async Task AReminderMovedBackToAMomentThatFiredDoesNotFireTwice()
+    {
+        subscriptions.Add(Owner, "https://push/a");
+        var task = NineOClockTask();
+        var tick = TickFor(task, Warsaw(Owner));
+        await tick.RunAsync(From, Moment, TestContext.Current.CancellationToken);
+
+        task.Apply(new TaskReminderSet(task.Id, Owner, From, TaskReminder.Of(0, new TimeOnly(9, 0))));
+        var result = await tick.RunAsync(From, Moment, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, result.Sent);
+        Assert.Single(sender.Endpoints);
+    }
+
+    [Fact]
     public async Task AUserWithoutDevicesIsSkippedWithoutAClaim()
     {
         var result = await TickFor(NineOClockTask(), Warsaw(Owner)).RunAsync(From, Moment, TestContext.Current.CancellationToken);
@@ -145,7 +177,7 @@ public class ReminderTickTests
         var task = NineOClockTask();
         var now = Moment.AddMinutes(30);
         var claim = new ReminderClaim(
-            ReminderClaim.IdFor(task.Id, new DateOnly(2026, 11, 20), Owner), task.Id, new DateOnly(2026, 11, 20),
+            ReminderClaim.IdFor(task.Id, new DateOnly(2026, 11, 20), Owner, Moment), task.Id, new DateOnly(2026, 11, 20),
             Owner, Moment, 1, ClaimState.Retry, new PushNote("t", "b", "u", "g"), now.AddMinutes(-1));
         claims.Claims[claim.Id] = claim;
 

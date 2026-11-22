@@ -22,6 +22,8 @@
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
 @inject IPushDevice Push
+@inject BrowserTimeZone BrowserZone
+@inject IClock Clock
 @inject IStringLocalizer<TasksStrings> T
 @inject IStringLocalizer<SharedStrings> Shared
 @inject IStringLocalizer<ListsStrings> ListText
@@ -88,7 +90,8 @@
             {
                 <TimeRow Value="@Time" ValueChanged="@TimeAsync" Disabled="@Disabled" />
                 <ReminderRow Value="@Reminder" ValueChanged="@ReminderAsync" Time="@Time" Repeats="@Repeats"
-                             Dormant="@ReminderDormant" DeviceOff="@_deviceOff" Disabled="@Disabled" />
+                             Dormant="@ReminderDormant" DeviceOff="@_deviceOff"
+                             ZoneNotice="@ReminderZone.Notice(State.TimeZone, BrowserZone.Id, Clock.UtcNow)" Disabled="@Disabled" />
             }
 
             <PriorityRow Value="@Priority" ValueChanged="@PriorityAsync" Disabled="@Disabled" />
