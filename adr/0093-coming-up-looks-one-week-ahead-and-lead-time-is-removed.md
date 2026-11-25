@@ -27,8 +27,11 @@ We will remove `LeadTime`, `LeadUnit`, `SetTaskLeadTime` and
 `TaskLeadTimeSet`. `TodayRule.Plan` shows a one-time task's trigger or a
 repeating task's next unticked occurrence in Coming up when it falls within
 the next seven days (`TodayRule.UpcomingDays`), the same reach for every
-task. Stored `leadTime` fields are left in place and ignored on load; past
-`TaskLeadTimeSet` events stay in the log as text. A `SetTaskLeadTime` from an
+task. The API removes stored `leadTime` fields at start
+(`MongoBackfill.DropLeadTimeAsync`, idempotent, no `seq` bump because no
+reader needs the change); until then they are ignored on load. Past
+`TaskLeadTimeSet` events stay in the log as text: the log is history
+(AD-2), and nothing replays them. A `SetTaskLeadTime` from an
 older client is refused as an unknown command, which the client treats as
 final and drops (ADR-0021).
 
@@ -39,9 +42,11 @@ final and drops (ADR-0021).
 - **Keep the command as a no-op for old clients.** It would accept a change
   that does nothing; an unknown-command refusal is already handled and says
   what happened.
-- **A migration that unsets `leadTime`.** Extra elements are already
-  ignored on load (`IgnoreExtraElementsConvention`); a migration adds risk
-  for no visible change.
+- **Leave `leadTime` in old documents.** Ignored on load
+  (`IgnoreExtraElementsConvention`), but dead data invites a later reader to
+  trust it.
+- **Delete the `TaskLeadTimeSet` events too.** Rewrites history for no
+  reader; the events are opaque text and nothing projects them.
 
 ## Consequences
 
@@ -50,5 +55,6 @@ final and drops (ADR-0021).
   to be told earlier.
 - A task with a short lead time (one day) now shows a week ahead again.
 - One fewer row and command in the task panel and the shared contract.
-- `leadTime` stays in old documents until the task is next saved by a full
-  replace; nothing reads it.
+- `leadTime` is gone from the database after the first start of this
+  version. A device's local copy may keep the field until the task next
+  syncs; the app ignores it.

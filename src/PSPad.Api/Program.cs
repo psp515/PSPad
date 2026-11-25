@@ -152,6 +152,7 @@ open.MapPublicSnapshotEndpoints();
 await MongoIndexes.EnsureAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 await MongoBackfill.EnsureCreatedAtAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 await MongoBackfill.EnsureGoalLinksAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
+await MongoBackfill.DropLeadTimeAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 
 app.Run();
 

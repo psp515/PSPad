@@ -3,6 +3,7 @@ using System.Text.Json;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using PSPad.Contracts;
+using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Tasks.Areas;
 using PSPad.Module.Tasks.Lists;
 using PSPad.Module.Tasks.Recurrence;
@@ -64,6 +65,29 @@ public class RetiredLeadTimeTests(MongoFixture fixture)
         var sync = await client.GetFromJsonAsync<SyncResponse>("/api/sync?since=0", ct);
         var synced = sync!.Documents["todotasks"].Single(row => row.GetProperty("id").GetGuid() == taskId);
         Assert.False(synced.TryGetProperty("leadTime", out _));
+    }
+
+    [Fact]
+    public async Task TheStartBackfillRemovesAStoredLeadTimeAndKeepsTheRest()
+    {
+        var ct = global::Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new ApiFactory(fixture);
+        var client = factory.ClientFor(Guid.NewGuid().ToString());
+        var user = (await client.GetFromJsonAsync<MeResponse>("/api/me", ct))!.UserId;
+        var taskId = await SeedTask(client, user, "Car insurance");
+        await Send(client, new SetTaskRecurrence(Guid.NewGuid(), user, taskId, RecurrenceRule.Yearly(UtcToday)));
+        var context = Persistence.TestContext.For(fixture);
+        var tasks = context.Collection<BsonDocument>("todotasks");
+        var byId = Builders<BsonDocument>.Filter.Eq("_id", new BsonBinaryData(taskId, GuidRepresentation.Standard));
+        await tasks.UpdateOneAsync(
+            byId, Builders<BsonDocument>.Update.Set("leadTime", new BsonDocument { { "amount", 2 }, { "unit", 1 } }),
+            cancellationToken: ct);
+
+        await MongoBackfill.DropLeadTimeAsync(context, ct);
+
+        var stored = await tasks.Find(byId).SingleAsync(ct);
+        Assert.False(stored.Contains("leadTime"));
+        Assert.True(stored["recurrence"].IsBsonDocument);
     }
 
     static async Task<Guid> SeedTask(HttpClient client, Guid user, string name)

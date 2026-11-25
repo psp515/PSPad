@@ -321,7 +321,7 @@ not stated there:
 - `RepeatTally.Of(task, today)` derives the done count (`completedDays`)
   and the streak: done occurrences walking back from today, today's pending
   occurrence not breaking it.
-- Coming up on My Day looks `TodayRule.UpcomingDays` (7) days ahead for every task; nothing moves a task into Today or Overdue early. The per-task lead time is gone (`adr/0093`): a stored `leadTime` field is ignored, and `SetTaskLeadTime` is refused as an unknown command.
+- Coming up on My Day looks `TodayRule.UpcomingDays` (7) days ahead for every task; nothing moves a task into Today or Overdue early. The per-task lead time is gone (`adr/0093`): the API unsets stored `leadTime` fields at start (`MongoBackfill.DropLeadTimeAsync`), and `SetTaskLeadTime` is refused as an unknown command.
 - `TodoTask.Time` (`TaskTime(Start, End?)`; `SetTaskTime`, `TaskTimeSet`) is an
   optional expected start and end, a wall clock in the user's stored zone
   like `DueOn`. `End` must differ from `Start` (`TaskTime.Of` and `Decide`
