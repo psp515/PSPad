@@ -7,13 +7,26 @@ using PSPad.Module.Reminders;
 namespace PSPad.Api.Reminders;
 
 public sealed class WebPushSender(
-    HttpClient httpClient, VapidKeyring keyring, IOptions<ReminderOptions> options, ILogger<WebPushSender> logger)
+    HttpClient httpClient,
+    VapidKeyring keyring,
+    PushServiceHosts hosts,
+    IOptions<ReminderOptions> options,
+    ILogger<WebPushSender> logger)
     : IPushSender
 {
+    // A device that can never be sent to is answered as gone, so the store forgets it.
+    const int GoneForGood = 410;
+
     readonly HttpClient _http = WithNormalUrgency(httpClient);
 
     public async Task<int?> SendAsync(PushSubscriptionRecord to, PushNote note, TimeSpan ttl, CancellationToken ct)
     {
+        if (!Uri.TryCreate(to.Endpoint, UriKind.Absolute, out var endpoint) || !hosts.IsKnown(endpoint))
+        {
+            logger.LogWarning("A device on an unknown push service was dropped without sending");
+            return GoneForGood;
+        }
+
         using var authentication = Authentication(await keyring.GetAsync(ct));
         var client = new PushServiceClient(_http)
         {

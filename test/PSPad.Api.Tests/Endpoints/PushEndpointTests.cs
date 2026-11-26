@@ -167,6 +167,8 @@ public class PushEndpointTests(MongoFixture fixture)
     [InlineData("https://push.test/a", ShortP256dh, Auth)]
     [InlineData("https://push.test/a", P256dh, ShortAuth)]
     [InlineData("https://push.test/a", P256dh + "A", Auth)]
+    [InlineData("https://evil.example/fcm/send/a", P256dh, Auth)]
+    [InlineData("https://fcm.googleapis.com.evil.example/a", P256dh, Auth)]
     public async Task ABadSubscriptionIsRefused(string endpoint, string p256dh, string auth)
     {
         await using var factory = FactoryWith(new FakePushService());

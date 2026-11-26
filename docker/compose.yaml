@@ -17,6 +17,7 @@ services:
       Cors__AllowedOrigins__0: ${APP_BASE_ADDRESS}
       Reminders__AppBaseAddress: ${APP_BASE_ADDRESS}
       Reminders__Contact: ${REMINDERS_CONTACT:-}
+      Reminders__ExtraPushHosts: ${REMINDERS_EXTRA_PUSH_HOSTS:-}
       Proxy__KnownNetworks__0: ${API_TRUSTED_PROXY_NETWORK:-}
       Proxy__ClientIpHeader: ${API_CLIENT_IP_HEADER:-X-Forwarded-For}
     ports:

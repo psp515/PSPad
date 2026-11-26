@@ -30,9 +30,10 @@ public static class PushEndpoints
             IPushSubscriptionStore store,
             ICurrentUser current,
             IClock clock,
+            PushServiceHosts hosts,
             CancellationToken ct) =>
         {
-            if (!IsAcceptableEndpoint(request.Endpoint) || !IsPublicKey(request.P256dh) || !IsAuth(request.Auth))
+            if (!IsAcceptableEndpoint(request.Endpoint, hosts) || !IsPublicKey(request.P256dh) || !IsAuth(request.Auth))
             {
                 return Results.BadRequest();
             }
@@ -117,11 +118,11 @@ public static class PushEndpoints
         });
     }
 
-    static bool IsAcceptableEndpoint(string? endpoint) =>
+    static bool IsAcceptableEndpoint(string? endpoint, PushServiceHosts hosts) =>
         endpoint is { Length: > 0 and <= MaxEndpointLength }
         && Uri.TryCreate(endpoint, UriKind.Absolute, out var uri)
-        && uri.Scheme == Uri.UriSchemeHttps
-        && uri.HostNameType == UriHostNameType.Dns;
+        && uri.HostNameType == UriHostNameType.Dns
+        && hosts.IsKnown(uri);
 
     static async Task<PushOutcome> TestOutcomeAsync(
         IPushSender sender, PushSubscriptionRecord subscription, PushNote note, CancellationToken ct)

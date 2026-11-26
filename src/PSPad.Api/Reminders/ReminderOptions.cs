@@ -9,4 +9,6 @@ public sealed class ReminderOptions
     public string Contact { get; set; } = "";
 
     public bool Enabled { get; set; } = true;
+
+    public string ExtraPushHosts { get; set; } = "";
 }

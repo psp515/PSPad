@@ -26,7 +26,8 @@ public sealed class ApiFactory(
             {
                 ["Mongo:ConnectionString"] = fixture.ConnectionString,
                 ["Mongo:Database"] = "pspad_test",
-                ["Reminders:Enabled"] = "false"
+                ["Reminders:Enabled"] = "false",
+                ["Reminders:ExtraPushHosts"] = "push.test"
             };
 
             foreach (var policy in new[] { "Api", "Commands", "Sync", "Statistics", "Quotes" })

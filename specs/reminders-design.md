@@ -199,14 +199,24 @@ All require the signed-in user.
 | `DELETE /api/push/subscriptions` | body `{Endpoint}`; deletes it if the caller owns it |
 | `POST /api/push/test` | body `{Endpoint}`; pushes "PSPad notifications work" to that subscription of the caller only |
 
-A subscription's endpoint must be an absolute `https` URL with a DNS host
-name (no IP literal), at most 2048 characters. `p256dh` must base64url-decode
+A subscription's endpoint must be an absolute `https` URL on the default
+port, with a DNS host name (no IP literal) on a known push service, at most
+2048 characters. Known push services (`PushServiceHosts`): `fcm.googleapis.com`,
+`android.googleapis.com`, `*.push.services.mozilla.com`, `*.push.apple.com`,
+`*.notify.windows.com`, plus `Reminders:ExtraPushHosts` (comma-separated, a
+leading dot for subdomains; `REMINDERS_EXTRA_PUSH_HOSTS`). `p256dh` must base64url-decode
 to 65 bytes starting `0x04` (an uncompressed P-256 point) and `auth` to 16
 bytes; anything else is `400`. A test push the push service refuses, or
-whose send throws, is `502`; a gone subscription is `410` and deleted. When sending, the push
-client refuses to connect to loopback, private, link-local, unique-local or
-unspecified addresses after DNS resolution, so a stored endpoint can't make
-the server call an internal service.
+whose send throws, is `502`; a gone subscription is `410` and deleted. When sending, three layers hold: `WebPushSender` answers a device on an
+unknown push service as gone (`410`, so it is deleted) without a request;
+the push `HttpClient`'s `KnownPushServiceHandler` refuses any request to
+an unknown host and the client follows no redirects; and
+`PublicOnlyConnect` resolves the host once, refuses if any address is
+non-public (`PublicAddress`: loopback, private, link-local, carrier-grade
+NAT, multicast, reserved, documentation and benchmark ranges, IPv6
+unique-local, Teredo, and NAT64 or 6to4 addresses wrapping one of those),
+and connects to exactly the checked addresses. A stored endpoint can't make
+the server call an internal service or anything but a push service.
 
 Account deletion removes the user's `pushsubscriptions` and `sentreminders`.
 

@@ -134,6 +134,28 @@ public class ReminderDeliveryTests(MongoFixture fixture)
     }
 
     [Fact]
+    public async Task ADeviceOnAnUnknownPushServiceIsNeverContacted()
+    {
+        var push = new FakePushService();
+        await using var factory = FactoryWith(push);
+        var (client, userId) = await UserAsync(factory);
+        var listId = await ListAsync(client, userId);
+        var day = new DateOnly(2031, 2, 3);
+        await TaskAsync(client, userId, listId, "Renew passport", day, 0, Nine);
+        using var device = BrowserDevice.Create();
+        using (var scope = factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IPushSubscriptionStore>().SaveAsync(
+                device.RecordFor(userId, SeededAt) with { Endpoint = "https://evil.example/push" }, Ct);
+        }
+
+        var moment = At(day, Nine);
+        await TickAsync(factory, moment.AddMinutes(-1), moment);
+
+        Assert.Empty(push.Requests);
+    }
+
+    [Fact]
     public async Task TwoTicksOverOneWindowSendOnce()
     {
         var push = new FakePushService();

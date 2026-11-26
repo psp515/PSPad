@@ -116,8 +116,16 @@ builder.Services.AddScoped<IVapidKeyStore, MongoVapidKeyStore>();
 builder.Services.AddSingleton<VapidKeyring>();
 builder.Services.AddSingleton(sp =>
     new ReminderSettings(sp.GetRequiredService<IOptions<ReminderOptions>>().Value.AppBaseAddress));
+builder.Services.AddSingleton(sp =>
+    new PushServiceHosts(sp.GetRequiredService<IOptions<ReminderOptions>>().Value.ExtraPushHosts));
+builder.Services.AddTransient<KnownPushServiceHandler>();
 builder.Services.AddHttpClient<IPushSender, WebPushSender>(client => client.Timeout = TimeSpan.FromSeconds(10))
-    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { ConnectCallback = PublicOnlyConnect.ConnectAsync });
+    .AddHttpMessageHandler<KnownPushServiceHandler>()
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    {
+        ConnectCallback = PublicOnlyConnect.ConnectAsync,
+        AllowAutoRedirect = false,
+    });
 builder.Services.AddScoped<ReminderTick>();
 builder.Services.AddHostedService<ReminderScheduler>();
 
