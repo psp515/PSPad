@@ -117,7 +117,10 @@ builder.Services.AddSingleton<VapidKeyring>();
 builder.Services.AddSingleton(sp =>
     new ReminderSettings(sp.GetRequiredService<IOptions<ReminderOptions>>().Value.AppBaseAddress));
 builder.Services.AddSingleton(sp =>
-    new PushServiceHosts(sp.GetRequiredService<IOptions<ReminderOptions>>().Value.ExtraPushHosts));
+{
+    var reminders = sp.GetRequiredService<IOptions<ReminderOptions>>().Value;
+    return new PushServiceHosts([.. reminders.WebPushHosts, .. reminders.AdditionalWebPushHosts]);
+});
 builder.Services.AddTransient<KnownPushServiceHandler>();
 builder.Services.AddHttpClient<IPushSender, WebPushSender>(client => client.Timeout = TimeSpan.FromSeconds(10))
     .AddHttpMessageHandler<KnownPushServiceHandler>()

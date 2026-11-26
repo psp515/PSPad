@@ -6,7 +6,10 @@ namespace PSPad.Api.Tests.Reminders;
 [UnitTest]
 public class PushServiceHostsTests
 {
-    static readonly PushServiceHosts BuiltIn = new("");
+    static readonly string[] Defaults =
+        ["fcm.googleapis.com", "android.googleapis.com", ".push.services.mozilla.com", ".push.apple.com", ".notify.windows.com"];
+
+    static readonly PushServiceHosts BuiltIn = new(Defaults);
 
     [Theory]
     [InlineData("https://fcm.googleapis.com/fcm/send/abc")]
@@ -31,18 +34,18 @@ public class PushServiceHostsTests
         Assert.False(BuiltIn.IsKnown(new Uri(endpoint)));
 
     [Fact]
-    public void AnExtraHostIsKnownExactly()
+    public void AHostWithoutALeadingDotIsKnownExactly()
     {
-        var hosts = new PushServiceHosts("push.example.org");
+        var hosts = new PushServiceHosts([.. Defaults, "push.example.org"]);
 
         Assert.True(hosts.IsKnown(new Uri("https://push.example.org/abc")));
         Assert.False(hosts.IsKnown(new Uri("https://eu.push.example.org/abc")));
     }
 
     [Fact]
-    public void AnExtraHostWithALeadingDotCoversItsSubdomains()
+    public void AnEntryMayListSeveralHostsAndALeadingDotCoversSubdomains()
     {
-        var hosts = new PushServiceHosts(" .push.example.org , other.example ");
+        var hosts = new PushServiceHosts([" .push.example.org , other.example ", ""]);
 
         Assert.True(hosts.IsKnown(new Uri("https://eu.push.example.org/abc")));
         Assert.False(hosts.IsKnown(new Uri("https://push.example.org/abc")));

@@ -201,10 +201,15 @@ All require the signed-in user.
 
 A subscription's endpoint must be an absolute `https` URL on the default
 port, with a DNS host name (no IP literal) on a known push service, at most
-2048 characters. Known push services (`PushServiceHosts`): `fcm.googleapis.com`,
-`android.googleapis.com`, `*.push.services.mozilla.com`, `*.push.apple.com`,
-`*.notify.windows.com`, plus `Reminders:ExtraPushHosts` (comma-separated, a
-leading dot for subdomains; `REMINDERS_EXTRA_PUSH_HOSTS`). `p256dh` must base64url-decode
+2048 characters. Known push services (`PushServiceHosts`) are configuration:
+`Reminders:WebPushHosts` in the api's `appsettings.json` holds the defaults —
+`fcm.googleapis.com`, `android.googleapis.com` (Chrome, Android, Opera,
+Samsung Internet, Edge outside Windows), `.push.services.mozilla.com`
+(Firefox), `.push.apple.com` (Safari, iPhone, iPad), `.notify.windows.com`
+(Edge on Windows) — and `Reminders:AdditionalWebPushHosts` adds more
+(compose: `REMINDERS_ADDITIONAL_WEB_PUSH_HOSTS`; tests: `push.test`). Each
+entry may list several hosts separated by commas; a leading dot covers
+subdomains only. `p256dh` must base64url-decode
 to 65 bytes starting `0x04` (an uncompressed P-256 point) and `auth` to 16
 bytes; anything else is `400`. A test push the push service refuses, or
 whose send throws, is `502`; a gone subscription is `410` and deleted. When sending, three layers hold: `WebPushSender` answers a device on an

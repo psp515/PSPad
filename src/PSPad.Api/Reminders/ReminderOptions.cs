@@ -10,5 +10,7 @@ public sealed class ReminderOptions
 
     public bool Enabled { get; set; } = true;
 
-    public string ExtraPushHosts { get; set; } = "";
+    public List<string> WebPushHosts { get; set; } = [];
+
+    public List<string> AdditionalWebPushHosts { get; set; } = [];
 }
