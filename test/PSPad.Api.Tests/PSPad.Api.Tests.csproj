@@ -20,6 +20,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
     <PackageReference Include="xunit.v3.mtp-v2" />
   </ItemGroup>
 
