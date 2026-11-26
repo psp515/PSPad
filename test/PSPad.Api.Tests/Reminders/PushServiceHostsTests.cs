@@ -43,12 +43,20 @@ public class PushServiceHostsTests
     }
 
     [Fact]
-    public void AnEntryMayListSeveralHostsAndALeadingDotCoversSubdomains()
+    public void AHostWithALeadingDotCoversItsSubdomainsOnly()
     {
-        var hosts = new PushServiceHosts([" .push.example.org , other.example ", ""]);
+        var hosts = new PushServiceHosts([.. Defaults, ".push.example.org"]);
 
         Assert.True(hosts.IsKnown(new Uri("https://eu.push.example.org/abc")));
         Assert.False(hosts.IsKnown(new Uri("https://push.example.org/abc")));
-        Assert.True(hosts.IsKnown(new Uri("https://other.example/abc")));
+    }
+
+    [Fact]
+    public void EachEntryIsOneHost()
+    {
+        var hosts = new PushServiceHosts([.. Defaults, "a.example,b.example"]);
+
+        Assert.False(hosts.IsKnown(new Uri("https://a.example/abc")));
+        Assert.False(hosts.IsKnown(new Uri("https://b.example/abc")));
     }
 }

@@ -207,9 +207,9 @@ port, with a DNS host name (no IP literal) on a known push service, at most
 Samsung Internet, Edge outside Windows), `.push.services.mozilla.com`
 (Firefox), `.push.apple.com` (Safari, iPhone, iPad), `.notify.windows.com`
 (Edge on Windows) — and `Reminders:AdditionalWebPushHosts` adds more
-(compose: `REMINDERS_ADDITIONAL_WEB_PUSH_HOSTS`; tests: `push.test`). Each
-entry may list several hosts separated by commas; a leading dot covers
-subdomains only. `p256dh` must base64url-decode
+(the API tests add `push.test`; a self-hoster sets
+`Reminders__AdditionalWebPushHosts__0` on the api container). One host per
+entry; a leading dot covers subdomains only. `p256dh` must base64url-decode
 to 65 bytes starting `0x04` (an uncompressed P-256 point) and `auth` to 16
 bytes; anything else is `400`. A test push the push service refuses, or
 whose send throws, is `502`; a gone subscription is `410` and deleted. When sending, three layers hold: `WebPushSender` answers a device on an

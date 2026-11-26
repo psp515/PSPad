@@ -1,12 +1,8 @@
 namespace PSPad.Api.Reminders;
 
-public sealed class PushServiceHosts(IEnumerable<string> entries)
+public sealed class PushServiceHosts(IEnumerable<string> hosts)
 {
-    readonly string[] _hosts =
-    [
-        .. entries.SelectMany(entry =>
-            entry.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)),
-    ];
+    readonly string[] _hosts = [.. hosts.Where(host => !string.IsNullOrWhiteSpace(host)).Select(host => host.Trim())];
 
     public bool IsKnown(Uri endpoint) =>
         endpoint.Scheme == Uri.UriSchemeHttps
