@@ -10,7 +10,7 @@ using PSPad.Module.Money.Values;
 namespace PSPad.App.Api;
 
 public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncApi, ILanguageApi, ISnapshotsApi, INbpRates, IQuoteSource, IListSharingApi,
-    IBudgetSharingApi
+    IBudgetSharingApi, IPushApi
 {
     static readonly TimeSpan DefaultRetryAfter = TimeSpan.FromSeconds(5);
 
@@ -277,6 +277,43 @@ public sealed class PSPadApiClient(HttpClient http) : IStatisticsSource, ISyncAp
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             return null;
+        }
+    }
+
+    public async Task<string?> PushKeyAsync()
+    {
+        try
+        {
+            return (await GetAsync<PushKeyResponse>("api/push/key"))?.PublicKey;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return null;
+        }
+    }
+
+    public Task<bool> SubscribeAsync(PushSubscriptionRequest request) =>
+        SucceedsAsync(() => http.PutAsJsonAsync("api/push/subscriptions", request));
+
+    public Task<bool> UnsubscribeAsync(string endpoint) =>
+        SucceedsAsync(() => http.SendAsync(new HttpRequestMessage(HttpMethod.Delete, "api/push/subscriptions")
+        {
+            Content = JsonContent.Create(new PushEndpointRequest(endpoint))
+        }));
+
+    public Task<bool> SendTestAsync(string endpoint) =>
+        SucceedsAsync(() => http.PostAsJsonAsync("api/push/test", new PushEndpointRequest(endpoint)));
+
+    static async Task<bool> SucceedsAsync(Func<Task<HttpResponseMessage>> send)
+    {
+        try
+        {
+            using var response = await send();
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return false;
         }
     }
 

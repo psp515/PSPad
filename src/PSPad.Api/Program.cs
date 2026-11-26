@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using PSPad.Abstractions;
 using PSPad.Api.Commands;
 using PSPad.Api.Cors;
@@ -10,6 +11,7 @@ using PSPad.Api.Proxy;
 using PSPad.Api.Quotes;
 using PSPad.Api.Rates;
 using PSPad.Api.RateLimiting;
+using PSPad.Api.Reminders;
 using PSPad.Api.Snapshots;
 using PSPad.Api.Statistics;
 using PSPad.Api.Sync;
@@ -17,6 +19,7 @@ using PSPad.Infrastructure;
 using PSPad.Infrastructure.Events;
 using PSPad.Infrastructure.Mongo;
 using PSPad.Module.Presentation;
+using PSPad.Module.Reminders;
 using PSPad.Module.Sharing.Ports;
 using PSPad.Module.Sharing.Snapshots;
 using PSPad.Module.Statistics;
@@ -105,6 +108,30 @@ builder.Services.AddScoped<IContainerMembers, MongoContainerMembers>();
 builder.Services.AddScoped<LiveAudience>();
 builder.Services.AddScoped<ICommitObserver, LiveNudges>();
 
+builder.Services.Configure<ReminderOptions>(builder.Configuration.GetSection(ReminderOptions.Section));
+builder.Services.AddScoped<IReminderSource, MongoReminderSource>();
+builder.Services.AddScoped<IReminderClaims, MongoReminderClaims>();
+builder.Services.AddScoped<IPushSubscriptionStore, MongoPushSubscriptions>();
+builder.Services.AddScoped<IVapidKeyStore, MongoVapidKeyStore>();
+builder.Services.AddSingleton<VapidKeyring>();
+builder.Services.AddSingleton(sp =>
+    new ReminderSettings(sp.GetRequiredService<IOptions<ReminderOptions>>().Value.AppBaseAddress));
+builder.Services.AddSingleton(sp =>
+{
+    var reminders = sp.GetRequiredService<IOptions<ReminderOptions>>().Value;
+    return new PushServiceHosts([.. reminders.WebPushHosts, .. reminders.AdditionalWebPushHosts]);
+});
+builder.Services.AddTransient<KnownPushServiceHandler>();
+builder.Services.AddHttpClient<IPushSender, WebPushSender>(client => client.Timeout = TimeSpan.FromSeconds(10))
+    .AddHttpMessageHandler<KnownPushServiceHandler>()
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    {
+        ConnectCallback = PublicOnlyConnect.ConnectAsync,
+        AllowAutoRedirect = false,
+    });
+builder.Services.AddScoped<ReminderTick>();
+builder.Services.AddHostedService<ReminderScheduler>();
+
 var app = builder.Build();
 
 app.UseForwardedHeaders();
@@ -126,6 +153,7 @@ api.MapMeEndpoints();
 api.MapAccountEndpoints();
 api.MapStatisticsEndpoints();
 api.MapSnapshotEndpoints();
+api.MapPushEndpoints();
 api.MapMoneyEndpoints();
 api.MapInvestmentEndpoints();
 
@@ -135,6 +163,7 @@ open.MapPublicSnapshotEndpoints();
 await MongoIndexes.EnsureAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 await MongoBackfill.EnsureCreatedAtAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 await MongoBackfill.EnsureGoalLinksAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
+await MongoBackfill.DropLeadTimeAsync(app.Services.GetRequiredService<MongoContext>(), CancellationToken.None);
 
 app.Run();
 

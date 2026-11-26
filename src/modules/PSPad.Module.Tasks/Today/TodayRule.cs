@@ -21,10 +21,6 @@ public static class TodayRule
 
     public const int UpcomingDays = 7;
 
-    static readonly LeadTime DefaultLookAhead = new(UpcomingDays, LeadUnit.Days);
-
-    static LeadTime LookAheadOf(TodoTask task) => task.LeadTime ?? DefaultLookAhead;
-
     public static DayPlan Plan(IEnumerable<TodoTask> tasks, DateOnly day, DateOnly today, TimeZoneInfo zone)
     {
         var live = tasks.Where(task => !task.Deleted).ToArray();
@@ -118,12 +114,11 @@ public static class TodayRule
 
     static DateOnly? NextOccurrence(TodoTask task, DateOnly today)
     {
-        var lookAhead = LookAheadOf(task);
-        for (var day = today.AddDays(1); day <= lookAhead.ReachFrom(today); day = day.AddDays(1))
+        for (var day = today.AddDays(1); day <= today.AddDays(UpcomingDays); day = day.AddDays(1))
         {
             if (task.OccursOn(day) && !task.CompletedDays.Contains(day))
             {
-                return lookAhead.Shows(day, today) ? day : null;
+                return day;
             }
         }
 
@@ -139,7 +134,7 @@ public static class TodayRule
 
         var trigger = TriggerOf(task);
 
-        return trigger is { } day && LookAheadOf(task).Shows(day, today) ? day : null;
+        return trigger is { } day && day > today && day <= today.AddDays(UpcomingDays) ? day : null;
     }
 
     static TodayEntry? Consider(TodoTask task, DateOnly today)

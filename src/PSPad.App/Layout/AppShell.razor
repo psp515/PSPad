@@ -5,6 +5,7 @@
 @using PSPad.App.Components
 @using PSPad.App.Live
 @using PSPad.App.Localization
+@using PSPad.App.Push
 @using PSPad.App.State
 @using PSPad.App.State.Dispatch
 @using PSPad.App.State.Investments
@@ -43,6 +44,7 @@
 @inject IClock Clock
 @inject ServerReachability Reachability
 @inject IConnectivity Connectivity
+@inject PushRefresh PushRefresh
 @inject StatusBelts Belts
 @inject IAppUpdates Updates
 @inject ILogger<AppShell> Logger
@@ -222,6 +224,7 @@
         if (session is not null)
         {
             await RefreshAccountAsync();
+            await PushRefresh.RefreshAsync();
         }
     }
 

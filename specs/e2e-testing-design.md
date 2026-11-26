@@ -90,8 +90,8 @@ Keycloak's form (`#username`, `#password`, `#kc-login`) and waits for the
 heading **My Day**. The app keeps its session in IndexedDB and the OIDC
 state in `sessionStorage`, so Playwright's storage state is not reused: each
 test signs in, which costs about three seconds and buys full isolation.
-First sign-in provisions the user with time zone `Etc/UTC` (no `zoneinfo`
-claim), so "today" in every test is the UTC date, computed in the test.
+First sign-in provisions the user in the browser's zone (no `zoneinfo`
+claim; the container's browser runs in UTC, stored as `Etc/UTC`), so "today" in every test is the UTC date, computed in the test.
 
 ### 3.3 Page helpers
 

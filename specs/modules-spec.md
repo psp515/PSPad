@@ -14,8 +14,8 @@ this file is about responsibility, not wiring.
 
 **Purpose.** The GTD domain — what the user's data *is*.
 
-**Owns.** `Area`, `TaskList`, `TodoTask` (steps inside), `Goal`, `Inbox`,
-`ReferenceItem` (fields inside); recurrence, the Today rule, container-delete
+**Owns.** `Area`, `TaskList`, `TodoTask` (steps inside, its `TaskReminder`), `Goal`, `Inbox`,
+`ReferenceItem` (fields inside); recurrence, the Today rule, `ReminderRule`, container-delete
 cascades. Collections `areas`, `tasklists`, `todotasks`, `goals`, `inboxes`,
 `referenceitems`.
 
@@ -156,6 +156,25 @@ widen `BudgetAccess.To` and the sync filter. Not built.
 
 `Money` and `Currencies` now live in the `PSPad.Abstractions` assembly with
 their namespaces unchanged (`adr/0083`).
+
+---
+
+## PSPad.Module.Reminders
+
+**Purpose.** Telling a task's people it is time, through Web Push, while the
+app is closed (`specs/reminders-design.md`, `adr/0092`).
+
+**Owns.** The tick (`ReminderTick`), the notification texts (EN and PL), the
+claim and subscription documents and the ports `IReminderSource`,
+`IReminderClaims`, `IPushSubscriptionStore`, `IPushSender`, `IVapidKeyStore`.
+Collections `pushsubscriptions`, `sentreminders`, `vapidkeys`.
+
+**Must not.** Reference anything but `PSPad.Abstractions`, `PSPad.Module.Tasks`
+and `PSPad.Module.Identity`; MongoDB, ASP.NET Core, `System.Net.Http`, Hosting
+and `PSPad.Infrastructure` stay out, so it is pure and server-side only (an
+architecture test guards it). Be referenced by `Tasks`, `Identity` or `App`.
+Decide when a reminder falls: that rule is `ReminderRule` in Tasks.
+`PSPad.Api/Reminders` holds the scheduler, Mongo stores and Web Push sender.
 
 ---
 

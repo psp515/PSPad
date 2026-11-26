@@ -10,6 +10,7 @@ using PSPad.App.Api;
 using PSPad.App.Auth;
 using PSPad.App.Live;
 using PSPad.App.Localization;
+using PSPad.App.Push;
 using PSPad.App.State;
 using PSPad.App.State.Dispatch;
 using PSPad.App.State.Investments;
@@ -95,8 +96,13 @@ var apiBaseAddress = builder.Configuration["Api:BaseAddress"]!;
 builder.Services.AddSingleton<ServerReachability>();
 builder.Services.AddScoped<ServerReachabilityHandler>();
 
+// The browser's runtime reads its zone from Intl, so Local is the user's zone here.
+builder.Services.AddSingleton(_ => new BrowserTimeZone(TimeZoneInfo.Local.Id));
+builder.Services.AddTransient<TimeZoneHintHandler>();
+
 builder.Services.AddHttpClient<PSPadApiClient>(client => client.BaseAddress = new Uri(apiBaseAddress))
     .AddHttpMessageHandler<ServerReachabilityHandler>()
+    .AddHttpMessageHandler<TimeZoneHintHandler>()
     .AddHttpMessageHandler<SessionAuthorizationHandler>()
     .AddHttpMessageHandler(() => new StalledRequestHandler(stalledRequestLimit));
 
@@ -135,9 +141,12 @@ builder.Services.AddScoped<INbpRates>(sp => sp.GetRequiredService<PSPadApiClient
 builder.Services.AddScoped<IQuoteSource>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IListSharingApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IBudgetSharingApi>(sp => sp.GetRequiredService<PSPadApiClient>());
+builder.Services.AddScoped<IPushApi>(sp => sp.GetRequiredService<PSPadApiClient>());
 builder.Services.AddScoped<IServerProbe, BrowserServerProbe>();
 builder.Services.AddScoped<IConnectivity, BrowserConnectivity>();
 builder.Services.AddScoped<IAppUpdates, BrowserAppUpdates>();
+builder.Services.AddScoped<IPushDevice, BrowserPushDevice>();
+builder.Services.AddScoped<PushRefresh>();
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<SyncCoordinator>();
 builder.Services.AddScoped<ISyncTrigger>(sp => sp.GetRequiredService<SyncCoordinator>());

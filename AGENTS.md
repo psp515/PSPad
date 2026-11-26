@@ -7,7 +7,7 @@ it points to before working, not before every task. Slice 1 is built.
 
 Daily-driver GTD system. One Today screen answers "what do I do now" across all
 areas; one shared Inbox captures; offline PWA syncs when back online.
-Later: habits, annual plans, integrations, print domain, reminders (`adr/README.md`).
+Later: habits, annual plans, integrations, print domain (`adr/README.md`).
 
 ## 2. Invariants (never regress)
 
@@ -35,10 +35,11 @@ Later: habits, annual plans, integrations, print domain, reminders (`adr/README.
 | Writing or running tests, fixtures, guards | `specs/testing-spec.md`; migration `specs/behaviour-tests-design.md`; record `specs/behaviour-tests-ledger.md` |
 | End-to-end scenarios, Playwright harness, e2e CI job | `specs/e2e-testing-design.md` |
 | Sharing, invites, public snapshots | `specs/sharing-spec.md` |
+| Reminders, Web Push | `specs/reminders-design.md` |
 | Reference lists | `specs/reference-lists-design.md` |
 | List ordering | `specs/list-ordering-design.md` |
 | List filter, sort, month calendar | `specs/list-filter-and-calendar-design.md` |
-| Recurrence lead time, yearly repeats | `specs/recurrence-lead-time-design.md` |
+| Yearly repeats, one-time vs repeating | `specs/recurrence-lead-time-design.md` |
 | Phone navigation | `specs/mobile-navigation-design.md` |
 | Budgets, expenses, balances, NBP rates | `specs/money-design.md` |
 | Budget CSV import | `specs/budget-import-design.md` |
@@ -61,11 +62,11 @@ Spec vs ADR disagree: ADR wins. Spec vs code disagree: say so, follow neither si
 
 | AD | Summary | ADR |
 |----|---------|-----|
-| 1 | Modular monolith: Tasks, Statistics, Identity, Presentation, Sharing, Money, Investments | 0010, 0045, 0059, 0082 |
+| 1 | Modular monolith: Tasks, Statistics, Identity, Presentation, Sharing, Money, Investments, Reminders | 0010, 0045, 0059, 0082, 0092 |
 | 2 | Documents are truth, events are the log; snapshot marks are state-only | 0011, 0064 |
 | 3–4 | Commands shared; Tasks compiles to WASM | 0003, 0004 |
 | 5–6 | LWW conflicts offline, version-checked saves on the server, final rejections dropped, a pull never replaces a newer local copy; delta sync by monotonic `seq`, paged, documents only | 0005, 0006, 0061, 0063, 0067, 0079 |
-| 7 | Recurrence template + occurrences | 0007, 0043, 0053 |
+| 7 | Recurrence template + occurrences | 0007, 0043, 0053, 0093 |
 | 8 | Aggregates: User, Area, TaskList, TodoTask, Goal, Inbox, ReferenceItem; a goal holds its task links | 0008, 0047, 0065 |
 | 9 | Integration tests own a Testcontainers MongoDB 8 replica set; tests assert behaviour, never shape or wiring | 0009, 0080 |
 | 10 | Events dispatch after commit, replayed from a marker | 0036, 0037 |
@@ -86,13 +87,13 @@ IndexedDB replica and outbox, Keycloak OIDC/JWT, Docker Compose, no messaging bu
 
 ```
 src/PSPad.Api  src/PSPad.App  src/shared/{Abstractions,Contracts,Infrastructure}
-src/modules/PSPad.Module.{Tasks,Statistics,Identity,Presentation,Sharing,Money,Investments}
+src/modules/PSPad.Module.{Tasks,Statistics,Identity,Presentation,Sharing,Money,Investments,Reminders}
 test/  brand/  docs/  specs/  adr/  docker/  .superpowers/sdd/ (uncommitted plans)
 ```
 
 References run one way: `Tasks`, `Money` and `Investments` see `Abstractions` only; `Infrastructure` sees no
 module; `App` never sees `Infrastructure`; `Api` sees all. Only module edges:
-`Statistics`→`Tasks`, `Sharing`→`Tasks`. Detail: `specs/backend-spec.md` §1.
+`Statistics`→`Tasks`, `Sharing`→`Tasks`, `Reminders`→`Tasks`, `Reminders`→`Identity`. Detail: `specs/backend-spec.md` §1.
 
 ## 6. Rules for agents
 

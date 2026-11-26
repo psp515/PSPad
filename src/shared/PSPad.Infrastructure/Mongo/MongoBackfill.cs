@@ -41,6 +41,13 @@ public static class MongoBackfill
         await tasks.UpdateManyAsync(withGoal, Builders<BsonDocument>.Update.Unset("goalId"), cancellationToken: ct);
     }
 
+    // The per-task lead time was removed (ADR-0093); nothing reads the field, so it goes without a seq bump.
+    public static async Task DropLeadTimeAsync(MongoContext context, CancellationToken ct) =>
+        await context.Collection<BsonDocument>("todotasks").UpdateManyAsync(
+            Builders<BsonDocument>.Filter.Exists("leadTime"),
+            Builders<BsonDocument>.Update.Unset("leadTime"),
+            cancellationToken: ct);
+
     static async Task EnsureCreatedAtAsync(
         MongoContext context, string collection, string createdEvent, CancellationToken ct)
     {

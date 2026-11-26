@@ -58,7 +58,7 @@ public class DayViewPlanTests
     }
 
     [Fact]
-    public void AFutureDayIgnoresTheLeadTime()
+    public void AFutureDayShowsATaskDueOnItBeyondTheWeekAhead()
     {
         var day = Today.AddDays(40);
         var task = Due(day);

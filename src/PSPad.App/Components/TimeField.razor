@@ -1,0 +1,98 @@
+@using PSPad.App.State
+
+<MudTextField T="string" Class="@($"pspad-time-input {Class}")" Placeholder="@Placeholder" aria-label="@Label"
+              InputMode="InputMode.numeric" Value="@Text" ValueChanged="@TypedAsync" Error="@(_invalid || Error)"
+              Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@Disabled"
+              Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Schedule" AdornmentAriaLabel="@ClockLabel"
+              OnAdornmentClick="@OpenClockAsync" />
+
+@* The picker's own dialog commits once, after the minute click or a click outside; a static clock submits on every hour click. *@
+<MudTimePicker @ref="_clock" PickerVariant="PickerVariant.Dialog" Elevation="0" Class="pspad-time-clock" AmPm="false"
+               @bind-Time="_pickerTime" PickerClosed="@ClockClosedAsync" />
+
+@code {
+    [Parameter] public TimeOnly? Value { get; set; }
+
+    [Parameter] public EventCallback<TimeOnly?> ValueChanged { get; set; }
+
+    [Parameter] public EventCallback<bool> InvalidChanged { get; set; }
+
+    [Parameter] public object? Shown { get; set; }
+
+    [Parameter] public string Label { get; set; } = "";
+
+    [Parameter] public string? Placeholder { get; set; }
+
+    [Parameter] public string ClockLabel { get; set; } = "";
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public bool Error { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    TimeOnly? _shownValue;
+
+    object? _shownKey;
+
+    string? _draft;
+
+    bool _invalid;
+
+    MudTimePicker? _clock;
+
+    TimeSpan? _pickerTime;
+
+    string Text => _draft ?? (Value is { } time ? TaskTimeText.Format(time) : "");
+
+    protected override void OnParametersSet()
+    {
+        if (_shownValue != Value || !Equals(_shownKey, Shown))
+        {
+            _shownValue = Value;
+            _shownKey = Shown;
+            _draft = null;
+            _invalid = false;
+        }
+    }
+
+    async Task TypedAsync(string? text)
+    {
+        if (!TimeText.TryParse(text, out var time))
+        {
+            _draft = text;
+            _invalid = true;
+            await InvalidChanged.InvokeAsync(true);
+            return;
+        }
+
+        await CommitAsync(time);
+    }
+
+    Task OpenClockAsync()
+    {
+        if (Disabled || _clock is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _pickerTime = Value?.ToTimeSpan();
+        return _clock.OpenAsync();
+    }
+
+    async Task ClockClosedAsync()
+    {
+        if (_pickerTime is { } span && TimeOnly.FromTimeSpan(span) is var time && time != Value)
+        {
+            await CommitAsync(time);
+        }
+    }
+
+    async Task CommitAsync(TimeOnly? time)
+    {
+        _draft = null;
+        _invalid = false;
+        await InvalidChanged.InvokeAsync(false);
+        await ValueChanged.InvokeAsync(time);
+    }
+}

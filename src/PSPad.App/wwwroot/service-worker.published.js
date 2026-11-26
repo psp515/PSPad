@@ -92,3 +92,38 @@ async function onFetch(event) {
         return new Response('', { status: 503, statusText: 'Service Unavailable' });
     }
 }
+
+function pushData(message) {
+  if (!message) { return {}; }
+  try {
+    const data = message.json();
+    return data && typeof data === 'object' ? data : { body: String(data) };
+  } catch {
+    return { title: 'PSPad', body: message.text() };
+  }
+}
+self.addEventListener('push', event => {
+  const data = pushData(event.data);
+  event.waitUntil(self.registration.showNotification(data.title ?? 'PSPad', {
+    body: data.body ?? '', tag: data.tag, data: { url: data.url ?? '/' }, icon: 'icon-192.png',
+  }));
+});
+self.addEventListener('pushsubscriptionchange', event => {
+  const applicationServerKey = event.oldSubscription?.options?.applicationServerKey;
+  if (!applicationServerKey) { return; }
+  event.waitUntil(self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey }).catch(() => { }));
+});
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  let target;
+  try { target = new URL(event.notification.data?.url ?? '/', self.location.origin); } catch { target = null; }
+  const url = target && target.origin === self.location.origin ? target.href : self.location.origin + '/';
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const open = windows.find(client => new URL(client.url).origin === self.location.origin);
+    if (open) {
+      try { await open.focus(); return await open.navigate(url); } catch { }
+    }
+    return self.clients.openWindow(url);
+  })());
+});
