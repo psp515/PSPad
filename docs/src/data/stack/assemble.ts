@@ -4,7 +4,7 @@ const images = {
   api: 'ghcr.io/psp515/pspad-backend:latest',
   app: 'ghcr.io/psp515/pspad-frontend:latest',
   mongo: 'mongo:8.3.13',
-  keycloak: 'quay.io/keycloak/keycloak:26.8.1',
+  keycloak: 'quay.io/keycloak/keycloak:26.8.2-2',
   postgres: 'postgres:18.6-alpine3.24',
   cloudflared: 'cloudflare/cloudflared:2026.9.1',
   caddy: 'caddy:2.11.2-alpine'

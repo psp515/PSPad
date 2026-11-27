@@ -269,7 +269,7 @@ What the assembled files contain:
 - `mongo` (image `mongo:8.3.13`, entrypoint, keyfile and data volumes,
   healthcheck) unless `atlas`, in which case the API reads
   `MONGO_CONNECTION_STRING` from `.env`.
-- `keycloak` (`quay.io/keycloak/keycloak:26.8.1`): `start-dev
+- `keycloak` (`quay.io/keycloak/keycloak:26.8.2-2`): `start-dev
   --import-realm` for quick, `start --import-realm` with
   `KC_HTTP_ENABLED`, `KC_HOSTNAME_STRICT` and `KC_PROXY_HEADERS: xforwarded`
   for VPS; `KC_DB*` pointing at `postgres` for `pg`, a `keycloak-data`
