@@ -69,7 +69,7 @@ Playwright image on the host network, with the stack up as above:
 
 ```bash
 cd test/e2e
-docker run --rm --network host -v "$PWD:/work" -w /work -e HOME=/tmp mcr.microsoft.com/playwright:v1.64.1-noble npx playwright test
+docker run --rm --network host -v "$PWD:/work" -w /work -e HOME=/tmp mcr.microsoft.com/playwright:v1.65.0-noble npx playwright test
 ```
 
 The image's Playwright version must match `package.json`.

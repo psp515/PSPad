@@ -49,7 +49,7 @@ public class NginxProxyTests(MongoFixture fixture)
 
             nginx = new ContainerBuilder(Image)
                 .WithPortBinding(8080, true)
-                .WithResourceMapping(Encoding.UTF8.GetBytes(StockConfig(apiPort)), "/etc/nginx/conf.d/default.conf")
+                .WithResourceMapping(Encoding.UTF8.GetBytes(StockConfig(apiPort)), FilePath.Of("/etc/nginx/conf.d/default.conf"))
                 .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(request => request.ForPort(8080).ForPath("/health")))
                 .Build();
             await nginx.StartAsync(ct);
